@@ -1,174 +1,159 @@
 
-# Plano: Correção do Download de Arquivos no ROY zAPP
+# Plano: Correção de Mensagens Inbound que Não Chegam no ROY zAPP
 
-## Problema Identificado
+## Diagnóstico Completo
 
-O download de arquivos no ROY zAPP não está funcionando corretamente. Quando o usuário clica para baixar um documento (como "Secretátia 1.docx"), o arquivo é baixado mas com um nome incorreto/ilegível.
+Após investigação extensiva dos logs, banco de dados e código, identifiquei **múltiplas causas raiz** para o problema de mensagens não chegando:
 
-### Evidências no Banco de Dados:
+### Problema 1: Conversas Duplicadas com Telefones em Formatos Diferentes
 
-| Campo | Valor |
-|-------|-------|
-| `media_filename` | `Secretátia 1.docx` |
-| `media_url` | `...document_1769443527484_dcee457d.vnd.openxmlformats-officedocument.wordprocessingml.document` |
+**Evidência no banco de dados:**
 
-O nome do arquivo na URL do Storage usa a extensão do mimetype (`vnd.openxmlformats-officedocument.wordprocessingml.document`) ao invés de preservar o nome original com extensão `.docx`.
+| Conversa | Telefone | Setor | Última Mensagem |
+|----------|----------|-------|-----------------|
+| Ana Paula (Vendas) | `+551991068935` (12 dígitos) | vendas | 12/Jan |
+| Paulinha (Operações) | `+5519991068935` (13 dígitos) | operacoes | 26/Jan (hoje) |
 
-### Por que isso acontece:
+**O que acontece:**
+1. A conversa original foi criada com formato antigo (sem o 9)
+2. Novas mensagens chegam com formato normalizado (com o 9)
+3. O webhook cria uma NOVA conversa em vez de encontrar a existente
+4. O usuário olha a conversa antiga (vazia) enquanto as mensagens vão para a nova
 
-1. O componente `ZappMessageBubble.tsx` usa uma tag `<a>` simples apontando para `message.media_url`
-2. Quando o navegador baixa de URLs cross-origin, ele ignora o atributo `download` por segurança
-3. O navegador usa o último segmento da URL como nome do arquivo, resultando em nomes como `document_1769443527484_dcee457d.vnd.openxmlformats-officedocument.wordprocessingml.document`
+**Causa raiz no código:**
+- O Layer 1 do fallback de busca (linha 792-820) tenta encontrar conversas com formato alternativo, MAS filtra por `integration_id`
+- Como as conversas estão em integrações diferentes (vendas vs operações), o fallback não as encontra
+- O Layer 2 (linha 822-914) deveria unificar, mas há uma falha na lógica de busca por formato alternativo
+
+### Problema 2: Mensagens que Simplesmente Não Chegam
+
+**Evidência:**
+- Conversa `+5543998319449` tem 6 mensagens outbound hoje, mas 0 inbound desde 20/Jan
+- O usuário enviou áudios às 16:26, mas a resposta do cliente não apareceu
+
+**Possíveis causas:**
+1. **UAZAPI não está enviando webhooks** para certas mensagens inbound
+2. **Webhook está sendo ignorado** por algum filtro (reaction, status, etc.)
+3. **Timeout ou erro silencioso** no processamento
+
+### Problema 3: Falta de Vinculação Cliente-Conversa
+
+A conversa "Paulinha" em Operações NÃO está vinculada ao cliente (`client_id: NULL`), mesmo existindo o cliente "Ana Paula Cardoso" com o mesmo telefone. Isso dificulta a rastreabilidade.
+
+---
 
 ## Solução Proposta
 
-Implementar o padrão **fetch-to-blob** que já está sendo usado com sucesso no Timeline de clientes (`src/components/client/Timeline.tsx`).
+### Correção 1: Melhorar Layer 1 - Busca Cross-Integration para BR Numbers
 
-### Como funciona:
+**Arquivo:** `supabase/functions/uazapi-webhook/index.ts` (linhas 791-820)
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    FLUXO ATUAL (COM BUG)                        │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. Usuario clica no link                                       │
-│     └─> <a href={media_url} target="_blank">                   │
-│                                                                 │
-│  2. Navegador abre nova aba com a URL                           │
-│     └─> Baixa usando nome da URL (sem extensao correta)        │
-│                                                                 │
-│  3. Arquivo salvo com nome incorreto                            │
-│     └─> "document_...vnd.openxmlformats..."                    │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+O problema é que o Layer 1 filtra por `integration_id`, então não encontra conversas com o mesmo telefone em outras integrações/setores.
 
-
-┌─────────────────────────────────────────────────────────────────┐
-│                    FLUXO CORRIGIDO                              │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  1. Usuario clica no botao de download                          │
-│     └─> handleDownload(message)                                │
-│                                                                 │
-│  2. Frontend faz fetch do arquivo                               │
-│     └─> const blob = await fetch(media_url).blob()             │
-│                                                                 │
-│  3. Cria URL local temporaria                                   │
-│     └─> const url = URL.createObjectURL(blob)                  │
-│                                                                 │
-│  4. Cria link programatico com nome correto                     │
-│     └─> link.download = message.media_filename                 │
-│                                                                 │
-│  5. Dispara download e limpa recursos                           │
-│     └─> link.click(); URL.revokeObjectURL(url)                 │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## Implementacao Tecnica
-
-### Arquivo: `src/components/royzapp/ZappMessageBubble.tsx`
-
-**Mudanca 1:** Adicionar funcao de download (apos as funcoes existentes, antes do componente)
+**Mudança:** Remover o filtro de `integration_id` no Layer 1 para números brasileiros, permitindo encontrar e ATUALIZAR conversas existentes:
 
 ```typescript
-// Function to handle file download with correct filename
-async function handleFileDownload(url: string, filename: string) {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error("Falha ao baixar arquivo");
+// === LAYER 1: Brazilian phone format fallback (cross-integration) ===
+if (!existingZappConvo && phone && phone.startsWith("+55") && phone.length === 14) {
+  const phoneWithout9 = phone.substring(0, 5) + phone.substring(6);
+  console.log(`[PHONE] Fallback L1: trying ${phoneWithout9} (removed 9th digit) across ALL integrations`);
+  
+  // Search WITHOUT integration_id filter to find existing conversations
+  const { data: fallbackData } = await supabase
+    .from("zapp_conversations")
+    .select("id, unread_count, integration_id, contact_name, client_id, lead_id, phone_e164, sector_id")
+    .eq("account_id", accountId)
+    .eq("phone_e164", phoneWithout9)
+    .eq("is_group", false)
+    .order("last_message_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  
+  if (fallbackData) {
+    existingZappConvo = fallbackData;
+    console.log(`[PHONE] Found via L1: old format ${phoneWithout9}, will update phone and integration`);
     
-    const blob = await response.blob();
-    const blobUrl = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = blobUrl;
-    link.download = filename || "documento";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(blobUrl);
-  } catch (error) {
-    console.error("Erro ao baixar arquivo:", error);
-    throw error;
+    // Update phone to normalized format AND update integration/sector
+    await supabase
+      .from("zapp_conversations")
+      .update({ 
+        phone_e164: phone,
+        integration_id: integrationId,
+        sector_id: sectorId
+      })
+      .eq("id", fallbackData.id);
   }
 }
 ```
 
-**Mudanca 2:** Adicionar estado de loading e toast hook (dentro do componente)
+### Correção 2: Adicionar Logging Detalhado para Mensagens Ignoradas
+
+**Arquivo:** `supabase/functions/uazapi-webhook/index.ts`
+
+Adicionar logs em TODOS os pontos de retorno para rastrear mensagens que não são processadas:
 
 ```typescript
-const [isDownloading, setIsDownloading] = useState(false);
-const { toast } = useToast();
+// Adicionar no início de cada return ignorado:
+console.log(`[IGNORED] reason: ${reason}, phone: ${phone || 'N/A'}, type: ${msg.type || 'N/A'}, msgId: ${msg.id || 'N/A'}`);
 ```
 
-**Mudanca 3:** Substituir tag `<a>` por elemento clicavel com handler (linhas 452-472)
+### Correção 3: Melhorar Validação de Mensagens Inbound
+
+**Arquivo:** `supabase/functions/uazapi-webhook/index.ts` (linhas 697-710)
+
+Adicionar mais contexto nos logs de mensagens bloqueadas para facilitar debug:
 
 ```typescript
-{message.media_url && message.media_type === "document" && (
-  <button
-    onClick={async (e) => {
-      e.preventDefault();
-      if (isDownloading) return;
-      setIsDownloading(true);
-      try {
-        await handleFileDownload(
-          message.media_url!,
-          message.media_filename || "documento"
-        );
-        toast({
-          title: "Download iniciado",
-          description: message.media_filename || "documento",
-        });
-      } catch (error) {
-        toast({
-          title: "Erro ao baixar",
-          description: "Não foi possível baixar o arquivo",
-          variant: "destructive",
-        });
-      } finally {
-        setIsDownloading(false);
-      }
-    }}
-    disabled={isDownloading}
-    className="flex items-center gap-3 bg-black/20 rounded-lg p-3 mb-1 hover:bg-black/30 transition-colors w-full text-left cursor-pointer disabled:opacity-50"
-  >
-    <div className="w-10 h-10 rounded-lg bg-[#7f66ff]/20 flex items-center justify-center">
-      <FileText className="h-5 w-5 text-[#7f66ff]" />
-    </div>
-    <div className="flex-1 min-w-0">
-      <p className="text-sm text-zapp-text truncate">
-        {message.media_filename || "Documento"}
-      </p>
-      <p className="text-xs text-zapp-text-muted">
-        {isDownloading ? "Baixando..." : "Clique para baixar"}
-      </p>
-    </div>
-    {isDownloading ? (
-      <Loader2 className="h-4 w-4 text-zapp-text-muted flex-shrink-0 animate-spin" />
-    ) : (
-      <Download className="h-4 w-4 text-zapp-text-muted flex-shrink-0" />
-    )}
-  </button>
-)}
+if (direction === "inbound" && !phone) {
+  console.error(`[WEBHOOK] CRITICAL: Inbound message BLOCKED - missing phone`);
+  console.error(`[WEBHOOK] Full payload snippet:`, JSON.stringify({
+    chatPhone: chat.phone,
+    chatId: chat.id,
+    waChatid: chat.wa_chatid,
+    sender: msg.sender,
+    senderPn: msg.sender_pn,
+    msgId: msg.id
+  }));
+  // Continue processing to avoid silent failures
+}
 ```
 
-## Arquivo a Modificar
+### Correção 4: Trigger de Vinculação Automática Cliente-Conversa
 
-| Arquivo | Alteracao |
+Garantir que o trigger `sync_zapp_conversation_client` funcione corretamente quando o telefone muda:
+
+**Verificação:** O trigger existe e está ativo, mas pode não estar sendo disparado quando o telefone é atualizado via Layer 1/Layer 2.
+
+**Ação:** Adicionar chamada explícita para vincular cliente após atualizar telefone da conversa.
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Alteração |
 |---------|-----------|
-| `src/components/royzapp/ZappMessageBubble.tsx` | Substituir link direto por handler fetch-to-blob |
+| `supabase/functions/uazapi-webhook/index.ts` | Melhorar Layer 1 (cross-integration), adicionar logging detalhado |
+
+---
 
 ## Impacto Esperado
 
-- Arquivos serao baixados com o nome original preservado (ex: "Secretátia 1.docx")
-- Indicador visual de loading durante o download
-- Feedback via toast ao usuario
-- Melhor experiencia de usuario
+1. **Conversas com telefone antigo** serão encontradas e atualizadas automaticamente
+2. **Logs detalhados** permitirão identificar exatamente quais mensagens estão sendo ignoradas e por quê
+3. **Vinculação cliente-conversa** será mantida mesmo quando conversas migram entre setores
 
-## Consideracoes
+## Considerações de Segurança
 
-Esta solucao:
-- Usa o mesmo padrao ja comprovado no Timeline de clientes
-- Nao requer alteracoes no backend ou Edge Functions
-- Funciona para todos os tipos de documentos (PDF, DOCX, XLSX, etc.)
-- Preserva o `media_filename` original armazenado no banco de dados
+Esta correção permite que uma conversa "migre" entre setores quando o mesmo cliente responde através de uma integração diferente. Isso é o comportamento desejado para evitar fragmentação de histórico, mas significa que:
+- A conversa será movida para o setor da última integração que recebeu mensagem
+- O histórico completo será preservado
+- A vinculação com o cliente será mantida
+
+## Resumo Técnico
+
+O problema principal é a **fragmentação de conversas** causada por:
+1. Formatos de telefone diferentes (12 vs 13 dígitos BR)
+2. Múltiplas integrações/setores
+3. Filtros muito restritivos na busca por conversa existente
+
+A solução é tornar a busca mais flexível para números brasileiros, permitindo encontrar e unificar conversas mesmo que estejam em integrações diferentes.
