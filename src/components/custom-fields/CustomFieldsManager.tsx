@@ -234,6 +234,10 @@ export function CustomFieldsManager({
   ]);
   const [isRequired, setIsRequired] = useState(false);
   const [showInClients, setShowInClients] = useState(true);
+  
+  // Deal stages for required stage selection
+  const [dealStages, setDealStages] = useState<{id: string, name: string}[]>([]);
+  const [requiredStages, setRequiredStages] = useState<string[]>(["all"]);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -305,6 +309,25 @@ export function CustomFieldsManager({
       fetchFields();
     }
   }, [currentUser?.account_id]);
+
+  // Fetch deal stages when sector context is "deals"
+  useEffect(() => {
+    const fetchDealStages = async () => {
+      if (sectorContext === "deals" && currentUser?.account_id) {
+        const { data } = await supabase
+          .from("deal_stages")
+          .select("id, name")
+          .eq("account_id", currentUser.account_id)
+          .eq("is_active", true)
+          .order("display_order");
+        
+        if (data) {
+          setDealStages(data);
+        }
+      }
+    };
+    fetchDealStages();
+  }, [sectorContext, currentUser?.account_id]);
 
   // Refetch fields when dialog opens
   useEffect(() => {
@@ -404,10 +427,11 @@ export function CustomFieldsManager({
     ]);
     setIsRequired(false);
     setShowInClients(true);
+    setRequiredStages(["all"]);
     setEditingField(null);
   };
 
-  const openEditDialog = (field: CustomField & { show_in_clients?: boolean }) => {
+  const openEditDialog = async (field: CustomField & { show_in_clients?: boolean }) => {
     setEditingField(field);
     setName(field.name);
     setFieldType(field.field_type);
@@ -417,6 +441,24 @@ export function CustomFieldsManager({
     ]);
     setIsRequired(field.is_required);
     setShowInClients(field.show_in_clients !== false);
+    
+    // Fetch required_stages for this field
+    if (sectorContext === "deals" && field.id) {
+      const { data } = await supabase
+        .from("custom_fields")
+        .select("required_stages")
+        .eq("id", field.id)
+        .single();
+      
+      if (data?.required_stages && Array.isArray(data.required_stages)) {
+        setRequiredStages(data.required_stages as string[]);
+      } else {
+        setRequiredStages(["all"]);
+      }
+    } else {
+      setRequiredStages(["all"]);
+    }
+    
     setDialogOpen(true);
   };
 
@@ -490,7 +532,7 @@ export function CustomFieldsManager({
       }
 
       // Set visibility flags based on sector context
-      const fieldData = {
+      const fieldData: any = {
         account_id: currentUser.account_id,
         name: name.trim(),
         field_type: fieldType,
@@ -505,6 +547,8 @@ export function CustomFieldsManager({
         show_in_deals: editingField ? editingField.show_in_clients : sectorContext === "deals",
         show_in_leads: editingField ? false : sectorContext === "leads",
         display_order: editingField?.display_order ?? fields.length,
+        // Add required_stages for deals context
+        required_stages: isRequired && sectorContext === "deals" ? requiredStages : null,
       };
 
       if (editingField) {
@@ -668,8 +712,63 @@ export function CustomFieldsManager({
               <Label className="text-sm">Obrigatório</Label>
               <p className="text-xs text-muted-foreground">Campo deve ser preenchido</p>
             </div>
-            <Switch checked={isRequired} onCheckedChange={setIsRequired} />
+            <Switch checked={isRequired} onCheckedChange={(checked) => {
+              setIsRequired(checked);
+              if (!checked) {
+                setRequiredStages(["all"]);
+              }
+            }} />
           </div>
+
+          {/* Stage selector for required fields - only for deals context */}
+          {isRequired && sectorContext === "deals" && dealStages.length > 0 && (
+            <div className="space-y-2 pl-3 border-l-2 border-primary/20 ml-1">
+              <Label className="text-sm text-muted-foreground">Obrigatório em quais etapas?</Label>
+              <div className="space-y-2">
+                {/* "All stages" option */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="stage-all"
+                    checked={requiredStages.includes("all")}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setRequiredStages(["all"]);
+                      } else {
+                        setRequiredStages([]);
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-input bg-background"
+                  />
+                  <label htmlFor="stage-all" className="text-sm font-medium cursor-pointer">
+                    Todas as etapas
+                  </label>
+                </div>
+                
+                {/* Individual stages (only shown when "all" is not selected) */}
+                {!requiredStages.includes("all") && dealStages.map(stage => (
+                  <div key={stage.id} className="flex items-center gap-2 pl-4">
+                    <input
+                      type="checkbox"
+                      id={`stage-${stage.id}`}
+                      checked={requiredStages.includes(stage.id)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setRequiredStages(prev => [...prev, stage.id]);
+                        } else {
+                          setRequiredStages(prev => prev.filter(id => id !== stage.id));
+                        }
+                      }}
+                      className="h-4 w-4 rounded border-input bg-background"
+                    />
+                    <label htmlFor={`stage-${stage.id}`} className="text-sm cursor-pointer">
+                      {stage.name}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center justify-between pt-2">
             <div>

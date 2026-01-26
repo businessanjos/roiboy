@@ -2800,6 +2800,7 @@ export type Database = {
           is_required: boolean | null
           name: string
           options: Json | null
+          required_stages: Json | null
           show_in_clients: boolean
           show_in_deals: boolean
           show_in_leads: boolean
@@ -2816,6 +2817,7 @@ export type Database = {
           is_required?: boolean | null
           name: string
           options?: Json | null
+          required_stages?: Json | null
           show_in_clients?: boolean
           show_in_deals?: boolean
           show_in_leads?: boolean
@@ -2832,6 +2834,7 @@ export type Database = {
           is_required?: boolean | null
           name?: string
           options?: Json | null
+          required_stages?: Json | null
           show_in_clients?: boolean
           show_in_deals?: boolean
           show_in_leads?: boolean
