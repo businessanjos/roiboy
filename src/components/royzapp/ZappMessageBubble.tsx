@@ -47,6 +47,22 @@ interface ZappMessageBubbleProps {
   onRetry?: (message: Message) => void;
 }
 
+// Function to handle file download with correct filename (fetch-to-blob pattern)
+async function handleFileDownload(url: string, filename: string) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("Falha ao baixar arquivo");
+  
+  const blob = await response.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = filename || "documento";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(blobUrl);
+}
+
 // Function to extract domain from URL for display
 function extractDomain(url: string): string {
   try {
@@ -159,6 +175,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(
     message.transcription || null
   );
@@ -450,11 +467,33 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
           
           {/* Document */}
           {message.media_url && message.media_type === "document" && (
-            <a
-              href={message.media_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 bg-black/20 rounded-lg p-3 mb-1 hover:bg-black/30 transition-colors"
+            <button
+              onClick={async (e) => {
+                e.preventDefault();
+                if (isDownloading) return;
+                setIsDownloading(true);
+                try {
+                  await handleFileDownload(
+                    message.media_url!,
+                    message.media_filename || "documento"
+                  );
+                  toast({
+                    title: "Download iniciado",
+                    description: message.media_filename || "documento",
+                  });
+                } catch (error) {
+                  console.error("Erro ao baixar arquivo:", error);
+                  toast({
+                    title: "Erro ao baixar",
+                    description: "Não foi possível baixar o arquivo",
+                    variant: "destructive",
+                  });
+                } finally {
+                  setIsDownloading(false);
+                }
+              }}
+              disabled={isDownloading}
+              className="flex items-center gap-3 bg-black/20 rounded-lg p-3 mb-1 hover:bg-black/30 transition-colors w-full text-left cursor-pointer disabled:opacity-50"
             >
               <div className="w-10 h-10 rounded-lg bg-[#7f66ff]/20 flex items-center justify-center">
                 <FileText className="h-5 w-5 text-[#7f66ff]" />
@@ -464,11 +503,15 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
                   {message.media_filename || "Documento"}
                 </p>
                 <p className="text-xs text-zapp-text-muted">
-                  Clique para baixar
+                  {isDownloading ? "Baixando..." : "Clique para baixar"}
                 </p>
               </div>
-              <Download className="h-4 w-4 text-zapp-text-muted flex-shrink-0" />
-            </a>
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 text-zapp-text-muted flex-shrink-0 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4 text-zapp-text-muted flex-shrink-0" />
+              )}
+            </button>
           )}
           
           {/* Text content (hide for audio-only messages) */}
