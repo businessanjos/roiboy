@@ -172,6 +172,14 @@ export function useMessageAssistant({
 
         if (error) {
           console.error("[AI Suggestions] Error:", error);
+          setSuggestions([]);
+          return;
+        }
+
+        // Handle payment/quota errors gracefully
+        if (data?.error) {
+          console.warn("[AI Suggestions] Service error:", data.error);
+          setSuggestions([]);
           return;
         }
 
@@ -229,6 +237,14 @@ export function useMessageAssistant({
       });
 
       if (error) throw error;
+      
+      // Handle payment/quota errors gracefully
+      if (data?.error) {
+        console.warn("[AI Suggestions] Service error on refresh:", data.error);
+        setSuggestions([]);
+        return;
+      }
+      
       if (data?.suggestions) {
         setSuggestions(data.suggestions);
       }
