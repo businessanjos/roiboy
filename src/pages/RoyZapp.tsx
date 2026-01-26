@@ -1115,7 +1115,12 @@ export default function RoyZapp() {
     const zc = assignment.zapp_conversation;
     const c = assignment.conversation?.client;
     
-    const name = zc?.client?.full_name || zc?.lead?.full_name || zc?.contact_name || c?.full_name || "Contato";
+    // IMPORTANTE: Para GRUPOS, sempre usar contact_name (nome do grupo no WhatsApp)
+    // Para conversas individuais, priorizar cliente/lead vinculado
+    // Isso mantém consistência entre sidebar e header
+    const name = zc?.is_group 
+      ? (zc?.contact_name || "Grupo sem nome")
+      : (zc?.client?.full_name || zc?.lead?.full_name || zc?.contact_name || c?.full_name || zc?.phone_e164 || "Desconhecido");
     const phone = zc?.phone_e164 || c?.phone_e164 || "";
     
     // Build searchable text with all relevant fields
