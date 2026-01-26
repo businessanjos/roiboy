@@ -1,130 +1,100 @@
 
-# Plano: Correção de Mensagens Inbound que Não Chegam no ROY zAPP
+# Plano: Correção dos Erros de Atribuição na Fila de Triagem
 
-## Diagnóstico Completo
+## Diagnóstico
 
-Após investigação extensiva dos logs, banco de dados e código, identifiquei **múltiplas causas raiz** para o problema de mensagens não chegando:
+Após investigação detalhada do código, banco de dados e políticas RLS, identifiquei a causa raiz dos erros:
 
-### Problema 1: Conversas Duplicadas com Telefones em Formatos Diferentes
+### Problema Identificado
 
-**Evidência no banco de dados:**
+O componente `ContractTriageQueue.tsx` está tentando atualizar uma coluna que **NÃO EXISTE** na tabela `clients`:
 
-| Conversa | Telefone | Setor | Última Mensagem |
-|----------|----------|-------|-----------------|
-| Ana Paula (Vendas) | `+551991068935` (12 dígitos) | vendas | 12/Jan |
-| Paulinha (Operações) | `+5519991068935` (13 dígitos) | operacoes | 26/Jan (hoje) |
+```typescript
+// Código atual - LINHA 168-174
+const { error } = await supabase
+  .from("clients")
+  .update({
+    responsible_user_id: currentUser.id,
+    updated_at: new Date().toISOString(),  // ERRO: Esta coluna não existe!
+  })
+  .eq("id", clientId);
+```
 
-**O que acontece:**
-1. A conversa original foi criada com formato antigo (sem o 9)
-2. Novas mensagens chegam com formato normalizado (com o 9)
-3. O webhook cria uma NOVA conversa em vez de encontrar a existente
-4. O usuário olha a conversa antiga (vazia) enquanto as mensagens vão para a nova
+A tabela `clients` possui apenas `created_at`, não possui `updated_at`. Quando o Supabase tenta executar este update, ele falha porque a coluna não existe.
 
-**Causa raiz no código:**
-- O Layer 1 do fallback de busca (linha 792-820) tenta encontrar conversas com formato alternativo, MAS filtra por `integration_id`
-- Como as conversas estão em integrações diferentes (vendas vs operações), o fallback não as encontra
-- O Layer 2 (linha 822-914) deveria unificar, mas há uma falha na lógica de busca por formato alternativo
+### Evidência
 
-### Problema 2: Mensagens que Simplesmente Não Chegam
-
-**Evidência:**
-- Conversa `+5543998319449` tem 6 mensagens outbound hoje, mas 0 inbound desde 20/Jan
-- O usuário enviou áudios às 16:26, mas a resposta do cliente não apareceu
-
-**Possíveis causas:**
-1. **UAZAPI não está enviando webhooks** para certas mensagens inbound
-2. **Webhook está sendo ignorado** por algum filtro (reaction, status, etc.)
-3. **Timeout ou erro silencioso** no processamento
-
-### Problema 3: Falta de Vinculação Cliente-Conversa
-
-A conversa "Paulinha" em Operações NÃO está vinculada ao cliente (`client_id: NULL`), mesmo existindo o cliente "Ana Paula Cardoso" com o mesmo telefone. Isso dificulta a rastreabilidade.
+A verificação do schema da tabela `clients` confirma que não há coluna `updated_at`:
+- Colunas existentes incluem: `id`, `account_id`, `full_name`, `phone_e164`, `created_at`, `responsible_user_id`, etc.
+- Coluna `updated_at` está **ausente**
 
 ---
 
-## Solução Proposta
+## Solução
 
-### Correção 1: Melhorar Layer 1 - Busca Cross-Integration para BR Numbers
+### Correção no Arquivo: `src/components/contracts/ContractTriageQueue.tsx`
 
-**Arquivo:** `supabase/functions/uazapi-webhook/index.ts` (linhas 791-820)
+Remover a referência à coluna `updated_at` em ambas as funções de atualização:
 
-O problema é que o Layer 1 filtra por `integration_id`, então não encontra conversas com o mesmo telefone em outras integrações/setores.
-
-**Mudança:** Remover o filtro de `integration_id` no Layer 1 para números brasileiros, permitindo encontrar e ATUALIZAR conversas existentes:
+**1. Função `handlePullClient` (linhas 160-186):**
 
 ```typescript
-// === LAYER 1: Brazilian phone format fallback (cross-integration) ===
-if (!existingZappConvo && phone && phone.startsWith("+55") && phone.length === 14) {
-  const phoneWithout9 = phone.substring(0, 5) + phone.substring(6);
-  console.log(`[PHONE] Fallback L1: trying ${phoneWithout9} (removed 9th digit) across ALL integrations`);
-  
-  // Search WITHOUT integration_id filter to find existing conversations
-  const { data: fallbackData } = await supabase
-    .from("zapp_conversations")
-    .select("id, unread_count, integration_id, contact_name, client_id, lead_id, phone_e164, sector_id")
-    .eq("account_id", accountId)
-    .eq("phone_e164", phoneWithout9)
-    .eq("is_group", false)
-    .order("last_message_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  
-  if (fallbackData) {
-    existingZappConvo = fallbackData;
-    console.log(`[PHONE] Found via L1: old format ${phoneWithout9}, will update phone and integration`);
-    
-    // Update phone to normalized format AND update integration/sector
-    await supabase
-      .from("zapp_conversations")
-      .update({ 
-        phone_e164: phone,
-        integration_id: integrationId,
-        sector_id: sectorId
-      })
-      .eq("id", fallbackData.id);
+const handlePullClient = async (clientId: string) => {
+  if (!currentUser) {
+    toast.error("Usuário não autenticado");
+    return;
   }
-}
+
+  setPullingClientId(clientId);
+  try {
+    const { error } = await supabase
+      .from("clients")
+      .update({
+        responsible_user_id: currentUser.id,
+        // Remover: updated_at: new Date().toISOString(),
+      })
+      .eq("id", clientId);
+
+    if (error) throw error;
+
+    toast.success("Cliente atribuído a você!");
+    onRefresh();
+  } catch (error) {
+    console.error("Error pulling client:", error);
+    toast.error("Erro ao puxar cliente");
+  } finally {
+    setPullingClientId(null);
+  }
+};
 ```
 
-### Correção 2: Adicionar Logging Detalhado para Mensagens Ignoradas
-
-**Arquivo:** `supabase/functions/uazapi-webhook/index.ts`
-
-Adicionar logs em TODOS os pontos de retorno para rastrear mensagens que não são processadas:
+**2. Função `handleAssignResponsible` (linhas 188-210):**
 
 ```typescript
-// Adicionar no início de cada return ignorado:
-console.log(`[IGNORED] reason: ${reason}, phone: ${phone || 'N/A'}, type: ${msg.type || 'N/A'}, msgId: ${msg.id || 'N/A'}`);
+const handleAssignResponsible = async (clientId: string, userId: string) => {
+  setAssigningClientId(clientId);
+  try {
+    const { error } = await supabase
+      .from("clients")
+      .update({
+        responsible_user_id: userId,
+        // Remover: updated_at: new Date().toISOString(),
+      })
+      .eq("id", clientId);
+
+    if (error) throw error;
+
+    const assignedUser = teamUsers.find((u) => u.id === userId);
+    toast.success(`Cliente atribuído a ${assignedUser?.name || "usuário"}!`);
+    onRefresh();
+  } catch (error) {
+    console.error("Error assigning responsible:", error);
+    toast.error("Erro ao atribuir responsável");
+  } finally {
+    setAssigningClientId(null);
+  }
+};
 ```
-
-### Correção 3: Melhorar Validação de Mensagens Inbound
-
-**Arquivo:** `supabase/functions/uazapi-webhook/index.ts` (linhas 697-710)
-
-Adicionar mais contexto nos logs de mensagens bloqueadas para facilitar debug:
-
-```typescript
-if (direction === "inbound" && !phone) {
-  console.error(`[WEBHOOK] CRITICAL: Inbound message BLOCKED - missing phone`);
-  console.error(`[WEBHOOK] Full payload snippet:`, JSON.stringify({
-    chatPhone: chat.phone,
-    chatId: chat.id,
-    waChatid: chat.wa_chatid,
-    sender: msg.sender,
-    senderPn: msg.sender_pn,
-    msgId: msg.id
-  }));
-  // Continue processing to avoid silent failures
-}
-```
-
-### Correção 4: Trigger de Vinculação Automática Cliente-Conversa
-
-Garantir que o trigger `sync_zapp_conversation_client` funcione corretamente quando o telefone muda:
-
-**Verificação:** O trigger existe e está ativo, mas pode não estar sendo disparado quando o telefone é atualizado via Layer 1/Layer 2.
-
-**Ação:** Adicionar chamada explícita para vincular cliente após atualizar telefone da conversa.
 
 ---
 
@@ -132,28 +102,22 @@ Garantir que o trigger `sync_zapp_conversation_client` funcione corretamente qua
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `supabase/functions/uazapi-webhook/index.ts` | Melhorar Layer 1 (cross-integration), adicionar logging detalhado |
+| `src/components/contracts/ContractTriageQueue.tsx` | Remover referência a `updated_at` nas funções `handlePullClient` e `handleAssignResponsible` |
 
 ---
 
 ## Impacto Esperado
 
-1. **Conversas com telefone antigo** serão encontradas e atualizadas automaticamente
-2. **Logs detalhados** permitirão identificar exatamente quais mensagens estão sendo ignoradas e por quê
-3. **Vinculação cliente-conversa** será mantida mesmo quando conversas migram entre setores
+- O botão "Puxar" passará a funcionar corretamente
+- O seletor "Atribuir a..." passará a funcionar corretamente
+- Clientes poderão ser atribuídos a consultores sem erros
+- O fluxo de triagem da operação será restaurado
 
-## Considerações de Segurança
+## Considerações Técnicas
 
-Esta correção permite que uma conversa "migre" entre setores quando o mesmo cliente responde através de uma integração diferente. Isso é o comportamento desejado para evitar fragmentação de histórico, mas significa que:
-- A conversa será movida para o setor da última integração que recebeu mensagem
-- O histórico completo será preservado
-- A vinculação com o cliente será mantida
+A coluna `updated_at` é comumente usada para rastrear a última modificação de um registro. Se for desejável ter essa funcionalidade no futuro, seria necessário:
 
-## Resumo Técnico
+1. Adicionar a coluna `updated_at` na tabela `clients` via migração
+2. Opcionalmente criar um trigger para atualizar automaticamente este valor
 
-O problema principal é a **fragmentação de conversas** causada por:
-1. Formatos de telefone diferentes (12 vs 13 dígitos BR)
-2. Múltiplas integrações/setores
-3. Filtros muito restritivos na busca por conversa existente
-
-A solução é tornar a busca mais flexível para números brasileiros, permitindo encontrar e unificar conversas mesmo que estejam em integrações diferentes.
+Porém, para resolver o problema imediato, basta remover a referência à coluna inexistente.
