@@ -172,13 +172,33 @@ function SortableFieldItem({
   );
 }
 
+type SectorContext = "clients" | "deals" | "leads";
+
 interface CustomFieldsManagerProps {
   onFieldsChange?: () => void;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  sectorContext?: SectorContext;
 }
 
-export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpenChange: externalOnOpenChange }: CustomFieldsManagerProps) {
+const SECTOR_COLUMN_MAP: Record<SectorContext, string> = {
+  clients: "show_in_clients",
+  deals: "show_in_deals",
+  leads: "show_in_leads",
+};
+
+const SECTOR_TITLE_MAP: Record<SectorContext, string> = {
+  clients: "Campos de Clientes (Operações)",
+  deals: "Campos de Negócios (Vendas)",
+  leads: "Campos de Leads (Vendas)",
+};
+
+export function CustomFieldsManager({ 
+  onFieldsChange, 
+  open: externalOpen, 
+  onOpenChange: externalOnOpenChange,
+  sectorContext = "clients" 
+}: CustomFieldsManagerProps) {
   const { currentUser } = useCurrentUser();
   const [fields, setFields] = useState<CustomField[]>([]);
   const [folders, setFolders] = useState<FolderConfig[]>([]);
@@ -241,13 +261,27 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
       })));
     }
     
-    // Fetch fields
-    const { data, error } = await supabase
+    // Determine the visibility column based on sector context
+    const visibilityColumn = SECTOR_COLUMN_MAP[sectorContext] as "show_in_clients" | "show_in_deals" | "show_in_leads";
+    
+    // Fetch fields filtered by sector context
+    let query = supabase
       .from("custom_fields")
       .select("*")
       .eq("account_id", currentUser.account_id)
       .eq("is_active", true)
       .order("display_order");
+    
+    // Apply sector-specific filter
+    if (visibilityColumn === "show_in_clients") {
+      query = query.eq("show_in_clients", true);
+    } else if (visibilityColumn === "show_in_deals") {
+      query = query.eq("show_in_deals", true);
+    } else {
+      query = query.eq("show_in_leads", true);
+    }
+    
+    const { data, error } = await query;
 
     if (!error && data) {
       const mappedFields: CustomField[] = data.map(f => ({
@@ -455,6 +489,7 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
         return;
       }
 
+      // Set visibility flags based on sector context
       const fieldData = {
         account_id: currentUser.account_id,
         name: name.trim(),
@@ -465,7 +500,10 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
           value: opt.value || `opt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         })) : [],
         is_required: isRequired,
-        show_in_clients: showInClients,
+        // Set visibility based on sector context (only set current sector's flag to true for new fields)
+        show_in_clients: editingField ? showInClients : sectorContext === "clients",
+        show_in_deals: editingField ? editingField.show_in_clients : sectorContext === "deals",
+        show_in_leads: editingField ? false : sectorContext === "leads",
         display_order: editingField?.display_order ?? fields.length,
       };
 
@@ -772,7 +810,7 @@ export function CustomFieldsManager({ onFieldsChange, open: externalOpen, onOpen
             {/* Header fixo */}
             <div className="flex-shrink-0 p-6 pb-0">
               <DialogHeader>
-                <DialogTitle>Configurar Campos</DialogTitle>
+                <DialogTitle>Configurar {SECTOR_TITLE_MAP[sectorContext]}</DialogTitle>
               </DialogHeader>
             </div>
             
