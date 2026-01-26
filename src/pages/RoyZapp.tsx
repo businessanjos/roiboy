@@ -3384,6 +3384,7 @@ export default function RoyZapp() {
           }}
           onCancelReply={() => setReplyingTo(null)}
           onDeleteMessage={handleDeleteMessage}
+          onEditMessage={handleEditMessage}
           onRetryMessage={(msg) => {
             // Remove the failed message and re-add its content to input for retry
             setMessages(prev => prev.filter(m => m.id !== msg.id));
