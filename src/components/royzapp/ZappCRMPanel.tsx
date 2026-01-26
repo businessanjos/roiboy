@@ -102,6 +102,10 @@ const [showCreateDeal, setShowCreateDeal] = useState(false);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<PendingTask | null>(null);
   const [selectedActivityType, setSelectedActivityType] = useState<ActivityType | null>(null);
+  
+  // Products for "Item da Venda"
+  const [products, setProducts] = useState<{ id: string; name: string; price: number }[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
 
   // Fetch deal stages
   const { data: stages = [] } = useQuery({
@@ -116,6 +120,27 @@ const [showCreateDeal, setShowCreateDeal] = useState(false);
     },
     enabled: !!currentUser?.account_id,
   });
+
+  // Fetch products for "Item da Venda"
+  const { data: fetchedProducts = [] } = useQuery({
+    queryKey: ["products-zapp", currentUser?.account_id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id, name, price")
+        .eq("account_id", currentUser?.account_id)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as { id: string; name: string; price: number }[];
+    },
+    enabled: !!currentUser?.account_id && showCreateDeal,
+  });
+
+  // Sync products to state when fetched
+  if (fetchedProducts.length > 0 && products.length !== fetchedProducts.length) {
+    setProducts(fetchedProducts);
+  }
 
   // Fetch lead info if we have a lead_id
   const { data: leadInfo, isLoading: leadLoading } = useQuery({
@@ -298,7 +323,7 @@ const [showCreateDeal, setShowCreateDeal] = useState(false);
     mutationFn: async () => {
       if (!currentUser?.account_id || !stages[0]) throw new Error("Dados insuficientes");
       
-      const { error } = await supabase
+      const { data: newDeal, error } = await supabase
         .from("deals")
         .insert({
           account_id: currentUser.account_id,
@@ -309,14 +334,27 @@ const [showCreateDeal, setShowCreateDeal] = useState(false);
           client_id: conversationClientId || null,
           status: "open",
           responsible_user_id: currentUser.id,
-        });
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+
+      // Persist product_id in deal_field_values if selected
+      if (newDeal && selectedProductId && selectedProductId !== "__none__") {
+        await supabase.from("deal_field_values").insert({
+          deal_id: newDeal.id,
+          field_id: "033b91fb-3add-4c96-aec9-567fefbd0fb2",
+          account_id: currentUser.account_id,
+          value_text: selectedProductId,
+        });
+      }
     },
     onSuccess: () => {
       refetchDeals();
       setShowCreateDeal(false);
       setNewDealTitle("");
       setNewDealValue("");
+      setSelectedProductId("");
       toast.success("Negócio criado!");
     },
     onError: () => {
@@ -689,6 +727,37 @@ const [showCreateDeal, setShowCreateDeal] = useState(false);
                     placeholder={conversationContactName || "Nome do negócio"}
                     className="h-8 text-sm bg-zapp-bg border-zapp-border text-zapp-text mt-1"
                   />
+                </div>
+
+                {/* Item da Venda */}
+                <div>
+                  <Label className="text-xs text-zapp-text-muted">Item da Venda</Label>
+                  <select
+                    value={selectedProductId}
+                    onChange={(e) => {
+                      const productId = e.target.value;
+                      setSelectedProductId(productId);
+                      if (productId && productId !== "__none__") {
+                        const product = products.find(p => p.id === productId);
+                        if (product) {
+                          const formatted = new Intl.NumberFormat("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          }).format(product.price);
+                          setNewDealValue(formatted);
+                        }
+                      }
+                    }}
+                    className="w-full h-8 text-sm bg-zapp-bg border border-zapp-border text-zapp-text mt-1 rounded px-2"
+                  >
+                    <option value="">Selecione o produto</option>
+                    <option value="__none__">Nenhum</option>
+                    {products.map(product => (
+                      <option key={product.id} value={product.id}>
+                        {product.name} - {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(product.price)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

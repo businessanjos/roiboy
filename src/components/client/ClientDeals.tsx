@@ -89,6 +89,10 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
   const [selectedDeal, setSelectedDeal] = useState<DealType | null>(null);
   const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
 
+  // Products for "Item da Venda"
+  const [products, setProducts] = useState<{ id: string; name: string; price: number }[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+
   // Form state
   const [formData, setFormData] = useState({
     title: "",
@@ -105,6 +109,35 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
     }
     fetchStages();
   }, [clientId, linkedClientIds]);
+
+  // Load products when dialog opens
+  useEffect(() => {
+    const loadProducts = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+      
+      const { data: userData } = await supabase
+        .from("users")
+        .select("account_id")
+        .eq("auth_user_id", authUser.id)
+        .single();
+      
+      if (!userData) return;
+      
+      const { data } = await supabase
+        .from("products")
+        .select("id, name, price")
+        .eq("account_id", userData.account_id)
+        .eq("is_active", true)
+        .order("name");
+      
+      setProducts(data || []);
+    };
+    
+    if (isDialogOpen) {
+      loadProducts();
+    }
+  }, [isDialogOpen]);
 
   const fetchStages = async () => {
     const { data } = await supabase
@@ -158,7 +191,7 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
 
       const firstStage = stages.sort((a, b) => a.display_order - b.display_order)[0];
 
-      const { error } = await supabase.from("deals").insert({
+      const { data: newDeal, error } = await supabase.from("deals").insert({
         account_id: userData.account_id,
         client_id: clientId,
         title: formData.title.trim(),
@@ -168,9 +201,19 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
         source: formData.source || null,
         notes: formData.notes || null,
         responsible_user_id: userData.id,
-      });
+      }).select("id").single();
 
       if (error) throw error;
+
+      // Persist product_id in deal_field_values if selected
+      if (newDeal && selectedProductId && selectedProductId !== "__none__") {
+        await supabase.from("deal_field_values").insert({
+          deal_id: newDeal.id,
+          field_id: "033b91fb-3add-4c96-aec9-567fefbd0fb2",
+          account_id: userData.account_id,
+          value_text: selectedProductId,
+        });
+      }
 
       toast.success("Negócio criado com sucesso!");
       setIsDialogOpen(false);
@@ -182,6 +225,7 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
         source: "",
         notes: "",
       });
+      setSelectedProductId("");
       fetchDeals();
     } catch (error: any) {
       console.error("Error creating deal:", error);
@@ -519,6 +563,43 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 placeholder={`Negócio com ${clientName || "cliente"}`}
               />
+            </div>
+
+            {/* Item da Venda */}
+            <div className="space-y-2">
+              <Label>Item da Venda</Label>
+              <Select
+                value={selectedProductId}
+                onValueChange={(productId) => {
+                  setSelectedProductId(productId);
+                  if (productId && productId !== "__none__") {
+                    const product = products.find(p => p.id === productId);
+                    if (product) {
+                      setFormData(prev => ({
+                        ...prev,
+                        value: product.price.toString()
+                      }));
+                    }
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o produto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
+                  {products.map(product => (
+                    <SelectItem key={product.id} value={product.id}>
+                      <div className="flex items-center justify-between w-full gap-2">
+                        <span>{product.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(product.price)}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-2 gap-4">

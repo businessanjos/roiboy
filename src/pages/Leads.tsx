@@ -177,6 +177,10 @@ export default function Leads() {
   const [creatingDeal, setCreatingDeal] = useState(false);
   const [leadForDeal, setLeadForDeal] = useState<Lead | null>(null);
 
+  // Products for "Item da Venda"
+  const [products, setProducts] = useState<{ id: string; name: string; price: number }[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+
   // Get deals for the current lead
   const getLeadDeals = useCallback((leadId: string) => {
     return deals.filter(d => d.lead_id === leadId);
@@ -189,6 +193,26 @@ export default function Leads() {
     stage_id: "",
     notes: "",
   });
+
+  // Load products when deal-form step is active
+  useEffect(() => {
+    const loadProducts = async () => {
+      if (!currentUser?.account_id) return;
+      
+      const { data } = await supabase
+        .from("products")
+        .select("id, name, price")
+        .eq("account_id", currentUser.account_id)
+        .eq("is_active", true)
+        .order("name");
+      
+      setProducts(data || []);
+    };
+    
+    if (dialogStep === 'deal-form') {
+      loadProducts();
+    }
+  }, [dialogStep, currentUser?.account_id]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -307,6 +331,7 @@ export default function Leads() {
     setLeadForDeal(null);
     setDialogStep('phone');
     clearLeadDuplicates();
+    setSelectedProductId("");
   };
 
   const openNewDialog = () => {
@@ -436,6 +461,9 @@ export default function Leads() {
   const handleCreateDeal = async () => {
     setCreatingDeal(true);
     try {
+      // Prepare product_id if selected
+      const productId = selectedProductId && selectedProductId !== "__none__" ? selectedProductId : undefined;
+      
       // Create deal from existing client or lead
       if (existingClient) {
         const deal = await createDeal({
@@ -444,6 +472,7 @@ export default function Leads() {
           stage_id: dealFormData.stage_id || undefined,
           value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
           notes: dealFormData.notes || undefined,
+          product_id: productId,
         });
 
         if (deal) {
@@ -464,6 +493,7 @@ export default function Leads() {
           value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
           notes: dealFormData.notes || leadForDeal.notes || undefined,
           source: leadForDeal.source || undefined,
+          product_id: productId,
         });
 
         if (deal) {
@@ -1684,6 +1714,43 @@ export default function Leads() {
                   onChange={(e) => setDealFormData({ ...dealFormData, title: e.target.value })}
                   placeholder="Ex: Consultoria inicial"
                 />
+              </div>
+
+              {/* Item da Venda */}
+              <div className="space-y-2">
+                <Label>Item da Venda</Label>
+                <Select
+                  value={selectedProductId}
+                  onValueChange={(productId) => {
+                    setSelectedProductId(productId);
+                    if (productId && productId !== "__none__") {
+                      const product = products.find(p => p.id === productId);
+                      if (product) {
+                        setDealFormData(prev => ({
+                          ...prev,
+                          value: product.price.toString()
+                        }));
+                      }
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o produto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Nenhum</SelectItem>
+                    {products.map(product => (
+                      <SelectItem key={product.id} value={product.id}>
+                        <div className="flex items-center justify-between w-full gap-2">
+                          <span>{product.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(product.price)}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
