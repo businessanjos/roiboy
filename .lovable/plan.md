@@ -1,163 +1,241 @@
 
-# Plano: Fixar Barra de Comentários no Perfil do Cliente
+# Plano: Garantir que Item da Venda Não Seja Perdido na Transição para Contrato
 
-## Problema
+## Problema Identificado
 
-Quando a Timeline ou as abas de Financeiro possuem muitas informações, os usuários precisam rolar até o final da página para acessar a caixa de comentário/anexo. Isso prejudica a usabilidade.
+Quando um negócio é marcado como "Ganho" e vai para a fila de conciliação, o **produto (Item da Venda)** frequentemente é perdido porque o mapeamento entre o valor do campo personalizado e o produto é **estático e incompleto**.
 
-## Componentes Afetados
+### Análise de Dados
 
-| Componente | Local do Input | Problema |
-|------------|----------------|----------|
-| `Timeline.tsx` | Final da lista | Fica escondido quando há muitos eventos |
-| `FinancialNotes.tsx` | Topo da lista | OK, mas pode melhorar com scroll |
-| `ClientFinancial.tsx` (aba Lançamentos) | Topo | Usa `FinancialQuickNoteInput` |
+**Opções disponíveis no campo "Item da Venda":**
 
-## Solução Proposta
-
-Reestruturar o layout para usar um container flex com altura definida:
+| Value | Label | Tem Mapeamento? | Tem Produto? |
+|-------|-------|-----------------|--------------|
+| `rykas_pass` | Rykas Pass | ❌ Não | ❌ Não existe |
+| `rykas_mentoring` | Rykas Mentoring | ✅ Sim | ✅ Existe |
+| `ren_rykas_mentoring` | Ren. Rykas Mentoring | ✅ Sim | ✅ Existe |
+| `eternum_club` | Eternum Club | ✅ Sim | ✅ Existe |
+| `ren_eternum_club` | Ren. Eternum Club | ✅ Sim | ✅ Existe |
+| `eternum_private` | Eternum Private | ✅ Sim | ✅ Existe |
+| `ren_eternum_private` | Ren. Eternum Private | ✅ Sim | ✅ Existe |
+| `eternum_mvp` | Eternum MVP | ❌ Não | ❌ Não existe |
+| `anjoszap_basic` | Anjoszap - Basic | ❌ Não | ❌ Não existe |
+| `anjoszap_premium` | Anjoszap - Premium | ❌ Não | ❌ Não existe |
+| `liberty_ia_mensal` | Liberty IA - Mensal | ❌ Não | ❌ Não existe |
+| `liberty_ia_anual` | Liberty IA - Anual | ❌ Não | ❌ Não existe |
+| `conselho_anjo` | Conselho de Anjo | ✅ Sim | ✅ Existe |
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                           ESTRUTURA ATUAL                                  │
+│                         PROBLEMA ATUAL                                     │
 └────────────────────────────────────────────────────────────────────────────┘
 
-   Timeline.tsx                        FinancialNotes.tsx
-┌─────────────────────────┐         ┌─────────────────────────┐
-│  Evento 1               │         │  Input (topo)           │
-│  Evento 2               │         │  Nota 1                 │
-│  Evento 3               │         │  Nota 2                 │
-│  ...                    │         │  ...                    │
-│  Evento N               │         │  Nota N                 │
-│  ────────────────────── │         └─────────────────────────┘
-│  Input (fundo)          │
-│  (precisa rolar)        │
-└─────────────────────────┘
+   Deal Field Value              Mapeamento Estático             Produtos
+   "eternum_mvp"                 ITEM_VENDA_TO_PRODUCT           (banco)
+┌─────────────────┐            ┌─────────────────────┐        ┌───────────────┐
+│ value_text:     │            │ eternum_mvp: ???    │        │ Eternum Club  │
+│ "eternum_mvp"   │────────────│ (NÃO EXISTE!)       │───X────│ Rykas Mentor. │
+└─────────────────┘            └─────────────────────┘        │ etc...        │
+        │                               │                     └───────────────┘
+        │                               │
+        ▼                               ▼
+   product_id = null ──────────▶ CONTRATO SEM PRODUTO!
+```
 
+---
 
+## Causa Raiz
+
+O sistema atual usa um **mapeamento estático** (`ITEM_VENDA_TO_PRODUCT`) em `src/utils/dealToClientContractMapping.ts` que:
+
+1. Precisa ser **atualizado manualmente** quando novos produtos são criados
+2. Falha **silenciosamente** quando o value não está mapeado (retorna `null`)
+3. Depende de nomes **exatos** dos produtos, que podem ter sido duplicados ou alterados
+
+---
+
+## Solução Proposta
+
+### Abordagem: Mapeamento Dinâmico via Label
+
+Em vez de depender de um objeto estático, buscar o **label da opção selecionada** diretamente do campo personalizado e fazer **match fuzzy** com os produtos existentes.
+
+```text
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                           ESTRUTURA NOVA                                   │
+│                         SOLUÇÃO PROPOSTA                                   │
 └────────────────────────────────────────────────────────────────────────────┘
 
-   Timeline.tsx                        FinancialNotes.tsx
-┌─────────────────────────┐         ┌─────────────────────────┐
-│ ┌─────────────────────┐ │         │ ┌─────────────────────┐ │
-│ │  Evento 1           │ │         │ │  Nota 1             │ │
-│ │  Evento 2           │ │         │ │  Nota 2             │ │
-│ │  Evento 3           │ │         │ │  ...                │ │
-│ │  ...                │ │         │ │  Nota N             │ │
-│ │  (scrollable)       │ │         │ │  (scrollable)       │ │
-│ └─────────────────────┘ │         │ └─────────────────────┘ │
-│ ────────────────────────│         │ ────────────────────────│
-│ Input (fixo no fundo)   │         │ Input (fixo no fundo)   │
-│ sempre visível          │         │ sempre visível          │
-└─────────────────────────┘         └─────────────────────────┘
+   Deal Field Value              Campo Custom Field              Produtos
+   "eternum_mvp"                 (options JSONB)                 (banco)
+┌─────────────────┐            ┌─────────────────────┐        ┌───────────────┐
+│ value_text:     │            │ value: eternum_mvp  │        │ Eternum MVP   │
+│ "eternum_mvp"   │────────────│ label: "Eternum MVP"│────────│ (precisa      │
+└─────────────────┘            └─────────────────────┘        │  ser criado)  │
+        │                               │                     └───────────────┘
+        │                               │
+        ▼                               ▼
+   1. Busca label da opção     2. Match com produto     3. product_id correto!
 ```
 
-## Alterações por Arquivo
+---
 
-### 1. `src/components/client/Timeline.tsx`
+## Alterações Técnicas
 
-Modificar o wrapper principal para:
-- Usar `flex flex-col` com altura máxima (ex: `max-h-[600px]`)
-- Lista de eventos dentro de um container com `flex-1 overflow-y-auto`
-- Input permanece fora do container scrollable (no fundo)
+### Arquivo: `src/utils/dealToClientContractMapping.ts`
 
-```tsx
-// Estrutura nova:
-<div className="flex flex-col max-h-[600px]">
-  {/* Lista scrollable */}
-  <div className="flex-1 overflow-y-auto space-y-4 pr-2">
-    {/* eventos aqui */}
-  </div>
+#### 1. Nova função para buscar o label da opção selecionada
+
+```typescript
+// Busca o label da opção selecionada no campo "Item da Venda"
+async function getItemVendaLabel(itemVendaValue: string): Promise<string | null> {
+  const { data } = await supabase
+    .from('custom_fields')
+    .select('options')
+    .eq('id', DEAL_FIELD_IDS.ITEM_VENDA)
+    .single();
   
-  {/* Input fixo no fundo */}
-  <div className="flex-shrink-0 pt-4 border-t bg-background">
-    {/* comment input */}
-  </div>
-</div>
-```
-
-### 2. `src/components/client/FinancialNotes.tsx`
-
-Aplicar a mesma estrutura:
-- Container flex com altura máxima
-- Lista de notas scrollable
-- Input MOVIDO para o fundo (atualmente está no topo)
-
-```tsx
-<div className="flex flex-col max-h-[600px]">
-  {/* Lista scrollable */}
-  <div className="flex-1 overflow-y-auto space-y-3 pr-2">
-    {notes.map(...)}
-  </div>
+  if (!data?.options) return null;
   
-  {/* Input fixo no fundo */}
-  <div className="flex-shrink-0 pt-4 border-t bg-background">
-    {/* quick comment input */}
-  </div>
-</div>
-```
-
-### 3. `src/components/client/ClientFinancial.tsx`
-
-Para a aba "entries" (Lançamentos):
-- Mover `FinancialQuickNoteInput` para o FINAL do TabsContent
-- Aplicar layout flex similar
-
-```tsx
-<TabsContent value="entries" className="mt-4 flex flex-col max-h-[600px]">
-  {/* Lista scrollable */}
-  <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-    {financialEntries.map(...)}
-  </div>
+  const options = data.options as Array<{ value: string; label: string }>;
+  const option = options.find(o => o.value === itemVendaValue);
   
-  {/* Input fixo no fundo */}
-  <div className="flex-shrink-0 pt-4 border-t bg-background">
-    <FinancialQuickNoteInput ... />
-  </div>
-</TabsContent>
-```
-
-## Detalhes Técnicos
-
-### Altura do Container
-
-Usar `max-h-[600px]` como padrão, que:
-- Permite cerca de 6-8 itens visíveis
-- Funciona bem em telas de laptop (768px+)
-- Pode ser ajustado com media queries se necessário
-
-### Scroll Suave
-
-Adicionar `scroll-smooth` para melhor UX ao navegar:
-```css
-.overflow-y-auto {
-  scroll-behavior: smooth;
+  return option?.label || null;
 }
 ```
 
-### Padding Right
+#### 2. Atualizar `mapItemVendaToProductId` para usar busca dinâmica
 
-Adicionar `pr-2` na área scrollable para evitar que a scrollbar sobreponha o conteúdo.
+```typescript
+export async function mapItemVendaToProductId(itemVendaValue: string): Promise<string | null> {
+  // 1. Primeiro, tentar pelo mapeamento estático (compatibilidade)
+  const staticProductName = ITEM_VENDA_TO_PRODUCT[itemVendaValue];
+  if (staticProductName) {
+    const productId = await getProductIdByName(staticProductName);
+    if (productId) return productId;
+  }
+  
+  // 2. Fallback: buscar label da opção e fazer match com produto
+  const label = await getItemVendaLabel(itemVendaValue);
+  if (!label) return null;
+  
+  // Limpar prefixo "Ren. " se existir para match
+  const cleanLabel = label.replace(/^Ren\.\s*/i, '').trim();
+  
+  const productId = await getProductIdByName(cleanLabel);
+  return productId;
+}
+```
 
-### Background do Input
+#### 3. Melhorar `getProductIdByName` para busca case-insensitive com match parcial
 
-Usar `bg-background` no container do input para garantir que ele se destaque do conteúdo scrollado.
+```typescript
+export async function getProductIdByName(productName: string): Promise<string | null> {
+  // Invalidar cache para garantir dados atualizados
+  // (ou usar cache com TTL curto)
+  
+  const { data } = await supabase
+    .from('products')
+    .select('id, name')
+    .eq('is_active', true);
+  
+  if (!data || data.length === 0) return null;
+  
+  const normalizedSearch = productName.toLowerCase().trim();
+  
+  // Match exato primeiro
+  const exactMatch = data.find(p => 
+    p.name.toLowerCase().trim() === normalizedSearch
+  );
+  if (exactMatch) return exactMatch.id;
+  
+  // Match parcial (contém)
+  const partialMatch = data.find(p => 
+    p.name.toLowerCase().includes(normalizedSearch) ||
+    normalizedSearch.includes(p.name.toLowerCase())
+  );
+  if (partialMatch) return partialMatch.id;
+  
+  return null;
+}
+```
+
+### Adicionar Logs para Debug
+
+```typescript
+export async function mapItemVendaToProductId(itemVendaValue: string): Promise<string | null> {
+  console.log('[DealMapping] Mapping item da venda:', itemVendaValue);
+  
+  // ... lógica ...
+  
+  if (!productId) {
+    console.warn('[DealMapping] Could not find product for:', itemVendaValue, '- label:', label);
+  } else {
+    console.log('[DealMapping] Mapped to product:', productId);
+  }
+  
+  return productId;
+}
+```
+
+---
+
+## Atualização do Mapeamento Estático (Medida Imediata)
+
+Enquanto implementamos a solução dinâmica, também atualizar o mapeamento estático para incluir os valores faltantes:
+
+```typescript
+const ITEM_VENDA_TO_PRODUCT: Record<string, string> = {
+  // Existentes
+  'eternum_private': 'Eternum Private',
+  'ren_eternum_private': 'Eternum Private',
+  'eternum_club': 'Eternum Club',
+  'ren_eternum_club': 'Eternum Club',
+  'rykas_mentoring': 'Rykas Mentoring',
+  'ren_rykas_mentoring': 'Rykas Mentoring',
+  'conselho_anjo': 'Conselho de Anjo',
+  'makers_club': 'Makers Club',
+  'mentoria_makers': 'Mentoria Makers',
+  
+  // NOVOS - adicionando os faltantes
+  'rykas_pass': 'Rykas Pass',           // Produto precisa existir
+  'eternum_mvp': 'Eternum MVP',         // Produto precisa existir
+  'anjoszap_basic': 'Anjoszap - Basic', // Produto precisa existir
+  'anjoszap_premium': 'Anjoszap - Premium', // Produto precisa existir
+  'liberty_ia_mensal': 'Liberty IA - Mensal', // Produto precisa existir
+  'liberty_ia_anual': 'Liberty IA - Anual', // Produto precisa existir
+};
+```
+
+---
 
 ## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/client/Timeline.tsx` | Reestruturar layout com flex e área scrollable |
-| `src/components/client/FinancialNotes.tsx` | Mover input para fundo + layout flex |
-| `src/components/client/ClientFinancial.tsx` | Aba "entries": mover input para fundo + layout flex |
+| `src/utils/dealToClientContractMapping.ts` | Implementar mapeamento dinâmico via label + atualizar mapeamento estático como fallback |
+
+---
+
+## Produtos Faltantes (Ação Manual Necessária)
+
+Os seguintes produtos precisam ser criados na área de Produtos para que o mapeamento funcione:
+
+| Nome do Produto | Status |
+|-----------------|--------|
+| Rykas Pass | ❌ Criar |
+| Eternum MVP | ❌ Criar |
+| Anjoszap - Basic | ❌ Criar |
+| Anjoszap - Premium | ❌ Criar |
+| Liberty IA - Mensal | ❌ Criar |
+| Liberty IA - Anual | ❌ Criar |
+
+---
 
 ## Resultado Esperado
 
 | Cenário | Antes | Depois |
 |---------|-------|--------|
-| Timeline com 50+ eventos | Rolar toda a página | Input sempre visível no fundo |
-| Notas financeiras extensas | Rolar para comentar | Input sempre acessível |
-| Lançamentos financeiros | Input no topo desaparece | Input fixo no fundo |
-| Telas pequenas (laptop) | Mesmo problema | Área scrollable contida |
+| Deal com "eternum_mvp" ganho | Contrato sem produto | Contrato com "Eternum MVP" |
+| Deal com "rykas_pass" ganho | Contrato sem produto | Contrato com "Rykas Pass" |
+| Novo produto/opção adicionado | Precisa editar código | Funciona automaticamente |
+| Mapeamento inexistente | Falha silenciosa | Log de warning + fallback |
