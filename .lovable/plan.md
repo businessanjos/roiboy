@@ -1,245 +1,215 @@
 
-# Plano: Corrigir Bug de Duplicação ao Editar Mensagem
 
-## Diagnóstico do Problema
+# Plano: Adicionar Campo "Item da Venda" em Todos os Diálogos de Criação de Negócio
 
-A imagem mostra claramente o bug: uma mensagem foi editada (marcada "editado" às 16:47) e uma cópia idêntica apareceu logo abaixo (16:48).
+## Diagnóstico
 
-### Causa Raiz Identificada
+A alteração anterior foi feita no arquivo **`src/components/sales/LeadsTab.tsx`**, porém o usuário está acessando a página **`src/pages/Leads.tsx`** (rota `/setores`), que é um arquivo completamente diferente e não possui o campo "Item da Venda".
 
-O problema está no arquivo `supabase/functions/uazapi-webhook/index.ts` nas linhas 1222-1238:
+### Arquivos que precisam do campo "Item da Venda":
 
-| Comportamento Atual | Problema |
-|---------------------|----------|
-| Webhook recebe notificação de mensagem | - |
-| Busca mensagem por `external_message_id` | - |
-| Se existe, verifica se foi deletada | - |
-| Se foi deletada, retorna `ignored` | Correto |
-| Se NÃO foi deletada, continua o fluxo... | **BUG!** Deveria retornar aqui |
-| Entra no bloco de inserção (linha 1307) | Cria duplicata |
-
-```text
-// Fluxo atual com bug:
-if (existingMsg) {
-  // Verifica is_deleted
-  if (msgDetails?.is_deleted) {
-    return { ignored: true }; // OK
-  }
-  // FALTA UM RETURN AQUI! O código continua...
-} else {
-  // Bloco de deduplicação e insert
-}
-// insert() na linha 1307 executa mesmo quando existingMsg existe!
-```
-
-### Por que acontece ao editar?
-
-1. Usuário edita mensagem no frontend
-2. `handleEditMessage` atualiza o banco (`is_edited: true`, novo conteúdo)
-3. `handleEditMessage` chama UAZAPI para editar no WhatsApp
-4. UAZAPI envia webhook de confirmação com o mesmo `external_message_id`
-5. Webhook encontra mensagem existente, mas **não retorna**
-6. Webhook insere nova mensagem (duplicata)
-7. Realtime `INSERT` dispara e adiciona duplicata na tela
+| Arquivo | Localização do Dialog | Status Atual |
+|---------|----------------------|--------------|
+| `src/components/sales/LeadsTab.tsx` | Dialog "Criar Negócio" | Já implementado |
+| `src/pages/Leads.tsx` | Dialog "Criar Negócio" (linhas 1647-1760) | **Faltando** |
+| `src/components/client/ClientDeals.tsx` | Dialog "Criar Negócio" (linhas 560-605) | **Faltando** |
+| `src/components/royzapp/ZappCRMPanel.tsx` | Form "Criar Negócio" (linhas 677-726) | **Faltando** |
 
 ---
 
-## Solucao Proposta
+## Mudanças Necessárias
 
-### Correcao 1: Retornar Early quando Mensagem Existe (Principal)
+### 1. `src/pages/Leads.tsx`
 
-Modificar o webhook para retornar imediatamente quando encontrar uma mensagem existente que nao foi deletada:
-
-**Arquivo:** `supabase/functions/uazapi-webhook/index.ts`
-
-**Linha 1238:** Adicionar `return` apos verificar que mensagem existe e nao foi deletada:
-
+**Adicionar estado para produtos:**
 ```typescript
-// ANTES (bugado):
-if (existingMsg) {
-  console.log(`Message already exists with external_message_id ${messageId}, checking if deleted`);
-  
-  const { data: msgDetails } = await supabase
-    .from("zapp_messages")
-    .select("is_deleted")
-    .eq("id", existingMsg.id)
-    .maybeSingle();
-  
-  if (msgDetails?.is_deleted) {
-    console.log(`Message ${messageId} is deleted, ignoring webhook update`);
-    return new Response(
-      JSON.stringify({ ignored: true, reason: "message_deleted" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-  // BUG: Nao tem return aqui!
-} else {
-  // ...
+// Interface para produtos (após linha 103)
+interface Product {
+  id: string;
+  name: string;
+  price: number;
 }
 
-// DEPOIS (corrigido):
-if (existingMsg) {
-  console.log(`Message already exists with external_message_id ${messageId}, checking if deleted`);
-  
-  const { data: msgDetails } = await supabase
-    .from("zapp_messages")
-    .select("is_deleted, content, is_edited")
-    .eq("id", existingMsg.id)
-    .maybeSingle();
-  
-  if (msgDetails?.is_deleted) {
-    console.log(`Message ${messageId} is deleted, ignoring webhook update`);
-    return new Response(
-      JSON.stringify({ ignored: true, reason: "message_deleted" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-  
-  // CORRECAO: Se mensagem existe e nao foi deletada, apenas ignorar
-  // Isso evita duplicacao em caso de webhooks de edicao ou reprocessamento
-  console.log(`Message ${messageId} already exists and is not deleted, skipping insert`);
-  
-  // Pular o insert e continuar para atualizar assignment/status se necessario
-  // Mas NAO inserir nova mensagem
-  
-  // Continuar para atualizar assignment se necessario (abaixo do bloco de insert)
-  // Usando uma flag para indicar que deve pular o insert
-} else {
-  // ... logica de deduplicacao normal
-}
+// Dentro do componente (após linha 178)
+const [products, setProducts] = useState<Product[]>([]);
+const [selectedProductId, setSelectedProductId] = useState<string>("");
 ```
 
-### Correcao 2: Usar Flag para Pular Insert
-
-Adicionar uma flag `skipInsert` que sera `true` quando mensagem ja existe:
-
+**Adicionar useEffect para carregar produtos:**
 ```typescript
-// No inicio do bloco de verificacao:
-let skipInsert = false;
-
-if (existingMsg) {
-  console.log(`Message already exists with external_message_id ${messageId}`);
+useEffect(() => {
+  const loadProducts = async () => {
+    if (!currentUser?.account_id) return;
+    
+    const { data } = await supabase
+      .from("products")
+      .select("id, name, price")
+      .eq("account_id", currentUser.account_id)
+      .eq("is_active", true)
+      .order("name");
+    
+    setProducts(data || []);
+  };
   
-  const { data: msgDetails } = await supabase
-    .from("zapp_messages")
-    .select("is_deleted")
-    .eq("id", existingMsg.id)
-    .maybeSingle();
-  
-  if (msgDetails?.is_deleted) {
-    console.log(`Message ${messageId} is deleted, ignoring webhook`);
-    return new Response(
-      JSON.stringify({ ignored: true, reason: "message_deleted" }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+  if (dialogStep === 'deal-form') {
+    loadProducts();
   }
-  
-  // CORRECAO: Mensagem existe, apenas pular insert
-  console.log(`[DEDUPE] Message ${messageId} exists, skipping insert`);
-  skipInsert = true;
-} else {
-  // ... logica de deduplicacao normal que tambem pode setar skipInsert
-}
-
-// Na linha 1306, onde ocorre o insert:
-if (!isDuplicate && !skipInsert) {
-  const { error: zappMsgError } = await supabase
-    .from("zapp_messages")
-    .insert({ ... });
-}
+}, [dialogStep, currentUser?.account_id]);
 ```
 
-### Correcao 3: Verificacao Adicional no Realtime (Blindagem Extra)
+**Adicionar campo no formulário (entre "Título" e "Valor/Etapa"):**
+- Seletor de produto com auto-preenchimento do valor
 
-Adicionar verificacao de `is_edited` no listener de INSERT para prevenir duplicatas de mensagens editadas:
+**Atualizar função `handleCreateDeal`:**
+- Incluir `product_id` na criação do deal
 
-**Arquivo:** `src/pages/RoyZapp.tsx`
+**Atualizar `resetForm`:**
+- Limpar `selectedProductId`
 
-**Linha 643-648:** Melhorar verificacao de duplicatas:
+---
+
+### 2. `src/components/client/ClientDeals.tsx`
+
+**Adicionar estado para produtos:**
+```typescript
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+}
+
+const [products, setProducts] = useState<Product[]>([]);
+const [selectedProductId, setSelectedProductId] = useState<string>("");
+```
+
+**Adicionar useEffect para carregar produtos quando dialog abre:**
+```typescript
+useEffect(() => {
+  const loadProducts = async () => {
+    // ... fetch products
+  };
+  
+  if (isDialogOpen) {
+    loadProducts();
+  }
+}, [isDialogOpen]);
+```
+
+**Adicionar campo no formulário (entre "Título" e grid de Valor/Etapa):**
+- Seletor de produto idêntico ao LeadsTab
+
+**Atualizar função `handleCreateDeal`:**
+- Inserir dados em `deal_field_values` após criar o deal (para armazenar product_id)
+
+---
+
+### 3. `src/components/royzapp/ZappCRMPanel.tsx`
+
+**Adicionar estado para produtos:**
+```typescript
+const [products, setProducts] = useState<Product[]>([]);
+const [selectedProductId, setSelectedProductId] = useState<string>("");
+```
+
+**Adicionar fetch de produtos:**
+- Usar useQuery ou fetch manual ao montar o componente
+
+**Adicionar campo no formulário (entre "Título" e "Valor"):**
+- Seletor de produto com estilos ZApp (bg-zapp-bg, border-zapp-border, etc.)
+
+**Atualizar mutation `createDeal`:**
+- Após criar o deal, inserir registro em `deal_field_values` com o `product_id`
+
+---
+
+## Estrutura do Campo "Item da Venda"
+
+Em todos os locais, o campo terá a mesma estrutura:
 
 ```typescript
-setMessages(prev => {
-  // Verificar se ja existe por id OU external_message_id
-  const exists = prev.some(m => 
-    m.id === newMsg.id || 
-    (m.external_message_id && m.external_message_id === newMsg.external_message_id)
-  );
-  
-  // NOVO: Se a mensagem existente foi editada, ignorar INSERT
-  if (exists) {
-    const existingEdited = prev.find(m => 
-      m.external_message_id === newMsg.external_message_id && m.is_edited
-    );
-    if (existingEdited) {
-      console.log("[RoyZapp] Ignoring INSERT for edited message:", newMsg.id);
-    }
-    return prev;
-  }
-  
-  // ... resto do codigo
-});
+<div className="space-y-2">
+  <Label>Item da Venda</Label>
+  <Select
+    value={selectedProductId}
+    onValueChange={(productId) => {
+      setSelectedProductId(productId);
+      if (productId && productId !== "__none__") {
+        const product = products.find(p => p.id === productId);
+        if (product) {
+          // Auto-preencher valor
+          setDealFormData(prev => ({
+            ...prev,
+            value: product.price.toString()
+          }));
+        }
+      }
+    }}
+  >
+    <SelectTrigger>
+      <SelectValue placeholder="Selecione o produto" />
+    </SelectTrigger>
+    <SelectContent>
+      <SelectItem value="__none__">Nenhum</SelectItem>
+      {products.map(product => (
+        <SelectItem key={product.id} value={product.id}>
+          <div className="flex items-center justify-between w-full gap-2">
+            <span>{product.name}</span>
+            <span className="text-xs text-muted-foreground">
+              {formatCurrency(product.price)}
+            </span>
+          </div>
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
+```
+
+---
+
+## Persistência do Product ID
+
+O `product_id` é armazenado em `deal_field_values` com o `field_id` correto:
+- **Field ID:** `033b91fb-3add-4c96-aec9-567fefbd0fb2` ("Item da Venda")
+
+### Para arquivos que usam o hook `useDeals`:
+O hook já suporta `product_id` no objeto passado para `createDeal()`.
+
+### Para arquivos com insert direto (ClientDeals, ZappCRMPanel):
+Após o insert do deal, inserir em `deal_field_values`:
+
+```typescript
+if (selectedProductId && selectedProductId !== "__none__") {
+  await supabase.from("deal_field_values").insert({
+    deal_id: newDeal.id,
+    field_id: "033b91fb-3add-4c96-aec9-567fefbd0fb2",
+    account_id: currentUser.account_id,
+    value_text: selectedProductId,
+  });
+}
 ```
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Alteracao |
+| Arquivo | Alteração |
 |---------|-----------|
-| `supabase/functions/uazapi-webhook/index.ts` | Adicionar flag `skipInsert` e return early quando mensagem existe |
-| `src/pages/RoyZapp.tsx` | Melhorar verificacao de duplicatas no listener de INSERT |
+| `src/pages/Leads.tsx` | Adicionar estado, fetch, campo UI e product_id no createDeal |
+| `src/components/client/ClientDeals.tsx` | Adicionar estado, fetch, campo UI e insert em deal_field_values |
+| `src/components/royzapp/ZappCRMPanel.tsx` | Adicionar estado, fetch, campo UI (estilo ZApp) e insert em deal_field_values |
 
 ---
 
-## Fluxo Corrigido
+## Resultado Esperado
 
-```text
-ANTES (bugado):
-┌─────────────────────────────────────────────────────────┐
-│ Webhook recebe notificacao                               │
-│ ↓                                                       │
-│ Busca por external_message_id → Encontra!               │
-│ ↓                                                       │
-│ Verifica is_deleted → Nao deletada                      │
-│ ↓                                                       │
-│ [Continua sem return]                                   │
-│ ↓                                                       │
-│ INSERT nova mensagem → DUPLICATA!                       │
-└─────────────────────────────────────────────────────────┘
+Todos os diálogos de criação de negócio terão o campo "Item da Venda":
 
-DEPOIS (corrigido):
-┌─────────────────────────────────────────────────────────┐
-│ Webhook recebe notificacao                               │
-│ ↓                                                       │
-│ Busca por external_message_id → Encontra!               │
-│ ↓                                                       │
-│ Verifica is_deleted → Nao deletada                      │
-│ ↓                                                       │
-│ skipInsert = true                                       │
-│ ↓                                                       │
-│ [Pula INSERT, apenas atualiza assignment]               │
-│ ↓                                                       │
-│ Return success (sem duplicata)                          │
-└─────────────────────────────────────────────────────────┘
-```
+1. Pipeline (`DealDialog.tsx`) - Já funciona
+2. Leads Tab (`LeadsTab.tsx`) - Já funciona
+3. Página Leads (`Leads.tsx`) - Será implementado
+4. Cliente Deals (`ClientDeals.tsx`) - Será implementado
+5. ROY zAPP CRM Panel (`ZappCRMPanel.tsx`) - Será implementado
 
----
+O comportamento será idêntico em todos: ao selecionar um produto, o valor é automaticamente preenchido, e o `product_id` é persistido para uso na conversão para contrato.
 
-## Detalhes Tecnicos
-
-### Por que usar flag em vez de return early?
-
-O webhook precisa continuar executando apos a verificacao de duplicatas para:
-1. Atualizar o `zapp_conversation_assignments` (status, department)
-2. Processar outras logicas de conversacao
-
-Se fizermos `return` imediatamente, perdemos essas atualizacoes importantes. Por isso a solucao usa uma flag `skipInsert` que permite pular apenas o insert, mas continuar o resto do fluxo.
-
-### Cenarios cobertos pela correcao
-
-| Cenario | Antes | Depois |
-|---------|-------|--------|
-| Usuario edita mensagem | Duplicata criada | Ignorado, sem duplicata |
-| Webhook reprocessado | Duplicata criada | Ignorado, sem duplicata |
-| Mensagem deletada | Corretamente ignorada | Corretamente ignorada |
-| Mensagem nova | Inserida corretamente | Inserida corretamente |
