@@ -1614,6 +1614,16 @@ serve(async (req) => {
           );
         }
 
+        // Validate phone number format before sending
+        const cleanPhone = phone.replace(/\D/g, "");
+        if (cleanPhone.length < 10 || cleanPhone.length > 15) {
+          console.error(`[send_text] Invalid phone format: ${phone} (cleaned: ${cleanPhone}, length: ${cleanPhone.length})`);
+          return new Response(
+            JSON.stringify({ error: "Número de telefone com formato inválido" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // PRIORITY: Use the token already loaded at the start of the function (respects integration_id)
         let instanceToken = savedInstanceToken;
         
@@ -1650,7 +1660,6 @@ serve(async (req) => {
         }
 
         console.log(`[send_text] Using token from integration_id: ${integration_id || 'sector fallback'}, has token: ${!!instanceToken}`);
-        const cleanPhone = phone.replace(/\D/g, "");
         const quotedMessageId = (payload as UazapiRequest).quoted_message_id;
         const quotedFromMe = (payload as UazapiRequest).quoted_from_me ?? false;
         
@@ -2096,12 +2105,26 @@ serve(async (req) => {
           throw new Error("WhatsApp não conectado. Configure a integração primeiro.");
         }
         
-        if (!group_id) {
+        if (!group_id || group_id.trim() === "") {
           throw new Error("ID do grupo é obrigatório");
         }
 
+        // Validate group_id format to prevent "Could not parse Group JID" errors
+        const groupIdClean = group_id.trim();
+        const isValidGroupFormat = /^\d+@g\.us$/.test(groupIdClean) || 
+                                   /^\d+-\d+@g\.us$/.test(groupIdClean) || 
+                                   /^\d{10,20}$/.test(groupIdClean);
+        
+        if (!isValidGroupFormat) {
+          console.error(`[group_participants] Invalid group_id format: ${group_id}`);
+          return new Response(
+            JSON.stringify({ error: "Formato de ID de grupo inválido" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         // Ensure group_id has @g.us suffix
-        const groupJidForParticipants = group_id.includes("@g.us") ? group_id : `${group_id}@g.us`;
+        const groupJidForParticipants = groupIdClean.includes("@g.us") ? groupIdClean : `${groupIdClean}@g.us`;
         console.log(`Fetching participants for group: ${groupJidForParticipants}`);
         
         let participantsResult: unknown = null;
