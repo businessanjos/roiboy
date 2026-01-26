@@ -819,10 +819,11 @@ serve(async (req) => {
             }
           }
           
-          // === LAYER 2: Search ANY conversation with same phone (no integration filter) ===
-          // This unifies conversations that were created with different/null integration_id
+          // === LAYER 2: Search ALL conversations with same phone and AUTO-UNIFY duplicates ===
+          // This finds all conversations with the same phone, picks the best match,
+          // and automatically unifies duplicates to prevent routing issues
           if (!existingZappConvo && phone) {
-            console.log(`[PHONE] Fallback L2: searching for ANY conversation with ${phone} (ignoring integration_id)`);
+            console.log(`[PHONE] Fallback L2: searching for ALL conversations with ${phone} (ignoring integration_id)`);
             
             // Build OR condition for both phone formats
             let phoneConditions = `phone_e164.eq.${phone}`;
@@ -831,43 +832,83 @@ serve(async (req) => {
               phoneConditions += `,phone_e164.eq.${phoneWithout9}`;
             }
             
-            const { data: anyConvo } = await supabase
+            // Fetch ALL conversations with this phone (not just one)
+            const { data: allConvos } = await supabase
               .from("zapp_conversations")
               .select("id, unread_count, integration_id, contact_name, client_id, lead_id, phone_e164, sector_id")
               .eq("account_id", accountId)
               .eq("is_group", false)
               .or(phoneConditions)
-              .order("last_message_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
+              .order("last_message_at", { ascending: false });
             
-            if (anyConvo) {
-              existingZappConvo = anyConvo;
-              console.log(`[PHONE] Found via L2: conversation ${anyConvo.id} (integration: ${anyConvo.integration_id}, phone: ${anyConvo.phone_e164})`);
+            if (allConvos && allConvos.length > 0) {
+              // Prioridade: mesmo integration_id > mesmo sector_id > mais recente
+              let bestMatch = allConvos.find(c => c.integration_id === integrationId);
+              if (!bestMatch && sectorId) {
+                bestMatch = allConvos.find(c => c.sector_id === sectorId);
+              }
+              if (!bestMatch) {
+                bestMatch = allConvos[0]; // mais recente
+              }
+              
+              existingZappConvo = bestMatch;
+              console.log(`[PHONE] Found via L2: conversation ${bestMatch.id} (integration: ${bestMatch.integration_id}, phone: ${bestMatch.phone_e164})`);
+              
+              // AUTO-UNIFY: If there are duplicates, merge them into bestMatch
+              if (allConvos.length > 1) {
+                console.log(`[DEDUPE] Found ${allConvos.length} duplicate conversations for phone ${phone}, unifying...`);
+                const duplicates = allConvos.filter(c => c.id !== bestMatch!.id);
+                
+                for (const dup of duplicates) {
+                  try {
+                    // Move messages from duplicate to main
+                    await supabase
+                      .from("zapp_messages")
+                      .update({ zapp_conversation_id: bestMatch.id })
+                      .eq("zapp_conversation_id", dup.id);
+                    
+                    // Update assignments to point to main
+                    await supabase
+                      .from("zapp_conversation_assignments")
+                      .update({ zapp_conversation_id: bestMatch.id })
+                      .eq("zapp_conversation_id", dup.id);
+                    
+                    // Delete the duplicate conversation
+                    await supabase
+                      .from("zapp_conversations")
+                      .delete()
+                      .eq("id", dup.id);
+                    
+                    console.log(`[DEDUPE] Unified conversation ${dup.id} → ${bestMatch.id}`);
+                  } catch (dedupeErr) {
+                    console.error(`[DEDUPE] Error unifying ${dup.id}:`, dedupeErr);
+                  }
+                }
+              }
               
               // Build update object: normalize phone + set integration_id + sector_id
               const updateFields: Record<string, unknown> = {};
               
-              if (anyConvo.phone_e164 !== phone) {
+              if (bestMatch.phone_e164 !== phone) {
                 updateFields.phone_e164 = phone;
-                console.log(`[PHONE] L2: Updating phone from ${anyConvo.phone_e164} to ${phone}`);
+                console.log(`[PHONE] L2: Updating phone from ${bestMatch.phone_e164} to ${phone}`);
               }
               
-              if (integrationId && anyConvo.integration_id !== integrationId) {
+              if (integrationId && bestMatch.integration_id !== integrationId) {
                 updateFields.integration_id = integrationId;
-                console.log(`[PHONE] L2: Updating integration_id from ${anyConvo.integration_id} to ${integrationId}`);
+                console.log(`[PHONE] L2: Updating integration_id from ${bestMatch.integration_id} to ${integrationId}`);
               }
               
-              if (sectorId && anyConvo.sector_id !== sectorId) {
+              if (sectorId && bestMatch.sector_id !== sectorId) {
                 updateFields.sector_id = sectorId;
-                console.log(`[PHONE] L2: Updating sector_id from ${anyConvo.sector_id} to ${sectorId}`);
+                console.log(`[PHONE] L2: Updating sector_id from ${bestMatch.sector_id} to ${sectorId}`);
               }
               
               if (Object.keys(updateFields).length > 0) {
                 await supabase
                   .from("zapp_conversations")
                   .update(updateFields)
-                  .eq("id", anyConvo.id);
+                  .eq("id", bestMatch.id);
               }
             }
           }
