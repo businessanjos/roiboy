@@ -253,6 +253,7 @@ export default function PublicForm() {
                 <Label
                   htmlFor={`${field.id}-${opt.value}`}
                   className="font-normal cursor-pointer"
+                  style={{ color: appearance.text_color }}
                 >
                   {opt.label}
                 </Label>
@@ -288,6 +289,7 @@ export default function PublicForm() {
                 <Label
                   htmlFor={`${field.id}-${opt.value}`}
                   className="font-normal cursor-pointer"
+                  style={{ color: appearance.text_color }}
                 >
                   {opt.label}
                 </Label>

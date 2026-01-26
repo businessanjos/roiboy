@@ -2608,23 +2608,41 @@ export default function RoyZapp() {
     const phonesForGroupSearch = combined.map(c => c.phone_e164?.replace(/\D/g, '')).filter(Boolean) as string[];
     
     if (phonesForGroupSearch.length > 0) {
+      // Fetch group participants separately (no direct FK relation)
       const { data: groupParticipants } = await supabase
         .from("whatsapp_group_participants")
-        .select("phone, group_jid, whatsapp_groups(name, avatar_url)")
+        .select("phone, group_jid")
         .eq("account_id", currentUser.account_id)
         .in("phone", phonesForGroupSearch);
 
+      // Get unique group JIDs to fetch group details
+      const groupJids = [...new Set((groupParticipants || []).map(p => p.group_jid))];
+      
+      let groupsMap = new Map<string, { name: string; avatar_url: string | null }>();
+      if (groupJids.length > 0) {
+        const { data: groups } = await supabase
+          .from("whatsapp_groups")
+          .select("jid, name, avatar_url")
+          .eq("account_id", currentUser.account_id)
+          .in("jid", groupJids);
+        
+        (groups || []).forEach(g => {
+          groupsMap.set(g.jid, { name: g.name, avatar_url: g.avatar_url });
+        });
+      }
+
       // Create phone -> groups map
       const phoneToGroups = new Map<string, Array<{name: string, avatar_url: string | null}>>();
-      (groupParticipants || []).forEach((p: { phone: string; whatsapp_groups: { name: string; avatar_url: string | null } | null }) => {
+      (groupParticipants || []).forEach((p) => {
         const phone = p.phone;
+        const groupInfo = groupsMap.get(p.group_jid);
         if (!phoneToGroups.has(phone)) {
           phoneToGroups.set(phone, []);
         }
-        if (p.whatsapp_groups) {
+        if (groupInfo) {
           phoneToGroups.get(phone)!.push({
-            name: p.whatsapp_groups.name,
-            avatar_url: p.whatsapp_groups.avatar_url,
+            name: groupInfo.name,
+            avatar_url: groupInfo.avatar_url,
           });
         }
       });

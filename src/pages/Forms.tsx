@@ -745,12 +745,20 @@ export default function Forms() {
     try {
       const { data, error } = await supabase
         .from("custom_fields")
-        .select("id, name, field_type, options, is_required")
+        .select("id, name, field_type, options, is_required, show_in_clients, show_in_deals, show_in_leads")
         .eq("is_active", true)
         .order("display_order", { ascending: true });
 
       if (error) throw error;
-      setCustomFields(data || []);
+      
+      // Filtrar campos: apenas show_in_clients=true OU campos genéricos (não exclusivos de deals/leads)
+      // Isso evita que campos de Vendas (show_in_deals) apareçam em formulários CX/Operações
+      const filteredFields = (data || []).filter(field => 
+        field.show_in_clients === true || 
+        (!field.show_in_deals && !field.show_in_leads)
+      );
+      
+      setCustomFields(filteredFields);
     } catch (error: any) {
       console.error("Error fetching custom fields:", error);
     }
