@@ -222,7 +222,7 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], config: Vi
     return item.deal_stages?.name || 'Sem Etapa';
   }
   if (field === 'responsible_name') {
-    return item.users?.full_name || 'Sem Responsável';
+    return item.users?.name || 'Sem Responsável';
   }
   if (field === 'is_active') {
     return item.is_active ? 'Ativo' : 'Inativo';
