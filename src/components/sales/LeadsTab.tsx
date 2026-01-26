@@ -1,8 +1,9 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLeads, Lead } from "@/hooks/useLeads";
 import { useDeals, Deal } from "@/hooks/useDeals";
 import { useSectorUsers } from "@/hooks/useSectorUsers";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -99,6 +100,13 @@ const LEAD_STATUS = [
   { value: "unqualified", label: "Não Qualificado", color: "bg-gray-500" },
 ];
 
+// Interface for products
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+}
+
 export default function LeadsTab() {
   const {
     leads,
@@ -115,6 +123,11 @@ export default function LeadsTab() {
   const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
   const { users: salesUsers, loading: usersLoading } = useSectorUsers({ sectorId: "vendas" });
   const { duplicates: leadDuplicates, checkDuplicates: checkLeadDuplicates, clearDuplicates: clearLeadDuplicates } = useLeadDuplicateDetection();
+  const { currentUser } = useCurrentUser();
+
+  // Product state for deal creation
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOwnerFilter, setSelectedOwnerFilter] = useState<string>("all");
@@ -183,7 +196,28 @@ export default function LeadsTab() {
     setLeadForDeal(null);
     setDialogStep('phone');
     clearLeadDuplicates();
+    setSelectedProductId("");
   };
+
+  // Load products when deal-form dialog opens
+  useEffect(() => {
+    const loadProducts = async () => {
+      if (!currentUser?.account_id) return;
+      
+      const { data } = await supabase
+        .from("products")
+        .select("id, name, price")
+        .eq("account_id", currentUser.account_id)
+        .eq("is_active", true)
+        .order("name");
+      
+      setProducts(data || []);
+    };
+    
+    if (dialogStep === 'deal-form') {
+      loadProducts();
+    }
+  }, [dialogStep, currentUser?.account_id]);
 
   const openNewDialog = () => {
     resetForm();
@@ -306,6 +340,10 @@ export default function LeadsTab() {
   const handleCreateDeal = async () => {
     setCreatingDeal(true);
     try {
+      const productId = selectedProductId && selectedProductId !== "__none__" 
+        ? selectedProductId 
+        : undefined;
+
       if (existingClient) {
         const deal = await createDeal({
           title: dealFormData.title || `Novo negócio - ${existingClient.full_name}`,
@@ -313,6 +351,7 @@ export default function LeadsTab() {
           stage_id: dealFormData.stage_id || undefined,
           value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
           notes: dealFormData.notes || undefined,
+          product_id: productId,
         });
 
         if (deal) {
@@ -331,6 +370,7 @@ export default function LeadsTab() {
           value: dealFormData.value ? parseFloat(dealFormData.value) : undefined,
           notes: dealFormData.notes || leadForDeal.notes || undefined,
           source: leadForDeal.source || undefined,
+          product_id: productId,
         });
 
         if (deal) {
@@ -1362,16 +1402,58 @@ export default function LeadsTab() {
                   }
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Valor</Label>
-                <Input
-                  type="number"
-                  placeholder="0,00"
-                  value={dealFormData.value}
-                  onChange={(e) =>
-                    setDealFormData({ ...dealFormData, value: e.target.value })
-                  }
-                />
+              {/* Item da Venda + Valor em grid de 2 colunas */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Item da Venda</Label>
+                  <Select
+                    value={selectedProductId}
+                    onValueChange={(productId) => {
+                      setSelectedProductId(productId);
+                      // Auto-fill value with product price
+                      if (productId && productId !== "__none__") {
+                        const product = products.find(p => p.id === productId);
+                        if (product) {
+                          setDealFormData(prev => ({
+                            ...prev,
+                            value: product.price.toString()
+                          }));
+                        }
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Nenhum</SelectItem>
+                      {products.map(product => (
+                        <SelectItem key={product.id} value={product.id}>
+                          <div className="flex items-center justify-between w-full gap-2">
+                            <span>{product.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Intl.NumberFormat('pt-BR', {
+                                style: 'currency',
+                                currency: 'BRL',
+                              }).format(product.price)}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor (R$)</Label>
+                  <Input
+                    type="number"
+                    placeholder="0,00"
+                    value={dealFormData.value}
+                    onChange={(e) =>
+                      setDealFormData({ ...dealFormData, value: e.target.value })
+                    }
+                  />
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Etapa</Label>
