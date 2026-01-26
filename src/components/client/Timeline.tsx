@@ -1291,16 +1291,18 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const hiddenCount = filteredEvents.length - visibleLimit;
 
   return (
-    <div className={cn("space-y-4", className)}>
-      {/* No results message */}
-      {filteredEvents.length === 0 && events.length > 0 && (
-        <div className="text-center py-8 text-muted-foreground">
-          <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-30" />
-          <p>Nenhum comentário ainda.</p>
-        </div>
-      )}
+    <div className={cn("flex flex-col max-h-[600px]", className)}>
+      {/* Scrollable Events Area */}
+      <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+        {/* No results message */}
+        {filteredEvents.length === 0 && events.length > 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            <StickyNote className="h-8 w-8 mx-auto mb-2 opacity-30" />
+            <p>Nenhum comentário ainda.</p>
+          </div>
+        )}
 
-      {/* Events List */}
+        {/* Events List */}
         <div className="space-y-4">
           {visibleEvents.map((event, index) => (
             <div key={event.id} className="relative">
@@ -1335,10 +1337,11 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
             </div>
           ))}
         </div>
+      </div>
 
-      {/* Comment Input - Bottom position like social networks */}
+      {/* Comment Input - Fixed at bottom */}
       {clientId && currentUser && (
-        <div className="flex gap-3 pt-4 border-t">
+        <div className="flex-shrink-0 flex gap-3 pt-4 mt-4 border-t bg-background">
           <Avatar className="h-9 w-9 flex-shrink-0">
             <AvatarImage src={currentUser.avatar_url || undefined} />
             <AvatarFallback className="bg-primary/10 text-primary text-sm">
