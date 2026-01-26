@@ -558,17 +558,16 @@ export function FormResponseViewer({
                 </div>
               </div>
 
-              {/* Content */}
-              <div className="flex-1 min-h-0 overflow-hidden">
-                <ScrollArea className="h-full">
-                  <div className="px-6 py-4 space-y-6">
-                  {/* Client Info Section */}
+              {/* Content - native scroll instead of ScrollArea for reliable flex behavior */}
+              <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4">
+                <div className="space-y-6">
+                  {/* Client Info Section - vertical layout to prevent truncation */}
                   <div className="space-y-3">
                     <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                       Informações do Cliente
                     </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="space-y-1 min-w-0">
+                    <div className="space-y-3">
+                      <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground flex items-center gap-1">
                           <User className="h-3 w-3" /> Nome
                         </Label>
@@ -576,11 +575,11 @@ export function FormResponseViewer({
                           {selectedResponse.clients?.full_name || selectedResponse.client_name || "—"}
                         </p>
                       </div>
-                      <div className="space-y-1 min-w-0">
+                      <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground flex items-center gap-1">
                           <Phone className="h-3 w-3" /> Telefone
                         </Label>
-                        <p className="font-medium break-all">
+                        <p className="font-medium">
                           {selectedResponse.clients?.phone_e164 || selectedResponse.client_phone || "—"}
                         </p>
                       </div>
@@ -631,14 +630,14 @@ export function FormResponseViewer({
                         const value = selectedResponse.responses?.[field.id];
 
                         return (
-                          <div key={field.id} className="flex flex-col gap-2 p-4 overflow-hidden">
-                            <div className="min-w-0">
+                          <div key={field.id} className="flex flex-col gap-2 p-4">
+                            <div>
                               <Label className="text-sm font-medium text-foreground break-words">
                                 {field.name}
                                 {field.is_required && <span className="text-destructive ml-1">*</span>}
                               </Label>
                             </div>
-                            <div className="text-sm break-words min-w-0 overflow-hidden">
+                            <div className="text-sm break-words">
                               {renderValue(field, value)}
                             </div>
                           </div>
@@ -646,8 +645,7 @@ export function FormResponseViewer({
                       })}
                     </div>
                   </div>
-                  </div>
-                </ScrollArea>
+                </div>
               </div>
 
               {/* Footer */}
