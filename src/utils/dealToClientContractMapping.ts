@@ -120,7 +120,26 @@ export async function mapItemVendaToProductId(itemVendaValue: string): Promise<s
     return null;
   }
   
-  // 1. Primeiro, tentar pelo mapeamento estático (compatibilidade)
+  // 1. Verificar se é um UUID válido (product_id direto - novo formato)
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (uuidRegex.test(itemVendaValue)) {
+    console.log('[DealMapping] Value is a UUID, checking if product exists...');
+    // Validar que o produto existe
+    const { data } = await supabase
+      .from('products')
+      .select('id')
+      .eq('id', itemVendaValue)
+      .eq('is_active', true)
+      .maybeSingle();
+    
+    if (data) {
+      console.log('[DealMapping] Direct product_id found and validated:', itemVendaValue);
+      return itemVendaValue;
+    }
+    console.warn('[DealMapping] UUID provided but product not found or inactive:', itemVendaValue);
+  }
+  
+  // 2. Tentar pelo mapeamento estático (compatibilidade com dados antigos)
   const staticProductName = ITEM_VENDA_TO_PRODUCT[itemVendaValue];
   if (staticProductName) {
     console.log('[DealMapping] Found static mapping:', itemVendaValue, '->', staticProductName);
@@ -132,7 +151,7 @@ export async function mapItemVendaToProductId(itemVendaValue: string): Promise<s
     console.warn('[DealMapping] Static mapping found but product not in DB:', staticProductName);
   }
   
-  // 2. Fallback: buscar label da opção e fazer match com produto
+  // 3. Fallback: buscar label da opção e fazer match com produto
   const label = await getItemVendaLabel(itemVendaValue);
   if (!label) {
     console.warn('[DealMapping] Could not find label for item venda:', itemVendaValue);

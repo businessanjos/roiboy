@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
+import { DEAL_FIELD_IDS } from "@/utils/dealToClientContractMapping";
 
 export interface DealStage {
   id: string;
@@ -96,6 +97,7 @@ interface CreateDealData {
   responsible_user_id?: string;
   notes?: string;
   tags?: string[];
+  product_id?: string; // Item da Venda - será salvo em deal_field_values
 }
 
 interface UpdateDealData extends Partial<CreateDealData> {
@@ -228,6 +230,10 @@ export function useDeals() {
         }
       });
 
+      // Extract product_id before inserting (it goes to deal_field_values, not deals table)
+      const productId = cleanData.product_id;
+      delete cleanData.product_id;
+
       const { data: newDeal, error } = await supabase
         .from('deals')
         .insert({
@@ -247,6 +253,25 @@ export function useDeals() {
         .single();
 
       if (error) throw error;
+
+      // Save product_id (Item da Venda) to deal_field_values if provided
+      if (productId && newDeal?.id) {
+        console.log('[useDeals] Saving Item da Venda product_id:', productId, 'for deal:', newDeal.id);
+        const { error: fieldError } = await supabase
+          .from('deal_field_values')
+          .upsert({
+            account_id: currentUser.account_id,
+            deal_id: newDeal.id,
+            field_id: DEAL_FIELD_IDS.ITEM_VENDA,
+            value_text: productId,
+          }, { onConflict: 'deal_id,field_id' });
+        
+        if (fieldError) {
+          console.error('[useDeals] Error saving Item da Venda:', fieldError);
+        } else {
+          console.log('[useDeals] Item da Venda saved successfully');
+        }
+      }
 
       const formattedDeal: Deal = {
         ...newDeal,

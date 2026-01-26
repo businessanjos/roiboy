@@ -82,6 +82,7 @@ const dealSchema = z.object({
   responsible_user_id: z.string().optional(),
   notes: z.string().optional(),
   tags: z.array(z.string()).default([]),
+  product_id: z.string().optional(), // Item da Venda
 });
 
 type DealFormValues = z.infer<typeof dealSchema>;
@@ -111,6 +112,12 @@ interface TeamMember {
   avatar_url: string | null;
 }
 
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+}
+
 export function DealDialog({
   open,
   onOpenChange,
@@ -129,6 +136,8 @@ export function DealDialog({
   const [lostReason, setLostReason] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [newTag, setNewTag] = useState("");
   const [sendNotification, setSendNotification] = useState(false);
 
@@ -154,22 +163,26 @@ export function DealDialog({
     },
   });
 
-  // Load clients and team members with sector access
+  // Load clients, team members, and products with sector access
   useEffect(() => {
     if (!currentUser?.account_id) return;
 
     const loadData = async () => {
-      // Fetch clients
-      const clientsRes = await supabase
-        .from("clients")
-        .select("id, full_name, phone_e164, avatar_url")
-        .eq("account_id", currentUser.account_id)
-        .eq("status", "active")
-        .order("full_name")
-        .limit(100);
-
-      // Fetch team members with access to vendas sector OR admins
-      const [sectorUsersRes, adminsRes] = await Promise.all([
+      // Fetch clients, products, sector users, and admins in parallel
+      const [clientsRes, productsRes, sectorUsersRes, adminsRes] = await Promise.all([
+        supabase
+          .from("clients")
+          .select("id, full_name, phone_e164, avatar_url")
+          .eq("account_id", currentUser.account_id)
+          .eq("status", "active")
+          .order("full_name")
+          .limit(100),
+        supabase
+          .from("products")
+          .select("id, name, price")
+          .eq("account_id", currentUser.account_id)
+          .eq("is_active", true)
+          .order("name"),
         supabase
           .from("user_sector_access")
           .select(`
@@ -200,6 +213,7 @@ export function DealDialog({
       }
 
       setClients(clientList);
+      setProducts(productsRes.data || []);
       
       // Extract unique users from sector access + admins
       const usersMap = new Map<string, TeamMember>();
@@ -256,8 +270,9 @@ export function DealDialog({
         notes: "",
         tags: [],
       });
-      // Reset notification checkbox for new deals
+      // Reset notification checkbox and product for new deals
       setSendNotification(false);
+      setSelectedProductId("");
     }
   }, [deal, stages, form, currentUser?.id]);
 
@@ -277,9 +292,12 @@ export function DealDialog({
     setSaving(true);
     try {
       // Auto-assign to creator if no responsible selected
+      // Include product_id (Item da Venda) in the data
+      const productId = selectedProductId && selectedProductId !== "__none__" ? selectedProductId : undefined;
       const finalData = {
         ...data,
         responsible_user_id: data.responsible_user_id || currentUser?.id || "",
+        product_id: productId,
       };
       await onSave(finalData, !isEditing && sendNotification);
     } finally {
@@ -413,6 +431,73 @@ export function DealDialog({
                     )}
                   />
 
+                  {/* Item da Venda + Valor */}
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Item da Venda - Select de Produtos */}
+                    <FormItem>
+                      <FormLabel>Item da Venda</FormLabel>
+                      <Select 
+                        value={selectedProductId}
+                        onValueChange={(productId) => {
+                          setSelectedProductId(productId);
+                          // Auto-preencher valor com o preço do produto
+                          if (productId && productId !== "__none__") {
+                            const product = products.find(p => p.id === productId);
+                            if (product) {
+                              form.setValue("value", product.price);
+                            }
+                          }
+                        }}
+                        disabled={isClosed}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione o produto" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">Nenhum</SelectItem>
+                          {products.map(product => (
+                            <SelectItem key={product.id} value={product.id}>
+                              <div className="flex items-center justify-between w-full gap-2">
+                                <span>{product.name}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {new Intl.NumberFormat('pt-BR', {
+                                    style: 'currency',
+                                    currency: 'BRL',
+                                  }).format(product.price)}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+
+                    {/* Value */}
+                    <FormField
+                      control={form.control}
+                      name="value"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Valor (R$)</FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                              <Input
+                                type="number"
+                                step="0.01"
+                                className="pl-9"
+                                {...field}
+                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+                                disabled={isClosed}
+                              />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <div className="grid grid-cols-2 gap-4">
                     {/* Stage */}
                     <FormField
@@ -450,33 +535,6 @@ export function DealDialog({
                       )}
                     />
 
-                    {/* Value */}
-                    <FormField
-                      control={form.control}
-                      name="value"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Valor (R$)</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                type="number"
-                                step="0.01"
-                                className="pl-9"
-                                {...field}
-                                onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                                disabled={isClosed}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
                     {/* Expected Close Date */}
                     <FormField
                       control={form.control}
@@ -499,6 +557,9 @@ export function DealDialog({
                         </FormItem>
                       )}
                     />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
 
                     {/* Probability */}
                     <FormField
