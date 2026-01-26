@@ -323,6 +323,7 @@ export function useSocialMediaData() {
         comments: number;
         shares: number;
         saves: number;
+        link_clicks: number;
         views: number;
         reposts: number;
         followers_gained: number;
@@ -360,6 +361,7 @@ export function useSocialMediaData() {
           comments: data.comments,
           shares: data.shares,
           saves: data.saves,
+          link_clicks: data.link_clicks || 0,
           views: data.views,
           reposts: data.reposts,
           followers_gained: data.followers_gained,
