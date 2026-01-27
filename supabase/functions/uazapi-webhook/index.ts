@@ -639,6 +639,21 @@ serve(async (req) => {
           : new Date().toISOString();
 
         // ============================================
+        // EDITED MESSAGE DETECTION
+        // UAZAPI sends 'edited' flag when message was edited
+        // This is CRITICAL to prevent duplication when user edits a message
+        // ============================================
+        const msgAnyEdit = msg as Record<string, unknown>;
+        const isEditedMessage = msgAnyEdit.edited === true || 
+                                msgAnyEdit.messageType === "editedMessage" ||
+                                msgAnyEdit.messageType === "EditedMessage" ||
+                                (typeof msgAnyEdit.type === "string" && msgAnyEdit.type.toLowerCase().includes("edited"));
+        
+        if (isEditedMessage) {
+          console.log(`[EDIT] Detected edited message webhook, will check for existing record to update`);
+        }
+
+        // ============================================
         // EXTRACT QUOTED MESSAGE DATA (for replies)
         // ============================================
         const msgAnyQuote = msg as Record<string, unknown>;
@@ -1244,7 +1259,78 @@ serve(async (req) => {
             // This prevents duplication when UAZAPI sends confirmation webhooks for edited messages
             console.log(`[DEDUPE] Message ${messageId} already exists (is_edited: ${msgDetails?.is_edited}), skipping insert`);
             skipInsert = true;
-          } else {
+          }
+          
+          // ============================================
+          // EDITED MESSAGE DEDUPLICATION
+          // When UAZAPI sends confirmation of an edited message, it comes with a NEW external_message_id
+          // The original message was already updated in the DB by the frontend with is_edited=true
+          // We need to find that original message and skip inserting a duplicate
+          // ============================================
+          if (!skipInsert && isEditedMessage && direction === "outbound") {
+            const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+            
+            // Strategy 1: Find message with same content that was recently marked as edited
+            const { data: editedOriginal } = await supabase
+              .from("zapp_messages")
+              .select("id, content, external_message_id")
+              .eq("zapp_conversation_id", zappConversationId)
+              .eq("direction", "outbound")
+              .eq("content", content)
+              .eq("is_edited", true)
+              .gte("created_at", fifteenMinutesAgo)
+              .order("updated_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            if (editedOriginal) {
+              console.log(`[EDIT] Found original edited message ${editedOriginal.id}, skipping duplicate insert`);
+              
+              // Update the external_message_id to the new one from UAZAPI
+              if (editedOriginal.external_message_id !== messageId) {
+                await supabase
+                  .from("zapp_messages")
+                  .update({ 
+                    external_message_id: messageId,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq("id", editedOriginal.id);
+                console.log(`[EDIT] Updated external_message_id from ${editedOriginal.external_message_id} to ${messageId}`);
+              }
+              
+              skipInsert = true;
+            } else {
+              console.log(`[EDIT] No matching edited message found for content, will proceed with insert check`);
+            }
+          }
+          
+          // ============================================
+          // FALLBACK: Content-based deduplication for recent outbound messages
+          // This catches cases where edited message wasn't detected by the above check
+          // ============================================
+          if (!skipInsert && direction === "outbound" && !isEditedMessage) {
+            const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+            
+            const { data: recentSameContent } = await supabase
+              .from("zapp_messages")
+              .select("id, external_message_id, is_edited")
+              .eq("zapp_conversation_id", zappConversationId)
+              .eq("direction", "outbound")
+              .eq("content", content)
+              .gte("created_at", twoMinutesAgo)
+              .neq("external_message_id", messageId)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            if (recentSameContent) {
+              console.log(`[DEDUPE] Found recent message with same content: ${recentSameContent.id}, ` +
+                          `is_edited: ${recentSameContent.is_edited}, skipping insert`);
+              skipInsert = true;
+            }
+          }
+          
+          if (!skipInsert) {
             // For outbound messages, check for recent duplicates without external_message_id
             // This handles messages sent from the UI that are then echoed back by the webhook
             // CRITICAL FIX: Use 5-minute window (increased from 2) to handle race conditions
