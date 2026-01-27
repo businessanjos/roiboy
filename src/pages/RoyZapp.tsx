@@ -2635,16 +2635,29 @@ export default function RoyZapp() {
         .order("last_message_at", { ascending: false })
         .limit(10),
       
-      // 4. Search groups by name
+      // 4. Search groups by name (cross-sector: no sector filter)
       supabase
         .from("zapp_conversations")
-        .select("id, contact_name, avatar_url, group_jid")
+        .select("id, contact_name, avatar_url, group_jid, sector_id")
         .eq("account_id", currentUser.account_id)
         .eq("is_group", true)
         .ilike("contact_name", `%${textSearch}%`)
         .order("last_message_at", { ascending: false })
-        .limit(10),
+        .limit(25),
     ]);
+
+    // Debug logging for cross-sector group search
+    console.log("[SearchContacts] Query term:", textSearch);
+    console.log("[SearchContacts] Groups result:", {
+      count: groupsResult.data?.length || 0,
+      error: groupsResult.error,
+      data: groupsResult.data?.slice(0, 5).map(g => ({ id: g.id, name: g.contact_name, sector: g.sector_id }))
+    });
+
+    if (groupsResult.error) {
+      console.error("[SearchContacts] Groups query error:", groupsResult.error);
+      toast.error("Erro ao buscar grupos");
+    }
 
     // Map results with type indicator
     const clients = (clientsResult.data || []).map(c => ({
