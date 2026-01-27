@@ -1,154 +1,135 @@
 
 
-# Plano: Correção Urgente - Grupos Desaparecendo do ROY zAPP
+# Plano: Aumentar Espaço e Flexibilidade dos Painéis de Insights
 
-## Diagnóstico do Problema
+## Problema Identificado
 
-### Causa Real Identificada
+Os painéis de insights estão com delimitações muito restritivas, impedindo posicionamento livre dos visuais. Analisando a imagem enviada e o código, identifiquei os seguintes limitadores:
 
-**Os grupos NÃO desapareceram por causa da última atualização.** 
-
-O problema é que os grupos estão sendo **fechados pelos agentes** como se fossem tickets de atendimento, e quando isso acontece, eles são filtrados da lista principal.
-
-**Dados do Banco:**
-- Total de grupos no setor Operações: 46
-- Grupos com status "closed": 45 
-- Grupos com status "waiting": 1 (Náyara Hungaro - o único visível na sua tela)
-
-Os grupos foram sendo fechados ao longo dos últimos 8 dias pelos próprios agentes:
-- 27/01: 3 grupos fechados
-- 26/01: 15 grupos fechados  
-- 21/01: 9 grupos fechados
-- 19/01: 2 grupos fechados
-- E assim por diante...
-
-### Por que isso é um problema?
-
-O sistema trata **grupos como tickets de atendimento**, aplicando a mesma lógica de filtragem. Quando um agente "fecha" um ticket de grupo, ele desaparece da lista principal (só aparece quando o filtro "Finalizados" está ativo).
-
-**Porém, grupos são conversas permanentes!** Eles não deveriam sumir da lista como um ticket de suporte que foi resolvido.
+| Configuração Atual | Valor | Resultado |
+|-------------------|-------|-----------|
+| `ROW_HEIGHT` | 80px | Cada unidade de altura = 80px |
+| `minW` (largura mínima) | 3 colunas | Visual não pode ser menor que 25% da tela |
+| `minH` (altura mínima) | 3 unidades | Visual mínimo de 240px de altura |
+| Tamanho padrão | 6×4 | Metade da largura, 320px de altura |
+| Grid | 12 colunas | Adequado, não precisa mudar |
 
 ---
 
 ## Solução Proposta
 
-### Mudança 1: Grupos SEMPRE Visíveis (Ignorar status "closed" para grupos)
+### 1. Reduzir Tamanhos Mínimos para Maior Flexibilidade
 
-**Arquivo:** `src/components/royzapp/ZappConversationList.tsx`
+Permitir visuais menores e mais compactos quando desejado:
 
-Modificar a lógica de filtragem para que grupos sempre apareçam, independente do status:
+**Antes:**
+- `minW: 3` (25% da tela)
+- `minH: 3` (240px)
 
-```typescript
-// Linha 76-89 - Modificar lógica de filtro closed
-const filtered = assignments.filter((a) => {
-  const contact = getContactInfo(a);
-  const isGroup = contact.isGroup;
-  
-  // Hide archived conversations from main inbox
-  const isArchived = a.zapp_conversation?.is_archived || false;
-  if (isArchived) return false;
-  
-  // Filter by closed status - BUT GROUPS ALWAYS SHOW
-  const isClosed = a.status === "closed";
-  if (showClosed) {
-    // When showing closed, ONLY show closed (groups or not)
-    if (!isClosed) return false;
-  } else {
-    // When not showing closed, HIDE closed conversations
-    // EXCEPTION: Groups are always visible (they're permanent conversations)
-    if (isClosed && !isGroup) return false;
-  }
-  
-  // ... resto do código
-});
-```
+**Depois:**
+- `minW: 2` (16.6% da tela) - permite até 6 visuais lado a lado
+- `minH: 2` (120px) - permite scorecards mais compactos
 
-### Mudança 2: Reabrir Grupos Automaticamente Quando Recebem Mensagem
+### 2. Aumentar Tamanho Padrão para Novos Visuais
 
-**Arquivo:** `supabase/functions/uazapi-webhook/index.ts`
+Visuais novos começarão maiores para melhor visualização:
 
-Quando um grupo recebe uma nova mensagem, garantir que o assignment seja reaberto para "active":
+**Antes:**
+- Largura padrão: 6 colunas (metade)
+- Altura padrão: 4 unidades (320px)
 
-```typescript
-// Ao processar mensagem inbound de grupo
-if (isGroup && existingAssignment?.status === "closed") {
-  await supabase
-    .from("zapp_conversation_assignments")
-    .update({ 
-      status: "active",
-      updated_at: new Date().toISOString()
-    })
-    .eq("id", existingAssignment.id);
-}
-```
+**Depois:**
+- Largura padrão: 6 colunas (mantém)
+- Altura padrão: 5 unidades (400px) - mais espaço para gráficos
 
-### Mudança 3: Corrigir Dados Existentes (Reabrir Grupos Fechados)
+### 3. Aumentar Altura da Linha para Mais Espaço Vertical
 
-**Executar SQL para reabrir todos os grupos que foram fechados incorretamente:**
+A mudança mais impactante - cada unidade de altura ocupará mais pixels:
 
-```sql
-UPDATE zapp_conversation_assignments za
-SET 
-  status = 'active',
-  closed_at = NULL,
-  closed_by = NULL,
-  updated_at = now()
-FROM zapp_conversations zc
-WHERE za.zapp_conversation_id = zc.id
-  AND zc.is_group = true
-  AND za.status = 'closed';
-```
+**Antes:** `ROW_HEIGHT = 80px`
+**Depois:** `ROW_HEIGHT = 100px`
 
----
+Isso significa:
+- Visual de altura 4 → 400px (antes era 320px)
+- Visual de altura 5 → 500px (antes era 400px)
+- Visual de altura 6 → 600px (painel grande)
 
-## Fluxo de Correção
+### 4. Permitir Visuais Maiores (Sem Limite Máximo)
 
-```text
-+------------------+     +--------------------+     +------------------+
-|    Mudança 1     |     |     Mudança 2      |     |    Mudança 3     |
-| Filtro Frontend  | --> | Webhook Reabrir    | --> | SQL Corrigir     |
-| (grupos visíveis)|     | (grupos auto-open) |     | (dados antigos)  |
-+------------------+     +--------------------+     +------------------+
-```
+Adicionar suporte para que visuais cresçam tanto quanto o usuário desejar, sem limites artificiais de largura ou altura.
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Mudança | Prioridade |
-|---------|---------|------------|
-| `src/components/royzapp/ZappConversationList.tsx` | Grupos sempre visíveis (ignorar closed) | URGENTE |
-| `supabase/functions/uazapi-webhook/index.ts` | Reabrir grupo quando recebe mensagem | Alta |
-| SQL Migration | Reabrir grupos fechados existentes | Alta |
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/insights/grid/InsightsGrid.tsx` | Ajustar `ROW_HEIGHT`, `minW`, `minH`, e tamanhos padrão |
 
 ---
 
 ## Resultado Esperado
 
-Após as correções:
-1. **Todos os 46 grupos** voltarão a aparecer na lista do setor Operações
-2. Grupos não desaparecerão mais quando forem "fechados"
-3. Grupos automaticamente voltarão para status "active" quando receberem mensagens
-4. A funcionalidade de "fechar ticket" continuará funcionando normalmente para conversas individuais
+```
+ANTES (Configuração atual)
+┌─────────────┬─────────────┐
+│  Visual A   │  Visual B   │  ← Altura limitada, pouco espaço
+│  (pequeno)  │  (pequeno)  │
+└─────────────┴─────────────┘
+
+DEPOIS (Nova configuração)
+┌─────────────────────────────┐
+│         Visual A            │  ← Pode ocupar largura total
+│       (altura maior)        │
+│                             │
+├────────────┬────────────────┤
+│  Visual B  │   Visual C     │  ← Ou lado a lado com mais altura
+│            │                │
+└────────────┴────────────────┘
+```
 
 ---
 
 ## Seção Técnica
 
-### Por que a última atualização não causou isso?
+### Alterações no InsightsGrid.tsx
 
-A última atualização modificou:
-1. Filtro multi-instância para incluir conversas legadas
-2. Eventos de webhook para sincronização de grupos
-3. Handlers de eventos `chats` e `groups`
+```typescript
+// Linha 23-25: Aumentar constantes
+const ROW_HEIGHT = 100;  // Era 80 → Agora 100px por unidade
+const COLS = 12;         // Mantém
+const MARGIN: [number, number] = [16, 16]; // Mantém
 
-Nenhuma dessas mudanças alterou a lógica de exibição por status "closed". O problema é um comportamento pré-existente que estava acontecendo gradualmente à medida que agentes fechavam os tickets de grupo.
+// Linhas 50-72: Ajustar layouts
+// Reduzir minW e minH para maior flexibilidade
+{
+  i: visual.id,
+  x: existingLayout.x,
+  y: existingLayout.y,
+  w: existingLayout.w,
+  h: existingLayout.h,
+  minW: 2,  // Era 3 → Agora 2 (mais compacto)
+  minH: 2,  // Era 3 → Agora 2 (mais compacto)
+}
 
-### Diferença entre Grupos e Tickets
+// Layout padrão para novos visuais
+{
+  i: visual.id,
+  x: (index % 2) * 6,
+  y: Math.floor(index / 2) * 5,  // Era 4 → Agora 5
+  w: 6,
+  h: 5,     // Era 4 → Agora 5 (mais altura)
+  minW: 2,  // Era 3 → Agora 2
+  minH: 2,  // Era 3 → Agora 2
+}
+```
 
-| Aspecto | Ticket Individual | Grupo |
-|---------|-------------------|-------|
-| Natureza | Temporário (problema → solução) | Permanente (relação contínua) |
-| Ciclo de vida | Abertura → Atendimento → Fechamento | Sempre ativo enquanto existir |
-| Status "closed" | Correto (ticket resolvido) | Incorreto (grupo não "resolve") |
+### Comparação de Tamanhos
+
+| Medida | Antes | Depois | Ganho |
+|--------|-------|--------|-------|
+| Altura mínima | 240px (3×80) | 200px (2×100) | Mais compacto |
+| Altura padrão | 320px (4×80) | 500px (5×100) | +56% espaço |
+| Altura máxima | Ilimitada | Ilimitada | ✓ |
+| Largura mínima | 25% | 16.6% | Mais flexível |
 
