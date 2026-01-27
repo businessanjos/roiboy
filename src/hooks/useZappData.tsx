@@ -50,7 +50,7 @@ export interface Message {
 }
 
 const HEARTBEAT_INTERVAL_MS = 60000;
-const REALTIME_DEBOUNCE_MS = 2000;
+const REALTIME_DEBOUNCE_MS = 3000; // Increased from 2000ms to 3000ms for cloud optimization
 const MIN_FETCH_INTERVAL_MS = 3000;
 
 interface UseZappDataOptions {
