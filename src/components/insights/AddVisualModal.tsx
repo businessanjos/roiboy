@@ -100,6 +100,9 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   const [title, setTitle] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
+  // Scorecards have only 2 steps, other charts have 3
+  const totalSteps = chartType === 'scorecard' ? 2 : 3;
+
   // Reset form when modal closes
   useEffect(() => {
     if (!open) {
@@ -113,18 +116,25 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
 
   // Auto-generate title when selections change
   useEffect(() => {
-    if (metric && groupBy) {
+    if (chartType === 'scorecard' && metric) {
+      // For scorecards, just use the metric label (no grouping)
+      setTitle(METRIC_LABELS[metric]);
+    } else if (metric && groupBy) {
       const generatedTitle = `${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}`;
       setTitle(generatedTitle);
     }
-  }, [metric, groupBy]);
+  }, [chartType, metric, groupBy]);
 
   const canProceedStep1 = chartType !== null;
   const canProceedStep2 = metric !== null;
-  const canCreate = groupBy !== null && title.trim() !== "" && activeDashboardId !== null;
+  
+  // Validation for creating the visual
+  const canCreate = chartType === 'scorecard'
+    ? metric !== null && title.trim() !== "" && activeDashboardId !== null
+    : groupBy !== null && title.trim() !== "" && activeDashboardId !== null;
 
   const handleNext = () => {
-    if (step < 3) setStep(step + 1);
+    if (step < totalSteps) setStep(step + 1);
   };
 
   const handleBack = () => {
@@ -132,48 +142,77 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   };
 
   const handleCreate = async () => {
-    if (!canCreate || !chartType || !metric || !groupBy || !activeDashboardId) return;
+    if (!chartType || !metric || !activeDashboardId) return;
+    
+    // For non-scorecards, groupBy is required
+    if (chartType !== 'scorecard' && !groupBy) return;
+    
+    if (!canCreate) return;
 
     setIsCreating(true);
     try {
       const metricConfig = METRIC_TO_CONFIG[metric];
-      const baseDimensionConfig = GROUP_BY_TO_DIMENSION[groupBy];
       
-      // Use intelligent date field selection for temporal groupings
-      const dimensionField = baseDimensionConfig.type === 'date' 
-        ? getDateFieldForMetric(metric) 
-        : baseDimensionConfig.field;
+      let config: VisualConfig;
+      
+      if (chartType === 'scorecard') {
+        // Scorecard: no grouping, global aggregation
+        config = {
+          dataSource: metricConfig.dataSource,
+          measure: {
+            field: metricConfig.measureField || '',
+            aggregation: metricConfig.aggregation,
+          },
+          dimension: {
+            field: '_total', // Special marker for global aggregation
+            type: 'text',
+          },
+          formatting: {
+            type: metricConfig.formatType,
+            decimals: metricConfig.formatType === 'currency' ? 2 : (metricConfig.formatType === 'percentage' ? 1 : 0),
+          },
+          appearance: DEFAULT_APPEARANCE,
+        };
+      } else {
+        // Charts: use groupBy for dimension
+        const baseDimensionConfig = GROUP_BY_TO_DIMENSION[groupBy!];
+        
+        // Use intelligent date field selection for temporal groupings
+        const dimensionField = baseDimensionConfig.type === 'date' 
+          ? getDateFieldForMetric(metric) 
+          : baseDimensionConfig.field;
 
-      const isTemporalGrouping = baseDimensionConfig.type === 'date';
+        const isTemporalGrouping = baseDimensionConfig.type === 'date';
 
-      const config: VisualConfig = {
-        dataSource: metricConfig.dataSource,
-        measure: {
-          field: metricConfig.measureField || '',
-          aggregation: metricConfig.aggregation,
-        },
-        dimension: {
-          field: dimensionField,
-          type: baseDimensionConfig.type,
-          ...(baseDimensionConfig.dateGrouping && { dateGrouping: baseDimensionConfig.dateGrouping }),
-        },
-        formatting: {
-          type: metricConfig.formatType,
-          decimals: metricConfig.formatType === 'currency' ? 2 : (metricConfig.formatType === 'percentage' ? 1 : 0),
-        },
-        appearance: {
-          ...DEFAULT_APPEARANCE,
-          fillEmptyDates: isTemporalGrouping,
-          showDataLabels: isTemporalGrouping,
-        },
-      };
+        config = {
+          dataSource: metricConfig.dataSource,
+          measure: {
+            field: metricConfig.measureField || '',
+            aggregation: metricConfig.aggregation,
+          },
+          dimension: {
+            field: dimensionField,
+            type: baseDimensionConfig.type,
+            ...(baseDimensionConfig.dateGrouping && { dateGrouping: baseDimensionConfig.dateGrouping }),
+          },
+          formatting: {
+            type: metricConfig.formatType,
+            decimals: metricConfig.formatType === 'currency' ? 2 : (metricConfig.formatType === 'percentage' ? 1 : 0),
+          },
+          appearance: {
+            ...DEFAULT_APPEARANCE,
+            fillEmptyDates: isTemporalGrouping,
+            showDataLabels: isTemporalGrouping,
+          },
+        };
+      }
 
       await addVisual({
         dashboard_id: activeDashboardId,
         title: title.trim(),
         chart_type: chartType,
         config,
-        layout: { x: 0, y: 0, w: 6, h: 4 },
+        layout: { x: 0, y: 0, w: chartType === 'scorecard' ? 3 : 6, h: chartType === 'scorecard' ? 2 : 4 },
       });
 
       onOpenChange(false);
@@ -191,7 +230,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           <DialogTitle className="flex items-center gap-2">
             Adicionar Visual
             <span className="text-sm font-normal text-muted-foreground">
-              — Passo {step} de 3
+              — Passo {step} de {totalSteps}
             </span>
           </DialogTitle>
         </DialogHeader>
@@ -234,7 +273,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             </div>
           )}
 
-          {/* Step 2: What to Measure */}
+          {/* Step 2: What to Measure (+ Title for Scorecards) */}
           {step === 2 && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">O que você quer medir?</p>
@@ -264,6 +303,19 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
                   </div>
                 ))}
               </RadioGroup>
+
+              {/* Title field for Scorecards (shown in step 2 since it's the final step) */}
+              {chartType === 'scorecard' && (
+                <div className="space-y-2 pt-4 border-t">
+                  <Label htmlFor="visual-title-scorecard">Título do Scorecard</Label>
+                  <Input
+                    id="visual-title-scorecard"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Ex: Faturamento Total"
+                  />
+                </div>
+              )}
             </div>
           )}
 
@@ -333,7 +385,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             </Button>
           )}
           
-          {step < 3 ? (
+          {step < totalSteps ? (
             <Button
               onClick={handleNext}
               disabled={step === 1 ? !canProceedStep1 : !canProceedStep2}
