@@ -145,7 +145,7 @@ async function configureWebhook(instanceToken: string, instanceName: string, sup
     webhookByEvents: true,
     addUrlEvents: false,
     addUrlTypesMessages: false,
-    events: ["messages", "connection", "qrcode", "MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"]
+    events: ["messages", "connection", "qrcode", "MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED", "chats", "groups", "history"]
   };
   
   // Try different endpoints and methods to set webhook
