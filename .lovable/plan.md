@@ -1,211 +1,179 @@
 
-# Plano: Buscar Grupos pelo Nome no Dialog "Nova Conversa"
+# Plano: Implementar Exibição de Mensagens Citadas (Reply) no ROY zAPP
 
-## Objetivo
+## Problema Identificado
 
-Permitir que o botao "Nova Conversa" busque grupos WhatsApp pelo nome, alem de clientes, leads e contatos individuais. Por exemplo, ao digitar "Carlos e", o grupo "Carlos e Fernanda - Eternum Medic Club" devera aparecer nos resultados.
+Quando um cliente responde a uma mensagem específica no WhatsApp, a referência à mensagem original (quoted message) não está sendo exibida no ROY zAPP. A mensagem aparece "solta" sem contexto, causando confusão para os operadores.
 
-## Arquivos a Modificar
+### Exemplo do Print
+- **WhatsApp**: Mostra "Canal Atendimento Anjos" com imagem e texto, e a resposta "Esse ?" referenciando essa mensagem
+- **ROY zAPP**: Mostra apenas "Esse ?" sem referência à mensagem original
 
-| Arquivo | Mudanca |
+### Causa Raiz Identificada
+
+O webhook do UAZAPI está procurando os dados de mensagem citada nos campos errados:
+- O código atual procura por: `quotedMsg`, `contextInfo`, `quotedMessageId`
+- O UAZAPI envia como: `quoted` (campo separado no objeto message)
+
+Evidência dos logs:
+```
+Message object keys: [
+  "quoted",           // <-- Este é o campo correto!
+  "quotedMessageId",  // Isso também existe
+  "content",
+  ...
+]
+```
+
+### Estado Atual
+- A tabela `zapp_messages` JÁ possui os campos: `quoted_message_id`, `quoted_content`, `quoted_sender_name`
+- O frontend (`ZappMessageBubble`) JÁ renderiza mensagens citadas quando `quoted_content` existe
+- O problema é 100% na extração de dados no webhook
+
+## Arquivo a Modificar
+
+| Arquivo | Mudança |
 |---------|---------|
-| `src/pages/RoyZapp.tsx` | Adicionar busca de grupos na funcao `searchContacts` e tratamento especial em `createConversationWithContact` |
-| `src/components/royzapp/dialogs/ZappNewConversationDialog.tsx` | Adicionar tipo 'group' na interface e exibir badge "Grupo" com icone |
+| `supabase/functions/uazapi-webhook/index.ts` | Adicionar extração do campo `quoted` do UAZAPI |
 
-## Alteracoes Tecnicas
+## Alteração Técnica
 
-### 1. Modificar Interface Contact (ZappNewConversationDialog.tsx)
+### Atualizar Extração de Quoted Message (linhas 656-702)
 
-**Codigo Atual:**
+**Problema**: O código não lê o campo `quoted` que o UAZAPI envia.
+
+**Solução**: Adicionar `msgAnyQuote.quoted` como uma das fontes de dados:
+
 ```typescript
-interface Contact {
-  id: string;
-  full_name: string;
-  phone_e164: string;
-  avatar_url: string | null;
-  type?: 'client' | 'lead' | 'conversation';
-  common_groups?: CommonGroup[];
+// ============================================
+// EXTRACT QUOTED MESSAGE DATA (for replies)
+// ============================================
+const msgAnyQuote = msg as Record<string, unknown>;
+
+// UAZAPI sends quoted message data in multiple formats:
+// 1. msg.quoted - Object with body/text/caption + sender info
+// 2. msg.contextInfo - Standard WhatsApp format
+// 3. msg.extendedTextMessage?.contextInfo
+// 4. msg.quotedMsg - Alternative format
+const contextInfo = msg.contextInfo || 
+                    msg.extendedTextMessage?.contextInfo || 
+                    (msgAnyQuote.contextInfo as Record<string, unknown>);
+
+// CRITICAL FIX: UAZAPI uses 'quoted' field for quoted messages
+const uazapiQuoted = msgAnyQuote.quoted as Record<string, unknown>;
+const quotedMsg = uazapiQuoted || 
+                  (msgAnyQuote.quotedMsg as Record<string, unknown>) || 
+                  (contextInfo?.quotedMessage as Record<string, unknown>);
+
+// Extract quoted message ID from multiple sources
+const quotedMsgId = msg.quotedMessageId || 
+                    (uazapiQuoted?.id as string) ||
+                    (uazapiQuoted?.messageid as string) ||
+                    (contextInfo?.stanzaId as string) || 
+                    null;
+
+// Extract quoted content from various formats (UAZAPI sends in different ways)
+let quotedContent: string | null = null;
+if (quotedMsg) {
+  // UAZAPI format: quoted.body, quoted.text, quoted.caption
+  quotedContent = 
+    (quotedMsg.body as string) ||  // UAZAPI primary field
+    (quotedMsg.text as string) ||  // Alternative text field
+    (quotedMsg.caption as string) ||  // For media with captions
+    (quotedMsg.conversation as string) ||  // Standard WhatsApp
+    ((quotedMsg.extendedTextMessage as Record<string, unknown>)?.text as string) ||
+    ((quotedMsg.imageMessage as Record<string, unknown>)?.caption as string) ||
+    ((quotedMsg.videoMessage as Record<string, unknown>)?.caption as string) ||
+    ((quotedMsg.documentMessage as Record<string, unknown>)?.caption as string) ||
+    null;
+  
+  // If still no content and it's media, show placeholder
+  if (!quotedContent) {
+    // Check UAZAPI format (quoted.type or quoted.mediaType)
+    const quotedType = (quotedMsg.type as string) || (quotedMsg.mediaType as string) || "";
+    
+    if (quotedType.toLowerCase().includes("image") || quotedMsg.imageMessage) {
+      quotedContent = "📷 Imagem";
+    } else if (quotedType.toLowerCase().includes("video") || quotedMsg.videoMessage) {
+      quotedContent = "🎬 Vídeo";
+    } else if (quotedType.toLowerCase().includes("audio") || quotedType.toLowerCase().includes("ptt") || quotedMsg.audioMessage) {
+      quotedContent = "🎤 Áudio";
+    } else if (quotedType.toLowerCase().includes("document") || quotedMsg.documentMessage) {
+      quotedContent = "📄 Documento";
+    } else if (quotedType.toLowerCase().includes("sticker") || quotedMsg.stickerMessage) {
+      quotedContent = "🎨 Figurinha";
+    }
+  }
+}
+
+// Extract quoted sender name
+// UAZAPI format: quoted.sender, quoted.senderName, quoted.sender_pn
+const quotedParticipant = (uazapiQuoted?.sender as string) ||
+                          (uazapiQuoted?.sender_pn as string) ||
+                          (contextInfo?.participant as string);
+                          
+let quotedSenderName: string | null = null;
+
+// First try senderName from UAZAPI (the actual display name)
+if (uazapiQuoted?.senderName && typeof uazapiQuoted.senderName === "string") {
+  quotedSenderName = uazapiQuoted.senderName;
+} else if (quotedParticipant) {
+  // Fallback: extract from phone/JID
+  quotedSenderName = quotedParticipant.split("@")[0];
+  if (quotedSenderName && /^\d+$/.test(quotedSenderName)) {
+    quotedSenderName = `+${quotedSenderName}`;
+  }
+}
+
+// For outbound quoted messages, show "Você" instead of phone
+if (uazapiQuoted?.fromMe === true) {
+  quotedSenderName = "Você";
+}
+
+if (quotedMsgId || quotedContent) {
+  console.log(`Quoted message detected - ID: ${quotedMsgId}, content: ${quotedContent?.substring(0, 50)}..., sender: ${quotedSenderName}`);
 }
 ```
 
-**Codigo Novo:**
-```typescript
-interface Contact {
-  id: string;
-  full_name: string;
-  phone_e164: string;
-  avatar_url: string | null;
-  type?: 'client' | 'lead' | 'conversation' | 'group';
-  common_groups?: CommonGroup[];
-  group_jid?: string; // Para identificar grupos
-}
+## Fluxo Corrigido
+
+```text
+1. Cliente responde a uma mensagem no WhatsApp
+2. UAZAPI envia webhook com campo "quoted" contendo dados da mensagem original
+3. Webhook extrai: quoted.body (texto), quoted.senderName (quem enviou), quoted.id (ID)
+4. Dados salvos em: quoted_content, quoted_sender_name, quoted_message_id
+5. Frontend (ZappMessageBubble) renderiza barra de citação acima da resposta
 ```
 
-### 2. Adicionar Badge "Grupo" no Dialog (ZappNewConversationDialog.tsx)
+## Visualização no Frontend (já implementado)
 
-Adicionar apos os badges existentes:
+O componente `ZappMessageBubble` já possui a renderização:
 
 ```typescript
-{client.type === 'group' && (
-  <Badge variant="outline" className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs whitespace-nowrap flex items-center gap-1">
-    <Users className="h-3 w-3" />
-    Grupo
-  </Badge>
+{message.quoted_content && (
+  <div className="bg-black/20 border-l-4 border-zapp-accent/60 px-2 py-1.5 mb-2 rounded-r">
+    <p className="text-xs font-medium text-zapp-accent truncate">
+      {message.quoted_sender_name || ""}
+    </p>
+    <p className="text-xs text-zapp-text-muted/80 line-clamp-2">
+      {message.quoted_content}
+    </p>
+  </div>
 )}
 ```
 
-E para grupos, mostrar o numero de participantes em vez do telefone:
+## Resultado Esperado
 
-```typescript
-<p className="text-[#8696a0] text-sm truncate">
-  {client.type === 'group' ? 'Grupo do WhatsApp' : client.phone_e164}
-</p>
-```
+Após a correção:
+- Mensagens de resposta mostrarão uma barra com a mensagem original
+- O nome do remetente original será exibido
+- Se a mensagem original for mídia, exibirá emoji representativo (📷, 🎬, 🎤, etc.)
+- Mensagens antigas sem dados de citação continuarão sem (não há retroatividade)
 
-### 3. Adicionar Busca de Grupos em searchContacts (RoyZapp.tsx)
+## Testes Recomendados
 
-Na funcao `searchContacts`, adicionar uma quarta query paralela:
-
-```typescript
-// 4. Search groups by name
-supabase
-  .from("zapp_conversations")
-  .select("id, contact_name, avatar_url, group_jid")
-  .eq("account_id", currentUser.account_id)
-  .eq("is_group", true)
-  .ilike("contact_name", `%${textSearch}%`)
-  .order("last_message_at", { ascending: false })
-  .limit(10),
-```
-
-E mapear os resultados:
-
-```typescript
-const groups = (groupsResult.data || []).map(g => ({
-  id: g.id,
-  full_name: g.contact_name || "Grupo",
-  phone_e164: "", // Grupos nao tem telefone
-  avatar_url: g.avatar_url,
-  type: 'group' as const,
-  group_jid: g.group_jid,
-}));
-```
-
-Combinar grupos na lista final (sem deduplicacao por telefone, pois grupos nao tem telefone):
-
-```typescript
-// Grupos sao adicionados diretamente sem filtro de telefone
-const combined = [...clients, ...leads, ...conversations];
-// ... filtragem por telefone existente ...
-const finalCombined = [...filteredByPhone, ...groups];
-```
-
-### 4. Modificar createConversationWithContact para Grupos (RoyZapp.tsx)
-
-No inicio da funcao, detectar se e um grupo:
-
-```typescript
-const createConversationWithContact = async (contact: any) => {
-  if (!currentUser?.account_id || !currentAgent) return;
-  
-  setCreatingConversation(true);
-  try {
-    // NOVO: Se for grupo, tratar de forma especial
-    if (contact.type === 'group') {
-      // Grupos ja existem como zapp_conversation, apenas buscar/criar assignment
-      const zappConvId = contact.id; // O id ja e o zapp_conversation.id
-      
-      // Buscar assignment existente para este grupo neste departamento
-      const { data: existingAssignments } = await supabase
-        .from("zapp_conversation_assignments")
-        .select("id, agent_id, status, department_id")
-        .eq("zapp_conversation_id", zappConvId)
-        .eq("department_id", currentSectorDepartmentId)
-        .order("created_at", { ascending: false });
-      
-      const activeAssignment = existingAssignments?.find(a => a.status !== 'closed');
-      const closedAssignment = existingAssignments?.find(a => a.status === 'closed');
-      
-      if (activeAssignment) {
-        // Abrir conversa existente
-        const { data: assignmentData } = await supabase
-          .from("zapp_conversation_assignments")
-          .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
-          .eq("id", activeAssignment.id)
-          .single();
-        
-        if (assignmentData) setSelectedConversation(assignmentData);
-        fetchData();
-        toast.info("Abrindo grupo existente");
-        setNewConversationDialogOpen(false);
-        setCreatingConversation(false);
-        return;
-      } else if (closedAssignment) {
-        // Reabrir grupo fechado
-        await supabase
-          .from("zapp_conversation_assignments")
-          .update({ status: "triage", agent_id: null, updated_at: new Date().toISOString() })
-          .eq("id", closedAssignment.id);
-        
-        toast.success("Grupo reaberto na Fila!");
-        setInboxTab("queue");
-        setNewConversationDialogOpen(false);
-        fetchData();
-        setCreatingConversation(false);
-        return;
-      } else {
-        // Criar novo assignment para o grupo
-        await supabase
-          .from("zapp_conversation_assignments")
-          .insert({
-            account_id: currentUser.account_id,
-            zapp_conversation_id: zappConvId,
-            agent_id: null,
-            status: "triage",
-            department_id: currentSectorDepartmentId,
-          });
-        
-        toast.success("Grupo adicionado a Fila!");
-        setInboxTab("queue");
-        setNewConversationDialogOpen(false);
-        fetchData();
-        setCreatingConversation(false);
-        return;
-      }
-    }
-    
-    // ... resto do codigo existente para contatos individuais ...
-```
-
-## Fluxo do Usuario
-
-```text
-1. Usuario clica em "Nova Conversa"
-2. Digita "Carlos e" no campo de busca
-3. Sistema busca em:
-   - Clientes com nome contendo "Carlos e"
-   - Leads com nome contendo "Carlos e"
-   - Contatos individuais com nome contendo "Carlos e"
-   - NOVO: Grupos com nome contendo "Carlos e"
-4. Aparece "Carlos e Fernanda - Eternum Medic Club" com badge "Grupo"
-5. Usuario clica no grupo
-6. Sistema verifica se ja tem assignment para este setor
-7. Se sim: abre conversa existente
-8. Se nao: cria assignment e coloca na fila
-9. Usuario pode interagir com o grupo
-```
-
-## Resultado Visual
-
-Os resultados de busca mostrarao:
-- **Clientes**: Badge verde "Cliente" + telefone
-- **Leads**: Badge amarelo "Lead" + telefone
-- **Contatos**: Badge cinza "Contato" + telefone
-- **Grupos**: Badge azul "Grupo" com icone de pessoas + "Grupo do WhatsApp"
-
-## Beneficios
-
-- Usuarios podem encontrar grupos rapidamente pelo nome
-- Interface consistente com tipos de contato existentes
-- Reuso da logica de assignment existente
-- Grupos podem ser reabertos/adicionados a fila normalmente
+1. Enviar uma resposta a uma mensagem de texto pelo WhatsApp
+2. Verificar se a citação aparece no ROY zAPP
+3. Testar resposta a imagem (deve mostrar "📷 Imagem" ou caption)
+4. Testar resposta a áudio (deve mostrar "🎤 Áudio")
+5. Verificar se o nome do remetente original aparece corretamente
