@@ -1,133 +1,259 @@
 
-# Plano: Verificação e Correção do Fluxo de Responsáveis (Vendedor vs Consultor)
+# Plano: Corrigir Erro "Cliente não encontrado" Causado por Falha de Rede
 
-## Diagnóstico Completo
+## Diagnóstico
 
-Após investigação detalhada, identifiquei a causa raiz do problema:
+O erro "Cliente não encontrado" está sendo exibido incorretamente quando ocorre uma **falha de rede transiente** (TypeError: Failed to fetch), em vez de quando o cliente realmente não existe.
 
-### Clientes Afetados
-| Cliente | Criado em | Consultor Atual | Sales_user_id |
-|---------|-----------|-----------------|---------------|
-| Dayse Magalhães | 26/01/2026 20:14 | George Oliveira | NULL |
-| Murilo Joaquim | 26/01/2026 23:14 | Everton Pieri | NULL |
+### Evidências Encontradas
+
+1. **Logs de Console:** `TypeError: Failed to fetch` - erro de rede, não erro 404
+2. **Banco de Dados:** Cliente Dayse Magalhães existe (ID: `a84ef3d0-6dfe-4125-a759-feb4d9dca730`)
+3. **Código Atual:** `ClientDetail.tsx` não diferencia entre "não encontrado" e "erro de rede"
 
 ### Causa Raiz
-Os clientes foram **convertidos ANTES** da migração que corrigiu o sistema (27/01/2026 18:15). Nesse período:
 
-1. A função `convert_lead_to_client` ainda **não** havia sido corrigida
-2. A coluna `sales_user_id` **ainda não existia**
-3. Alguém atribuiu manualmente esses clientes via Triagem (ou edit), preenchendo `responsible_user_id` com vendedores
-
-### Estado Atual do Sistema (Correto)
-- ✅ Migração aplicada em 27/01/2026 adicionou `sales_user_id`
-- ✅ Função `convert_lead_to_client` agora NÃO copia `responsible_user_id`
-- ✅ `SalesPipeline.tsx` atualiza `sales_user_id` (linha 383) e NÃO `responsible_user_id`
-- ✅ Triagem ordena do mais recente para o mais antigo (linha 153)
-
-## Arquivos a Modificar (Correção de Ordenação)
-
-Após revisar novamente o código, identifiquei que a ordenação na Triagem **já está implementada** na linha 150-156 de `ContractTriageQueue.tsx`:
+Na função `fetchData()` (linha 578-934 de `ClientDetail.tsx`):
 
 ```typescript
-const triageContracts = useMemo(() => {
-  return contracts
-    .filter((contract) => !contract.client?.responsible_user_id)
-    .sort((a, b) => {
-      const dateA = new Date(a.created_at).getTime();
-      const dateB = new Date(b.created_at).getTime();
-      return dateB - dateA; // Mais recente primeiro
-    });
-}, [contracts]);
+try {
+  const { data: clientData, error: clientError } = await supabase
+    .from("clients")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (clientError) {
+    console.error("Client fetch error:", clientError);
+    throw clientError;  // Joga o erro sem diferenciar o tipo
+  }
+  
+  if (!clientData) {
+    console.error("Client not found for ID:", id);
+    setLoading(false);
+    return;  // Client permanece null
+  }
+  // ...
+} catch (error) {
+  console.error("Error fetching client data:", error);
+  toast.error("Erro ao carregar dados do cliente");  // Toast genérico
+} finally {
+  setLoading(false);
+}
 ```
 
-## Ação Necessária: Correção Manual dos Dados Históricos
+O problema é que **qualquer** erro (rede, RLS, timeout) resulta em `client = null` e a UI exibe "Cliente não encontrado".
 
-Os clientes mencionados (Dayse e Murilo) precisam de correção manual:
+## Arquivos a Modificar
 
-1. **Remover o responsável atual** (`responsible_user_id`) para que voltem para a Triagem
-2. **Definir o vendedor** (`sales_user_id`) com o ID do vendedor do negócio
+| Arquivo | Mudança |
+|---------|---------|
+| `src/pages/ClientDetail.tsx` | Adicionar estado de erro, retry automático, e UI diferenciada |
 
-| Cliente | Ação |
-|---------|------|
-| Dayse Magalhães | `sales_user_id` = Everton Pieri, `responsible_user_id` = NULL |
-| Murilo Joaquim | `sales_user_id` = Everton Pieri, `responsible_user_id` = NULL |
+## Solução Proposta
 
-### SQL de Correção (Executar Manualmente)
+### 1. Adicionar Estado de Erro
 
-```sql
--- Corrigir clientes que foram atribuídos incorretamente
--- Definir sales_user_id com o vendedor do negócio e limpar responsible_user_id
-
-UPDATE clients 
-SET 
-  sales_user_id = (
-    SELECT d.responsible_user_id 
-    FROM deals d 
-    WHERE d.client_id = clients.id 
-    AND d.status = 'won'
-    LIMIT 1
-  ),
-  responsible_user_id = NULL
-WHERE id IN (
-  '9aede114-19b0-4b87-b492-b6116675ffe7',  -- Murilo
-  'a84ef3d0-6dfe-4125-a759-feb4d9dca730'   -- Dayse
-);
+```typescript
+const [fetchError, setFetchError] = useState<{ type: 'network' | 'not_found' | 'permission'; message: string } | null>(null);
 ```
 
-## Fluxo Correto (Funcionando Após Correção)
+### 2. Modificar fetchData() para Diferenciar Erros
+
+```typescript
+const fetchData = async () => {
+  if (!id) return;
+  setLoading(true);
+  setFetchError(null);  // Reset error state
+
+  try {
+    const { data: clientData, error: clientError } = await supabase
+      .from("clients")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    // Diferenciar tipos de erro
+    if (clientError) {
+      console.error("Client fetch error:", clientError);
+      
+      // Erro de rede (Failed to fetch, ETIMEDOUT, etc)
+      if (clientError.message?.includes('Failed to fetch') || 
+          clientError.message?.includes('NetworkError') ||
+          clientError.code === 'PGRST301') {
+        setFetchError({ 
+          type: 'network', 
+          message: 'Erro de conexão. Verifique sua internet.' 
+        });
+        return;
+      }
+      
+      // Cliente não encontrado (PGRST116 = single row not found)
+      if (clientError.code === 'PGRST116') {
+        setFetchError({ 
+          type: 'not_found', 
+          message: 'Cliente não encontrado.' 
+        });
+        return;
+      }
+      
+      // Erro de permissão (RLS)
+      if (clientError.code === '42501' || clientError.code === 'PGRST301') {
+        setFetchError({ 
+          type: 'permission', 
+          message: 'Sem permissão para visualizar este cliente.' 
+        });
+        return;
+      }
+      
+      // Outros erros
+      setFetchError({ 
+        type: 'network', 
+        message: clientError.message || 'Erro desconhecido.' 
+      });
+      return;
+    }
+    
+    // ... resto do código existente
+  } catch (error: any) {
+    console.error("Error fetching client data:", error);
+    
+    // Tratamento de erros não-Supabase (network errors puros)
+    if (error?.message?.includes('Failed to fetch') || 
+        error instanceof TypeError) {
+      setFetchError({ 
+        type: 'network', 
+        message: 'Falha na conexão. Tente novamente.' 
+      });
+    } else {
+      setFetchError({ 
+        type: 'network', 
+        message: error?.message || 'Erro ao carregar dados.' 
+      });
+    }
+  } finally {
+    setLoading(false);
+  }
+};
+```
+
+### 3. Modificar UI para Exibir Erros Diferenciados
+
+```typescript
+// Tela de erro de rede com botão de retry
+if (fetchError?.type === 'network') {
+  return (
+    <div className="p-6 lg:p-8 flex flex-col items-center justify-center min-h-[50vh]">
+      <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4" />
+      <p className="text-muted-foreground mb-2">{fetchError.message}</p>
+      <Button onClick={() => fetchData()} className="mt-4">
+        <RefreshCw className="h-4 w-4 mr-2" />
+        Tentar Novamente
+      </Button>
+    </div>
+  );
+}
+
+// Cliente realmente não encontrado
+if (fetchError?.type === 'not_found' || !client) {
+  return (
+    <div className="p-6 lg:p-8">
+      <p className="text-muted-foreground">Cliente não encontrado.</p>
+      <Button asChild className="mt-4">
+        <Link to="/dashboard">Voltar ao Dashboard</Link>
+      </Button>
+    </div>
+  );
+}
+
+// Erro de permissão
+if (fetchError?.type === 'permission') {
+  return (
+    <div className="p-6 lg:p-8 flex flex-col items-center justify-center min-h-[50vh]">
+      <Lock className="h-12 w-12 text-red-500 mb-4" />
+      <p className="text-muted-foreground mb-2">{fetchError.message}</p>
+      <Button asChild className="mt-4">
+        <Link to="/clients">Voltar para Clientes</Link>
+      </Button>
+    </div>
+  );
+}
+```
+
+### 4. Adicionar Retry Automático para Erros de Rede
+
+```typescript
+// No useEffect, adicionar retry automático
+useEffect(() => {
+  let retryCount = 0;
+  const maxRetries = 2;
+  
+  const fetchWithRetry = async () => {
+    await fetchData();
+    
+    // Se houve erro de rede e ainda tem tentativas, retry após 2 segundos
+    if (fetchError?.type === 'network' && retryCount < maxRetries) {
+      retryCount++;
+      setTimeout(fetchWithRetry, 2000);
+    }
+  };
+  
+  fetchWithRetry();
+  fetchAvailableForms();
+  fetchTeamUsers();
+}, [id]);
+```
+
+## Fluxo Corrigido
 
 ```text
-┌─────────────────────────────────────────────────────────────────┐
-│                    LEAD → CLIENTE (CONVERSÃO)                   │
-├─────────────────────────────────────────────────────────────────┤
-│ 1. Vendedor marca negócio como "Ganho" no Pipeline             │
-│                                                                 │
-│ 2. Sistema executa convert_lead_to_client()                    │
-│    → Cliente criado com responsible_user_id = NULL              │
-│    → Cliente vai para Triagem da Operação                       │
-│                                                                 │
-│ 3. SalesPipeline.tsx atualiza sales_user_id                    │
-│    → Cliente mantém referência ao vendedor                      │
-│                                                                 │
-│ 4. Contrato criado e enviado para Conciliação                  │
-│                                                                 │
-│ 5. Cliente aparece na Triagem da Operação                      │
-│    → Consultor clica "Puxar" ou CX atribui                     │
-│    → responsible_user_id = Consultor escolhido                  │
-│                                                                 │
-│ 6. Cliente possui 2 responsáveis distintos:                    │
-│    → sales_user_id = Vendedor (contato periódico)              │
-│    → responsible_user_id = Consultor (atendimento diário)      │
-└─────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│                  CARREGAMENTO DE CLIENTE                   │
+├────────────────────────────────────────────────────────────┤
+│ 1. Usuário clica no nome do cliente na Triagem            │
+│    → Navigate para /clients/{id}                           │
+│                                                            │
+│ 2. ClientDetail.tsx executa fetchData()                   │
+│    → setLoading(true)                                      │
+│    → setFetchError(null)                                   │
+│                                                            │
+│ 3. Consulta Supabase: .from("clients").eq("id", id)       │
+│                                                            │
+│ 4. Análise do resultado:                                   │
+│    ┌─────────────────────────────────────────────────┐     │
+│    │ SUCESSO?                                        │     │
+│    │ ├─ SIM: setClient(data)                         │     │
+│    │ └─ NÃO: Analisar tipo de erro                   │     │
+│    │        ├─ Network Error → Retry + UI de retry   │     │
+│    │        ├─ PGRST116 → "Cliente não encontrado"   │     │
+│    │        └─ 42501 → "Sem permissão"               │     │
+│    └─────────────────────────────────────────────────┘     │
+│                                                            │
+│ 5. UI apropriada baseada no estado:                       │
+│    ├─ loading=true → LoadingScreen                         │
+│    ├─ fetchError.type='network' → Botão "Tentar Novamente"│
+│    ├─ fetchError.type='not_found' → "Não encontrado"       │
+│    └─ client → Exibir perfil completo                      │
+└────────────────────────────────────────────────────────────┘
 ```
 
-## Verificação de Código (Sem Mudanças Necessárias)
+## Resultado Esperado
 
-| Arquivo | Status | Observação |
-|---------|--------|------------|
-| `convert_lead_to_client` (DB) | ✅ Correto | Não copia `responsible_user_id` |
-| `SalesPipeline.tsx` | ✅ Correto | Atualiza apenas `sales_user_id` |
-| `ContractTriageQueue.tsx` | ✅ Correto | Ordena por `created_at` DESC |
-| `ClientDetail.tsx` | ✅ Correto | Exibe Consultor e Vendedor separados |
+| Cenário | Antes | Depois |
+|---------|-------|--------|
+| Erro de rede temporário | "Cliente não encontrado" | UI de erro + botão "Tentar Novamente" |
+| Cliente realmente não existe | "Cliente não encontrado" | "Cliente não encontrado" (sem mudança) |
+| Sem permissão RLS | "Cliente não encontrado" | "Sem permissão para visualizar" |
+| Sucesso | Exibe perfil | Exibe perfil (sem mudança) |
 
-## Conclusão
+## Imports Adicionais
 
-O sistema está **corretamente implementado** para novas conversões. O problema observado são **dados históricos** de clientes convertidos antes da correção (26/01). 
+Adicionar `Lock` aos imports de lucide-react (já existe `RefreshCw`).
 
-A correção envolve:
-1. Executar o SQL de correção para os clientes afetados
-2. Verificar se existem outros clientes na mesma situação
-3. Confirmar que novas conversões funcionam corretamente
+## Observação sobre o Problema Atual
 
-Para identificar todos os clientes afetados (vendedores como consultores):
+O erro que ocorreu com Dayse Magalhães foi um **erro de rede transiente** no preview do Lovable (muito comum durante desenvolvimento). Com esta correção:
 
-```sql
-SELECT c.id, c.full_name, 
-       u.name as consultor_atual,
-       d.responsible_user_id as vendedor_do_negocio
-FROM clients c
-JOIN users u ON u.id = c.responsible_user_id
-JOIN deals d ON d.client_id = c.id AND d.status = 'won'
-WHERE c.sales_user_id IS NULL
-AND c.responsible_user_id IS NOT NULL;
-```
+1. O usuário verá "Erro de conexão" em vez de "Cliente não encontrado"
+2. Um botão "Tentar Novamente" permitirá recarregar sem navegar
+3. Retry automático tentará 2x antes de desistir
