@@ -1,179 +1,220 @@
 
-# Plano: Implementar Exibição de Mensagens Citadas (Reply) no ROY zAPP
+# Plano: Separar Responsável de Vendas e Responsável de Operação
 
-## Problema Identificado
+## Contexto do Problema
 
-Quando um cliente responde a uma mensagem específica no WhatsApp, a referência à mensagem original (quoted message) não está sendo exibida no ROY zAPP. A mensagem aparece "solta" sem contexto, causando confusão para os operadores.
+Atualmente existe apenas UM campo `responsible_user_id` na tabela `clients`, que está sendo usado de forma ambígua para dois papéis diferentes:
 
-### Exemplo do Print
-- **WhatsApp**: Mostra "Canal Atendimento Anjos" com imagem e texto, e a resposta "Esse ?" referenciando essa mensagem
-- **ROY zAPP**: Mostra apenas "Esse ?" sem referência à mensagem original
+1. **Vendedor** (Setor Vendas) - fechou a venda, faz contato periódico
+2. **Consultor** (Setor Operações) - atende o cliente durante o contrato
 
-### Causa Raiz Identificada
+O Lead convertido em Cliente DEVE:
+- ✅ Ir para a fila de Conciliação (já funciona)
+- ✅ Ir para a Triagem da Operação (precisa ter `responsible_user_id` = NULL)
+- ✅ Manter o vendedor vinculado (novo campo `sales_user_id`)
 
-O webhook do UAZAPI está procurando os dados de mensagem citada nos campos errados:
-- O código atual procura por: `quotedMsg`, `contextInfo`, `quotedMessageId`
-- O UAZAPI envia como: `quoted` (campo separado no objeto message)
-
-Evidência dos logs:
-```
-Message object keys: [
-  "quoted",           // <-- Este é o campo correto!
-  "quotedMessageId",  // Isso também existe
-  "content",
-  ...
-]
-```
-
-### Estado Atual
-- A tabela `zapp_messages` JÁ possui os campos: `quoted_message_id`, `quoted_content`, `quoted_sender_name`
-- O frontend (`ZappMessageBubble`) JÁ renderiza mensagens citadas quando `quoted_content` existe
-- O problema é 100% na extração de dados no webhook
-
-## Arquivo a Modificar
+## Arquivos a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `supabase/functions/uazapi-webhook/index.ts` | Adicionar extração do campo `quoted` do UAZAPI |
+| **Migração SQL** | Adicionar coluna `sales_user_id` na tabela `clients` |
+| `convert_lead_to_client` (função DB) | Atualizar para NÃO copiar `responsible_user_id` do lead |
+| `src/pages/SalesPipeline.tsx` | Após conversão, salvar `deal.responsible_user_id` em `clients.sales_user_id` |
+| `src/components/contracts/ContractTriageQueue.tsx` | Ordenar por `created_at` DESC e exibir vendedor responsável |
+| `src/components/client/ClientHeader.tsx` | Exibir ambos responsáveis (Vendedor + Consultor) |
 
-## Alteração Técnica
+## Alterações Técnicas
 
-### Atualizar Extração de Quoted Message (linhas 656-702)
+### 1. Migração SQL - Nova Coluna
 
-**Problema**: O código não lê o campo `quoted` que o UAZAPI envia.
+```sql
+-- Adicionar coluna para vendedor responsável
+ALTER TABLE public.clients 
+ADD COLUMN IF NOT EXISTS sales_user_id uuid REFERENCES public.users(id);
 
-**Solução**: Adicionar `msgAnyQuote.quoted` como uma das fontes de dados:
+-- Comentário explicativo
+COMMENT ON COLUMN public.clients.sales_user_id IS 'Vendedor que fechou a venda (setor Vendas)';
+COMMENT ON COLUMN public.clients.responsible_user_id IS 'Consultor responsável pelo atendimento (setor Operações)';
+```
+
+### 2. Atualizar Função convert_lead_to_client
+
+Modificar para NÃO copiar `responsible_user_id` do lead para o cliente, garantindo que novos clientes sempre vão para triagem:
+
+```sql
+CREATE OR REPLACE FUNCTION public.convert_lead_to_client(p_lead_id uuid)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_lead RECORD;
+  v_client_id uuid;
+BEGIN
+  -- Buscar lead
+  SELECT * INTO v_lead FROM public.leads WHERE id = p_lead_id;
+  
+  IF v_lead IS NULL THEN
+    RAISE EXCEPTION 'Lead não encontrado';
+  END IF;
+  
+  IF v_lead.converted_to_client_id IS NOT NULL THEN
+    RAISE EXCEPTION 'Lead já foi convertido';
+  END IF;
+  
+  -- Criar cliente SEM responsible_user_id (vai para triagem)
+  INSERT INTO public.clients (
+    account_id, full_name, phone_e164, emails,
+    cpf, rg, birth_date, cnpj, company_name,
+    business_segment, business_niche, companies,
+    street, street_number, complement, neighborhood, city, state, zip_code,
+    business_street, business_street_number, business_complement,
+    business_neighborhood, business_city, business_state, business_zip_code,
+    bank_code, bank_name, bank_agency, bank_account, bank_account_type,
+    pix_key, pix_key_type, instagram, instagrams,
+    additional_phones, additional_pix_keys, additional_bank_accounts,
+    notes, tags, status
+    -- responsible_user_id REMOVIDO - cliente vai para triagem
+  ) VALUES (
+    v_lead.account_id, v_lead.full_name, COALESCE(v_lead.phone, '+5500000000000'),
+    COALESCE(v_lead.emails, CASE WHEN v_lead.email IS NOT NULL THEN jsonb_build_array(v_lead.email) ELSE '[]'::jsonb END),
+    v_lead.cpf, v_lead.rg, v_lead.birth_date, v_lead.cnpj, v_lead.company_name,
+    v_lead.business_segment, v_lead.business_niche, COALESCE(v_lead.companies, '[]'::jsonb),
+    v_lead.street, v_lead.street_number, v_lead.complement, v_lead.neighborhood,
+    v_lead.city, v_lead.state, v_lead.zip_code,
+    v_lead.business_street, v_lead.business_street_number, v_lead.business_complement,
+    v_lead.business_neighborhood, v_lead.business_city, v_lead.business_state, v_lead.business_zip_code,
+    v_lead.bank_code, v_lead.bank_name, v_lead.bank_agency, v_lead.bank_account, v_lead.bank_account_type,
+    v_lead.pix_key, v_lead.pix_key_type, v_lead.instagram, COALESCE(v_lead.instagrams, '[]'::jsonb),
+    COALESCE(v_lead.additional_phones, '[]'::jsonb),
+    COALESCE(v_lead.additional_pix_keys, '[]'::jsonb),
+    COALESCE(v_lead.additional_bank_accounts, '[]'::jsonb),
+    v_lead.notes, COALESCE(v_lead.tags, '[]'::jsonb), 'active'
+  ) RETURNING id INTO v_client_id;
+  
+  -- Atualizar lead como convertido
+  UPDATE public.leads
+  SET converted_to_client_id = v_client_id,
+      converted_at = now(),
+      status = 'converted'
+  WHERE id = p_lead_id;
+  
+  RETURN v_client_id;
+END;
+$$;
+```
+
+### 3. SalesPipeline.tsx - Salvar Vendedor
+
+Após a conversão do lead e atualização com dados do deal, adicionar:
 
 ```typescript
-// ============================================
-// EXTRACT QUOTED MESSAGE DATA (for replies)
-// ============================================
-const msgAnyQuote = msg as Record<string, unknown>;
-
-// UAZAPI sends quoted message data in multiple formats:
-// 1. msg.quoted - Object with body/text/caption + sender info
-// 2. msg.contextInfo - Standard WhatsApp format
-// 3. msg.extendedTextMessage?.contextInfo
-// 4. msg.quotedMsg - Alternative format
-const contextInfo = msg.contextInfo || 
-                    msg.extendedTextMessage?.contextInfo || 
-                    (msgAnyQuote.contextInfo as Record<string, unknown>);
-
-// CRITICAL FIX: UAZAPI uses 'quoted' field for quoted messages
-const uazapiQuoted = msgAnyQuote.quoted as Record<string, unknown>;
-const quotedMsg = uazapiQuoted || 
-                  (msgAnyQuote.quotedMsg as Record<string, unknown>) || 
-                  (contextInfo?.quotedMessage as Record<string, unknown>);
-
-// Extract quoted message ID from multiple sources
-const quotedMsgId = msg.quotedMessageId || 
-                    (uazapiQuoted?.id as string) ||
-                    (uazapiQuoted?.messageid as string) ||
-                    (contextInfo?.stanzaId as string) || 
-                    null;
-
-// Extract quoted content from various formats (UAZAPI sends in different ways)
-let quotedContent: string | null = null;
-if (quotedMsg) {
-  // UAZAPI format: quoted.body, quoted.text, quoted.caption
-  quotedContent = 
-    (quotedMsg.body as string) ||  // UAZAPI primary field
-    (quotedMsg.text as string) ||  // Alternative text field
-    (quotedMsg.caption as string) ||  // For media with captions
-    (quotedMsg.conversation as string) ||  // Standard WhatsApp
-    ((quotedMsg.extendedTextMessage as Record<string, unknown>)?.text as string) ||
-    ((quotedMsg.imageMessage as Record<string, unknown>)?.caption as string) ||
-    ((quotedMsg.videoMessage as Record<string, unknown>)?.caption as string) ||
-    ((quotedMsg.documentMessage as Record<string, unknown>)?.caption as string) ||
-    null;
+// STEP 4: Update client with deal custom field data (Instagram, City, Bonus)
+if (clientId && currentUser?.account_id) {
+  await updateClientWithDealData(clientId, currentUser.account_id, dealFieldValues);
   
-  // If still no content and it's media, show placeholder
-  if (!quotedContent) {
-    // Check UAZAPI format (quoted.type or quoted.mediaType)
-    const quotedType = (quotedMsg.type as string) || (quotedMsg.mediaType as string) || "";
-    
-    if (quotedType.toLowerCase().includes("image") || quotedMsg.imageMessage) {
-      quotedContent = "📷 Imagem";
-    } else if (quotedType.toLowerCase().includes("video") || quotedMsg.videoMessage) {
-      quotedContent = "🎬 Vídeo";
-    } else if (quotedType.toLowerCase().includes("audio") || quotedType.toLowerCase().includes("ptt") || quotedMsg.audioMessage) {
-      quotedContent = "🎤 Áudio";
-    } else if (quotedType.toLowerCase().includes("document") || quotedMsg.documentMessage) {
-      quotedContent = "📄 Documento";
-    } else if (quotedType.toLowerCase().includes("sticker") || quotedMsg.stickerMessage) {
-      quotedContent = "🎨 Figurinha";
-    }
+  // NOVO: Salvar vendedor responsável (sales_user_id)
+  // O responsible_user_id permanece NULL para triagem da Operação
+  if (deal.responsible_user_id) {
+    await supabase
+      .from('clients')
+      .update({ sales_user_id: deal.responsible_user_id })
+      .eq('id', clientId);
   }
 }
+```
 
-// Extract quoted sender name
-// UAZAPI format: quoted.sender, quoted.senderName, quoted.sender_pn
-const quotedParticipant = (uazapiQuoted?.sender as string) ||
-                          (uazapiQuoted?.sender_pn as string) ||
-                          (contextInfo?.participant as string);
-                          
-let quotedSenderName: string | null = null;
+### 4. ContractTriageQueue.tsx - Ordenação + Exibir Vendedor
 
-// First try senderName from UAZAPI (the actual display name)
-if (uazapiQuoted?.senderName && typeof uazapiQuoted.senderName === "string") {
-  quotedSenderName = uazapiQuoted.senderName;
-} else if (quotedParticipant) {
-  // Fallback: extract from phone/JID
-  quotedSenderName = quotedParticipant.split("@")[0];
-  if (quotedSenderName && /^\d+$/.test(quotedSenderName)) {
-    quotedSenderName = `+${quotedSenderName}`;
-  }
+```typescript
+// Ordenar do mais recente para o mais antigo
+const triageContracts = useMemo(() => {
+  return contracts
+    .filter((contract) => !contract.client?.responsible_user_id)
+    .sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return dateB - dateA; // Mais recente primeiro
+    });
+}, [contracts]);
+```
+
+E na interface Contract, adicionar:
+
+```typescript
+interface Contract {
+  // ... existente
+  client?: {
+    id: string;
+    full_name: string;
+    avatar_url: string | null;
+    responsible_user_id: string | null;
+    sales_user_id: string | null; // NOVO
+  };
 }
+```
 
-// For outbound quoted messages, show "Você" instead of phone
-if (uazapiQuoted?.fromMe === true) {
-  quotedSenderName = "Você";
-}
+Na tabela, adicionar coluna "Vendedor":
 
-if (quotedMsgId || quotedContent) {
-  console.log(`Quoted message detected - ID: ${quotedMsgId}, content: ${quotedContent?.substring(0, 50)}..., sender: ${quotedSenderName}`);
-}
+```typescript
+<TableHead>Vendedor</TableHead>
+// ...
+<TableCell>
+  {contract.client?.sales_user_id ? (
+    // Buscar nome do vendedor
+    <span className="text-sm text-muted-foreground">
+      {salesUserName}
+    </span>
+  ) : (
+    <span className="text-sm text-muted-foreground">-</span>
+  )}
+</TableCell>
 ```
 
 ## Fluxo Corrigido
 
 ```text
-1. Cliente responde a uma mensagem no WhatsApp
-2. UAZAPI envia webhook com campo "quoted" contendo dados da mensagem original
-3. Webhook extrai: quoted.body (texto), quoted.senderName (quem enviou), quoted.id (ID)
-4. Dados salvos em: quoted_content, quoted_sender_name, quoted_message_id
-5. Frontend (ZappMessageBubble) renderiza barra de citação acima da resposta
+┌─────────────────────────────────────────────────────────────────┐
+│                    PROCESSO DE VENDA                            │
+├─────────────────────────────────────────────────────────────────┤
+│ 1. Vendedor trabalha o Lead no Pipeline                         │
+│    → Deal.responsible_user_id = Vendedor                        │
+│                                                                 │
+│ 2. Vendedor marca negócio como "Ganho"                          │
+│    → Lead convertido para Cliente                               │
+│    → Client.sales_user_id = Vendedor (NOVO)                     │
+│    → Client.responsible_user_id = NULL (vai para triagem)       │
+│    → Contrato criado → Fila de Conciliação                      │
+│                                                                 │
+│ 3. Cliente aparece na Triagem da Operação                       │
+│    → Consultor clica "Puxar" ou CX atribui                      │
+│    → Client.responsible_user_id = Consultor                     │
+│                                                                 │
+│ 4. Cliente agora tem dois responsáveis:                         │
+│    → sales_user_id = Vendedor (contato periódico)               │
+│    → responsible_user_id = Consultor (atendimento diário)       │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-## Visualização no Frontend (já implementado)
+## Visualização no Perfil do Cliente
 
-O componente `ZappMessageBubble` já possui a renderização:
+Na área de responsáveis do cliente, exibir ambos:
 
-```typescript
-{message.quoted_content && (
-  <div className="bg-black/20 border-l-4 border-zapp-accent/60 px-2 py-1.5 mb-2 rounded-r">
-    <p className="text-xs font-medium text-zapp-accent truncate">
-      {message.quoted_sender_name || ""}
-    </p>
-    <p className="text-xs text-zapp-text-muted/80 line-clamp-2">
-      {message.quoted_content}
-    </p>
-  </div>
-)}
+```text
+┌──────────────────────────────────────┐
+│ Responsáveis                         │
+├──────────────────────────────────────┤
+│ 🎯 Consultor: [Avatar] João Silva    │
+│ 💼 Vendedor:  [Avatar] Maria Santos  │
+└──────────────────────────────────────┘
 ```
 
 ## Resultado Esperado
 
-Após a correção:
-- Mensagens de resposta mostrarão uma barra com a mensagem original
-- O nome do remetente original será exibido
-- Se a mensagem original for mídia, exibirá emoji representativo (📷, 🎬, 🎤, etc.)
-- Mensagens antigas sem dados de citação continuarão sem (não há retroatividade)
-
-## Testes Recomendados
-
-1. Enviar uma resposta a uma mensagem de texto pelo WhatsApp
-2. Verificar se a citação aparece no ROY zAPP
-3. Testar resposta a imagem (deve mostrar "📷 Imagem" ou caption)
-4. Testar resposta a áudio (deve mostrar "🎤 Áudio")
-5. Verificar se o nome do remetente original aparece corretamente
+| Cenário | Antes | Depois |
+|---------|-------|--------|
+| Cliente convertido de Lead | Sem responsável OU com responsável errado | `sales_user_id` = Vendedor, `responsible_user_id` = NULL |
+| Triagem da Operação | Cliente pode não aparecer | Cliente SEMPRE aparece (sem consultor) |
+| Perfil do Cliente | Apenas 1 responsável | 2 responsáveis distintos |
+| Ordenação Triagem | Arbitrária | Mais recente primeiro |
