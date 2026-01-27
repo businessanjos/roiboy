@@ -111,6 +111,7 @@ interface Client {
   is_mls?: boolean;
   mls_level?: string | null;
   responsible_user_id?: string | null;
+  sales_user_id?: string | null;
 }
 
 interface ScoreSnapshot {
@@ -1585,6 +1586,32 @@ export default function ClientDetail() {
                 <Edit2 className="h-3 w-3" />
               </Button>
             </div>
+            
+            {/* Responsáveis: Consultor (Operações) e Vendedor (Vendas) */}
+            {(client.responsible_user_id || client.sales_user_id) && (
+              <div className="flex items-center gap-3 flex-wrap mt-2 text-xs text-muted-foreground">
+                {client.responsible_user_id && (() => {
+                  const consultant = teamUsers.find(u => u.id === client.responsible_user_id);
+                  return consultant ? (
+                    <span className="flex items-center gap-1">
+                      <User className="h-3 w-3 text-primary" />
+                      <span className="text-muted-foreground">Consultor:</span>
+                      <span className="font-medium text-foreground">{consultant.name}</span>
+                    </span>
+                  ) : null;
+                })()}
+                {client.sales_user_id && (() => {
+                  const salesperson = teamUsers.find(u => u.id === client.sales_user_id);
+                  return salesperson ? (
+                    <span className="flex items-center gap-1">
+                      <Building2 className="h-3 w-3 text-emerald-600" />
+                      <span className="text-muted-foreground">Vendedor:</span>
+                      <span className="font-medium text-foreground">{salesperson.name}</span>
+                    </span>
+                  ) : null;
+                })()}
+              </div>
+            )}
           </div>
         </div>
 

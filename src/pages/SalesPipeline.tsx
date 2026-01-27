@@ -374,6 +374,19 @@ export default function SalesPipeline() {
       // STEP 4: Update client with deal custom field data (Instagram, City, Bonus)
       if (clientId && currentUser?.account_id) {
         await updateClientWithDealData(clientId, currentUser.account_id, dealFieldValues);
+        
+        // Save salesperson (sales_user_id) from deal to client
+        // responsible_user_id remains NULL so client goes to Operations triage queue
+        if (deal.responsible_user_id) {
+          const { error: salesUserError } = await supabase
+            .from('clients')
+            .update({ sales_user_id: deal.responsible_user_id })
+            .eq('id', clientId);
+          
+          if (salesUserError) {
+            console.error("[MarkAsWon] Error setting sales_user_id:", salesUserError);
+          }
+        }
       }
 
       // STEP 5: Create contract BEFORE marking as won

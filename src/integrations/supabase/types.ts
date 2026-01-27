@@ -2235,6 +2235,7 @@ export type Database = {
           pix_key_type: string | null
           responsible_user_id: string | null
           rg: string | null
+          sales_user_id: string | null
           stage_id: string | null
           state: string | null
           status: Database["public"]["Enums"]["client_status"]
@@ -2289,6 +2290,7 @@ export type Database = {
           pix_key_type?: string | null
           responsible_user_id?: string | null
           rg?: string | null
+          sales_user_id?: string | null
           stage_id?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["client_status"]
@@ -2343,6 +2345,7 @@ export type Database = {
           pix_key_type?: string | null
           responsible_user_id?: string | null
           rg?: string | null
+          sales_user_id?: string | null
           stage_id?: string | null
           state?: string | null
           status?: Database["public"]["Enums"]["client_status"]
@@ -2362,6 +2365,13 @@ export type Database = {
           {
             foreignKeyName: "clients_responsible_user_id_fkey"
             columns: ["responsible_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_sales_user_id_fkey"
+            columns: ["sales_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
