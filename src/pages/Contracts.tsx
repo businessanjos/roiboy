@@ -1183,13 +1183,30 @@ export default function Contracts() {
           additional_bank_accounts: clientFormData.additional_bank_accounts.length > 0 ? clientFormData.additional_bank_accounts : null,
         };
 
+        console.log('[Contract] Creating new client:', {
+          full_name: clientFormData.full_name,
+          phone: clientFormData.phone_e164,
+          account_id: userProfile.account_id
+        });
+
         const { data: newClient, error: createClientError } = await supabase
           .from("clients")
           .insert(newClientData as any)
           .select("id")
           .single();
 
-        if (createClientError) throw createClientError;
+        if (createClientError) {
+          console.error('[Contract] Client creation error:', createClientError);
+          if (createClientError.code === '23505') {
+            toast.error("Este telefone já está cadastrado. Use 'Selecionar existente'.");
+          } else if (createClientError.code === '42501') {
+            toast.error("Sem permissão para criar cliente. Verifique suas credenciais.");
+          } else {
+            toast.error(`Erro ao criar cliente: ${createClientError.message}`);
+          }
+          setSaving(false);
+          return;
+        }
         clientId = newClient.id;
         
         // Refresh clients list
@@ -1276,13 +1293,33 @@ export default function Contracts() {
           : null,
       };
 
+      console.log('[Contract] Creating contract:', {
+        client_id: clientId,
+        start_date: formData.start_date,
+        value: formData.value,
+        status: isFutureStart ? "scheduled" : "active"
+      });
+
       const { data: newContract, error } = await supabase
         .from("client_contracts")
         .insert(contractData as any)
         .select("id")
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Contract] Contract creation error:', error);
+        if (error.code === '23503') {
+          toast.error("Cliente ou produto inválido. Verifique os dados.");
+        } else if (error.code === '23514') {
+          toast.error("Status do contrato inválido.");
+        } else if (error.code === '42501') {
+          toast.error("Sem permissão para criar contrato.");
+        } else {
+          toast.error(`Erro ao salvar contrato: ${error.message}`);
+        }
+        setSaving(false);
+        return;
+      }
       
       // Send notifications if contract is from a deal win
       if (fromDealRef.current && newContract) {
