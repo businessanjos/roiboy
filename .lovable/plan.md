@@ -1,134 +1,34 @@
 
-# Plano: Separar Responsável de Vendas e Responsável de Operação
+# Plano: Verificação e Correção do Fluxo de Responsáveis (Vendedor vs Consultor)
 
-## Contexto do Problema
+## Diagnóstico Completo
 
-Atualmente existe apenas UM campo `responsible_user_id` na tabela `clients`, que está sendo usado de forma ambígua para dois papéis diferentes:
+Após investigação detalhada, identifiquei a causa raiz do problema:
 
-1. **Vendedor** (Setor Vendas) - fechou a venda, faz contato periódico
-2. **Consultor** (Setor Operações) - atende o cliente durante o contrato
+### Clientes Afetados
+| Cliente | Criado em | Consultor Atual | Sales_user_id |
+|---------|-----------|-----------------|---------------|
+| Dayse Magalhães | 26/01/2026 20:14 | George Oliveira | NULL |
+| Murilo Joaquim | 26/01/2026 23:14 | Everton Pieri | NULL |
 
-O Lead convertido em Cliente DEVE:
-- ✅ Ir para a fila de Conciliação (já funciona)
-- ✅ Ir para a Triagem da Operação (precisa ter `responsible_user_id` = NULL)
-- ✅ Manter o vendedor vinculado (novo campo `sales_user_id`)
+### Causa Raiz
+Os clientes foram **convertidos ANTES** da migração que corrigiu o sistema (27/01/2026 18:15). Nesse período:
 
-## Arquivos a Modificar
+1. A função `convert_lead_to_client` ainda **não** havia sido corrigida
+2. A coluna `sales_user_id` **ainda não existia**
+3. Alguém atribuiu manualmente esses clientes via Triagem (ou edit), preenchendo `responsible_user_id` com vendedores
 
-| Arquivo | Mudança |
-|---------|---------|
-| **Migração SQL** | Adicionar coluna `sales_user_id` na tabela `clients` |
-| `convert_lead_to_client` (função DB) | Atualizar para NÃO copiar `responsible_user_id` do lead |
-| `src/pages/SalesPipeline.tsx` | Após conversão, salvar `deal.responsible_user_id` em `clients.sales_user_id` |
-| `src/components/contracts/ContractTriageQueue.tsx` | Ordenar por `created_at` DESC e exibir vendedor responsável |
-| `src/components/client/ClientHeader.tsx` | Exibir ambos responsáveis (Vendedor + Consultor) |
+### Estado Atual do Sistema (Correto)
+- ✅ Migração aplicada em 27/01/2026 adicionou `sales_user_id`
+- ✅ Função `convert_lead_to_client` agora NÃO copia `responsible_user_id`
+- ✅ `SalesPipeline.tsx` atualiza `sales_user_id` (linha 383) e NÃO `responsible_user_id`
+- ✅ Triagem ordena do mais recente para o mais antigo (linha 153)
 
-## Alterações Técnicas
+## Arquivos a Modificar (Correção de Ordenação)
 
-### 1. Migração SQL - Nova Coluna
-
-```sql
--- Adicionar coluna para vendedor responsável
-ALTER TABLE public.clients 
-ADD COLUMN IF NOT EXISTS sales_user_id uuid REFERENCES public.users(id);
-
--- Comentário explicativo
-COMMENT ON COLUMN public.clients.sales_user_id IS 'Vendedor que fechou a venda (setor Vendas)';
-COMMENT ON COLUMN public.clients.responsible_user_id IS 'Consultor responsável pelo atendimento (setor Operações)';
-```
-
-### 2. Atualizar Função convert_lead_to_client
-
-Modificar para NÃO copiar `responsible_user_id` do lead para o cliente, garantindo que novos clientes sempre vão para triagem:
-
-```sql
-CREATE OR REPLACE FUNCTION public.convert_lead_to_client(p_lead_id uuid)
-RETURNS uuid
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_lead RECORD;
-  v_client_id uuid;
-BEGIN
-  -- Buscar lead
-  SELECT * INTO v_lead FROM public.leads WHERE id = p_lead_id;
-  
-  IF v_lead IS NULL THEN
-    RAISE EXCEPTION 'Lead não encontrado';
-  END IF;
-  
-  IF v_lead.converted_to_client_id IS NOT NULL THEN
-    RAISE EXCEPTION 'Lead já foi convertido';
-  END IF;
-  
-  -- Criar cliente SEM responsible_user_id (vai para triagem)
-  INSERT INTO public.clients (
-    account_id, full_name, phone_e164, emails,
-    cpf, rg, birth_date, cnpj, company_name,
-    business_segment, business_niche, companies,
-    street, street_number, complement, neighborhood, city, state, zip_code,
-    business_street, business_street_number, business_complement,
-    business_neighborhood, business_city, business_state, business_zip_code,
-    bank_code, bank_name, bank_agency, bank_account, bank_account_type,
-    pix_key, pix_key_type, instagram, instagrams,
-    additional_phones, additional_pix_keys, additional_bank_accounts,
-    notes, tags, status
-    -- responsible_user_id REMOVIDO - cliente vai para triagem
-  ) VALUES (
-    v_lead.account_id, v_lead.full_name, COALESCE(v_lead.phone, '+5500000000000'),
-    COALESCE(v_lead.emails, CASE WHEN v_lead.email IS NOT NULL THEN jsonb_build_array(v_lead.email) ELSE '[]'::jsonb END),
-    v_lead.cpf, v_lead.rg, v_lead.birth_date, v_lead.cnpj, v_lead.company_name,
-    v_lead.business_segment, v_lead.business_niche, COALESCE(v_lead.companies, '[]'::jsonb),
-    v_lead.street, v_lead.street_number, v_lead.complement, v_lead.neighborhood,
-    v_lead.city, v_lead.state, v_lead.zip_code,
-    v_lead.business_street, v_lead.business_street_number, v_lead.business_complement,
-    v_lead.business_neighborhood, v_lead.business_city, v_lead.business_state, v_lead.business_zip_code,
-    v_lead.bank_code, v_lead.bank_name, v_lead.bank_agency, v_lead.bank_account, v_lead.bank_account_type,
-    v_lead.pix_key, v_lead.pix_key_type, v_lead.instagram, COALESCE(v_lead.instagrams, '[]'::jsonb),
-    COALESCE(v_lead.additional_phones, '[]'::jsonb),
-    COALESCE(v_lead.additional_pix_keys, '[]'::jsonb),
-    COALESCE(v_lead.additional_bank_accounts, '[]'::jsonb),
-    v_lead.notes, COALESCE(v_lead.tags, '[]'::jsonb), 'active'
-  ) RETURNING id INTO v_client_id;
-  
-  -- Atualizar lead como convertido
-  UPDATE public.leads
-  SET converted_to_client_id = v_client_id,
-      converted_at = now(),
-      status = 'converted'
-  WHERE id = p_lead_id;
-  
-  RETURN v_client_id;
-END;
-$$;
-```
-
-### 3. SalesPipeline.tsx - Salvar Vendedor
-
-Após a conversão do lead e atualização com dados do deal, adicionar:
+Após revisar novamente o código, identifiquei que a ordenação na Triagem **já está implementada** na linha 150-156 de `ContractTriageQueue.tsx`:
 
 ```typescript
-// STEP 4: Update client with deal custom field data (Instagram, City, Bonus)
-if (clientId && currentUser?.account_id) {
-  await updateClientWithDealData(clientId, currentUser.account_id, dealFieldValues);
-  
-  // NOVO: Salvar vendedor responsável (sales_user_id)
-  // O responsible_user_id permanece NULL para triagem da Operação
-  if (deal.responsible_user_id) {
-    await supabase
-      .from('clients')
-      .update({ sales_user_id: deal.responsible_user_id })
-      .eq('id', clientId);
-  }
-}
-```
-
-### 4. ContractTriageQueue.tsx - Ordenação + Exibir Vendedor
-
-```typescript
-// Ordenar do mais recente para o mais antigo
 const triageContracts = useMemo(() => {
   return contracts
     .filter((contract) => !contract.client?.responsible_user_id)
@@ -140,81 +40,94 @@ const triageContracts = useMemo(() => {
 }, [contracts]);
 ```
 
-E na interface Contract, adicionar:
+## Ação Necessária: Correção Manual dos Dados Históricos
 
-```typescript
-interface Contract {
-  // ... existente
-  client?: {
-    id: string;
-    full_name: string;
-    avatar_url: string | null;
-    responsible_user_id: string | null;
-    sales_user_id: string | null; // NOVO
-  };
-}
+Os clientes mencionados (Dayse e Murilo) precisam de correção manual:
+
+1. **Remover o responsável atual** (`responsible_user_id`) para que voltem para a Triagem
+2. **Definir o vendedor** (`sales_user_id`) com o ID do vendedor do negócio
+
+| Cliente | Ação |
+|---------|------|
+| Dayse Magalhães | `sales_user_id` = Everton Pieri, `responsible_user_id` = NULL |
+| Murilo Joaquim | `sales_user_id` = Everton Pieri, `responsible_user_id` = NULL |
+
+### SQL de Correção (Executar Manualmente)
+
+```sql
+-- Corrigir clientes que foram atribuídos incorretamente
+-- Definir sales_user_id com o vendedor do negócio e limpar responsible_user_id
+
+UPDATE clients 
+SET 
+  sales_user_id = (
+    SELECT d.responsible_user_id 
+    FROM deals d 
+    WHERE d.client_id = clients.id 
+    AND d.status = 'won'
+    LIMIT 1
+  ),
+  responsible_user_id = NULL
+WHERE id IN (
+  '9aede114-19b0-4b87-b492-b6116675ffe7',  -- Murilo
+  'a84ef3d0-6dfe-4125-a759-feb4d9dca730'   -- Dayse
+);
 ```
 
-Na tabela, adicionar coluna "Vendedor":
-
-```typescript
-<TableHead>Vendedor</TableHead>
-// ...
-<TableCell>
-  {contract.client?.sales_user_id ? (
-    // Buscar nome do vendedor
-    <span className="text-sm text-muted-foreground">
-      {salesUserName}
-    </span>
-  ) : (
-    <span className="text-sm text-muted-foreground">-</span>
-  )}
-</TableCell>
-```
-
-## Fluxo Corrigido
+## Fluxo Correto (Funcionando Após Correção)
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                    PROCESSO DE VENDA                            │
+│                    LEAD → CLIENTE (CONVERSÃO)                   │
 ├─────────────────────────────────────────────────────────────────┤
-│ 1. Vendedor trabalha o Lead no Pipeline                         │
-│    → Deal.responsible_user_id = Vendedor                        │
+│ 1. Vendedor marca negócio como "Ganho" no Pipeline             │
 │                                                                 │
-│ 2. Vendedor marca negócio como "Ganho"                          │
-│    → Lead convertido para Cliente                               │
-│    → Client.sales_user_id = Vendedor (NOVO)                     │
-│    → Client.responsible_user_id = NULL (vai para triagem)       │
-│    → Contrato criado → Fila de Conciliação                      │
+│ 2. Sistema executa convert_lead_to_client()                    │
+│    → Cliente criado com responsible_user_id = NULL              │
+│    → Cliente vai para Triagem da Operação                       │
 │                                                                 │
-│ 3. Cliente aparece na Triagem da Operação                       │
-│    → Consultor clica "Puxar" ou CX atribui                      │
-│    → Client.responsible_user_id = Consultor                     │
+│ 3. SalesPipeline.tsx atualiza sales_user_id                    │
+│    → Cliente mantém referência ao vendedor                      │
 │                                                                 │
-│ 4. Cliente agora tem dois responsáveis:                         │
-│    → sales_user_id = Vendedor (contato periódico)               │
-│    → responsible_user_id = Consultor (atendimento diário)       │
+│ 4. Contrato criado e enviado para Conciliação                  │
+│                                                                 │
+│ 5. Cliente aparece na Triagem da Operação                      │
+│    → Consultor clica "Puxar" ou CX atribui                     │
+│    → responsible_user_id = Consultor escolhido                  │
+│                                                                 │
+│ 6. Cliente possui 2 responsáveis distintos:                    │
+│    → sales_user_id = Vendedor (contato periódico)              │
+│    → responsible_user_id = Consultor (atendimento diário)      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## Visualização no Perfil do Cliente
+## Verificação de Código (Sem Mudanças Necessárias)
 
-Na área de responsáveis do cliente, exibir ambos:
+| Arquivo | Status | Observação |
+|---------|--------|------------|
+| `convert_lead_to_client` (DB) | ✅ Correto | Não copia `responsible_user_id` |
+| `SalesPipeline.tsx` | ✅ Correto | Atualiza apenas `sales_user_id` |
+| `ContractTriageQueue.tsx` | ✅ Correto | Ordena por `created_at` DESC |
+| `ClientDetail.tsx` | ✅ Correto | Exibe Consultor e Vendedor separados |
 
-```text
-┌──────────────────────────────────────┐
-│ Responsáveis                         │
-├──────────────────────────────────────┤
-│ 🎯 Consultor: [Avatar] João Silva    │
-│ 💼 Vendedor:  [Avatar] Maria Santos  │
-└──────────────────────────────────────┘
+## Conclusão
+
+O sistema está **corretamente implementado** para novas conversões. O problema observado são **dados históricos** de clientes convertidos antes da correção (26/01). 
+
+A correção envolve:
+1. Executar o SQL de correção para os clientes afetados
+2. Verificar se existem outros clientes na mesma situação
+3. Confirmar que novas conversões funcionam corretamente
+
+Para identificar todos os clientes afetados (vendedores como consultores):
+
+```sql
+SELECT c.id, c.full_name, 
+       u.name as consultor_atual,
+       d.responsible_user_id as vendedor_do_negocio
+FROM clients c
+JOIN users u ON u.id = c.responsible_user_id
+JOIN deals d ON d.client_id = c.id AND d.status = 'won'
+WHERE c.sales_user_id IS NULL
+AND c.responsible_user_id IS NOT NULL;
 ```
-
-## Resultado Esperado
-
-| Cenário | Antes | Depois |
-|---------|-------|--------|
-| Cliente convertido de Lead | Sem responsável OU com responsável errado | `sales_user_id` = Vendedor, `responsible_user_id` = NULL |
-| Triagem da Operação | Cliente pode não aparecer | Cliente SEMPRE aparece (sem consultor) |
-| Perfil do Cliente | Apenas 1 responsável | 2 responsáveis distintos |
-| Ordenação Triagem | Arbitrária | Mais recente primeiro |
