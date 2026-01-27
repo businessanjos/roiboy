@@ -2591,7 +2591,11 @@ export default function RoyZapp() {
 
     const trimmedSearch = searchTerm.trim();
     const normalizedPhone = trimmedSearch.replace(/\D/g, '');
-    const textSearch = trimmedSearch.toLowerCase();
+    // Remove diacritics/accents for accent-insensitive search (e.g., "Letícia" → "Leticia")
+    const textSearch = trimmedSearch
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
     
     const isPhoneSearch = trimmedSearch.startsWith('+') || 
       (normalizedPhone.length >= 4 && normalizedPhone.length >= trimmedSearch.replace(/[\s\-\(\)]/g, '').length * 0.7);
