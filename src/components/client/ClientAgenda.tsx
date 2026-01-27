@@ -637,40 +637,44 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
             />
           </div>
 
-          {formData.event_type === "live" && (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="scheduled_at">Data/Hora</Label>
-                  <Input
-                    id="scheduled_at"
-                    type="datetime-local"
-                    value={formData.scheduled_at}
-                    onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duração (min)</Label>
-                  <Input
-                    id="duration"
-                    type="number"
-                    value={formData.duration_minutes}
-                    onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
-                  />
-                </div>
-              </div>
+          {/* Data/Hora e Duração - Disponível para todos os tipos exceto material */}
+          {formData.event_type !== "material" && (
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="meeting_url">Link da Reunião</Label>
+                <Label htmlFor="scheduled_at">Data/Hora</Label>
                 <Input
-                  id="meeting_url"
-                  value={formData.meeting_url}
-                  onChange={(e) => setFormData({ ...formData, meeting_url: e.target.value })}
-                  placeholder="https://zoom.us/..."
+                  id="scheduled_at"
+                  type="datetime-local"
+                  value={formData.scheduled_at}
+                  onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
                 />
               </div>
-            </>
+              <div className="space-y-2">
+                <Label htmlFor="duration">Duração (min)</Label>
+                <Input
+                  id="duration"
+                  type="number"
+                  value={formData.duration_minutes}
+                  onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
+                />
+              </div>
+            </div>
           )}
 
+          {/* Link da Reunião - Tipos que suportam reunião online */}
+          {["live", "mentoria", "workshop", "masterclass", "webinar", "imersao", "plantao"].includes(formData.event_type) && (
+            <div className="space-y-2">
+              <Label htmlFor="meeting_url">Link da Reunião</Label>
+              <Input
+                id="meeting_url"
+                value={formData.meeting_url}
+                onChange={(e) => setFormData({ ...formData, meeting_url: e.target.value })}
+                placeholder="https://zoom.us/..."
+              />
+            </div>
+          )}
+
+          {/* Link do Material - Apenas para tipo material */}
           {formData.event_type === "material" && (
             <div className="space-y-2">
               <Label htmlFor="material_url">Link do Material</Label>
