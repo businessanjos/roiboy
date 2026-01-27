@@ -74,18 +74,22 @@ export const ZappConversationList = memo(function ZappConversationList({
   // Filter assignments based on current filters
   const filteredAssignments = useMemo(() => {
     const filtered = assignments.filter((a) => {
+      const contact = getContactInfo(a);
+      const isGroup = contact.isGroup;
+      
       // Hide archived conversations from main inbox
       const isArchived = a.zapp_conversation?.is_archived || false;
       if (isArchived) return false;
       
-      // Filter by closed status
+      // Filter by closed status - BUT GROUPS ALWAYS SHOW (they're permanent conversations)
       const isClosed = a.status === "closed";
       if (showClosed) {
         // When showing closed, ONLY show closed conversations
         if (!isClosed) return false;
       } else {
         // When not showing closed, HIDE closed conversations
-        if (isClosed) return false;
+        // EXCEPTION: Groups are always visible (they're permanent, not tickets)
+        if (isClosed && !isGroup) return false;
       }
       
       // Tab filter: "mine" = assigned to current agent, "queue" = ALL conversations
