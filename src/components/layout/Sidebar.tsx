@@ -142,8 +142,43 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
 
   // Filter nav items based on permissions, super admin status, and current sector
   const filteredNavItems = useMemo(() => {
+    // Team role name for special access checks
+    const teamRoleName = currentUser?.team_role_name;
+    
+    // Check if user has full access to the current sector based on their role
+    const hasFullSectorAccess = () => {
+      if (!currentSector) return false;
+      
+      // Financeiro, Gestor, Admin roles have full access to the financial sector
+      if (currentSector.id === "financeiro") {
+        return teamRoleName === "Financeiro" || 
+               teamRoleName === "Gestor" || 
+               teamRoleName === "Admin";
+      }
+      
+      // CX, CS, Consultor roles have full access to the operations sector
+      if (currentSector.id === "operacoes") {
+        return teamRoleName === "CX" || 
+               teamRoleName === "CS" || 
+               teamRoleName === "Consultor" ||
+               teamRoleName === "Gestor" ||
+               teamRoleName === "Admin";
+      }
+      
+      // Vendedor, Closer, SDR roles have full access to the sales sector
+      if (currentSector.id === "vendas") {
+        return teamRoleName === "Vendedor" || 
+               teamRoleName === "Closer" || 
+               teamRoleName === "SDR" ||
+               teamRoleName === "Gestor" ||
+               teamRoleName === "Admin";
+      }
+      
+      return false;
+    };
+    
     // During loading OR for admins, show all items to avoid empty sidebar
-    const showAllItems = permissionsLoading || isAdmin || isSuperAdmin || currentUser?.role === "admin";
+    const showAllItems = permissionsLoading || isAdmin || isSuperAdmin || currentUser?.role === "admin" || hasFullSectorAccess();
     
     // Super admins have access to everything - show sector items + admin items
     if (isSuperAdmin) {
@@ -158,7 +193,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     if (currentSector) {
       const sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
       
-      // Admins or during loading - show all sector items
+      // Admins, role-based access, or during loading - show all sector items
       if (showAllItems) return sectorItems;
       
       return sectorItems.filter((item) => {
@@ -174,7 +209,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       if (!item.permission) return true;
       return hasPermission(item.permission);
     });
-  }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role]);
+  }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role, currentUser?.team_role_name]);
 
   // Super admins should always see the full UI
   const showRegularUI = true;
