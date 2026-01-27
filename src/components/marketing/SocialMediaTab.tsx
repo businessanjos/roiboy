@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { format, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -199,6 +200,9 @@ export function SocialMediaTab() {
     });
   };
 
+  // Get queryClient for manual refetch fallback
+  const queryClient = useQueryClient();
+
   const handleEditPost = (postId: string, data: EditPostFormData) => {
     updatePost.mutate(
       { postId, data },
@@ -206,6 +210,10 @@ export function SocialMediaTab() {
         onSuccess: () => {
           setEditPostDialogOpen(false);
           setSelectedPost(null);
+          // Force explicit refetch after 100ms as fallback for edge cases
+          setTimeout(() => {
+            queryClient.refetchQueries({ queryKey: ['instagram-posts'] });
+          }, 100);
         },
       }
     );

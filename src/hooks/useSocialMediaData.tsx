@@ -98,8 +98,9 @@ export function useSocialMediaData() {
   }, [profiles, selectedProfileId]);
 
   // Fetch posts for selected profile
+  // Query key simplified to avoid volatile state issues with cache invalidation
   const { data: posts = [], isLoading: isLoadingPosts } = useQuery({
-    queryKey: ['instagram-posts', currentProfile?.id, useMockData],
+    queryKey: ['instagram-posts', currentProfile?.id],
     queryFn: async () => {
       if (!currentProfile) return [];
       
@@ -117,6 +118,7 @@ export function useSocialMediaData() {
       return data as InstagramPost[];
     },
     enabled: !!currentProfile,
+    staleTime: 30000, // 30 seconds - more responsive for post updates
   });
 
   // Calculate KPIs
@@ -381,7 +383,14 @@ export function useSocialMediaData() {
       return post;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['instagram-posts'] });
+      // Aggressive cache invalidation to ensure data refresh for all users
+      queryClient.invalidateQueries({ 
+        queryKey: ['instagram-posts'],
+        exact: false,
+        refetchType: 'all'
+      });
+      // Also invalidate dashboard that may use this data
+      queryClient.invalidateQueries({ queryKey: ['instagram-dashboard'] });
       toast.success('Post atualizado com sucesso!');
     },
     onError: (error) => {
