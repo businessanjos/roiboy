@@ -657,48 +657,87 @@ serve(async (req) => {
         // EXTRACT QUOTED MESSAGE DATA (for replies)
         // ============================================
         const msgAnyQuote = msg as Record<string, unknown>;
-        const contextInfo = msg.contextInfo || msg.extendedTextMessage?.contextInfo || (msgAnyQuote.contextInfo as Record<string, unknown>);
-        const quotedMsg = (msgAnyQuote.quotedMsg as Record<string, unknown>) || (contextInfo?.quotedMessage as Record<string, unknown>);
-        const quotedMsgId = msg.quotedMessageId || (contextInfo?.stanzaId as string) || null;
         
-        // Extract quoted content from various formats
+        // UAZAPI sends quoted message data in multiple formats:
+        // 1. msg.quoted - Object with body/text/caption + sender info (UAZAPI primary format)
+        // 2. msg.contextInfo - Standard WhatsApp format
+        // 3. msg.extendedTextMessage?.contextInfo
+        // 4. msg.quotedMsg - Alternative format
+        const contextInfo = msg.contextInfo || msg.extendedTextMessage?.contextInfo || (msgAnyQuote.contextInfo as Record<string, unknown>);
+        
+        // CRITICAL FIX: UAZAPI uses 'quoted' field for quoted messages
+        const uazapiQuoted = msgAnyQuote.quoted as Record<string, unknown>;
+        const quotedMsg = uazapiQuoted || 
+                          (msgAnyQuote.quotedMsg as Record<string, unknown>) || 
+                          (contextInfo?.quotedMessage as Record<string, unknown>);
+        
+        // Extract quoted message ID from multiple sources
+        const quotedMsgId = msg.quotedMessageId || 
+                            (uazapiQuoted?.id as string) ||
+                            (uazapiQuoted?.messageid as string) ||
+                            (contextInfo?.stanzaId as string) || 
+                            null;
+        
+        // Extract quoted content from various formats (UAZAPI sends in different ways)
         let quotedContent: string | null = null;
         if (quotedMsg) {
+          // UAZAPI format: quoted.body, quoted.text, quoted.caption
           quotedContent = 
-            (quotedMsg.conversation as string) || 
+            (quotedMsg.body as string) ||  // UAZAPI primary field
+            (quotedMsg.text as string) ||  // Alternative text field
+            (quotedMsg.caption as string) ||  // For media with captions
+            (quotedMsg.conversation as string) ||  // Standard WhatsApp
             ((quotedMsg.extendedTextMessage as Record<string, unknown>)?.text as string) ||
-            (quotedMsg.caption as string) ||
             ((quotedMsg.imageMessage as Record<string, unknown>)?.caption as string) ||
             ((quotedMsg.videoMessage as Record<string, unknown>)?.caption as string) ||
             ((quotedMsg.documentMessage as Record<string, unknown>)?.caption as string) ||
-            (quotedMsg.text as string) ||
             null;
           
           // If still no content and it's media, show placeholder
           if (!quotedContent) {
-            if (quotedMsg.imageMessage) quotedContent = "📷 Imagem";
-            else if (quotedMsg.videoMessage) quotedContent = "🎬 Vídeo";
-            else if (quotedMsg.audioMessage) quotedContent = "🎤 Áudio";
-            else if (quotedMsg.documentMessage) quotedContent = "📄 Documento";
-            else if (quotedMsg.stickerMessage) quotedContent = "🎨 Figurinha";
+            // Check UAZAPI format (quoted.type or quoted.mediaType)
+            const quotedType = (quotedMsg.type as string) || (quotedMsg.mediaType as string) || "";
+            
+            if (quotedType.toLowerCase().includes("image") || quotedMsg.imageMessage) {
+              quotedContent = "📷 Imagem";
+            } else if (quotedType.toLowerCase().includes("video") || quotedMsg.videoMessage) {
+              quotedContent = "🎬 Vídeo";
+            } else if (quotedType.toLowerCase().includes("audio") || quotedType.toLowerCase().includes("ptt") || quotedMsg.audioMessage) {
+              quotedContent = "🎤 Áudio";
+            } else if (quotedType.toLowerCase().includes("document") || quotedMsg.documentMessage) {
+              quotedContent = "📄 Documento";
+            } else if (quotedType.toLowerCase().includes("sticker") || quotedMsg.stickerMessage) {
+              quotedContent = "🎨 Figurinha";
+            }
           }
         }
         
         // Extract quoted sender name
-        const quotedParticipant = contextInfo?.participant as string | undefined;
+        // UAZAPI format: quoted.sender, quoted.senderName, quoted.sender_pn
+        const quotedParticipant = (uazapiQuoted?.sender as string) ||
+                                  (uazapiQuoted?.sender_pn as string) ||
+                                  (contextInfo?.participant as string);
+                                  
         let quotedSenderName: string | null = null;
-        if (quotedParticipant) {
-          // participant is like "5511999999999@s.whatsapp.net"
-          // Try to get the name, or just use a placeholder
+        
+        // First try senderName from UAZAPI (the actual display name)
+        if (uazapiQuoted?.senderName && typeof uazapiQuoted.senderName === "string") {
+          quotedSenderName = uazapiQuoted.senderName;
+        } else if (quotedParticipant) {
+          // Fallback: extract from phone/JID
           quotedSenderName = quotedParticipant.split("@")[0];
-          // Prefix with + if it looks like a phone number
           if (quotedSenderName && /^\d+$/.test(quotedSenderName)) {
             quotedSenderName = `+${quotedSenderName}`;
           }
         }
         
-        if (quotedMsgId) {
-          console.log(`Quoted message detected - ID: ${quotedMsgId}, content: ${quotedContent?.substring(0, 50)}...`);
+        // For outbound quoted messages, show "Você" instead of phone
+        if (uazapiQuoted?.fromMe === true) {
+          quotedSenderName = "Você";
+        }
+        
+        if (quotedMsgId || quotedContent) {
+          console.log(`Quoted message detected - ID: ${quotedMsgId}, content: ${quotedContent?.substring(0, 50)}..., sender: ${quotedSenderName}`);
         }
 
         console.log(`Extracted - phone: ${phone}, content: ${content.substring(0, 50)}...`);
