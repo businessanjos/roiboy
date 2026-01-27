@@ -7,6 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MentionInput, extractMentions } from "@/components/ui/mention-input";
 import { ClientFinancialStatusBadge } from "./ClientFinancialStatusBadge";
+import { ReceivableMethodSelector, ReceivableMethod } from "@/components/financial/ReceivableMethodSelector";
+import { ManualReceivableDialog, ReceivableFormData } from "@/components/financial/ManualReceivableDialog";
+import { NfeImportDialog } from "@/components/financial/NfeImportDialog";
+import { BarcodeImportDialog } from "@/components/financial/BarcodeImportDialog";
 import { 
   Package, 
   Calendar, 
@@ -30,7 +34,8 @@ import {
   ArrowDownLeft,
   Building2,
   Link2,
-  MessageSquareText
+  MessageSquareText,
+  Plus
 } from "lucide-react";
 import { FinancialNotes } from "./FinancialNotes";
 import { FinancialQuickNoteInput } from "./FinancialQuickNoteInput";
@@ -125,6 +130,8 @@ const entryStatusConfig: Record<string, { label: string; className: string }> = 
   cancelled: { label: "Cancelado", className: "bg-slate-500/10 text-slate-600" },
 };
 
+const FINANCIAL_ALLOWED_ROLES = ["Admin", "Financeiro", "Gestor"];
+
 export function ClientFinancial({ clientId }: ClientFinancialProps) {
   const { currentUser } = useCurrentUser();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
@@ -147,6 +154,18 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
   // File input refs
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // New entry dialog states
+  const [isReceivableMethodOpen, setIsReceivableMethodOpen] = useState(false);
+  const [isManualReceivableOpen, setIsManualReceivableOpen] = useState(false);
+  const [isNfeReceivableOpen, setIsNfeReceivableOpen] = useState(false);
+  const [isBarcodeReceivableOpen, setIsBarcodeReceivableOpen] = useState(false);
+
+  // Permission check
+  const canAddEntry = 
+    currentUser?.role === "admin" || 
+    currentUser?.is_also_admin === true ||
+    FINANCIAL_ALLOWED_ROLES.includes(currentUser?.team_role_name || "");
 
   const fetchClientData = async (): Promise<ClientData | null> => {
     const { data } = await supabase
@@ -491,6 +510,40 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
     }
   };
 
+  const handleSaveReceivable = async (data: ReceivableFormData) => {
+    if (!currentUser?.account_id) return;
+
+    const { error } = await supabase.from("financial_entries").insert({
+      account_id: currentUser.account_id,
+      entry_type: "receivable",
+      description: data.client_name || "Receita",
+      amount: parseFloat(data.amount.replace(",", ".")) || 0,
+      due_date: data.due_date,
+      category_id: data.category_id || null,
+      bank_account_id: data.bank_account_id || null,
+      client_id: data.client_id || clientId,
+      is_recurring: data.is_recurring,
+      recurrence_type: data.is_recurring ? data.recurrence_type : null,
+      recurrence_end_date: data.is_recurring && data.recurrence_end_date ? data.recurrence_end_date : null,
+      document_number: data.document_number || null,
+      notes: data.notes || null,
+      status: "pending",
+      currency: "BRL",
+      issue_date: data.issue_date || null,
+      expected_date: data.expected_date || null,
+      seller_id: data.seller_id || null,
+      project_id: data.project_id || null,
+    });
+
+    if (error) {
+      toast.error(`Erro ao criar lançamento: ${error.message}`);
+    } else {
+      toast.success("Lançamento criado com sucesso!");
+      fetchFinancialEntries(clientData);
+      setIsManualReceivableOpen(false);
+    }
+  };
+
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -514,19 +567,30 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
           <h3 className="font-medium">Dados Financeiros</h3>
           <ClientFinancialStatusBadge clientId={clientId} size="lg" />
         </div>
-        <Button 
-          size="sm" 
-          variant="outline" 
-          onClick={handleSyncOmie}
-          disabled={syncing}
-        >
-          {syncing ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4 mr-2" />
+        <div className="flex items-center gap-2">
+          {canAddEntry && (
+            <Button 
+              size="sm" 
+              onClick={() => setIsReceivableMethodOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Lançamento
+            </Button>
           )}
-          Sincronizar Omie
-        </Button>
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={handleSyncOmie}
+            disabled={syncing}
+          >
+            {syncing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Sincronizar Omie
+          </Button>
+        </div>
       </div>
 
       {/* Company info if available */}
@@ -886,6 +950,66 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
         </TabsContent>
       </Tabs>
 
+      {/* Seletor de Método de Recebimento */}
+      <ReceivableMethodSelector
+        open={isReceivableMethodOpen}
+        onOpenChange={setIsReceivableMethodOpen}
+        onSelect={(method: ReceivableMethod) => {
+          if (method === "manual") {
+            setIsManualReceivableOpen(true);
+          } else if (method === "nfe") {
+            setIsNfeReceivableOpen(true);
+          } else if (method === "barcode") {
+            setIsBarcodeReceivableOpen(true);
+          }
+        }}
+      />
+
+      {/* Dialog Manual com cliente pré-preenchido */}
+      <ManualReceivableDialog
+        open={isManualReceivableOpen}
+        onOpenChange={setIsManualReceivableOpen}
+        onSave={handleSaveReceivable}
+        editingEntry={{
+          id: undefined,
+          client_id: clientId,
+          client_name: clientData?.company_name || "",
+          due_date: "",
+          amount: "",
+          installment_current: 1,
+          installment_total: 1,
+          category_id: "",
+          expected_date: "",
+          bank_account_id: "",
+          document_number: "",
+          issue_date: "",
+          project_id: "",
+          seller_id: "",
+          notes: "",
+          is_recurring: false,
+          recurrence_type: "monthly",
+          recurrence_end_date: "",
+        }}
+      />
+
+      {/* NFe e Barcode (em desenvolvimento) */}
+      <NfeImportDialog
+        open={isNfeReceivableOpen}
+        onOpenChange={setIsNfeReceivableOpen}
+        onImport={async () => {
+          toast.info("Importação de NF-e em desenvolvimento");
+          setIsNfeReceivableOpen(false);
+        }}
+      />
+
+      <BarcodeImportDialog
+        open={isBarcodeReceivableOpen}
+        onOpenChange={setIsBarcodeReceivableOpen}
+        onContinue={async () => {
+          toast.info("Importação de código de barras em desenvolvimento");
+          setIsBarcodeReceivableOpen(false);
+        }}
+      />
     </div>
   );
 }
