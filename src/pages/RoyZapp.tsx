@@ -2597,7 +2597,7 @@ export default function RoyZapp() {
       (normalizedPhone.length >= 4 && normalizedPhone.length >= trimmedSearch.replace(/[\s\-\(\)]/g, '').length * 0.7);
 
     // Search in parallel across all sources
-    const [clientsResult, leadsResult, conversationsResult] = await Promise.all([
+    const [clientsResult, leadsResult, conversationsResult, groupsResult] = await Promise.all([
       // 1. Search clients (include all relevant statuses, not just active)
       supabase
         .from("clients")
@@ -2634,6 +2634,16 @@ export default function RoyZapp() {
           : `contact_name.ilike.%${textSearch}%,phone_e164.ilike.%${textSearch}%`)
         .order("last_message_at", { ascending: false })
         .limit(10),
+      
+      // 4. Search groups by name
+      supabase
+        .from("zapp_conversations")
+        .select("id, contact_name, avatar_url, group_jid")
+        .eq("account_id", currentUser.account_id)
+        .eq("is_group", true)
+        .ilike("contact_name", `%${textSearch}%`)
+        .order("last_message_at", { ascending: false })
+        .limit(10),
     ]);
 
     // Map results with type indicator
@@ -2664,6 +2674,16 @@ export default function RoyZapp() {
         type: 'conversation' as const,
       }));
 
+    // Map groups
+    const groups = (groupsResult.data || []).map(g => ({
+      id: g.id,
+      full_name: g.contact_name || "Grupo",
+      phone_e164: "",
+      avatar_url: g.avatar_url,
+      type: 'group' as const,
+      group_jid: g.group_jid,
+    }));
+
     // Combine results removing phone duplicates - PRIORITIZE clients over leads
     // Order: clients first (any status), then leads, then conversations
     // This ensures if same phone exists as both client and lead, client wins
@@ -2675,7 +2695,10 @@ export default function RoyZapp() {
       return true;
     });
 
-    // Fetch common groups for the found contacts
+    // Add groups (no phone deduplication needed)
+    const finalCombined = [...combined, ...groups];
+
+    // Fetch common groups for the found contacts (only for non-group contacts)
     const phonesForGroupSearch = combined.map(c => c.phone_e164?.replace(/\D/g, '')).filter(Boolean) as string[];
     
     if (phonesForGroupSearch.length > 0) {
@@ -2689,16 +2712,16 @@ export default function RoyZapp() {
       // Get unique group JIDs to fetch group details
       const groupJids = [...new Set((groupParticipants || []).map(p => p.group_jid))];
       
-      let groupsMap = new Map<string, { name: string; avatar_url: string | null }>();
+      let groupsMapForCommon = new Map<string, { name: string; avatar_url: string | null }>();
       if (groupJids.length > 0) {
-        const { data: groups } = await supabase
+        const { data: groupDetails } = await supabase
           .from("whatsapp_groups")
           .select("group_jid, name")
           .eq("account_id", currentUser.account_id)
           .in("group_jid", groupJids);
         
-        (groups || []).forEach((g: { group_jid: string; name: string }) => {
-          groupsMap.set(g.group_jid, { name: g.name, avatar_url: null });
+        (groupDetails || []).forEach((g: { group_jid: string; name: string }) => {
+          groupsMapForCommon.set(g.group_jid, { name: g.name, avatar_url: null });
         });
       }
 
@@ -2706,7 +2729,7 @@ export default function RoyZapp() {
       const phoneToGroups = new Map<string, Array<{name: string, avatar_url: string | null}>>();
       (groupParticipants || []).forEach((p) => {
         const phone = p.phone;
-        const groupInfo = groupsMap.get(p.group_jid);
+        const groupInfo = groupsMapForCommon.get(p.group_jid);
         if (!phoneToGroups.has(phone)) {
           phoneToGroups.set(phone, []);
         }
@@ -2718,15 +2741,15 @@ export default function RoyZapp() {
         }
       });
 
-      // Add groups to contacts
+      // Add common_groups to individual contacts, then append group results
       const combinedWithGroups = combined.map(c => ({
         ...c,
         common_groups: phoneToGroups.get(c.phone_e164?.replace(/\D/g, '') || '') || [],
       }));
 
-      setNewConversationClients(combinedWithGroups);
+      setNewConversationClients([...combinedWithGroups, ...groups]);
     } else {
-      setNewConversationClients(combined);
+      setNewConversationClients(finalCombined);
     }
   }, [currentUser?.account_id]);
 
@@ -2747,6 +2770,69 @@ export default function RoyZapp() {
     
     setCreatingConversation(true);
     try {
+      // Handle groups specially - they already exist as zapp_conversation
+      if (contact.type === 'group') {
+        const zappConvId = contact.id;
+        
+        // Check for existing assignment in this department
+        const { data: existingAssignments } = await supabase
+          .from("zapp_conversation_assignments")
+          .select("id, agent_id, status, department_id")
+          .eq("zapp_conversation_id", zappConvId)
+          .eq("department_id", currentSectorDepartmentId)
+          .order("created_at", { ascending: false });
+        
+        const activeAssignment = existingAssignments?.find(a => a.status !== 'closed');
+        const closedAssignment = existingAssignments?.find(a => a.status === 'closed');
+        
+        if (activeAssignment) {
+          // Open existing group conversation
+          const { data: assignmentData } = await supabase
+            .from("zapp_conversation_assignments")
+            .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
+            .eq("id", activeAssignment.id)
+            .single();
+          
+          if (assignmentData) setSelectedConversation(assignmentData);
+          fetchData();
+          toast.info("Abrindo grupo existente");
+          setNewConversationDialogOpen(false);
+          setCreatingConversation(false);
+          return;
+        } else if (closedAssignment) {
+          // Reopen closed group
+          await supabase
+            .from("zapp_conversation_assignments")
+            .update({ status: "triage", agent_id: null, updated_at: new Date().toISOString() })
+            .eq("id", closedAssignment.id);
+          
+          toast.success("Grupo reaberto na Fila!");
+          setInboxTab("queue");
+          setNewConversationDialogOpen(false);
+          fetchData();
+          setCreatingConversation(false);
+          return;
+        } else {
+          // Create new assignment for group
+          await supabase
+            .from("zapp_conversation_assignments")
+            .insert({
+              account_id: currentUser.account_id,
+              zapp_conversation_id: zappConvId,
+              agent_id: null,
+              status: "triage",
+              department_id: currentSectorDepartmentId,
+            });
+          
+          toast.success("Grupo adicionado à Fila!");
+          setInboxTab("queue");
+          setNewConversationDialogOpen(false);
+          fetchData();
+          setCreatingConversation(false);
+          return;
+        }
+      }
+      
       // Usar o TIPO do contato selecionado, não o setor
       const isLeadContact = contact.type === 'lead';
       const isClientContact = contact.type === 'client';

@@ -22,8 +22,9 @@ interface Contact {
   full_name: string;
   phone_e164: string;
   avatar_url: string | null;
-  type?: 'client' | 'lead' | 'conversation';
+  type?: 'client' | 'lead' | 'conversation' | 'group';
   common_groups?: CommonGroup[];
+  group_jid?: string;
 }
 
 interface ZappNewConversationDialogProps {
@@ -131,8 +132,16 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
                             Contato
                           </Badge>
                         )}
+                        {client.type === 'group' && (
+                          <Badge variant="outline" className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs whitespace-nowrap flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            Grupo
+                          </Badge>
+                        )}
                       </div>
-                      <p className="text-[#8696a0] text-sm truncate">{client.phone_e164}</p>
+                      <p className="text-[#8696a0] text-sm truncate">
+                        {client.type === 'group' ? 'Grupo do WhatsApp' : client.phone_e164}
+                      </p>
                     </div>
                     {creating && <Loader2 className="h-4 w-4 animate-spin text-zapp-accent shrink-0" />}
                   </button>
