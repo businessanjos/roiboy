@@ -2937,15 +2937,22 @@ export default function RoyZapp() {
         if (isArchived) return false;
       }
       
+      // Get contact info FIRST - we need isGroup for filtering
+      const contact = getContactInfo(a);
+      const isGroup = contact.isGroup;
+      
       // Closed conversations filter
       // When filterStatus is "closed", show only closed
       // Otherwise, HIDE closed conversations by default
+      // CRITICAL EXCEPTION: Groups are PERMANENT conversations and should NEVER be hidden
+      // Groups are ongoing relationships, not temporary tickets
       const isClosed = a.status === "closed";
       if (filterStatus === "closed") {
         if (!isClosed) return false;
       } else if (filterStatus === "all") {
-        // When showing "all", hide closed unless explicitly requested
-        if (isClosed) return false;
+        // When showing "all", hide closed INDIVIDUAL conversations
+        // But ALWAYS keep groups visible - they are permanent, not tickets
+        if (isClosed && !isGroup) return false;
       }
       
       // Tab filter: "mine" = assigned to current agent, "queue" = unassigned conversations only
@@ -2957,7 +2964,6 @@ export default function RoyZapp() {
           : a.agent_id === null // Queue always shows only unassigned
       );
       
-      const contact = getContactInfo(a);
       const matchesSearch = matchesSearchQuery(contact, searchQuery);
       // Status filter: "triage" means no agent assigned (in queue)
       // Skip status filter for "closed" and "all" as they're handled above
@@ -2968,7 +2974,6 @@ export default function RoyZapp() {
       const matchesUnread = !filterUnread || (contact.unreadCount > 0);
       
       // Conversation type filter: all, individual, or group
-      const isGroup = contact.isGroup;
       const matchesConversationType = 
         filterConversationType === "all" ||
         (filterConversationType === "individual" && !isGroup) ||
