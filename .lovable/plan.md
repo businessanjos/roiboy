@@ -1,248 +1,113 @@
 
-# Plano: Diagnóstico e Correção de Sincronização do ROY zAPP - Setor Operações
 
-## Resumo do Problema
+# Plano: Correção Urgente - Grupos Desaparecendo do ROY zAPP
 
-Usuários do setor de **Operações** relatam que conversas, mensagens e grupos visíveis no WhatsApp conectado não estão aparecendo no ROY zAPP. O sistema deveria refletir exatamente o WhatsApp conectado, mas algumas conversas estão faltando.
+## Diagnóstico do Problema
 
----
+### Causa Real Identificada
 
-## Diagnóstico: Causas Identificadas
+**Os grupos NÃO desapareceram por causa da última atualização.** 
 
-Após análise detalhada do código e da especificação da API UAZAPI, identifiquei **7 causas potenciais** para a desincronização:
+O problema é que os grupos estão sendo **fechados pelos agentes** como se fossem tickets de atendimento, e quando isso acontece, eles são filtrados da lista principal.
 
-### 1. Filtro de Multi-Instância Muito Restritivo
+**Dados do Banco:**
+- Total de grupos no setor Operações: 46
+- Grupos com status "closed": 45 
+- Grupos com status "waiting": 1 (Náyara Hungaro - o único visível na sua tela)
 
-**Problema:** O frontend aplica um filtro por `integration_id` que exclui conversas sem esse campo preenchido. Conversas criadas antes da implementação de multi-instância ou com `integration_id` nulo não aparecem.
+Os grupos foram sendo fechados ao longo dos últimos 8 dias pelos próprios agentes:
+- 27/01: 3 grupos fechados
+- 26/01: 15 grupos fechados  
+- 21/01: 9 grupos fechados
+- 19/01: 2 grupos fechados
+- E assim por diante...
 
-```typescript
-// src/hooks/useZappData.tsx linha 846-858
-if (integrationId) {
-  filtered = filtered.filter(a => {
-    const convIntegrationId = zappConv?.integration_id;
-    return convIntegrationId === integrationId; // Conversas antigas sem integration_id são excluídas!
-  });
-}
-```
+### Por que isso é um problema?
 
-**Evidência nos Logs:**
-```
-[ZappData] MULTI-INSTANCE: Filtered to 234 assignments for integration dbb6109c-... (from 254)
-```
-20 conversas estão sendo excluídas por esse filtro.
+O sistema trata **grupos como tickets de atendimento**, aplicando a mesma lógica de filtragem. Quando um agente "fecha" um ticket de grupo, ele desaparece da lista principal (só aparece quando o filtro "Finalizados" está ativo).
 
-### 2. Webhook Não Recebe Todos os Eventos da UAZAPI
-
-**Problema:** O webhook está configurado para receber apenas alguns tipos de eventos. Segundo a especificação da UAZAPI, há eventos críticos que podem estar faltando:
-
-```typescript
-// supabase/functions/uazapi-manager/index.ts linha 147-148
-events: ["messages", "connection", "qrcode", "MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED"]
-```
-
-**Faltando:** `chats`, `groups`, `history` - eventos importantes para sincronização de conversas existentes e grupos.
-
-### 3. Limite de 500 Conversas na Query
-
-**Problema:** O hook de dados limita a 500 registros, o que pode excluir conversas mais antigas em contas com alto volume:
-
-```typescript
-// src/hooks/useZappData.tsx linha 178
-.limit(500);
-```
-
-### 4. Grupos Não São Sincronizados Automaticamente
-
-**Problema:** A sincronização de grupos (`sync_groups`) é uma ação manual. Grupos novos ou alterados no WhatsApp não aparecem automaticamente até que o usuário sincronize manualmente.
-
-### 5. Importação de Conversas Históricas Incompleta
-
-**Problema:** A ação `import-conversations` na uazapi-manager tenta múltiplos endpoints mas pode falhar silenciosamente:
-
-```typescript
-// supabase/functions/uazapi-manager/index.ts linhas 3388-3414
-const endpoints = ["/chats/list", "/chats", "/chat/list"];
-```
-
-Se todos os endpoints falharem, nenhuma conversa histórica é importada.
-
-### 6. Normalização de Telefones Brasileiros
-
-**Problema:** O webhook normaliza números brasileiros de 12 para 13 dígitos, mas a busca por conversas existentes pode falhar se o registro antigo tiver o formato diferente:
-
-```typescript
-// Busca por telefone sem considerar variantes
-.eq("phone_e164", phone)
-```
-
-### 7. Conversas de Grupos Sem Assignment
-
-**Problema:** Algumas conversas de grupo podem existir em `zapp_conversations` mas não ter um registro correspondente em `zapp_conversation_assignments`, tornando-as invisíveis na lista.
+**Porém, grupos são conversas permanentes!** Eles não deveriam sumir da lista como um ticket de suporte que foi resolvido.
 
 ---
 
 ## Solução Proposta
 
-### Etapa 1: Correção do Filtro Multi-Instância
+### Mudança 1: Grupos SEMPRE Visíveis (Ignorar status "closed" para grupos)
 
-**Arquivo:** `src/hooks/useZappData.tsx`
+**Arquivo:** `src/components/royzapp/ZappConversationList.tsx`
 
-Modificar o filtro para incluir conversas sem `integration_id` quando uma instância está selecionada (elas pertencem ao setor e podem ser de antes da implementação multi-instância):
-
-```typescript
-// Linha 846-858 - Modificar para incluir conversas antigas
-if (integrationId) {
-  const beforeCount = filtered.length;
-  filtered = filtered.filter(a => {
-    const zappConv = a.zapp_conversation as { integration_id?: string; sector_id?: string } | null;
-    const convIntegrationId = zappConv?.integration_id;
-    const convSectorId = zappConv?.sector_id;
-    
-    // Incluir conversas que:
-    // 1. Pertencem a esta integração OU
-    // 2. São do mesmo setor e não têm integration_id (conversas legadas)
-    return convIntegrationId === integrationId || 
-           (!convIntegrationId && convSectorId === sectorId);
-  });
-  // ...
-}
-```
-
-### Etapa 2: Adicionar Eventos Faltantes ao Webhook
-
-**Arquivo:** `supabase/functions/uazapi-manager/index.ts`
-
-Adicionar os eventos `chats`, `groups` e `history` à configuração do webhook:
+Modificar a lógica de filtragem para que grupos sempre apareçam, independente do status:
 
 ```typescript
-// Linha 147-148
-events: [
-  "messages", "connection", "qrcode", 
-  "MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED",
-  "chats", "groups", "history" // NOVOS eventos para sincronização completa
-]
+// Linha 76-89 - Modificar lógica de filtro closed
+const filtered = assignments.filter((a) => {
+  const contact = getContactInfo(a);
+  const isGroup = contact.isGroup;
+  
+  // Hide archived conversations from main inbox
+  const isArchived = a.zapp_conversation?.is_archived || false;
+  if (isArchived) return false;
+  
+  // Filter by closed status - BUT GROUPS ALWAYS SHOW
+  const isClosed = a.status === "closed";
+  if (showClosed) {
+    // When showing closed, ONLY show closed (groups or not)
+    if (!isClosed) return false;
+  } else {
+    // When not showing closed, HIDE closed conversations
+    // EXCEPTION: Groups are always visible (they're permanent conversations)
+    if (isClosed && !isGroup) return false;
+  }
+  
+  // ... resto do código
+});
 ```
 
-### Etapa 3: Processar Evento "chats" no Webhook
+### Mudança 2: Reabrir Grupos Automaticamente Quando Recebem Mensagem
 
 **Arquivo:** `supabase/functions/uazapi-webhook/index.ts`
 
-Adicionar handler para o evento `chats` que sincroniza novas conversas automaticamente:
+Quando um grupo recebe uma nova mensagem, garantir que o assignment seja reaberto para "active":
 
 ```typescript
-// Após linha 1595 (antes do handler de "data.messages")
-// Handle "chats" event - sync conversations when WhatsApp syncs its chat list
-if (eventType === "chats" || eventType === "CHATS_UPDATE") {
-  const chatsData = payload.data?.chats || (payload as any).chats || [];
-  console.log(`[WEBHOOK] Processing chats event with ${chatsData.length} chats`);
-  
-  for (const chat of chatsData) {
-    // Criar/atualizar zapp_conversation para cada chat
-    const isGroup = chat.wa_isGroup || (chat.id || "").includes("@g.us");
-    const phone = isGroup ? "" : normalizePhone(chat.phone);
-    const groupJid = isGroup ? (chat.wa_chatid || chat.id) : null;
-    
-    // Upsert conversation...
-  }
-  
-  return new Response(
-    JSON.stringify({ success: true, synced: chatsData.length }),
-    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-  );
+// Ao processar mensagem inbound de grupo
+if (isGroup && existingAssignment?.status === "closed") {
+  await supabase
+    .from("zapp_conversation_assignments")
+    .update({ 
+      status: "active",
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", existingAssignment.id);
 }
 ```
 
-### Etapa 4: Processar Evento "groups" no Webhook
+### Mudança 3: Corrigir Dados Existentes (Reabrir Grupos Fechados)
 
-Adicionar handler para sincronização automática de grupos:
-
-```typescript
-// Handle "groups" event - sync groups automatically
-if (eventType === "groups" || eventType === "GROUPS_UPDATE") {
-  const groupsData = payload.data?.groups || (payload as any).groups || [];
-  console.log(`[WEBHOOK] Processing groups event with ${groupsData.length} groups`);
-  
-  for (const group of groupsData) {
-    const groupJid = group.JID || group.jid || group.id;
-    const groupName = group.Name || group.name || group.Subject || group.subject;
-    
-    if (groupJid && groupJid.includes("@g.us")) {
-      // Upsert to whatsapp_groups
-      await supabase
-        .from("whatsapp_groups")
-        .upsert({
-          account_id: accountId,
-          group_jid: groupJid,
-          name: groupName,
-          participant_count: group.Participants?.length || group.size || 0,
-        }, { onConflict: "account_id,group_jid" });
-      
-      // Create zapp_conversation for group if doesn't exist
-      // ...
-    }
-  }
-}
-```
-
-### Etapa 5: Criar Ferramenta de Diagnóstico
-
-**Novo arquivo:** `src/components/admin/WhatsAppDiagnosticsPanel.tsx`
-
-Adicionar um painel de diagnóstico para administradores que:
-
-1. Lista conversas no banco sem assignment
-2. Mostra conversas sem integration_id
-3. Permite sincronização manual de grupos
-4. Compara quantidade de chats no WhatsApp vs ROY zAPP
-
-### Etapa 6: Migrar Conversas Antigas
-
-**Nova Edge Function ou SQL:** Atualizar conversas existentes do setor Operações que não têm `integration_id`:
+**Executar SQL para reabrir todos os grupos que foram fechados incorretamente:**
 
 ```sql
--- Identificar conversas do setor operações sem integration_id
-UPDATE zapp_conversations zc
-SET integration_id = (
-  SELECT i.id 
-  FROM integrations i 
-  WHERE i.account_id = zc.account_id 
-    AND i.sector_id = 'operacoes' 
-    AND i.type = 'whatsapp' 
-    AND i.status = 'connected'
-  LIMIT 1
-)
-WHERE zc.sector_id = 'operacoes' 
-  AND zc.integration_id IS NULL;
-```
-
-### Etapa 7: Aumentar Limite de Conversas com Paginação
-
-**Arquivo:** `src/hooks/useZappData.tsx`
-
-Implementar carregamento paginado ou virtual scrolling para conversas:
-
-```typescript
-// Remover limite fixo de 500 e implementar paginação
-.order("updated_at", { ascending: false })
-.range(offset, offset + pageSize - 1);
+UPDATE zapp_conversation_assignments za
+SET 
+  status = 'active',
+  closed_at = NULL,
+  closed_by = NULL,
+  updated_at = now()
+FROM zapp_conversations zc
+WHERE za.zapp_conversation_id = zc.id
+  AND zc.is_group = true
+  AND za.status = 'closed';
 ```
 
 ---
 
-## Fluxo de Implementação
+## Fluxo de Correção
 
 ```text
 +------------------+     +--------------------+     +------------------+
-|    Etapa 1       |     |     Etapa 2        |     |    Etapa 3-4     |
-| Correção Filtro  | --> | Adicionar Eventos  | --> | Handlers Webhook |
-| (useZappData)    |     | (uazapi-manager)   |     | (uazapi-webhook) |
-+------------------+     +--------------------+     +------------------+
-         |                                                   |
-         v                                                   v
-+------------------+     +--------------------+     +------------------+
-|    Etapa 6       |     |     Etapa 5        |     |    Etapa 7       |
-| Migrar Dados     | <-- | Painel Diagnóstico | <-- | Paginação        |
-| (SQL/Edge Fn)    |     | (Admin Panel)      |     | (useZappData)    |
+|    Mudança 1     |     |     Mudança 2      |     |    Mudança 3     |
+| Filtro Frontend  | --> | Webhook Reabrir    | --> | SQL Corrigir     |
+| (grupos visíveis)|     | (grupos auto-open) |     | (dados antigos)  |
 +------------------+     +--------------------+     +------------------+
 ```
 
@@ -252,62 +117,38 @@ Implementar carregamento paginado ou virtual scrolling para conversas:
 
 | Arquivo | Mudança | Prioridade |
 |---------|---------|------------|
-| `src/hooks/useZappData.tsx` | Ajustar filtro multi-instância para incluir conversas legadas | Alta |
-| `supabase/functions/uazapi-manager/index.ts` | Adicionar eventos "chats", "groups", "history" ao webhook | Alta |
-| `supabase/functions/uazapi-webhook/index.ts` | Adicionar handlers para novos eventos de sincronização | Alta |
-| `src/components/admin/WhatsAppDiagnosticsPanel.tsx` | Novo painel de diagnóstico | Média |
-| SQL Migration | Migrar integration_id para conversas antigas | Média |
+| `src/components/royzapp/ZappConversationList.tsx` | Grupos sempre visíveis (ignorar closed) | URGENTE |
+| `supabase/functions/uazapi-webhook/index.ts` | Reabrir grupo quando recebe mensagem | Alta |
+| SQL Migration | Reabrir grupos fechados existentes | Alta |
 
 ---
 
-## Verificação Pós-Implementação
+## Resultado Esperado
 
-1. **Conferir logs do webhook** para confirmar recebimento dos novos eventos
-2. **Comparar contagem** de chats no WhatsApp vs ROY zAPP
-3. **Verificar conversas de grupo** aparecem corretamente
-4. **Testar com usuário do setor Operações** para validar que todas as conversas estão visíveis
+Após as correções:
+1. **Todos os 46 grupos** voltarão a aparecer na lista do setor Operações
+2. Grupos não desaparecerão mais quando forem "fechados"
+3. Grupos automaticamente voltarão para status "active" quando receberem mensagens
+4. A funcionalidade de "fechar ticket" continuará funcionando normalmente para conversas individuais
 
 ---
 
-## Seção Técnica: Detalhes da Implementação
+## Seção Técnica
 
-### Estrutura de Eventos da UAZAPI
+### Por que a última atualização não causou isso?
 
-Segundo a especificação OpenAPI fornecida, os eventos disponíveis são:
+A última atualização modificou:
+1. Filtro multi-instância para incluir conversas legadas
+2. Eventos de webhook para sincronização de grupos
+3. Handlers de eventos `chats` e `groups`
 
-- `connection` - Estado da conexão
-- `history` - Sincronização de histórico (CRÍTICO para conversas existentes)
-- `messages` - Novas mensagens
-- `messages_update` - Atualizações de status de mensagens
-- `call` - Chamadas
-- `contacts` - Sincronização de contatos
-- `presence` - Status online/offline
-- `groups` - Sincronização de grupos
-- `labels` - Etiquetas
-- `chats` - Lista de conversas
-- `chat_labels` - Etiquetas por conversa
-- `blocks` - Contatos bloqueados
-- `leads` - Leads do UAZAPI
+Nenhuma dessas mudanças alterou a lógica de exibição por status "closed". O problema é um comportamento pré-existente que estava acontecendo gradualmente à medida que agentes fechavam os tickets de grupo.
 
-### Campos Críticos para Grupos
+### Diferença entre Grupos e Tickets
 
-A UAZAPI retorna grupos com estes campos (conforme especificação):
+| Aspecto | Ticket Individual | Grupo |
+|---------|-------------------|-------|
+| Natureza | Temporário (problema → solução) | Permanente (relação contínua) |
+| Ciclo de vida | Abertura → Atendimento → Fechamento | Sempre ativo enquanto existir |
+| Status "closed" | Correto (ticket resolvido) | Incorreto (grupo não "resolve") |
 
-```yaml
-wa_isGroup: boolean
-wa_isGroup_admin: boolean
-wa_isGroup_announce: boolean
-wa_isGroup_community: boolean
-wa_isGroup_member: boolean
-wa_chatid: string (formato: 123456789@g.us)
-```
-
-### Formato de Telefone Brasileiro
-
-A normalização atual já trata a conversão de 12 para 13 dígitos:
-
-```
-+55 71 9739-8455 (12 dígitos) -> +55 71 99739-8455 (13 dígitos)
-```
-
-Mas a busca de conversas existentes precisa considerar ambos os formatos com OR condition.
