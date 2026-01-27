@@ -19,10 +19,26 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Label } from "@/components/ui/label";
 import { Trash2 } from "lucide-react";
 import { AppearanceSection } from "../visual-builder/AppearanceSection";
-import { VisualConfig, DateDisplayFormat, ColorPalette, DEFAULT_APPEARANCE } from "../visual-builder/types";
+import { 
+  VisualConfig, 
+  DateDisplayFormat, 
+  ColorPalette, 
+  DisplayScale,
+  DEFAULT_APPEARANCE,
+  DISPLAY_SCALE_OPTIONS,
+  DEFAULT_DISPLAY_SCALE,
+} from "../visual-builder/types";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { toast } from "sonner";
 
@@ -56,8 +72,17 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   const [fillEmptyDates, setFillEmptyDates] = useState(
     config?.appearance?.fillEmptyDates ?? DEFAULT_APPEARANCE.fillEmptyDates
   );
+  const [displayScale, setDisplayScale] = useState<DisplayScale>(
+    config?.formatting?.displayScale ?? DEFAULT_DISPLAY_SCALE
+  );
+  const [decimals, setDecimals] = useState<number>(
+    config?.formatting?.decimals ?? 2
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Detect if it's a scorecard
+  const isScorecard = visual.chart_type === 'scorecard';
 
   // Reset state when visual changes or sheet opens
   useEffect(() => {
@@ -66,6 +91,8 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
       setDateDisplayFormat(config?.appearance?.dateDisplayFormat ?? DEFAULT_APPEARANCE.dateDisplayFormat);
       setColorPalette(config?.appearance?.colorPalette ?? DEFAULT_APPEARANCE.colorPalette);
       setFillEmptyDates(config?.appearance?.fillEmptyDates ?? DEFAULT_APPEARANCE.fillEmptyDates);
+      setDisplayScale(config?.formatting?.displayScale ?? DEFAULT_DISPLAY_SCALE);
+      setDecimals(config?.formatting?.decimals ?? 2);
     }
   }, [open, config]);
 
@@ -78,6 +105,11 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
     try {
       const newConfig: VisualConfig = {
         ...config,
+        formatting: {
+          ...config.formatting,
+          displayScale,
+          decimals,
+        },
         appearance: {
           showDataLabels,
           dateDisplayFormat,
@@ -119,7 +151,50 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
           </SheetDescription>
         </SheetHeader>
 
-        <div className="py-6">
+        <div className="py-6 space-y-6">
+          {/* Scorecard formatting options */}
+          {isScorecard && (
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Formatação do Valor</Label>
+              
+              {/* Display Scale */}
+              <div className="space-y-2">
+                <Label className="text-sm font-normal text-muted-foreground">Escala de Exibição</Label>
+                <Select value={displayScale} onValueChange={(value) => setDisplayScale(value as DisplayScale)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DISPLAY_SCALE_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Decimal Places */}
+              <div className="space-y-2">
+                <Label className="text-sm font-normal text-muted-foreground">Casas Decimais</Label>
+                <Select value={String(decimals)} onValueChange={(v) => setDecimals(Number(v))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[0, 1, 2, 3, 4].map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        {n} {n === 1 ? 'casa' : 'casas'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <Separator />
+            </div>
+          )}
+
           <AppearanceSection
             showDataLabels={showDataLabels}
             onShowDataLabelsChange={setShowDataLabels}

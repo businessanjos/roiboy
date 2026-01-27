@@ -5,6 +5,7 @@ export type DateGrouping = 'day' | 'week' | 'month' | 'year';
 export type ChartType = 'bar' | 'line' | 'pie' | 'number' | 'scorecard';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
 export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature';
+export type DisplayScale = 'full' | 'auto' | 'thousands' | 'millions' | 'billions';
 
 export interface AppearanceConfig {
   showDataLabels: boolean;
@@ -33,6 +34,7 @@ export interface VisualConfig {
   formatting: {
     type: FormatType;
     decimals: number;
+    displayScale?: DisplayScale;
   };
   // Custom formula for transformations (e.g., "{{value}} * 0.1")
   customFormula?: string;
@@ -101,6 +103,18 @@ export const COLOR_PALETTE_OPTIONS: { value: ColorPalette; label: string }[] = [
   { value: 'alert', label: 'Alerta' },
   { value: 'nature', label: 'Natureza' },
 ];
+
+// Display scale options for scorecards
+export const DISPLAY_SCALE_OPTIONS: { value: DisplayScale; label: string }[] = [
+  { value: 'auto', label: 'Automático (K/M/B)' },
+  { value: 'full', label: 'Valor Completo' },
+  { value: 'thousands', label: 'Em Milhares (K)' },
+  { value: 'millions', label: 'Em Milhões (M)' },
+  { value: 'billions', label: 'Em Bilhões (B)' },
+];
+
+// Default display scale
+export const DEFAULT_DISPLAY_SCALE: DisplayScale = 'auto';
 
 // Default appearance config
 export const DEFAULT_APPEARANCE: AppearanceConfig = {
