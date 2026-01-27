@@ -1,234 +1,99 @@
 
 
-# Plano: Corrigir Faturamento para Somar Apenas Negócios Ganhos
+# Plano: Melhorar Tratamento de Erros na Criação de Contrato
 
 ## Problema Identificado
 
-O Scorecard de "Faturamento" está exibindo **R$ 36.536.800** somando **todos os 479 negócios**, quando deveria somar apenas os negócios com `status = 'won'` (ganhos).
+O erro "Erro ao salvar contrato" é exibido de forma genérica, sem indicar a causa real. A investigação dos logs do banco de dados não revelou erros específicos de `client_contracts`, sugerindo que:
 
-### Causa Raiz
-
-No `useVisualData.ts`, a lógica de filtragem para Scorecards (`dimension.field === '_total'`) não considera o tipo de métrica sendo calculada:
-
-| Métrica | Filtro Necessário | Situação Atual |
-|---------|-------------------|----------------|
-| Faturamento | `status = 'won'` | Nenhum filtro |
-| Negócios | Nenhum | OK |
-| Ticket Médio | `status = 'won'` | Nenhum filtro |
-| Perdas | `status = 'lost'` | Nenhum filtro |
-
-O problema é que a configuração do Scorecard não carrega qual métrica está sendo usada - apenas `measure.field = 'value'` e `aggregation = 'sum'`. Isso não é suficiente para determinar que deve filtrar apenas negócios ganhos.
-
----
+1. O erro pode estar ocorrendo na **criação do cliente** (antes do contrato)
+2. O erro pode ser de **RLS/permissões** que não aparece nos logs postgres
+3. A mensagem de erro está sendo **engolida** pelo catch genérico
 
 ## Solucao Proposta
 
-### Abordagem: Adicionar campo `statusFilter` na config do Scorecard
+Melhorar o tratamento de erros para exibir mensagens específicas e adicionar logs de debug para facilitar a identificação do problema.
 
-Adicionar um campo opcional `statusFilter` no `VisualConfig` que indica qual status de deal filtrar. Isso é configurado no momento da criação baseado na métrica selecionada.
-
-| Métrica | statusFilter |
-|---------|--------------|
-| `revenue` | `'won'` |
-| `avg_ticket` | `'won'` |
-| `lost_reasons` | `'lost'` |
-| `deals_count` | `undefined` (todos) |
-| `conversion` | `undefined` (todos) |
-
----
-
-## Arquivos a Modificar
+## Arquivo a Modificar
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/components/insights/visual-builder/types.ts` | Adicionar `statusFilter?: 'won' \| 'lost' \| 'open'` em `VisualConfig` |
-| `src/hooks/useVisualData.ts` | Aplicar filtro de status baseado em `config.statusFilter` |
-| `src/components/insights/AddVisualModal.tsx` | Configurar `statusFilter` correto para cada metrica |
+| `src/pages/Contracts.tsx` | Adicionar tratamento de erro detalhado e logs de debug |
 
----
+## Alteracoes Tecnicas
+
+```typescript
+// Em handleSaveContract, linhas ~1186-1320
+
+// 1. Adicionar log antes de criar cliente
+console.log('[Contract] Creating new client:', {
+  full_name: clientFormData.full_name,
+  phone: clientFormData.phone_e164,
+  account_id: userProfile.account_id
+});
+
+const { data: newClient, error: createClientError } = await supabase
+  .from("clients")
+  .insert(newClientData as any)
+  .select("id")
+  .single();
+
+if (createClientError) {
+  console.error('[Contract] Client creation error:', createClientError);
+  // Mensagem especifica para erro de cliente
+  if (createClientError.code === '23505') {
+    toast.error("Este telefone ja esta cadastrado. Use 'Selecionar existente'.");
+  } else if (createClientError.code === '42501') {
+    toast.error("Sem permissao para criar cliente. Verifique suas credenciais.");
+  } else {
+    toast.error(`Erro ao criar cliente: ${createClientError.message}`);
+  }
+  setSaving(false);
+  return;
+}
+
+// 2. Adicionar log antes de criar contrato
+console.log('[Contract] Creating contract:', {
+  client_id: clientId,
+  start_date: formData.start_date,
+  value: formData.value,
+  status: isFutureStart ? "scheduled" : "active"
+});
+
+const { data: newContract, error } = await supabase
+  .from("client_contracts")
+  .insert(contractData as any)
+  .select("id")
+  .single();
+
+if (error) {
+  console.error('[Contract] Contract creation error:', error);
+  // Mensagens especificas por tipo de erro
+  if (error.code === '23503') {
+    toast.error("Cliente ou produto invalido. Verifique os dados.");
+  } else if (error.code === '23514') {
+    toast.error("Status do contrato invalido.");
+  } else if (error.code === '42501') {
+    toast.error("Sem permissao para criar contrato.");
+  } else {
+    toast.error(`Erro ao salvar contrato: ${error.message}`);
+  }
+  setSaving(false);
+  return;
+}
+```
+
+## Beneficios
+
+1. **Mensagens claras**: Usuario sabera exatamente o que falhou
+2. **Logs de debug**: Console mostrara dados enviados para identificar problemas
+3. **Tratamento especifico**: Cada tipo de erro (duplicidade, permissao, FK) tem mensagem propria
+4. **Nao interrompe fluxo**: Se cliente falhar, nao tenta criar contrato
 
 ## Resultado Esperado
 
-```text
-ANTES (Errado)
-┌─────────────────┐
-│   Faturamento   │
-│  R$ 36.536.800  │  ← Soma TODOS os deals
-│  479 registros  │
-└─────────────────┘
-
-DEPOIS (Correto)
-┌─────────────────┐
-│   Faturamento   │
-│   R$ 2.500.000  │  ← Soma apenas deals GANHOS
-│   35 registros  │
-└─────────────────┘
-```
-
----
-
-## Secao Tecnica
-
-### 1. types.ts - Adicionar statusFilter
-
-```typescript
-export interface VisualConfig {
-  dataSource: DataSource;
-  measure: {
-    field: string;
-    aggregation: AggregationType;
-  };
-  dimension: {
-    field: string;
-    type: 'date' | 'text';
-    dateGrouping?: DateGrouping;
-  };
-  formatting: {
-    type: FormatType;
-    decimals: number;
-    displayScale?: DisplayScale;
-  };
-  appearance?: VisualAppearance;
-  statusFilter?: 'won' | 'lost' | 'open'; // NOVO: Filtro de status para deals
-}
-```
-
-### 2. useVisualData.ts - Aplicar filtro de status
-
-```typescript
-async function fetchDealsData(
-  accountId: string,
-  measure: VisualConfig['measure'],
-  dimension: VisualConfig['dimension'],
-  filters: any,
-  dateDisplayFormat: DateDisplayFormat,
-  statusFilter?: 'won' | 'lost' | 'open' // Novo parametro
-): Promise<AggregatedDataPoint[]> {
-  let query = supabase
-    .from('deals')
-    .select(`...`)
-    .eq('account_id', accountId);
-
-  // NOVO: Aplicar filtro de status se especificado
-  if (statusFilter) {
-    query = query.eq('status', statusFilter);
-  }
-
-  // Determinar campo de data para filtros
-  const dateFilterField = dimension.type === 'date' && dimension.field 
-    ? dimension.field 
-    : statusFilter === 'won' 
-      ? 'won_at'  // Para faturamento, filtrar por won_at
-      : statusFilter === 'lost'
-        ? 'lost_at' // Para perdas, filtrar por lost_at
-        : 'created_at';
-
-  // ... resto da logica
-}
-```
-
-Na chamada da funcao, passar o `statusFilter` do config:
-
-```typescript
-// Na funcao useVisualData
-switch (dataSource) {
-  case 'deals':
-    result = await fetchDealsData(
-      currentUser.account_id, 
-      measure, 
-      dimension, 
-      filters, 
-      dateDisplayFormat,
-      config.statusFilter // Passar o filtro de status
-    );
-    break;
-}
-```
-
-### 3. AddVisualModal.tsx - Configurar statusFilter por metrica
-
-```typescript
-// Mapping atualizado para incluir statusFilter
-const METRIC_TO_CONFIG: Record<Metric, { 
-  dataSource: 'deals'; 
-  measureField: string | null; 
-  aggregation: 'sum' | 'count' | 'avg'; 
-  formatType: 'currency' | 'decimal' | 'percentage';
-  statusFilter?: 'won' | 'lost'; // NOVO
-}> = {
-  revenue: { 
-    dataSource: 'deals', 
-    measureField: 'value', 
-    aggregation: 'sum', 
-    formatType: 'currency',
-    statusFilter: 'won' // Apenas negocios ganhos
-  },
-  deals_count: { 
-    dataSource: 'deals', 
-    measureField: null, 
-    aggregation: 'count', 
-    formatType: 'decimal'
-    // Sem statusFilter = todos os deals
-  },
-  avg_ticket: { 
-    dataSource: 'deals', 
-    measureField: 'value', 
-    aggregation: 'avg', 
-    formatType: 'currency',
-    statusFilter: 'won' // Apenas negocios ganhos
-  },
-  conversion: { 
-    dataSource: 'deals', 
-    measureField: null, 
-    aggregation: 'count', 
-    formatType: 'percentage'
-    // Sem statusFilter = calculo feito de outra forma
-  },
-  lost_reasons: { 
-    dataSource: 'deals', 
-    measureField: null, 
-    aggregation: 'count', 
-    formatType: 'decimal',
-    statusFilter: 'lost' // Apenas negocios perdidos
-  },
-};
-
-// Na criacao do config (handleCreate)
-if (chartType === 'scorecard') {
-  config = {
-    dataSource: metricConfig.dataSource,
-    measure: { ... },
-    dimension: { field: '_total', type: 'text' },
-    formatting: { ... },
-    appearance: DEFAULT_APPEARANCE,
-    statusFilter: metricConfig.statusFilter, // NOVO
-  };
-}
-```
-
----
-
-## Migracao de Scorecards Existentes
-
-Para Scorecards ja criados sem o `statusFilter`, precisamos de uma logica de fallback inteligente:
-
-```typescript
-// Em useVisualData.ts, ao detectar scorecard de faturamento sem statusFilter
-// Inferir o statusFilter baseado no measure
-function inferStatusFilter(measure: VisualConfig['measure'], dimension: VisualConfig['dimension']): 'won' | 'lost' | undefined {
-  if (dimension.field !== '_total') return undefined;
-  
-  // Se esta somando 'value', provavelmente e faturamento = deals ganhos
-  if (measure.field === 'value' && measure.aggregation === 'sum') {
-    return 'won';
-  }
-  if (measure.field === 'value' && measure.aggregation === 'avg') {
-    return 'won';
-  }
-  
-  return undefined;
-}
-```
-
-Isso garante que Scorecards existentes funcionem corretamente mesmo sem atualizar seus configs no banco.
+Em vez de "Erro ao salvar contrato", o usuario vera mensagens como:
+- "Este telefone ja esta cadastrado. Use 'Selecionar existente'."
+- "Erro ao criar cliente: [mensagem especifica do banco]"
+- "Sem permissao para criar contrato."
 
