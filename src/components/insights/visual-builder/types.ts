@@ -1,5 +1,5 @@
 export type DataSource = 'deals' | 'leads' | 'products';
-export type Aggregation = 'sum' | 'avg' | 'count';
+export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
 export type ChartType = 'bar' | 'line' | 'pie' | 'number' | 'scorecard';
@@ -186,6 +186,7 @@ export function generateVisualTitle(
     sum: 'Total',
     avg: 'Média',
     count: 'Quantidade',
+    conversion_rate: 'Taxa de Conversão',
   };
 
   const measureLabel = DATA_SOURCE_FIELDS[dataSource].numeric.find(f => f.value === measureField)?.label || measureField;
