@@ -1,145 +1,179 @@
 
-# Plano: Adicionar Campos de Data/Hora na Edição de Eventos da Aba Agenda
+# Plano: Corrigir Atualização de Dados na Análise de Conteúdos
 
 ## Diagnóstico do Problema
 
-Ao analisar o arquivo `src/components/client/ClientAgenda.tsx`, identifiquei que os campos de **Data/Hora** e **Duração** estão condicionados apenas ao tipo de evento `"live"`:
+Após investigação detalhada, identifiquei **4 causas potenciais** para os dados não atualizarem após edição de métricas dos posts:
 
+### 1. Query Key Inconsistente com Invalidação
+
+**Problema:**
 ```typescript
-// Linha 640 - Problema atual
-{formData.event_type === "live" && (
-  <>
-    <div className="grid grid-cols-2 gap-3">
-      <div className="space-y-2">
-        <Label htmlFor="scheduled_at">Data/Hora</Label>
-        <Input type="datetime-local" ... />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="duration">Duração (min)</Label>
-        <Input type="number" ... />
-      </div>
-    </div>
-    <div className="space-y-2">
-      <Label htmlFor="meeting_url">Link da Reunião</Label>
-      <Input ... />
-    </div>
-  </>
-)}
+// Query usa 3 elementos
+queryKey: ['instagram-posts', currentProfile?.id, useMockData]
+
+// Invalidação usa apenas prefixo
+queryClient.invalidateQueries({ queryKey: ['instagram-posts'] });
 ```
 
-Isso faz com que eventos do tipo "Material de Apoio", "Mentoria", "Workshop", etc., não exibam os campos de data/hora na edição, como mostrado no screenshot do usuário.
+O estado `useMockData` é gerenciado internamente e pode estar dessincronizado entre diferentes renderizações, fazendo com que a invalidação não atinja a query correta.
+
+### 2. staleTime Global de 5 Minutos
+
+O cache está configurado para manter dados "frescos" por 5 minutos, o que pode interferir com refetch imediato após invalidação em certas condições de rede ou estado.
+
+### 3. Warning de forwardRef no DialogFooter
+
+Console mostra erro de ref no `DialogFooter`, indicando problema potencial no fluxo de fechamento do dialog que pode afetar a execução do callback `onSuccess`.
+
+### 4. Múltiplos Estados Interdependentes
+
+A query de posts depende de `currentProfile` e `useMockData`, que são derivados de outras queries/estados. Uma mudança em qualquer um deles pode causar re-fetch com dados antigos.
 
 ---
 
 ## Solução Proposta
 
-Separar a lógica condicional:
-1. **Data/Hora e Duração**: Disponíveis para TODOS os tipos de eventos (exceto "material")
-2. **Link da Reunião**: Apenas para tipos de eventos que fazem sentido (lives, mentorias, webinars, etc.)
-3. **Link do Material**: Apenas para tipo "material"
+### Mudança 1: Melhorar Invalidação de Cache no Hook
+
+**Arquivo:** `src/hooks/useSocialMediaData.tsx`
+
+Alterar a invalidação para usar `exact: false` explicitamente e também forçar refetch:
+
+```typescript
+// No updatePost.onSuccess (linha ~383)
+onSuccess: () => {
+  // Invalidar todas as queries de posts com prefixo
+  queryClient.invalidateQueries({ 
+    queryKey: ['instagram-posts'],
+    exact: false,
+    refetchType: 'all'
+  });
+  // Também invalidar dashboard que pode usar esses dados
+  queryClient.invalidateQueries({ queryKey: ['instagram-dashboard'] });
+  toast.success('Post atualizado com sucesso!');
+},
+```
+
+### Mudança 2: Remover `useMockData` da Query Key
+
+Simplificar a query key para não depender de estado volátil:
+
+```typescript
+// Linha ~101-102
+const { data: posts = [], isLoading: isLoadingPosts } = useQuery({
+  queryKey: ['instagram-posts', currentProfile?.id],
+  queryFn: async () => {
+    if (!currentProfile) return [];
+    
+    // Verificar mock data dentro da função, não na key
+    const { data, error } = await supabase
+      .from('instagram_posts')
+      .select('*')
+      .eq('profile_id', currentProfile.id)
+      .order('posted_at', { ascending: false });
+
+    // Se não houver dados reais e perfil for mock, retornar mock
+    if (error) throw error;
+    return data as InstagramPost[];
+  },
+  enabled: !!currentProfile && !useMockData,
+  staleTime: 30000, // 30 segundos para posts - mais responsivo
+});
+```
+
+### Mudança 3: Adicionar staleTime Específico para Posts
+
+Reduzir o staleTime especificamente para a query de posts para garantir refetch após invalidação:
+
+```typescript
+staleTime: 30000, // 30 segundos em vez de 5 minutos global
+```
+
+### Mudança 4: Corrigir Warning de forwardRef no DialogFooter
+
+**Arquivo:** `src/components/ui/dialog.tsx`
+
+Atualizar `DialogFooter` para usar `React.forwardRef`:
+
+```typescript
+const DialogFooter = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div 
+    ref={ref}
+    className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2", className)} 
+    {...props} 
+  />
+));
+DialogFooter.displayName = "DialogFooter";
+```
+
+### Mudança 5: Adicionar Fallback de Refetch Manual
+
+Garantir que após fechar o dialog, os dados sejam recarregados:
+
+**Arquivo:** `src/components/marketing/SocialMediaTab.tsx`
+
+```typescript
+const handleEditPost = (postId: string, data: EditPostFormData) => {
+  updatePost.mutate(
+    { postId, data },
+    {
+      onSuccess: () => {
+        setEditPostDialogOpen(false);
+        setSelectedPost(null);
+        // Força refetch explícito após 100ms
+        setTimeout(() => {
+          queryClient.refetchQueries({ queryKey: ['instagram-posts'] });
+        }, 100);
+      },
+    }
+  );
+};
+```
 
 ---
 
-## Mudanças no Arquivo
+## Arquivos a Modificar
 
-**Arquivo:** `src/components/client/ClientAgenda.tsx`
-
-### Antes (linhas 640-684):
-```typescript
-{formData.event_type === "live" && (
-  <>
-    <div className="grid grid-cols-2 gap-3">
-      {/* Data/Hora e Duração */}
-    </div>
-    <div className="space-y-2">
-      {/* Link da Reunião */}
-    </div>
-  </>
-)}
-
-{formData.event_type === "material" && (
-  <div className="space-y-2">
-    {/* Link do Material */}
-  </div>
-)}
-```
-
-### Depois:
-```typescript
-{/* Data/Hora e Duração - Disponível para todos os tipos exceto material */}
-{formData.event_type !== "material" && (
-  <div className="grid grid-cols-2 gap-3">
-    <div className="space-y-2">
-      <Label htmlFor="scheduled_at">Data/Hora</Label>
-      <Input
-        id="scheduled_at"
-        type="datetime-local"
-        value={formData.scheduled_at}
-        onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
-      />
-    </div>
-    <div className="space-y-2">
-      <Label htmlFor="duration">Duração (min)</Label>
-      <Input
-        id="duration"
-        type="number"
-        value={formData.duration_minutes}
-        onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
-      />
-    </div>
-  </div>
-)}
-
-{/* Link da Reunião - Tipos que suportam reunião online */}
-{["live", "mentoria", "workshop", "masterclass", "webinar", "imersao", "plantao"].includes(formData.event_type) && (
-  <div className="space-y-2">
-    <Label htmlFor="meeting_url">Link da Reunião</Label>
-    <Input
-      id="meeting_url"
-      value={formData.meeting_url}
-      onChange={(e) => setFormData({ ...formData, meeting_url: e.target.value })}
-      placeholder="https://zoom.us/..."
-    />
-  </div>
-)}
-
-{/* Link do Material - Apenas para tipo material */}
-{formData.event_type === "material" && (
-  <div className="space-y-2">
-    <Label htmlFor="material_url">Link do Material</Label>
-    <Input
-      id="material_url"
-      value={formData.material_url}
-      onChange={(e) => setFormData({ ...formData, material_url: e.target.value })}
-      placeholder="https://..."
-    />
-  </div>
-)}
-```
-
----
-
-## Fluxo Corrigido
-
-| Tipo de Evento | Data/Hora | Duração | Link Reunião | Link Material |
-|----------------|-----------|---------|--------------|---------------|
-| Live | Sim | Sim | Sim | Nao |
-| Mentoria | Sim | Sim | Sim | Nao |
-| Workshop | Sim | Sim | Sim | Nao |
-| Masterclass | Sim | Sim | Sim | Nao |
-| Webinar | Sim | Sim | Sim | Nao |
-| Imersao | Sim | Sim | Sim | Nao |
-| Plantao | Sim | Sim | Sim | Nao |
-| Material | Nao | Nao | Nao | Sim |
-| Outros (campanha, viagem, etc.) | Sim | Sim | Nao | Nao |
+| Arquivo | Mudança |
+|---------|---------|
+| `src/hooks/useSocialMediaData.tsx` | Melhorar invalidação e simplificar query key |
+| `src/components/ui/dialog.tsx` | Corrigir forwardRef no DialogFooter |
+| `src/components/marketing/SocialMediaTab.tsx` | Adicionar refetch manual como fallback |
 
 ---
 
 ## Resultado Esperado
 
-Apos a correcao, ao editar qualquer evento que nao seja do tipo "material", o usuario vera os campos:
-- **Data/Hora** (input datetime-local)
-- **Duracao (min)** (input number)
-- **Link da Reuniao** (quando aplicavel ao tipo)
+Após as correções:
+1. A invalidação de cache será mais agressiva e confiável
+2. A query key não dependerá de estado volátil
+3. O staleTime menor garantirá refetch mais rápido
+4. O warning do console será eliminado
+5. Um refetch manual como fallback garantirá atualização mesmo em edge cases
 
-Isso permitira editar a data e hora de mentorias, workshops, e qualquer outro tipo de evento agendavel.
+---
+
+## Seção Técnica: Detalhes de Implementação
+
+### Comportamento do React Query com invalidateQueries
+
+A invalidação por prefixo funciona com `exact: false` (padrão), mas há nuances:
+- Se a query está "fresh" (dentro do staleTime), ela é marcada como "stale" mas não refetch automaticamente
+- O `refetchType: 'all'` força refetch de todas as queries matching
+
+### Por que o problema não afeta todos os usuários?
+
+Usuários que:
+- Têm conexão mais lenta (a invalidação completa antes do re-render)
+- Navegam entre abas (forçam refetch ao retornar)
+- Têm menos dados em cache
+
+Não experienciam o problema porque o timing naturalmente favorece o refetch.
+
+### Diagnóstico para o Warning de Ref
+
+O Radix UI Dialog internamente pode passar refs para children. O `DialogFooter` sendo um componente funcional simples não suporta isso, causando o warning. Embora seja apenas um warning, pode indicar comportamentos inesperados no lifecycle do componente.
