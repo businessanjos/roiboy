@@ -42,6 +42,7 @@ import {
   TrendingUp,
   AlertTriangle,
   Lightbulb,
+  Lock,
   Check,
   X,
   Clock,
@@ -193,6 +194,8 @@ export default function ClientDetail() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [riskEvents, setRiskEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<{ type: 'network' | 'not_found' | 'permission'; message: string } | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [roiDialogOpen, setRoiDialogOpen] = useState(false);
   
   // Product editing state
@@ -578,6 +581,7 @@ export default function ClientDetail() {
   const fetchData = async () => {
     if (!id) return;
     setLoading(true);
+    setFetchError(null);
 
     try {
       // Fetch client
@@ -589,11 +593,54 @@ export default function ClientDetail() {
 
       if (clientError) {
         console.error("Client fetch error:", clientError);
-        throw clientError;
+        
+        // Network error (Failed to fetch, ETIMEDOUT, etc)
+        if (clientError.message?.includes('Failed to fetch') || 
+            clientError.message?.includes('NetworkError') ||
+            clientError.message?.includes('fetch')) {
+          setFetchError({ 
+            type: 'network', 
+            message: 'Erro de conexão. Verifique sua internet.' 
+          });
+          setLoading(false);
+          return;
+        }
+        
+        // Client not found (PGRST116 = single row not found)
+        if (clientError.code === 'PGRST116') {
+          setFetchError({ 
+            type: 'not_found', 
+            message: 'Cliente não encontrado.' 
+          });
+          setLoading(false);
+          return;
+        }
+        
+        // Permission error (RLS)
+        if (clientError.code === '42501' || clientError.code === 'PGRST301') {
+          setFetchError({ 
+            type: 'permission', 
+            message: 'Sem permissão para visualizar este cliente.' 
+          });
+          setLoading(false);
+          return;
+        }
+        
+        // Other errors - treat as network
+        setFetchError({ 
+          type: 'network', 
+          message: clientError.message || 'Erro desconhecido.' 
+        });
+        setLoading(false);
+        return;
       }
       
       if (!clientData) {
         console.error("Client not found for ID:", id);
+        setFetchError({ 
+          type: 'not_found', 
+          message: 'Cliente não encontrado.' 
+        });
         setLoading(false);
         return;
       }
@@ -926,19 +973,55 @@ export default function ClientDetail() {
       timelineItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setTimeline(timelineItems.slice(0, 50));
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching client data:", error);
-      toast.error("Erro ao carregar dados do cliente");
+      
+      // Handle non-Supabase errors (pure network errors)
+      if (error?.message?.includes('Failed to fetch') || 
+          error?.message?.includes('fetch') ||
+          error instanceof TypeError) {
+        setFetchError({ 
+          type: 'network', 
+          message: 'Falha na conexão. Tente novamente.' 
+        });
+      } else {
+        setFetchError({ 
+          type: 'network', 
+          message: error?.message || 'Erro ao carregar dados.' 
+        });
+      }
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    const maxRetries = 2;
+    
+    const fetchWithRetry = async () => {
+      await fetchData();
+    };
+    
+    fetchWithRetry();
     fetchAvailableForms();
     fetchTeamUsers();
+    
+    // Reset retry count when id changes
+    setRetryCount(0);
   }, [id]);
+  
+  // Auto-retry on network errors
+  useEffect(() => {
+    const maxRetries = 2;
+    if (fetchError?.type === 'network' && retryCount < maxRetries && !loading) {
+      const timer = setTimeout(() => {
+        console.log(`Auto-retrying fetch (attempt ${retryCount + 1}/${maxRetries})...`);
+        setRetryCount(prev => prev + 1);
+        fetchData();
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [fetchError, retryCount, loading]);
 
   // Realtime subscriptions
   useEffect(() => {
@@ -1476,12 +1559,47 @@ export default function ClientDetail() {
     return <LoadingScreen message="Carregando cliente..." fullScreen={false} />;
   }
 
-  if (!client) {
+  // Network error - show retry button
+  if (fetchError?.type === 'network') {
     return (
-      <div className="p-6 lg:p-8">
-        <p className="text-muted-foreground">Cliente não encontrado.</p>
-        <Button asChild className="mt-4">
-          <Link to="/dashboard">Voltar ao Dashboard</Link>
+      <div className="p-6 lg:p-8 flex flex-col items-center justify-center min-h-[50vh]">
+        <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4" />
+        <h2 className="text-lg font-semibold mb-2">Erro de Conexão</h2>
+        <p className="text-muted-foreground mb-4 text-center">{fetchError.message}</p>
+        <Button onClick={() => { setRetryCount(0); fetchData(); }} className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Tentar Novamente
+        </Button>
+        <Button variant="ghost" asChild className="mt-2">
+          <Link to="/clients">Voltar para Clientes</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  // Permission error - show access denied
+  if (fetchError?.type === 'permission') {
+    return (
+      <div className="p-6 lg:p-8 flex flex-col items-center justify-center min-h-[50vh]">
+        <Lock className="h-12 w-12 text-destructive mb-4" />
+        <h2 className="text-lg font-semibold mb-2">Acesso Negado</h2>
+        <p className="text-muted-foreground mb-4 text-center">{fetchError.message}</p>
+        <Button asChild>
+          <Link to="/clients">Voltar para Clientes</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  // Client not found or no client data
+  if (fetchError?.type === 'not_found' || !client) {
+    return (
+      <div className="p-6 lg:p-8 flex flex-col items-center justify-center min-h-[50vh]">
+        <User className="h-12 w-12 text-muted-foreground mb-4" />
+        <h2 className="text-lg font-semibold mb-2">Cliente Não Encontrado</h2>
+        <p className="text-muted-foreground mb-4">O cliente solicitado não existe ou foi removido.</p>
+        <Button asChild>
+          <Link to="/clients">Voltar para Clientes</Link>
         </Button>
       </div>
     );
