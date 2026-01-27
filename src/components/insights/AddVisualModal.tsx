@@ -50,14 +50,14 @@ const GROUP_BY_OPTIONS = [
 const METRIC_TO_CONFIG: Record<Metric, { 
   dataSource: 'deals'; 
   measureField: string | null; 
-  aggregation: 'sum' | 'count' | 'avg'; 
+  aggregation: 'sum' | 'count' | 'avg' | 'conversion_rate'; 
   formatType: 'currency' | 'decimal' | 'percentage';
   statusFilter?: 'won' | 'lost';
 }> = {
   revenue: { dataSource: 'deals', measureField: 'value', aggregation: 'sum', formatType: 'currency', statusFilter: 'won' },
   deals_count: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal' },
   avg_ticket: { dataSource: 'deals', measureField: 'value', aggregation: 'avg', formatType: 'currency', statusFilter: 'won' },
-  conversion: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'percentage' },
+  conversion: { dataSource: 'deals', measureField: null, aggregation: 'conversion_rate', formatType: 'percentage' },
   lost_reasons: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal', statusFilter: 'lost' },
 };
 

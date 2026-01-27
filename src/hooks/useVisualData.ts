@@ -92,6 +92,15 @@ async function fetchDealsData(
   dateDisplayFormat: DateDisplayFormat,
   statusFilter?: 'won' | 'lost' | 'open'
 ): Promise<AggregatedDataPoint[]> {
+  // Special handling for conversion rate calculation
+  if (measure.aggregation === 'conversion_rate') {
+    if (dimension.field === '_total') {
+      return calculateConversionRate(accountId, filters);
+    } else {
+      return calculateConversionRateByPeriod(accountId, filters, dimension, dateDisplayFormat);
+    }
+  }
+
   let query = supabase
     .from('deals')
     .select(`
@@ -160,6 +169,136 @@ async function fetchDealsData(
   }
 
   return aggregateData(data || [], measure, dimension, dateDisplayFormat);
+}
+
+// Calculate conversion rate as (won deals / total deals) * 100
+async function calculateConversionRate(
+  accountId: string,
+  filters: any
+): Promise<AggregatedDataPoint[]> {
+  // Build base query for total deals created in period
+  let totalQuery = supabase
+    .from('deals')
+    .select('*', { count: 'exact', head: true })
+    .eq('account_id', accountId);
+
+  // Build query for won deals in period
+  let wonQuery = supabase
+    .from('deals')
+    .select('*', { count: 'exact', head: true })
+    .eq('account_id', accountId)
+    .eq('status', 'won')
+    .not('won_at', 'is', null);
+
+  // Apply date filters - total uses created_at, won uses won_at
+  if (filters.startDate) {
+    totalQuery = totalQuery.gte('created_at', filters.startDate);
+    wonQuery = wonQuery.gte('won_at', filters.startDate);
+  }
+  if (filters.endDate) {
+    totalQuery = totalQuery.lte('created_at', filters.endDate);
+    wonQuery = wonQuery.lte('won_at', filters.endDate);
+  }
+
+  // Apply user filter to both queries
+  if (filters.userId && filters.userId !== 'all') {
+    totalQuery = totalQuery.eq('responsible_user_id', filters.userId);
+    wonQuery = wonQuery.eq('responsible_user_id', filters.userId);
+  }
+
+  // Apply stage filter to both queries
+  if (filters.stageId && filters.stageId !== 'all') {
+    totalQuery = totalQuery.eq('stage_id', filters.stageId);
+    wonQuery = wonQuery.eq('stage_id', filters.stageId);
+  }
+
+  const [totalResult, wonResult] = await Promise.all([totalQuery, wonQuery]);
+
+  if (totalResult.error) {
+    console.error('Error fetching total deals:', totalResult.error);
+    return [];
+  }
+  if (wonResult.error) {
+    console.error('Error fetching won deals:', wonResult.error);
+    return [];
+  }
+
+  const total = totalResult.count || 0;
+  const won = wonResult.count || 0;
+
+  // Calculate conversion rate
+  const rate = total > 0 ? (won / total) * 100 : 0;
+
+  return [{
+    name: 'Total',
+    value: Number(rate.toFixed(1)),
+    count: total
+  }];
+}
+
+// Calculate conversion rate grouped by period
+async function calculateConversionRateByPeriod(
+  accountId: string,
+  filters: any,
+  dimension: VisualConfig['dimension'],
+  dateDisplayFormat: DateDisplayFormat
+): Promise<AggregatedDataPoint[]> {
+  // Fetch all deals in the period
+  let query = supabase
+    .from('deals')
+    .select('id, status, created_at, won_at')
+    .eq('account_id', accountId);
+
+  if (filters.startDate) {
+    query = query.gte('created_at', filters.startDate);
+  }
+  if (filters.endDate) {
+    query = query.lte('created_at', filters.endDate);
+  }
+  if (filters.userId && filters.userId !== 'all') {
+    query = query.eq('responsible_user_id', filters.userId);
+  }
+  if (filters.stageId && filters.stageId !== 'all') {
+    query = query.eq('stage_id', filters.stageId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching deals for conversion:', error);
+    return [];
+  }
+
+  // Group by period
+  const periods = new Map<string, { total: number; won: number }>();
+  const dateGrouping = dimension.dateGrouping || 'month';
+
+  for (const deal of data || []) {
+    const periodKey = formatDateGroup(deal.created_at, dateGrouping, dateDisplayFormat);
+
+    if (!periods.has(periodKey)) {
+      periods.set(periodKey, { total: 0, won: 0 });
+    }
+
+    const period = periods.get(periodKey)!;
+    period.total++;
+
+    if (deal.status === 'won') {
+      period.won++;
+    }
+  }
+
+  // Calculate rate per period
+  const result: AggregatedDataPoint[] = Array.from(periods.entries()).map(([name, { total, won }]) => ({
+    name,
+    value: total > 0 ? Number(((won / total) * 100).toFixed(1)) : 0,
+    count: total
+  }));
+
+  // Sort by period name for chronological order
+  result.sort((a, b) => a.name.localeCompare(b.name));
+
+  return result;
 }
 
 async function fetchLeadsData(
