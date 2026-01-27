@@ -778,9 +778,16 @@ export function useZappData(options: UseZappDataOptions = {}) {
           }
           
           // Update the message in local state if it's for media download completion
+          // CRITICAL FIX: Only update if message exists in current state (belongs to current conversation)
           if (newData?.media_download_status && newData?.media_url) {
-            setMessages(prevMessages => 
-              prevMessages.map(msg => 
+            setMessages(prevMessages => {
+              // If message doesn't exist in current state, it's for a different conversation
+              const messageExists = prevMessages.some(msg => msg.id === newData.id);
+              if (!messageExists) {
+                console.log("[ZappData] Ignoring UPDATE for message not in current conversation:", newData.id);
+                return prevMessages;
+              }
+              return prevMessages.map(msg => 
                 msg.id === newData.id 
                   ? { 
                       ...msg, 
@@ -788,19 +795,24 @@ export function useZappData(options: UseZappDataOptions = {}) {
                       media_download_status: newData.media_download_status 
                     } 
                   : msg
-              )
-            );
+              );
+            });
           }
           
           // Also update delivery status changes
+          // CRITICAL FIX: Only update if message exists in current state
           if (newData?.delivery_status) {
-            setMessages(prevMessages => 
-              prevMessages.map(msg => 
+            setMessages(prevMessages => {
+              const messageExists = prevMessages.some(msg => msg.id === newData.id);
+              if (!messageExists) {
+                return prevMessages;
+              }
+              return prevMessages.map(msg => 
                 msg.id === newData.id 
                   ? { ...msg, delivery_status: newData.delivery_status } 
                   : msg
-              )
-            );
+              );
+            });
           }
         }
       )

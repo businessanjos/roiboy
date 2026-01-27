@@ -599,13 +599,29 @@ export default function RoyZapp() {
     fetchAIAgents();
   }, []);
 
+  // Ref to track current conversation ID for realtime validation
+  const currentConversationIdRef = useRef<string | null>(null);
+
+  // Update ref when conversation changes
+  useEffect(() => {
+    currentConversationIdRef.current = 
+      selectedConversation?.zapp_conversation_id || 
+      selectedConversation?.zapp_conversation?.id || 
+      null;
+  }, [selectedConversation?.id, selectedConversation?.zapp_conversation_id, selectedConversation?.zapp_conversation?.id]);
+
   // Fetch messages when conversation is selected
   useEffect(() => {
     const zappConvId = selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id;
+    
+    // CRITICAL FIX: Clear messages IMMEDIATELY when conversation changes
+    // This prevents showing messages from previous conversation during fetch
+    setMessages([]);
+    
     if (zappConvId) {
       fetchMessages(zappConvId);
     }
-  }, [selectedConversation?.id, fetchMessages]);
+  }, [selectedConversation?.id, fetchMessages, setMessages]);
 
   // Realtime subscription for messages in selected conversation
   useEffect(() => {
@@ -630,6 +646,16 @@ export default function RoyZapp() {
         (payload) => {
           console.log("[RoyZapp] Realtime INSERT received:", payload);
           const newMsg = payload.new as any;
+          
+          // CRITICAL FIX: Validate this message belongs to CURRENTLY selected conversation
+          // This prevents messages from being added if user switched conversations
+          if (currentConversationIdRef.current !== zappConvId) {
+            console.log("[RoyZapp] Ignoring realtime INSERT - conversation changed:", {
+              receivedFor: zappConvId,
+              currentlySelected: currentConversationIdRef.current
+            });
+            return;
+          }
           
           // Skip if this is our own recently sent outbound message
           // This prevents duplicate fetching right after we insert
@@ -690,6 +716,16 @@ export default function RoyZapp() {
         (payload) => {
           console.log("[RoyZapp] Realtime UPDATE received:", payload);
           const updatedMsg = payload.new as any;
+          
+          // CRITICAL FIX: Validate this update belongs to CURRENTLY selected conversation
+          if (currentConversationIdRef.current !== zappConvId) {
+            console.log("[RoyZapp] Ignoring realtime UPDATE - conversation changed:", {
+              receivedFor: zappConvId,
+              currentlySelected: currentConversationIdRef.current
+            });
+            return;
+          }
+          
           // Update message in local state (includes is_deleted changes)
           setMessages(prev => prev.map(m => 
             m.id === updatedMsg.id 
