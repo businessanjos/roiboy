@@ -39,19 +39,27 @@ interface ZappNewConversationDialogProps {
 }
 
 // Função para abreviar nomes longos mantendo legibilidade
-const formatName = (name: string, maxLength: number = 22): string => {
-  if (!name || name.length <= maxLength) return name || '';
+const formatName = (name: string, type?: string, maxLength: number = 22): string => {
+  // Para grupos, usar limite maior e truncar com ellipsis
+  const effectiveMaxLength = type === 'group' ? 40 : maxLength;
+  
+  if (!name || name.length <= effectiveMaxLength) return name || '';
+  
+  // Para grupos, apenas truncar com ellipsis (sem abreviação agressiva)
+  if (type === 'group') {
+    return name.slice(0, effectiveMaxLength - 3) + '...';
+  }
   
   const parts = name.trim().split(' ').filter(p => p.length > 0);
-  if (parts.length <= 1) return name.slice(0, maxLength - 3) + '...';
+  if (parts.length <= 1) return name.slice(0, effectiveMaxLength - 3) + '...';
   
   const firstName = parts[0];
   const lastName = parts[parts.length - 1];
   
   if (parts.length === 2) {
     const combined = `${firstName} ${lastName}`;
-    if (combined.length <= maxLength) return combined;
-    return `${firstName.slice(0, maxLength - lastName.length - 4)}... ${lastName}`;
+    if (combined.length <= effectiveMaxLength) return combined;
+    return `${firstName.slice(0, effectiveMaxLength - lastName.length - 4)}... ${lastName}`;
   }
   
   // Para múltiplos nomes: "Nome M. M. Sobrenome"
@@ -59,10 +67,10 @@ const formatName = (name: string, maxLength: number = 22): string => {
   const middleInitials = middleParts.map(n => n[0]?.toLowerCase() + '.').join(' ');
   const abbreviated = `${firstName} ${middleInitials} ${lastName}`;
   
-  if (abbreviated.length <= maxLength) return abbreviated;
+  if (abbreviated.length <= effectiveMaxLength) return abbreviated;
   
   // Se ainda for muito longo, simplifica mais
-  return `${firstName} ${lastName}`.length <= maxLength 
+  return `${firstName} ${lastName}`.length <= effectiveMaxLength 
     ? `${firstName} ${lastName}` 
     : `${firstName.slice(0, 10)}... ${lastName}`;
 };
@@ -115,7 +123,7 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-[#e9edef] font-medium whitespace-nowrap">
-                          {formatName(client.full_name)}
+                          {formatName(client.full_name, client.type)}
                         </span>
                         {client.type === 'client' && (
                           <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs whitespace-nowrap">
