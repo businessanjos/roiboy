@@ -100,7 +100,6 @@ export const ZappConversationList = memo(function ZappConversationList({
           ? a.agent_id === currentAgent?.id
           : true);
       
-      const contact = getContactInfo(a);
       const matchesSearch = matchesSearchQuery(contact, searchQuery);
       
       const matchesStatus = filterStatus === "all" || 
@@ -109,7 +108,6 @@ export const ZappConversationList = memo(function ZappConversationList({
       const matchesUnread = !filterUnread || (contact.unreadCount > 0);
       
       // Conversation type filter
-      const isGroup = contact.isGroup;
       const matchesConversationType = 
         filterConversationType === "all" ||
         (filterConversationType === "individual" && !isGroup) ||
