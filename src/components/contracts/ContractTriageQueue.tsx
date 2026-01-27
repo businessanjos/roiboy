@@ -130,6 +130,12 @@ interface ContractTriageQueueProps {
   teamUsers: TeamUser[];
   onRefresh: () => void;
   onViewContract: (contract: Contract) => void;
+  // Filter props
+  searchTerm?: string;
+  statusFilter?: string;
+  typeFilter?: string;
+  productFilter?: string;
+  sortOrder?: "az" | "recent";
 }
 
 export function ContractTriageQueue({
@@ -137,6 +143,11 @@ export function ContractTriageQueue({
   teamUsers,
   onRefresh,
   onViewContract,
+  searchTerm = "",
+  statusFilter = "all",
+  typeFilter = "all",
+  productFilter = "all",
+  sortOrder = "recent",
 }: ContractTriageQueueProps) {
   const navigate = useNavigate();
   const { isAdmin } = usePermissions();
@@ -146,16 +157,45 @@ export function ContractTriageQueue({
   const [assigningClientId, setAssigningClientId] = useState<string | null>(null);
 
   // Filter contracts where client has no responsible_user_id
-  // Sort by created_at descending (newest first)
+  // Apply all filters and sort
   const triageContracts = useMemo(() => {
     return contracts
-      .filter((contract) => !contract.client?.responsible_user_id)
+      .filter((contract) => {
+        // 1. Base filter: client without responsible
+        if (contract.client?.responsible_user_id) return false;
+        
+        // 2. Search filter
+        const matchesSearch = !searchTerm || 
+          contract.client?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          contract.product?.name?.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        // 3. Status filter
+        const isExpired = contract.end_date && 
+          new Date(contract.end_date) < new Date() && 
+          contract.status === "active";
+        const matchesStatus = statusFilter === "all" || 
+          (statusFilter === "expired" ? isExpired : contract.status === statusFilter);
+        
+        // 4. Type filter
+        const matchesType = typeFilter === "all" || contract.contract_type === typeFilter;
+        
+        // 5. Product filter
+        const matchesProduct = productFilter === "all" || contract.product?.id === productFilter;
+        
+        return matchesSearch && matchesStatus && matchesType && matchesProduct;
+      })
       .sort((a, b) => {
+        if (sortOrder === "az") {
+          const nameA = a.client?.full_name?.toLowerCase() || "";
+          const nameB = b.client?.full_name?.toLowerCase() || "";
+          return nameA.localeCompare(nameB, "pt-BR");
+        }
+        // Default: newest first
         const dateA = new Date(a.created_at).getTime();
         const dateB = new Date(b.created_at).getTime();
-        return dateB - dateA; // Newest first
+        return dateB - dateA;
       });
-  }, [contracts]);
+  }, [contracts, searchTerm, statusFilter, typeFilter, productFilter, sortOrder]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -214,15 +254,24 @@ export function ContractTriageQueue({
     }
   };
 
+  const hasFiltersApplied = searchTerm || statusFilter !== "all" || 
+    typeFilter !== "all" || productFilter !== "all";
+
   if (triageContracts.length === 0) {
     return (
       <Card>
         <CardContent className="p-8">
           <div className="flex flex-col items-center justify-center text-muted-foreground">
             <UserCheck className="h-12 w-12 mb-4 opacity-50" />
-            <p className="text-lg font-medium">Nenhum cliente na triagem</p>
+            <p className="text-lg font-medium">
+              {hasFiltersApplied 
+                ? "Nenhum contrato encontrado" 
+                : "Nenhum cliente na triagem"}
+            </p>
             <p className="text-sm">
-              Todos os clientes com contratos já possuem um responsável atribuído
+              {hasFiltersApplied
+                ? "Tente ajustar os filtros"
+                : "Todos os clientes com contratos já possuem um responsável atribuído"}
             </p>
           </div>
         </CardContent>

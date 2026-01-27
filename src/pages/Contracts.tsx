@@ -1930,6 +1930,11 @@ export default function Contracts() {
                   setSelectedContract(contract as any);
                   setDetailSheetOpen(true);
                 }}
+                searchTerm={searchTerm}
+                statusFilter={statusFilter}
+                typeFilter={typeFilter}
+                productFilter={productFilter}
+                sortOrder={sortOrder}
               />
             </>
           )}
