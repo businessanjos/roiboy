@@ -1,151 +1,109 @@
 
 
-# Plano: Corrigir Posicionamento do Botão "Salvar Alterações" no Sheet de Ajustes
+# Plano: Adicionar Tipo de Atividade "Alinhamento ou Reunião"
 
-## Diagnóstico do Problema
+## Diagnóstico
 
-### O Que Está Acontecendo
+### Situação Atual
 
-Na screenshot, o botão "Salvar Alterações" aparece **fora** do painel lateral direito (Sheet), posicionado no canto inferior esquerdo da tela.
+Na tela de "Nova Tarefa" dentro do perfil do cliente (aba Agenda), o dropdown "Tipo de Atividade" mostra apenas as opções para o setor de Operações:
 
-### Causas Identificadas
+| Tipo Atual | Ícone | Cor |
+|------------|-------|-----|
+| Onboarding | users | #0ea5e9 |
+| Implementação da Clínica Ryka | calendar | #8b5cf6 |
+| Implementação das Ferramentas de IA | calendar | #14b8a6 |
+| Suporte de Ferramentas | wrench | #f59e0b |
+| Back office | briefcase | #6366f1 |
+| Apresentação do Plano de Ação | presentation | #10b981 |
 
-| Problema | Causa |
-|----------|-------|
-| SheetContent sem estrutura flex | Conteúdo não está organizado em colunas flexíveis |
-| SheetFooter com classes conflitantes | Classes padrão `sm:flex-row sm:justify-end` quebram o layout vertical |
-| Conteúdo sem limitação de altura | O conteúdo do meio pode estar transbordando |
+### O Que Falta
 
-### Análise do Código Atual
-
-```tsx
-// Linha 146: SheetContent sem flex layout
-<SheetContent side="right" className="w-[340px] sm:w-[400px]">
-
-// Linha 154: Conteúdo central sem scroll ou limitações
-<div className="py-6 space-y-6">
-
-// Linha 211: SheetFooter padrão com classes problemáticas
-<SheetFooter className="flex flex-col gap-4">
-  // SheetFooter base tem: sm:flex-row sm:justify-end sm:space-x-2 (conflita!)
-```
-
-## Arquivo a Modificar
-
-| Arquivo | Modificação |
-|---------|-------------|
-| `src/components/insights/visuals/VisualQuickSettings.tsx` | Corrigir estrutura do layout do Sheet |
+O usuário precisa da opção **"Alinhamento ou Reunião"** para registrar tarefas de reuniões de alinhamento com clientes.
 
 ## Solução Proposta
 
-### 1. Adicionar estrutura flex ao SheetContent
+### Migração SQL
 
-O `SheetContent` precisa ter `flex flex-col h-full` para organizar header, conteúdo e footer corretamente:
+Adicionar um novo tipo de atividade na tabela `activity_types` para cada conta (`account_id`) que já possui tipos de operações configurados.
 
-```tsx
-<SheetContent side="right" className="w-[340px] sm:w-[400px] flex flex-col">
-```
+### Configuração do Novo Tipo
 
-### 2. Tornar o conteúdo central scrollável
+| Campo | Valor |
+|-------|-------|
+| **name** | Alinhamento ou Reunião |
+| **icon** | users |
+| **color** | #f59e0b (amber-500) |
+| **sector_id** | operacoes |
+| **display_order** | 17 (após "Apresentação do Plano de Ação") |
+| **is_active** | true |
 
-O conteúdo do meio deve ter `flex-1 overflow-y-auto` para ocupar o espaço disponível e permitir scroll:
+### SQL da Migração
 
-```tsx
-<div className="py-6 space-y-6 flex-1 overflow-y-auto">
-```
-
-### 3. Corrigir SheetFooter para layout vertical fixo
-
-Substituir a classe padrão conflitante por um layout fixo no final:
-
-```tsx
-<SheetFooter className="flex flex-col gap-4 pt-4 mt-auto border-t">
-```
-
-Ou usar uma div em vez de SheetFooter para evitar conflitos:
-
-```tsx
-<div className="flex flex-col gap-4 pt-4 mt-auto border-t flex-shrink-0">
-```
-
-## Detalhes da Implementação
-
-### Modificação Completa
-
-```tsx
-return (
-  <Sheet open={open} onOpenChange={onOpenChange}>
-    <SheetContent side="right" className="w-[340px] sm:w-[400px] flex flex-col">
-      <SheetHeader>
-        <SheetTitle>Ajustes do Visual</SheetTitle>
-        <SheetDescription className="truncate">
-          {visual.title || "Visual sem título"}
-        </SheetDescription>
-      </SheetHeader>
-
-      {/* Conteúdo scrollável */}
-      <div className="py-6 space-y-6 flex-1 overflow-y-auto">
-        {/* ... conteúdo existente ... */}
-      </div>
-
-      {/* Footer fixo na base */}
-      <div className="flex flex-col gap-4 pt-4 mt-auto border-t flex-shrink-0">
-        <Button onClick={handleSave} disabled={isSaving} className="w-full">
-          {isSaving ? "Salvando..." : "Salvar Alterações"}
-        </Button>
-        
-        <Separator />
-        
-        <div className="space-y-2">
-          {/* ... zona de perigo ... */}
-        </div>
-      </div>
-    </SheetContent>
-  </Sheet>
-);
+```sql
+-- Adicionar tipo "Alinhamento ou Reunião" para todas as contas que têm tipos de operações
+INSERT INTO activity_types (account_id, name, icon, color, sector_id, display_order, is_active, description)
+SELECT DISTINCT 
+  account_id,
+  'Alinhamento ou Reunião',
+  'users',
+  '#f59e0b',
+  'operacoes',
+  17,
+  true,
+  'Reuniões de alinhamento com clientes'
+FROM activity_types 
+WHERE sector_id = 'operacoes' 
+  AND is_active = true
+  AND NOT EXISTS (
+    SELECT 1 FROM activity_types at2 
+    WHERE at2.account_id = activity_types.account_id 
+      AND at2.name = 'Alinhamento ou Reunião'
+      AND at2.sector_id = 'operacoes'
+  );
 ```
 
 ## Resultado Esperado
 
-### Antes (Bug Atual)
-- Botão "Salvar Alterações" fora do painel
-- Layout desorganizado
-
-### Depois (Corrigido)
-- Painel com estrutura flex vertical
-- Conteúdo scrollável no centro
-- Botões fixos na base do painel
-- Layout consistente em qualquer altura de conteúdo
-
-## Fluxo Visual Corrigido
+### Dropdown Atualizado
 
 ```text
 ┌─────────────────────────────────────┐
-│  Ajustes do Visual              [X] │  ← Header (flex-shrink-0)
-│  Faturamento                        │
+│  Tipo de Atividade *                │
+│  [Selecione o tipo de atividade ▼]  │
 ├─────────────────────────────────────┤
-│                                     │
-│  Formatação do Valor                │
-│  [Escala de Exibição    ▼]          │  ← Conteúdo (flex-1 overflow-y-auto)
-│  [Casas Decimais        ▼]          │
-│                                     │
-│  Personalização Visual              │
-│  [Paletas de cores...]              │
-│                                     │
-├─────────────────────────────────────┤
-│  [    Salvar Alterações    ]        │  ← Footer (flex-shrink-0 mt-auto)
-│  ───────────────────────────        │
-│         Zona de Perigo              │
-│  [🗑️   Excluir Visual     ]        │
+│  ● Onboarding                       │
+│  ● Implementação da Clínica Ryka    │
+│  ● Implementação das Ferramentas... │
+│  ● Suporte de Ferramentas           │
+│  ● Back office                      │
+│  ● Apresentação do Plano de Ação    │
+│  ● Alinhamento ou Reunião      ← NOVO
 └─────────────────────────────────────┘
 ```
+
+## Contas Afetadas
+
+A migração adicionará o novo tipo para as seguintes contas:
+
+- 796e7970-fd93-4574-a871-6090624cace6
+- 68f63a04-db94-46aa-a433-2a236fe8111a
+- 21a69ee1-a7fc-49e6-b61d-871ff50235b8
+- 2abb5823-50f4-4415-851d-a931f608dd36
+- b29f4820-c998-4e58-af5b-273691c45628
+- 67dceab4-620e-488e-8a73-3f889357a01f
+- c0b2fe21-56aa-4754-a50b-1833ed1b9b09
 
 ## Benefícios
 
 | Aspecto | Descrição |
 |---------|-----------|
-| **Layout correto** | Todos os elementos dentro do painel |
-| **Scroll funcional** | Conteúdo longo não quebra o layout |
-| **Footer fixo** | Botões sempre visíveis e acessíveis |
-| **Responsividade** | Funciona em diferentes alturas de tela |
+| **Categorização** | Tarefas de reunião terão tipo específico |
+| **Organização** | Facilita filtrar e buscar reuniões de alinhamento |
+| **Consistência** | Segue o padrão dos outros tipos de atividade |
+| **Retrocompatibilidade** | Não afeta tarefas existentes |
+
+## Nenhuma Alteração de Código Necessária
+
+Como o sistema já carrega tipos de atividade dinamicamente via `useActivityTypes`, nenhuma modificação de código é necessária. A nova opção aparecerá automaticamente após a migração.
 
