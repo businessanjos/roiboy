@@ -4,7 +4,6 @@ import {
   Sheet,
   SheetContent,
   SheetDescription,
-  SheetFooter,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
@@ -143,15 +142,15 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-[340px] sm:w-[400px]">
-        <SheetHeader>
+      <SheetContent side="right" className="w-[340px] sm:w-[400px] flex flex-col">
+        <SheetHeader className="flex-shrink-0">
           <SheetTitle>Ajustes do Visual</SheetTitle>
           <SheetDescription className="truncate">
             {visual.title || "Visual sem título"}
           </SheetDescription>
         </SheetHeader>
 
-        <div className="py-6 space-y-6">
+        <div className="py-6 space-y-6 flex-1 overflow-y-auto">
           {/* Scorecard formatting options */}
           {isScorecard && (
             <div className="space-y-4">
@@ -208,7 +207,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
           />
         </div>
 
-        <SheetFooter className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 pt-4 mt-auto border-t flex-shrink-0">
           <Button 
             onClick={handleSave} 
             disabled={isSaving}
@@ -250,7 +249,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
               </AlertDialogContent>
             </AlertDialog>
           </div>
-        </SheetFooter>
+        </div>
       </SheetContent>
     </Sheet>
   );
