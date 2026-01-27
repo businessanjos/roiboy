@@ -441,13 +441,6 @@ export default function Auth() {
                 <p className="text-sm text-muted-foreground">Sua plataforma de encantamento</p>
               </div>
             </div>
-            <a 
-              href="/roy-logo.png" 
-              download="roy-logo.png"
-              className="text-xs text-primary hover:underline mt-2"
-            >
-              Baixar logo ROY (PNG transparente)
-            </a>
           </div>
 
         <Card className="shadow-elevated border-border/50">
