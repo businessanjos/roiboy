@@ -20,7 +20,7 @@ interface InsightsGridProps {
   onLayoutChange: (layouts: Array<{ id: string; layout: LayoutItem }>) => void;
 }
 
-const ROW_HEIGHT = 80;
+const ROW_HEIGHT = 100;
 const COLS = 12;
 const MARGIN: [number, number] = [16, 16];
 
@@ -54,8 +54,8 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
           y: existingLayout.y,
           w: existingLayout.w,
           h: existingLayout.h,
-          minW: 3,
-          minH: 3,
+          minW: 2,
+          minH: 2,
         };
       }
 
@@ -63,11 +63,11 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
       return {
         i: visual.id,
         x: (index % 2) * 6,
-        y: Math.floor(index / 2) * 4,
+        y: Math.floor(index / 2) * 5,
         w: 6,
-        h: 4,
-        minW: 3,
-        minH: 3,
+        h: 5,
+        minW: 2,
+        minH: 2,
       };
     });
   }, [visuals]);
