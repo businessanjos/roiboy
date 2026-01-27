@@ -169,7 +169,8 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           },
           formatting: {
             type: metricConfig.formatType,
-            decimals: metricConfig.formatType === 'currency' ? 2 : (metricConfig.formatType === 'percentage' ? 1 : 0),
+            decimals: metricConfig.formatType === 'currency' ? 1 : (metricConfig.formatType === 'percentage' ? 1 : 0),
+            displayScale: 'auto', // Default to auto for scorecards
           },
           appearance: DEFAULT_APPEARANCE,
         };

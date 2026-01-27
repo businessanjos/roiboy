@@ -114,3 +114,71 @@ export function formatValueCompact(
 
 // Alias for backward compatibility
 export const formatValueDisplay = formatValue;
+
+/**
+ * Formats a value with a specific display scale (for scorecards)
+ * @param value Number to format
+ * @param formatType Format type
+ * @param decimals Number of decimal places
+ * @param displayScale Scale to use ('full', 'auto', 'thousands', 'millions', 'billions')
+ * @returns Formatted string with scale suffix
+ */
+export function formatValueWithScale(
+  value: number,
+  formatType: 'currency' | 'percentage' | 'decimal',
+  decimals: number = 2,
+  displayScale: 'full' | 'auto' | 'thousands' | 'millions' | 'billions' = 'full'
+): string {
+  if (value === null || value === undefined || !isFinite(value)) {
+    return '-';
+  }
+
+  const prefix = formatType === 'currency' ? 'R$ ' : '';
+  const suffix = formatType === 'percentage' ? '%' : '';
+
+  let displayValue = value;
+  let scaleSuffix = '';
+
+  switch (displayScale) {
+    case 'auto':
+      if (Math.abs(value) >= 1_000_000_000) {
+        displayValue = value / 1_000_000_000;
+        scaleSuffix = 'B';
+      } else if (Math.abs(value) >= 1_000_000) {
+        displayValue = value / 1_000_000;
+        scaleSuffix = 'M';
+      } else if (Math.abs(value) >= 1_000) {
+        displayValue = value / 1_000;
+        scaleSuffix = 'K';
+      }
+      break;
+    case 'thousands':
+      displayValue = value / 1_000;
+      scaleSuffix = 'K';
+      break;
+    case 'millions':
+      displayValue = value / 1_000_000;
+      scaleSuffix = 'M';
+      break;
+    case 'billions':
+      displayValue = value / 1_000_000_000;
+      scaleSuffix = 'B';
+      break;
+    case 'full':
+    default:
+      // Full value, use standard formatting
+      break;
+  }
+
+  // If there's a scale suffix, format compactly
+  if (scaleSuffix) {
+    const formatted = new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }).format(displayValue);
+    return `${prefix}${formatted}${scaleSuffix}${suffix}`;
+  }
+
+  // Full value, use standard format
+  return formatValue(value, formatType, decimals);
+}
