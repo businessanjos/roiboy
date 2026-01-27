@@ -2980,15 +2980,12 @@ export default function RoyZapp() {
       // Closed conversations filter
       // When filterStatus is "closed", show only closed
       // Otherwise, HIDE closed conversations by default
-      // CRITICAL EXCEPTION: Groups are PERMANENT conversations and should NEVER be hidden
-      // Groups are ongoing relationships, not temporary tickets
       const isClosed = a.status === "closed";
       if (filterStatus === "closed") {
         if (!isClosed) return false;
       } else if (filterStatus === "all") {
-        // When showing "all", hide closed INDIVIDUAL conversations
-        // But ALWAYS keep groups visible - they are permanent, not tickets
-        if (isClosed && !isGroup) return false;
+        // When showing "all", hide closed conversations
+        if (isClosed) return false;
       }
       
       // Tab filter: "mine" = assigned to current agent, "queue" = unassigned conversations only

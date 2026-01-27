@@ -88,8 +88,7 @@ export const ZappConversationList = memo(function ZappConversationList({
         if (!isClosed) return false;
       } else {
         // When not showing closed, HIDE closed conversations
-        // EXCEPTION: Groups are always visible (they're permanent, not tickets)
-        if (isClosed && !isGroup) return false;
+        if (isClosed) return false;
       }
       
       // Tab filter: "mine" = assigned to current agent, "queue" = ALL conversations
