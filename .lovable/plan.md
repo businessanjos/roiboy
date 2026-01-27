@@ -1,108 +1,157 @@
 
-# Plano: Corrigir Desaparecimento de Grupos no ROY zAPP
+# Plano: Corrigir Mensagens Aparecendo na Conversa Errada
 
 ## Problema Identificado
 
-Os grupos do WhatsApp estão desaparecendo porque a lógica de filtragem no `RoyZapp.tsx` esconde conversas com status `closed`, **sem exceção para grupos**.
-
-### Dados do Banco de Dados
-No setor Operações existem 46 grupos:
-- **42 grupos com status `closed`** (escondidos)
-- 3 grupos com status `active`
-- 1 grupo com status `waiting`
+Quando o usuario troca de conversa no ROY zAPP, as mensagens da conversa anterior continuam sendo exibidas momentaneamente (ou permanentemente em caso de erro), causando a exibicao de mensagens de texto e audio de uma conversa dentro de outra.
 
 ### Causa Raiz
-Existem **dois níveis de filtragem** que deveriam ter a mesma lógica:
+1. O estado `messages` nao e limpo imediatamente ao trocar de conversa
+2. Existe uma race condition onde o fetchMessages() e assincrono, mas a UI ja mostra a nova conversa com mensagens antigas
+3. Os handlers de realtime no hook useZappData atualizam o estado `messages` sem verificar se a mensagem pertence a conversa atualmente selecionada
 
-1. **RoyZapp.tsx (linha 2946-2949)** - Faz pré-filtragem SEM exceção para grupos
-2. **ZappConversationList.tsx (linha 92)** - Tem a exceção correta para grupos
+### Evidencia
+No banco de dados as mensagens estao corretamente associadas as suas conversas. A mensagem "Audio da minha cliente kkk" esta na conversa "Suelen Lupi" (id: ff043d95-...), nao na "Natalia e Marine" (id: e897c10b-...). O problema e exclusivamente no frontend.
 
-O código em RoyZapp.tsx:
-```typescript
-} else if (filterStatus === "all") {
-  // When showing "all", hide closed unless explicitly requested
-  if (isClosed) return false;  // ❌ Esconde TODOS os fechados, incluindo grupos
-}
-```
+## Arquivos a Modificar
 
-O código correto em ZappConversationList.tsx:
-```typescript
-// EXCEPTION: Groups are always visible (they're permanent, not tickets)
-if (isClosed && !isGroup) return false;  // ✅ Mantém grupos visíveis
-```
-
-## Solução
-
-Adicionar a mesma exceção para grupos na filtragem do `RoyZapp.tsx`.
-
-## Arquivo a Modificar
-
-| Arquivo | Mudança |
+| Arquivo | Mudanca |
 |---------|---------|
-| `src/pages/RoyZapp.tsx` | Adicionar exceção para grupos no filtro de conversas fechadas |
+| `src/pages/RoyZapp.tsx` | Limpar mensagens ao trocar de conversa e validar conversation ID no realtime |
+| `src/hooks/useZappData.tsx` | Adicionar referencia de conversa atual para validacao em updates de realtime |
 
-## Alteração Técnica
+## Alteracoes Tecnicas
 
-### Localização: `RoyZapp.tsx` linhas 2940-2949
+### 1. Limpar Mensagens Imediatamente ao Trocar de Conversa
 
-**Código Atual:**
+**Arquivo:** `src/pages/RoyZapp.tsx` (linhas 602-608)
+
+O useEffect que busca mensagens deve limpar o estado ANTES de iniciar o fetch:
+
 ```typescript
-// Closed conversations filter
-// When filterStatus is "closed", show only closed
-// Otherwise, HIDE closed conversations by default
-const isClosed = a.status === "closed";
-if (filterStatus === "closed") {
-  if (!isClosed) return false;
-} else if (filterStatus === "all") {
-  // When showing "all", hide closed unless explicitly requested
-  if (isClosed) return false;
-}
+// Fetch messages when conversation is selected
+useEffect(() => {
+  const zappConvId = selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id;
+  
+  // CRITICAL FIX: Clear messages IMMEDIATELY when conversation changes
+  // This prevents showing messages from previous conversation during fetch
+  setMessages([]);
+  
+  if (zappConvId) {
+    fetchMessages(zappConvId);
+  }
+}, [selectedConversation?.id, fetchMessages, setMessages]);
 ```
 
-**Código Corrigido:**
-```typescript
-// Closed conversations filter
-// When filterStatus is "closed", show only closed
-// Otherwise, HIDE closed conversations by default
-// CRITICAL EXCEPTION: Groups are permanent conversations and should NEVER be hidden
-const contact = getContactInfo(a);
-const isGroup = contact.isGroup;
-const isClosed = a.status === "closed";
+### 2. Armazenar ID da Conversa Atual para Validacao
 
-if (filterStatus === "closed") {
-  if (!isClosed) return false;
-} else if (filterStatus === "all") {
-  // When showing "all", hide closed INDIVIDUAL conversations
-  // But ALWAYS keep groups visible - they are permanent, not tickets
-  if (isClosed && !isGroup) return false;
-}
+**Arquivo:** `src/pages/RoyZapp.tsx`
+
+Criar uma ref para rastrear a conversa atualmente selecionada:
+
+```typescript
+// Ref to track current conversation ID for realtime validation
+const currentConversationIdRef = useRef<string | null>(null);
+
+// Update ref when conversation changes
+useEffect(() => {
+  currentConversationIdRef.current = 
+    selectedConversation?.zapp_conversation_id || 
+    selectedConversation?.zapp_conversation?.id || 
+    null;
+}, [selectedConversation?.id, selectedConversation?.zapp_conversation_id, selectedConversation?.zapp_conversation?.id]);
 ```
 
-### Ajuste de Ordem
-Como `getContactInfo` é chamado na linha 2960 atualmente, precisamos mover essa chamada para antes da verificação de closed status, ou duplicar a verificação de isGroup.
+### 3. Validar Conversa no Handler de Realtime
 
-A solução mais eficiente é reorganizar o código para chamar `getContactInfo` uma vez no início do filtro e reutilizar.
+**Arquivo:** `src/pages/RoyZapp.tsx` (linhas 620-680)
+
+Atualizar o handler de realtime para validar que a mensagem pertence a conversa atual:
+
+```typescript
+const messagesChannel = supabase
+  .channel(`zapp-messages-${zappConvId}`)
+  .on(
+    'postgres_changes',
+    {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'zapp_messages',
+      filter: `zapp_conversation_id=eq.${zappConvId}`
+    },
+    (payload) => {
+      const newMsg = payload.new as any;
+      
+      // CRITICAL FIX: Validate this message belongs to CURRENTLY selected conversation
+      // This prevents messages from being added if user switched conversations
+      if (currentConversationIdRef.current !== zappConvId) {
+        console.log("[RoyZapp] Ignoring realtime INSERT - conversation changed:", {
+          receivedFor: zappConvId,
+          currentlySelected: currentConversationIdRef.current
+        });
+        return;
+      }
+      
+      // ... rest of existing handler logic
+    }
+  )
+```
+
+### 4. Validar no setMessages do Hook useZappData
+
+**Arquivo:** `src/hooks/useZappData.tsx` (linhas 780-800)
+
+O hook ja tem um problema onde atualiza mensagens sem verificar a conversa. Adicionar parametro de conversa atual:
+
+Exportar a funcao fetchMessages com uma variante que aceita callback de validacao, ou adicionar logica para ignorar updates de mensagens que nao estao no array atual (ja que isso significa que a conversa mudou).
+
+```typescript
+// Update the message in local state ONLY if it exists (belongs to current conversation)
+if (newData?.media_download_status && newData?.media_url) {
+  setMessages(prevMessages => {
+    // If message doesn't exist in current state, it's for a different conversation
+    const messageExists = prevMessages.some(msg => msg.id === newData.id);
+    if (!messageExists) {
+      console.log("[ZappData] Ignoring UPDATE for message not in current conversation:", newData.id);
+      return prevMessages;
+    }
+    return prevMessages.map(msg => 
+      msg.id === newData.id 
+        ? { 
+            ...msg, 
+            media_url: newData.media_url, 
+            media_download_status: newData.media_download_status 
+          } 
+        : msg
+    );
+  });
+}
+```
 
 ## Fluxo Corrigido
 
 ```text
-1. Grupo tem ticket finalizado → status = "closed"
-2. Filtro em RoyZapp.tsx verifica:
-   - isClosed? Sim
-   - isGroup? Sim
-   - Resultado: NÃO remove da lista (grupos são permanentes)
-3. Grupo permanece visível na lista de conversas
+1. Usuario esta na conversa A, messages = [mensagens de A]
+2. Usuario clica na conversa B
+3. setSelectedConversation(B) e chamado
+4. useEffect dispara:
+   a. setMessages([]) ← LIMPA IMEDIATAMENTE
+   b. fetchMessages(B) inicia
+5. UI mostra conversa B com lista de mensagens vazia (loading)
+6. Fetch completa → setMessages([mensagens de B])
+7. UI mostra mensagens corretas de B
 ```
 
-## Impacto
+## Beneficios
 
-- **42 grupos no setor Operações** voltarão a aparecer imediatamente
-- Grupos de outros setores também serão corrigidos
-- A lógica fica consistente entre RoyZapp.tsx e ZappConversationList.tsx
-- Prevenção permanente: grupos NUNCA mais desaparecerão por terem status "closed"
+- Mensagens NUNCA aparecerao na conversa errada
+- O estado e sempre consistente com a conversa selecionada
+- Race conditions sao eliminadas pela limpeza imediata
+- Validacoes de realtime previnem insercoes acidentais
 
-## Por que o Problema Reapareceu?
+## Testes Recomendados
 
-O fix anterior foi feito apenas no `ZappConversationList.tsx`, mas o `RoyZapp.tsx` faz uma pré-filtragem independente antes de passar os dados para o componente de lista. Essa duplicação de lógica causou a inconsistência.
-
-Com esta correção, a filtragem primária em RoyZapp.tsx já respeitará a regra de grupos permanentes, garantindo que o problema nunca mais ocorra.
+1. Alternar rapidamente entre varias conversas
+2. Verificar que mensagens nao "vazam" de uma conversa para outra
+3. Testar recebimento de mensagens via realtime enquanto troca de conversa
+4. Confirmar que audio e texto aparecem apenas em suas conversas originais
