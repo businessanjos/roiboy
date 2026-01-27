@@ -146,10 +146,15 @@ export function ContractTriageQueue({
   const [assigningClientId, setAssigningClientId] = useState<string | null>(null);
 
   // Filter contracts where client has no responsible_user_id
+  // Sort by created_at descending (newest first)
   const triageContracts = useMemo(() => {
-    return contracts.filter(
-      (contract) => !contract.client?.responsible_user_id
-    );
+    return contracts
+      .filter((contract) => !contract.client?.responsible_user_id)
+      .sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA; // Newest first
+      });
   }, [contracts]);
 
   const formatCurrency = (value: number) => {
