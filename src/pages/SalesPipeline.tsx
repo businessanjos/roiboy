@@ -389,6 +389,60 @@ export default function SalesPipeline() {
         }
       }
 
+      // STEP 4.5: Transfer "Call Comercial Concluída" notes to client timeline
+      if (clientId && currentUser?.account_id) {
+        try {
+          // 1. Find the "Call Comercial Concluída" activity type
+          const { data: activityType } = await supabase
+            .from("activity_types")
+            .select("id")
+            .eq("account_id", currentUser.account_id)
+            .eq("name", "Call Comercial Concluída")
+            .maybeSingle();
+
+          if (activityType?.id) {
+            // 2. Fetch completed tasks of this type for this deal
+            const { data: callTasks } = await supabase
+              .from("internal_tasks")
+              .select("id, title, description, completed_at, created_by")
+              .eq("deal_id", dealId)
+              .eq("activity_type_id", activityType.id)
+              .not("completed_at", "is", null)
+              .not("description", "is", null)
+              .order("completed_at", { ascending: true });
+
+            // 3. Transfer each task's notes to client timeline
+            if (callTasks && callTasks.length > 0) {
+              const followupsToInsert = callTasks
+                .filter(task => task.description?.trim())
+                .map(task => ({
+                  account_id: currentUser.account_id,
+                  client_id: clientId,
+                  user_id: task.created_by || currentUser.id,
+                  type: "note" as const,
+                  title: `📞 ${task.title || "Call Comercial Concluída"}`,
+                  content: task.description?.trim(),
+                }));
+
+              if (followupsToInsert.length > 0) {
+                const { error: followupsError } = await supabase
+                  .from("client_followups")
+                  .insert(followupsToInsert);
+
+                if (followupsError) {
+                  console.error("[MarkAsWon] Error transferring call notes:", followupsError);
+                } else {
+                  console.log(`[MarkAsWon] Transferred ${followupsToInsert.length} call notes to client timeline`);
+                }
+              }
+            }
+          }
+        } catch (transferError) {
+          console.error("[MarkAsWon] Error in call notes transfer:", transferError);
+          // Don't block the flow - this is a non-critical enhancement
+        }
+      }
+
       // STEP 5: Create contract BEFORE marking as won
       let contractCreated = false;
       if (clientId && currentUser?.account_id) {
