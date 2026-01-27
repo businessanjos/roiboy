@@ -40,6 +40,8 @@ export interface VisualConfig {
   customFormula?: string;
   // Visual appearance settings
   appearance?: AppearanceConfig;
+  // Status filter for deals (won, lost, open)
+  statusFilter?: 'won' | 'lost' | 'open';
 }
 
 // Data source options

@@ -27,15 +27,18 @@ export function useVisualData({ config, enabled = true }: UseVisualDataParams) {
     queryFn: async (): Promise<AggregatedDataPoint[]> => {
       if (!config || !currentUser?.account_id) return [];
 
-      const { dataSource, measure, dimension, appearance } = config;
+      const { dataSource, measure, dimension, appearance, statusFilter } = config;
       const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
       const fillEmptyDates = appearance?.fillEmptyDates || false;
+
+      // Infer status filter for legacy scorecards without explicit statusFilter
+      const effectiveStatusFilter = statusFilter ?? inferStatusFilter(measure, dimension);
 
       let result: AggregatedDataPoint[];
 
       switch (dataSource) {
         case 'deals':
-          result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
+          result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter);
           break;
         case 'leads':
           result = await fetchLeadsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
@@ -65,12 +68,29 @@ export function useVisualData({ config, enabled = true }: UseVisualDataParams) {
   });
 }
 
+// Infer status filter for legacy scorecards that don't have explicit statusFilter
+function inferStatusFilter(
+  measure: VisualConfig['measure'], 
+  dimension: VisualConfig['dimension']
+): 'won' | 'lost' | undefined {
+  // Only infer for scorecards (global total)
+  if (dimension.field !== '_total') return undefined;
+  
+  // If measuring value with sum or avg, it's likely revenue/ticket = won deals
+  if (measure.field === 'value' && (measure.aggregation === 'sum' || measure.aggregation === 'avg')) {
+    return 'won';
+  }
+  
+  return undefined;
+}
+
 async function fetchDealsData(
   accountId: string,
   measure: VisualConfig['measure'],
   dimension: VisualConfig['dimension'],
   filters: any,
-  dateDisplayFormat: DateDisplayFormat
+  dateDisplayFormat: DateDisplayFormat,
+  statusFilter?: 'won' | 'lost' | 'open'
 ): Promise<AggregatedDataPoint[]> {
   let query = supabase
     .from('deals')
@@ -89,10 +109,22 @@ async function fetchDealsData(
     `)
   .eq('account_id', accountId);
 
-  // Determine which date field to use for filters based on dimension
-  const dateFilterField = dimension.type === 'date' && dimension.field 
-    ? dimension.field 
-    : 'created_at';
+  // Apply status filter if specified (e.g., only 'won' deals for revenue)
+  if (statusFilter) {
+    query = query.eq('status', statusFilter);
+  }
+
+  // Determine which date field to use for filters based on dimension and status
+  let dateFilterField: string;
+  if (dimension.type === 'date' && dimension.field && dimension.field !== '_total') {
+    dateFilterField = dimension.field;
+  } else if (statusFilter === 'won') {
+    dateFilterField = 'won_at';
+  } else if (statusFilter === 'lost') {
+    dateFilterField = 'lost_at';
+  } else {
+    dateFilterField = 'created_at';
+  }
 
   // For specific date fields (won_at, lost_at), filter out records with null values
   if (dateFilterField === 'won_at') {

@@ -47,12 +47,18 @@ const GROUP_BY_OPTIONS = [
 ];
 
 // Mapping from simplified selections to full VisualConfig
-const METRIC_TO_CONFIG: Record<Metric, { dataSource: 'deals'; measureField: string | null; aggregation: 'sum' | 'count' | 'avg'; formatType: 'currency' | 'decimal' | 'percentage' }> = {
-  revenue: { dataSource: 'deals', measureField: 'value', aggregation: 'sum', formatType: 'currency' },
+const METRIC_TO_CONFIG: Record<Metric, { 
+  dataSource: 'deals'; 
+  measureField: string | null; 
+  aggregation: 'sum' | 'count' | 'avg'; 
+  formatType: 'currency' | 'decimal' | 'percentage';
+  statusFilter?: 'won' | 'lost';
+}> = {
+  revenue: { dataSource: 'deals', measureField: 'value', aggregation: 'sum', formatType: 'currency', statusFilter: 'won' },
   deals_count: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal' },
-  avg_ticket: { dataSource: 'deals', measureField: 'value', aggregation: 'avg', formatType: 'currency' },
+  avg_ticket: { dataSource: 'deals', measureField: 'value', aggregation: 'avg', formatType: 'currency', statusFilter: 'won' },
   conversion: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'percentage' },
-  lost_reasons: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal' },
+  lost_reasons: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal', statusFilter: 'lost' },
 };
 
 const GROUP_BY_TO_DIMENSION: Record<GroupBy, { field: string; type: 'date' | 'text'; dateGrouping?: 'day' | 'week' | 'month' | 'year' }> = {
@@ -173,6 +179,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             displayScale: 'auto', // Default to auto for scorecards
           },
           appearance: DEFAULT_APPEARANCE,
+          statusFilter: metricConfig.statusFilter, // Filter by deal status (won/lost)
         };
       } else {
         // Charts: use groupBy for dimension
