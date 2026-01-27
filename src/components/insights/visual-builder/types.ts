@@ -2,7 +2,7 @@ export type DataSource = 'deals' | 'leads' | 'products';
 export type Aggregation = 'sum' | 'avg' | 'count';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
-export type ChartType = 'bar' | 'line' | 'pie' | 'number';
+export type ChartType = 'bar' | 'line' | 'pie' | 'number' | 'scorecard';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
 export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature';
 

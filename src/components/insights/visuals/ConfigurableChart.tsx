@@ -53,6 +53,7 @@ export function ConfigurableChart({ type, data, formatting, appearance, onDrilld
 
   switch (type) {
     case 'number':
+    case 'scorecard':
       return <ConfigurableScorecard data={data} formatting={formatting} />;
     case 'bar':
       return <BarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;

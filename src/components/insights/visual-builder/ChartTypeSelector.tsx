@@ -13,6 +13,7 @@ const ICON_MAP: Record<ChartType, React.ElementType> = {
   line: LineChart,
   pie: PieChart,
   number: Hash,
+  scorecard: Hash,
 };
 
 export function ChartTypeSelector({ value, onChange }: ChartTypeSelectorProps) {
