@@ -843,19 +843,29 @@ export function useZappData(options: UseZappDataOptions = {}) {
       console.warn(`[ZappData] SECURITY: Filtered out ${assignments.length - filtered.length} assignments that didn't match department`);
     }
     
-    // CRITICAL: If integrationId is specified, further filter by conversation's integration_id
-    // This ensures multi-instance isolation within the same sector
+    // CRITICAL: If integrationId is specified, filter by integration_id but INCLUDE legacy conversations
+    // Legacy conversations (no integration_id) that belong to this sector should still be visible
+    // This prevents missing conversations after multi-instance migration
     if (integrationId) {
       const beforeCount = filtered.length;
       filtered = filtered.filter(a => {
-        // Access integration_id via type assertion since it's queried but not in static type
-        const zappConv = a.zapp_conversation as { integration_id?: string } | null;
+        // Access integration_id and sector_id via type assertion since queried but not in static type
+        const zappConv = a.zapp_conversation as { integration_id?: string; sector_id?: string } | null;
         const convIntegrationId = zappConv?.integration_id;
-        return convIntegrationId === integrationId;
+        const convSectorId = zappConv?.sector_id;
+        
+        // Include conversation if:
+        // 1. It belongs to this exact integration, OR
+        // 2. It has no integration_id (legacy) but belongs to the same sector
+        //    This prevents losing conversations from before multi-instance was implemented
+        const matchesIntegration = convIntegrationId === integrationId;
+        const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
+        
+        return matchesIntegration || isLegacySameSector;
       });
       
       if (filtered.length !== beforeCount) {
-        console.log(`[ZappData] MULTI-INSTANCE: Filtered to ${filtered.length} assignments for integration ${integrationId} (from ${beforeCount})`);
+        console.log(`[ZappData] MULTI-INSTANCE: Filtered to ${filtered.length} assignments for integration ${integrationId} (from ${beforeCount}, includes legacy same-sector conversations)`);
       }
     }
     

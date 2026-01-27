@@ -2075,6 +2075,268 @@ serve(async (req) => {
       );
     }
 
+    // =============================================
+    // Handle "chats" event - sync conversation list from WhatsApp
+    // This event is sent when WhatsApp syncs its chat list
+    // =============================================
+    if (eventType === "chats" || eventType === "CHATS_UPDATE" || eventType === "chats.upsert") {
+      // deno-lint-ignore no-explicit-any
+      const payloadAny = payload as any;
+      const chatsData = payloadAny.data?.chats || payloadAny.chats || payloadAny.data || [];
+      const chatList = Array.isArray(chatsData) ? chatsData : [chatsData];
+      
+      console.log(`[WEBHOOK] Processing chats event with ${chatList.length} chats for sector ${sectorId}`);
+      
+      let syncedCount = 0;
+      let errorCount = 0;
+      
+      for (const chat of chatList) {
+        try {
+          // Determine if it's a group or individual chat
+          const chatId = chat.id || chat.jid || chat.wa_chatid || "";
+          const isGroup = chat.wa_isGroup || isGroupJid(chatId);
+          
+          // Extract phone for individual chats
+          const chatPhone = isGroup ? "" : normalizePhone(chat.phone || extractPhoneFromJid(chatId));
+          const groupJid = isGroup ? chatId : null;
+          const chatName = chat.name || chat.wa_name || chat.pushName || chat.notifyName || "Desconhecido";
+          
+          // Skip if no identifiable data
+          if (!isGroup && !chatPhone) continue;
+          if (isGroup && !groupJid) continue;
+          
+          // Check if conversation already exists
+          let existingConvo;
+          if (isGroup && groupJid) {
+            const { data } = await supabase
+              .from("zapp_conversations")
+              .select("id, integration_id")
+              .eq("account_id", accountId)
+              .eq("group_jid", groupJid)
+              .maybeSingle();
+            existingConvo = data;
+          } else {
+            // Try normalized phone and variants
+            const phoneVariants = [chatPhone];
+            const digits = chatPhone.replace(/\D/g, "");
+            if (digits.length === 13 && digits.startsWith("55")) {
+              // Also try 12-digit variant (without 9th digit)
+              phoneVariants.push(`+${digits.slice(0, 4)}${digits.slice(5)}`);
+            } else if (digits.length === 12 && digits.startsWith("55")) {
+              // Also try 13-digit variant (with 9th digit)
+              phoneVariants.push(`+${digits.slice(0, 4)}9${digits.slice(4)}`);
+            }
+            
+            const { data } = await supabase
+              .from("zapp_conversations")
+              .select("id, integration_id")
+              .eq("account_id", accountId)
+              .in("phone_e164", phoneVariants)
+              .eq("is_group", false)
+              .limit(1);
+            existingConvo = data?.[0];
+          }
+          
+          if (existingConvo) {
+            // Update existing conversation - ensure integration_id is set for legacy conversations
+            if (!existingConvo.integration_id && integrationId) {
+              await supabase
+                .from("zapp_conversations")
+                .update({ 
+                  integration_id: integrationId,
+                  contact_name: chatName,
+                })
+                .eq("id", existingConvo.id);
+              console.log(`[CHATS] Updated legacy conversation ${existingConvo.id} with integration_id`);
+            }
+          } else {
+            // Create new zapp_conversation
+            const { data: newConvo, error: convError } = await supabase
+              .from("zapp_conversations")
+              .insert({
+                account_id: accountId,
+                sector_id: sectorId,
+                integration_id: integrationId,
+                phone_e164: chatPhone || null,
+                contact_name: chatName,
+                is_group: isGroup,
+                group_jid: groupJid,
+                last_message_at: new Date().toISOString(),
+              })
+              .select("id")
+              .single();
+            
+            if (convError) {
+              console.error(`[CHATS] Error creating conversation:`, convError.message);
+              errorCount++;
+              continue;
+            }
+            
+            // Create assignment for the conversation
+            if (newConvo && sectorDepartmentId) {
+              await supabase
+                .from("zapp_conversation_assignments")
+                .insert({
+                  account_id: accountId,
+                  zapp_conversation_id: newConvo.id,
+                  department_id: sectorDepartmentId,
+                  status: "waiting",
+                });
+              console.log(`[CHATS] Created new conversation ${newConvo.id} with assignment`);
+            }
+          }
+          
+          syncedCount++;
+        } catch (chatError) {
+          console.error(`[CHATS] Error processing chat:`, chatError);
+          errorCount++;
+        }
+      }
+      
+      console.log(`[CHATS] Synced ${syncedCount} conversations, ${errorCount} errors`);
+      
+      return new Response(
+        JSON.stringify({ success: true, event: eventType, synced: syncedCount, errors: errorCount }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // =============================================
+    // Handle "groups" event - sync groups from WhatsApp
+    // This event is sent when WhatsApp syncs group information
+    // =============================================
+    if (eventType === "groups" || eventType === "GROUPS_UPDATE" || eventType === "groups.upsert") {
+      // deno-lint-ignore no-explicit-any
+      const payloadAny = payload as any;
+      const groupsData = payloadAny.data?.groups || payloadAny.groups || payloadAny.data || [];
+      const groupList = Array.isArray(groupsData) ? groupsData : [groupsData];
+      
+      console.log(`[WEBHOOK] Processing groups event with ${groupList.length} groups for sector ${sectorId}`);
+      
+      let syncedCount = 0;
+      let errorCount = 0;
+      
+      for (const group of groupList) {
+        try {
+          const groupJid = group.JID || group.jid || group.id || group.wa_chatid || "";
+          
+          // Validate group JID format
+          if (!groupJid || !groupJid.includes("@g.us")) {
+            console.log(`[GROUPS] Skipping invalid group JID: ${groupJid}`);
+            continue;
+          }
+          
+          const groupName = group.Name || group.name || group.Subject || group.subject || group.wa_name || "Grupo";
+          const participantCount = group.Participants?.length || group.participants?.length || group.size || 0;
+          const groupDesc = group.Desc || group.desc || group.Description || group.description || null;
+          
+          // Upsert to whatsapp_groups table
+          const { error: groupError } = await supabase
+            .from("whatsapp_groups")
+            .upsert({
+              account_id: accountId,
+              group_jid: groupJid,
+              name: groupName,
+              description: groupDesc,
+              participant_count: participantCount,
+            }, { onConflict: "account_id,group_jid" });
+          
+          if (groupError) {
+            console.error(`[GROUPS] Error upserting group ${groupJid}:`, groupError.message);
+            errorCount++;
+            continue;
+          }
+          
+          // Also ensure zapp_conversation exists for this group
+          const { data: existingConvo } = await supabase
+            .from("zapp_conversations")
+            .select("id, integration_id")
+            .eq("account_id", accountId)
+            .eq("group_jid", groupJid)
+            .maybeSingle();
+          
+          if (!existingConvo) {
+            // Create zapp_conversation for the group
+            const { data: newConvo, error: convError } = await supabase
+              .from("zapp_conversations")
+              .insert({
+                account_id: accountId,
+                sector_id: sectorId,
+                integration_id: integrationId,
+                contact_name: groupName,
+                is_group: true,
+                group_jid: groupJid,
+                last_message_at: new Date().toISOString(),
+              })
+              .select("id")
+              .single();
+            
+            if (convError) {
+              console.error(`[GROUPS] Error creating conversation for group ${groupJid}:`, convError.message);
+            } else if (newConvo && sectorDepartmentId) {
+              // Create assignment
+              await supabase
+                .from("zapp_conversation_assignments")
+                .insert({
+                  account_id: accountId,
+                  zapp_conversation_id: newConvo.id,
+                  department_id: sectorDepartmentId,
+                  status: "waiting",
+                });
+              console.log(`[GROUPS] Created new group conversation ${newConvo.id} for ${groupName}`);
+            }
+          } else if (!existingConvo.integration_id && integrationId) {
+            // Update legacy group conversation with integration_id
+            await supabase
+              .from("zapp_conversations")
+              .update({ integration_id: integrationId })
+              .eq("id", existingConvo.id);
+            console.log(`[GROUPS] Updated legacy group conversation ${existingConvo.id} with integration_id`);
+          }
+          
+          syncedCount++;
+        } catch (groupError) {
+          console.error(`[GROUPS] Error processing group:`, groupError);
+          errorCount++;
+        }
+      }
+      
+      console.log(`[GROUPS] Synced ${syncedCount} groups, ${errorCount} errors`);
+      
+      return new Response(
+        JSON.stringify({ success: true, event: eventType, synced: syncedCount, errors: errorCount }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // =============================================
+    // Handle "history" event - sync historical messages
+    // This event is sent when WhatsApp syncs message history
+    // =============================================
+    if (eventType === "history" || eventType === "HISTORY_SYNC" || eventType === "history.sync") {
+      // deno-lint-ignore no-explicit-any
+      const payloadAny = payload as any;
+      const historyData = payloadAny.data || payloadAny.history || payloadAny;
+      
+      console.log(`[WEBHOOK] Processing history event for sector ${sectorId}`);
+      console.log(`[HISTORY] Data keys:`, Object.keys(historyData || {}));
+      
+      // History sync can contain chats, messages, contacts
+      // We mainly care about ensuring conversations exist
+      const chats = historyData.chats || historyData.conversations || [];
+      
+      if (Array.isArray(chats) && chats.length > 0) {
+        console.log(`[HISTORY] Found ${chats.length} chats to sync`);
+        // Process similar to chats event but don't need full implementation
+        // The main goal is to acknowledge the event
+      }
+      
+      return new Response(
+        JSON.stringify({ success: true, event: eventType, message: "History event acknowledged" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log(`Unhandled event type: ${eventType}`);
     return new Response(
       JSON.stringify({ success: true, event: eventType, handled: false }),
