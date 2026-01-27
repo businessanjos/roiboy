@@ -23,7 +23,6 @@ interface MarketingTaskMediaUploadProps {
 }
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const MAX_ATTACHMENTS = 10;
 const ACCEPTED_TYPES = ["image/*", "video/*"];
 
 export function MarketingTaskMediaUpload({
@@ -89,13 +88,6 @@ export function MarketingTaskMediaUpload({
 
   const handleFiles = async (files: FileList | File[]) => {
     const fileArray = Array.from(files);
-    const remainingSlots = MAX_ATTACHMENTS - attachments.length;
-
-    if (fileArray.length > remainingSlots) {
-      toast.error(`Máximo de ${MAX_ATTACHMENTS} anexos por tarefa. Slots disponíveis: ${remainingSlots}`);
-      return;
-    }
-
     setIsUploading(true);
     const newAttachments: MediaAttachment[] = [];
 
@@ -163,7 +155,7 @@ export function MarketingTaskMediaUpload({
     <div className="space-y-3">
       <Label className="flex items-center gap-2">
         <ImageIcon className="h-4 w-4" />
-        Anexos ({attachments.length}/{MAX_ATTACHMENTS})
+        Anexos ({attachments.length})
       </Label>
 
       <div className="flex flex-wrap gap-2">
@@ -213,28 +205,26 @@ export function MarketingTaskMediaUpload({
         ))}
 
         {/* Upload zone */}
-        {attachments.length < MAX_ATTACHMENTS && (
-          <div
-            className={cn(
-              "w-20 h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors",
-              isDragging ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:border-primary/50",
-              disabled && "opacity-50 cursor-not-allowed"
-            )}
-            onClick={() => !disabled && fileInputRef.current?.click()}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-          >
-            {isUploading ? (
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            ) : (
-              <>
-                <ImagePlus className="h-5 w-5 text-muted-foreground" />
-                <span className="text-[10px] text-muted-foreground mt-1">Adicionar</span>
-              </>
-            )}
-          </div>
-        )}
+        <div
+          className={cn(
+            "w-20 h-20 rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors",
+            isDragging ? "border-primary bg-primary/10" : "border-muted-foreground/30 hover:border-primary/50",
+            disabled && "opacity-50 cursor-not-allowed"
+          )}
+          onClick={() => !disabled && fileInputRef.current?.click()}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {isUploading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          ) : (
+            <>
+              <ImagePlus className="h-5 w-5 text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground mt-1">Adicionar</span>
+            </>
+          )}
+        </div>
       </div>
 
       <input
