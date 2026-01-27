@@ -86,14 +86,14 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
 }: ZappNewConversationDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef] max-w-md">
+      <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef] max-w-md overflow-hidden">
         <DialogHeader>
           <DialogTitle>Nova Conversa</DialogTitle>
           <DialogDescription className="text-[#8696a0]">
             Busque um contato para iniciar uma conversa
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-hidden">
           <Input
             placeholder="Buscar por nome ou telefone..."
             value={searchQuery}
@@ -120,9 +120,9 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
                         {client.full_name.slice(0, 2).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#e9edef] font-medium whitespace-nowrap">
+                    <div className="flex-1 min-w-0 overflow-hidden">
+                      <div className="flex items-center gap-2 flex-wrap min-w-0 overflow-hidden">
+                        <span className="text-[#e9edef] font-medium truncate max-w-[180px] sm:max-w-[220px]">
                           {formatName(client.full_name, client.type)}
                         </span>
                         {client.type === 'client' && (
