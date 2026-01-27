@@ -122,6 +122,11 @@ async function fetchDealsData(
     return [];
   }
 
+  // If dimension is _total, return global aggregation (for Scorecards)
+  if (dimension.field === '_total') {
+    return aggregateGlobalTotal(data || [], measure);
+  }
+
   return aggregateData(data || [], measure, dimension, dateDisplayFormat);
 }
 
@@ -151,6 +156,11 @@ async function fetchLeadsData(
     return [];
   }
 
+  // If dimension is _total, return global aggregation (for Scorecards)
+  if (dimension.field === '_total') {
+    return aggregateGlobalTotal(data || [], { ...measure, aggregation: 'count' });
+  }
+
   // Leads only support count aggregation
   return aggregateData(data || [], { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
 }
@@ -172,6 +182,11 @@ async function fetchProductsData(
   if (error) {
     console.error('Error fetching products:', error);
     return [];
+  }
+
+  // If dimension is _total, return global aggregation (for Scorecards)
+  if (dimension.field === '_total') {
+    return aggregateGlobalTotal(data || [], measure);
   }
 
   return aggregateData(data || [], measure, dimension, dateDisplayFormat);
@@ -286,6 +301,37 @@ function getMeasureValue(item: any, field: string): number {
     return isNaN(parsed) ? 0 : parsed;
   }
   return 0;
+}
+
+// Global aggregation for Scorecards (no grouping)
+function aggregateGlobalTotal(
+  data: any[],
+  measure: VisualConfig['measure']
+): AggregatedDataPoint[] {
+  let value: number;
+
+  switch (measure.aggregation) {
+    case 'count':
+      value = data.length;
+      break;
+    case 'sum':
+      value = data.reduce((acc, item) => {
+        const val = getMeasureValue(item, measure.field);
+        return acc + (val || 0);
+      }, 0);
+      break;
+    case 'avg':
+      const total = data.reduce((acc, item) => {
+        const val = getMeasureValue(item, measure.field);
+        return acc + (val || 0);
+      }, 0);
+      value = data.length > 0 ? total / data.length : 0;
+      break;
+    default:
+      value = 0;
+  }
+
+  return [{ name: 'Total', value, count: data.length }];
 }
 
 function formatDateGroup(dateString: string, grouping: DateGrouping, displayFormat: DateDisplayFormat = 'monthYear'): string {
