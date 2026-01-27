@@ -49,7 +49,7 @@ export interface Message {
   is_edited?: boolean;
 }
 
-const HEARTBEAT_INTERVAL_MS = 60000;
+const HEARTBEAT_INTERVAL_MS = 120000; // Increased from 60s to 120s for cloud optimization
 const REALTIME_DEBOUNCE_MS = 3000; // Increased from 2000ms to 3000ms for cloud optimization
 const MIN_FETCH_INTERVAL_MS = 3000;
 

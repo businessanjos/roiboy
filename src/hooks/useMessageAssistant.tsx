@@ -129,7 +129,8 @@ export function useMessageAssistant({
 
   // Check spelling with debounce - increased to 1500ms for cloud optimization
   useEffect(() => {
-    if (!spellingEnabled || !messageInput || messageInput.length < 15) {
+    // Increased minimum text length from 15 to 20 for cloud optimization
+    if (!spellingEnabled || !messageInput || messageInput.length < 20) {
       setCorrection(null);
       return;
     }
@@ -187,6 +188,7 @@ export function useMessageAssistant({
 
   // Load suggestions when messages change - ONLY when last message is from client
   // Uses local cache to avoid duplicate API calls
+  // OPTIMIZATION: Disabled auto-refresh when suggestions are already loaded
   useEffect(() => {
     if (!suggestionsEnabled || lastMessages.length === 0) {
       console.log("[AI Suggestions] Disabled or no messages");
@@ -197,6 +199,13 @@ export function useMessageAssistant({
     // Skip if rate limited due to 402 error
     if (isRateLimited()) {
       console.log("[AI Suggestions] Skipping - rate limited after 402 error");
+      return;
+    }
+
+    // OPTIMIZATION: Skip auto-refresh if suggestions are already loaded
+    // User can manually refresh using the refresh button if needed
+    if (suggestions.length > 0) {
+      console.log("[AI Suggestions] Already have suggestions, skipping auto-refresh");
       return;
     }
 

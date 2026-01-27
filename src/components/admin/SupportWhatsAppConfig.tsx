@@ -45,7 +45,7 @@ export function SupportWhatsAppConfig() {
     if (isPolling || settings?.status === "connecting") {
       intervalId = setInterval(() => {
         refetch();
-      }, 5000); // Check every 5 seconds
+      }, 10000); // Optimized from 5s to 10s for cloud consumption reduction
     }
     
     // Stop polling when connected

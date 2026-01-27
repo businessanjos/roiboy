@@ -52,7 +52,7 @@ export function OnboardingWhatsAppStep({ onConnected, onSkip }: OnboardingWhatsA
       } catch (err) {
         console.log("Status poll error:", err);
       }
-    }, 5000);
+    }, 10000); // Optimized from 5s to 10s for cloud consumption reduction
 
     return () => {
       clearInterval(interval);
