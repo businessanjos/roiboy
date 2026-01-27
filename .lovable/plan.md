@@ -1,215 +1,145 @@
 
+# Plano: Adicionar Campos de Data/Hora na Edição de Eventos da Aba Agenda
 
-# Plano: Adicionar Campo "Item da Venda" em Todos os Diálogos de Criação de Negócio
+## Diagnóstico do Problema
 
-## Diagnóstico
+Ao analisar o arquivo `src/components/client/ClientAgenda.tsx`, identifiquei que os campos de **Data/Hora** e **Duração** estão condicionados apenas ao tipo de evento `"live"`:
 
-A alteração anterior foi feita no arquivo **`src/components/sales/LeadsTab.tsx`**, porém o usuário está acessando a página **`src/pages/Leads.tsx`** (rota `/setores`), que é um arquivo completamente diferente e não possui o campo "Item da Venda".
+```typescript
+// Linha 640 - Problema atual
+{formData.event_type === "live" && (
+  <>
+    <div className="grid grid-cols-2 gap-3">
+      <div className="space-y-2">
+        <Label htmlFor="scheduled_at">Data/Hora</Label>
+        <Input type="datetime-local" ... />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="duration">Duração (min)</Label>
+        <Input type="number" ... />
+      </div>
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="meeting_url">Link da Reunião</Label>
+      <Input ... />
+    </div>
+  </>
+)}
+```
 
-### Arquivos que precisam do campo "Item da Venda":
-
-| Arquivo | Localização do Dialog | Status Atual |
-|---------|----------------------|--------------|
-| `src/components/sales/LeadsTab.tsx` | Dialog "Criar Negócio" | Já implementado |
-| `src/pages/Leads.tsx` | Dialog "Criar Negócio" (linhas 1647-1760) | **Faltando** |
-| `src/components/client/ClientDeals.tsx` | Dialog "Criar Negócio" (linhas 560-605) | **Faltando** |
-| `src/components/royzapp/ZappCRMPanel.tsx` | Form "Criar Negócio" (linhas 677-726) | **Faltando** |
+Isso faz com que eventos do tipo "Material de Apoio", "Mentoria", "Workshop", etc., não exibam os campos de data/hora na edição, como mostrado no screenshot do usuário.
 
 ---
 
-## Mudanças Necessárias
+## Solução Proposta
 
-### 1. `src/pages/Leads.tsx`
-
-**Adicionar estado para produtos:**
-```typescript
-// Interface para produtos (após linha 103)
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-}
-
-// Dentro do componente (após linha 178)
-const [products, setProducts] = useState<Product[]>([]);
-const [selectedProductId, setSelectedProductId] = useState<string>("");
-```
-
-**Adicionar useEffect para carregar produtos:**
-```typescript
-useEffect(() => {
-  const loadProducts = async () => {
-    if (!currentUser?.account_id) return;
-    
-    const { data } = await supabase
-      .from("products")
-      .select("id, name, price")
-      .eq("account_id", currentUser.account_id)
-      .eq("is_active", true)
-      .order("name");
-    
-    setProducts(data || []);
-  };
-  
-  if (dialogStep === 'deal-form') {
-    loadProducts();
-  }
-}, [dialogStep, currentUser?.account_id]);
-```
-
-**Adicionar campo no formulário (entre "Título" e "Valor/Etapa"):**
-- Seletor de produto com auto-preenchimento do valor
-
-**Atualizar função `handleCreateDeal`:**
-- Incluir `product_id` na criação do deal
-
-**Atualizar `resetForm`:**
-- Limpar `selectedProductId`
+Separar a lógica condicional:
+1. **Data/Hora e Duração**: Disponíveis para TODOS os tipos de eventos (exceto "material")
+2. **Link da Reunião**: Apenas para tipos de eventos que fazem sentido (lives, mentorias, webinars, etc.)
+3. **Link do Material**: Apenas para tipo "material"
 
 ---
 
-### 2. `src/components/client/ClientDeals.tsx`
+## Mudanças no Arquivo
 
-**Adicionar estado para produtos:**
+**Arquivo:** `src/components/client/ClientAgenda.tsx`
+
+### Antes (linhas 640-684):
 ```typescript
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-}
+{formData.event_type === "live" && (
+  <>
+    <div className="grid grid-cols-2 gap-3">
+      {/* Data/Hora e Duração */}
+    </div>
+    <div className="space-y-2">
+      {/* Link da Reunião */}
+    </div>
+  </>
+)}
 
-const [products, setProducts] = useState<Product[]>([]);
-const [selectedProductId, setSelectedProductId] = useState<string>("");
+{formData.event_type === "material" && (
+  <div className="space-y-2">
+    {/* Link do Material */}
+  </div>
+)}
 ```
 
-**Adicionar useEffect para carregar produtos quando dialog abre:**
+### Depois:
 ```typescript
-useEffect(() => {
-  const loadProducts = async () => {
-    // ... fetch products
-  };
-  
-  if (isDialogOpen) {
-    loadProducts();
-  }
-}, [isDialogOpen]);
-```
+{/* Data/Hora e Duração - Disponível para todos os tipos exceto material */}
+{formData.event_type !== "material" && (
+  <div className="grid grid-cols-2 gap-3">
+    <div className="space-y-2">
+      <Label htmlFor="scheduled_at">Data/Hora</Label>
+      <Input
+        id="scheduled_at"
+        type="datetime-local"
+        value={formData.scheduled_at}
+        onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
+      />
+    </div>
+    <div className="space-y-2">
+      <Label htmlFor="duration">Duração (min)</Label>
+      <Input
+        id="duration"
+        type="number"
+        value={formData.duration_minutes}
+        onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
+      />
+    </div>
+  </div>
+)}
 
-**Adicionar campo no formulário (entre "Título" e grid de Valor/Etapa):**
-- Seletor de produto idêntico ao LeadsTab
+{/* Link da Reunião - Tipos que suportam reunião online */}
+{["live", "mentoria", "workshop", "masterclass", "webinar", "imersao", "plantao"].includes(formData.event_type) && (
+  <div className="space-y-2">
+    <Label htmlFor="meeting_url">Link da Reunião</Label>
+    <Input
+      id="meeting_url"
+      value={formData.meeting_url}
+      onChange={(e) => setFormData({ ...formData, meeting_url: e.target.value })}
+      placeholder="https://zoom.us/..."
+    />
+  </div>
+)}
 
-**Atualizar função `handleCreateDeal`:**
-- Inserir dados em `deal_field_values` após criar o deal (para armazenar product_id)
-
----
-
-### 3. `src/components/royzapp/ZappCRMPanel.tsx`
-
-**Adicionar estado para produtos:**
-```typescript
-const [products, setProducts] = useState<Product[]>([]);
-const [selectedProductId, setSelectedProductId] = useState<string>("");
-```
-
-**Adicionar fetch de produtos:**
-- Usar useQuery ou fetch manual ao montar o componente
-
-**Adicionar campo no formulário (entre "Título" e "Valor"):**
-- Seletor de produto com estilos ZApp (bg-zapp-bg, border-zapp-border, etc.)
-
-**Atualizar mutation `createDeal`:**
-- Após criar o deal, inserir registro em `deal_field_values` com o `product_id`
-
----
-
-## Estrutura do Campo "Item da Venda"
-
-Em todos os locais, o campo terá a mesma estrutura:
-
-```typescript
-<div className="space-y-2">
-  <Label>Item da Venda</Label>
-  <Select
-    value={selectedProductId}
-    onValueChange={(productId) => {
-      setSelectedProductId(productId);
-      if (productId && productId !== "__none__") {
-        const product = products.find(p => p.id === productId);
-        if (product) {
-          // Auto-preencher valor
-          setDealFormData(prev => ({
-            ...prev,
-            value: product.price.toString()
-          }));
-        }
-      }
-    }}
-  >
-    <SelectTrigger>
-      <SelectValue placeholder="Selecione o produto" />
-    </SelectTrigger>
-    <SelectContent>
-      <SelectItem value="__none__">Nenhum</SelectItem>
-      {products.map(product => (
-        <SelectItem key={product.id} value={product.id}>
-          <div className="flex items-center justify-between w-full gap-2">
-            <span>{product.name}</span>
-            <span className="text-xs text-muted-foreground">
-              {formatCurrency(product.price)}
-            </span>
-          </div>
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-</div>
+{/* Link do Material - Apenas para tipo material */}
+{formData.event_type === "material" && (
+  <div className="space-y-2">
+    <Label htmlFor="material_url">Link do Material</Label>
+    <Input
+      id="material_url"
+      value={formData.material_url}
+      onChange={(e) => setFormData({ ...formData, material_url: e.target.value })}
+      placeholder="https://..."
+    />
+  </div>
+)}
 ```
 
 ---
 
-## Persistência do Product ID
+## Fluxo Corrigido
 
-O `product_id` é armazenado em `deal_field_values` com o `field_id` correto:
-- **Field ID:** `033b91fb-3add-4c96-aec9-567fefbd0fb2` ("Item da Venda")
-
-### Para arquivos que usam o hook `useDeals`:
-O hook já suporta `product_id` no objeto passado para `createDeal()`.
-
-### Para arquivos com insert direto (ClientDeals, ZappCRMPanel):
-Após o insert do deal, inserir em `deal_field_values`:
-
-```typescript
-if (selectedProductId && selectedProductId !== "__none__") {
-  await supabase.from("deal_field_values").insert({
-    deal_id: newDeal.id,
-    field_id: "033b91fb-3add-4c96-aec9-567fefbd0fb2",
-    account_id: currentUser.account_id,
-    value_text: selectedProductId,
-  });
-}
-```
-
----
-
-## Arquivos a Modificar
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/Leads.tsx` | Adicionar estado, fetch, campo UI e product_id no createDeal |
-| `src/components/client/ClientDeals.tsx` | Adicionar estado, fetch, campo UI e insert em deal_field_values |
-| `src/components/royzapp/ZappCRMPanel.tsx` | Adicionar estado, fetch, campo UI (estilo ZApp) e insert em deal_field_values |
+| Tipo de Evento | Data/Hora | Duração | Link Reunião | Link Material |
+|----------------|-----------|---------|--------------|---------------|
+| Live | Sim | Sim | Sim | Nao |
+| Mentoria | Sim | Sim | Sim | Nao |
+| Workshop | Sim | Sim | Sim | Nao |
+| Masterclass | Sim | Sim | Sim | Nao |
+| Webinar | Sim | Sim | Sim | Nao |
+| Imersao | Sim | Sim | Sim | Nao |
+| Plantao | Sim | Sim | Sim | Nao |
+| Material | Nao | Nao | Nao | Sim |
+| Outros (campanha, viagem, etc.) | Sim | Sim | Nao | Nao |
 
 ---
 
 ## Resultado Esperado
 
-Todos os diálogos de criação de negócio terão o campo "Item da Venda":
+Apos a correcao, ao editar qualquer evento que nao seja do tipo "material", o usuario vera os campos:
+- **Data/Hora** (input datetime-local)
+- **Duracao (min)** (input number)
+- **Link da Reuniao** (quando aplicavel ao tipo)
 
-1. Pipeline (`DealDialog.tsx`) - Já funciona
-2. Leads Tab (`LeadsTab.tsx`) - Já funciona
-3. Página Leads (`Leads.tsx`) - Será implementado
-4. Cliente Deals (`ClientDeals.tsx`) - Será implementado
-5. ROY zAPP CRM Panel (`ZappCRMPanel.tsx`) - Será implementado
-
-O comportamento será idêntico em todos: ao selecionar um produto, o valor é automaticamente preenchido, e o `product_id` é persistido para uso na conversão para contrato.
-
+Isso permitira editar a data e hora de mentorias, workshops, e qualquer outro tipo de evento agendavel.
