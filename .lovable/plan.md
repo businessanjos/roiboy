@@ -1,154 +1,108 @@
 
-# Plano: Corrigir Duplicação de Mensagens ao Editar
+# Plano: Corrigir Desaparecimento de Grupos no ROY zAPP
 
 ## Problema Identificado
 
-Quando o usuário edita uma mensagem no RoyZapp:
+Os grupos do WhatsApp estão desaparecendo porque a lógica de filtragem no `RoyZapp.tsx` esconde conversas com status `closed`, **sem exceção para grupos**.
 
-1. O frontend atualiza a mensagem no banco com `is_edited: true`
-2. O UAZAPI envia um webhook de confirmação com a mensagem editada
-3. **O webhook recebe um NOVO `external_message_id`** diferente do original
-4. A deduplicação falha porque busca pelo novo ID (inexistente)
-5. Uma nova mensagem é inserida, causando duplicação
+### Dados do Banco de Dados
+No setor Operações existem 46 grupos:
+- **42 grupos com status `closed`** (escondidos)
+- 3 grupos com status `active`
+- 1 grupo com status `waiting`
 
-### Evidência do Banco de Dados
-```text
-Mensagem original: external_id=3EB0C521B208696F4CA328, is_edited=true
-Mensagem duplicada: external_id=3EB0C3204672B2EAEC2180, is_edited=false
-Mesmo conteúdo, 31 segundos de diferença
+### Causa Raiz
+Existem **dois níveis de filtragem** que deveriam ter a mesma lógica:
+
+1. **RoyZapp.tsx (linha 2946-2949)** - Faz pré-filtragem SEM exceção para grupos
+2. **ZappConversationList.tsx (linha 92)** - Tem a exceção correta para grupos
+
+O código em RoyZapp.tsx:
+```typescript
+} else if (filterStatus === "all") {
+  // When showing "all", hide closed unless explicitly requested
+  if (isClosed) return false;  // ❌ Esconde TODOS os fechados, incluindo grupos
+}
 ```
 
-### Campo não Verificado
-Os logs mostram que o UAZAPI envia `msg.edited` no payload, mas o webhook não verifica esse campo.
+O código correto em ZappConversationList.tsx:
+```typescript
+// EXCEPTION: Groups are always visible (they're permanent, not tickets)
+if (isClosed && !isGroup) return false;  // ✅ Mantém grupos visíveis
+```
 
 ## Solução
 
-Adicionar detecção de mensagens editadas no webhook e atualizar a mensagem existente em vez de inserir uma nova.
+Adicionar a mesma exceção para grupos na filtragem do `RoyZapp.tsx`.
 
 ## Arquivo a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `supabase/functions/uazapi-webhook/index.ts` | Detectar mensagens editadas e pular inserção |
+| `src/pages/RoyZapp.tsx` | Adicionar exceção para grupos no filtro de conversas fechadas |
 
-## Alterações Técnicas
+## Alteração Técnica
 
-### 1. Detectar Campo `edited` no Payload
+### Localização: `RoyZapp.tsx` linhas 2940-2949
 
-Após extrair os dados da mensagem (linha ~636), adicionar verificação:
-
+**Código Atual:**
 ```typescript
-// EDITED MESSAGE DETECTION
-// UAZAPI sends 'edited' flag when message was edited
-const msgAny = msg as Record<string, unknown>;
-const isEditedMessage = msgAny.edited === true || 
-                        msgAny.messageType === "editedMessage" ||
-                        msgAny.messageType === "EditedMessage";
-
-if (isEditedMessage) {
-  console.log(`[EDIT] Detected edited message, will update instead of insert`);
+// Closed conversations filter
+// When filterStatus is "closed", show only closed
+// Otherwise, HIDE closed conversations by default
+const isClosed = a.status === "closed";
+if (filterStatus === "closed") {
+  if (!isClosed) return false;
+} else if (filterStatus === "all") {
+  // When showing "all", hide closed unless explicitly requested
+  if (isClosed) return false;
 }
 ```
 
-### 2. Para Mensagens Editadas: Buscar e Atualizar Existente
-
-Modificar a lógica de inserção (após linha ~1220) para:
-
+**Código Corrigido:**
 ```typescript
-if (isEditedMessage && direction === "outbound") {
-  // For edited messages, find the original by matching:
-  // 1. Same conversation
-  // 2. Same content (after edit, content is already the new value)
-  // 3. Outbound direction
-  // 4. Recent time window (within 15 minutes, since user could edit old messages)
-  // 5. Already marked as is_edited=true (edited by frontend first)
-  
-  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-  
-  const { data: editedOriginal } = await supabase
-    .from("zapp_messages")
-    .select("id, content, external_message_id")
-    .eq("zapp_conversation_id", zappConversationId)
-    .eq("direction", "outbound")
-    .eq("content", content)
-    .eq("is_edited", true)
-    .is("external_message_id", null) // If webhook updates before frontend saved external_id
-    .or(`external_message_id.neq.${messageId}`) // Or has different external_id
-    .gte("created_at", fifteenMinutesAgo)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  
-  if (editedOriginal) {
-    console.log(`[EDIT] Found original edited message ${editedOriginal.id}, skipping duplicate insert`);
-    
-    // Optionally update the external_message_id to the new one from UAZAPI
-    if (editedOriginal.external_message_id !== messageId) {
-      await supabase
-        .from("zapp_messages")
-        .update({ 
-          external_message_id: messageId,
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", editedOriginal.id);
-      console.log(`[EDIT] Updated external_message_id to ${messageId}`);
-    }
-    
-    skipInsert = true;
-  }
+// Closed conversations filter
+// When filterStatus is "closed", show only closed
+// Otherwise, HIDE closed conversations by default
+// CRITICAL EXCEPTION: Groups are permanent conversations and should NEVER be hidden
+const contact = getContactInfo(a);
+const isGroup = contact.isGroup;
+const isClosed = a.status === "closed";
+
+if (filterStatus === "closed") {
+  if (!isClosed) return false;
+} else if (filterStatus === "all") {
+  // When showing "all", hide closed INDIVIDUAL conversations
+  // But ALWAYS keep groups visible - they are permanent, not tickets
+  if (isClosed && !isGroup) return false;
 }
 ```
 
-### 3. Adicionar Fallback por Conteúdo Similar
+### Ajuste de Ordem
+Como `getContactInfo` é chamado na linha 2960 atualmente, precisamos mover essa chamada para antes da verificação de closed status, ou duplicar a verificação de isGroup.
 
-Para mensagens editadas onde o frontend ainda não atualizou, buscar por conteúdo similar:
-
-```typescript
-// Additional check: Look for outbound messages with same content 
-// that were created/updated recently (prevents duplicate from edit confirmation)
-if (!skipInsert && direction === "outbound" && !isEditedMessage) {
-  const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-  
-  const { data: recentSameContent } = await supabase
-    .from("zapp_messages")
-    .select("id, external_message_id, is_edited")
-    .eq("zapp_conversation_id", zappConversationId)
-    .eq("direction", "outbound")
-    .eq("content", content)
-    .gte("created_at", twoMinutesAgo)
-    .neq("external_message_id", messageId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  
-  if (recentSameContent) {
-    console.log(`[DEDUPE] Found recent message with same content: ${recentSameContent.id}, ` +
-                `is_edited: ${recentSameContent.is_edited}, skipping insert`);
-    skipInsert = true;
-  }
-}
-```
+A solução mais eficiente é reorganizar o código para chamar `getContactInfo` uma vez no início do filtro e reutilizar.
 
 ## Fluxo Corrigido
 
 ```text
-1. Usuário edita mensagem no frontend
-   → UPDATE zapp_messages SET content=X, is_edited=true
-
-2. UAZAPI confirma edição via webhook
-   → msg.edited = true, novo external_message_id
-   → Webhook detecta edited=true
-   → Busca mensagem com mesmo conteúdo + is_edited=true
-   → Encontra original
-   → skipInsert = true (não duplica)
-   → Opcionalmente atualiza external_message_id
-
-3. Resultado: apenas uma mensagem com conteúdo atualizado
+1. Grupo tem ticket finalizado → status = "closed"
+2. Filtro em RoyZapp.tsx verifica:
+   - isClosed? Sim
+   - isGroup? Sim
+   - Resultado: NÃO remove da lista (grupos são permanentes)
+3. Grupo permanece visível na lista de conversas
 ```
 
-## Resultado Esperado
+## Impacto
 
-- Mensagens editadas não serão mais duplicadas
-- O campo `is_edited` será respeitado
-- O `external_message_id` será atualizado para o novo valor do UAZAPI (opcional)
-- Logs claros indicando quando uma mensagem editada foi detectada e tratada
+- **42 grupos no setor Operações** voltarão a aparecer imediatamente
+- Grupos de outros setores também serão corrigidos
+- A lógica fica consistente entre RoyZapp.tsx e ZappConversationList.tsx
+- Prevenção permanente: grupos NUNCA mais desaparecerão por terem status "closed"
+
+## Por que o Problema Reapareceu?
+
+O fix anterior foi feito apenas no `ZappConversationList.tsx`, mas o `RoyZapp.tsx` faz uma pré-filtragem independente antes de passar os dados para o componente de lista. Essa duplicação de lógica causou a inconsistência.
+
+Com esta correção, a filtragem primária em RoyZapp.tsx já respeitará a regra de grupos permanentes, garantindo que o problema nunca mais ocorra.
