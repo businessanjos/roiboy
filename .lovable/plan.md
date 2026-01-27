@@ -1,62 +1,82 @@
 
 
-# Plano: Aumentar Espaço e Flexibilidade dos Painéis de Insights
+# Plano: Scorecard sem Passo de Agrupamento
 
 ## Problema Identificado
 
-Os painéis de insights estão com delimitações muito restritivas, impedindo posicionamento livre dos visuais. Analisando a imagem enviada e o código, identifiquei os seguintes limitadores:
+Ao criar um visual do tipo "Scorecard", o sistema exibe um terceiro passo pedindo "Como agrupar os dados?". Isso é incorreto porque Scorecards devem exibir **um único valor agregado** baseado nos filtros ativos, sem necessidade de agrupamento.
 
-| Configuração Atual | Valor | Resultado |
-|-------------------|-------|-----------|
-| `ROW_HEIGHT` | 80px | Cada unidade de altura = 80px |
-| `minW` (largura mínima) | 3 colunas | Visual não pode ser menor que 25% da tela |
-| `minH` (altura mínima) | 3 unidades | Visual mínimo de 240px de altura |
-| Tamanho padrão | 6×4 | Metade da largura, 320px de altura |
-| Grid | 12 colunas | Adequado, não precisa mudar |
+| Visual | Comportamento Esperado |
+|--------|----------------------|
+| Gráfico de Barras/Linhas/Pizza | Precisa de agrupamento (eixo X) |
+| Scorecard | Apenas valor total, sem agrupamento |
 
 ---
 
 ## Solução Proposta
 
-### 1. Reduzir Tamanhos Mínimos para Maior Flexibilidade
+### 1. Ajustar Fluxo do Modal para Scorecards
 
-Permitir visuais menores e mais compactos quando desejado:
+**Arquivo:** `src/components/insights/AddVisualModal.tsx`
 
-**Antes:**
-- `minW: 3` (25% da tela)
-- `minH: 3` (240px)
+Quando o tipo selecionado for "scorecard", o modal terá apenas **2 passos**:
+- Passo 1: Escolher formato
+- Passo 2: Escolher métrica + título (e criar)
 
-**Depois:**
-- `minW: 2` (16.6% da tela) - permite até 6 visuais lado a lado
-- `minH: 2` (120px) - permite scorecards mais compactos
+```text
+FLUXO ATUAL (3 passos para todos)
+┌───────────┐   ┌────────────┐   ┌──────────────┐
+│ 1. Formato│ → │ 2. Métrica │ → │ 3. Agrupamento│
+└───────────┘   └────────────┘   └──────────────┘
 
-### 2. Aumentar Tamanho Padrão para Novos Visuais
+FLUXO NOVO (2 passos para Scorecard)
+┌───────────┐   ┌───────────────────┐
+│ 1. Formato│ → │ 2. Métrica + Criar│  ← Scorecard termina aqui
+└───────────┘   └───────────────────┘
 
-Visuais novos começarão maiores para melhor visualização:
+FLUXO NOVO (3 passos para Gráficos)
+┌───────────┐   ┌────────────┐   ┌──────────────┐
+│ 1. Formato│ → │ 2. Métrica │ → │ 3. Agrupamento│
+└───────────┘   └────────────┘   └──────────────┘
+```
 
-**Antes:**
-- Largura padrão: 6 colunas (metade)
-- Altura padrão: 4 unidades (320px)
+### 2. Criar Config Sem Dimensão para Scorecards
 
-**Depois:**
-- Largura padrão: 6 colunas (mantém)
-- Altura padrão: 5 unidades (400px) - mais espaço para gráficos
+Scorecards usarão uma configuração especial onde `dimension` indica agregação global:
 
-### 3. Aumentar Altura da Linha para Mais Espaço Vertical
+```typescript
+// Config para Scorecard (sem agrupamento real)
+const config: VisualConfig = {
+  dataSource: 'deals',
+  measure: { field: 'value', aggregation: 'sum' },
+  dimension: { 
+    field: '_total',  // Marcador especial: agregação global
+    type: 'text' 
+  },
+  formatting: { type: 'currency', decimals: 2 },
+};
+```
 
-A mudança mais impactante - cada unidade de altura ocupará mais pixels:
+### 3. Ajustar Busca de Dados para Scorecards
 
-**Antes:** `ROW_HEIGHT = 80px`
-**Depois:** `ROW_HEIGHT = 100px`
+**Arquivo:** `src/hooks/useVisualData.ts`
 
-Isso significa:
-- Visual de altura 4 → 400px (antes era 320px)
-- Visual de altura 5 → 500px (antes era 400px)
-- Visual de altura 6 → 600px (painel grande)
+Quando `dimension.field === '_total'`, retornar um único ponto de dados com o valor agregado de todos os registros:
 
-### 4. Permitir Visuais Maiores (Sem Limite Máximo)
+```typescript
+// Se dimension._total, não agrupa - retorna total geral
+if (dimension.field === '_total') {
+  const totalValue = calculateTotalValue(data, measure);
+  return [{ name: 'Total', value: totalValue, count: data.length }];
+}
+```
 
-Adicionar suporte para que visuais cresçam tanto quanto o usuário desejar, sem limites artificiais de largura ou altura.
+### 4. Gerar Título Automaticamente para Scorecards
+
+O título será baseado apenas na métrica, sem "por X":
+- "Faturamento Total"
+- "Quantidade de Negócios"
+- "Ticket Médio"
 
 ---
 
@@ -64,72 +84,131 @@ Adicionar suporte para que visuais cresçam tanto quanto o usuário desejar, sem
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/insights/grid/InsightsGrid.tsx` | Ajustar `ROW_HEIGHT`, `minW`, `minH`, e tamanhos padrão |
+| `src/components/insights/AddVisualModal.tsx` | Lógica condicional de passos para scorecard (2 vs 3) |
+| `src/hooks/useVisualData.ts` | Suporte a `dimension.field === '_total'` |
 
 ---
 
 ## Resultado Esperado
 
-```
-ANTES (Configuração atual)
-┌─────────────┬─────────────┐
-│  Visual A   │  Visual B   │  ← Altura limitada, pouco espaço
-│  (pequeno)  │  (pequeno)  │
-└─────────────┴─────────────┘
-
-DEPOIS (Nova configuração)
-┌─────────────────────────────┐
-│         Visual A            │  ← Pode ocupar largura total
-│       (altura maior)        │
-│                             │
-├────────────┬────────────────┤
-│  Visual B  │   Visual C     │  ← Ou lado a lado com mais altura
-│            │                │
-└────────────┴────────────────┘
-```
+1. Usuário seleciona "Scorecard" no passo 1
+2. Passo 2 mostra opções de métricas + campo de título
+3. Botão "Criar" aparece diretamente no passo 2 (não há passo 3)
+4. Scorecard criado exibe o valor total da métrica para o período filtrado
 
 ---
 
-## Seção Técnica
+## Seção Tecnica
 
-### Alterações no InsightsGrid.tsx
+### Alteracoes em AddVisualModal.tsx
 
 ```typescript
-// Linha 23-25: Aumentar constantes
-const ROW_HEIGHT = 100;  // Era 80 → Agora 100px por unidade
-const COLS = 12;         // Mantém
-const MARGIN: [number, number] = [16, 16]; // Mantém
+// Determinar numero total de passos baseado no tipo
+const totalSteps = chartType === 'scorecard' ? 2 : 3;
 
-// Linhas 50-72: Ajustar layouts
-// Reduzir minW e minH para maior flexibilidade
-{
-  i: visual.id,
-  x: existingLayout.x,
-  y: existingLayout.y,
-  w: existingLayout.w,
-  h: existingLayout.h,
-  minW: 2,  // Era 3 → Agora 2 (mais compacto)
-  minH: 2,  // Era 3 → Agora 2 (mais compacto)
-}
+// Ajustar titulo do header
+<span>- Passo {step} de {totalSteps}</span>
 
-// Layout padrão para novos visuais
-{
-  i: visual.id,
-  x: (index % 2) * 6,
-  y: Math.floor(index / 2) * 5,  // Era 4 → Agora 5
-  w: 6,
-  h: 5,     // Era 4 → Agora 5 (mais altura)
-  minW: 2,  // Era 3 → Agora 2
-  minH: 2,  // Era 3 → Agora 2
-}
+// No passo 2, se for scorecard, mostrar campo de titulo
+{step === 2 && (
+  <div className="space-y-4">
+    <p>O que você quer medir?</p>
+    <RadioGroup ...>
+      {METRICS.map(...)}
+    </RadioGroup>
+    
+    {/* Mostrar titulo apenas para scorecards no passo 2 */}
+    {chartType === 'scorecard' && (
+      <div className="space-y-2">
+        <Label>Título do Visual</Label>
+        <Input value={title} onChange={...} />
+      </div>
+    )}
+  </div>
+)}
+
+// Ajustar navegacao
+// Se scorecard e step 2 -> mostrar botao Criar (nao Proximo)
+{step < totalSteps ? (
+  <Button onClick={handleNext}>Próximo</Button>
+) : (
+  <Button onClick={handleCreate}>Criar</Button>
+)}
+
+// Ajustar auto-geracao de titulo para scorecards (sem "por X")
+useEffect(() => {
+  if (chartType === 'scorecard' && metric) {
+    setTitle(METRIC_LABELS[metric]); // Ex: "Faturamento"
+  } else if (metric && groupBy) {
+    setTitle(`${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}`);
+  }
+}, [chartType, metric, groupBy]);
+
+// handleCreate - config sem agrupamento para scorecards
+const handleCreate = async () => {
+  // Para scorecard, nao precisa de groupBy
+  if (chartType === 'scorecard') {
+    const config: VisualConfig = {
+      dataSource: 'deals',
+      measure: { field: metricConfig.measureField || '', aggregation: metricConfig.aggregation },
+      dimension: { field: '_total', type: 'text' }, // Agregacao global
+      formatting: { type: metricConfig.formatType, decimals: ... },
+    };
+    // ... criar visual
+  }
+};
+
+// Ajustar validacao
+const canCreate = chartType === 'scorecard'
+  ? metric !== null && title.trim() !== '' && activeDashboardId !== null
+  : groupBy !== null && title.trim() !== '' && activeDashboardId !== null;
 ```
 
-### Comparação de Tamanhos
+### Alteracoes em useVisualData.ts
 
-| Medida | Antes | Depois | Ganho |
-|--------|-------|--------|-------|
-| Altura mínima | 240px (3×80) | 200px (2×100) | Mais compacto |
-| Altura padrão | 320px (4×80) | 500px (5×100) | +56% espaço |
-| Altura máxima | Ilimitada | Ilimitada | ✓ |
-| Largura mínima | 25% | 16.6% | Mais flexível |
+```typescript
+// Em fetchDealsData, fetchLeadsData, etc.
+async function fetchDealsData(...) {
+  // Buscar dados aplicando filtros de data e outros
+  const { data, error } = await query;
+  
+  // Se dimension._total, retornar agregacao global
+  if (dimension.field === '_total') {
+    return aggregateGlobalTotal(data, measure);
+  }
+  
+  // Caso contrario, agregar por dimensao normalmente
+  return aggregateData(data, measure, dimension, dateDisplayFormat);
+}
+
+function aggregateGlobalTotal(
+  data: any[], 
+  measure: VisualConfig['measure']
+): AggregatedDataPoint[] {
+  let value: number;
+  
+  switch (measure.aggregation) {
+    case 'count':
+      value = data.length;
+      break;
+    case 'sum':
+      value = data.reduce((acc, item) => {
+        const val = getMeasureValue(item, measure.field);
+        return acc + (val || 0);
+      }, 0);
+      break;
+    case 'avg':
+      const total = data.reduce((acc, item) => {
+        const val = getMeasureValue(item, measure.field);
+        return acc + (val || 0);
+      }, 0);
+      value = data.length > 0 ? total / data.length : 0;
+      break;
+    default:
+      value = 0;
+  }
+  
+  return [{ name: 'Total', value, count: data.length }];
+}
+```
 
