@@ -1,138 +1,149 @@
 
-
-# Plano: Preservar Espaçamentos no Grid Ultra-Granular
+# Plano: Corrigir Cálculo de Taxa de Conversão por Vendedor
 
 ## Problema Identificado
 
-O problema é a **perda de precisão** no arredondamento das coordenadas:
+O visual "Conversão por Vendedor" está mostrando a taxa de conversão agrupada por **mês** ao invés de por **vendedor** porque:
 
-1. O usuário posiciona os visuais com espaçamento (ex: x=25, y=30)
-2. Ao salvar, divide por 4/5 e arredonda: `Math.round(25/4) = 6`
-3. Ao carregar, multiplica de volta: `6 * 4 = 24`
-4. Resultado: visual "pulou" 1 célula, perdendo o espaçamento
+1. A função `fetchDealsData()` detecta que é `conversion_rate` e chama `calculateConversionRateByPeriod()`
+2. A função `calculateConversionRateByPeriod()` **sempre agrupa por período de data** (`dateGrouping`), ignorando o campo de dimensão real (`responsible_name`)
+3. O código usa `formatDateGroup(deal.created_at, dateGrouping, ...)` para criar as chaves de grupo, independente do tipo de dimensão
 
-Isso acontece porque o banco armazena em **escala 12 cols/100px**, mas o grid usa **escala 48 cols/20px**. A conversão arredonda e perde os espaçamentos finos.
+## Solução
 
-## Solução: Armazenar Diretamente na Escala Granular
-
-Ao invés de converter entre escalas, armazenar os valores diretamente na escala granular (48 cols/20px rows) no banco de dados. Isso preserva a precisão exata do posicionamento.
+Criar uma lógica que detecta se a dimensão é de **texto** (como vendedor, etapa, etc.) ou **data** e aplique o agrupamento correto.
 
 ### Arquivo a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/components/insights/grid/InsightsGrid.tsx` | Remover conversão de escala - salvar/carregar valores diretamente |
+| `src/hooks/useVisualData.ts` | Criar nova função para calcular conversão por dimensão textual e atualizar a lógica de roteamento |
 
 ## Mudanças Específicas
 
-### 1. Remover Multiplicação ao Carregar
+### 1. Atualizar Roteamento na `fetchDealsData()` (linhas 95-102)
 
 ```typescript
-// ANTES: Converte de 12→48 cols
-x: existingLayout.x * 4,
-y: existingLayout.y * 5,
-
-// DEPOIS: Usa valores diretamente
-x: existingLayout.x,
-y: existingLayout.y,
+if (measure.aggregation === 'conversion_rate') {
+  if (dimension.field === '_total') {
+    return calculateConversionRate(accountId, filters);
+  } else if (dimension.type === 'text') {
+    // NOVO: Agrupar por campo textual (vendedor, etapa, etc.)
+    return calculateConversionRateByTextDimension(accountId, filters, dimension);
+  } else {
+    // Agrupar por período de data
+    return calculateConversionRateByPeriod(accountId, filters, dimension, dateDisplayFormat);
+  }
+}
 ```
 
-### 2. Remover Divisão ao Salvar
+### 2. Criar Nova Função `calculateConversionRateByTextDimension()`
+
+Esta função irá:
+1. Buscar todos os deals no período
+2. Agrupar por campo textual (ex: `responsible_user_id`)
+3. Para cada grupo, calcular: `(deals ganhos / total deals) * 100`
 
 ```typescript
-// ANTES: Converte de 48→12 cols (arredonda e perde precisão)
-x: Math.round(item.x / 4),
-y: Math.round(item.y / 5),
+async function calculateConversionRateByTextDimension(
+  accountId: string,
+  filters: any,
+  dimension: VisualConfig['dimension']
+): Promise<AggregatedDataPoint[]> {
+  // Buscar todos os deals com dados do vendedor
+  let query = supabase
+    .from('deals')
+    .select(`
+      id, status, created_at, won_at,
+      users!deals_responsible_user_id_fkey(name)
+    `)
+    .eq('account_id', accountId);
 
-// DEPOIS: Salva valores diretamente
-x: item.x,
-y: item.y,
-```
+  // Aplicar filtros de data (usando created_at para total)
+  if (filters.startDate) query = query.gte('created_at', filters.startDate);
+  if (filters.endDate) query = query.lte('created_at', filters.endDate);
+  if (filters.userId && filters.userId !== 'all') {
+    query = query.eq('responsible_user_id', filters.userId);
+  }
 
-### 3. Ajustar Layout Padrão para Novos Visuais
+  const { data, error } = await query;
+  if (error) return [];
 
-Os novos visuais já usam a escala granular (48 cols), então apenas precisamos garantir que tenham tamanhos razoáveis com espaçamento:
+  // Agrupar por vendedor
+  const groups = new Map<string, { total: number; won: number }>();
 
-```typescript
-// Default layout para novos visuais
-return {
-  i: visual.id,
-  x: (index % 2) * 26,      // 26 = card de 24 + gap de 2 (~40px)
-  y: Math.floor(index / 2) * 27,  // 27 = card de 25 + gap de 2
-  w: 24,
-  h: 25,
-  minW: 8,
-  minH: 10,
-};
+  for (const deal of data || []) {
+    // Obter nome do vendedor
+    const groupName = deal.users?.name || 'Sem Responsável';
+
+    if (!groups.has(groupName)) {
+      groups.set(groupName, { total: 0, won: 0 });
+    }
+
+    const group = groups.get(groupName)!;
+    group.total++;
+
+    // Verificar se foi ganho no período
+    if (deal.status === 'won' && deal.won_at) {
+      const wonDate = new Date(deal.won_at);
+      const startDate = filters.startDate ? new Date(filters.startDate) : null;
+      const endDate = filters.endDate ? new Date(filters.endDate) : null;
+
+      if ((!startDate || wonDate >= startDate) && (!endDate || wonDate <= endDate)) {
+        group.won++;
+      }
+    }
+  }
+
+  // Calcular taxa por vendedor
+  const result: AggregatedDataPoint[] = [];
+  for (const [name, { total, won }] of groups) {
+    if (name !== 'Sem Responsável') {  // Filtrar deals sem responsável
+      result.push({
+        name,
+        value: total > 0 ? Number(((won / total) * 100).toFixed(1)) : 0,
+        count: total
+      });
+    }
+  }
+
+  // Ordenar por taxa de conversão (maior primeiro)
+  result.sort((a, b) => b.value - a.value);
+
+  return result;
+}
 ```
 
 ## Comportamento Esperado
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                   ANTES (Com Arredondamento)                │
-├─────────────────────────────────────────────────────────────┤
-│  Usuário posiciona: x=25 (com gap de 1 célula)              │
-│  Salva: Math.round(25/4) = 6                                │
-│  Carrega: 6 * 4 = 24  ← GAP PERDIDO!                       │
-│  Resultado: visuais colados                                 │
-└─────────────────────────────────────────────────────────────┘
+| Visual | Antes | Depois |
+|--------|-------|--------|
+| Conversão por Vendedor | Mostra barra única "Jan/26" com taxa global | Mostra barra para cada vendedor com sua taxa individual |
+| Conversão por Etapa | Mostra por mês | Mostra taxa por etapa do funil |
+| Conversão por Mês | Continua funcionando | Sem alterações |
 
-                          ↓
+## Exemplo de Resultado
 
+```
 ┌─────────────────────────────────────────────────────────────┐
-│                   DEPOIS (Sem Conversão)                    │
+│        Conversão por Vendedor (Corrigido)                   │
 ├─────────────────────────────────────────────────────────────┤
-│  Usuário posiciona: x=25                                    │
-│  Salva: x=25                                                │
-│  Carrega: x=25  ← PRESERVADO!                              │
-│  Resultado: espaçamento mantido                             │
+│  Everton Pieri    ████████████████████  15.2%              │
+│  João Silva       ████████████         10.5%              │
+│  Maria Santos     █████████             8.3%              │
+│  Carlos Lima      ██████                5.1%              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Considerações Importantes
+## Suporte a Outras Dimensões Textuais
 
-### Visuais Existentes
+A nova função deve suportar múltiplos campos de dimensão:
 
-Os visuais que já existem no banco estão na escala antiga (12 cols). Para não quebrá-los, podemos detectar se o valor é da escala antiga (valores pequenos como 0-12) e converter apenas esses:
+| Campo | Agrupamento |
+|-------|-------------|
+| `responsible_name` | Por nome do vendedor |
+| `stage_name` | Por etapa do funil |
+| `source` | Por origem do lead |
+| `lost_reason` | Por motivo de perda |
 
-```typescript
-// Detectar se é layout antigo (escala 12 cols) ou novo (escala 48 cols)
-const isOldScale = existingLayout.x <= 12 && existingLayout.w <= 12;
-
-if (isOldScale) {
-  // Converter de escala antiga para nova
-  return {
-    x: existingLayout.x * 4,
-    y: existingLayout.y * 5,
-    w: existingLayout.w * 4,
-    h: existingLayout.h * 5,
-    ...
-  };
-} else {
-  // Usar valores diretamente
-  return {
-    x: existingLayout.x,
-    y: existingLayout.y,
-    w: existingLayout.w,
-    h: existingLayout.h,
-    ...
-  };
-}
-```
-
-## Resumo das Mudanças
-
-| Aspecto | Antes | Depois |
-|---------|-------|--------|
-| **Escala do DB** | 12 cols / 100px rows | 48 cols / 20px rows |
-| **Conversão ao carregar** | `x * 4`, `y * 5` | Direto (ou detecta escala) |
-| **Conversão ao salvar** | `Math.round(x / 4)` | Direto |
-| **Precisão** | Perde espaçamentos | Preserva exatamente |
-
-## Resultado Final
-
-- Espaçamentos entre visuais são **preservados exatamente**
-- Visuais permanecem onde o usuário os posicionou
-- Compatibilidade com layouts antigos via detecção de escala
-
+Isso é feito usando a função `getGroupKey()` existente ou mapeando o campo diretamente para o campo apropriado na query.
