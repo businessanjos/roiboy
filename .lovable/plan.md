@@ -1,174 +1,157 @@
 
-# Plano: Corrigir Funcionalidade de Resposta/Citação no ROY zAPP
+# Plano: Corrigir Agendas de Clientes "Vinculadas"
 
-## Problema Identificado
+## Diagnóstico do Problema
 
-As mensagens enviadas como "resposta" no ROY zAPP não chegam como citação no WhatsApp do destinatário. A mensagem é enviada, mas sem o contexto de qual mensagem está sendo respondida.
+A investigação revelou a **causa raiz**: o componente `ClientAgenda.tsx` permite criar, editar e excluir eventos na seção "Agenda de Entregas", mas esses eventos são **globais** (vinculados a produtos), não específicos do cliente.
 
-## Causa Raiz
+### Dados do Problema
 
-O código atual no `uazapi-manager` usa o campo `replyid` para responder mensagens:
+| Evento | Clientes Afetados |
+|--------|-------------------|
+| Implementação da Clínica Ryka com time | 89 clientes |
+| Onboarding | 89 clientes |
+| ETERNUM♾️CLUB / PRESENCIAL | 89 clientes |
+| Mentoria Individual Com Ever - PRESENCIAL | 89 clientes |
 
-```typescript
-// Código atual (INCORRETO)
-if (quotedMessageId) {
-  messageBody.replyid = quotedMessageId;  // "554388346806:AC8FADB8794A355D0DE4051F47A7DBB0"
-}
+Quando um usuário edita um evento na agenda do "Cliente A", está editando o mesmo registro na tabela `events` que aparece para os outros 88 clientes com o mesmo produto.
+
+### Estrutura Atual
+
+```text
+┌────────────┐      ┌──────────────────┐      ┌──────────┐
+│  clients   │──┐   │  client_products │   ┌──│ products │
+└────────────┘  │   └──────────────────┘   │  └──────────┘
+                │            │              │
+                └────────────┴──────────────┘
+                             │
+                    ┌────────┴────────┐
+                    │  event_products │
+                    └────────┬────────┘
+                             │
+                    ┌────────┴────────┐
+                    │     events      │ ← EVENTO GLOBAL (compartilhado)
+                    └─────────────────┘
 ```
 
-Baseado na documentação do WUZAPI/UAZAPI, o formato correto para responder mensagens é usar `ContextInfo` com `StanzaId` e `Participant`:
+## Solução
 
-```json
-{
-  "Phone": "5491155554444",
-  "Body": "Resposta",
-  "ContextInfo": {
-    "StanzaId": "AC8FADB8794A355D0DE4051F47A7DBB0",
-    "Participant": "5491155553935@s.whatsapp.net"
-  }
-}
-```
+Transformar a seção "Agenda de Entregas" em **somente visualização**. Eventos globais devem ser gerenciados apenas na página `/events`.
 
-## Problemas Específicos
-
-1. **Formato do ID incorreto**: O `external_message_id` é salvo como `phone:msgid` (ex: `554388346806:AC8FADB8794A355D0DE4051F47A7DBB0`), mas a UAZAPI espera apenas o `msgid` puro.
-
-2. **Campo errado**: O código usa `replyid` ao invés de `ContextInfo`.
-
-3. **Falta Participant**: Para respostas funcionarem, é necessário enviar o `Participant` (JID de quem enviou a mensagem original).
-
-## Arquivos a Modificar
+### Arquivos a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `supabase/functions/uazapi-manager/index.ts` | Alterar formato de envio de replies para usar `ContextInfo` |
-| `src/pages/RoyZapp.tsx` | Passar informação do remetente original junto com a citação |
+| `src/components/client/ClientAgenda.tsx` | Remover botões de edição/exclusão/criação de eventos globais |
 
-## Mudanças Detalhadas
+### Mudanças Detalhadas
 
-### 1. RoyZapp.tsx - Adicionar `quoted_participant` ao payload
+#### 1. Remover botão "Novo Evento" (linhas 931-937)
 
-Atualmente o frontend passa:
-- `quoted_message_id`: ID da mensagem
-- `quoted_from_me`: Se a mensagem citada foi enviada por nós
-
-Precisamos adicionar:
-- `quoted_participant`: JID do remetente da mensagem original
-
-O `replyingTo` state já tem a informação se é `is_from_client`, mas precisa do telefone/JID original.
-
-### 2. uazapi-manager/index.ts - Reformatar envio de replies
-
-```typescript
-// ANTES (não funciona como citação)
-if (quotedMessageId) {
-  messageBody.replyid = quotedMessageId;
-}
-
-// DEPOIS (formato correto WUZAPI/UAZAPI)
-if (quotedMessageId) {
-  // Extrair apenas o ID da mensagem (sem prefixo phone:)
-  const pureMessageId = quotedMessageId.includes(':') 
-    ? quotedMessageId.split(':').pop() 
-    : quotedMessageId;
-  
-  // Para chats 1:1, usar o JID do destinatário como participant
-  // Para mensagens inbound citadas (cliente enviou), participant = JID do cliente
-  // Para mensagens outbound citadas (nós enviamos), participant = nosso JID
-  const participantJid = quotedFromMe 
-    ? `${instanceOwner}@s.whatsapp.net`  // Nosso número (owner da instância)
-    : `${cleanPhone}@s.whatsapp.net`;    // Número do cliente
-  
-  messageBody.ContextInfo = {
-    StanzaId: pureMessageId,
-    Participant: participantJid
-  };
-  
-  console.log(`[send_text] Reply with ContextInfo: StanzaId=${pureMessageId}, Participant=${participantJid}`);
-}
+```tsx
+// REMOVER este bloco
+{clientProductIds.length > 0 && (
+  <div className="flex justify-end">
+    <Button size="sm" onClick={() => setDialogOpen(true)}>
+      <Plus className="h-4 w-4 mr-1" />
+      Novo Evento
+    </Button>
+  </div>
+)}
 ```
 
-### 3. Ajuste similar para `send_to_group`
+#### 2. Remover Dialog de criar/editar evento
 
-Para mensagens em grupos, o `Participant` deve ser o JID do remetente original:
+- Remover `eventDialogContent` (linhas 549-698)
+- Remover `deleteDialogContent` (linhas 701-718)
+- Remover todos os states relacionados: `dialogOpen`, `editingItem`, `formData`, `submitting`, etc.
+- Remover funções: `handleCreateEvent`, `handleUpdateEvent`, `handleDeleteEvent`, `openEditDialog`, `resetForm`
 
-```typescript
-if (quotedMessageId) {
-  const pureMessageId = quotedMessageId.includes(':') 
-    ? quotedMessageId.split(':').pop() 
-    : quotedMessageId;
-  
-  // Para grupos, precisamos do JID exato de quem enviou a mensagem original
-  const participantJid = quotedFromMe 
-    ? `${instanceOwner}@s.whatsapp.net`
-    : quotedParticipant || `${groupJid}`;  // Fallback para o grupo se não tiver participant
-  
-  baseBody.ContextInfo = {
-    StanzaId: pureMessageId,
-    Participant: participantJid
-  };
-}
+#### 3. Modificar tabela de eventos - Remover botões de ação (linhas 869-899)
+
+Substituir os botões de Editar/Excluir por apenas o link do evento:
+
+```tsx
+// ANTES
+<TableCell className="text-right">
+  <div className="flex justify-end gap-1">
+    {(event.meeting_url || event.material_url) && (...)}
+    <Button onClick={() => openEditDialog(event)}>
+      <Pencil />
+    </Button>
+    <Button onClick={() => setEventToDelete(event)}>
+      <Trash2 />
+    </Button>
+  </div>
+</TableCell>
+
+// DEPOIS
+<TableCell className="text-right">
+  <div className="flex justify-end gap-1">
+    {(event.meeting_url || event.material_url) && (
+      <Button variant="ghost" size="icon" asChild>
+        <a href={event.meeting_url || event.material_url} target="_blank" rel="noopener noreferrer">
+          <LinkIcon className="h-4 w-4" />
+        </a>
+      </Button>
+    )}
+  </div>
+</TableCell>
 ```
 
-### 4. Mudanças no Frontend
+#### 4. Ajustar cabeçalho da tabela (linha 774)
 
-Modificar `RoyZapp.tsx` para passar o JID/telefone do remetente original:
+Remover a coluna "Ações" quando não houver ações:
 
-```typescript
-// No payload de envio
-if (replyContext?.external_message_id) {
-  payload.quoted_message_id = replyContext.external_message_id;
-  payload.quoted_from_me = !replyContext.is_from_client;
-  // NOVO: Passar o telefone do remetente original para construir o Participant JID
-  payload.quoted_participant = replyContext.is_from_client 
-    ? phone  // Se foi o cliente que enviou, participant é o telefone do cliente
-    : null;  // Se fomos nós, o backend usa o owner da instância
-}
+```tsx
+// ANTES
+<TableHead className="text-right">Ações</TableHead>
+
+// DEPOIS - mostrar apenas se tiver links
+// (ou remover completamente se não houver mais ações)
 ```
 
-## Fluxo de Dados Corrigido
+#### 5. Atualizar texto de "sem eventos" (linhas 1006-1010)
 
-```text
-1. Usuário clica "Responder" em uma mensagem
-   ↓
-2. Frontend captura:
-   - external_message_id: "554388346806:AC8FADB8794A355D0DE4051F47A7DBB0"
-   - is_from_client: true/false
-   - phone do contato atual
-   ↓
-3. Frontend envia para uazapi-manager:
-   - quoted_message_id: "554388346806:AC8FADB8794A355D0DE4051F47A7DBB0"
-   - quoted_from_me: true/false
-   - quoted_participant: "+5511910901007" (se foi mensagem do cliente)
-   ↓
-4. uazapi-manager extrai:
-   - pureMessageId: "AC8FADB8794A355D0DE4051F47A7DBB0" (parte após ":")
-   - participantJid: "5511910901007@s.whatsapp.net"
-   ↓
-5. Envia para UAZAPI:
-   {
-     "number": "5511910901007",
-     "text": "Resposta",
-     "ContextInfo": {
-       "StanzaId": "AC8FADB8794A355D0DE4051F47A7DBB0",
-       "Participant": "5511910901007@s.whatsapp.net"
-     }
-   }
-   ↓
-6. UAZAPI processa e envia para WhatsApp como citação real
+```tsx
+// ANTES
+<p className="text-xs mt-1">Crie eventos usando o botão acima.</p>
+
+// DEPOIS
+<p className="text-xs mt-1">
+  Eventos são criados na <a href="/events" className="text-primary underline">página de Eventos</a>.
+</p>
 ```
 
-## Testes Necessários
+## O Que Permanece Funcionando
 
-Após implementação, testar:
-1. Responder mensagem de cliente (inbound) em chat 1:1
-2. Responder nossa própria mensagem (outbound) em chat 1:1
-3. Responder mensagem em grupo
-4. Verificar se a citação aparece corretamente no WhatsApp do destinatário
-5. Verificar se mensagens recebidas com citação ainda exibem corretamente no ROY zAPP
+| Funcionalidade | Status |
+|----------------|--------|
+| Visualizar eventos do produto | ✅ Mantido |
+| Marcar participação (checkbox) | ✅ Mantido |
+| Convites para Eventos (RSVP) | ✅ Mantido |
+| Feedbacks | ✅ Mantido |
+| Tarefas do Cliente | ✅ Mantido |
 
-## Notas Técnicas
+## Resultado Esperado
 
-- O formato `ContextInfo` com `StanzaId` e `Participant` é o padrão documentado pelo WUZAPI (que é a base do UAZAPI)
-- O campo `Participant` é crucial - sem ele, o WhatsApp não consegue identificar de quem é a mensagem citada
-- O ID puro (sem prefixo phone:) é necessário porque é assim que o WhatsApp identifica mensagens internamente
+1. Usuários **não poderão mais** criar/editar/excluir eventos diretamente da agenda do cliente
+2. Modificações em um cliente **não afetarão** outros clientes
+3. A seção "Agenda de Entregas" mostrará eventos de forma **somente-leitura**
+4. Eventos continuarão sendo gerenciados na página `/events` (onde pertencem)
+5. O checkbox de participação continua funcionando (isso é por cliente, na tabela `client_event_deliveries`)
+
+## Limpeza de Código
+
+O componente ficará significativamente mais limpo, removendo:
+- ~200 linhas de código de formulário/dialog
+- 10+ states não utilizados
+- 5 funções de manipulação
+
+## Notas para o Time de Operações
+
+Após a correção, para criar ou editar eventos que aparecem na agenda dos clientes:
+1. Acessar o menu **Eventos** (`/events`)
+2. Criar/editar o evento desejado
+3. Vincular aos produtos apropriados
+4. O evento aparecerá automaticamente na agenda de todos os clientes com aquele produto
