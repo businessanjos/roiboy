@@ -1,5 +1,6 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import GridLayout from "react-grid-layout";
+import { noCompactor } from "react-grid-layout/core";
 import { InsightsVisual } from "@/hooks/useInsightsDashboards";
 import { ConfigurableVisualCard } from "../visuals/ConfigurableVisualCard";
 import "react-grid-layout/css/styles.css";
@@ -122,7 +123,7 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
         gridConfig={{
           cols: COLS,
           rowHeight: ROW_HEIGHT,
-          margin: MARGIN,
+          margin: [8, 8] as [number, number],
           containerPadding: [0, 0] as [number, number],
         }}
         dragConfig={{
@@ -132,6 +133,7 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
         resizeConfig={{
           enabled: true,
         }}
+        compactor={noCompactor}
       >
         {visuals.map((visual) => (
           <div key={visual.id} className="h-full">
