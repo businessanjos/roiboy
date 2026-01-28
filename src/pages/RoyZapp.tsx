@@ -2829,15 +2829,23 @@ export default function RoyZapp() {
             .update({ status: "triage", agent_id: null, updated_at: new Date().toISOString() })
             .eq("id", closedAssignment.id);
           
-          toast.success("Grupo reaberto na Fila!");
-          setInboxTab("queue");
+          // Fetch and select the reopened assignment so it appears in sidebar
+          const { data: reopenedData } = await supabase
+            .from("zapp_conversation_assignments")
+            .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
+            .eq("id", closedAssignment.id)
+            .maybeSingle();
+          
+          if (reopenedData) setSelectedConversation(reopenedData);
+          
+          toast.success("Grupo reaberto!");
           setNewConversationDialogOpen(false);
           fetchData();
           setCreatingConversation(false);
           return;
         } else {
           // Create new assignment for group
-          await supabase
+          const { data: newAssignment } = await supabase
             .from("zapp_conversation_assignments")
             .insert({
               account_id: currentUser.account_id,
@@ -2845,10 +2853,13 @@ export default function RoyZapp() {
               agent_id: null,
               status: "triage",
               department_id: currentSectorDepartmentId,
-            });
+            })
+            .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
+            .single();
           
-          toast.success("Grupo adicionado à Fila!");
-          setInboxTab("queue");
+          if (newAssignment) setSelectedConversation(newAssignment);
+          
+          toast.success("Grupo adicionado!");
           setNewConversationDialogOpen(false);
           fetchData();
           setCreatingConversation(false);
