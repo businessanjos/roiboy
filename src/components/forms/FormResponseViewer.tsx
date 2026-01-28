@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -74,7 +75,6 @@ interface FormResponseViewerProps {
   formFields: string[];
   formTitle: string;
   onSaveToClient: (responseId: string, clientId: string) => Promise<void>;
-  clients?: Array<{ id: string; full_name: string; phone_e164: string }>;
 }
 
 export function FormResponseViewer({
@@ -83,8 +83,8 @@ export function FormResponseViewer({
   formFields,
   formTitle,
   onSaveToClient,
-  clients = [],
 }: FormResponseViewerProps) {
+  const { currentUser } = useCurrentUser();
   const [searchTerm, setSearchTerm] = useState("");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
   const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
@@ -93,6 +93,67 @@ export function FormResponseViewer({
   const [selectedResponse, setSelectedResponse] = useState<FormResponse | null>(null);
   const [savingToClient, setSavingToClient] = useState(false);
   const [linkingClientId, setLinkingClientId] = useState<string>("");
+  
+  // Client search states
+  const [clientSearchTerm, setClientSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; full_name: string; phone_e164: string; avatar_url?: string }>>([]);
+  const [searchingClients, setSearchingClients] = useState(false);
+
+  // Search clients server-side with flexible matching
+  const searchClients = async (term: string) => {
+    if (!term || term.length < 2 || !currentUser?.account_id) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setSearchingClients(true);
+    try {
+      // Normalize term: remove accents for flexible matching
+      const normalizedTerm = term.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const terms = normalizedTerm.trim().split(/\s+/).filter(t => t.length > 0);
+      
+      let query = supabase
+        .from("clients")
+        .select("id, full_name, phone_e164, avatar_url")
+        .eq("account_id", currentUser.account_id)
+        .order("full_name")
+        .limit(20);
+      
+      // Flexible search: each term should appear in name or phone
+      if (terms.length === 1) {
+        query = query.or(`full_name.ilike.%${terms[0]}%,phone_e164.ilike.%${terms[0]}%`);
+      } else {
+        // For multiple terms, use OR for each term in full_name
+        const conditions = terms.map(t => `full_name.ilike.%${t}%`);
+        query = query.or(conditions.join(','));
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      
+      setSearchResults(data || []);
+    } catch (error) {
+      console.error("Error searching clients:", error);
+      setSearchResults([]);
+    } finally {
+      setSearchingClients(false);
+    }
+  };
+
+  // Debounce client search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchClients(clientSearchTerm);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [clientSearchTerm, currentUser?.account_id]);
+
+  // Reset client search when response changes
+  useEffect(() => {
+    setClientSearchTerm("");
+    setSearchResults([]);
+    setLinkingClientId("");
+  }, [selectedResponse?.id]);
 
   // Get ordered fields data
   const orderedFields = useMemo(() => {
@@ -595,27 +656,87 @@ export function FormResponseViewer({
                         Ver perfil do cliente
                       </Link>
                     ) : (
-                      <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
-                        <Select value={linkingClientId} onValueChange={setLinkingClientId}>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Selecionar cliente para vincular..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {clients.map((client) => (
-                              <SelectItem key={client.id} value={client.id}>
-                                {client.full_name} ({client.phone_e164})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          size="sm"
-                          onClick={handleSaveToClient}
-                          disabled={!linkingClientId || savingToClient}
-                        >
-                          {savingToClient && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                          Vincular
-                        </Button>
+                      <div className="space-y-2 p-3 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Buscar cliente por nome ou telefone..."
+                              value={clientSearchTerm}
+                              onChange={(e) => setClientSearchTerm(e.target.value)}
+                              className="pl-9"
+                            />
+                          </div>
+                          {linkingClientId && (
+                            <Button
+                              size="sm"
+                              onClick={handleSaveToClient}
+                              disabled={savingToClient}
+                            >
+                              {savingToClient && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                              Vincular
+                            </Button>
+                          )}
+                        </div>
+                        
+                        {/* Search results list */}
+                        {clientSearchTerm.length >= 2 && (
+                          <div className="max-h-40 overflow-y-auto border rounded-md bg-background">
+                            {searchingClients ? (
+                              <div className="flex items-center justify-center py-4">
+                                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                              </div>
+                            ) : searchResults.length === 0 ? (
+                              <div className="p-3 text-center text-sm text-muted-foreground">
+                                Nenhum cliente encontrado
+                              </div>
+                            ) : (
+                              searchResults.map((client) => (
+                                <button
+                                  key={client.id}
+                                  onClick={() => {
+                                    setLinkingClientId(client.id);
+                                    setClientSearchTerm(client.full_name);
+                                    setSearchResults([]);
+                                  }}
+                                  className={cn(
+                                    "w-full flex items-center gap-3 p-2 hover:bg-muted text-left transition-colors",
+                                    linkingClientId === client.id && "bg-muted"
+                                  )}
+                                >
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage src={client.avatar_url || undefined} />
+                                    <AvatarFallback className="text-xs">
+                                      {client.full_name.slice(0, 2).toUpperCase()}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium truncate">{client.full_name}</p>
+                                    <p className="text-xs text-muted-foreground truncate">{client.phone_e164}</p>
+                                  </div>
+                                  {linkingClientId === client.id && (
+                                    <Check className="h-4 w-4 text-primary shrink-0" />
+                                  )}
+                                </button>
+                              ))
+                            )}
+                          </div>
+                        )}
+                        
+                        {/* Hint when not typed yet */}
+                        {clientSearchTerm.length < 2 && !linkingClientId && (
+                          <p className="text-xs text-muted-foreground text-center py-2">
+                            Digite ao menos 2 caracteres para buscar
+                          </p>
+                        )}
+                        
+                        {/* Selected client feedback */}
+                        {linkingClientId && clientSearchTerm.length < 2 && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Check className="h-4 w-4 text-primary" />
+                            Cliente selecionado. Clique em "Vincular" para confirmar.
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

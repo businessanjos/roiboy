@@ -639,7 +639,7 @@ export default function Forms() {
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [responses, setResponses] = useState<any[]>([]);
   const [loadingResponses, setLoadingResponses] = useState(false);
-  const [allClients, setAllClients] = useState<Array<{ id: string; full_name: string; phone_e164: string }>>([]);
+  
 
   // Form state
   const [formTitle, setFormTitle] = useState("");
@@ -691,22 +691,8 @@ export default function Forms() {
     if (currentUser?.account_id) {
       fetchForms();
       fetchCustomFields();
-      fetchClients();
     }
   }, [currentUser?.account_id]);
-
-  const fetchClients = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("clients")
-        .select("id, full_name, phone_e164")
-        .order("full_name");
-      if (error) throw error;
-      setAllClients(data || []);
-    } catch (error) {
-      console.error("Error fetching clients:", error);
-    }
-  };
 
   const fetchForms = async () => {
     try {
@@ -1968,7 +1954,7 @@ export default function Forms() {
                   formFields={selectedForm?.fields || []}
                   formTitle={selectedForm?.title || "Formulário"}
                   onSaveToClient={saveResponsesToClient}
-                  clients={allClients}
+                  
                 />
               )}
             </TabsContent>
