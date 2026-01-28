@@ -1,101 +1,195 @@
 
-# Plano: Corrigir Exibição Completa da Timeline de Clientes
+# Plano: Notificações Push do Sistema para ROY zAPP
 
-## Problema Identificado
-
-A timeline de clientes está limitando artificialmente os dados exibidos através de múltiplos limites nas queries do `ClientDetail.tsx`:
-
-### Limites Atuais
-| Query | Limite Atual | Dados Existentes |
-|-------|--------------|------------------|
-| `client_followups` (notas/anexos) | `.limit(30)` | Até 20 por cliente |
-| `message_events` | `.limit(20)` | Até 20.635 por cliente |
-| `risk_events` | `.limit(20)` | 160 total |
-| `life_events` | `.limit(20)` | - |
-| `form_responses` | `.limit(20)` | - |
-| `event_participants` | `.limit(20)` | - |
-| `client_subscriptions` | `.limit(20)` | - |
-| **Corte Final** | `slice(0, 50)` | **Este é o maior problema** |
-
-### Por que Parece "Só 7 dias"
-Clientes ativos recebem muitas mensagens diariamente. Com o limite de 50 itens totais na timeline e mensagens dominando a lista, as notas e anexos mais antigos são empurrados para fora do corte.
+## Objetivo
+Implementar notificações nativas do sistema operacional (Web Notifications API) para que alertas sonoros e visuais apareçam mesmo quando:
+- O navegador está minimizado
+- O usuário está em outra aba
+- A janela do ROY zAPP não está em foco
 
 ---
 
-## Solução Proposta
+## Funcionalidade Atual vs. Proposta
 
-### Fase 1: Remover Limites Desnecessários (Correção Imediata)
+| Cenário | Atual | Após Implementação |
+|---------|-------|-------------------|
+| Aba do ROY zAPP ativa | ✅ Toast + Som | ✅ Toast + Som |
+| Aba do ROY zAPP em background | ❌ Nada visível | ✅ **Push nativo + Som** |
+| Navegador minimizado | ❌ Nada | ✅ **Push nativo + Som** |
+| Outro programa em foco | ❌ Nada | ✅ **Push nativo** |
 
-**Arquivo:** `src/pages/ClientDetail.tsx`
+---
 
-1. **Remover limite de `client_followups`** (linha 849):
-   - De: `.limit(30)`
-   - Para: Sem limite (são poucos registros por cliente - máximo ~20)
+## Arquivos a Modificar
 
-2. **Aumentar limite de `message_events`** (linha 770):
-   - De: `.limit(20)`
-   - Para: `.limit(100)` ou remover (para conversas completas)
+### 1. `src/hooks/useZappNotifications.tsx`
 
-3. **Aumentar limite de outros eventos** (linhas 815, 880, 906, 933, 955):
-   - De: `.limit(20)`
-   - Para: `.limit(100)`
+**Adicionar:**
+- Função `showSystemNotification()` usando a Web Notifications API
+- Estado `notificationPermission` para rastrear permissão
+- Função `requestNotificationPermission()` para solicitar permissão
+- Lógica para detectar se a aba está ativa (`document.hidden`)
+- Mostrar push nativo quando a aba não está em foco
 
-4. **Aumentar ou remover corte final** (linha 974):
-   - De: `timelineItems.slice(0, 50)`
-   - Para: `timelineItems.slice(0, 200)` ou remover completamente
+**Comportamento:**
+```
+Se aba ativa:
+  → Toast customizado + Som
+Se aba em background ou navegador minimizado:
+  → Notificação push do sistema + Som
+```
 
-### Fase 2: FinancialNotes (Verificação)
+### 2. `src/pages/RoyZapp.tsx`
 
-**Arquivo:** `src/components/client/FinancialNotes.tsx`
+**Adicionar:**
+- Botão/indicador de permissão de notificações no painel de configurações
+- Chamada para solicitar permissão quando necessário
 
-A query atual (linha 66-75) já não tem limite, então está correta:
+### 3. `src/components/royzapp/ZappSettingsPanel.tsx`
+
+**Adicionar:**
+- Toggle ou botão para ativar notificações push do sistema
+- Indicador de status da permissão (concedida/negada/não solicitada)
+
+---
+
+## Detalhes Técnicos
+
+### Fluxo de Notificação Melhorado
+
+```text
+[Nova mensagem INBOUND]
+       ↓
+[useZappNotifications.notifyNewMessage()]
+       ↓
+   ┌───────────────────────────────────┐
+   │ Verificações:                     │
+   │ • É a conversa selecionada? Skip  │
+   │ • Rate limit (2s)? Skip           │
+   └───────────────────────────────────┘
+       ↓
+   ┌───────────────────────────────────┐
+   │ document.hidden?                  │
+   │ (aba não está em foco)            │
+   └───────────────────────────────────┘
+       ↓                    ↓
+      SIM                  NÃO
+       ↓                    ↓
+[Push Sistema]      [Toast in-app]
+       ↓                    ↓
+   [Tocar Som]         [Tocar Som]
+```
+
+### Código da Notificação Push
+
 ```typescript
-.eq("client_id", clientId)
-.in("type", ["financial_note", "image", "file"])
-.is("parent_id", null)
-.order("created_at", { ascending: false });
-// Sem .limit() - OK!
+const showSystemNotification = (title: string, body: string, data: any) => {
+  if (!("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+  
+  const notification = new Notification(title, {
+    body,
+    icon: "/favicon.ico",
+    badge: "/favicon.ico",
+    tag: `zapp-${data.conversationId}`, // Agrupa notificações do mesmo chat
+    requireInteraction: false, // Fecha automaticamente
+  });
+  
+  notification.onclick = () => {
+    window.focus();
+    onViewChat(data.conversationId);
+    notification.close();
+  };
+  
+  // Auto-close após 5 segundos
+  setTimeout(() => notification.close(), 5000);
+};
+```
+
+### Detecção de Visibilidade da Aba
+
+```typescript
+const isTabVisible = () => {
+  return !document.hidden;
+};
+
+// No notifyNewMessage:
+if (isTabVisible()) {
+  // Mostrar toast customizado (comportamento atual)
+  toast.custom(...);
+} else {
+  // Mostrar notificação push do sistema
+  showSystemNotification(
+    `Nova mensagem${isQueue ? " (Fila)" : ""}`,
+    `${contactName}: "${messagePreview}"`,
+    { conversationId }
+  );
+}
+```
+
+### Solicitação de Permissão
+
+```typescript
+const requestNotificationPermission = async () => {
+  if (!("Notification" in window)) {
+    return "unsupported";
+  }
+  
+  const permission = await Notification.requestPermission();
+  return permission;
+};
 ```
 
 ---
 
-## Modificações Detalhadas
+## Interface do Usuário
 
-### `src/pages/ClientDetail.tsx`
+### No Painel de Configurações (ZappSettingsPanel)
 
-| Linha | Atual | Novo |
-|-------|-------|------|
-| 770 | `.limit(20)` | `.limit(200)` |
-| 815 | `.limit(20)` | `.limit(100)` |
-| 849 | `.limit(30)` | **Remover** |
-| 880 | `.limit(20)` | `.limit(100)` |
-| 906 | `.limit(20)` | `.limit(100)` |
-| 933 | `.limit(20)` | `.limit(100)` |
-| 955 | `.limit(20)` | `.limit(100)` |
-| 974 | `slice(0, 50)` | `slice(0, 300)` |
+```text
+┌─────────────────────────────────────────────────┐
+│ 🔔 Notificações                                 │
+├─────────────────────────────────────────────────┤
+│ ○ Som de notificação              [Toggle ON]  │
+│ ○ Notificações do sistema         [Ativar]     │
+│   └─ Receba alertas mesmo com o navegador      │
+│      minimizado ou em outra aba                │
+│                                                 │
+│   Status: ✅ Ativadas / ❌ Bloqueadas / ⚠️ Pendente │
+└─────────────────────────────────────────────────┘
+```
 
 ---
 
-## Considerações de Performance
+## Considerações
 
-### Por que esses aumentos são seguros:
+### Limitações do Navegador
+- O usuário precisa conceder permissão explícita
+- Alguns navegadores móveis têm restrições adicionais
+- Modo anônimo pode bloquear notificações
 
-1. **`client_followups`**: Máximo de 20 registros por cliente atualmente - remover limite não afeta performance
+### Comportamento por Status de Permissão
 
-2. **`message_events`**: Cliente mais ativo tem ~20.000 mensagens, mas a timeline é ordenada por data e só precisa mostrar os mais recentes. Limite de 200 é suficiente para contexto histórico
+| Status | Comportamento |
+|--------|---------------|
+| `granted` | Push nativo funciona |
+| `denied` | Apenas toast in-app (já implementado) |
+| `default` | Mostra botão para solicitar permissão |
 
-3. **Corte final de 300**: Ainda mantém um limite razoável para renderização, mas permite visualizar dados de ~30 dias ou mais
-
-4. **Paginação futura**: Se necessário, podemos implementar "Carregar mais" posteriormente, mas para a maioria dos casos 300 itens é suficiente
+### Som em Background
+- Navegadores modernos permitem reprodução de áudio em background
+- O áudio será tocado mesmo com a aba inativa
+- Apenas pode ser bloqueado se o usuário nunca interagiu com a página
 
 ---
 
 ## Resultado Esperado
 
-1. **Todas as notas e anexos** do cliente aparecerão na timeline (sem limite de 7 dias)
-2. **Histórico mais completo** de mensagens, eventos e interações
-3. **Performance mantida** com limites razoáveis aumentados
-4. **FinancialNotes** continuará funcionando corretamente (já não tem limite)
+1. **Aba ativa**: Toast customizado verde/âmbar + som (comportamento atual)
+2. **Aba em background**: Push nativo do sistema + som
+3. **Navegador minimizado**: Push nativo aparece no canto da tela + som
+4. **Permissão negada**: Fallback para comportamento atual (toast quando voltar à aba)
+5. **Clicar na notificação**: Abre/foca a aba e seleciona a conversa
 
 ---
 
@@ -103,4 +197,6 @@ A query atual (linha 66-75) já não tem limite, então está correta:
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/ClientDetail.tsx` | Remover/aumentar limites nas queries e no slice final |
+| `src/hooks/useZappNotifications.tsx` | Adicionar Web Notifications API e detecção de visibilidade |
+| `src/pages/RoyZapp.tsx` | Integrar permissão de notificações |
+| `src/components/royzapp/ZappSettingsPanel.tsx` | Adicionar toggle/botão de permissão |
