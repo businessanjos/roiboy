@@ -2823,10 +2823,15 @@ export default function RoyZapp() {
           setCreatingConversation(false);
           return;
         } else if (closedAssignment) {
-          // Reopen closed group
+          // Reopen closed group - GROUPS ARE AUTO-ASSIGNED TO CURRENT AGENT
           await supabase
             .from("zapp_conversation_assignments")
-            .update({ status: "triage", agent_id: null, updated_at: new Date().toISOString() })
+            .update({ 
+              status: "active",  // Groups go directly to active, not triage
+              agent_id: currentAgent?.id || null,  // Assign to current agent
+              assigned_at: new Date().toISOString(),
+              updated_at: new Date().toISOString() 
+            })
             .eq("id", closedAssignment.id);
           
           // Fetch and select the reopened assignment so it appears in sidebar
@@ -2837,19 +2842,25 @@ export default function RoyZapp() {
             .maybeSingle();
           
           if (reopenedData) {
-            setSelectedConversation(reopenedData);
+            // Enrich with current agent data for immediate display in "Minhas" tab
+            const enrichedReopened = {
+              ...reopenedData,
+              agent: currentAgent ? { ...currentAgent } : null
+            };
+            setSelectedConversation(enrichedReopened);
             // CRITICAL: Add immediately to local list so it appears in sidebar
             setAssignments(prev => {
-              const exists = prev.some(a => a.id === reopenedData.id);
+              const exists = prev.some(a => a.id === enrichedReopened.id);
               if (exists) {
-                return prev.map(a => a.id === reopenedData.id ? reopenedData : a);
+                return prev.map(a => a.id === enrichedReopened.id ? enrichedReopened : a);
               }
-              return [reopenedData, ...prev];
+              return [enrichedReopened, ...prev];
             });
           }
           
           toast.success("Grupo reaberto!");
           setNewConversationDialogOpen(false);
+          setInboxTab("mine"); // Go to "Minhas" tab since group is auto-assigned
           setFilterConversationType("group"); // Switch to groups tab
           
           // CRITICAL FIX: Delay fetchData to prevent overwriting local state
@@ -2858,27 +2869,34 @@ export default function RoyZapp() {
           setCreatingConversation(false);
           return;
         } else {
-          // Create new assignment for group
+          // Create new assignment for group - GROUPS ARE AUTO-ASSIGNED TO CURRENT AGENT
           const { data: newAssignment } = await supabase
             .from("zapp_conversation_assignments")
             .insert({
               account_id: currentUser.account_id,
               zapp_conversation_id: zappConvId,
-              agent_id: null,
-              status: "triage",
+              agent_id: currentAgent?.id || null,  // Assign to current agent immediately
+              status: "active",  // Groups go directly to active, not triage
               department_id: currentSectorDepartmentId,
+              assigned_at: new Date().toISOString(),  // Set assignment time
             })
             .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
             .single();
           
           if (newAssignment) {
-            setSelectedConversation(newAssignment);
+            // Enrich with current agent data for immediate display in "Minhas" tab
+            const enrichedAssignment = {
+              ...newAssignment,
+              agent: currentAgent ? { ...currentAgent } : null
+            };
+            setSelectedConversation(enrichedAssignment);
             // CRITICAL: Add immediately to local list so it appears in sidebar
-            setAssignments(prev => [newAssignment, ...prev]);
+            setAssignments(prev => [enrichedAssignment, ...prev]);
           }
           
           toast.success("Grupo adicionado!");
           setNewConversationDialogOpen(false);
+          setInboxTab("mine"); // Go to "Minhas" tab since group is auto-assigned
           setFilterConversationType("group"); // Switch to groups tab
           
           // CRITICAL FIX: Delay fetchData to prevent overwriting local state
