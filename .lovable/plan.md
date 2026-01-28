@@ -1,88 +1,149 @@
 
-# Plano: Isolar Campos por Setor e Restaurar Dados
+# Plano: Notificações Sonoras e Visuais no ROY zAPP
 
-## Problema Identificado
+## Resumo
+Implementar sistema de notificações para novas mensagens recebidas no ROY zAPP com:
+- **Som "pop"** para mensagens em "Minhas" (conversas atribuídas ao agente)
+- **Som "ding"** para mensagens na "Fila" (conversas sem agente)
+- **Toast visual** com avatar, nome do contato, preview da mensagem, origem e botão "Ver chat"
 
-### 1. Bug no Diálogo de Configuração de Campos do Pipeline
-O `DealFieldsConfigDialog` busca **TODOS os campos ativos** da conta, sem filtrar por setor:
+---
 
-```typescript
-// ATUAL (bugado) - linha 92-97
-supabase
-  .from("custom_fields")
-  .eq("account_id", accountId)
-  .eq("is_active", true)  // ← Busca TUDO!
-```
+## Arquivos a Criar
 
-Isso faz campos de Operações (como "Você utiliza estratégias de vendas estruturadas?") aparecerem na lista de configuração do Pipeline.
+### 1. `src/hooks/useZappNotifications.tsx`
+Hook centralizado para gerenciar notificações do Zapp:
+- Controle de reprodução de áudio (pop vs ding)
+- Lógica para determinar origem (Minhas/Fila)
+- Validação: não notificar conversa atualmente selecionada
+- Respeitar configuração de som habilitado
 
-### 2. Dados Corrompidos
-O update anterior alterou incorretamente "Ganhou Bônus?" removendo-o de Vendas:
-- **Atual**: `show_in_deals: false` 
-- **Correto**: `show_in_deals: true`
+### 2. `src/components/royzapp/ZappNotificationToast.tsx`
+Componente de toast customizado:
+- Avatar do contato (iniciais como fallback)
+- Nome do contato
+- Preview da mensagem (truncado em ~50 caracteres)
+- Badge colorido indicando origem: "Minhas" (verde) ou "Fila" (âmbar)
+- Botão "Ver chat" que navega para a conversa
+- Auto-dismiss após 5 segundos
 
-## Solução
+### 3. `public/sounds/notification-pop.mp3`
+Som curto (~0.3s) tipo "pop" suave para conversas em "Minhas"
 
-### Parte 1: Corrigir DealFieldsConfigDialog
+### 4. `public/sounds/notification-ding.mp3`
+Som curto (~0.5s) tipo "ding" mais perceptível para conversas na "Fila"
 
-Arquivo: `src/components/sales/DealFieldsConfigDialog/index.tsx`
-
-Modificar a query para buscar **APENAS campos que já estão marcados para Deals** OU campos que podem ser adicionados ao Deals (que ainda não pertencem exclusivamente a outro setor):
-
-```typescript
-// CORRIGIDO - Mostrar apenas campos que:
-// 1. Já estão em Deals (show_in_deals = true), OU
-// 2. Não pertencem exclusivamente a outro setor
-supabase
-  .from("custom_fields")
-  .select("id, name, field_type, show_in_deals, show_in_clients, show_in_leads, display_order, folder_id")
-  .eq("account_id", accountId)
-  .eq("is_active", true)
-  .or("show_in_deals.eq.true,and(show_in_clients.eq.false,show_in_leads.eq.false)")
-  .order("display_order"),
-```
-
-**Alternativa mais simples** (recomendada): Mostrar apenas campos que já pertencem a Deals:
-
-```typescript
-supabase
-  .from("custom_fields")
-  .select("id, name, field_type, show_in_deals, display_order, folder_id")
-  .eq("account_id", accountId)
-  .eq("is_active", true)
-  .eq("show_in_deals", true)  // ← ADICIONAR este filtro
-  .order("display_order"),
-```
-
-### Parte 2: Restaurar "Ganhou Bônus?" para Vendas
-
-```sql
-UPDATE custom_fields 
-SET show_in_deals = true 
-WHERE id = '82f58c54-d7e3-4d33-b73a-e214e1205b22';
-```
+---
 
 ## Arquivos a Modificar
 
-| Arquivo | Modificação |
-|---------|-------------|
-| `src/components/sales/DealFieldsConfigDialog/index.tsx` | Adicionar filtro `show_in_deals = true` na query (linha 92-97) |
-| Banco de dados | Restaurar "Ganhou Bônus?" com `show_in_deals = true` |
+### 1. `src/hooks/useZappData.tsx`
+Adicionar callback `onNewInboundMessage` que é chamado quando uma mensagem INBOUND chega:
+- Extrair dados necessários: conversationId, contactName, messagePreview, agentId
+- Passar para o hook de notificações
+
+### 2. `src/pages/RoyZapp.tsx`
+Integrar o hook `useZappNotifications`:
+- Passar referência da conversa selecionada (para não notificar)
+- Passar currentAgent.id (para determinar se é "Minhas" ou "Fila")
+- Passar configuração soundEnabled
+- Callback para selecionar conversa ao clicar no toast
+
+### 3. `src/components/royzapp/index.ts`
+Exportar o novo componente `ZappNotificationToast`
+
+---
+
+## Fluxo Técnico
+
+```text
+[Webhook] Mensagem INBOUND
+     ↓
+[Realtime] INSERT em zapp_messages
+     ↓
+[useZappData] Detecta nova mensagem
+     ↓
+[useZappNotifications] Verifica:
+  ├─ Conversa selecionada? → Não notificar
+  ├─ Som habilitado? → Tocar áudio
+  └─ Determina origem (agent_id == null → Fila)
+     ↓
+[ZappNotificationToast] Exibe toast com:
+  • Avatar + Nome
+  • Preview da mensagem
+  • Badge "Minhas" ou "Fila"
+  • Botão "Ver chat"
+```
+
+---
+
+## Layout do Toast
+
+```text
+┌────────────────────────────────────────────────┐
+│  🔔 Nova mensagem                          ✕   │
+│                                                │
+│  [Avatar]  João Silva                          │
+│            "Olá, preciso de ajuda com..."      │
+│                                                │
+│  🟢 Minhas                         [Ver chat]  │
+└────────────────────────────────────────────────┘
+```
+
+Ou para Fila:
+```text
+│  🟡 Fila                           [Ver chat]  │
+```
+
+---
+
+## Detalhes Técnicos
+
+### Sons
+Serão criados dois arquivos de áudio sintéticos leves (~5KB cada):
+- **Pop**: Tom mais suave, frequência média (~440Hz), decay rápido
+- **Ding**: Tom mais agudo (~880Hz), decay um pouco mais longo
+
+### Reprodução de Áudio
+```typescript
+const playNotificationSound = (isQueue: boolean) => {
+  if (!soundEnabled) return;
+  const audio = new Audio(
+    isQueue ? '/sounds/notification-ding.mp3' : '/sounds/notification-pop.mp3'
+  );
+  audio.volume = 0.5;
+  audio.play().catch(() => {}); // Ignorar erros de autoplay
+};
+```
+
+### Determinação da Origem
+```typescript
+const getMessageOrigin = (assignment: ConversationAssignment) => {
+  // Se não tem agent_id ou agent_id diferente do atual → Fila
+  if (!assignment.agent_id || assignment.agent_id !== currentAgentId) {
+    return 'queue';
+  }
+  return 'mine';
+};
+```
+
+### Validação (Não Notificar)
+```typescript
+const shouldNotify = (conversationId: string) => {
+  // Não notificar se é a conversa atualmente selecionada
+  if (selectedConversationId === conversationId) return false;
+  // Não notificar se som está desabilitado (para áudio)
+  return true;
+};
+```
+
+---
 
 ## Resultado Esperado
 
-1. O diálogo "Personalizar Campos do Negócio" mostrará **apenas** campos que pertencem ao setor de Vendas
-2. Campos de Operações como "Você utiliza estratégias..." **não** aparecerão no Pipeline
-3. "Ganhou Bônus?" voltará a aparecer no Pipeline
-4. "Cidade" continuará aparecendo em ambos os setores (comportamento atual correto)
+1. Ao receber mensagem em conversa atribuída ao agente → Som "pop" + Toast com badge verde "Minhas"
+2. Ao receber mensagem em conversa na fila → Som "ding" + Toast com badge âmbar "Fila"
+3. Conversa selecionada → Sem notificação (usuário já está vendo)
+4. Som desabilitado nas configurações → Apenas toast visual
+5. Clicar em "Ver chat" → Navega para a conversa e seleciona ela
 
-## Nota sobre a Imagem
-
-Os campos que aparecem na imagem que você enviou e que **não deveriam estar lá**:
-- "Você utiliza estratégias de vendas estruturadas?" → Campo de Operações
-- "Você possui um público-alvo claramente definido?" → Campo de Operações  
-- "Você utiliza alguma ferramenta de CRM ou gestão de leads?" → Campo de Operações
-
-Estes campos estão com `show_in_clients: true` e `show_in_deals: false`, então **teoricamente não deveriam aparecer no Pipeline**. Vou verificar se há outro local que está buscando esses campos incorretamente, pois o `DealDetailSheet` já filtra corretamente por `show_in_deals = true`.
-
-Após a correção, esses campos de Operações deixarão de aparecer no diálogo de configuração do Pipeline e, consequentemente, não poderão ser ativados acidentalmente.
