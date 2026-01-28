@@ -2836,11 +2836,22 @@ export default function RoyZapp() {
             .eq("id", closedAssignment.id)
             .maybeSingle();
           
-          if (reopenedData) setSelectedConversation(reopenedData);
+          if (reopenedData) {
+            setSelectedConversation(reopenedData);
+            // CRITICAL: Add immediately to local list so it appears in sidebar
+            setAssignments(prev => {
+              const exists = prev.some(a => a.id === reopenedData.id);
+              if (exists) {
+                return prev.map(a => a.id === reopenedData.id ? reopenedData : a);
+              }
+              return [reopenedData, ...prev];
+            });
+          }
           
           toast.success("Grupo reaberto!");
           setNewConversationDialogOpen(false);
-          fetchData();
+          setFilterConversationType("group"); // Switch to groups tab
+          fetchData(); // Background refresh
           setCreatingConversation(false);
           return;
         } else {
@@ -2857,11 +2868,16 @@ export default function RoyZapp() {
             .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
             .single();
           
-          if (newAssignment) setSelectedConversation(newAssignment);
+          if (newAssignment) {
+            setSelectedConversation(newAssignment);
+            // CRITICAL: Add immediately to local list so it appears in sidebar
+            setAssignments(prev => [newAssignment, ...prev]);
+          }
           
           toast.success("Grupo adicionado!");
           setNewConversationDialogOpen(false);
-          fetchData();
+          setFilterConversationType("group"); // Switch to groups tab
+          fetchData(); // Background refresh
           setCreatingConversation(false);
           return;
         }
