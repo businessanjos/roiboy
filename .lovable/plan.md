@@ -1,157 +1,141 @@
 
-# Plano: Corrigir Agendas de Clientes "Vinculadas"
+# Plano: Corrigir Criação de Campos Personalizados em Formulários
 
-## Diagnóstico do Problema
+## Problema Identificado
 
-A investigação revelou a **causa raiz**: o componente `ClientAgenda.tsx` permite criar, editar e excluir eventos na seção "Agenda de Entregas", mas esses eventos são **globais** (vinculados a produtos), não específicos do cliente.
+Ao criar um novo campo personalizado no "Configurar Campos de Clientes", o toast "Campo criado!" aparece, indicando sucesso, mas o campo não é exibido na lista imediatamente.
 
-### Dados do Problema
+## Análise da Causa Raiz
 
-| Evento | Clientes Afetados |
-|--------|-------------------|
-| Implementação da Clínica Ryka com time | 89 clientes |
-| Onboarding | 89 clientes |
-| ETERNUM♾️CLUB / PRESENCIAL | 89 clientes |
-| Mentoria Individual Com Ever - PRESENCIAL | 89 clientes |
+A investigação revelou **dois problemas** no componente `CustomFieldsManager.tsx`:
 
-Quando um usuário edita um evento na agenda do "Cliente A", está editando o mesmo registro na tabela `events` que aparece para os outros 88 clientes com o mesmo produto.
+### Problema 1: `fetchFields()` sem await (Crítico)
 
-### Estrutura Atual
+Na função `handleSave` (linha 573), a chamada `fetchFields()` é feita **sem await**:
 
-```text
-┌────────────┐      ┌──────────────────┐      ┌──────────┐
-│  clients   │──┐   │  client_products │   ┌──│ products │
-└────────────┘  │   └──────────────────┘   │  └──────────┘
-                │            │              │
-                └────────────┴──────────────┘
-                             │
-                    ┌────────┴────────┐
-                    │  event_products │
-                    └────────┬────────┘
-                             │
-                    ┌────────┴────────┐
-                    │     events      │ ← EVENTO GLOBAL (compartilhado)
-                    └─────────────────┘
+```typescript
+toast.success("Campo criado!");
+setDialogOpen(false);
+resetForm();
+fetchFields();        // SEM await - não espera a busca completar
+onFieldsChange?.();
 ```
+
+Isso causa uma race condition onde:
+1. O campo é inserido no banco com sucesso
+2. O toast aparece
+3. O dialog fecha e o estado é resetado
+4. `fetchFields()` é disparado, mas como não aguardamos, a execução continua
+5. O componente pode re-renderizar antes de `fetchFields()` completar
+
+### Problema 2: Formulário não é resetado ao ABRIR o dialog
+
+O `resetForm()` só é chamado quando o dialog **fecha**, não quando **abre**:
+
+```typescript
+<Dialog open={dialogOpen} onOpenChange={(open) => {
+  setDialogOpen(open);
+  if (!open) resetForm();  // Só reseta quando fecha
+}}>
+```
+
+Isso pode causar estados "sujos" de operações anteriores persistirem quando o usuário abre o dialog para criar um novo campo.
 
 ## Solução
 
-Transformar a seção "Agenda de Entregas" em **somente visualização**. Eventos globais devem ser gerenciados apenas na página `/events`.
-
-### Arquivos a Modificar
+### Arquivo a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/components/client/ClientAgenda.tsx` | Remover botões de edição/exclusão/criação de eventos globais |
+| `src/components/custom-fields/CustomFieldsManager.tsx` | Adicionar await e resetar ao abrir |
 
 ### Mudanças Detalhadas
 
-#### 1. Remover botão "Novo Evento" (linhas 931-937)
+#### 1. Adicionar await ao fetchFields no handleSave (linhas 570-574)
 
-```tsx
-// REMOVER este bloco
-{clientProductIds.length > 0 && (
-  <div className="flex justify-end">
-    <Button size="sm" onClick={() => setDialogOpen(true)}>
-      <Plus className="h-4 w-4 mr-1" />
-      Novo Evento
-    </Button>
-  </div>
-)}
-```
-
-#### 2. Remover Dialog de criar/editar evento
-
-- Remover `eventDialogContent` (linhas 549-698)
-- Remover `deleteDialogContent` (linhas 701-718)
-- Remover todos os states relacionados: `dialogOpen`, `editingItem`, `formData`, `submitting`, etc.
-- Remover funções: `handleCreateEvent`, `handleUpdateEvent`, `handleDeleteEvent`, `openEditDialog`, `resetForm`
-
-#### 3. Modificar tabela de eventos - Remover botões de ação (linhas 869-899)
-
-Substituir os botões de Editar/Excluir por apenas o link do evento:
-
-```tsx
+```typescript
 // ANTES
-<TableCell className="text-right">
-  <div className="flex justify-end gap-1">
-    {(event.meeting_url || event.material_url) && (...)}
-    <Button onClick={() => openEditDialog(event)}>
-      <Pencil />
-    </Button>
-    <Button onClick={() => setEventToDelete(event)}>
-      <Trash2 />
-    </Button>
-  </div>
-</TableCell>
+setDialogOpen(false);
+resetForm();
+fetchFields();
+onFieldsChange?.();
 
 // DEPOIS
-<TableCell className="text-right">
-  <div className="flex justify-end gap-1">
-    {(event.meeting_url || event.material_url) && (
-      <Button variant="ghost" size="icon" asChild>
-        <a href={event.meeting_url || event.material_url} target="_blank" rel="noopener noreferrer">
-          <LinkIcon className="h-4 w-4" />
-        </a>
-      </Button>
-    )}
-  </div>
-</TableCell>
+setDialogOpen(false);
+resetForm();
+await fetchFields();  // Aguarda a busca completar
+onFieldsChange?.();
 ```
 
-#### 4. Ajustar cabeçalho da tabela (linha 774)
+#### 2. Resetar formulário quando o dialog ABRE para criar (linhas 604-607)
 
-Remover a coluna "Ações" quando não houver ações:
-
-```tsx
+```typescript
 // ANTES
-<TableHead className="text-right">Ações</TableHead>
-
-// DEPOIS - mostrar apenas se tiver links
-// (ou remover completamente se não houver mais ações)
-```
-
-#### 5. Atualizar texto de "sem eventos" (linhas 1006-1010)
-
-```tsx
-// ANTES
-<p className="text-xs mt-1">Crie eventos usando o botão acima.</p>
+<Dialog open={dialogOpen} onOpenChange={(open) => {
+  setDialogOpen(open);
+  if (!open) resetForm();
+}}>
 
 // DEPOIS
-<p className="text-xs mt-1">
-  Eventos são criados na <a href="/events" className="text-primary underline">página de Eventos</a>.
-</p>
+<Dialog open={dialogOpen} onOpenChange={(open) => {
+  setDialogOpen(open);
+  if (!open) {
+    resetForm();
+  } else if (!editingField) {
+    // Ao abrir para CRIAR (não editar), reseta o formulário
+    resetForm();
+  }
+}}>
 ```
 
-## O Que Permanece Funcionando
+Isso garante que quando o usuário clica "Novo Campo", o formulário sempre inicie com valores padrão corretos (fieldType = "select", options vazias, etc.).
 
-| Funcionalidade | Status |
-|----------------|--------|
-| Visualizar eventos do produto | ✅ Mantido |
-| Marcar participação (checkbox) | ✅ Mantido |
-| Convites para Eventos (RSVP) | ✅ Mantido |
-| Feedbacks | ✅ Mantido |
-| Tarefas do Cliente | ✅ Mantido |
+## Fluxo Corrigido
 
-## Resultado Esperado
+```text
+1. Usuário clica "Novo Campo"
+   ↓
+2. Dialog abre e resetForm() é chamado
+   - fieldType = "select"
+   - options = 2 opções vazias
+   - name = ""
+   ↓
+3. Usuário preenche o formulário
+   ↓
+4. Usuário clica "Criar Campo"
+   ↓
+5. handleSave():
+   - Insert no banco ✓
+   - toast.success() ✓
+   - setDialogOpen(false)
+   - resetForm()
+   - await fetchFields()  ← AGUARDA completar
+   - onFieldsChange?.()
+   ↓
+6. Lista de campos atualizada com o novo campo ✓
+```
 
-1. Usuários **não poderão mais** criar/editar/excluir eventos diretamente da agenda do cliente
-2. Modificações em um cliente **não afetarão** outros clientes
-3. A seção "Agenda de Entregas" mostrará eventos de forma **somente-leitura**
-4. Eventos continuarão sendo gerenciados na página `/events` (onde pertencem)
-5. O checkbox de participação continua funcionando (isso é por cliente, na tabela `client_event_deliveries`)
+## Validação Adicional
 
-## Limpeza de Código
+Também será adicionado um log de debug temporário para ajudar a identificar qualquer problema futuro:
 
-O componente ficará significativamente mais limpo, removendo:
-- ~200 linhas de código de formulário/dialog
-- 10+ states não utilizados
-- 5 funções de manipulação
+```typescript
+const { data, error } = await query;
+console.log(`[fetchFields] Fetched ${data?.length || 0} fields, error:`, error);
+```
 
-## Notas para o Time de Operações
+Este log pode ser removido após confirmar que o problema está resolvido.
 
-Após a correção, para criar ou editar eventos que aparecem na agenda dos clientes:
-1. Acessar o menu **Eventos** (`/events`)
-2. Criar/editar o evento desejado
-3. Vincular aos produtos apropriados
-4. O evento aparecerá automaticamente na agenda de todos os clientes com aquele produto
+## Impacto
+
+- Campos criados aparecerão imediatamente na lista
+- O formulário sempre iniciará limpo ao criar novo campo
+- Nenhuma mudança na estrutura do banco de dados
+- Nenhuma mudança nas regras de negócio
+
+## Testes Sugeridos
+
+1. Criar um campo do tipo "Seleção única" com opções e verificar se aparece na lista
+2. Criar um campo do tipo "Texto" e verificar se aparece na lista
+3. Editar um campo existente e cancelar, depois criar novo - verificar se tipo está correto
+4. Criar múltiplos campos em sequência e verificar se todos aparecem
