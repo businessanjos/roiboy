@@ -402,6 +402,14 @@ export default function Contracts() {
 
       if (error) throw error;
       setContracts(data || []);
+      
+      // Sync selectedContract with fresh data to prevent stale state
+      if (selectedContract) {
+        const updatedContract = (data || []).find(c => c.id === selectedContract.id);
+        if (updatedContract) {
+          setSelectedContract(updatedContract);
+        }
+      }
     } catch (error) {
       console.error("Error fetching contracts:", error);
       toast.error("Erro ao carregar contratos");

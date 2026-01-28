@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,6 +90,14 @@ export function ContractNegotiationTab({
   );
   const [receivablesGenerated, setReceivablesGenerated] = useState(initialReceivablesGenerated);
 
+  // Ref to prevent duplicate generation during re-renders
+  const generatedRef = useRef(initialReceivablesGenerated);
+
+  // Sync ref with prop when component receives new data
+  useEffect(() => {
+    generatedRef.current = initialReceivablesGenerated;
+  }, [initialReceivablesGenerated]);
+
   useEffect(() => {
     // Detectar tipo automaticamente baseado nos dados existentes
     let effectiveType = initialType;
@@ -143,12 +151,21 @@ export function ContractNegotiationTab({
   };
 
   const handleGenerateReceivables = async () => {
+    // Triple-check to prevent duplicate generation
+    if (generating || receivablesGenerated || generatedRef.current) {
+      console.warn('Generation blocked: already in progress or completed');
+      return;
+    }
+
     if (!paymentMethod) {
       toast.error("Selecione uma forma de pagamento");
       return;
     }
 
+    // Mark immediately BEFORE any async operation
+    generatedRef.current = true;
     setGenerating(true);
+    
     try {
       const entries = [];
       const baseDate = new Date(firstDueDate);
@@ -174,7 +191,10 @@ export function ContractNegotiationTab({
         .from("financial_entries")
         .insert(entries);
 
-      if (entriesError) throw entriesError;
+      if (entriesError) {
+        generatedRef.current = false; // Allow retry on error
+        throw entriesError;
+      }
 
       // Mark receivables as generated
       const { error: updateError } = await supabase
@@ -188,7 +208,10 @@ export function ContractNegotiationTab({
         })
         .eq("id", contractId);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        generatedRef.current = false; // Allow retry on error
+        throw updateError;
+      }
 
       setReceivablesGenerated(true);
       toast.success(`${installments} parcela(s) gerada(s) no contas a receber`);
@@ -196,6 +219,7 @@ export function ContractNegotiationTab({
     } catch (error) {
       console.error("Error generating receivables:", error);
       toast.error("Erro ao gerar parcelas");
+      generatedRef.current = false; // Allow retry on error
     } finally {
       setGenerating(false);
     }

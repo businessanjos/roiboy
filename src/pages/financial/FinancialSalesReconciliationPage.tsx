@@ -157,6 +157,15 @@ export default function FinancialSalesReconciliationPage() {
 
       if (processedError) throw processedError;
       setProcessedContracts((processed || []) as Contract[]);
+      
+      // Sync detailContract with fresh data to prevent stale state
+      if (detailContract) {
+        const allContracts = [...(pending || []), ...(processed || [])];
+        const updatedContract = allContracts.find(c => c.id === detailContract.id);
+        if (updatedContract) {
+          setDetailContract(updatedContract as Contract);
+        }
+      }
     } catch (error) {
       console.error("Error fetching contracts:", error);
       toast.error("Erro ao carregar contratos");
