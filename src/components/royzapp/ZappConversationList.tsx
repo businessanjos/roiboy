@@ -1,5 +1,5 @@
 import { memo, useMemo } from "react";
-import { MessageSquare, Search, Plus } from "lucide-react";
+import { MessageSquare, Search, Plus, Pin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,19 +76,25 @@ export const ZappConversationList = memo(function ZappConversationList({
     const filtered = assignments.filter((a) => {
       const contact = getContactInfo(a);
       const isGroup = contact.isGroup;
+      const isPinned = contact.isPinned;
       
       // Hide archived conversations from main inbox
       const isArchived = a.zapp_conversation?.is_archived || false;
       if (isArchived) return false;
       
-      // Filter by closed status - BUT GROUPS ALWAYS SHOW (they're permanent conversations)
+      // Pinned groups ALWAYS show in the groups tab, even if closed
+      const skipClosedFilter = isGroup && isPinned && filterConversationType === "group";
+      
+      // Filter by closed status
       const isClosed = a.status === "closed";
-      if (showClosed) {
-        // When showing closed, ONLY show closed conversations
-        if (!isClosed) return false;
-      } else {
-        // When not showing closed, HIDE closed conversations
-        if (isClosed) return false;
+      if (!skipClosedFilter) {
+        if (showClosed) {
+          // When showing closed, ONLY show closed conversations
+          if (!isClosed) return false;
+        } else {
+          // When not showing closed, HIDE closed conversations
+          if (isClosed) return false;
+        }
       }
       
       // Tab filter: "mine" = assigned to current agent, "queue" = ALL conversations
@@ -144,6 +150,25 @@ export const ZappConversationList = memo(function ZappConversationList({
       return dateB - dateA;
     });
   }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, showClosed]);
+
+  // Separate pinned groups from regular items when viewing groups
+  const { pinnedGroups, regularItems } = useMemo(() => {
+    if (filterConversationType !== "group") {
+      return { pinnedGroups: [], regularItems: filteredAssignments };
+    }
+    
+    const pinned = filteredAssignments.filter(a => {
+      const contact = getContactInfo(a);
+      return contact.isGroup && contact.isPinned;
+    });
+    
+    const regular = filteredAssignments.filter(a => {
+      const contact = getContactInfo(a);
+      return !(contact.isGroup && contact.isPinned);
+    });
+    
+    return { pinnedGroups: pinned, regularItems: regular };
+  }, [filteredAssignments, filterConversationType]);
 
   return (
     <div className="flex flex-col h-full">
@@ -227,22 +252,62 @@ export const ZappConversationList = memo(function ZappConversationList({
               <p className="text-zapp-text-muted text-sm">Nenhuma conversa encontrada</p>
             </div>
           ) : (
-            filteredAssignments.map((assignment) => (
-              <ZappConversationItem
-                key={assignment.id}
-                assignment={assignment}
-                isSelected={selectedConversation?.id === assignment.id}
-                currentAgentId={currentAgent?.id || null}
-                clientProducts={clientProducts}
-                onSelect={onSelectConversation}
-                onMarkAsRead={onMarkAsRead}
-                onMarkAsUnread={onMarkAsUnread}
-                onUpdateFlag={onUpdateFlag}
-                onOpenTagDialog={onOpenTagDialog}
-                onDeleteConversation={onDeleteConversation}
-                getAgentName={getAgentName}
-              />
-            ))
+            <>
+              {/* Pinned Groups Section - only shown when viewing groups */}
+              {pinnedGroups.length > 0 && (
+                <>
+                  <div className="px-3 py-2 bg-zapp-panel/50 border-b border-zapp-border">
+                    <span className="text-xs font-medium text-zapp-accent flex items-center gap-1.5">
+                      <Pin className="h-3 w-3" />
+                      GRUPOS FIXADOS
+                    </span>
+                  </div>
+                  {pinnedGroups.map((assignment) => (
+                    <ZappConversationItem
+                      key={assignment.id}
+                      assignment={assignment}
+                      isSelected={selectedConversation?.id === assignment.id}
+                      currentAgentId={currentAgent?.id || null}
+                      clientProducts={clientProducts}
+                      onSelect={onSelectConversation}
+                      onMarkAsRead={onMarkAsRead}
+                      onMarkAsUnread={onMarkAsUnread}
+                      onUpdateFlag={onUpdateFlag}
+                      onOpenTagDialog={onOpenTagDialog}
+                      onDeleteConversation={onDeleteConversation}
+                      getAgentName={getAgentName}
+                    />
+                  ))}
+                </>
+              )}
+              
+              {/* Regular items section header - only when there are pinned groups */}
+              {pinnedGroups.length > 0 && regularItems.length > 0 && (
+                <div className="px-3 py-2 bg-zapp-panel/30 border-b border-zapp-border">
+                  <span className="text-xs font-medium text-zapp-text-muted">
+                    OUTROS GRUPOS
+                  </span>
+                </div>
+              )}
+              
+              {/* Regular items (or all items if not viewing groups) */}
+              {regularItems.map((assignment) => (
+                <ZappConversationItem
+                  key={assignment.id}
+                  assignment={assignment}
+                  isSelected={selectedConversation?.id === assignment.id}
+                  currentAgentId={currentAgent?.id || null}
+                  clientProducts={clientProducts}
+                  onSelect={onSelectConversation}
+                  onMarkAsRead={onMarkAsRead}
+                  onMarkAsUnread={onMarkAsUnread}
+                  onUpdateFlag={onUpdateFlag}
+                  onOpenTagDialog={onOpenTagDialog}
+                  onDeleteConversation={onDeleteConversation}
+                  getAgentName={getAgentName}
+                />
+              ))}
+            </>
           )}
         </div>
       </ScrollArea>
