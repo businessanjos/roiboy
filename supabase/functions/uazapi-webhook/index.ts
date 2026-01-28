@@ -1398,8 +1398,27 @@ serve(async (req) => {
                 if (recentDupe) {
                   console.log(`[DEDUPE] Found pending audio message ${recentDupe.id} to update with external_message_id ${messageId}`);
                 }
+              } else if (mediaType === "document") {
+                // DOCUMENT DEDUPLICATION: Search by message_type since content/filename differs between frontend and webhook
+                // Frontend saves filename in content, webhook receives empty caption with different filename (WhatsApp code)
+                const { data } = await supabase
+                  .from("zapp_messages")
+                  .select("id, media_url, media_filename")
+                  .eq("zapp_conversation_id", zappConversationId)
+                  .eq("direction", "outbound")
+                  .eq("message_type", "document")
+                  .is("external_message_id", null)
+                  .gte("created_at", fiveMinutesAgo)
+                  .order("created_at", { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+                recentDupe = data;
+                
+                if (recentDupe) {
+                  console.log(`[DEDUPE] Found pending document message ${recentDupe.id} (filename: ${recentDupe.media_filename}) to update with external_message_id ${messageId}`);
+                }
               } else {
-                // For non-audio messages, use content-based matching
+                // For text and image messages, use content-based matching
                 const { data } = await supabase
                   .from("zapp_messages")
                   .select("id")
