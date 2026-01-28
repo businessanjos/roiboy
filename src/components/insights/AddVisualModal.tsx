@@ -212,6 +212,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             fillEmptyDates: isTemporalGrouping,
             showDataLabels: isTemporalGrouping,
           },
+          statusFilter: metricConfig.statusFilter, // Apply status filter (won/lost) for revenue, avg_ticket, lost_reasons
         };
       }
 

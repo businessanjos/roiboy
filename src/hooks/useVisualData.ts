@@ -428,6 +428,11 @@ function aggregateData(
     result.sort((a, b) => b.value - a.value);
   }
 
+  // Filter out "Sem Responsável" from user-based dimensions
+  if (dimension.field === 'responsible_name') {
+    return result.filter(item => item.name !== 'Sem Responsável');
+  }
+
   return result;
 }
 
