@@ -46,31 +46,48 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
     return () => window.removeEventListener("resize", updateWidth);
   }, []);
 
-  // Convert visuals to layout items (scale up from DB format to ultra-granular grid)
+  // Convert visuals to layout items (detect old scale and convert if needed)
   const layout = useMemo<LayoutItem[]>(() => {
     return visuals.map((visual, index) => {
       const existingLayout = visual.layout;
       
       if (existingLayout) {
-        // Scale up: DB uses 12 cols/100px rows, grid uses 48 cols/20px rows
+        // Detect if layout is in old scale (12 cols) or new scale (48 cols)
+        // Old scale: x and w are typically <= 12, new scale: values are larger
+        const isOldScale = existingLayout.x <= 12 && existingLayout.w <= 12;
+        
+        if (isOldScale) {
+          // Convert from old scale (12 cols/100px rows) to new scale (48 cols/20px rows)
+          return {
+            i: visual.id,
+            x: existingLayout.x * 4,
+            y: existingLayout.y * 5,
+            w: existingLayout.w * 4,
+            h: existingLayout.h * 5,
+            minW: 8,
+            minH: 10,
+          };
+        }
+        
+        // New scale: use values directly (preserves exact positioning)
         return {
           i: visual.id,
-          x: existingLayout.x * 4,   // 12→48 cols
-          y: existingLayout.y * 5,   // 100px→20px rows
-          w: existingLayout.w * 4,
-          h: existingLayout.h * 5,
-          minW: 8,   // ~2 colunas antigas
-          minH: 10,  // ~200px
+          x: existingLayout.x,
+          y: existingLayout.y,
+          w: existingLayout.w,
+          h: existingLayout.h,
+          minW: 8,
+          minH: 10,
         };
       }
 
-      // Default layout for new visuals (in granular scale)
+      // Default layout for new visuals with spacing gap
       return {
         i: visual.id,
-        x: (index % 2) * 24,         // 24 = metade do grid (48/2)
-        y: Math.floor(index / 2) * 25, // 25 rows = ~500px
-        w: 24,                        // metade da largura
-        h: 25,                        // ~500px de altura
+        x: (index % 2) * 26,           // 26 = card(24) + gap(2) ~40px spacing
+        y: Math.floor(index / 2) * 27, // 27 = card(25) + gap(2)
+        w: 24,
+        h: 25,
         minW: 8,
         minH: 10,
       };
@@ -87,15 +104,15 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
 
       // Debounce by 500ms to avoid excessive saves
       debounceRef.current = setTimeout(() => {
-        // Scale down: grid uses 48 cols/20px rows, DB uses 12 cols/100px rows
+        // Save directly in granular scale (48 cols/20px rows) - no conversion
         const layoutUpdates = newLayout.map((item) => ({
           id: item.i,
           layout: {
             i: item.i,
-            x: Math.round(item.x / 4),  // 48→12 cols
-            y: Math.round(item.y / 5),  // 20px→100px rows
-            w: Math.round(item.w / 4),
-            h: Math.round(item.h / 5),
+            x: item.x,
+            y: item.y,
+            w: item.w,
+            h: item.h,
           },
         }));
 
