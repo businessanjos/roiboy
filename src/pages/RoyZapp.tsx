@@ -486,7 +486,11 @@ export default function RoyZapp() {
   }, [assignments, currentAgent?.id]);
 
   // Notification hook
-  const { notifyNewMessage } = useZappNotifications({
+  const { 
+    notifyNewMessage, 
+    notificationPermission, 
+    requestNotificationPermission 
+  } = useZappNotifications({
     soundEnabled,
     currentAgentId: currentAgent?.id,
     selectedConversationId: selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id,
@@ -3666,6 +3670,8 @@ export default function RoyZapp() {
           }}
           getAgentName={getAgentName}
           onPullFromQueue={pullFromQueue}
+          notificationPermission={notificationPermission}
+          onRequestNotificationPermission={requestNotificationPermission}
           aiAgents={[]} // Hidden for now - TODO: configure AI agents properly
           selectedAIAgent={null}
           onSelectAIAgent={() => {}} // Disabled for now

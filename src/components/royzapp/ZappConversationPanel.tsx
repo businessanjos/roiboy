@@ -112,6 +112,10 @@ interface ZappConversationPanelProps {
   suggestionsEnabled?: boolean;
   autoLearningEnabled?: boolean;
   
+  // System Notifications
+  notificationPermission?: "granted" | "denied" | "default" | "unsupported";
+  onRequestNotificationPermission?: () => void;
+  
   // Callbacks
   onSelectConversation: (assignment: ConversationAssignment) => void;
   onOpenNewConversationDialog: () => void;
@@ -220,6 +224,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   spellingEnabled = true,
   suggestionsEnabled = true,
   autoLearningEnabled = true,
+  notificationPermission = "default",
+  onRequestNotificationPermission,
   onSpellingChange,
   onSuggestionsChange,
   onAutoLearningChange,
@@ -786,6 +792,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             spellingEnabled={spellingEnabled}
             suggestionsEnabled={suggestionsEnabled}
             autoLearningEnabled={autoLearningEnabled}
+            notificationPermission={notificationPermission}
             onToggleWhatsAppConnection={onToggleWhatsAppConnection}
             onRoundRobinChange={onRoundRobinChange}
             onRespectLimitChange={onRespectLimitChange}
@@ -796,6 +803,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             onSpellingChange={onSpellingChange}
             onSuggestionsChange={onSuggestionsChange}
             onAutoLearningChange={onAutoLearningChange}
+            onRequestNotificationPermission={onRequestNotificationPermission}
           />
         )}
         {activeView === "playbook" && (
