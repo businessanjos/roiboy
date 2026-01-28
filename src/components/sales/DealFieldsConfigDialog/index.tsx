@@ -94,6 +94,7 @@ export function DealFieldsConfigDialog({
           .select("id, name, field_type, show_in_deals, display_order, folder_id")
           .eq("account_id", accountId)
           .eq("is_active", true)
+          .eq("show_in_deals", true)
           .order("display_order"),
         supabase
           .from("custom_field_folders")
