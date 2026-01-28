@@ -41,13 +41,38 @@ export function useZappNotifications({
     return Notification.permission as NotificationPermissionStatus;
   });
 
-  // Update permission state when it changes
+  // Re-verify permission when tab regains focus
+  // This captures changes made by the user in browser settings
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) {
       setNotificationPermission("unsupported");
       return;
     }
+    
+    // Check immediately
     setNotificationPermission(Notification.permission as NotificationPermissionStatus);
+    
+    // Re-check when tab regains focus (user may have changed in settings)
+    const handleVisibilityChange = () => {
+      if (!document.hidden && "Notification" in window) {
+        setNotificationPermission(Notification.permission as NotificationPermissionStatus);
+      }
+    };
+    
+    // Re-check when window gains focus
+    const handleFocus = () => {
+      if ("Notification" in window) {
+        setNotificationPermission(Notification.permission as NotificationPermissionStatus);
+      }
+    };
+    
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+    
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, []);
 
   // Request notification permission
