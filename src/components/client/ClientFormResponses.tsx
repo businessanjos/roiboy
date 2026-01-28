@@ -65,6 +65,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
   const [formResponses, setFormResponses] = useState<FormResponse[]>([]);
   const [diagnostic, setDiagnostic] = useState<DiagnosticData | null>(null);
   const [expandedResponses, setExpandedResponses] = useState<Set<string>>(new Set());
+  const [customFieldsMap, setCustomFieldsMap] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     fetchData();
@@ -73,6 +74,28 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
   const fetchData = async () => {
     setLoading(true);
     try {
+      // Primeiro, buscar o account_id do cliente
+      const { data: clientData, error: clientError } = await supabase
+        .from("clients")
+        .select("account_id")
+        .eq("id", clientId)
+        .maybeSingle();
+
+      if (clientError) throw clientError;
+      const accountId = clientData?.account_id;
+
+      // Buscar custom_fields para mapeamento de labels
+      if (accountId) {
+        const { data: fieldsData } = await supabase
+          .from("custom_fields")
+          .select("id, name")
+          .eq("account_id", accountId);
+
+        if (fieldsData) {
+          setCustomFieldsMap(new Map(fieldsData.map(f => [f.id, f.name])));
+        }
+      }
+
       // Fetch form responses
       const { data: responsesData, error: responsesError } = await supabase
         .from("form_responses")
@@ -133,10 +156,8 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
     });
   };
 
-  const getFieldLabel = (form: FormResponse["forms"], fieldId: string): string => {
-    if (!form?.fields) return fieldId;
-    const field = form.fields.find((f: any) => f.id === fieldId);
-    return field?.label || fieldId;
+  const getFieldLabel = (fieldId: string): string => {
+    return customFieldsMap.get(fieldId) || fieldId;
   };
 
   const formatValue = (value: any): string => {
@@ -219,7 +240,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                   {Object.entries(response.responses).map(([fieldId, value]) => (
                     <div key={fieldId} className="grid grid-cols-3 gap-2 text-sm">
                       <span className="text-muted-foreground font-medium">
-                        {getFieldLabel(response.forms, fieldId)}
+                        {getFieldLabel(fieldId)}
                       </span>
                       <span className="col-span-2">
                         {formatValue(value)}
