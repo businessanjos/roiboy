@@ -1,118 +1,88 @@
 
-
-# Plano: Isolar Campos Personalizados por Setor
+# Plano: Isolar Campos por Setor e Restaurar Dados
 
 ## Problema Identificado
 
-Campos personalizados criados em um setor (ex: Operações) estão aparecendo em outros setores (ex: Vendas) porque:
-
-1. **Bug no código de salvamento** (linha 547 do `CustomFieldsManager.tsx`):
-   ```typescript
-   // ERRADO - usa show_in_clients para definir show_in_deals
-   show_in_deals: editingField ? editingField.show_in_clients : sectorContext === "deals",
-   
-   // TAMBÉM ERRADO - sempre define false ao editar
-   show_in_leads: editingField ? false : sectorContext === "leads",
-   ```
-
-2. **Ausência de isolamento real**: O sistema usa flags booleanas (`show_in_clients`, `show_in_deals`, `show_in_leads`) que podem ser todas `true` simultaneamente, permitindo que um campo apareça em múltiplos setores.
-
-3. **Dados corrompidos no banco**: Existem campos que foram salvos com flags incorretas, causando o cruzamento entre setores.
-
-## Solução Proposta
-
-### Parte 1: Corrigir o Bug no Código
-
-Arquivo: `src/components/custom-fields/CustomFieldsManager.tsx`
-
-**Mudança nas linhas 544-552:**
+### 1. Bug no Diálogo de Configuração de Campos do Pipeline
+O `DealFieldsConfigDialog` busca **TODOS os campos ativos** da conta, sem filtrar por setor:
 
 ```typescript
-// ANTES (bugado)
-show_in_clients: editingField ? showInClients : sectorContext === "clients",
-show_in_deals: editingField ? editingField.show_in_clients : sectorContext === "deals",
-show_in_leads: editingField ? false : sectorContext === "leads",
-
-// DEPOIS (correto)
-// For new fields: only enable the current sector's flag
-// For editing: preserve all flags from the existing field
-show_in_clients: editingField?.show_in_clients ?? (sectorContext === "clients"),
-show_in_deals: editingField?.show_in_deals ?? (sectorContext === "deals"),
-show_in_leads: editingField?.show_in_leads ?? (sectorContext === "leads"),
+// ATUAL (bugado) - linha 92-97
+supabase
+  .from("custom_fields")
+  .eq("account_id", accountId)
+  .eq("is_active", true)  // ← Busca TUDO!
 ```
 
-**Problema adicional no mapeamento de campos** (linhas 291-301):
+Isso faz campos de Operações (como "Você utiliza estratégias de vendas estruturadas?") aparecerem na lista de configuração do Pipeline.
 
-O campo `show_in_deals` não é mapeado quando os campos são carregados, impedindo que o valor correto seja preservado ao editar. Corrigir:
+### 2. Dados Corrompidos
+O update anterior alterou incorretamente "Ganhou Bônus?" removendo-o de Vendas:
+- **Atual**: `show_in_deals: false` 
+- **Correto**: `show_in_deals: true`
+
+## Solução
+
+### Parte 1: Corrigir DealFieldsConfigDialog
+
+Arquivo: `src/components/sales/DealFieldsConfigDialog/index.tsx`
+
+Modificar a query para buscar **APENAS campos que já estão marcados para Deals** OU campos que podem ser adicionados ao Deals (que ainda não pertencem exclusivamente a outro setor):
 
 ```typescript
-const mappedFields: CustomField[] = data.map(f => ({
-  id: f.id,
-  name: f.name,
-  field_type: f.field_type as CustomField["field_type"],
-  options: (f.options as unknown as FieldOption[]) || [],
-  is_required: f.is_required,
-  display_order: f.display_order,
-  is_active: f.is_active,
-  show_in_clients: f.show_in_clients,
-  show_in_deals: f.show_in_deals,      // ADICIONAR
-  show_in_leads: f.show_in_leads,      // ADICIONAR
-  folder_id: f.folder_id,
-}));
+// CORRIGIDO - Mostrar apenas campos que:
+// 1. Já estão em Deals (show_in_deals = true), OU
+// 2. Não pertencem exclusivamente a outro setor
+supabase
+  .from("custom_fields")
+  .select("id, name, field_type, show_in_deals, show_in_clients, show_in_leads, display_order, folder_id")
+  .eq("account_id", accountId)
+  .eq("is_active", true)
+  .or("show_in_deals.eq.true,and(show_in_clients.eq.false,show_in_leads.eq.false)")
+  .order("display_order"),
 ```
 
-**Atualizar a interface CustomField** para incluir os campos:
+**Alternativa mais simples** (recomendada): Mostrar apenas campos que já pertencem a Deals:
 
 ```typescript
-export interface CustomField {
-  // ... existing fields
-  show_in_clients?: boolean;
-  show_in_deals?: boolean;    // ADICIONAR
-  show_in_leads?: boolean;    // ADICIONAR
-}
+supabase
+  .from("custom_fields")
+  .select("id, name, field_type, show_in_deals, display_order, folder_id")
+  .eq("account_id", accountId)
+  .eq("is_active", true)
+  .eq("show_in_deals", true)  // ← ADICIONAR este filtro
+  .order("display_order"),
 ```
 
-### Parte 2: Limpar Dados Corrompidos no Banco
+### Parte 2: Restaurar "Ganhou Bônus?" para Vendas
 
-Executar SQL para corrigir campos que estão marcados para múltiplos setores incorretamente:
-
-**Campos que devem ser APENAS de Clientes (Operações):**
 ```sql
 UPDATE custom_fields 
-SET show_in_deals = false, show_in_leads = false 
-WHERE show_in_clients = true 
-  AND (show_in_deals = true OR show_in_leads = true)
-  AND name NOT IN ('Canal de Venda', 'Faturamento Atual', 'Origem da Venda', ...); -- campos conhecidos de Vendas
+SET show_in_deals = true 
+WHERE id = '82f58c54-d7e3-4d33-b73a-e214e1205b22';
 ```
-
-**Campos que devem ser APENAS de Deals (Vendas):**
-```sql
-UPDATE custom_fields 
-SET show_in_clients = false, show_in_leads = false 
-WHERE show_in_deals = true 
-  AND (show_in_clients = true OR show_in_leads = true)
-  AND name IN ('Canal de Venda', 'Faturamento Atual', 'Origem da Venda', ...); -- campos de Vendas
-```
-
-**Nota**: Antes de executar, verificar com o usuário quais campos pertencem a qual setor.
 
 ## Arquivos a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/components/custom-fields/CustomFieldsManager.tsx` | Corrigir bug nas linhas 544-552 e adicionar mapeamento correto |
-| Banco de dados | Limpar dados incorretos (via SQL) |
+| `src/components/sales/DealFieldsConfigDialog/index.tsx` | Adicionar filtro `show_in_deals = true` na query (linha 92-97) |
+| Banco de dados | Restaurar "Ganhou Bônus?" com `show_in_deals = true` |
 
 ## Resultado Esperado
 
-1. Campos criados em Operações (`show_in_clients`) **não** aparecerão em Vendas
-2. Campos criados em Vendas (`show_in_deals`) **não** aparecerão em Operações
-3. Editar um campo preservará suas flags de setor corretamente
-4. Campos existentes com flags incorretas serão corrigidos
+1. O diálogo "Personalizar Campos do Negócio" mostrará **apenas** campos que pertencem ao setor de Vendas
+2. Campos de Operações como "Você utiliza estratégias..." **não** aparecerão no Pipeline
+3. "Ganhou Bônus?" voltará a aparecer no Pipeline
+4. "Cidade" continuará aparecendo em ambos os setores (comportamento atual correto)
 
-## Impacto
+## Nota sobre a Imagem
 
-- Correção de bug crítico que causava vazamento de dados entre setores
-- Limpeza de dados históricos incorretos
-- Isolamento correto por setor daqui em diante
+Os campos que aparecem na imagem que você enviou e que **não deveriam estar lá**:
+- "Você utiliza estratégias de vendas estruturadas?" → Campo de Operações
+- "Você possui um público-alvo claramente definido?" → Campo de Operações  
+- "Você utiliza alguma ferramenta de CRM ou gestão de leads?" → Campo de Operações
 
+Estes campos estão com `show_in_clients: true` e `show_in_deals: false`, então **teoricamente não deveriam aparecer no Pipeline**. Vou verificar se há outro local que está buscando esses campos incorretamente, pois o `DealDetailSheet` já filtra corretamente por `show_in_deals = true`.
+
+Após a correção, esses campos de Operações deixarão de aparecer no diálogo de configuração do Pipeline e, consequentemente, não poderão ser ativados acidentalmente.
