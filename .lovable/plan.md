@@ -1,149 +1,106 @@
 
-# Plano: Notificações Sonoras e Visuais no ROY zAPP
+# Plano: Corrigir Exibição Completa da Timeline de Clientes
 
-## Resumo
-Implementar sistema de notificações para novas mensagens recebidas no ROY zAPP com:
-- **Som "pop"** para mensagens em "Minhas" (conversas atribuídas ao agente)
-- **Som "ding"** para mensagens na "Fila" (conversas sem agente)
-- **Toast visual** com avatar, nome do contato, preview da mensagem, origem e botão "Ver chat"
+## Problema Identificado
 
----
+A timeline de clientes está limitando artificialmente os dados exibidos através de múltiplos limites nas queries do `ClientDetail.tsx`:
 
-## Arquivos a Criar
+### Limites Atuais
+| Query | Limite Atual | Dados Existentes |
+|-------|--------------|------------------|
+| `client_followups` (notas/anexos) | `.limit(30)` | Até 20 por cliente |
+| `message_events` | `.limit(20)` | Até 20.635 por cliente |
+| `risk_events` | `.limit(20)` | 160 total |
+| `life_events` | `.limit(20)` | - |
+| `form_responses` | `.limit(20)` | - |
+| `event_participants` | `.limit(20)` | - |
+| `client_subscriptions` | `.limit(20)` | - |
+| **Corte Final** | `slice(0, 50)` | **Este é o maior problema** |
 
-### 1. `src/hooks/useZappNotifications.tsx`
-Hook centralizado para gerenciar notificações do Zapp:
-- Controle de reprodução de áudio (pop vs ding)
-- Lógica para determinar origem (Minhas/Fila)
-- Validação: não notificar conversa atualmente selecionada
-- Respeitar configuração de som habilitado
-
-### 2. `src/components/royzapp/ZappNotificationToast.tsx`
-Componente de toast customizado:
-- Avatar do contato (iniciais como fallback)
-- Nome do contato
-- Preview da mensagem (truncado em ~50 caracteres)
-- Badge colorido indicando origem: "Minhas" (verde) ou "Fila" (âmbar)
-- Botão "Ver chat" que navega para a conversa
-- Auto-dismiss após 5 segundos
-
-### 3. `public/sounds/notification-pop.mp3`
-Som curto (~0.3s) tipo "pop" suave para conversas em "Minhas"
-
-### 4. `public/sounds/notification-ding.mp3`
-Som curto (~0.5s) tipo "ding" mais perceptível para conversas na "Fila"
+### Por que Parece "Só 7 dias"
+Clientes ativos recebem muitas mensagens diariamente. Com o limite de 50 itens totais na timeline e mensagens dominando a lista, as notas e anexos mais antigos são empurrados para fora do corte.
 
 ---
 
-## Arquivos a Modificar
+## Solução Proposta
 
-### 1. `src/hooks/useZappData.tsx`
-Adicionar callback `onNewInboundMessage` que é chamado quando uma mensagem INBOUND chega:
-- Extrair dados necessários: conversationId, contactName, messagePreview, agentId
-- Passar para o hook de notificações
+### Fase 1: Remover Limites Desnecessários (Correção Imediata)
 
-### 2. `src/pages/RoyZapp.tsx`
-Integrar o hook `useZappNotifications`:
-- Passar referência da conversa selecionada (para não notificar)
-- Passar currentAgent.id (para determinar se é "Minhas" ou "Fila")
-- Passar configuração soundEnabled
-- Callback para selecionar conversa ao clicar no toast
+**Arquivo:** `src/pages/ClientDetail.tsx`
 
-### 3. `src/components/royzapp/index.ts`
-Exportar o novo componente `ZappNotificationToast`
+1. **Remover limite de `client_followups`** (linha 849):
+   - De: `.limit(30)`
+   - Para: Sem limite (são poucos registros por cliente - máximo ~20)
 
----
+2. **Aumentar limite de `message_events`** (linha 770):
+   - De: `.limit(20)`
+   - Para: `.limit(100)` ou remover (para conversas completas)
 
-## Fluxo Técnico
+3. **Aumentar limite de outros eventos** (linhas 815, 880, 906, 933, 955):
+   - De: `.limit(20)`
+   - Para: `.limit(100)`
 
-```text
-[Webhook] Mensagem INBOUND
-     ↓
-[Realtime] INSERT em zapp_messages
-     ↓
-[useZappData] Detecta nova mensagem
-     ↓
-[useZappNotifications] Verifica:
-  ├─ Conversa selecionada? → Não notificar
-  ├─ Som habilitado? → Tocar áudio
-  └─ Determina origem (agent_id == null → Fila)
-     ↓
-[ZappNotificationToast] Exibe toast com:
-  • Avatar + Nome
-  • Preview da mensagem
-  • Badge "Minhas" ou "Fila"
-  • Botão "Ver chat"
-```
+4. **Aumentar ou remover corte final** (linha 974):
+   - De: `timelineItems.slice(0, 50)`
+   - Para: `timelineItems.slice(0, 200)` ou remover completamente
 
----
+### Fase 2: FinancialNotes (Verificação)
 
-## Layout do Toast
+**Arquivo:** `src/components/client/FinancialNotes.tsx`
 
-```text
-┌────────────────────────────────────────────────┐
-│  🔔 Nova mensagem                          ✕   │
-│                                                │
-│  [Avatar]  João Silva                          │
-│            "Olá, preciso de ajuda com..."      │
-│                                                │
-│  🟢 Minhas                         [Ver chat]  │
-└────────────────────────────────────────────────┘
-```
-
-Ou para Fila:
-```text
-│  🟡 Fila                           [Ver chat]  │
-```
-
----
-
-## Detalhes Técnicos
-
-### Sons
-Serão criados dois arquivos de áudio sintéticos leves (~5KB cada):
-- **Pop**: Tom mais suave, frequência média (~440Hz), decay rápido
-- **Ding**: Tom mais agudo (~880Hz), decay um pouco mais longo
-
-### Reprodução de Áudio
+A query atual (linha 66-75) já não tem limite, então está correta:
 ```typescript
-const playNotificationSound = (isQueue: boolean) => {
-  if (!soundEnabled) return;
-  const audio = new Audio(
-    isQueue ? '/sounds/notification-ding.mp3' : '/sounds/notification-pop.mp3'
-  );
-  audio.volume = 0.5;
-  audio.play().catch(() => {}); // Ignorar erros de autoplay
-};
+.eq("client_id", clientId)
+.in("type", ["financial_note", "image", "file"])
+.is("parent_id", null)
+.order("created_at", { ascending: false });
+// Sem .limit() - OK!
 ```
 
-### Determinação da Origem
-```typescript
-const getMessageOrigin = (assignment: ConversationAssignment) => {
-  // Se não tem agent_id ou agent_id diferente do atual → Fila
-  if (!assignment.agent_id || assignment.agent_id !== currentAgentId) {
-    return 'queue';
-  }
-  return 'mine';
-};
-```
+---
 
-### Validação (Não Notificar)
-```typescript
-const shouldNotify = (conversationId: string) => {
-  // Não notificar se é a conversa atualmente selecionada
-  if (selectedConversationId === conversationId) return false;
-  // Não notificar se som está desabilitado (para áudio)
-  return true;
-};
-```
+## Modificações Detalhadas
+
+### `src/pages/ClientDetail.tsx`
+
+| Linha | Atual | Novo |
+|-------|-------|------|
+| 770 | `.limit(20)` | `.limit(200)` |
+| 815 | `.limit(20)` | `.limit(100)` |
+| 849 | `.limit(30)` | **Remover** |
+| 880 | `.limit(20)` | `.limit(100)` |
+| 906 | `.limit(20)` | `.limit(100)` |
+| 933 | `.limit(20)` | `.limit(100)` |
+| 955 | `.limit(20)` | `.limit(100)` |
+| 974 | `slice(0, 50)` | `slice(0, 300)` |
+
+---
+
+## Considerações de Performance
+
+### Por que esses aumentos são seguros:
+
+1. **`client_followups`**: Máximo de 20 registros por cliente atualmente - remover limite não afeta performance
+
+2. **`message_events`**: Cliente mais ativo tem ~20.000 mensagens, mas a timeline é ordenada por data e só precisa mostrar os mais recentes. Limite de 200 é suficiente para contexto histórico
+
+3. **Corte final de 300**: Ainda mantém um limite razoável para renderização, mas permite visualizar dados de ~30 dias ou mais
+
+4. **Paginação futura**: Se necessário, podemos implementar "Carregar mais" posteriormente, mas para a maioria dos casos 300 itens é suficiente
 
 ---
 
 ## Resultado Esperado
 
-1. Ao receber mensagem em conversa atribuída ao agente → Som "pop" + Toast com badge verde "Minhas"
-2. Ao receber mensagem em conversa na fila → Som "ding" + Toast com badge âmbar "Fila"
-3. Conversa selecionada → Sem notificação (usuário já está vendo)
-4. Som desabilitado nas configurações → Apenas toast visual
-5. Clicar em "Ver chat" → Navega para a conversa e seleciona ela
+1. **Todas as notas e anexos** do cliente aparecerão na timeline (sem limite de 7 dias)
+2. **Histórico mais completo** de mensagens, eventos e interações
+3. **Performance mantida** com limites razoáveis aumentados
+4. **FinancialNotes** continuará funcionando corretamente (já não tem limite)
 
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/ClientDetail.tsx` | Remover/aumentar limites nas queries e no slice final |
