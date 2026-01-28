@@ -1,161 +1,138 @@
 
-# Plano: Grid de Posicionamento Ultra-Granular (Estilo PowerBI)
 
-## Problema Raiz
+# Plano: Preservar Espaçamentos no Grid Ultra-Granular
 
-O `react-grid-layout` é **fundamentalmente baseado em grid** - os itens sempre "encaixam" em células de colunas/linhas. A configuração atual:
+## Problema Identificado
 
-| Parâmetro | Valor Atual | Resultado |
-|-----------|-------------|-----------|
-| `cols` | 12 | ~83px por coluna (em tela de 1000px) |
-| `rowHeight` | 100px | 100px por linha |
+O problema é a **perda de precisão** no arredondamento das coordenadas:
 
-Isso significa que ao arrastar, o item "pula" em incrementos de ~83px horizontal e 100px vertical - por isso parece haver posições "predefinidas".
+1. O usuário posiciona os visuais com espaçamento (ex: x=25, y=30)
+2. Ao salvar, divide por 4/5 e arredonda: `Math.round(25/4) = 6`
+3. Ao carregar, multiplica de volta: `6 * 4 = 24`
+4. Resultado: visual "pulou" 1 célula, perdendo o espaçamento
 
-## Solução: Grid Ultra-Fino
+Isso acontece porque o banco armazena em **escala 12 cols/100px**, mas o grid usa **escala 48 cols/20px**. A conversão arredonda e perde os espaçamentos finos.
 
-Para simular posicionamento livre como no PowerBI, precisamos aumentar drasticamente a granularidade do grid:
+## Solução: Armazenar Diretamente na Escala Granular
 
-| Parâmetro | Valor Atual | Novo Valor | Resultado |
-|-----------|-------------|------------|-----------|
-| `cols` | 12 | 48 | ~21px por coluna (snap quase imperceptível) |
-| `rowHeight` | 100px | 20px | 20px por linha (movimento suave) |
-
-Com esta configuração:
-- Movimento horizontal: snap de ~21px (em tela 1000px)
-- Movimento vertical: snap de 20px
-- Usuário percebe como "livre"
+Ao invés de converter entre escalas, armazenar os valores diretamente na escala granular (48 cols/20px rows) no banco de dados. Isso preserva a precisão exata do posicionamento.
 
 ### Arquivo a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/components/insights/grid/InsightsGrid.tsx` | Mudar `COLS` para 48 e `ROW_HEIGHT` para 20 |
+| `src/components/insights/grid/InsightsGrid.tsx` | Remover conversão de escala - salvar/carregar valores diretamente |
 
-## Código Proposto
+## Mudanças Específicas
 
-```typescript
-// Antes
-const ROW_HEIGHT = 100;
-const COLS = 12;
-
-// Depois
-const ROW_HEIGHT = 20;  // 5x mais granular verticalmente
-const COLS = 48;        // 4x mais granular horizontalmente
-```
-
-### Ajuste de Layouts Existentes
-
-Os layouts salvos no banco de dados usam o sistema de 12 colunas. Para manter compatibilidade:
+### 1. Remover Multiplicação ao Carregar
 
 ```typescript
-// Converter layout antigo (12 cols) para novo (48 cols)
-const layout = useMemo<LayoutItem[]>(() => {
-  return visuals.map((visual, index) => {
-    const existingLayout = visual.layout;
-    
-    if (existingLayout) {
-      // Multiplicar x e w por 4 para converter de 12→48 colunas
-      // Multiplicar y e h por 5 para converter de 100px→20px rowHeight
-      return {
-        i: visual.id,
-        x: existingLayout.x * 4,
-        y: existingLayout.y * 5,
-        w: existingLayout.w * 4,
-        h: existingLayout.h * 5,
-        minW: 4,  // equivalente ao antigo minW: 1
-        minH: 5,  // equivalente ao antigo minH: 1
-      };
-    }
+// ANTES: Converte de 12→48 cols
+x: existingLayout.x * 4,
+y: existingLayout.y * 5,
 
-    // Default layout para novos visuais
-    return {
-      i: visual.id,
-      x: (index % 2) * 24,  // 24 cols = metade do grid
-      y: Math.floor(index / 2) * 25,  // 25 rows = ~500px
-      w: 24,  // metade da largura
-      h: 25,  // ~500px de altura
-      minW: 4,
-      minH: 5,
-    };
-  });
-}, [visuals]);
-
-// Ao salvar, converter de volta para escala 12 cols / 100px rows
-const handleLayoutChange = useCallback(
-  (newLayout: LayoutItem[]) => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    debounceRef.current = setTimeout(() => {
-      const layoutUpdates = newLayout.map((item) => ({
-        id: item.i,
-        layout: {
-          i: item.i,
-          x: Math.round(item.x / 4),  // Converter para 12 cols
-          y: Math.round(item.y / 5),  // Converter para 100px rows
-          w: Math.round(item.w / 4),
-          h: Math.round(item.h / 5),
-        },
-      }));
-
-      onLayoutChange(layoutUpdates);
-    }, 500);
-  },
-  [onLayoutChange]
-);
+// DEPOIS: Usa valores diretamente
+x: existingLayout.x,
+y: existingLayout.y,
 ```
 
-## Comportamento Visual
+### 2. Remover Divisão ao Salvar
+
+```typescript
+// ANTES: Converte de 48→12 cols (arredonda e perde precisão)
+x: Math.round(item.x / 4),
+y: Math.round(item.y / 5),
+
+// DEPOIS: Salva valores diretamente
+x: item.x,
+y: item.y,
+```
+
+### 3. Ajustar Layout Padrão para Novos Visuais
+
+Os novos visuais já usam a escala granular (48 cols), então apenas precisamos garantir que tenham tamanhos razoáveis com espaçamento:
+
+```typescript
+// Default layout para novos visuais
+return {
+  i: visual.id,
+  x: (index % 2) * 26,      // 26 = card de 24 + gap de 2 (~40px)
+  y: Math.floor(index / 2) * 27,  // 27 = card de 25 + gap de 2
+  w: 24,
+  h: 25,
+  minW: 8,
+  minH: 10,
+};
+```
+
+## Comportamento Esperado
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                   ANTES (Grid 12x100)                       │
+│                   ANTES (Com Arredondamento)                │
 ├─────────────────────────────────────────────────────────────┤
-│  Arrastar visual:                                           │
-│  → Pula em incrementos de ~83px (horizontal)               │
-│  → Pula em incrementos de 100px (vertical)                 │
-│  → Usuário percebe "encaixe forçado"                       │
+│  Usuário posiciona: x=25 (com gap de 1 célula)              │
+│  Salva: Math.round(25/4) = 6                                │
+│  Carrega: 6 * 4 = 24  ← GAP PERDIDO!                       │
+│  Resultado: visuais colados                                 │
 └─────────────────────────────────────────────────────────────┘
 
                           ↓
 
 ┌─────────────────────────────────────────────────────────────┐
-│                   DEPOIS (Grid 48x20)                       │
+│                   DEPOIS (Sem Conversão)                    │
 ├─────────────────────────────────────────────────────────────┤
-│  Arrastar visual:                                           │
-│  → Pula em incrementos de ~21px (horizontal)               │
-│  → Pula em incrementos de 20px (vertical)                  │
-│  → Usuário percebe como "movimento livre"                  │
+│  Usuário posiciona: x=25                                    │
+│  Salva: x=25                                                │
+│  Carrega: x=25  ← PRESERVADO!                              │
+│  Resultado: espaçamento mantido                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Detalhes Técnicos
+## Considerações Importantes
 
-### Conversão de Escala
+### Visuais Existentes
 
-Para manter compatibilidade com layouts existentes salvos no banco:
+Os visuais que já existem no banco estão na escala antiga (12 cols). Para não quebrá-los, podemos detectar se o valor é da escala antiga (valores pequenos como 0-12) e converter apenas esses:
 
-| Operação | Fórmula |
-|----------|---------|
-| **Leitura** (DB → Grid) | `x * 4`, `y * 5`, `w * 4`, `h * 5` |
-| **Escrita** (Grid → DB) | `x / 4`, `y / 5`, `w / 4`, `h / 5` |
+```typescript
+// Detectar se é layout antigo (escala 12 cols) ou novo (escala 48 cols)
+const isOldScale = existingLayout.x <= 12 && existingLayout.w <= 12;
 
-### Tamanhos Mínimos
+if (isOldScale) {
+  // Converter de escala antiga para nova
+  return {
+    x: existingLayout.x * 4,
+    y: existingLayout.y * 5,
+    w: existingLayout.w * 4,
+    h: existingLayout.h * 5,
+    ...
+  };
+} else {
+  // Usar valores diretamente
+  return {
+    x: existingLayout.x,
+    y: existingLayout.y,
+    w: existingLayout.w,
+    h: existingLayout.h,
+    ...
+  };
+}
+```
 
-| Parâmetro | Antes | Depois | Equivalência |
-|-----------|-------|--------|--------------|
-| `minW` | 2 | 8 | ~2 colunas antigas |
-| `minH` | 2 | 10 | ~200px |
+## Resumo das Mudanças
 
-## Resultado Esperado
+| Aspecto | Antes | Depois |
+|---------|-------|--------|
+| **Escala do DB** | 12 cols / 100px rows | 48 cols / 20px rows |
+| **Conversão ao carregar** | `x * 4`, `y * 5` | Direto (ou detecta escala) |
+| **Conversão ao salvar** | `Math.round(x / 4)` | Direto |
+| **Precisão** | Perde espaçamentos | Preserva exatamente |
 
-- **Movimento fluido**: Snap de 20-21px é quase imperceptível
-- **Posicionamento preciso**: Usuário pode colocar visuais exatamente onde deseja
-- **Sem "pulos"**: Transição suave durante o arrasto
-- **Compatibilidade**: Layouts existentes são convertidos automaticamente
+## Resultado Final
 
-## Limitação
+- Espaçamentos entre visuais são **preservados exatamente**
+- Visuais permanecem onde o usuário os posicionou
+- Compatibilidade com layouts antigos via detecção de escala
 
-O `react-grid-layout` sempre terá algum nível de "snap" porque é baseado em grid. Para posicionamento **100% livre em pixels**, seria necessário substituir por uma biblioteca como `react-rnd` (draggable + resizable sem grid). Porém, com grid 48x20, o snap é tão pequeno que a maioria dos usuários não perceberá.
