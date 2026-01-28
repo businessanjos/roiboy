@@ -378,9 +378,21 @@ serve(async (req) => {
         integrationQuery = integrationQuery.is("sector_id", null);
       }
       
-      const { data, error: existingError } = await integrationQuery.maybeSingle();
-      existingWhatsapp = data;
-      console.log(`[UAZAPI] Action: ${action}, Sector: ${sector_id || 'default'}, Integration found:`, existingWhatsapp ? `ID=${existingWhatsapp.id}` : 'none', existingError?.message || '');
+      // FIX: Use limit(1) instead of maybeSingle() to handle sectors with multiple WhatsApp instances gracefully
+      // maybeSingle() throws PGRST116 error when more than one row is found, causing 500 errors
+      const { data: integrations, error: existingError } = await integrationQuery.limit(1);
+      existingWhatsapp = integrations?.[0] || null;
+      
+      if (existingError) {
+        console.error(`[UAZAPI] Error fetching integration:`, existingError.message);
+      }
+      
+      // Warn about potential ambiguity with multiple instances (helps debugging)
+      if (existingWhatsapp && !integration_id) {
+        console.warn(`[UAZAPI] Action: ${action}, Sector: ${sector_id || 'default'} - Using first integration found (ID=${existingWhatsapp.id}). For sectors with multiple WhatsApp instances, specify integration_id to avoid ambiguity.`);
+      }
+      
+      console.log(`[UAZAPI] Action: ${action}, Sector: ${sector_id || 'default'}, Integration found:`, existingWhatsapp ? `ID=${existingWhatsapp.id}` : 'none');
     }
 
     // For "create" action, ALWAYS generate a unique instance name if:
