@@ -73,7 +73,8 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format, differenceInDays, addYears, isBefore, isAfter } from "date-fns";
+import { differenceInDays, addYears, isBefore } from "date-fns";
+import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { ImageGalleryLightbox } from "@/components/ui/image-gallery-lightbox";
 
@@ -449,7 +450,9 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
   const getNextOccurrence = (event: LifeEvent) => {
     if (!event.event_date || !event.is_recurring) return null;
 
-    const eventDate = new Date(event.event_date);
+    const eventDate = parseLocalDate(event.event_date);
+    if (!eventDate) return null;
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -595,7 +598,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
                       {event.event_date && (
                         <>
                           <span>•</span>
-                          <span>{format(new Date(event.event_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+                          <span>{formatLocalDate(event.event_date)}</span>
                         </>
                       )}
                       {event.is_recurring && daysUntil !== null && daysUntil <= 30 && (

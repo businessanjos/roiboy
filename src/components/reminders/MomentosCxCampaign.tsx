@@ -48,8 +48,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { formatLocalDate } from "@/lib/dateUtils";
 
 interface LifeEvent {
   id: string;
@@ -425,11 +424,11 @@ Um abraço!`);
                               <Badge variant="outline">{event.event_type}</Badge>
                             </TableCell>
                             <TableCell>
-                              {event.event_date ? (
-                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                  <Calendar className="h-3 w-3" />
-                                  {format(new Date(event.event_date), "dd/MM/yyyy", { locale: ptBR })}
-                                </div>
+                            {event.event_date ? (
+                              <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                <Calendar className="h-3 w-3" />
+                                {formatLocalDate(event.event_date)}
+                              </div>
                               ) : (
                                 <span className="text-muted-foreground">-</span>
                               )}
