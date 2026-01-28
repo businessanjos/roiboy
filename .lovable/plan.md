@@ -1,132 +1,154 @@
 
-# Plano: Separar Lógica de Grupos e Contatos no ROY zAPP
+# Plano: Corrigir Duplicação de Documentos no Envio
 
-## Resumo
+## Problema Identificado
 
-Atualmente, quando você clica para iniciar uma conversa com um grupo, ele é criado com `agent_id: null` e `status: "triage"` (igual a contatos). Por isso o grupo vai para a **Fila** e não aparece na aba **"Minhas"**.
+Quando você envia **um único documento**, aparecem **dois documentos** na conversa:
+1. O documento correto (com nome original ex: "Contrato.pdf")
+2. Um documento duplicado (com código numérico como nome)
 
-A solução é criar uma lógica específica para grupos: ao iniciar conversa com um grupo, ele será **imediatamente atribuído a você** e aparecerá na aba "Minhas", permitindo que você decida se quer fixá-lo ou não.
+### Causa Raiz
 
-## Diferença Entre Contatos e Grupos
+O fluxo atual de envio de documentos:
 
-| Aspecto | Contatos | Grupos (Novo) |
-|---------|----------|---------------|
-| Ao iniciar | Vai para Fila (`agent_id: null`, `status: triage`) | Atribuído ao agente (`agent_id: currentAgent.id`, `status: active`) |
-| Onde aparece | Aba "Fila" | Aba "Minhas" |
-| Para atender | Precisa "puxar" da fila | Já está atribuído |
-| Ao sair | Some da lista se não fixado | Some da lista se não fixado |
-
-## Mudanças Técnicas
-
-### Arquivo: `src/pages/RoyZapp.tsx`
-
-#### Mudança 1: Criar novo grupo (linhas 2862-2872)
-
-Alterar de `agent_id: null` e `status: "triage"` para `agent_id: currentAgent.id` e `status: "active"`:
-
-```typescript
-// ANTES
-.insert({
-  account_id: currentUser.account_id,
-  zapp_conversation_id: zappConvId,
-  agent_id: null,           // ❌ Vai para fila
-  status: "triage",         // ❌ Status de triagem
-  department_id: currentSectorDepartmentId,
-})
-
-// DEPOIS  
-.insert({
-  account_id: currentUser.account_id,
-  zapp_conversation_id: zappConvId,
-  agent_id: currentAgent.id,  // ✅ Atribuído ao agente atual
-  status: "active",           // ✅ Status ativo
-  department_id: currentSectorDepartmentId,
-  assigned_at: new Date().toISOString(),  // ✅ Data de atribuição
-})
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ FRONTEND (RoyZapp.tsx)                                                      │
+│ 1. Salva mensagem no banco com:                                             │
+│    • content: "Contrato.pdf" (nome do arquivo)                              │
+│    • media_filename: "Contrato.pdf"                                         │
+│    • external_message_id: NULL (ainda não tem)                              │
+└─────────────────────────────┬───────────────────────────────────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ UAZAPI-MANAGER                                                              │
+│ 2. Envia documento para WhatsApp via API                                    │
+└─────────────────────────────┬───────────────────────────────────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ WEBHOOK (uazapi-webhook)                                                    │
+│ 3. Recebe confirmação do WhatsApp com:                                      │
+│    • content: "" (caption vazio!)                                           │
+│    • media_filename: "123456789" (código do WhatsApp)                       │
+│    • external_message_id: "ABC123XYZ"                                       │
+│                                                                             │
+│ 4. Tenta deduplificar buscando:                                             │
+│    WHERE content = "" AND external_message_id IS NULL                       │
+│                                                                             │
+│    ❌ NÃO ENCONTRA porque frontend salvou content = "Contrato.pdf"          │
+│                                                                             │
+│ 5. INSERE NOVA MENSAGEM → DUPLICAÇÃO!                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Mudança 2: Reabrir grupo fechado (linha 2829)
+### Por que funciona para Áudio?
 
-Alterar de `agent_id: null` e `status: "triage"` para atribuir ao agente atual:
+O webhook já tem lógica especial para áudio:
 
 ```typescript
-// ANTES
-.update({ 
-  status: "triage", 
-  agent_id: null, 
-  updated_at: new Date().toISOString() 
-})
-
-// DEPOIS
-.update({ 
-  status: "active",           // ✅ Status ativo
-  agent_id: currentAgent.id,  // ✅ Atribuído ao agente atual
-  assigned_at: new Date().toISOString(),
-  updated_at: new Date().toISOString() 
-})
+if (mediaType === "audio") {
+  // Busca por message_type, não por content
+  const { data } = await supabase
+    .from("zapp_messages")
+    .select("id, media_url")
+    .eq("message_type", "audio")  // ← ESPECÍFICO PARA ÁUDIO
+    .is("external_message_id", null)
+    ...
+}
 ```
 
-#### Mudança 3: Ajustar navegação para aba "Minhas"
+**Documentos não têm essa lógica específica!**
 
-Após criar/reabrir grupo, mudar para aba "Minhas" (não "Fila"):
+## Solução
 
-```typescript
-// ANTES
-setFilterConversationType("group");
+Adicionar deduplicação específica para documentos no webhook, usando `message_type` e `media_filename` ao invés de apenas `content`.
 
-// DEPOIS  
-setInboxTab("mine");           // ✅ Vai para aba "Minhas"
-setFilterConversationType("group");  // ✅ Mostra grupos
-```
+### Arquivos a Modificar
 
-#### Mudança 4: Atualizar o assignment local com o agent correto
+| Arquivo | Modificação |
+|---------|-------------|
+| `supabase/functions/uazapi-webhook/index.ts` | Adicionar lógica de deduplicação para documentos |
 
-Quando adicionamos à lista local, garantir que o agent está presente:
+### Mudança no Webhook (linhas ~1380-1415)
 
 ```typescript
-if (newAssignment) {
-  // Enrich with current agent data for immediate display
-  const enrichedAssignment = {
-    ...newAssignment,
-    agent: { ...currentAgent }
-  };
-  setSelectedConversation(enrichedAssignment);
-  setAssignments(prev => [enrichedAssignment, ...prev]);
+// ANTES - só trata áudio especialmente
+if (mediaType === "audio") {
+  // Busca por message_type
+} else {
+  // Para TODOS outros (texto, imagem, documento), busca por content
+  const { data } = await supabase
+    .from("zapp_messages")
+    .select("id")
+    .eq("content", content)  // ❌ Falha para documentos!
+    ...
+}
+
+// DEPOIS - trata áudio E documento especialmente
+if (mediaType === "audio") {
+  // Busca por message_type (mantém código existente)
+  ...
+} else if (mediaType === "document") {
+  // NOVO: Busca por message_type + media_filename
+  const { data } = await supabase
+    .from("zapp_messages")
+    .select("id, media_url, media_filename")
+    .eq("zapp_conversation_id", zappConversationId)
+    .eq("direction", "outbound")
+    .eq("message_type", "document")
+    .is("external_message_id", null)
+    .gte("created_at", fiveMinutesAgo)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  recentDupe = data;
+  
+  if (recentDupe) {
+    console.log(`[DEDUPE] Found pending document message ${recentDupe.id} to update`);
+  }
+} else {
+  // Para texto e imagem, busca por content (mantém código existente)
+  ...
 }
 ```
 
 ## Fluxo Corrigido
 
 ```text
-[Usuário clica em grupo no "Nova Conversa"]
-                 ↓
-[Sistema cria assignment com:]
-  • agent_id = currentAgent.id
-  • status = "active"
-  • assigned_at = now()
-                 ↓
-[Sistema adiciona à lista local]
-                 ↓
-[Sistema muda para aba "Minhas" + filtro "grupos"]
-                 ↓
-[GRUPO APARECE NA LISTA!] ✅
-                 ↓
-[Usuário pode:]
-  • Fixar grupo (📌) → Permanece visível
-  • Não fixar → Desaparece ao fechar
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ FRONTEND (RoyZapp.tsx)                                                      │
+│ 1. Salva mensagem com:                                                      │
+│    • message_type: "document"                                               │
+│    • media_filename: "Contrato.pdf"                                         │
+│    • external_message_id: NULL                                              │
+└─────────────────────────────┬───────────────────────────────────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ WEBHOOK (uazapi-webhook) - CORRIGIDO                                        │
+│ 2. Recebe confirmação e detecta: mediaType = "document"                     │
+│                                                                             │
+│ 3. Busca mensagem pendente:                                                 │
+│    WHERE message_type = "document"                                          │
+│      AND external_message_id IS NULL                                        │
+│      AND created_at > 5 min ago                                             │
+│                                                                             │
+│    ✅ ENCONTRA a mensagem do frontend!                                      │
+│                                                                             │
+│ 4. ATUALIZA external_message_id ao invés de inserir                         │
+│    → SEM DUPLICAÇÃO! ✅                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Resultado Esperado
 
-1. Ao clicar em um grupo no "Nova Conversa", ele aparece **imediatamente** na aba "Minhas"
-2. O grupo fica disponível para ser fixado (menu 3 pontinhos → "Fixar")
-3. Se o usuário não fixar e fechar a conversa, o grupo some da lista (comportamento normal)
-4. Se o usuário fixar, o grupo permanece visível mesmo após fechamento
-5. Contatos continuam funcionando como antes (indo para a Fila)
+1. Documento enviado pelo frontend cria 1 mensagem
+2. Webhook recebe confirmação e **atualiza** a mensagem existente
+3. Apenas **1 documento** aparece na conversa
+4. O nome correto do arquivo é preservado
 
 ## Impacto
 
-- Nenhuma mudança no banco de dados
-- Apenas ajustes de lógica no frontend
-- Separação clara entre fluxo de contatos e grupos
-- Melhora significativa na usabilidade
+- Mudança apenas no edge function `uazapi-webhook`
+- Nenhuma mudança no frontend ou banco de dados
+- Correção aplica-se automaticamente para novos envios
+- Mensagens duplicadas existentes não são afetadas (precisariam ser removidas manualmente)
