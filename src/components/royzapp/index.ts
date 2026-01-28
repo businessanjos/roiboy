@@ -25,3 +25,4 @@ export * from "./ZappCRMPanel";
 export * from "./ZappFinancePanel";
 export * from "./ZappDealDetailSheet";
 export * from "./ZappLeadDataEditor";
+export * from "./ZappNotificationToast";

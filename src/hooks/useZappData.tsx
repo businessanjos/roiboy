@@ -53,13 +53,23 @@ const HEARTBEAT_INTERVAL_MS = 120000; // Increased from 60s to 120s for cloud op
 const REALTIME_DEBOUNCE_MS = 3000; // Increased from 2000ms to 3000ms for cloud optimization
 const MIN_FETCH_INTERVAL_MS = 3000;
 
+export interface InboundMessageData {
+  conversationId: string;
+  contactName: string;
+  messagePreview: string;
+  avatarUrl?: string | null;
+  agentId?: string | null;
+  isGroup?: boolean;
+}
+
 interface UseZappDataOptions {
   sectorId?: SectorId;
   integrationId?: string;
+  onNewInboundMessage?: (data: InboundMessageData) => void;
 }
 
 export function useZappData(options: UseZappDataOptions = {}) {
-  const { sectorId, integrationId } = options;
+  const { sectorId, integrationId, onNewInboundMessage } = options;
   const { currentUser } = useCurrentUser();
   
   // Core data state
@@ -85,6 +95,10 @@ export function useZappData(options: UseZappDataOptions = {}) {
   const lastHeartbeatRef = useRef<number>(0);
   const realtimeFetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastFetchTimeRef = useRef<number>(0);
+  
+  // Ref for notification callback to avoid stale closures
+  const onNewInboundMessageRef = useRef(onNewInboundMessage);
+  onNewInboundMessageRef.current = onNewInboundMessage;
 
   // Current agent
   const currentAgent = useMemo(() => {
@@ -740,6 +754,40 @@ export function useZappData(options: UseZappDataOptions = {}) {
             return;
           }
           
+          // NOTIFICATION: Trigger callback for INBOUND messages
+          if (newMsg?.direction === 'inbound' && onNewInboundMessageRef.current) {
+            // Find the conversation in assignments to get contact info and agent
+            const conversationId = newMsg.zapp_conversation_id;
+            const assignment = filteredAssignmentsRef.current.find(
+              a => a.zapp_conversation_id === conversationId || a.zapp_conversation?.id === conversationId
+            );
+            
+            if (assignment) {
+              const contactName = assignment.zapp_conversation?.contact_name 
+                || assignment.zapp_conversation?.client?.full_name 
+                || assignment.zapp_conversation?.lead?.full_name 
+                || assignment.zapp_conversation?.phone_e164 
+                || "Contato";
+              
+              const messagePreview = newMsg.content 
+                || (newMsg.message_type === 'audio' ? '🎤 Áudio' : '')
+                || (newMsg.message_type === 'image' ? '📷 Imagem' : '')
+                || (newMsg.message_type === 'video' ? '🎥 Vídeo' : '')
+                || (newMsg.message_type === 'document' ? '📄 Documento' : '')
+                || (newMsg.message_type === 'sticker' ? '🎭 Sticker' : '')
+                || 'Nova mensagem';
+              
+              onNewInboundMessageRef.current({
+                conversationId,
+                contactName,
+                messagePreview,
+                avatarUrl: assignment.zapp_conversation?.avatar_url || assignment.zapp_conversation?.client?.avatar_url,
+                agentId: assignment.agent_id,
+                isGroup: assignment.zapp_conversation?.is_group || false,
+              });
+            }
+          }
+          
           // CRITICAL FIX: Check if message already exists in local state before adding
           // This prevents duplicates from realtime when frontend already added the message
           if (newMsg?.id) {
@@ -883,6 +931,10 @@ export function useZappData(options: UseZappDataOptions = {}) {
     
     return filtered;
   }, [assignments, departments, sectorId, integrationId]);
+
+  // Keep a ref of filtered assignments for use in realtime callbacks (avoids stale closures)
+  const filteredAssignmentsRef = useRef(filteredAssignments);
+  filteredAssignmentsRef.current = filteredAssignments;
 
   return {
     // Data
