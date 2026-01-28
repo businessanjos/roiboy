@@ -1,104 +1,126 @@
 
 
-# Plano: Correção de Visuais do Insights (Layout, Faturamento e "Sem Responsável")
+# Plano: Grid de Visuais com Posicionamento Totalmente Livre (Estilo PowerBI)
 
-## Problemas Identificados
+## Problema Atual
 
-### 1. "Sem Responsável" aparece nos gráficos de vendedores
-Os visuais agrupados por vendedor mostram uma categoria "Sem Responsável" para negócios sem usuário atribuído.
+O grid atual ainda apresenta comportamentos indesejados:
+- **Áreas sombreadas (placeholders)** aparecem durante o arrasto, indicando onde o item vai "encaixar"
+- **Compactação automática** reorganiza os itens mesmo com `noCompactor`
+- **Colisão** faz com que itens empurrem outros durante o arrasto
+- **Espaçamentos predefinidos** limitam o posicionamento preciso
 
-### 2. Faturamento por Vendedor está incorreto
-O gráfico está somando TODOS os negócios (abertos, perdidos e ganhos), quando deveria mostrar apenas o valor dos negócios GANHOS.
-
-**Causa raiz**: No `AddVisualModal.tsx`, a propriedade `statusFilter` está sendo passada apenas para scorecards (linha 182), mas NÃO para gráficos (linhas 195-215):
-
-```typescript
-// Scorecards - statusFilter É passado ✅
-config = {
-  ...
-  statusFilter: metricConfig.statusFilter,
-};
-
-// Charts - statusFilter NÃO é passado ❌
-config = {
-  ...
-  // statusFilter está faltando!
-};
-```
-
-### 3. Layout do grid limitado e inflexível
-O `react-grid-layout` está usando compactação automática (`verticalCompactor` por padrão), que reorganiza os itens automaticamente, causando sobreposição e dificultando o posicionamento livre.
-
-## Solução Proposta
+## Solução: Posicionamento Livre Absoluto
 
 ### Arquivos a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/hooks/useVisualData.ts` | Filtrar "Sem Responsável" de visuais por vendedor |
-| `src/components/insights/AddVisualModal.tsx` | Passar `statusFilter` para gráficos (não apenas scorecards) |
-| `src/components/insights/grid/InsightsGrid.tsx` | Usar `noCompactor` para posicionamento livre |
+| `src/components/insights/grid/InsightsGrid.tsx` | Usar compactor com `allowOverlap: false` + `preventCollision: true` + ocultar placeholder + remover transições |
 
-### 1. Remover "Sem Responsável" dos Visuais
+### Configuração do Compactor
 
-Na função `aggregateData` em `useVisualData.ts`, filtrar resultados onde o nome é "Sem Responsável" quando o dimension.field é `responsible_name`:
+O `react-grid-layout` v2 oferece a função `getCompactor` que permite criar um compactor personalizado:
 
 ```typescript
-// Após o loop de agregação, antes de retornar:
-let filteredResult = result;
+import { getCompactor, noCompactor } from "react-grid-layout/core";
 
-// Remove "Sem Responsável" from user-based dimensions
-if (dimension.field === 'responsible_name') {
-  filteredResult = result.filter(item => item.name !== 'Sem Responsável');
-}
+// Opção 1: noCompactor com preventCollision
+// - Items ficam onde posicionados
+// - Não podem ser colocados sobre outros (bloqueado)
+// - Não empurram outros items
 
-return filteredResult;
+// Opção 2: getCompactor com allowOverlap
+// - Permite sobreposição total
+// - Posicionamento 100% livre
 ```
 
-### 2. Corrigir Faturamento por Vendedor
+### Mudanças Específicas
 
-No `AddVisualModal.tsx`, adicionar `statusFilter` à configuração de gráficos:
+1. **Remover o Placeholder Visual**
+   - O placeholder é a área sombreada que aparece durante o arrasto
+   - Ocultar via CSS: `display: none`
 
-```typescript
-// Charts: use groupBy for dimension
-config = {
-  dataSource: metricConfig.dataSource,
-  measure: {
-    field: metricConfig.measureField || '',
-    aggregation: metricConfig.aggregation,
-  },
-  dimension: {
-    field: dimensionField,
-    type: baseDimensionConfig.type,
-    ...(baseDimensionConfig.dateGrouping && { dateGrouping: baseDimensionConfig.dateGrouping }),
-  },
-  formatting: {
-    type: metricConfig.formatType,
-    decimals: metricConfig.formatType === 'currency' ? 2 : 1,
-  },
-  appearance: {
-    ...DEFAULT_APPEARANCE,
-    fillEmptyDates: isTemporalGrouping,
-    showDataLabels: isTemporalGrouping,
-  },
-  statusFilter: metricConfig.statusFilter,  // ← ADICIONAR ESTA LINHA
-};
-```
+2. **Usar Compactor com `preventCollision: true`**
+   - Quando `preventCollision: true` e `allowOverlap: false`:
+     - Itens NÃO podem ser colocados sobre outros (snap back)
+     - Itens NÃO empurram outros
+   - Quando `allowOverlap: true`:
+     - Posicionamento 100% livre, mesmo sobre outros items
 
-Isso garante que:
-- "Faturamento por Vendedor" (metric: revenue) → filtra apenas `status = 'won'`
-- "Ticket Médio por Vendedor" (metric: avg_ticket) → filtra apenas `status = 'won'`
-- "Perdas por Etapa" (metric: lost_reasons) → filtra apenas `status = 'lost'`
+3. **Remover Transições Durante Arrasto**
+   - Transições causam a sensação de "encaixe"
+   - Remover para movimento fluido
 
-### 3. Grid Flexível com Posicionamento Livre
+4. **Reduzir Margens para Zero**
+   - Margens criam espaçamentos forçados
+   - Usar `[0, 0]` para layout contíguo
 
-Atualizar `InsightsGrid.tsx` para usar `noCompactor` do `react-grid-layout/core`:
+### Código Proposto
 
 ```typescript
 import GridLayout from "react-grid-layout";
-import { noCompactor } from "react-grid-layout/core";
+import { getCompactor } from "react-grid-layout/core";
 
-// Na configuração do GridLayout:
+// Compactor livre: sem compactação, com prevenção de colisão
+const freePositionCompactor = getCompactor(null, false, true);
+// getCompactor(type, allowOverlap, preventCollision)
+// - type: null = sem compactação vertical/horizontal
+// - allowOverlap: false = não permite sobreposição
+// - preventCollision: true = bloqueia movimento que causaria colisão
+
+// OU para liberdade total (permite sobreposição):
+const totalFreeCompactor = getCompactor(null, true, false);
+```
+
+### Estilo CSS Atualizado
+
+```css
+/* Ocultar placeholder completamente */
+.insights-grid .react-grid-placeholder {
+  display: none !important;
+}
+
+/* Remover transições para movimento instantâneo */
+.insights-grid .react-grid-item {
+  transition: none !important;
+}
+
+/* OU manter transição suave apenas para tamanho */
+.insights-grid .react-grid-item:not(.react-draggable-dragging) {
+  transition: width 200ms, height 200ms;
+}
+```
+
+## Comportamento Esperado
+
+### Antes (Atual)
+```
+┌─────────────────────────────────────────────────────────┐
+│  Arrastar item:                                         │
+│  → Aparece área sombreada (placeholder)                │
+│  → Outros items são "empurrados"                        │
+│  → Item "encaixa" em posições predefinidas              │
+│  → Espaços vazios entre items                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Depois (PowerBI-style)
+```
+┌─────────────────────────────────────────────────────────┐
+│  Arrastar item:                                         │
+│  → Nenhum placeholder visível                          │
+│  → Outros items NÃO são movidos                        │
+│  → Item fica exatamente onde você solta                │
+│  → Layout contíguo, sem gaps forçados                  │
+└─────────────────────────────────────────────────────────┘
+```
+
+## Detalhes Técnicos
+
+### Configuração Final do GridLayout
+
+```typescript
 <GridLayout
   className="layout"
   layout={layout}
@@ -107,7 +129,7 @@ import { noCompactor } from "react-grid-layout/core";
   gridConfig={{
     cols: COLS,
     rowHeight: ROW_HEIGHT,
-    margin: [8, 8],           // Margens menores
+    margin: [0, 0],           // Sem margens forçadas
     containerPadding: [0, 0],
   }}
   dragConfig={{
@@ -117,89 +139,44 @@ import { noCompactor } from "react-grid-layout/core";
   resizeConfig={{
     enabled: true,
   }}
-  compactor={noCompactor}     // ← Posicionamento livre sem compactação
+  compactor={freePositionCompactor}  // Posicionamento livre
 />
 ```
 
-**Benefícios do `noCompactor`**:
-- Visuais permanecem exatamente onde você os posiciona
-- Sem reorganização automática ao arrastar
-- Permite posicionamento livre em qualquer posição do grid
-- Visuais não "empurram" outros automaticamente
+### Opções de Comportamento
 
-## Fluxo Visual
+| Configuração | Resultado |
+|--------------|-----------|
+| `getCompactor(null, false, true)` | Livre, mas não permite sobreposição (item volta se colidir) |
+| `getCompactor(null, true, false)` | 100% livre, permite sobreposição total |
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                   ANTES (PROBLEMAS)                         │
-├─────────────────────────────────────────────────────────────┤
-│  ┌───────────┐ ┌───────────┐ ┌───────────┐                  │
-│  │Faturamento│ │Ticket Méd.│ │ Conversão │  ← Cards OK      │
-│  │R$3.751.200│ │R$ 117,2K  │ │   6.6%    │                  │
-│  └───────────┘ └───────────┘ └───────────┘                  │
-│                                                             │
-│  ┌──────────────────────────────────────┐                   │
-│  │   Faturamento por Vendedor           │  ← SOBREPONDO!    │
-│  │   ████████ Vanessa                   │                   │
-│  │   ███████ Darlan                     │                   │
-│  │   ██████ Jonathan                    │                   │
-│  │   █████ George                       │                   │
-│  │   ████ Everton                       │                   │
-│  │   ███ SEM RESPONSÁVEL ← REMOVER      │                   │
-│  └──────────────────────────────────────┘                   │
-│                                                             │
-│  Valor total = TODOS os deals (errado!)                     │
-└─────────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────────┐
-│                   DEPOIS (CORRIGIDO)                        │
-├─────────────────────────────────────────────────────────────┤
-│  ┌───────────┐ ┌───────────┐ ┌───────────┐                  │
-│  │Faturamento│ │Ticket Méd.│ │ Conversão │  ← Cards OK      │
-│  │R$2.450.000│ │R$ 95,3K   │ │   32.5%   │  (valores reais) │
-│  └───────────┘ └───────────┘ └───────────┘                  │
-│                                                             │
-│  ┌──────────────────────────────────────┐                   │
-│  │   Faturamento por Vendedor           │  ← POSICIONÁVEL   │
-│  │   ████████ Vanessa                   │    LIVREMENTE     │
-│  │   ███████ Darlan                     │                   │
-│  │   ██████ Jonathan                    │                   │
-│  │   █████ George                       │                   │
-│  │   ████ Everton                       │  ← Sem "Sem Resp."|
-│  └──────────────────────────────────────┘                   │
-│                                                             │
-│  Valor = apenas deals GANHOS (correto!)                     │
-│  Grid = posicionamento livre, sem sobreposição forçada      │
-└─────────────────────────────────────────────────────────────┘
+**Recomendação**: Usar `getCompactor(null, false, true)` para evitar sobreposição acidental, similar ao PowerBI onde items não ficam um sobre o outro.
+
+### CSS Final para Ocultar Placeholder
+
+```css
+.insights-grid .react-grid-placeholder {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+.insights-grid .react-grid-item {
+  transition: none;
+}
+
+.insights-grid .react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 100;
+}
 ```
 
-## Detalhes Técnicos
+## Resultado Final
 
-### Mudança no Grid
-
-| Aspecto | Antes | Depois |
-|---------|-------|--------|
-| **Compactação** | `verticalCompactor` (padrão) | `noCompactor` |
-| **Margens** | `[16, 16]` | `[8, 8]` (menores) |
-| **Comportamento** | Itens se reorganizam | Itens ficam onde posicionados |
-| **Sobreposição** | Possível ao arrastar | Prevenida naturalmente |
-
-### Mudança no StatusFilter
-
-| Métrica | dataSource | statusFilter | Resultado |
-|---------|------------|--------------|-----------|
-| revenue | deals | `'won'` | Apenas negócios ganhos |
-| avg_ticket | deals | `'won'` | Apenas negócios ganhos |
-| deals_count | deals | (nenhum) | Todos os negócios |
-| conversion | deals | (cálculo especial) | Taxa de conversão |
-| lost_reasons | deals | `'lost'` | Apenas negócios perdidos |
-
-## Visuais Existentes
-
-**Nota importante**: Visuais já criados anteriormente continuarão com a configuração antiga (sem `statusFilter`). Para corrigir visuais existentes, o usuário precisará:
-
-1. Deletar o visual antigo
-2. Criar um novo visual com a mesma métrica
-
-Alternativamente, podemos adicionar uma migração para atualizar visuais existentes no banco de dados.
+O grid se comportará como o PowerBI:
+- **Arraste livre**: Items movem para qualquer posição
+- **Sem placeholders**: Nada aparece durante o arrasto
+- **Sem empurrões**: Outros items permanecem em suas posições
+- **Colisão bloqueada**: Se tentar soltar sobre outro item, volta para posição original
+- **Redimensionamento livre**: Ajuste de tamanho sem restrições de grid
 
