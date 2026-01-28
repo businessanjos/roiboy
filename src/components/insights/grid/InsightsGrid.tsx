@@ -1,10 +1,13 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
 import GridLayout from "react-grid-layout";
-import { noCompactor } from "react-grid-layout/core";
+import { getCompactor } from "react-grid-layout/core";
 import { InsightsVisual } from "@/hooks/useInsightsDashboards";
 import { ConfigurableVisualCard } from "../visuals/ConfigurableVisualCard";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+
+// Free position compactor: no compaction, prevents collision, items don't push others
+const freePositionCompactor = getCompactor(null, false, true);
 
 interface LayoutItem {
   i: string;
@@ -123,7 +126,7 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
         gridConfig={{
           cols: COLS,
           rowHeight: ROW_HEIGHT,
-          margin: [8, 8] as [number, number],
+          margin: [0, 0] as [number, number],
           containerPadding: [0, 0] as [number, number],
         }}
         dragConfig={{
@@ -133,7 +136,7 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
         resizeConfig={{
           enabled: true,
         }}
-        compactor={noCompactor}
+        compactor={freePositionCompactor}
       >
         {visuals.map((visual) => (
           <div key={visual.id} className="h-full">
@@ -144,11 +147,10 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
 
       <style>{`
         .insights-grid .react-grid-item {
-          transition: all 200ms ease;
-          transition-property: left, top, width, height;
+          transition: none;
         }
-        .insights-grid .react-grid-item.cssTransforms {
-          transition-property: transform, width, height;
+        .insights-grid .react-grid-item:not(.react-draggable-dragging) {
+          transition: width 200ms ease, height 200ms ease;
         }
         .insights-grid .react-grid-item.resizing {
           z-index: 1;
@@ -156,7 +158,7 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
         }
         .insights-grid .react-grid-item.react-draggable-dragging {
           transition: none;
-          z-index: 3;
+          z-index: 100;
           will-change: transform;
         }
         .insights-grid .react-grid-item > .react-resizable-handle {
@@ -175,16 +177,9 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
           border-bottom: 2px solid rgba(0, 0, 0, 0.3);
         }
         .insights-grid .react-grid-placeholder {
-          background: hsl(var(--primary) / 0.2);
-          opacity: 0.5;
-          transition-duration: 100ms;
-          z-index: 2;
-          -webkit-user-select: none;
-          -moz-user-select: none;
-          -ms-user-select: none;
-          -o-user-select: none;
-          user-select: none;
-          border-radius: var(--radius);
+          display: none !important;
+          opacity: 0 !important;
+          visibility: hidden !important;
         }
       `}</style>
     </div>
