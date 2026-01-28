@@ -570,7 +570,7 @@ export function CustomFieldsManager({
 
       setDialogOpen(false);
       resetForm();
-      fetchFields();
+      await fetchFields();
       onFieldsChange?.();
     } catch (error: any) {
       toast.error(error.message || "Erro ao salvar campo");
@@ -603,7 +603,12 @@ export function CustomFieldsManager({
   const fieldDialog = (
     <Dialog open={dialogOpen} onOpenChange={(open) => {
       setDialogOpen(open);
-      if (!open) resetForm();
+      if (!open) {
+        resetForm();
+      } else if (!editingField) {
+        // Ao abrir para CRIAR (não editar), reseta o formulário
+        resetForm();
+      }
     }}>
       <DialogTrigger asChild>
         <Button size="sm" className={isControlled ? "ml-auto" : ""}>
