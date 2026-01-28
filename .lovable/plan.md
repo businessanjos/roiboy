@@ -1,144 +1,231 @@
 
-# Plano: Corrigir Erro de Envio de Mensagens com Múltiplas Instâncias WhatsApp
+# Plano: Substituir Select de Clientes por Barra de Pesquisa Flexível
 
 ## Problema Identificado
 
-O time de Operações (e Vendas) enfrenta o erro "Edge Function returned a non-2xx status code" ao tentar enviar mensagens. A investigação revelou:
+O componente `FormResponseViewer.tsx` usa um `<Select>` simples para vincular clientes ao formulário, com dois problemas críticos:
 
-### Causa Raiz Técnica
+| Problema | Causa |
+|----------|-------|
+| **Sem pesquisa** | O `<Select>` não possui funcionalidade de busca |
+| **Lista incompleta** | A query em `Forms.tsx` (linha 700-705) não tem limite explícito, mas por ser um simples `.order("full_name")` sem paginação, está sujeita ao limite de 1000 rows do Supabase - além disso, renderizar todos os clientes de uma vez é ineficiente |
 
-O setor **Vendas** possui **2 integrações de WhatsApp** simultaneamente:
-- `[COMERCIAL] Eternum Club` (c3baa312-78b9-400f-802a-705d56731f90)
-- `Whatsapp Jota` (026d6fef-8c3b-4e65-8a9f-68f5d9f9fbf6)
+## Solução
 
-Quando o frontend não especifica qual instância usar via `integration_id`, a Edge Function busca por `sector_id` usando `maybeSingle()`. Esta função **retorna erro quando encontra mais de uma row**, causando falha no envio.
+Transformar o campo de seleção em uma **barra de pesquisa com debounce** que busca clientes server-side, similar ao padrão já implementado em `EventParticipantsTab.tsx` e `Contracts.tsx`.
 
-### Fluxo do Erro
+### Comportamento Esperado
 
-```text
-1. Usuário tenta enviar mensagem
-2. Frontend chama uazapi-manager com sector_id: "vendas" (sem integration_id)
-3. Edge Function executa: .eq("sector_id", "vendas").maybeSingle()
-4. Supabase encontra 2 rows → retorna ERRO (não data)
-5. existingWhatsapp fica null, savedInstanceToken fica undefined
-6. A ação send_text falha ou usa fallback incorreto
-7. Erro 500 retornado → "Edge Function returned a non-2xx status code"
-```
-
-## Solução: Três Correções
-
-### 1. Edge Function: Trocar `maybeSingle()` por `.limit(1)` 
-
-**Arquivo**: `supabase/functions/uazapi-manager/index.ts` (linhas 365-384)
-
-Modificar a query para retornar a **primeira integração encontrada** em vez de falhar quando há múltiplas:
-
-```typescript
-// ANTES (PROBLEMÁTICO)
-const { data, error: existingError } = await integrationQuery.maybeSingle();
-existingWhatsapp = data;
-
-// DEPOIS (SEGURO)
-// Use limit(1) para pegar a primeira integração quando há múltiplas
-const { data: integrations, error: existingError } = await integrationQuery.limit(1);
-if (existingError) {
-  console.error(`[UAZAPI] Error fetching integration: ${existingError.message}`);
-}
-existingWhatsapp = integrations?.[0] || null;
-
-// Log warning when there might be multiple integrations
-if (existingWhatsapp && !integration_id) {
-  console.warn(`[UAZAPI] Using first integration found. For sectors with multiple instances, specify integration_id to avoid ambiguity.`);
-}
-```
-
-### 2. Edge Function: Aplicar mesma correção no fallback de `send_text`
-
-**Arquivo**: `supabase/functions/uazapi-manager/index.ts` (linhas 1631-1649)
-
-Este bloco já usa `.limit(1)` corretamente, mas devemos garantir consistência e adicionar log de warning:
-
-```typescript
-// Já está correto, mas adicionar warning para debug
-if (integration_id) {
-  console.log(`[send_text] Using specific integration_id: ${integration_id}`);
-  sendTextIntQuery = sendTextIntQuery.eq("id", integration_id);
-} else {
-  // Warning: setor pode ter múltiplas instâncias
-  console.warn(`[send_text] No integration_id provided, using first integration for sector: ${sector_id || 'default'}`);
-  if (sector_id) {
-    sendTextIntQuery = sendTextIntQuery.eq("sector_id", sector_id);
-  } else {
-    sendTextIntQuery = sendTextIntQuery.is("sector_id", null);
-  }
-}
-```
-
-### 3. Frontend: Garantir que `integration_id` seja sempre definido
-
-**Arquivo**: `src/hooks/useZappData.tsx`
-
-Quando há múltiplas instâncias, o hook deve garantir que busque a preferência do usuário automaticamente:
-
-Verificar se o `integrationId` está sendo passado corretamente quando o usuário abre uma conversa. Se não, o hook pode buscar a preferência salva do usuário ou usar a primeira instância conectada.
+1. Usuário digita no campo de busca (mínimo 2 caracteres)
+2. Após 300ms de debounce, busca é executada server-side
+3. Busca flexível: "Tiago" encontra "Thiago Henrique Alhier Gomes"
+4. Resultados exibidos em lista clicável
+5. Ao selecionar, cliente é vinculado
 
 ## Arquivos a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `supabase/functions/uazapi-manager/index.ts` | Trocar `maybeSingle()` por `.limit(1)` na linha ~381; adicionar warnings para debug |
+| `src/components/forms/FormResponseViewer.tsx` | Substituir `<Select>` por `<Input>` com busca + lista de resultados |
+| `src/pages/Forms.tsx` | Remover `fetchClients()` e prop `allClients` (não será mais necessário carregar todos) |
 
-## Código Específico da Correção Principal
+## Mudanças Detalhadas
 
-A mudança principal é simples e cirúrgica:
+### 1. FormResponseViewer.tsx - Adicionar Estados e Função de Busca
 
 ```typescript
-// Linha ~365-384 - SUBSTITUIR maybeSingle por limit(1)
-} else {
-  // Fallback to sector_id based lookup
-  let integrationQuery = supabase
-    .from("integrations")
-    .select("config, status, sector_id, id")
-    .eq("account_id", accountId)
-    .eq("type", "whatsapp");
-  
-  // CRITICAL: sector_id can be null for default sector
-  if (sector_id) {
-    integrationQuery = integrationQuery.eq("sector_id", sector_id);
-  } else {
-    // For default sector, explicitly match null sector_id
-    integrationQuery = integrationQuery.is("sector_id", null);
+// Novos imports
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
+// Novos estados (dentro do componente)
+const { currentUser } = useCurrentUser();
+const [clientSearchTerm, setClientSearchTerm] = useState("");
+const [searchResults, setSearchResults] = useState<Array<{ id: string; full_name: string; phone_e164: string; avatar_url?: string }>>([]);
+const [searchingClients, setSearchingClients] = useState(false);
+
+// Função de busca server-side
+const searchClients = async (term: string) => {
+  if (!term || term.length < 2 || !currentUser?.account_id) {
+    setSearchResults([]);
+    return;
   }
   
-  // FIX: Use limit(1) instead of maybeSingle() to handle multiple integrations gracefully
-  const { data: integrations, error: existingError } = await integrationQuery.limit(1);
-  existingWhatsapp = integrations?.[0] || null;
-  
-  if (existingError) {
-    console.error(`[UAZAPI] Error fetching integration:`, existingError.message);
+  setSearchingClients(true);
+  try {
+    // Dividir termo em múltiplas palavras para busca flexível
+    const terms = term.trim().split(/\s+/).filter(t => t.length > 0);
+    
+    let query = supabase
+      .from("clients")
+      .select("id, full_name, phone_e164, avatar_url")
+      .eq("account_id", currentUser.account_id)
+      .order("full_name")
+      .limit(20);
+    
+    // Busca flexível: cada termo deve aparecer no nome
+    if (terms.length === 1) {
+      query = query.or(`full_name.ilike.%${terms[0]}%,phone_e164.ilike.%${terms[0]}%`);
+    } else {
+      // Para múltiplos termos, todos devem aparecer no nome
+      const conditions = terms.map(t => `full_name.ilike.%${t}%`);
+      query = query.or(conditions.join(','));
+    }
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    setSearchResults(data || []);
+  } catch (error) {
+    console.error("Error searching clients:", error);
+    setSearchResults([]);
+  } finally {
+    setSearchingClients(false);
   }
+};
+
+// useEffect com debounce
+useEffect(() => {
+  const timer = setTimeout(() => {
+    searchClients(clientSearchTerm);
+  }, 300);
+  return () => clearTimeout(timer);
+}, [clientSearchTerm, currentUser?.account_id]);
+
+// Reset ao trocar de resposta
+useEffect(() => {
+  setClientSearchTerm("");
+  setSearchResults([]);
+  setLinkingClientId("");
+}, [selectedResponse?.id]);
+```
+
+### 2. FormResponseViewer.tsx - Substituir UI do Select
+
+Substituir o bloco de `<Select>` (linhas 598-619) por:
+
+```tsx
+<div className="space-y-2 p-3 rounded-lg bg-muted/50">
+  <div className="flex items-center gap-2">
+    <div className="flex-1 relative">
+      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <Input
+        placeholder="Buscar cliente por nome ou telefone..."
+        value={clientSearchTerm}
+        onChange={(e) => setClientSearchTerm(e.target.value)}
+        className="pl-9"
+      />
+    </div>
+    {linkingClientId && (
+      <Button
+        size="sm"
+        onClick={handleSaveToClient}
+        disabled={savingToClient}
+      >
+        {savingToClient && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+        Vincular
+      </Button>
+    )}
+  </div>
   
-  // Warn about potential ambiguity with multiple instances
-  if (existingWhatsapp && !integration_id) {
-    console.warn(`[UAZAPI] Action: ${action}, Sector: ${sector_id || 'default'} - Using first integration. Consider specifying integration_id for sectors with multiple instances.`);
-  }
+  {/* Lista de resultados */}
+  {clientSearchTerm.length >= 2 && (
+    <div className="max-h-40 overflow-y-auto border rounded-md bg-background">
+      {searchingClients ? (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        </div>
+      ) : searchResults.length === 0 ? (
+        <div className="p-3 text-center text-sm text-muted-foreground">
+          Nenhum cliente encontrado
+        </div>
+      ) : (
+        searchResults.map((client) => (
+          <button
+            key={client.id}
+            onClick={() => {
+              setLinkingClientId(client.id);
+              setClientSearchTerm(client.full_name);
+              setSearchResults([]);
+            }}
+            className={cn(
+              "w-full flex items-center gap-3 p-2 hover:bg-muted text-left transition-colors",
+              linkingClientId === client.id && "bg-muted"
+            )}
+          >
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={client.avatar_url || undefined} />
+              <AvatarFallback className="text-xs">
+                {client.full_name.slice(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{client.full_name}</p>
+              <p className="text-xs text-muted-foreground truncate">{client.phone_e164}</p>
+            </div>
+            {linkingClientId === client.id && (
+              <Check className="h-4 w-4 text-primary shrink-0" />
+            )}
+          </button>
+        ))
+      )}
+    </div>
+  )}
   
-  console.log(`[UAZAPI] Action: ${action}, Sector: ${sector_id || 'default'}, Integration found:`, existingWhatsapp ? `ID=${existingWhatsapp.id}` : 'none');
+  {/* Mensagem quando não digitou ainda */}
+  {clientSearchTerm.length < 2 && !linkingClientId && (
+    <p className="text-xs text-muted-foreground text-center py-2">
+      Digite ao menos 2 caracteres para buscar
+    </p>
+  )}
+  
+  {/* Cliente selecionado (visual feedback) */}
+  {linkingClientId && clientSearchTerm.length < 2 && (
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <Check className="h-4 w-4 text-primary" />
+      Cliente selecionado. Clique em "Vincular" para confirmar.
+    </div>
+  )}
+</div>
+```
+
+### 3. Forms.tsx - Remover Carregamento de Todos os Clientes
+
+Remover:
+- Estado `allClients` (linha 642)
+- Função `fetchClients()` (linhas 698-709)
+- Chamada `fetchClients()` no useEffect
+- Prop `clients={allClients}` na chamada do FormResponseViewer (linha 1971)
+
+### 4. FormResponseViewer.tsx - Atualizar Props
+
+Remover a prop `clients` da interface:
+
+```typescript
+interface FormResponseViewerProps {
+  responses: FormResponse[];
+  customFields: CustomField[];
+  formFields: string[];
+  formTitle: string;
+  onSaveToClient: (responseId: string, clientId: string) => Promise<void>;
+  // REMOVER: clients?: Array<{ id: string; full_name: string; phone_e164: string }>;
 }
 ```
 
-## Impacto e Testes
+## Resultado Final
 
-| Cenário | Antes | Depois |
-|---------|-------|--------|
-| Setor com 1 instância | Funciona | Funciona |
-| Setor com 2+ instâncias (com integration_id) | Funciona | Funciona |
-| Setor com 2+ instâncias (SEM integration_id) | **ERRO 500** | Usa primeira instância |
-| Setor sem instância | Erro claro | Erro claro |
+| Antes | Depois |
+|-------|--------|
+| Select com lista estática de ~1000 clientes | Input com busca dinâmica |
+| Sem pesquisa | Pesquisa flexível por nome ou telefone |
+| Lista para na letra "R" | Busca qualquer cliente do sistema |
+| Carrega todos clientes no load da página | Busca sob demanda (mais eficiente) |
+| "Tiago" não encontra "Thiago" | "Tiago" encontra "Thiago Henrique Alhier Gomes" |
 
-## Por que essa correção resolve o problema definitivamente
+## Busca Flexível Detalhada
 
-1. **`maybeSingle()` é rígido**: Falha quando há mais de 1 resultado (comportamento intencional do Supabase)
-2. **`.limit(1)` é flexível**: Retorna apenas 1 resultado independente de quantos existam
-3. **Backward compatible**: O código já funciona quando `integration_id` é especificado
-4. **Logging melhorado**: Warnings ajudam a identificar uso incorreto sem quebrar a aplicação
+A busca será inteligente:
+- **Termo único**: Busca em `full_name` e `phone_e164`
+- **Múltiplos termos**: Cada termo deve aparecer no nome (AND implícito)
+- **Case insensitive**: "tiago" encontra "THIAGO"
+- **Limite 20 resultados**: Performance otimizada
+- **Debounce 300ms**: Evita chamadas excessivas
