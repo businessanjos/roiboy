@@ -47,6 +47,8 @@ export interface CustomField {
   display_order: number;
   is_active: boolean;
   show_in_clients?: boolean;
+  show_in_deals?: boolean;
+  show_in_leads?: boolean;
   folder_id?: string | null;
 }
 
@@ -297,6 +299,8 @@ export function CustomFieldsManager({
         display_order: f.display_order,
         is_active: f.is_active,
         show_in_clients: f.show_in_clients,
+        show_in_deals: f.show_in_deals,
+        show_in_leads: f.show_in_leads,
         folder_id: f.folder_id,
       }));
       setFields(mappedFields);
@@ -542,10 +546,10 @@ export function CustomFieldsManager({
           value: opt.value || `opt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         })) : [],
         is_required: isRequired,
-        // Set visibility based on sector context (only set current sector's flag to true for new fields)
-        show_in_clients: editingField ? showInClients : sectorContext === "clients",
-        show_in_deals: editingField ? editingField.show_in_clients : sectorContext === "deals",
-        show_in_leads: editingField ? false : sectorContext === "leads",
+        // For editing: preserve existing sector flags; For new fields: only enable current sector
+        show_in_clients: editingField?.show_in_clients ?? (sectorContext === "clients"),
+        show_in_deals: editingField?.show_in_deals ?? (sectorContext === "deals"),
+        show_in_leads: editingField?.show_in_leads ?? (sectorContext === "leads"),
         display_order: editingField?.display_order ?? fields.length,
         // Add required_stages for deals context
         required_stages: isRequired && sectorContext === "deals" ? requiredStages : null,
