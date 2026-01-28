@@ -1,45 +1,69 @@
 
-# Plano: Melhorar Funcionalidade de Fixar Grupos no ROY zAPP
+# Plano: Corrigir Visibilidade de Grupos no ROY zAPP
 
-## Diagnóstico
+## Diagnóstico do Problema
 
-A funcionalidade de "Fixar" conversas/grupos **já existe** no código e está funcionando tecnicamente. No entanto, há um problema de usabilidade:
+A investigação revelou que:
 
-### Problema Identificado
-Quando um grupo é **fixado** mas seu ticket é **fechado (closed)**, ele desaparece da lista de grupos. Isso acontece porque:
+1. **O componente `ZappConversationList.tsx` onde adicionamos a lógica de grupos fixados NÃO ESTÁ SENDO USADO** - ele nunca é importado no projeto
+2. **A filtragem real acontece em `RoyZapp.tsx`** (linhas 3073-3139), que é passada para `ZappConversationPanel.tsx`
+3. **A lógica de tabs bloqueia grupos**:
+   - Aba "Minhas": só mostra conversas onde `agent_id === currentAgent?.id` (ou admin)
+   - Aba "Fila": só mostra conversas onde `agent_id === null`
+   - Se um grupo não tem agente atribuído, ele só aparece na "Fila", não em "Minhas"
+   - Se um grupo está atribuído a outro agente, não aparece para o usuário atual
 
-```typescript
-// ZappConversationList.tsx - linhas 84-92
-// Filter by closed status - BUT GROUPS ALWAYS SHOW (they're permanent conversations)
-const isClosed = a.status === "closed";
-if (showClosed) {
-  if (!isClosed) return false;
-} else {
-  // When not showing closed, HIDE closed conversations
-  if (isClosed) return false;  // ← GRUPOS FIXADOS SÃO ESCONDIDOS AQUI
-}
-```
+## Grupos vs Tickets - Diferença Conceitual
 
-O comentário menciona "GROUPS ALWAYS SHOW" mas a implementação **não respeita isso para grupos fixados**.
+| Aspecto | Conversas Individuais | Grupos |
+|---------|----------------------|--------|
+| Natureza | Ticket temporário | Conversa permanente |
+| Atribuição | Importante (quem atende) | Menos relevante (todos podem participar) |
+| Fechamento | Finaliza atendimento | Grupo continua existindo |
+| Visibilidade esperada | Só quem está atribuído | Todos do setor |
 
 ## Solução
 
-Modificar a lógica de filtragem para que **grupos fixados sempre apareçam** na aba de grupos, independentemente do status de "closed".
+Modificar a lógica de filtragem em `RoyZapp.tsx` para que **grupos sempre apareçam** quando o filtro de tipo de conversa for "group", independentemente da aba (Minhas/Fila) ou status de atribuição.
 
 ### Arquivo a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/components/royzapp/ZappConversationList.tsx` | Excluir grupos fixados da filtragem de status "closed" |
+| `src/pages/RoyZapp.tsx` | Modificar `filteredAssignments` para tratar grupos diferentemente |
 
-### Mudança Detalhada
+### Mudança Detalhada (linhas 3073-3137)
 
 ```typescript
-// ANTES (linha 84-92)
+// ANTES (linhas 3100-3107)
+const matchesTab = (filterArchived || filterStatus === "closed") ? true : (
+  inboxTab === "mine" 
+    ? (isAdmin || a.agent_id === currentAgent?.id)
+    : a.agent_id === null
+);
+
+// DEPOIS
+// Grupos ignoram o filtro de tabs quando estamos na aba de grupos
+// Isso permite que grupos apareçam independentemente de quem está atribuído
+const skipTabFilterForGroups = filterConversationType === "group" && isGroup;
+
+const matchesTab = (filterArchived || filterStatus === "closed" || skipTabFilterForGroups) ? true : (
+  inboxTab === "mine" 
+    ? (isAdmin || a.agent_id === currentAgent?.id)
+    : a.agent_id === null
+);
+```
+
+### Mudança para Grupos Fixados (linhas 3089-3098)
+
+Também precisamos garantir que grupos fixados não sejam filtrados por status "closed":
+
+```typescript
+// ANTES
 const isClosed = a.status === "closed";
-if (showClosed) {
+if (filterStatus === "closed") {
   if (!isClosed) return false;
-} else {
+} else if (filterStatus === "all") {
   if (isClosed) return false;
 }
 
@@ -47,72 +71,81 @@ if (showClosed) {
 const isClosed = a.status === "closed";
 const isPinned = contact.isPinned;
 
-// Grupos fixados SEMPRE aparecem na aba de grupos, mesmo se "closed"
-const skipClosedFilter = isGroup && isPinned;
+// Grupos fixados SEMPRE aparecem na aba de grupos, mesmo se fechados
+const skipClosedFilterForPinnedGroups = isGroup && isPinned && filterConversationType === "group";
 
-if (!skipClosedFilter) {
-  if (showClosed) {
+if (!skipClosedFilterForPinnedGroups) {
+  if (filterStatus === "closed") {
     if (!isClosed) return false;
-  } else {
+  } else if (filterStatus === "all") {
     if (isClosed) return false;
   }
 }
 ```
 
-### Adicionar Seção Visual de "Grupos Fixados"
+### Adicionar UI de Grupos Fixados no ZappConversationPanel
 
-Para melhorar a experiência, também criaremos uma seção destacada no topo da lista quando `filterConversationType === "group"`:
+Como `ZappConversationList` não é usado, precisamos adicionar a separação visual de grupos fixados diretamente em `ZappConversationPanel.tsx`:
 
 ```typescript
-// Separar grupos fixados dos não-fixados quando na aba de grupos
-const pinnedGroups = filtered.filter(a => getContactInfo(a).isGroup && getContactInfo(a).isPinned);
-const regularGroups = filtered.filter(a => !(getContactInfo(a).isGroup && getContactInfo(a).isPinned));
+// No render de filteredAssignments, separar grupos fixados
+{filterConversationType === "group" && (
+  <>
+    {/* Seção de Grupos Fixados */}
+    {filteredAssignments.filter(a => getContactInfo(a).isGroup && getContactInfo(a).isPinned).length > 0 && (
+      <>
+        <div className="px-4 py-2 bg-zapp-bg-dark">
+          <span className="text-xs font-medium text-zapp-accent flex items-center gap-1.5">
+            <Pin className="h-3 w-3" />
+            GRUPOS FIXADOS
+          </span>
+        </div>
+        {/* Mapear grupos fixados */}
+      </>
+    )}
+    {/* Seção de Outros Grupos */}
+  </>
+)}
 ```
 
-A interface mostrará:
+## Fluxo Corrigido
 
 ```
-┌─────────────────────────────────┐
-│ 📌 GRUPOS FIXADOS               │
-├─────────────────────────────────┤
-│ 🏢 Henrique & Leticia - Eternu... │
-│ 🏢 Time Vendas - Diário          │
-├─────────────────────────────────┤
-│ 👥 OUTROS GRUPOS                │
-├─────────────────────────────────┤
-│ 🏢 Suporte Clientes             │
-│ 🏢 Marketing Team               │
-└─────────────────────────────────┘
+1. Usuário clica no ícone de Grupos na sidebar
+   ↓
+2. filterConversationType muda para "group"
+   ↓
+3. filteredAssignments agora inclui:
+   - TODOS os grupos do setor (ignorando aba Minhas/Fila)
+   - Grupos fixados aparecem mesmo se "closed"
+   ↓
+4. Lista mostra:
+   📌 GRUPOS FIXADOS (se houver)
+   - Grupo A
+   - Grupo B
+   👥 OUTROS GRUPOS  
+   - Grupo C
+   - Grupo D
 ```
 
-## Funcionalidade Existente (já funciona)
+## Arquivos a Modificar
 
-O usuário pode fixar qualquer conversa/grupo através do menu de 3 pontinhos (⋮) de cada item na lista:
-
-1. Clicar nos 3 pontinhos da conversa/grupo
-2. Selecionar "Fixar conversa" 📌
-3. A conversa aparece com um ícone de pin e vai para o topo
+| Arquivo | Tipo de Mudança |
+|---------|-----------------|
+| `src/pages/RoyZapp.tsx` | Modificar lógica de filtragem |
+| `src/components/royzapp/ZappConversationPanel.tsx` | Adicionar UI de grupos fixados |
 
 ## Resultado Esperado
 
-1. ✅ Grupos fixados aparecem **sempre** na aba de grupos, mesmo com ticket fechado
-2. ✅ Seção visual destacada "Grupos Fixados" no topo da lista
-3. ✅ A ordenação continua priorizando fixados primeiro
-4. ✅ O ícone de pin (📌) aparece ao lado do nome do grupo fixado
+1. Ao clicar no ícone de grupos, **todos os grupos** do setor aparecem
+2. Grupos fixados aparecem no topo com seção destacada
+3. Grupos fixados permanecem visíveis mesmo após ticket "fechado"
+4. O menu de 3 pontinhos continua funcionando para fixar/desafixar
+5. A aba Minhas/Fila não afeta a visualização de grupos
 
 ## Impacto
 
-- Nenhuma mudança no banco de dados (o campo `is_pinned` já existe)
-- Melhora significativa na usabilidade para acesso rápido a grupos frequentes
-- Comportamento consistente: grupos permanentes não somem quando o ticket fecha
-
-## Fluxo de Uso
-
-```
-1. Usuário vai para aba de Grupos 👥
-2. Clica nos 3 pontinhos de um grupo frequente
-3. Clica em "Fixar conversa" 📌
-4. Grupo aparece na seção "Grupos Fixados" no topo
-5. Mesmo que alguém finalize o atendimento, o grupo permanece visível
-6. Usuário pode enviar mensagem diretamente sem abrir nova conversa
-```
+- Nenhuma mudança no banco de dados
+- Nenhuma mudança nas APIs
+- Apenas ajustes de lógica frontend
+- Componente `ZappConversationList.tsx` pode ser removido (não usado)
