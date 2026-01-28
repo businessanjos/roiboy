@@ -306,3 +306,140 @@ export async function getContractDataFromDealFields(
   
   return result;
 }
+
+// Helper function to format field values for timeline display
+function formatFieldValueForTimeline(
+  field: { field_type: string; options?: Array<{ value: string; label: string }> },
+  valueRow: { value_text?: string | null; value_number?: number | null; value_boolean?: boolean | null; value_date?: string | null; value_json?: any }
+): string | null {
+  switch (field.field_type) {
+    case 'text':
+    case 'instagram':
+      return valueRow.value_text || null;
+    
+    case 'select':
+      // Get label from option
+      const option = field.options?.find(o => o.value === valueRow.value_text);
+      return option?.label || valueRow.value_text || null;
+    
+    case 'multi_select':
+      // Array of values -> labels
+      const values = valueRow.value_json as string[] || [];
+      if (values.length === 0) return null;
+      const labels = values.map(v => {
+        const opt = field.options?.find(o => o.value === v);
+        return opt?.label || v;
+      });
+      return labels.join(', ');
+    
+    case 'boolean':
+      if (valueRow.value_boolean === null || valueRow.value_boolean === undefined) return null;
+      return valueRow.value_boolean ? 'Sim' : 'Não';
+    
+    case 'number':
+      return valueRow.value_number !== null && valueRow.value_number !== undefined 
+        ? valueRow.value_number.toString() 
+        : null;
+    
+    case 'currency':
+      return valueRow.value_number !== null && valueRow.value_number !== undefined
+        ? `R$ ${valueRow.value_number.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` 
+        : null;
+    
+    case 'date':
+      return valueRow.value_date 
+        ? new Date(valueRow.value_date).toLocaleDateString('pt-BR') 
+        : null;
+    
+    case 'location':
+      const loc = valueRow.value_json;
+      if (!loc) return null;
+      if (loc.formatted_address) return loc.formatted_address;
+      if (loc.city && loc.state) return `${loc.city}, ${loc.state}`;
+      return null;
+    
+    case 'user':
+      const userIds = valueRow.value_json as string[];
+      return userIds?.length > 0 ? `${userIds.length} usuário(s)` : null;
+    
+    case 'multi_instagram':
+      const instagrams = valueRow.value_json as string[];
+      return instagrams?.length > 0 ? instagrams.join(', ') : null;
+    
+    default:
+      return valueRow.value_text || null;
+  }
+}
+
+/**
+ * Formats all deal custom fields as a readable text for client timeline
+ */
+export async function formatDealCustomFieldsForTimeline(
+  dealId: string,
+  accountId: string
+): Promise<string | null> {
+  try {
+    // 1. Fetch field definitions
+    const { data: fields, error: fieldsError } = await supabase
+      .from("custom_fields")
+      .select("id, name, field_type, options")
+      .eq("account_id", accountId)
+      .eq("show_in_deals", true)
+      .eq("is_active", true)
+      .order("display_order");
+    
+    if (fieldsError) {
+      console.error('[DealMapping] Error fetching custom fields:', fieldsError);
+      return null;
+    }
+    
+    if (!fields || fields.length === 0) {
+      return null;
+    }
+    
+    // 2. Fetch field values for this deal
+    const { data: fieldValues, error: valuesError } = await supabase
+      .from("deal_field_values")
+      .select("field_id, value_text, value_number, value_boolean, value_date, value_json")
+      .eq("deal_id", dealId);
+    
+    if (valuesError) {
+      console.error('[DealMapping] Error fetching deal field values:', valuesError);
+      return null;
+    }
+    
+    if (!fieldValues || fieldValues.length === 0) {
+      return null;
+    }
+    
+    // 3. Build formatted text
+    const lines: string[] = [];
+    
+    for (const field of fields) {
+      const valueRow = fieldValues.find(v => v.field_id === field.id);
+      if (!valueRow) continue;
+      
+      const formattedValue = formatFieldValueForTimeline(
+        { 
+          field_type: field.field_type, 
+          options: field.options as Array<{ value: string; label: string }> 
+        },
+        valueRow
+      );
+      
+      if (formattedValue) {
+        lines.push(`• ${field.name}: ${formattedValue}`);
+      }
+    }
+    
+    if (lines.length === 0) {
+      return null;
+    }
+    
+    console.log(`[DealMapping] Formatted ${lines.length} custom fields for timeline`);
+    return lines.join('\n');
+  } catch (error) {
+    console.error('[DealMapping] Error formatting deal custom fields:', error);
+    return null;
+  }
+}
