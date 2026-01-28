@@ -12,6 +12,7 @@ import {
   fetchDealCustomFieldValues,
   updateClientWithDealData,
   getContractDataFromDealFields,
+  formatDealCustomFieldsForTimeline,
 } from "@/utils/dealToClientContractMapping";
 import { DealKanban } from "@/components/sales/DealKanban";
 import { DealDialog } from "@/components/sales/DealDialog";
@@ -440,6 +441,35 @@ export default function SalesPipeline() {
         } catch (transferError) {
           console.error("[MarkAsWon] Error in call notes transfer:", transferError);
           // Don't block the flow - this is a non-critical enhancement
+        }
+      }
+
+      // STEP 4.6: Transfer Deal Custom Fields to client timeline
+      if (clientId && currentUser?.account_id) {
+        try {
+          const customFieldsText = await formatDealCustomFieldsForTimeline(dealId, currentUser.account_id);
+          
+          if (customFieldsText) {
+            const { error: fieldsNoteError } = await supabase
+              .from("client_followups")
+              .insert({
+                account_id: currentUser.account_id,
+                client_id: clientId,
+                user_id: currentUser.id,
+                type: "note",
+                title: "📋 Dados da Negociação",
+                content: customFieldsText,
+              });
+            
+            if (fieldsNoteError) {
+              console.error("[MarkAsWon] Error transferring custom fields:", fieldsNoteError);
+            } else {
+              console.log("[MarkAsWon] Custom fields transferred to client timeline");
+            }
+          }
+        } catch (fieldsError) {
+          console.error("[MarkAsWon] Error in custom fields transfer:", fieldsError);
+          // Non-blocking - continue the flow
         }
       }
 
