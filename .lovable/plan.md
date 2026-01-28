@@ -1,195 +1,116 @@
 
-# Plano: Notificações Push do Sistema para ROY zAPP
+# Plano: Corrigir Sincronização de Estado de Permissão de Notificações
 
-## Objetivo
-Implementar notificações nativas do sistema operacional (Web Notifications API) para que alertas sonoros e visuais apareçam mesmo quando:
-- O navegador está minimizado
-- O usuário está em outra aba
-- A janela do ROY zAPP não está em foco
+## Problema Identificado
 
----
+O estado `notificationPermission` no hook `useZappNotifications` é inicializado apenas uma vez quando o componente monta. Se o usuário muda a permissão diretamente nas configurações do navegador (pelo ícone de cadeado), **o aplicativo não detecta essa mudança** e continua exibindo "Bloqueadas" mesmo após a permissão ser concedida.
 
-## Funcionalidade Atual vs. Proposta
-
-| Cenário | Atual | Após Implementação |
-|---------|-------|-------------------|
-| Aba do ROY zAPP ativa | ✅ Toast + Som | ✅ Toast + Som |
-| Aba do ROY zAPP em background | ❌ Nada visível | ✅ **Push nativo + Som** |
-| Navegador minimizado | ❌ Nada | ✅ **Push nativo + Som** |
-| Outro programa em foco | ❌ Nada | ✅ **Push nativo** |
-
----
-
-## Arquivos a Modificar
-
-### 1. `src/hooks/useZappNotifications.tsx`
-
-**Adicionar:**
-- Função `showSystemNotification()` usando a Web Notifications API
-- Estado `notificationPermission` para rastrear permissão
-- Função `requestNotificationPermission()` para solicitar permissão
-- Lógica para detectar se a aba está ativa (`document.hidden`)
-- Mostrar push nativo quando a aba não está em foco
-
-**Comportamento:**
-```
-Se aba ativa:
-  → Toast customizado + Som
-Se aba em background ou navegador minimizado:
-  → Notificação push do sistema + Som
-```
-
-### 2. `src/pages/RoyZapp.tsx`
-
-**Adicionar:**
-- Botão/indicador de permissão de notificações no painel de configurações
-- Chamada para solicitar permissão quando necessário
-
-### 3. `src/components/royzapp/ZappSettingsPanel.tsx`
-
-**Adicionar:**
-- Toggle ou botão para ativar notificações push do sistema
-- Indicador de status da permissão (concedida/negada/não solicitada)
-
----
-
-## Detalhes Técnicos
-
-### Fluxo de Notificação Melhorado
-
-```text
-[Nova mensagem INBOUND]
-       ↓
-[useZappNotifications.notifyNewMessage()]
-       ↓
-   ┌───────────────────────────────────┐
-   │ Verificações:                     │
-   │ • É a conversa selecionada? Skip  │
-   │ • Rate limit (2s)? Skip           │
-   └───────────────────────────────────┘
-       ↓
-   ┌───────────────────────────────────┐
-   │ document.hidden?                  │
-   │ (aba não está em foco)            │
-   └───────────────────────────────────┘
-       ↓                    ↓
-      SIM                  NÃO
-       ↓                    ↓
-[Push Sistema]      [Toast in-app]
-       ↓                    ↓
-   [Tocar Som]         [Tocar Som]
-```
-
-### Código da Notificação Push
-
+### Código Atual (Problemático)
 ```typescript
-const showSystemNotification = (title: string, body: string, data: any) => {
-  if (!("Notification" in window)) return;
-  if (Notification.permission !== "granted") return;
-  
-  const notification = new Notification(title, {
-    body,
-    icon: "/favicon.ico",
-    badge: "/favicon.ico",
-    tag: `zapp-${data.conversationId}`, // Agrupa notificações do mesmo chat
-    requireInteraction: false, // Fecha automaticamente
-  });
-  
-  notification.onclick = () => {
-    window.focus();
-    onViewChat(data.conversationId);
-    notification.close();
-  };
-  
-  // Auto-close após 5 segundos
-  setTimeout(() => notification.close(), 5000);
-};
-```
-
-### Detecção de Visibilidade da Aba
-
-```typescript
-const isTabVisible = () => {
-  return !document.hidden;
-};
-
-// No notifyNewMessage:
-if (isTabVisible()) {
-  // Mostrar toast customizado (comportamento atual)
-  toast.custom(...);
-} else {
-  // Mostrar notificação push do sistema
-  showSystemNotification(
-    `Nova mensagem${isQueue ? " (Fila)" : ""}`,
-    `${contactName}: "${messagePreview}"`,
-    { conversationId }
-  );
-}
-```
-
-### Solicitação de Permissão
-
-```typescript
-const requestNotificationPermission = async () => {
-  if (!("Notification" in window)) {
+// Inicialização única - não atualiza quando permissão muda externamente
+const [notificationPermission, setNotificationPermission] = useState<NotificationPermissionStatus>(() => {
+  if (typeof window === "undefined" || !("Notification" in window)) {
     return "unsupported";
   }
-  
-  const permission = await Notification.requestPermission();
-  return permission;
-};
+  return Notification.permission as NotificationPermissionStatus;
+});
+
+useEffect(() => {
+  // Executa APENAS uma vez (array vazio)
+  setNotificationPermission(Notification.permission as NotificationPermissionStatus);
+}, []);
 ```
 
 ---
 
-## Interface do Usuário
+## Solução Proposta
 
-### No Painel de Configurações (ZappSettingsPanel)
+Adicionar um listener para o evento `visibilitychange` do documento. Quando o usuário volta à aba (após mudar configurações no navegador), o hook re-verifica a permissão atual.
+
+### Modificação: `src/hooks/useZappNotifications.tsx`
+
+**Antes:**
+```typescript
+useEffect(() => {
+  if (typeof window === "undefined" || !("Notification" in window)) {
+    setNotificationPermission("unsupported");
+    return;
+  }
+  setNotificationPermission(Notification.permission as NotificationPermissionStatus);
+}, []);
+```
+
+**Depois:**
+```typescript
+// Re-verificar permissão quando a aba volta ao foco
+// Isso captura mudanças feitas pelo usuário nas configurações do navegador
+useEffect(() => {
+  if (typeof window === "undefined" || !("Notification" in window)) {
+    setNotificationPermission("unsupported");
+    return;
+  }
+  
+  // Verificar imediatamente
+  setNotificationPermission(Notification.permission as NotificationPermissionStatus);
+  
+  // Re-verificar quando a aba volta ao foco (usuário pode ter mudado nas configs)
+  const handleVisibilityChange = () => {
+    if (!document.hidden && "Notification" in window) {
+      setNotificationPermission(Notification.permission as NotificationPermissionStatus);
+    }
+  };
+  
+  // Re-verificar quando a janela ganha foco
+  const handleFocus = () => {
+    if ("Notification" in window) {
+      setNotificationPermission(Notification.permission as NotificationPermissionStatus);
+    }
+  };
+  
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+  window.addEventListener("focus", handleFocus);
+  
+  return () => {
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    window.removeEventListener("focus", handleFocus);
+  };
+}, []);
+```
+
+---
+
+## Fluxo Após a Correção
 
 ```text
-┌─────────────────────────────────────────────────┐
-│ 🔔 Notificações                                 │
-├─────────────────────────────────────────────────┤
-│ ○ Som de notificação              [Toggle ON]  │
-│ ○ Notificações do sistema         [Ativar]     │
-│   └─ Receba alertas mesmo com o navegador      │
-│      minimizado ou em outra aba                │
-│                                                 │
-│   Status: ✅ Ativadas / ❌ Bloqueadas / ⚠️ Pendente │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│ 1. Usuário abre ROY zAPP                                │
+│    → Permissão lida: "denied" ou "default"              │
+│    → UI mostra "Bloqueadas" ou "Ativar"                 │
+└─────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────┐
+│ 2. Usuário clica no cadeado do navegador                │
+│    → Muda permissão para "Permitir"                     │
+│    (aplicativo não sabe ainda)                          │
+└─────────────────────────────────────────────────────────┘
+                           ↓
+┌─────────────────────────────────────────────────────────┐
+│ 3. Usuário volta à aba do ROY zAPP                      │
+│    → Evento "focus" ou "visibilitychange" dispara       │
+│    → Hook re-lê: Notification.permission = "granted"    │
+│    → UI atualiza para "Ativadas" ✅                     │
+└─────────────────────────────────────────────────────────┘
 ```
-
----
-
-## Considerações
-
-### Limitações do Navegador
-- O usuário precisa conceder permissão explícita
-- Alguns navegadores móveis têm restrições adicionais
-- Modo anônimo pode bloquear notificações
-
-### Comportamento por Status de Permissão
-
-| Status | Comportamento |
-|--------|---------------|
-| `granted` | Push nativo funciona |
-| `denied` | Apenas toast in-app (já implementado) |
-| `default` | Mostra botão para solicitar permissão |
-
-### Som em Background
-- Navegadores modernos permitem reprodução de áudio em background
-- O áudio será tocado mesmo com a aba inativa
-- Apenas pode ser bloqueado se o usuário nunca interagiu com a página
 
 ---
 
 ## Resultado Esperado
 
-1. **Aba ativa**: Toast customizado verde/âmbar + som (comportamento atual)
-2. **Aba em background**: Push nativo do sistema + som
-3. **Navegador minimizado**: Push nativo aparece no canto da tela + som
-4. **Permissão negada**: Fallback para comportamento atual (toast quando voltar à aba)
-5. **Clicar na notificação**: Abre/foca a aba e seleciona a conversa
+| Cenário | Antes | Depois |
+|---------|-------|--------|
+| Muda permissão pelo cadeado | Fica "Bloqueadas" até dar refresh | Atualiza automaticamente ao voltar à aba |
+| Abre configurações do navegador | Precisa recarregar página | Sincroniza ao focar na janela |
+| Concede permissão pelo botão "Ativar" | Funciona | Continua funcionando |
 
 ---
 
@@ -197,6 +118,13 @@ const requestNotificationPermission = async () => {
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/hooks/useZappNotifications.tsx` | Adicionar Web Notifications API e detecção de visibilidade |
-| `src/pages/RoyZapp.tsx` | Integrar permissão de notificações |
-| `src/components/royzapp/ZappSettingsPanel.tsx` | Adicionar toggle/botão de permissão |
+| `src/hooks/useZappNotifications.tsx` | Adicionar listeners para `visibilitychange` e `focus` |
+
+---
+
+## Considerações Técnicas
+
+1. **Performance**: Os listeners são leves e só fazem uma leitura simples de `Notification.permission`
+2. **Cleanup**: Os listeners são removidos corretamente quando o componente desmonta
+3. **Compatibilidade**: Ambos os eventos (`visibilitychange` e `focus`) são suportados em todos os navegadores modernos
+4. **Redundância intencional**: Usamos dois eventos porque alguns navegadores/cenários podem não disparar um ou outro
