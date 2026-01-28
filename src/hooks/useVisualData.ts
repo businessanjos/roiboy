@@ -96,7 +96,11 @@ async function fetchDealsData(
   if (measure.aggregation === 'conversion_rate') {
     if (dimension.field === '_total') {
       return calculateConversionRate(accountId, filters);
+    } else if (dimension.type === 'text') {
+      // Group by text dimension (salesperson, stage, etc.)
+      return calculateConversionRateByTextDimension(accountId, filters, dimension);
     } else {
+      // Group by date period
       return calculateConversionRateByPeriod(accountId, filters, dimension, dateDisplayFormat);
     }
   }
@@ -234,6 +238,105 @@ async function calculateConversionRate(
     value: Number(rate.toFixed(1)),
     count: total
   }];
+}
+
+// Calculate conversion rate grouped by text dimension (salesperson, stage, etc.)
+async function calculateConversionRateByTextDimension(
+  accountId: string,
+  filters: any,
+  dimension: VisualConfig['dimension']
+): Promise<AggregatedDataPoint[]> {
+  // Fetch all deals with related data
+  let query = supabase
+    .from('deals')
+    .select(`
+      id, status, source, lost_reason, created_at, won_at,
+      deal_stages!deals_stage_id_fkey(name, color),
+      users!deals_responsible_user_id_fkey(name)
+    `)
+    .eq('account_id', accountId);
+
+  // Apply date filters using created_at for total
+  if (filters.startDate) {
+    query = query.gte('created_at', filters.startDate);
+  }
+  if (filters.endDate) {
+    query = query.lte('created_at', filters.endDate);
+  }
+  if (filters.userId && filters.userId !== 'all') {
+    query = query.eq('responsible_user_id', filters.userId);
+  }
+  if (filters.stageId && filters.stageId !== 'all') {
+    query = query.eq('stage_id', filters.stageId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Error fetching deals for conversion by text:', error);
+    return [];
+  }
+
+  // Group by text dimension
+  const groups = new Map<string, { total: number; won: number; color?: string }>();
+
+  for (const deal of data || []) {
+    // Get group name based on dimension field
+    let groupName: string;
+    let groupColor: string | undefined;
+
+    if (dimension.field === 'responsible_name') {
+      groupName = (deal.users as any)?.name || 'Sem Responsável';
+    } else if (dimension.field === 'stage_name') {
+      groupName = (deal.deal_stages as any)?.name || 'Sem Etapa';
+      groupColor = (deal.deal_stages as any)?.color;
+    } else if (dimension.field === 'source') {
+      groupName = deal.source || 'Não informado';
+    } else if (dimension.field === 'lost_reason') {
+      groupName = deal.lost_reason || 'Não informado';
+    } else {
+      groupName = (deal as any)[dimension.field] || 'Não informado';
+    }
+
+    if (!groups.has(groupName)) {
+      groups.set(groupName, { total: 0, won: 0, color: groupColor });
+    }
+
+    const group = groups.get(groupName)!;
+    group.total++;
+
+    // Check if won within the period
+    if (deal.status === 'won' && deal.won_at) {
+      const wonDate = new Date(deal.won_at);
+      const startDate = filters.startDate ? new Date(filters.startDate) : null;
+      const endDate = filters.endDate ? new Date(filters.endDate) : null;
+
+      if ((!startDate || wonDate >= startDate) && (!endDate || wonDate <= endDate)) {
+        group.won++;
+      }
+    }
+  }
+
+  // Calculate rate per group
+  const result: AggregatedDataPoint[] = [];
+  for (const [name, { total, won, color }] of groups) {
+    // Filter out empty groups for user-based dimensions
+    if (dimension.field === 'responsible_name' && name === 'Sem Responsável') {
+      continue;
+    }
+
+    result.push({
+      name,
+      value: total > 0 ? Number(((won / total) * 100).toFixed(1)) : 0,
+      count: total,
+      color
+    });
+  }
+
+  // Sort by conversion rate (highest first)
+  result.sort((a, b) => b.value - a.value);
+
+  return result;
 }
 
 // Calculate conversion rate grouped by period
