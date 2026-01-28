@@ -1,237 +1,227 @@
 
-# Plano: Corrigir Cálculo da Taxa de Conversão nos Visuais
 
-## Diagnóstico do Problema
+# Plano: Transferir Campos Personalizados do Negócio para Timeline do Cliente
 
-### O Que Está Acontecendo
+## Contexto
 
-O scorecard de "Conversão" mostra **486.0%** com **486 registros**, quando deveria mostrar algo como **30-40%** (percentual de leads convertidos em ganhos).
+Atualmente, quando um negócio é marcado como "Ganho" e o Lead é convertido em Cliente:
+- ✅ As notas de "Call Comercial Concluída" são transferidas para a Timeline do cliente
+- ❌ Os **Campos Personalizados** do negócio NÃO são inseridos na Timeline
 
-### Causa Raiz
+O usuário precisa que os valores preenchidos nos Campos Personalizados (como Cidade, Item da Venda, Canal de Venda, MQL, etc.) também sejam registrados na Timeline do cliente como uma anotação.
 
-| Sistema | Cálculo | Status |
-|---------|---------|--------|
-| **`useInsightsData.tsx`** (widgets antigos) | `(won / total) × 100` | ✅ Correto |
-| **`useVisualData.ts`** (visuais novos) | Contagem simples de registros | ❌ Incorreto |
-
-Quando um visual de "Conversão" é criado pelo `AddVisualModal`, a configuração é:
-```ts
-conversion: { 
-  dataSource: 'deals', 
-  measureField: null, 
-  aggregation: 'count',  // ← Simplesmente conta registros
-  formatType: 'percentage' 
-}
-```
-
-O `useVisualData.ts` recebe essa configuração e executa uma contagem simples, resultando em `486` registros exibidos como `486%`.
-
-### Fórmula Correta
-
-```text
-Taxa de Conversão = (Deals GANHOS no período / Total de Deals CRIADOS no período) × 100
-```
-
-## Solução Proposta
-
-### Arquivos a Modificar
+## Arquivos a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/components/insights/visual-builder/types.ts` | Adicionar tipo de agregação `'conversion_rate'` |
-| `src/components/insights/AddVisualModal.tsx` | Configurar métrica de conversão com nova agregação |
-| `src/hooks/useVisualData.ts` | Implementar lógica de cálculo de taxa de conversão |
+| `src/utils/dealToClientContractMapping.ts` | Nova função para formatar campos em texto legível |
+| `src/pages/SalesPipeline.tsx` | Adicionar STEP 4.6 para inserir anotação dos campos na timeline |
 
-### 1. Atualizar Tipos (`types.ts`)
+## Solução Proposta
 
-Adicionar um novo tipo de agregação especial para taxa de conversão:
+### 1. Nova Função: Formatar Campos Personalizados
 
-```typescript
-export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate';
-```
-
-### 2. Atualizar Modal de Criação (`AddVisualModal.tsx`)
-
-Modificar a configuração da métrica `conversion`:
+Criar uma função que busca todos os campos personalizados do negócio (não apenas os mapeados) e retorna um texto formatado:
 
 ```typescript
-const METRIC_TO_CONFIG: Record<Metric, {...}> = {
-  // ...
-  conversion: { 
-    dataSource: 'deals', 
-    measureField: null, 
-    aggregation: 'conversion_rate',  // ← Nova agregação especial
-    formatType: 'percentage' 
-  },
-  // ...
-};
-```
+export async function formatDealCustomFieldsForTimeline(
+  dealId: string,
+  accountId: string
+): Promise<string | null> {
+  // 1. Buscar definição dos campos (name, field_type, options)
+  const { data: fields } = await supabase
+    .from("custom_fields")
+    .select("id, name, field_type, options")
+    .eq("account_id", accountId)
+    .eq("show_in_deals", true)
+    .eq("is_active", true)
+    .order("display_order");
 
-### 3. Implementar Lógica no Hook (`useVisualData.ts`)
+  // 2. Buscar valores dos campos para este deal
+  const { data: values } = await supabase
+    .from("deal_field_values")
+    .select("field_id, value_text, value_number, value_boolean, value_date, value_json")
+    .eq("deal_id", dealId);
 
-Adicionar tratamento especial para `aggregation: 'conversion_rate'`:
-
-```typescript
-// Na função fetchDealsData:
-if (measure.aggregation === 'conversion_rate') {
-  return await calculateConversionRate(accountId, filters);
-}
-
-// Nova função:
-async function calculateConversionRate(
-  accountId: string,
-  filters: any
-): Promise<AggregatedDataPoint[]> {
-  // 1. Contar TOTAL de deals criados no período
-  let totalQuery = supabase
-    .from('deals')
-    .select('*', { count: 'exact', head: true })
-    .eq('account_id', accountId)
-    .gte('created_at', filters.startDate)
-    .lte('created_at', filters.endDate);
-
-  // 2. Contar deals GANHOS no período
-  let wonQuery = supabase
-    .from('deals')
-    .select('*', { count: 'exact', head: true })
-    .eq('account_id', accountId)
-    .eq('status', 'won')
-    .not('won_at', 'is', null)
-    .gte('won_at', filters.startDate)
-    .lte('won_at', filters.endDate);
-
-  // Aplicar filtro de usuário se necessário
-  if (filters.userId && filters.userId !== 'all') {
-    totalQuery = totalQuery.eq('responsible_user_id', filters.userId);
-    wonQuery = wonQuery.eq('responsible_user_id', filters.userId);
-  }
-
-  const [{ count: total }, { count: won }] = await Promise.all([totalQuery, wonQuery]);
-
-  // 3. Calcular taxa de conversão
-  const rate = (total && total > 0) 
-    ? ((won || 0) / total) * 100 
-    : 0;
-
-  return [{ 
-    name: 'Total', 
-    value: Number(rate.toFixed(1)), 
-    count: total || 0 
-  }];
-}
-```
-
-### 4. Tratar Agrupamentos Temporais (Opcional)
-
-Para gráficos de linha/barra com conversão por mês:
-
-```typescript
-async function calculateConversionRateByPeriod(
-  accountId: string,
-  filters: any,
-  dateGrouping: 'month' | 'week' | 'day'
-): Promise<AggregatedDataPoint[]> {
-  // Buscar todos os deals
-  const { data: allDeals } = await supabase
-    .from('deals')
-    .select('id, status, created_at, won_at')
-    .eq('account_id', accountId)
-    .gte('created_at', filters.startDate)
-    .lte('created_at', filters.endDate);
-
-  // Agrupar por período
-  const periods = new Map<string, { total: number; won: number }>();
-
-  for (const deal of allDeals || []) {
-    const periodKey = formatDateGroup(deal.created_at, dateGrouping);
+  // 3. Montar texto formatado
+  const lines: string[] = [];
+  
+  for (const field of fields) {
+    const valueRow = values?.find(v => v.field_id === field.id);
+    if (!valueRow) continue;
     
-    if (!periods.has(periodKey)) {
-      periods.set(periodKey, { total: 0, won: 0 });
-    }
-    
-    const period = periods.get(periodKey)!;
-    period.total++;
-    
-    if (deal.status === 'won') {
-      period.won++;
+    const formattedValue = formatFieldValue(field, valueRow);
+    if (formattedValue) {
+      lines.push(`• ${field.name}: ${formattedValue}`);
     }
   }
 
-  // Calcular taxa por período
-  return Array.from(periods.entries()).map(([name, { total, won }]) => ({
-    name,
-    value: total > 0 ? (won / total) * 100 : 0,
-    count: total
-  }));
+  return lines.length > 0 ? lines.join('\n') : null;
+}
+
+function formatFieldValue(field: any, valueRow: any): string | null {
+  switch (field.field_type) {
+    case 'text':
+    case 'instagram':
+      return valueRow.value_text || null;
+    
+    case 'select':
+      // Buscar label da opção
+      const option = field.options?.find(o => o.value === valueRow.value_text);
+      return option?.label || valueRow.value_text || null;
+    
+    case 'multi_select':
+      // Array de valores -> labels
+      const values = valueRow.value_json as string[] || [];
+      const labels = values.map(v => {
+        const opt = field.options?.find(o => o.value === v);
+        return opt?.label || v;
+      });
+      return labels.length > 0 ? labels.join(', ') : null;
+    
+    case 'boolean':
+      return valueRow.value_boolean ? 'Sim' : 'Não';
+    
+    case 'number':
+      return valueRow.value_number?.toString() || null;
+    
+    case 'currency':
+      return valueRow.value_number 
+        ? `R$ ${valueRow.value_number.toLocaleString('pt-BR')}` 
+        : null;
+    
+    case 'date':
+      return valueRow.value_date 
+        ? new Date(valueRow.value_date).toLocaleDateString('pt-BR') 
+        : null;
+    
+    case 'location':
+      const loc = valueRow.value_json;
+      if (loc?.formatted_address) return loc.formatted_address;
+      if (loc?.city && loc?.state) return `${loc.city}, ${loc.state}`;
+      return null;
+    
+    case 'user':
+      // Para campos de usuário, buscar nome (simplificado)
+      const userIds = valueRow.value_json;
+      return userIds?.length > 0 ? `${userIds.length} usuário(s)` : null;
+    
+    default:
+      return valueRow.value_text || null;
+  }
 }
 ```
 
-## Fluxo Visual Corrigido
+### 2. Adicionar STEP 4.6 no handleMarkAsWon
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                   ANTES (INCORRETO)                         │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│   ┌─────────────────┐                                       │
-│   │   Conversão     │                                       │
-│   │                 │                                       │
-│   │    486.0%       │  ← Contagem simples (486 registros)   │
-│   │   486 registros │                                       │
-│   └─────────────────┘                                       │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────────┐
-│                   DEPOIS (CORRETO)                          │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│   ┌─────────────────┐                                       │
-│   │   Conversão     │                                       │
-│   │                 │                                       │
-│   │    32.5%        │  ← (158 ganhos / 486 total) × 100     │
-│   │   486 negócios  │                                       │
-│   └─────────────────┘                                       │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
+No arquivo `SalesPipeline.tsx`, após o STEP 4.5 (transferência das notas de Call):
+
+```typescript
+// STEP 4.6: Transfer Deal Custom Fields to client timeline
+if (clientId && currentUser?.account_id) {
+  try {
+    const customFieldsText = await formatDealCustomFieldsForTimeline(dealId, currentUser.account_id);
+    
+    if (customFieldsText) {
+      const { error: fieldsNoteError } = await supabase
+        .from("client_followups")
+        .insert({
+          account_id: currentUser.account_id,
+          client_id: clientId,
+          user_id: currentUser.id,
+          type: "note",
+          title: "📋 Dados da Negociação",
+          content: customFieldsText,
+        });
+      
+      if (fieldsNoteError) {
+        console.error("[MarkAsWon] Error transferring custom fields:", fieldsNoteError);
+      } else {
+        console.log("[MarkAsWon] Custom fields transferred to client timeline");
+      }
+    }
+  } catch (fieldsError) {
+    console.error("[MarkAsWon] Error in custom fields transfer:", fieldsError);
+    // Non-blocking - continue the flow
+  }
+}
 ```
 
 ## Resultado Esperado
 
-### Scorecard de Conversão
+### Na Timeline do Cliente (após conversão)
 
-| Métrica | Antes | Depois |
-|---------|-------|--------|
-| **Valor Exibido** | 486.0% | ~32.5% (exemplo) |
-| **Significado** | Contagem de registros | Taxa real de conversão |
-| **Legenda** | 486 registros | 486 negócios |
+```
+┌─────────────────────────────────────────────────────────────┐
+│  📋 Dados da Negociação                                     │
+│  Há poucos segundos • Você                                  │
+├─────────────────────────────────────────────────────────────┤
+│  • Cidade: Irecê, Bahia, Brasil                             │
+│  • Canal de Venda: Orgânico                                 │
+│  • Faturamento Atual: Entre 30 e 50 mil reais               │
+│  • MQL: SIM - Acima de 30k                                  │
+│  • Item da Venda: Rykas Mentoring                           │
+│  • Origem da Venda: ORG-EVER, JJ - Podcast                  │
+│  • Data do primeiro contato: 26/01/2026                     │
+│  • Ganhou Bônus?: (valor se preenchido)                     │
+│  • Instagram: @dra.carellicassia                            │
+└─────────────────────────────────────────────────────────────┘
 
-### Fórmula Aplicada
+│  📞 Call Comercial Concluída                                │
+│  (notas da call - já existente)                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## Fluxo de Execução
 
 ```text
-Taxa = (Deals Ganhos ÷ Total de Deals) × 100
-Exemplo: (158 ÷ 486) × 100 = 32.5%
+handleMarkAsWon()
+│
+├── STEP 1-3: Conversão Lead → Cliente
+│
+├── STEP 4: Atualizar cliente com dados mapeados
+│
+├── STEP 4.5: Transferir notas de Call Comercial ✅ (existente)
+│
+├── STEP 4.6: Transferir Campos Personalizados ← NOVO
+│   ├── Buscar definição dos campos (custom_fields)
+│   ├── Buscar valores preenchidos (deal_field_values)
+│   ├── Formatar texto legível com labels
+│   └── Inserir em client_followups
+│
+├── STEP 5: Criar contrato
+│
+└── STEP 6: Marcar negócio como ganho
 ```
 
 ## Detalhes Técnicos
 
-### Fluxo de Dados
+### Tipos de Campo Suportados
 
-```text
-1. AddVisualModal
-   └── Define aggregation: 'conversion_rate'
+| Tipo | Formatação |
+|------|------------|
+| `text` / `instagram` | Valor direto |
+| `select` | Label da opção |
+| `multi_select` | Labels separados por vírgula |
+| `boolean` | "Sim" ou "Não" |
+| `number` | Número formatado |
+| `currency` | "R$ X.XXX,XX" |
+| `date` | "DD/MM/AAAA" |
+| `location` | "Cidade, Estado" ou endereço completo |
+| `user` | "X usuário(s)" |
 
-2. useVisualData
-   └── fetchDealsData()
-       ├── Detecta aggregation === 'conversion_rate'
-       └── Chama calculateConversionRate()
-           ├── Query 1: COUNT(*) FROM deals (total criados)
-           ├── Query 2: COUNT(*) FROM deals WHERE status = 'won'
-           └── Return: (won/total) × 100
-```
+### Tratamento de Erros
 
-### Compatibilidade
+- A transferência é **não-bloqueante** (não impede o fluxo de marcar como ganho)
+- Campos sem valor preenchido são ignorados
+- Se não houver nenhum campo preenchido, nenhuma anotação é criada
 
-- **Visuais existentes** com configuração antiga continuarão funcionando
-- **Novos visuais** de conversão usarão a lógica correta automaticamente
-- **Visuais antigos** precisam ser recriados para usar a nova lógica
+## Benefícios
+
+| Aspecto | Descrição |
+|---------|-----------|
+| **Histórico Completo** | Todos os dados da negociação ficam na Timeline do cliente |
+| **Rastreabilidade** | Equipe de Operações vê exatamente o que foi negociado |
+| **Consistência** | Segue o mesmo padrão das notas de Call Comercial |
+| **Não-destrutivo** | Dados originais permanecem no negócio |
+
