@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
-import { useZappData, Message, TeamUser } from "@/hooks/useZappData";
+import { useZappData, Message, TeamUser, InboundMessageData } from "@/hooks/useZappData";
+import { useZappNotifications } from "@/hooks/useZappNotifications";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -473,6 +474,83 @@ export default function RoyZapp() {
     return saved !== null ? saved === "true" : true;
   });
   
+  // Notification system - handle view chat callback
+  const handleNotificationViewChat = useCallback((conversationId: string) => {
+    const assignment = assignments.find(
+      a => a.zapp_conversation_id === conversationId || a.zapp_conversation?.id === conversationId
+    );
+    if (assignment) {
+      setSelectedConversation(assignment);
+      setInboxTab(assignment.agent_id === currentAgent?.id ? "mine" : "queue");
+    }
+  }, [assignments, currentAgent?.id]);
+
+  // Notification hook
+  const { notifyNewMessage } = useZappNotifications({
+    soundEnabled,
+    currentAgentId: currentAgent?.id,
+    selectedConversationId: selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id,
+    onViewChat: handleNotificationViewChat,
+  });
+
+  // Realtime subscription for notifications (all inbound messages in sector)
+  useEffect(() => {
+    if (!currentUser?.account_id || !selectedSectorId) return;
+
+    const notificationChannel = supabase
+      .channel(`zapp-notifications-${selectedSectorId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'zapp_messages',
+          filter: `account_id=eq.${currentUser.account_id}`
+        },
+        (payload) => {
+          const newMsg = payload.new as any;
+          
+          // Only notify for inbound messages
+          if (newMsg?.direction !== 'inbound') return;
+          
+          // Find the conversation in assignments
+          const conversationId = newMsg.zapp_conversation_id;
+          const assignment = assignments.find(
+            a => a.zapp_conversation_id === conversationId || a.zapp_conversation?.id === conversationId
+          );
+          
+          if (assignment) {
+            const contactName = assignment.zapp_conversation?.contact_name 
+              || assignment.zapp_conversation?.client?.full_name 
+              || assignment.zapp_conversation?.lead?.full_name 
+              || assignment.zapp_conversation?.phone_e164 
+              || "Contato";
+            
+            const messagePreview = newMsg.content 
+              || (newMsg.message_type === 'audio' ? '🎤 Áudio' : '')
+              || (newMsg.message_type === 'image' ? '📷 Imagem' : '')
+              || (newMsg.message_type === 'video' ? '🎥 Vídeo' : '')
+              || (newMsg.message_type === 'document' ? '📄 Documento' : '')
+              || 'Nova mensagem';
+            
+            notifyNewMessage({
+              conversationId,
+              contactName,
+              messagePreview,
+              avatarUrl: assignment.zapp_conversation?.avatar_url,
+              agentId: assignment.agent_id,
+              isGroup: assignment.zapp_conversation?.is_group || false,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(notificationChannel);
+    };
+  }, [currentUser?.account_id, selectedSectorId, assignments, notifyNewMessage]);
+
   // Import conversations state
   const [importingConversations, setImportingConversations] = useState(false);
   const [importLimit, setImportLimit] = useState("50");
