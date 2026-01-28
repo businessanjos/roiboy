@@ -767,7 +767,7 @@ export default function ClientDetail() {
         .select("*")
         .eq("client_id", id)
         .order("sent_at", { ascending: false })
-        .limit(20);
+        .limit(200);
 
       (messagesData || []).forEach((msg: any) => {
         const isGroup = msg.is_group === true;
@@ -812,7 +812,7 @@ export default function ClientDetail() {
         .select("*")
         .eq("client_id", id)
         .order("happened_at", { ascending: false })
-        .limit(20);
+        .limit(100);
 
       (allRiskData || []).forEach((risk: any) => {
         timelineItems.push({
@@ -845,8 +845,7 @@ export default function ClientDetail() {
           users (name, avatar_url)
         `)
         .eq("client_id", id)
-        .order("created_at", { ascending: false })
-        .limit(30);
+        .order("created_at", { ascending: false });
 
       (followupsData || []).forEach((followup: any) => {
         const isNote = followup.type === "note";
@@ -877,7 +876,7 @@ export default function ClientDetail() {
         .select("*")
         .eq("client_id", id)
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(100);
 
       (lifeEventsData || []).forEach((event: any) => {
         timelineItems.push({
@@ -903,7 +902,7 @@ export default function ClientDetail() {
         `)
         .eq("client_id", id)
         .order("submitted_at", { ascending: false })
-        .limit(20);
+        .limit(100);
 
       (formResponsesData || []).forEach((response: any) => {
         const responseCount = Object.keys(response.responses || {}).length;
@@ -930,7 +929,7 @@ export default function ClientDetail() {
         .eq("client_id", id)
         .not("event_id", "is", null)
         .order("join_time", { ascending: false })
-        .limit(20);
+        .limit(100);
 
       (attendanceData || []).forEach((att: any) => {
         timelineItems.push({
@@ -952,7 +951,7 @@ export default function ClientDetail() {
         .select("*")
         .eq("client_id", id)
         .order("created_at", { ascending: false })
-        .limit(20);
+        .limit(100);
 
       (subscriptionsData || []).forEach((sub: any) => {
         timelineItems.push({
@@ -971,7 +970,7 @@ export default function ClientDetail() {
 
       // Sort by timestamp
       timelineItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setTimeline(timelineItems.slice(0, 50));
+      setTimeline(timelineItems.slice(0, 300));
 
     } catch (error: any) {
       console.error("Error fetching client data:", error);
