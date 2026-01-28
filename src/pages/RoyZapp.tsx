@@ -3089,18 +3089,27 @@ export default function RoyZapp() {
       // Closed conversations filter
       // When filterStatus is "closed", show only closed
       // Otherwise, HIDE closed conversations by default
+      // EXCEPTION: Pinned groups ALWAYS show in the groups tab, even if closed
       const isClosed = a.status === "closed";
-      if (filterStatus === "closed") {
-        if (!isClosed) return false;
-      } else if (filterStatus === "all") {
-        // When showing "all", hide closed conversations
-        if (isClosed) return false;
+      const isPinned = contact.isPinned;
+      const skipClosedFilterForPinnedGroups = isGroup && isPinned && filterConversationType === "group";
+      
+      if (!skipClosedFilterForPinnedGroups) {
+        if (filterStatus === "closed") {
+          if (!isClosed) return false;
+        } else if (filterStatus === "all") {
+          // When showing "all", hide closed conversations
+          if (isClosed) return false;
+        }
       }
       
       // Tab filter: "mine" = assigned to current agent, "queue" = unassigned conversations only
       // Admins can see ALL conversations in "mine" tab (to monitor team)
       // Skip tab filter when viewing archived or closed (show all regardless of assignment)
-      const matchesTab = (filterArchived || filterStatus === "closed") ? true : (
+      // EXCEPTION: Groups skip tab filter when viewing groups tab (they're permanent, not tickets)
+      const skipTabFilterForGroups = filterConversationType === "group" && isGroup;
+      
+      const matchesTab = (filterArchived || filterStatus === "closed" || skipTabFilterForGroups) ? true : (
         inboxTab === "mine" 
           ? (isAdmin || a.agent_id === currentAgent?.id) // Admins see all assigned, others see only their own
           : a.agent_id === null // Queue always shows only unassigned
