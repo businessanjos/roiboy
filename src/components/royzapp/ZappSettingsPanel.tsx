@@ -11,6 +11,10 @@ import {
   Sparkles,
   Wand2,
   Brain,
+  Bell,
+  BellOff,
+  BellRing,
+  Volume2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -24,6 +28,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+
+import type { NotificationPermissionStatus } from "@/hooks/useZappNotifications";
 
 interface ZappSettingsPanelProps {
   whatsappConnected: boolean;
@@ -39,6 +45,8 @@ interface ZappSettingsPanelProps {
   spellingEnabled?: boolean;
   suggestionsEnabled?: boolean;
   autoLearningEnabled?: boolean;
+  // System Notifications
+  notificationPermission?: NotificationPermissionStatus;
   onToggleWhatsAppConnection: () => void;
   onRoundRobinChange: (checked: boolean) => void;
   onRespectLimitChange: (checked: boolean) => void;
@@ -50,6 +58,8 @@ interface ZappSettingsPanelProps {
   onSpellingChange?: (checked: boolean) => void;
   onSuggestionsChange?: (checked: boolean) => void;
   onAutoLearningChange?: (checked: boolean) => void;
+  // System Notifications Handler
+  onRequestNotificationPermission?: () => void;
 }
 
 export const ZappSettingsPanel = memo(function ZappSettingsPanel({
@@ -65,6 +75,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
   spellingEnabled = true,
   suggestionsEnabled = true,
   autoLearningEnabled = true,
+  notificationPermission = "default",
   onToggleWhatsAppConnection,
   onRoundRobinChange,
   onRespectLimitChange,
@@ -75,6 +86,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
   onSpellingChange,
   onSuggestionsChange,
   onAutoLearningChange,
+  onRequestNotificationPermission,
 }: ZappSettingsPanelProps) {
   const navigate = useNavigate();
 
@@ -165,6 +177,84 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
         </Button>
       </div>
 
+      {/* Notification Settings */}
+      <div className="space-y-4 pt-4 border-t border-zapp-border">
+        <div className="flex items-center gap-2">
+          <BellRing className="h-4 w-4 text-zapp-accent" />
+          <p className="text-zapp-text text-sm font-medium">Notificações</p>
+        </div>
+        
+        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
+          <div className="flex items-center gap-2">
+            <Volume2 className="h-4 w-4 text-blue-500" />
+            <div>
+              <p className="text-zapp-text text-sm">Som de nova conversa</p>
+              <p className="text-zapp-text-muted text-xs">Tocar som ao receber mensagem</p>
+            </div>
+          </div>
+          <Switch 
+            checked={soundEnabled} 
+            onCheckedChange={onSoundChange}
+            className="data-[state=checked]:bg-zapp-accent" 
+          />
+        </div>
+
+        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
+          <div className="flex items-center gap-2">
+            {notificationPermission === "granted" ? (
+              <Bell className="h-4 w-4 text-emerald-500" />
+            ) : notificationPermission === "denied" ? (
+              <BellOff className="h-4 w-4 text-red-500" />
+            ) : (
+              <Bell className="h-4 w-4 text-amber-500" />
+            )}
+            <div>
+              <p className="text-zapp-text text-sm">Notificações do Sistema</p>
+              <p className="text-zapp-text-muted text-xs">
+                {notificationPermission === "granted" 
+                  ? "Receba alertas mesmo em background"
+                  : notificationPermission === "denied"
+                  ? "Bloqueadas pelo navegador"
+                  : notificationPermission === "unsupported"
+                  ? "Não suportado neste navegador"
+                  : "Clique para ativar alertas push"}
+              </p>
+            </div>
+          </div>
+          
+          {notificationPermission === "granted" ? (
+            <span className="text-xs text-emerald-500 font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              Ativadas
+            </span>
+          ) : notificationPermission === "denied" ? (
+            <span className="text-xs text-red-500 font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+              Bloqueadas
+            </span>
+          ) : notificationPermission === "unsupported" ? (
+            <span className="text-xs text-zapp-text-muted font-medium">
+              Indisponível
+            </span>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRequestNotificationPermission}
+              className="border-zapp-accent text-zapp-accent hover:bg-zapp-accent/10 h-7 text-xs"
+            >
+              Ativar
+            </Button>
+          )}
+        </div>
+        
+        {notificationPermission === "denied" && (
+          <p className="text-xs text-amber-500 px-3">
+            💡 Para ativar, clique no ícone de cadeado na barra de endereço do navegador e permita notificações.
+          </p>
+        )}
+      </div>
+
       {/* Distribution Settings */}
       <div className="space-y-4 pt-4 border-t border-zapp-border">
         <p className="text-zapp-text text-sm font-medium">Distribuição</p>
@@ -189,18 +279,6 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
           <Switch 
             checked={respectLimitEnabled} 
             onCheckedChange={onRespectLimitChange}
-            className="data-[state=checked]:bg-zapp-accent" 
-          />
-        </div>
-
-        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
-          <div>
-            <p className="text-zapp-text text-sm">Som de nova conversa</p>
-            <p className="text-zapp-text-muted text-xs">Tocar som ao receber mensagem</p>
-          </div>
-          <Switch 
-            checked={soundEnabled} 
-            onCheckedChange={onSoundChange}
             className="data-[state=checked]:bg-zapp-accent" 
           />
         </div>
