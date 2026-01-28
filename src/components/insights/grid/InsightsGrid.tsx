@@ -24,9 +24,9 @@ interface InsightsGridProps {
   onLayoutChange: (layouts: Array<{ id: string; layout: LayoutItem }>) => void;
 }
 
-const ROW_HEIGHT = 100;
-const COLS = 12;
-const MARGIN: [number, number] = [16, 16];
+const ROW_HEIGHT = 20;  // Ultra-granular: 5x mais fino para movimento suave
+const COLS = 48;        // Ultra-granular: 4x mais colunas para posicionamento preciso
+const MARGIN: [number, number] = [0, 0];
 
 export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -46,37 +46,38 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
     return () => window.removeEventListener("resize", updateWidth);
   }, []);
 
-  // Convert visuals to layout items
+  // Convert visuals to layout items (scale up from DB format to ultra-granular grid)
   const layout = useMemo<LayoutItem[]>(() => {
     return visuals.map((visual, index) => {
       const existingLayout = visual.layout;
       
       if (existingLayout) {
+        // Scale up: DB uses 12 cols/100px rows, grid uses 48 cols/20px rows
         return {
           i: visual.id,
-          x: existingLayout.x,
-          y: existingLayout.y,
-          w: existingLayout.w,
-          h: existingLayout.h,
-          minW: 2,
-          minH: 2,
+          x: existingLayout.x * 4,   // 12→48 cols
+          y: existingLayout.y * 5,   // 100px→20px rows
+          w: existingLayout.w * 4,
+          h: existingLayout.h * 5,
+          minW: 8,   // ~2 colunas antigas
+          minH: 10,  // ~200px
         };
       }
 
-      // Default layout for new visuals (stack vertically)
+      // Default layout for new visuals (in granular scale)
       return {
         i: visual.id,
-        x: (index % 2) * 6,
-        y: Math.floor(index / 2) * 5,
-        w: 6,
-        h: 5,
-        minW: 2,
-        minH: 2,
+        x: (index % 2) * 24,         // 24 = metade do grid (48/2)
+        y: Math.floor(index / 2) * 25, // 25 rows = ~500px
+        w: 24,                        // metade da largura
+        h: 25,                        // ~500px de altura
+        minW: 8,
+        minH: 10,
       };
     });
   }, [visuals]);
 
-  // Handle layout changes with debounce
+  // Handle layout changes with debounce (scale down to DB format)
   const handleLayoutChange = useCallback(
     (newLayout: LayoutItem[]) => {
       // Clear existing debounce
@@ -86,14 +87,15 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
 
       // Debounce by 500ms to avoid excessive saves
       debounceRef.current = setTimeout(() => {
+        // Scale down: grid uses 48 cols/20px rows, DB uses 12 cols/100px rows
         const layoutUpdates = newLayout.map((item) => ({
           id: item.i,
           layout: {
             i: item.i,
-            x: item.x,
-            y: item.y,
-            w: item.w,
-            h: item.h,
+            x: Math.round(item.x / 4),  // 48→12 cols
+            y: Math.round(item.y / 5),  // 20px→100px rows
+            w: Math.round(item.w / 4),
+            h: Math.round(item.h / 5),
           },
         }));
 
