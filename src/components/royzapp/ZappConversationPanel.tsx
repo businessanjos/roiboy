@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import {
   MessageSquare,
   Users,
@@ -11,7 +11,9 @@ import {
   Check,
   Bot,
   ArrowDownToLine,
+  Pin,
 } from "lucide-react";
+import { getContactInfo } from "./types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -635,22 +637,112 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                 <p className="text-zapp-text-muted text-sm">Nenhuma conversa encontrada</p>
               </div>
             ) : (
-              filteredAssignments.map((assignment) => (
-                <ZappConversationItem
-                  key={assignment.id}
-                  assignment={assignment}
-                  isSelected={selectedConversation?.id === assignment.id && !selectedAIAgent}
-                  currentAgentId={currentAgentId}
-                  clientProducts={clientProducts}
-                  onSelect={onSelectConversation}
-                  onMarkAsRead={onMarkAsRead}
-                  onMarkAsUnread={onMarkAsUnread}
-                  onUpdateFlag={onUpdateFlag}
-                  onOpenTagDialog={onOpenTagConversationDialog}
-                  onDeleteConversation={onDeleteConversation}
-                  getAgentName={getAgentName}
-                />
-              ))
+              <>
+                {/* Pinned Groups Section - Only show when viewing groups */}
+                {filterConversationType === "group" && (() => {
+                  const pinnedGroups = filteredAssignments.filter(a => {
+                    const contact = getContactInfo(a);
+                    return contact.isGroup && contact.isPinned;
+                  });
+                  const regularItems = filteredAssignments.filter(a => {
+                    const contact = getContactInfo(a);
+                    return !(contact.isGroup && contact.isPinned);
+                  });
+                  
+                  if (pinnedGroups.length === 0) {
+                    // No pinned groups, just render all
+                    return filteredAssignments.map((assignment) => (
+                      <ZappConversationItem
+                        key={assignment.id}
+                        assignment={assignment}
+                        isSelected={selectedConversation?.id === assignment.id && !selectedAIAgent}
+                        currentAgentId={currentAgentId}
+                        clientProducts={clientProducts}
+                        onSelect={onSelectConversation}
+                        onMarkAsRead={onMarkAsRead}
+                        onMarkAsUnread={onMarkAsUnread}
+                        onUpdateFlag={onUpdateFlag}
+                        onOpenTagDialog={onOpenTagConversationDialog}
+                        onDeleteConversation={onDeleteConversation}
+                        getAgentName={getAgentName}
+                      />
+                    ));
+                  }
+                  
+                  return (
+                    <>
+                      {/* Pinned groups header */}
+                      <div className="px-4 py-2 bg-zapp-panel/50 border-b border-zapp-border">
+                        <span className="text-xs font-medium text-zapp-accent flex items-center gap-1.5">
+                          <Pin className="h-3 w-3" />
+                          GRUPOS FIXADOS
+                        </span>
+                      </div>
+                      {pinnedGroups.map((assignment) => (
+                        <ZappConversationItem
+                          key={assignment.id}
+                          assignment={assignment}
+                          isSelected={selectedConversation?.id === assignment.id && !selectedAIAgent}
+                          currentAgentId={currentAgentId}
+                          clientProducts={clientProducts}
+                          onSelect={onSelectConversation}
+                          onMarkAsRead={onMarkAsRead}
+                          onMarkAsUnread={onMarkAsUnread}
+                          onUpdateFlag={onUpdateFlag}
+                          onOpenTagDialog={onOpenTagConversationDialog}
+                          onDeleteConversation={onDeleteConversation}
+                          getAgentName={getAgentName}
+                        />
+                      ))}
+                      
+                      {/* Other groups header */}
+                      {regularItems.length > 0 && (
+                        <>
+                          <div className="px-4 py-2 bg-zapp-panel/30 border-b border-zapp-border">
+                            <span className="text-xs font-medium text-zapp-text-muted">
+                              OUTROS GRUPOS
+                            </span>
+                          </div>
+                          {regularItems.map((assignment) => (
+                            <ZappConversationItem
+                              key={assignment.id}
+                              assignment={assignment}
+                              isSelected={selectedConversation?.id === assignment.id && !selectedAIAgent}
+                              currentAgentId={currentAgentId}
+                              clientProducts={clientProducts}
+                              onSelect={onSelectConversation}
+                              onMarkAsRead={onMarkAsRead}
+                              onMarkAsUnread={onMarkAsUnread}
+                              onUpdateFlag={onUpdateFlag}
+                              onOpenTagDialog={onOpenTagConversationDialog}
+                              onDeleteConversation={onDeleteConversation}
+                              getAgentName={getAgentName}
+                            />
+                          ))}
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+                
+                {/* Regular rendering for non-group views */}
+                {filterConversationType !== "group" && filteredAssignments.map((assignment) => (
+                  <ZappConversationItem
+                    key={assignment.id}
+                    assignment={assignment}
+                    isSelected={selectedConversation?.id === assignment.id && !selectedAIAgent}
+                    currentAgentId={currentAgentId}
+                    clientProducts={clientProducts}
+                    onSelect={onSelectConversation}
+                    onMarkAsRead={onMarkAsRead}
+                    onMarkAsUnread={onMarkAsUnread}
+                    onUpdateFlag={onUpdateFlag}
+                    onOpenTagDialog={onOpenTagConversationDialog}
+                    onDeleteConversation={onDeleteConversation}
+                    getAgentName={getAgentName}
+                  />
+                ))}
+              </>
             )}
           </div>
         )}
