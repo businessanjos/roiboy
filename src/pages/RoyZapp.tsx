@@ -2851,7 +2851,10 @@ export default function RoyZapp() {
           toast.success("Grupo reaberto!");
           setNewConversationDialogOpen(false);
           setFilterConversationType("group"); // Switch to groups tab
-          fetchData(); // Background refresh
+          
+          // CRITICAL FIX: Delay fetchData to prevent overwriting local state
+          setTimeout(() => fetchData(), 2000);
+          
           setCreatingConversation(false);
           return;
         } else {
@@ -2877,7 +2880,10 @@ export default function RoyZapp() {
           toast.success("Grupo adicionado!");
           setNewConversationDialogOpen(false);
           setFilterConversationType("group"); // Switch to groups tab
-          fetchData(); // Background refresh
+          
+          // CRITICAL FIX: Delay fetchData to prevent overwriting local state
+          setTimeout(() => fetchData(), 2000);
+          
           setCreatingConversation(false);
           return;
         }
