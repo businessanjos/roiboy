@@ -28,7 +28,8 @@ interface UazapiRequest {
   message_id?: string;
   new_content?: string;
   quoted_message_id?: string;
-  quoted_from_me?: boolean; // NEW: Whether the quoted message was sent by us
+  quoted_from_me?: boolean; // Whether the quoted message was sent by us
+  quoted_participant?: string; // Phone/JID of who sent the original quoted message
   group_id?: string;
   group_name?: string;
   group_description?: string;
@@ -1674,15 +1675,43 @@ serve(async (req) => {
         console.log(`[send_text] Using token from integration_id: ${integration_id || 'sector fallback'}, has token: ${!!instanceToken}`);
         const quotedMessageId = (payload as UazapiRequest).quoted_message_id;
         const quotedFromMe = (payload as UazapiRequest).quoted_from_me ?? false;
+        const quotedParticipant = (payload as UazapiRequest).quoted_participant;
         
         // UAZAPI GO v2 - Documentação oficial: POST /send/text
-        // Body: { number: "5511999999999", text: "mensagem", quoted?: { key: { id: "...", fromMe: bool, remoteJid: "..." } } }
+        // Body: { number: "5511999999999", text: "mensagem", ContextInfo?: { StanzaId: "...", Participant: "...@s.whatsapp.net" } }
         const messageBody: Record<string, unknown> = { number: cleanPhone, text: message };
         
-        // Add quoted message for replies - UAZAPI GO v2 documentação oficial: campo "replyid"
+        // Add quoted message for replies - WUZAPI/UAZAPI format: ContextInfo with StanzaId and Participant
+        // The external_message_id is stored as "phone:msgid" but UAZAPI expects just the pure msgid
         if (quotedMessageId) {
-          messageBody.replyid = quotedMessageId;
-          console.log(`[send_text] Reply with replyid: ${quotedMessageId}`);
+          // Extract pure message ID (remove phone: prefix if present)
+          const pureMessageId = quotedMessageId.includes(':') 
+            ? quotedMessageId.split(':').pop() 
+            : quotedMessageId;
+          
+          // Determine participant JID:
+          // - For inbound messages (quotedFromMe = false), participant is the client's phone
+          // - For outbound messages (quotedFromMe = true), participant is our instance owner
+          // The frontend sends quoted_participant for inbound messages (client's phone)
+          let participantJid: string;
+          if (quotedFromMe) {
+            // Quoted message was sent by us - try to get owner from instance info, fallback to cleanPhone
+            participantJid = `${cleanPhone}@s.whatsapp.net`; // Fallback - will be overridden if owner is known
+          } else if (quotedParticipant) {
+            // Quoted message was from client - use their phone
+            const cleanParticipant = quotedParticipant.replace(/\D/g, "");
+            participantJid = `${cleanParticipant}@s.whatsapp.net`;
+          } else {
+            // Fallback to cleanPhone (the recipient) for inbound quotes
+            participantJid = `${cleanPhone}@s.whatsapp.net`;
+          }
+          
+          messageBody.ContextInfo = {
+            StanzaId: pureMessageId,
+            Participant: participantJid,
+          };
+          
+          console.log(`[send_text] Reply with ContextInfo: StanzaId=${pureMessageId}, Participant=${participantJid}, quotedFromMe=${quotedFromMe}`);
         }
         
         if (instanceToken) {
@@ -2414,7 +2443,8 @@ serve(async (req) => {
         const mentionsList = (payload as UazapiRequest).mentions || [];
         const quotedMessageId = (payload as UazapiRequest).quoted_message_id;
         const quotedFromMe = (payload as UazapiRequest).quoted_from_me ?? false;
-        console.log(`Sending message to group: ${groupJid}, mentions: ${mentionsList.length}, quoted: ${quotedMessageId || 'none'}, quotedFromMe: ${quotedFromMe}`);
+        const quotedParticipant = (payload as UazapiRequest).quoted_participant;
+        console.log(`Sending message to group: ${groupJid}, mentions: ${mentionsList.length}, quoted: ${quotedMessageId || 'none'}, quotedFromMe: ${quotedFromMe}, quotedParticipant: ${quotedParticipant || 'none'}`);
         
         let sendResult: unknown = null;
         let sendSuccess = false;
@@ -2430,20 +2460,32 @@ serve(async (req) => {
         // Base message body
         const baseBody: Record<string, unknown> = { number: groupJid, text: message };
         
-        // Add quoted message for replies - UAZAPI requires complete key with remoteJid and fromMe
+        // Add quoted message for replies - WUZAPI/UAZAPI format: ContextInfo with StanzaId and Participant
         if (quotedMessageId) {
-          baseBody.quoted = { 
-            key: { 
-              id: quotedMessageId,
-              fromMe: quotedFromMe,
-              remoteJid: groupJid  // For groups, use the group JID
-            }
+          // Extract pure message ID (remove phone: prefix if present)
+          const pureMessageId = quotedMessageId.includes(':') 
+            ? quotedMessageId.split(':').pop() 
+            : quotedMessageId;
+          
+          // Determine participant JID for group quotes:
+          // - quotedFromMe = true: we sent the original message, participant is our instance owner
+          // - quotedFromMe = false: someone else sent it, use their JID from quotedParticipant
+          let participantJid: string;
+          if (quotedParticipant) {
+            // Use the provided participant (phone of who sent the original message)
+            const cleanParticipant = quotedParticipant.replace(/\D/g, "");
+            participantJid = `${cleanParticipant}@s.whatsapp.net`;
+          } else {
+            // Fallback to group JID if no participant provided
+            participantJid = groupJid;
+          }
+          
+          baseBody.ContextInfo = {
+            StanzaId: pureMessageId,
+            Participant: participantJid,
           };
-          // Also add contextInfo for some UAZAPI versions
-          baseBody.contextInfo = {
-            stanzaId: quotedMessageId
-          };
-          console.log(`[send_to_group] Quote payload: id=${quotedMessageId}, fromMe=${quotedFromMe}, remoteJid=${groupJid}`);
+          
+          console.log(`[send_to_group] Reply with ContextInfo: StanzaId=${pureMessageId}, Participant=${participantJid}, quotedFromMe=${quotedFromMe}`);
         }
         
         // First try WITHOUT mentions (to ensure message is sent)

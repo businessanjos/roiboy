@@ -1440,6 +1440,12 @@ export default function RoyZapp() {
           // is_from_client = true means CLIENT sent the message, so fromMe = false (we didn't send it)
           // is_from_client = false means WE sent the message, so fromMe = true
           payload.quoted_from_me = !replyContext.is_from_client;
+          // Pass the participant for proper quote attribution
+          // For client messages, use the conversation's phone (client's phone)
+          // For our messages, the backend will determine our instance owner JID
+          if (replyContext.is_from_client && phone) {
+            payload.quoted_participant = phone;
+          }
         }
         
         const { error } = await supabase.functions.invoke("uazapi-manager", {
