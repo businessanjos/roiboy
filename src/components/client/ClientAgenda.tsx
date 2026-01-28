@@ -1,35 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { localDateTimeToUTC, utcToLocalDateTime } from "@/lib/dateUtils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -46,11 +19,7 @@ import {
   Check,
   Users,
   Monitor,
-  ExternalLink,
   Package,
-  Plus,
-  Pencil,
-  Trash2,
   MapPin,
   QrCode,
   Link as LinkIcon,
@@ -60,6 +29,7 @@ import { format, isPast, isFuture, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 type EventType = "live" | "material" | "mentoria" | "workshop" | "masterclass" | "webinar" | "imersao" | "plantao" | "launch" | "campaign" | "content" | "partnership" | "fair" | "movimento" | "viagem" | "autoridade" | "other";
 
@@ -141,24 +111,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
   const [feedbacks, setFeedbacks] = useState<ClientEventFeedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<EventWithProducts | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [eventToDelete, setEventToDelete] = useState<EventWithProducts | null>(null);
-  
-  // Form state
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    event_type: "live" as EventType,
-    modality: "online" as "online" | "presencial",
-    address: "",
-    scheduled_at: "",
-    duration_minutes: "60",
-    meeting_url: "",
-    material_url: "",
-  });
 
   useEffect(() => {
     fetchAccountId();
@@ -176,7 +128,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
 
   const fetchAccountId = async () => {
     try {
-      // Primeiro obter o usuário autenticado
       const { data: { user: authUser } } = await supabase.auth.getUser();
       
       if (!authUser) {
@@ -185,7 +136,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         return;
       }
       
-      // Filtrar por auth_user_id para evitar erro de múltiplas linhas
       const { data, error } = await supabase
         .from("users")
         .select("account_id")
@@ -214,7 +164,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     setLoading(true);
     
     try {
-      // Get events linked to the client's products
       const { data, error } = await supabase
         .from("events")
         .select(`
@@ -227,7 +176,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         console.error("Error fetching events:", error);
         setEvents([]);
       } else {
-        // Filter events that match client's products
         const filteredEvents = (data || []).filter((event: EventWithProducts) => {
           if (event.event_products.length === 0) return false;
           return event.event_products.some((ep) => 
@@ -319,7 +267,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     const delivery = getDeliveryStatus(eventId);
     
     if (delivery) {
-      // Update existing delivery
       const newStatus = currentStatus === "delivered" ? "pending" : "delivered";
       const { error } = await supabase
         .from("client_event_deliveries")
@@ -337,7 +284,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         fetchDeliveries();
       }
     } else {
-      // Create new delivery
       const { error } = await supabase
         .from("client_event_deliveries")
         .insert({
@@ -358,176 +304,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      title: "",
-      description: "",
-      event_type: "live",
-      modality: "online",
-      address: "",
-      scheduled_at: "",
-      duration_minutes: "60",
-      meeting_url: "",
-      material_url: "",
-    });
-    setEditingEvent(null);
-  };
-
-  const openEditDialog = (event: EventWithProducts) => {
-    setEditingEvent(event);
-    setFormData({
-      title: event.title,
-      description: event.description || "",
-      event_type: event.event_type,
-      modality: event.modality || "online",
-      address: event.address || "",
-      scheduled_at: utcToLocalDateTime(event.scheduled_at),
-      duration_minutes: event.duration_minutes?.toString() || "60",
-      meeting_url: event.meeting_url || "",
-      material_url: event.material_url || "",
-    });
-    setDialogOpen(true);
-  };
-
-  const handleCreateEvent = async () => {
-    if (!accountId || !formData.title.trim()) {
-      toast.error("Preencha o título do evento");
-      return;
-    }
-
-    if (clientProductIds.length === 0) {
-      toast.error("Cliente não possui produtos vinculados");
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      // Create event
-      const { data: eventData, error: eventError } = await supabase
-        .from("events")
-        .insert({
-          account_id: accountId,
-          title: formData.title.trim(),
-          description: formData.description.trim() || null,
-          event_type: formData.event_type,
-          modality: formData.modality,
-          address: formData.modality === "presencial" ? formData.address.trim() || null : null,
-          scheduled_at: formData.scheduled_at ? localDateTimeToUTC(formData.scheduled_at) : null,
-          duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null,
-          meeting_url: formData.meeting_url.trim() || null,
-          material_url: formData.material_url.trim() || null,
-        })
-        .select()
-        .single();
-
-      if (eventError) throw eventError;
-
-      // Link to client's products
-      const eventProductsInserts = clientProductIds.map((productId) => ({
-        account_id: accountId,
-        event_id: eventData.id,
-        product_id: productId,
-      }));
-
-      const { error: linkError } = await supabase
-        .from("event_products")
-        .insert(eventProductsInserts);
-
-      if (linkError) throw linkError;
-
-      toast.success("Evento criado com sucesso!");
-      resetForm();
-      setDialogOpen(false);
-      fetchEvents();
-    } catch (error) {
-      console.error("Error creating event:", error);
-      toast.error("Erro ao criar evento");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleUpdateEvent = async () => {
-    if (!accountId || !editingEvent || !formData.title.trim()) {
-      toast.error("Preencha o título do evento");
-      return;
-    }
-
-    setSubmitting(true);
-
-    try {
-      const { error } = await supabase
-        .from("events")
-        .update({
-          title: formData.title.trim(),
-          description: formData.description.trim() || null,
-          event_type: formData.event_type,
-          modality: formData.modality,
-          address: formData.modality === "presencial" ? formData.address.trim() || null : null,
-          scheduled_at: formData.scheduled_at ? localDateTimeToUTC(formData.scheduled_at) : null,
-          duration_minutes: formData.duration_minutes ? parseInt(formData.duration_minutes) : null,
-          meeting_url: formData.meeting_url.trim() || null,
-          material_url: formData.material_url.trim() || null,
-        })
-        .eq("id", editingEvent.id);
-
-      if (error) throw error;
-
-      toast.success("Evento atualizado com sucesso!");
-      resetForm();
-      setDialogOpen(false);
-      fetchEvents();
-    } catch (error) {
-      console.error("Error updating event:", error);
-      toast.error("Erro ao atualizar evento");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleDeleteEvent = async () => {
-    if (!eventToDelete) return;
-
-    try {
-      // First delete event_products links
-      await supabase
-        .from("event_products")
-        .delete()
-        .eq("event_id", eventToDelete.id);
-
-      // Then delete deliveries
-      await supabase
-        .from("client_event_deliveries")
-        .delete()
-        .eq("event_id", eventToDelete.id);
-
-      // Finally delete the event
-      const { error } = await supabase
-        .from("events")
-        .delete()
-        .eq("id", eventToDelete.id);
-
-      if (error) throw error;
-
-      toast.success("Evento excluído com sucesso!");
-      setDeleteDialogOpen(false);
-      setEventToDelete(null);
-      fetchEvents();
-    } catch (error) {
-      console.error("Error deleting event:", error);
-      toast.error("Erro ao excluir evento");
-    }
-  };
-
-  const handleSubmit = () => {
-    if (editingEvent) {
-      handleUpdateEvent();
-    } else {
-      handleCreateEvent();
-    }
-  };
-
   if (loading) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -545,177 +321,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       </div>
     );
   }
-
-  const eventDialogContent = (
-    <Dialog open={dialogOpen} onOpenChange={(open) => {
-      setDialogOpen(open);
-      if (!open) resetForm();
-    }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>{editingEvent ? "Editar Evento" : "Criar Evento para Cliente"}</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label htmlFor="event-title">Título *</Label>
-            <Input
-              id="event-title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Nome do evento"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="event_type">Tipo</Label>
-              <Select
-                value={formData.event_type}
-                onValueChange={(value: "live" | "material") => 
-                  setFormData({ ...formData, event_type: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="live">Live / Reunião</SelectItem>
-                  <SelectItem value="material">Material de Apoio</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Modalidade</Label>
-              <Select
-                value={formData.modality}
-                onValueChange={(v: "online" | "presencial") => 
-                  setFormData({ ...formData, modality: v })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="online">
-                    <div className="flex items-center gap-2">
-                      <Monitor className="h-4 w-4" />
-                      Online
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="presencial">
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      Presencial
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {formData.modality === "presencial" && (
-            <div className="space-y-2">
-              <Label htmlFor="address">Endereço</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                placeholder="Rua, número, bairro, cidade..."
-              />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <Label htmlFor="event-description">Descrição</Label>
-            <Textarea
-              id="event-description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Detalhes do evento"
-              rows={3}
-            />
-          </div>
-
-          {/* Data/Hora e Duração - Disponível para TODOS os tipos de eventos */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="scheduled_at">Data/Hora</Label>
-              <Input
-                id="scheduled_at"
-                type="datetime-local"
-                value={formData.scheduled_at}
-                onChange={(e) => setFormData({ ...formData, scheduled_at: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="duration">Duração (min)</Label>
-              <Input
-                id="duration"
-                type="number"
-                value={formData.duration_minutes}
-                onChange={(e) => setFormData({ ...formData, duration_minutes: e.target.value })}
-              />
-            </div>
-          </div>
-
-          {/* Link da Reunião - Tipos que suportam reunião online */}
-          {["live", "mentoria", "workshop", "masterclass", "webinar", "imersao", "plantao"].includes(formData.event_type) && (
-            <div className="space-y-2">
-              <Label htmlFor="meeting_url">Link da Reunião</Label>
-              <Input
-                id="meeting_url"
-                value={formData.meeting_url}
-                onChange={(e) => setFormData({ ...formData, meeting_url: e.target.value })}
-                placeholder="https://zoom.us/..."
-              />
-            </div>
-          )}
-
-          {/* Link do Material - Apenas para tipo material */}
-          {formData.event_type === "material" && (
-            <div className="space-y-2">
-              <Label htmlFor="material_url">Link do Material</Label>
-              <Input
-                id="material_url"
-                value={formData.material_url}
-                onChange={(e) => setFormData({ ...formData, material_url: e.target.value })}
-                placeholder="https://..."
-              />
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? (editingEvent ? "Salvando..." : "Criando...") : (editingEvent ? "Salvar" : "Criar Evento")}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-
-  const deleteDialogContent = (
-    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Excluir evento?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Tem certeza que deseja excluir "{eventToDelete?.title}"? Esta ação não pode ser desfeita.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={handleDeleteEvent} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            Excluir
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
 
   // Helper to get event type label and icon
   const getEventTypeInfo = (eventType: EventType) => {
@@ -740,8 +345,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     };
     return typeMap[eventType] || typeMap.live;
   };
-
-  // Removed early return - we always want to render participations even if no product events
 
   // Separate events by status
   const upcomingEvents = events.filter(
@@ -771,7 +374,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                 <TableHead>Modalidade</TableHead>
                 <TableHead>Data/Hora</TableHead>
                 {showParticipation && <TableHead>Status</TableHead>}
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="text-right">Link</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -784,6 +387,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                 const isPresencial = event.modality === "presencial";
                 const eventTypeInfo = getEventTypeInfo(event.event_type);
                 const isTodayEvent = event.scheduled_at && isToday(new Date(event.scheduled_at));
+                const hasLink = event.meeting_url || event.material_url;
 
                 return (
                   <TableRow 
@@ -867,36 +471,19 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                       </TableCell>
                     )}
                     <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {(event.meeting_url || event.material_url) && (
-                          <Button variant="ghost" size="icon" asChild>
-                            <a
-                              href={event.meeting_url || event.material_url || "#"}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <LinkIcon className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEditDialog(event)}
-                        >
-                          <Pencil className="h-4 w-4" />
+                      {hasLink ? (
+                        <Button variant="ghost" size="icon" asChild>
+                          <a
+                            href={event.meeting_url || event.material_url || "#"}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <LinkIcon className="h-4 w-4" />
+                          </a>
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setEventToDelete(event);
-                            setDeleteDialogOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">-</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 );
@@ -927,19 +514,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
 
   return (
     <div className="space-y-6">
-      {/* Header with Create Button */}
-      {clientProductIds.length > 0 && (
-        <div className="flex justify-end">
-          <Button size="sm" onClick={() => setDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" />
-            Novo Evento
-          </Button>
-        </div>
-      )}
-      
-      {eventDialogContent}
-      {deleteDialogContent}
-
       {/* SECTION 1: Client Event Invitations (RSVPs) - ALWAYS VISIBLE */}
       <div>
         <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
@@ -989,7 +563,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         )}
       </div>
 
-      {/* SECTION 2: Delivery Schedule (product events) */}
+      {/* SECTION 2: Delivery Schedule (product events) - READ ONLY */}
       {clientProductIds.length > 0 && (
         <div className="border-t pt-6">
           <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
@@ -1006,7 +580,12 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
             <div className="text-center py-6 text-muted-foreground border rounded-lg bg-muted/10">
               <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
               <p className="text-sm">Nenhum evento programado para os produtos deste cliente.</p>
-              <p className="text-xs mt-1">Crie eventos usando o botão acima.</p>
+              <p className="text-xs mt-1">
+                Eventos são criados na{" "}
+                <Link to="/events" className="text-primary underline hover:no-underline">
+                  página de Eventos
+                </Link>.
+              </p>
             </div>
           )}
         </div>
