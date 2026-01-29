@@ -1,96 +1,121 @@
 
-
-# Plano: Corrigir Acesso ao ROY zAPP para Usuários com Cargo CX
+# Plano: Corrigir Upload de PDFs no Playbook
 
 ## Problema Identificado
 
-A usuária Maria (cargo CX) não consegue acessar o ROY zAPP no setor de Operações, mesmo tendo:
-- Permissão `royzapp.access` configurada no cargo CX
-- Registro ativo em `user_sector_access` para o setor `operacoes`
-- Cargo CX que deveria ter acesso automático ao setor de Operações
+Usuários não conseguem fazer upload de arquivos PDF no Playbook quando selecionam o tipo "Documento". Após análise do código, identifiquei múltiplas causas:
 
-## Causa Raiz
+## Causas Raiz
 
-Existe uma **inconsistência arquitetural** entre dois hooks que verificam acesso a setores:
+### 1. Atributo `accept` incompleto
+O atributo `accept` do input de arquivo está truncado e não inclui todos os MIME types necessários:
 
-| Hook | Lógica de Bypass por Cargo | Usado por |
-|------|---------------------------|-----------|
-| `useUserSectorAccess.tsx` | Concede acesso automático ao setor `operacoes` para cargos CX, CS, Consultor | Outras partes do sistema |
-| `useSectorAccess.tsx` | **NAO TEM** essa lógica | ROY zAPP / ZappSectorSelector |
-
-O hook `useSectorAccess` (usado pelo ROY zAPP) verifica apenas:
-1. Se e super_admin (para diretoria)
-2. Se `role === "admin"`
-3. Se tem registro explicito em `user_sector_access`
-
-**Falta a verificacao de cargo (team_role_name)** que permite bypass automatico para CX, CS, Consultor no setor de operacoes.
-
-## Solucao Proposta
-
-Adicionar a mesma logica de bypass por cargo no hook `useSectorAccess.tsx` que ja existe no `useUserSectorAccess.tsx` e no `Sidebar.tsx`.
-
-## Alteracoes Tecnicas
-
-### Arquivo: `src/hooks/useSectorAccess.tsx`
-
-**1. Adicionar constante para cargos de operacao (antes da funcao):**
 ```typescript
-const OPERATION_TEAM_ROLES = ["CX", "CS", "Consultor"];
+// Atual (incompleto):
+case 'document':
+  return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+// Faltam os MIME types para Excel e PowerPoint!
 ```
 
-**2. Obter team_role_name do currentUser:**
+Isso pode fazer com que o seletor de arquivos do navegador não mostre PDFs corretamente em alguns dispositivos.
+
+### 2. MIME types de PDF incompletos
+Em alguns navegadores/dispositivos (especialmente móveis), o `file.type` pode retornar:
+- String vazia `""`
+- `text/pdf` (tipo antigo)
+- `binary/octet-stream` ou similar
+
+A lista `validTypes.document` não inclui esses tipos alternativos.
+
+### 3. Fallback para application/octet-stream no upload
+Quando `file.type` está vazio, o hook usa `getMimeTypeFromExtension()` que retorna o tipo correto. Mas se o bucket rejeitar tipos não listados em `allowed_mime_types`, o upload falhará.
+
+## Solução Proposta
+
+### Arquivo 1: `src/components/sales/PlaybookItemForm.tsx`
+
+**Modificação 1 - Adicionar MIME types alternativos para documentos (linha 188-197):**
+
 ```typescript
-const teamRoleName = currentUser?.team_role_name;
+document: [
+  'application/pdf',
+  'text/pdf', // Tipo alternativo para PDF em alguns sistemas
+  'application/x-pdf', // Outro tipo alternativo
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/octet-stream', // Fallback para tipos desconhecidos
+  '', // String vazia que alguns navegadores retornam
+],
 ```
 
-**3. Modificar a funcao `hasSectorAccess` para incluir verificacao de cargo:**
+**Modificação 2 - Corrigir atributo `accept` para documentos (linha 397-398):**
 
-De:
 ```typescript
-const hasSectorAccess = (sectorId: SectorId): boolean => {
-  if (sectorId === "diretoria") {
-    return isSuperAdmin;
-  }
-  if (userRole === "admin") return true;
-  return sectorAccess.some((access) => access.sector_id === sectorId);
-};
+case 'document':
+  return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation';
 ```
 
-Para:
+**Modificação 3 - Priorizar validação por extensão quando file.type está vazio (linha 210-218):**
+
 ```typescript
-const hasSectorAccess = (sectorId: SectorId): boolean => {
-  if (sectorId === "diretoria") {
-    return isSuperAdmin;
-  }
-  if (userRole === "admin") return true;
-  
-  // Bypass para cargos de operacao no setor de operacoes
-  if (sectorId === "operacoes" && teamRoleName) {
-    if (OPERATION_TEAM_ROLES.includes(teamRoleName)) {
-      return true;
-    }
-  }
-  
-  return sectorAccess.some((access) => access.sector_id === sectorId);
-};
+const fileExtension = getFileExtension(file.name);
+// Priorizar extensão quando file.type está vazio ou é genérico
+const isValidByExtension = validExtensions[contentType]?.includes(fileExtension);
+const isValidByType = file.type && file.type !== 'application/octet-stream' 
+  ? validTypes[contentType]?.includes(file.type)
+  : false;
+
+console.log('[Playbook Form] Validation:', { isValidByType, isValidByExtension, fileExtension, fileType: file.type });
+
+// Aceitar se válido por extensão OU por tipo
+if (!isValidByType && !isValidByExtension) {
+  toast.error(`Tipo de arquivo inválido para ${contentType}. Extensões aceitas: ${validExtensions[contentType]?.join(', ')}`);
+  return;
+}
+```
+
+### Arquivo 2: Atualizar bucket no banco (SQL Migration)
+
+Adicionar MIME types alternativos para PDF no bucket:
+
+```sql
+UPDATE storage.buckets 
+SET allowed_mime_types = ARRAY[
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/m4a', 'audio/aac', 'audio/x-m4a', 'audio/mp4',
+  'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/avi',
+  'application/pdf', 'text/pdf', 'application/x-pdf',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/octet-stream'
+]
+WHERE id = 'playbook-media';
 ```
 
 ## Resultado Esperado
 
-Apos a correcao:
-1. Usuarios com cargo CX, CS ou Consultor terao acesso automatico ao setor de Operacoes no ROY zAPP
-2. Maria podera ver e selecionar o setor de Operacoes no seletor de setores
-3. A consistencia entre os hooks sera mantida
+Após as correções:
+1. PDFs serão aceitos independentemente de como o navegador reporta o MIME type
+2. O seletor de arquivos mostrará PDFs corretamente em todos os dispositivos
+3. O bucket aceitará upload de PDFs com MIME types alternativos
+4. A validação priorizará a extensão do arquivo como método mais confiável
 
 ## Arquivos a Modificar
 
-| Arquivo | Alteracao |
+| Arquivo | Alteração |
 |---------|-----------|
-| `src/hooks/useSectorAccess.tsx` | Adicionar logica de bypass por cargo para setor de operacoes |
+| `src/components/sales/PlaybookItemForm.tsx` | Adicionar MIME types, corrigir accept, melhorar validação |
+| Nova migration SQL | Atualizar allowed_mime_types do bucket |
 
-## Nota sobre Consistencia
+## Testes Recomendados
 
-Esta correcao alinha o comportamento do `useSectorAccess` com o `useUserSectorAccess` e o `Sidebar`, garantindo que:
-- Cargos CX, CS, Consultor sempre tenham acesso ao setor de Operacoes
-- A experiencia do usuario seja consistente em toda a plataforma
-
+1. Upload de PDF no desktop (Chrome, Firefox, Safari)
+2. Upload de PDF em dispositivo móvel (iOS Safari, Android Chrome)
+3. Upload de documentos Word, Excel e PowerPoint
+4. Verificar se PDFs existentes continuam funcionando
