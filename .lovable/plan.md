@@ -1,109 +1,85 @@
 
-# Plano: Corrigir Bug de Timezone nos Momentos CX
 
-## Problema Identificado
+# Plano: Investigar e Corrigir Problemas na Aba Agenda do Cliente
 
-O usuário seleciona a data `01/02/1987` no formulário, mas ao salvar e exibir, aparece `31/01/1987` (um dia antes).
+## Situacao Atual
 
-### Causa Raiz
+Ao analisar o codigo e a imagem fornecida, identifiquei uma **discrepancia significativa**:
 
-O JavaScript interpreta `new Date("YYYY-MM-DD")` como **UTC meia-noite**. Em fusos horários negativos (como Brasil UTC-3), a conversão para hora local resulta no dia anterior:
+### O Que Encontrei no Codigo Atual
 
-```text
-Usuário seleciona: 01/02/1987
-Salvo no banco:    "1987-02-01" (correto)
-new Date() cria:   1987-02-01 00:00:00 UTC
-Convertido local:  1987-01-31 21:00:00 (Brasil UTC-3)
-Exibido:           31/01/1987 (ERRADO)
-```
+| Elemento | Status no Codigo |
+|----------|------------------|
+| Coluna "Acoes" com editar/excluir | **NAO EXISTE** |
+| Tabela "Proximos Eventos" | Existe, mas **sem botoes de edicao** |
+| Funcionalidade | **Somente leitura** (apenas checkbox de participacao) |
 
-### Locais Afetados no Código
+### O Que a Imagem Mostra
 
-| Linha | Código Problemático | Uso |
-|-------|---------------------|-----|
-| 452 | `new Date(event.event_date)` | Cálculo de próxima ocorrência |
-| 456 | `new Date(eventDate)` | Cálculo de próxima ocorrência |
-| 598 | `format(new Date(event.event_date), ...)` | Formatação na lista |
+A imagem mostra claramente uma coluna "Acoes" com icones de lapis (editar) e lixeira (excluir) que **nao existem** no componente `ClientAgenda.tsx` atual.
 
 ---
 
-## Solução
+## Memoria do Sistema
 
-O projeto já possui funções utilitárias em `src/lib/dateUtils.ts` criadas para evitar esse problema:
+Conforme registrado na memoria do projeto:
 
-```typescript
-// Parseia "1987-02-01" como 01/02/1987 00:00 LOCAL (não UTC)
-parseLocalDate("1987-02-01") 
-// Resultado: Date(1987, 1, 1) = 01/02/1987 meia-noite local
+> "Client agenda 'Agenda de Entregas' section is now **read-only**. Users cannot create, edit, or delete global events from the client profile. All global events are managed exclusively from the /events page."
 
-// Formata diretamente sem passar por Date
-formatLocalDate("1987-02-01")
-// Resultado: "01/02/1987"
-```
+Isso confirma que a funcionalidade de edicao foi **intencionalmente removida** do perfil do cliente.
 
 ---
 
-## Modificações
+## Possiveis Cenarios
 
-### Arquivo: `src/components/client/ClientLifeEvents.tsx`
+### Cenario A: A imagem e de uma versao anterior
+A funcionalidade de edicao existia anteriormente e foi removida. Os botoes que aparecem na imagem sao de uma versao desatualizada em cache.
 
-**1. Adicionar import:**
-```typescript
-import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
-```
+### Cenario B: Ha codigo customizado nao sincronizado
+Existe uma modificacao local ou fork que adicionou esses botoes.
 
-**2. Corrigir função `getNextOccurrence` (linhas 449-464):**
-
-Antes:
-```typescript
-const eventDate = new Date(event.event_date);  // ← UTC
-```
-
-Depois:
-```typescript
-const eventDate = parseLocalDate(event.event_date);  // ← Local
-if (!eventDate) return null;
-```
-
-**3. Corrigir formatação da data na lista (linha 598):**
-
-Antes:
-```typescript
-{format(new Date(event.event_date), "dd/MM/yyyy", { locale: ptBR })}
-```
-
-Depois:
-```typescript
-{formatLocalDate(event.event_date)}
-```
+### Cenario C: O usuario quer que a funcionalidade seja adicionada
+O usuario espera poder editar eventos diretamente do perfil do cliente.
 
 ---
 
-## Fluxo Após Correção
+## Sobre o Problema de Data/Hora
 
-```text
-Usuário seleciona: 01/02/1987
-Salvo no banco:    "1987-02-01"
-parseLocalDate():  new Date(1987, 1, 1) = 01/02/1987 meia-noite LOCAL
-formatLocalDate(): "01/02/1987" 
-Exibido:           01/02/1987 (CORRETO)
-```
+Analisei os dados no banco:
 
----
+| Evento | No Banco (UTC) | Convertido Brasil (UTC-3) |
+|--------|----------------|---------------------------|
+| ETERNUM CLUB / PRESENCIAL | 2026-03-15 03:00:00+00 | 15/03/2026 00:00 |
+| Implementacao Clinica | 2026-10-22 13:00:00+00 | 22/10/2026 10:00 |
 
-## Arquivos a Modificar
+A formatacao atual usa `format(new Date(event.scheduled_at), "dd/MM/yyyy HH:mm")` que e **correta** para timestamps com timezone.
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/client/ClientLifeEvents.tsx` | Importar e usar `parseLocalDate`/`formatLocalDate` |
+**Possivel causa da data errada**: Se os eventos estao sendo salvos com timezone incorreto (ex: salvando hora local como UTC), a exibicao ficara errada.
 
 ---
 
-## Resultado Esperado
+## Proximos Passos - Preciso de Esclarecimento
 
-| Cenário | Antes | Depois |
-|---------|-------|--------|
-| Inserir data 01/02/1987 | Exibe 31/01/1987 | Exibe 01/02/1987 |
-| Editar momento existente | Data errada no form | Data correta |
-| Calcular "em X dias" | Pode errar 1 dia | Correto |
-| Usuários em qualquer fuso | Inconsistente | Consistente |
+Antes de implementar correcoes, preciso entender melhor o cenario:
+
+**Opcao 1: Adicionar funcionalidade de edicao**
+Implementar botoes de editar/excluir na tabela de "Proximos Eventos" no perfil do cliente, permitindo modificar eventos diretamente.
+
+**Opcao 2: Corrigir apenas o timezone**
+Manter a aba como read-only mas corrigir possiveis problemas de exibicao de data/hora.
+
+**Opcao 3: Redirecionar para pagina de eventos**
+Manter read-only mas adicionar um link/botao para editar o evento na pagina principal de eventos (`/events`).
+
+---
+
+## Pergunta ao Usuario
+
+Para que eu possa implementar a solucao correta:
+
+1. **Voce quer poder editar eventos diretamente na aba Agenda do perfil do cliente?** (Isso reverteria a decisao de manter read-only)
+
+2. **Ou a edicao deveria ser feita na pagina de Eventos (`/events`) e a aba Agenda do cliente deve apenas exibir os dados?**
+
+3. **O problema de data esta acontecendo ao criar/editar eventos, ou apenas na exibicao?**
+
