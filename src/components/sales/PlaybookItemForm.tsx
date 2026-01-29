@@ -187,13 +187,16 @@ export function PlaybookItemForm({
       video: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'],
       document: [
         'application/pdf',
+        'text/pdf', // Tipo alternativo para PDF em alguns sistemas
+        'application/x-pdf', // Outro tipo alternativo para PDF
         'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         'application/vnd.ms-excel',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.ms-powerpoint',
         'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'application/octet-stream', // Fallback for unknown types
+        'application/octet-stream', // Fallback para tipos desconhecidos
+        '', // String vazia que alguns navegadores retornam
       ],
       sticker: ['image/webp', 'image/png'],
     };
@@ -208,11 +211,15 @@ export function PlaybookItemForm({
     };
 
     const fileExtension = getFileExtension(file.name);
-    const isValidByType = validTypes[contentType]?.includes(file.type);
+    // Priorizar extensão quando file.type está vazio ou é genérico
     const isValidByExtension = validExtensions[contentType]?.includes(fileExtension);
+    const isValidByType = file.type && file.type !== 'application/octet-stream' 
+      ? validTypes[contentType]?.includes(file.type)
+      : false;
 
-    console.log('[Playbook Form] Validation:', { isValidByType, isValidByExtension, fileExtension });
+    console.log('[Playbook Form] Validation:', { isValidByType, isValidByExtension, fileExtension, fileType: file.type });
 
+    // Aceitar se válido por extensão OU por tipo
     if (!isValidByType && !isValidByExtension) {
       toast.error(`Tipo de arquivo inválido para ${contentType}. Extensões aceitas: ${validExtensions[contentType]?.join(', ')}`);
       return;
@@ -395,7 +402,7 @@ export function PlaybookItemForm({
       case 'video':
         return '.mp4,.webm,.mov,.avi,video/*';
       case 'document':
-        return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,text/pdf,application/x-pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation';
       case 'sticker':
         return '.webp,.png,image/webp,image/png';
       default:
