@@ -1,72 +1,84 @@
 
-# Plano: Corrigir Upload de PDFs no Playbook (Problema de onChange no Edge)
+
+# Plano: Corrigir Preview de Documentos no Playbook
 
 ## Problema Identificado
 
-O upload de PDFs não está funcionando porque o evento `onChange` do input de arquivo **nunca é disparado**. O usuário seleciona o arquivo PDF, clica em "Abrir", mas nada acontece.
+Após investigação detalhada, descobri que o **arquivo está sendo selecionado corretamente** (os logs confirmam: "File accepted for upload"). O problema real é que **o preview do documento nunca aparece** após a seleção.
 
 ## Causa Raiz
 
-O atributo `accept` para documentos está **extremamente longo** (300+ caracteres) com muitos MIME types complexos:
+A condição que decide se mostra o botão de upload ou o preview está **incompleta**:
 
 ```typescript
-case 'document':
-  return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,text/pdf,application/x-pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation';
+// Linha 758 - ATUAL (com bug)
+{!mediaPreview && !existingMediaUrl ? (
+  // Mostra botão de upload
+) : (
+  // Mostra preview do arquivo
+)}
 ```
 
-O Microsoft Edge (navegador que o usuário está usando) tem problemas conhecidos com atributos `accept` muito longos ou com MIME types específicos demais. Quando isso acontece:
-- O seletor de arquivos abre normalmente
-- O usuário consegue selecionar o arquivo
-- Ao clicar "Abrir", **o navegador falha silenciosamente** e não dispara o evento `onChange`
+O fluxo para documentos:
+1. Usuário seleciona PDF → `handleFileSelect` é chamado
+2. `setMediaFile(file)` → arquivo é armazenado ✓
+3. `setMediaPreview(null)` → documentos não têm preview visual (linha 239)
+4. `existingMediaUrl` é `null` (não é edição)
 
-Os logs não mostram nenhuma mensagem `[Playbook Form] File selected:` porque o `handleFileSelect` nunca é chamado.
+**Resultado:** A condição `!mediaPreview && !existingMediaUrl` continua sendo `true` → botão de upload continua aparecendo em vez do preview do documento!
 
 ## Solução
 
-**Simplificar o atributo `accept` para usar apenas extensões de arquivo**, que são mais confiáveis entre navegadores. A validação detalhada por MIME type já é feita dentro do `handleFileSelect`, então não precisamos dos MIME types no atributo `accept`.
+Adicionar verificação de `mediaFile` na condição:
 
-## Alteração Proposta
+```typescript
+// Linha 758 - CORRIGIDO
+{!mediaFile && !mediaPreview && !existingMediaUrl ? (
+  // Mostra botão de upload
+) : (
+  // Mostra preview do arquivo
+)}
+```
+
+## Alteração Técnica
 
 ### Arquivo: `src/components/sales/PlaybookItemForm.tsx`
 
-**Modificar a função `getAcceptedFileTypes` (linhas 396-411):**
+**Modificar linha 758:**
 
 De:
 ```typescript
-case 'document':
-  return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,text/pdf,application/x-pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation';
+{!mediaPreview && !existingMediaUrl ? (
 ```
 
 Para:
 ```typescript
-case 'document':
-  return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
+{!mediaFile && !mediaPreview && !existingMediaUrl ? (
 ```
 
-Esta simplificação:
-1. Remove MIME types problemáticos do atributo `accept`
-2. Usa apenas extensões de arquivo (suportadas universalmente)
-3. Mantém a validação completa dentro do `handleFileSelect` (que já valida por extensão E por MIME type)
-4. Resolve o problema do Edge não disparar o evento `onChange`
+## Por que isso funciona
+
+- Para imagens/stickers: `mediaPreview` é definido via FileReader → condição funciona
+- Para áudio/vídeo: `mediaPreview` é definido via URL.createObjectURL → condição funciona
+- Para documentos: `mediaFile` é definido, mas `mediaPreview` é `null` → **agora a verificação de `mediaFile` garante que o preview do documento apareça**
+
+## Resultado Esperado
+
+1. Usuário seleciona PDF no tipo "Documento"
+2. Preview do documento aparece imediatamente (ícone + nome do arquivo)
+3. Usuário pode ver o arquivo selecionado e prosseguir com o salvamento
 
 ## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/sales/PlaybookItemForm.tsx` | Simplificar `accept` para documentos usando apenas extensões |
-
-## Justificativa Técnica
-
-- O atributo `accept` serve apenas para **filtrar os arquivos visíveis** no seletor de arquivos
-- A **validação real** ocorre no JavaScript (`handleFileSelect`), que já valida por extensão e MIME type
-- Extensões de arquivo são mais confiáveis entre navegadores do que MIME types longos
-- Esta abordagem já é usada em outros tipos (audio, video, image usam `audio/*`, `video/*`, `image/*` como fallback)
+| `src/components/sales/PlaybookItemForm.tsx` | Adicionar `!mediaFile &&` na condição de renderização do preview (linha 758) |
 
 ## Teste Recomendado
 
-1. Abrir o formulário de novo item do Playbook
+1. Abrir formulário de novo item no Playbook
 2. Selecionar tipo "Documento"
-3. Clicar na área de upload
-4. Selecionar um arquivo PDF
-5. Clicar "Abrir"
-6. Verificar se o arquivo aparece no preview (ícone de documento com nome do arquivo)
+3. Clicar na área de upload e selecionar um PDF
+4. **Verificar se aparece o preview** (ícone de documento + nome do arquivo)
+5. Salvar e confirmar que o upload funciona
+
