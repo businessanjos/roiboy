@@ -1,98 +1,83 @@
 
-# Plano: Corrigir Filtro de Contrato Aplicado Antes da Paginação
+# Plano: Corrigir Duplicação de Contratos na Aba de Triagem
 
 ## Problema Identificado
 
-O filtro de contrato está sendo aplicado **depois** da paginação, causando resultados incorretos:
+A cliente **Camila De Azevedo Dos Santos** tem 2 contratos no banco de dados (datas: 28/01/2026 e 29/01/2026), mas cada um aparece **2 vezes** na tela, totalizando 4 entradas.
+
+### Causa Raiz
+
+A página `Contracts.tsx` renderiza **duas tabelas simultaneamente** na aba de triagem:
+
+1. `ContractTriageQueue` (linhas 1933-1946) - tabela específica de triagem com botões "Puxar" e "Atribuir"
+2. Tabela genérica de contratos (linhas 1950-2093) - tabela padrão com botões "Ver Contrato" e "Excluir"
+
+A tabela genérica está **fora do bloco condicional** `{activeTab === "triagem" && ...}`, sendo renderizada em todas as abas.
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ FLUXO ATUAL (INCORRETO)                                     │
-├─────────────────────────────────────────────────────────────┤
-│ 1. Busca 50 clientes da Michele (ordenados por nome)        │
-│ 2. Enriquece com dados de contrato de client_contracts      │
-│ 3. Aplica filtro: contract.status === "active"              │
-│ 4. Resultado: ~70 clientes (perdendo os que foram           │
-│    filtrados após a paginação)                              │
-└─────────────────────────────────────────────────────────────┘
+ESTRUTURA ATUAL (INCORRETA):
 
-┌─────────────────────────────────────────────────────────────┐
-│ FLUXO CORRETO                                               │
-├─────────────────────────────────────────────────────────────┤
-│ 1. Busca IDs dos clientes com contrato active               │
-│ 2. Filtra clientes por esses IDs + responsible_user         │
-│ 3. Aplica paginação (50 por página)                         │
-│ 4. Enriquece com dados adicionais                           │
-│ 5. Resultado: 84 clientes em 2 páginas                      │
-└─────────────────────────────────────────────────────────────┘
+{activeTab === "triagem" && (
+  <>
+    <Card info="Clientes aguardando..." />
+    <ContractTriageQueue ... />    ← Tabela 1 (com Puxar/Atribuir)
+  </>
+)}
+
+<Card>                              ← Tabela 2 (SEMPRE renderizada!)
+  <Table>{filteredContracts}</Table>
+</Card>
 ```
+
+### Evidência Visual da Duplicação
+
+Na imagem enviada, é possível ver:
+- **Tabela 1** (topo): Colunas "Cliente | Tipo | Valor | Data Início | Status | Ações" com botões **Puxar** e **Atribuir a...**
+- **Tabela 2** (abaixo): Colunas "Cliente | Tipo | Valor | Período | Status | Ações" com botão **Ver Contrato**
+
+São duas tabelas distintas mostrando os mesmos dados!
 
 ## Solução Proposta
 
-Modificar a Edge Function `list-clients` para aplicar o filtro de contrato **antes** da paginação, usando uma subquery para buscar os client_ids elegíveis.
+Adicionar condição para **não renderizar** a tabela genérica quando a aba ativa for "triagem".
 
 ## Arquivo a Modificar
 
-**supabase/functions/list-clients/index.ts**
+**src/pages/Contracts.tsx**
 
-## Alterações Detalhadas
+## Alteração
 
-### 1. Buscar IDs de clientes com contrato active antes da query principal
+### Ocultar tabela genérica na aba de triagem (linha ~1950)
 
-Quando `contractFilter === "active"`, primeiro buscar os client_ids que têm contrato com status active:
-
-```typescript
-// Se filtro de contrato active, buscar IDs elegíveis primeiro
-let contractFilterClientIds: string[] | null = null;
-if (contractFilter === "active") {
-  const { data: activeContracts } = await supabase
-    .from("client_contracts")
-    .select("client_id")
-    .eq("account_id", accountId)
-    .eq("status", "active");
-  
-  contractFilterClientIds = [...new Set(activeContracts?.map(c => c.client_id) || [])];
-  
-  if (contractFilterClientIds.length === 0) {
-    // Nenhum cliente com contrato active
-    return Response com lista vazia;
-  }
-}
-```
-
-### 2. Aplicar filtro na query principal
-
-Adicionar o filtro de client_ids na query principal de clientes, antes da paginação:
+Envolver a tabela genérica de contratos com uma condição:
 
 ```typescript
-// Aplicar filtro de contrato active (antes da paginação)
-if (contractFilterClientIds && contractFilterClientIds.length > 0) {
-  query = query.in("id", contractFilterClientIds);
-}
-```
-
-### 3. Remover filtro pós-paginação para "active"
-
-Ajustar a lógica que aplica filtros após o enriquecimento para não processar "active" novamente:
-
-```typescript
-if (contractFilter && contractFilter !== "all" && contractFilter !== "active") {
-  // Filtros de data (expired, urgent, warning, ok, none)
-  // Esses ainda precisam ser aplicados pós-enriquecimento
-}
+{/* Contracts Table - hide on triagem tab since it has its own component */}
+{activeTab !== "triagem" && (
+  <Card>
+    <CardContent className="p-0">
+      {filteredContracts.length === 0 ? (
+        // ... empty state
+      ) : (
+        <Table>
+          // ... tabela de contratos
+        </Table>
+      )}
+    </CardContent>
+  </Card>
+)}
 ```
 
 ## Detalhes Técnicos
 
-| Item | Antes | Depois |
-|------|-------|--------|
-| Filtro active | Pós-paginação | Pré-paginação via subquery |
-| Outros filtros (expired, urgent, etc.) | Pós-paginação | Mantém pós-paginação |
-| Performance | N queries | N+1 query (para active) |
-| Precisão | Incorreta | Correta |
+| Aspecto | Situação Atual | Após Correção |
+|---------|----------------|---------------|
+| Aba "Conciliação" | Tabela genérica | Tabela genérica |
+| Aba "Triagem" | ContractTriageQueue + Tabela genérica (duplicado!) | Apenas ContractTriageQueue |
+| Aba "Conciliados" | Tabela genérica | Tabela genérica |
 
 ## Resultado Esperado
 
-- Michele Santos verá **84 clientes** ao filtrar por "Contrato: Ativo"
-- A paginação funcionará corretamente (páginas de 50)
-- Total exibido corresponderá ao número real de clientes filtrados
+- Na aba "Triagem", cada contrato aparecerá **apenas uma vez**
+- A cliente Camila aparecerá com seus 2 contratos (um por linha), não 4
+- O badge "Triagem 2" refletirá corretamente os 2 contratos
