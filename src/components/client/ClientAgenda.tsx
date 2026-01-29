@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { EventEditDialog, EventData, EventType } from "@/components/events/EventEditDialog";
+import { useLinkedClients, getLinkedClientName } from "@/hooks/useLinkedClients";
 
 interface Event {
   id: string;
@@ -60,6 +61,7 @@ interface EventWithProducts extends Event {
 interface ClientDelivery {
   id: string;
   event_id: string;
+  client_id: string;
   status: "pending" | "delivered" | "missed";
   delivered_at: string | null;
   delivery_method: string | null;
@@ -69,12 +71,14 @@ interface ClientDelivery {
 interface ClientAttendance {
   id: string;
   event_id: string;
+  client_id: string;
   join_time: string;
 }
 
 interface ClientEventParticipation {
   id: string;
   event_id: string;
+  client_id: string;
   rsvp_status: string;
   rsvp_responded_at: string | null;
   invited_at: string | null;
@@ -89,6 +93,7 @@ interface ClientEventParticipation {
 interface ClientEventFeedback {
   id: string;
   event_id: string;
+  client_id: string;
   nps_score: number | null;
   overall_rating: number | null;
   submitted_at: string;
@@ -105,6 +110,9 @@ interface ClientAgendaProps {
 }
 
 export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) {
+  // Use linked clients hook for data isolation (couples/linked profiles)
+  const { linkedClientIds, linkedClients, isLoading: linkedLoading } = useLinkedClients(clientId);
+  
   const [events, setEvents] = useState<EventWithProducts[]>([]);
   const [deliveries, setDeliveries] = useState<ClientDelivery[]>([]);
   const [attendances, setAttendances] = useState<ClientAttendance[]>([]);
@@ -119,15 +127,16 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     fetchAccountId();
   }, []);
 
+  // Wait for linkedClientIds before fetching data
   useEffect(() => {
-    if (accountId) {
+    if (accountId && linkedClientIds.length > 0) {
       fetchEvents();
       fetchDeliveries();
       fetchAttendances();
       fetchParticipations();
       fetchFeedbacks();
     }
-  }, [accountId, clientProductIds, clientId]);
+  }, [accountId, clientProductIds, clientId, linkedClientIds]);
 
   const fetchAccountId = async () => {
     try {
@@ -167,25 +176,68 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     setLoading(true);
     
     try {
+      // FIXED: Only fetch events where this client (or linked clients) has deliveries
+      // This ensures proper data isolation per client
+      const { data: clientDeliveryEventIds } = await supabase
+        .from("client_event_deliveries")
+        .select("event_id")
+        .in("client_id", linkedClientIds);
+
+      const { data: clientAttendanceEventIds } = await supabase
+        .from("attendance")
+        .select("event_id")
+        .in("client_id", linkedClientIds)
+        .not("event_id", "is", null);
+
+      // Get unique event IDs from both sources
+      const eventIdsFromDeliveries = (clientDeliveryEventIds || []).map(d => d.event_id);
+      const eventIdsFromAttendances = (clientAttendanceEventIds || []).map(a => a.event_id).filter(Boolean);
+      
+      // Also get events linked to client's products (for events they haven't participated yet)
+      const { data: productEvents } = await supabase
+        .from("events")
+        .select(`
+          id,
+          event_products (product_id)
+        `)
+        .order("scheduled_at", { ascending: true, nullsFirst: false });
+
+      const eventIdsFromProducts = (productEvents || [])
+        .filter((event: any) => {
+          if (!event.event_products || event.event_products.length === 0) return false;
+          return event.event_products.some((ep: any) => 
+            clientProductIds.includes(ep.product_id)
+          );
+        })
+        .map((event: any) => event.id);
+
+      // Combine all unique event IDs
+      const allEventIds = [...new Set([
+        ...eventIdsFromDeliveries,
+        ...eventIdsFromAttendances,
+        ...eventIdsFromProducts,
+      ])];
+
+      if (allEventIds.length === 0) {
+        setEvents([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("events")
         .select(`
           *,
           event_products (product_id)
         `)
+        .in("id", allEventIds)
         .order("scheduled_at", { ascending: true, nullsFirst: false });
 
       if (error) {
         console.error("Error fetching events:", error);
         setEvents([]);
       } else {
-        const filteredEvents = (data || []).filter((event: EventWithProducts) => {
-          if (event.event_products.length === 0) return false;
-          return event.event_products.some((ep) => 
-            clientProductIds.includes(ep.product_id)
-          );
-        });
-        setEvents(filteredEvents as EventWithProducts[]);
+        setEvents((data || []) as EventWithProducts[]);
       }
     } catch (err) {
       console.error("Exception fetching events:", err);
@@ -195,22 +247,24 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     }
   };
 
+  // FIXED: Filter by linkedClientIds for proper data isolation
   const fetchDeliveries = async () => {
     const { data, error } = await supabase
       .from("client_event_deliveries")
       .select("*")
-      .eq("client_id", clientId);
+      .in("client_id", linkedClientIds);
 
     if (!error) {
       setDeliveries((data || []) as ClientDelivery[]);
     }
   };
 
+  // FIXED: Filter by linkedClientIds for proper data isolation
   const fetchAttendances = async () => {
     const { data, error } = await supabase
       .from("attendance")
-      .select("id, event_id, join_time")
-      .eq("client_id", clientId)
+      .select("id, event_id, client_id, join_time")
+      .in("client_id", linkedClientIds)
       .not("event_id", "is", null);
 
     if (!error) {
@@ -218,18 +272,20 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     }
   };
 
+  // FIXED: Filter by linkedClientIds for proper data isolation
   const fetchParticipations = async () => {
     const { data, error } = await supabase
       .from("event_participants")
       .select(`
         id,
         event_id,
+        client_id,
         rsvp_status,
         rsvp_responded_at,
         invited_at,
         events (id, title, scheduled_at, modality)
       `)
-      .eq("client_id", clientId)
+      .in("client_id", linkedClientIds)
       .order("invited_at", { ascending: false });
 
     if (!error) {
@@ -237,18 +293,20 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     }
   };
 
+  // FIXED: Filter by linkedClientIds for proper data isolation
   const fetchFeedbacks = async () => {
     const { data, error } = await supabase
       .from("event_feedback")
       .select(`
         id,
         event_id,
+        client_id,
         nps_score,
         overall_rating,
         submitted_at,
         events (id, title, scheduled_at)
       `)
-      .eq("client_id", clientId)
+      .in("client_id", linkedClientIds)
       .order("submitted_at", { ascending: false });
 
     if (!error) {
@@ -264,6 +322,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     return attendances.find((a) => a.event_id === eventId);
   };
 
+  // FIXED: Use original clientId (not linked) for creating new deliveries
   const toggleDelivery = async (eventId: string, currentStatus?: string) => {
     if (!accountId) return;
 
@@ -287,11 +346,12 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         fetchDeliveries();
       }
     } else {
+      // Use the CURRENT clientId for new deliveries, not linked ones
       const { error } = await supabase
         .from("client_event_deliveries")
         .insert({
           account_id: accountId,
-          client_id: clientId,
+          client_id: clientId, // Always use the current client's ID
           event_id: eventId,
           status: "delivered",
           delivered_at: new Date().toISOString(),
@@ -307,7 +367,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     }
   };
 
-  if (loading) {
+  if (loading || linkedLoading) {
     return (
       <div className="text-center py-8 text-muted-foreground">
         Carregando agenda...
@@ -379,6 +439,17 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     };
     setEditingEvent(eventData);
     setEditDialogOpen(true);
+  };
+
+  // Helper to get linked client name for badges
+  const getLinkedBadge = (itemClientId: string) => {
+    const linkedName = getLinkedClientName(itemClientId, clientId, linkedClients);
+    if (!linkedName) return null;
+    return (
+      <Badge variant="outline" className="text-xs ml-2 bg-purple-500/10 text-purple-600 border-purple-500/30">
+        Via {linkedName.split(" ")[0]}
+      </Badge>
+    );
   };
 
   const renderEventTable = (eventsList: EventWithProducts[], title: string, icon: React.ReactNode, showParticipation?: boolean) => {
@@ -568,7 +639,10 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
             {participations.map((p) => (
               <div key={p.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{p.events?.title || "Evento"}</p>
+                  <div className="flex items-center">
+                    <p className="font-medium truncate">{p.events?.title || "Evento"}</p>
+                    {getLinkedBadge(p.client_id)}
+                  </div>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground mt-1">
                     <span className="flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
@@ -644,7 +718,10 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
             {feedbacks.map((f) => (
               <div key={f.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
                 <div>
-                  <p className="font-medium">{f.events?.title || "Evento"}</p>
+                  <div className="flex items-center">
+                    <p className="font-medium">{f.events?.title || "Evento"}</p>
+                    {getLinkedBadge(f.client_id)}
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     Enviado em {format(new Date(f.submitted_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                   </p>
