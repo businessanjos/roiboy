@@ -1,121 +1,72 @@
 
-# Plano: Corrigir Upload de PDFs no Playbook
+# Plano: Corrigir Upload de PDFs no Playbook (Problema de onChange no Edge)
 
 ## Problema Identificado
 
-Usuários não conseguem fazer upload de arquivos PDF no Playbook quando selecionam o tipo "Documento". Após análise do código, identifiquei múltiplas causas:
+O upload de PDFs não está funcionando porque o evento `onChange` do input de arquivo **nunca é disparado**. O usuário seleciona o arquivo PDF, clica em "Abrir", mas nada acontece.
 
-## Causas Raiz
+## Causa Raiz
 
-### 1. Atributo `accept` incompleto
-O atributo `accept` do input de arquivo está truncado e não inclui todos os MIME types necessários:
-
-```typescript
-// Atual (incompleto):
-case 'document':
-  return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-
-// Faltam os MIME types para Excel e PowerPoint!
-```
-
-Isso pode fazer com que o seletor de arquivos do navegador não mostre PDFs corretamente em alguns dispositivos.
-
-### 2. MIME types de PDF incompletos
-Em alguns navegadores/dispositivos (especialmente móveis), o `file.type` pode retornar:
-- String vazia `""`
-- `text/pdf` (tipo antigo)
-- `binary/octet-stream` ou similar
-
-A lista `validTypes.document` não inclui esses tipos alternativos.
-
-### 3. Fallback para application/octet-stream no upload
-Quando `file.type` está vazio, o hook usa `getMimeTypeFromExtension()` que retorna o tipo correto. Mas se o bucket rejeitar tipos não listados em `allowed_mime_types`, o upload falhará.
-
-## Solução Proposta
-
-### Arquivo 1: `src/components/sales/PlaybookItemForm.tsx`
-
-**Modificação 1 - Adicionar MIME types alternativos para documentos (linha 188-197):**
-
-```typescript
-document: [
-  'application/pdf',
-  'text/pdf', // Tipo alternativo para PDF em alguns sistemas
-  'application/x-pdf', // Outro tipo alternativo
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint',
-  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'application/octet-stream', // Fallback para tipos desconhecidos
-  '', // String vazia que alguns navegadores retornam
-],
-```
-
-**Modificação 2 - Corrigir atributo `accept` para documentos (linha 397-398):**
+O atributo `accept` para documentos está **extremamente longo** (300+ caracteres) com muitos MIME types complexos:
 
 ```typescript
 case 'document':
-  return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation';
+  return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,text/pdf,application/x-pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation';
 ```
 
-**Modificação 3 - Priorizar validação por extensão quando file.type está vazio (linha 210-218):**
+O Microsoft Edge (navegador que o usuário está usando) tem problemas conhecidos com atributos `accept` muito longos ou com MIME types específicos demais. Quando isso acontece:
+- O seletor de arquivos abre normalmente
+- O usuário consegue selecionar o arquivo
+- Ao clicar "Abrir", **o navegador falha silenciosamente** e não dispara o evento `onChange`
 
+Os logs não mostram nenhuma mensagem `[Playbook Form] File selected:` porque o `handleFileSelect` nunca é chamado.
+
+## Solução
+
+**Simplificar o atributo `accept` para usar apenas extensões de arquivo**, que são mais confiáveis entre navegadores. A validação detalhada por MIME type já é feita dentro do `handleFileSelect`, então não precisamos dos MIME types no atributo `accept`.
+
+## Alteração Proposta
+
+### Arquivo: `src/components/sales/PlaybookItemForm.tsx`
+
+**Modificar a função `getAcceptedFileTypes` (linhas 396-411):**
+
+De:
 ```typescript
-const fileExtension = getFileExtension(file.name);
-// Priorizar extensão quando file.type está vazio ou é genérico
-const isValidByExtension = validExtensions[contentType]?.includes(fileExtension);
-const isValidByType = file.type && file.type !== 'application/octet-stream' 
-  ? validTypes[contentType]?.includes(file.type)
-  : false;
-
-console.log('[Playbook Form] Validation:', { isValidByType, isValidByExtension, fileExtension, fileType: file.type });
-
-// Aceitar se válido por extensão OU por tipo
-if (!isValidByType && !isValidByExtension) {
-  toast.error(`Tipo de arquivo inválido para ${contentType}. Extensões aceitas: ${validExtensions[contentType]?.join(', ')}`);
-  return;
-}
+case 'document':
+  return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf,text/pdf,application/x-pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation';
 ```
 
-### Arquivo 2: Atualizar bucket no banco (SQL Migration)
-
-Adicionar MIME types alternativos para PDF no bucket:
-
-```sql
-UPDATE storage.buckets 
-SET allowed_mime_types = ARRAY[
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
-  'audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/m4a', 'audio/aac', 'audio/x-m4a', 'audio/mp4',
-  'video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/avi',
-  'application/pdf', 'text/pdf', 'application/x-pdf',
-  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-  'application/octet-stream'
-]
-WHERE id = 'playbook-media';
+Para:
+```typescript
+case 'document':
+  return '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx';
 ```
 
-## Resultado Esperado
-
-Após as correções:
-1. PDFs serão aceitos independentemente de como o navegador reporta o MIME type
-2. O seletor de arquivos mostrará PDFs corretamente em todos os dispositivos
-3. O bucket aceitará upload de PDFs com MIME types alternativos
-4. A validação priorizará a extensão do arquivo como método mais confiável
+Esta simplificação:
+1. Remove MIME types problemáticos do atributo `accept`
+2. Usa apenas extensões de arquivo (suportadas universalmente)
+3. Mantém a validação completa dentro do `handleFileSelect` (que já valida por extensão E por MIME type)
+4. Resolve o problema do Edge não disparar o evento `onChange`
 
 ## Arquivos a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/sales/PlaybookItemForm.tsx` | Adicionar MIME types, corrigir accept, melhorar validação |
-| Nova migration SQL | Atualizar allowed_mime_types do bucket |
+| `src/components/sales/PlaybookItemForm.tsx` | Simplificar `accept` para documentos usando apenas extensões |
 
-## Testes Recomendados
+## Justificativa Técnica
 
-1. Upload de PDF no desktop (Chrome, Firefox, Safari)
-2. Upload de PDF em dispositivo móvel (iOS Safari, Android Chrome)
-3. Upload de documentos Word, Excel e PowerPoint
-4. Verificar se PDFs existentes continuam funcionando
+- O atributo `accept` serve apenas para **filtrar os arquivos visíveis** no seletor de arquivos
+- A **validação real** ocorre no JavaScript (`handleFileSelect`), que já valida por extensão e MIME type
+- Extensões de arquivo são mais confiáveis entre navegadores do que MIME types longos
+- Esta abordagem já é usada em outros tipos (audio, video, image usam `audio/*`, `video/*`, `image/*` como fallback)
+
+## Teste Recomendado
+
+1. Abrir o formulário de novo item do Playbook
+2. Selecionar tipo "Documento"
+3. Clicar na área de upload
+4. Selecionar um arquivo PDF
+5. Clicar "Abrir"
+6. Verificar se o arquivo aparece no preview (ícone de documento com nome do arquivo)
