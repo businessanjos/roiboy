@@ -90,11 +90,17 @@ export function useSubscriptionStatus(): SubscriptionStatus {
         const paidStatuses = ["active", "paid", "trialing", "pending"];
         const hasActiveSubscription = paidStatuses.includes(account.subscription_status || "");
         
-        // For trial users: must have payment method configured to access
-        const isInTrial = account.subscription_status === "trial" && !isTrialExpired;
-        const trialWithPayment = isInTrial && account.payment_method_configured;
+        // Trial logic
+        const isInTrial = account.subscription_status === "trial";
         
-        const hasAccess = hasActiveSubscription || trialWithPayment;
+        // Grant access if:
+        // 1. Has active subscription (active, paid, trialing, pending)
+        // 2. Trial with no expiration date set (internal/dev accounts - unlimited trial)
+        // 3. Trial not expired and has payment method configured
+        const hasUnlimitedTrial = isInTrial && !trialEndsAt; // No expiration = unlimited trial
+        const hasValidTrial = isInTrial && !isTrialExpired && account.payment_method_configured;
+        
+        const hasAccess = hasActiveSubscription || hasUnlimitedTrial || hasValidTrial;
 
         setStatus({
           isLoading: false,

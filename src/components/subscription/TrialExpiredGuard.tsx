@@ -29,7 +29,9 @@ export function TrialExpiredGuard({ children }: TrialExpiredGuardProps) {
     location.pathname.startsWith(route)
   );
 
-  const isTrialWithoutPayment = subscriptionStatus === "trial" && !paymentMethodConfigured && !isTrialExpired;
+  // Only show payment requirement for trials WITH an expiration date
+  // Accounts with trial_ends_at = null are "unlimited trial" (internal/dev accounts)
+  const isTrialWithoutPayment = subscriptionStatus === "trial" && !paymentMethodConfigured && !isTrialExpired && !hasAccess;
 
   useEffect(() => {
     // Skip check for public routes
