@@ -91,6 +91,10 @@ export function PlaybookItemForm({
   const [mediaFile, setMediaFile] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [existingMediaUrl, setExistingMediaUrl] = useState<string | null>(null);
+  // Multiple files support for documents
+  const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [existingMediaUrls, setExistingMediaUrls] = useState<string[]>([]);
+  const [existingMediaFilenames, setExistingMediaFilenames] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   // Link fields
@@ -124,6 +128,18 @@ export function PlaybookItemForm({
         setExistingMediaUrl(editingItem.media_url);
         setMediaFile(null);
         setMediaPreview(null);
+        // Multiple files for documents
+        if (editingItem.content_type === 'document' && editingItem.media_url) {
+          const urls = editingItem.media_url.split('|');
+          const filenames = (editingItem.media_filename || '').split('|');
+          setExistingMediaUrls(urls);
+          setExistingMediaFilenames(filenames);
+          setMediaFiles([]);
+        } else {
+          setExistingMediaUrls([]);
+          setExistingMediaFilenames([]);
+          setMediaFiles([]);
+        }
         // Media caption
         setMediaCaption(editingItem.media_caption || '');
         // Link fields
@@ -146,6 +162,10 @@ export function PlaybookItemForm({
         setMediaFile(null);
         setMediaPreview(null);
         setExistingMediaUrl(null);
+        // Multiple files for documents
+        setMediaFiles([]);
+        setExistingMediaUrls([]);
+        setExistingMediaFilenames([]);
         // Media caption
         setMediaCaption('');
         // Link fields
@@ -168,78 +188,106 @@ export function PlaybookItemForm({
     return filename.split('.').pop()?.toLowerCase() || '';
   };
 
+  // Validation helpers
+  const validTypes: Record<string, string[]> = {
+    audio: ['audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/m4a', 'audio/aac', 'audio/x-m4a', 'audio/mp4'],
+    image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
+    video: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'],
+    document: [
+      'application/pdf',
+      'text/pdf',
+      'application/x-pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/octet-stream',
+      '',
+    ],
+    sticker: ['image/webp', 'image/png'],
+  };
+
+  const validExtensions: Record<string, string[]> = {
+    audio: ['mp3', 'm4a', 'aac', 'ogg', 'wav', 'webm'],
+    image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
+    video: ['mp4', 'webm', 'mov', 'avi'],
+    document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'],
+    sticker: ['webp', 'png'],
+  };
+
   // Handle file selection
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
 
-    console.log('[Playbook Form] File selected:', {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      contentType,
-    });
+    console.log('[Playbook Form] Files selected:', files.length, contentType);
 
-    // Validate file type based on content type - allow both MIME types and extensions
-    const validTypes: Record<string, string[]> = {
-      audio: ['audio/mpeg', 'audio/mp3', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/m4a', 'audio/aac', 'audio/x-m4a', 'audio/mp4'],
-      image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
-      video: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'],
-      document: [
-        'application/pdf',
-        'text/pdf', // Tipo alternativo para PDF em alguns sistemas
-        'application/x-pdf', // Outro tipo alternativo para PDF
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.ms-powerpoint',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-        'application/octet-stream', // Fallback para tipos desconhecidos
-        '', // String vazia que alguns navegadores retornam
-      ],
-      sticker: ['image/webp', 'image/png'],
-    };
+    // For documents: allow multiple files
+    if (contentType === 'document') {
+      const validFiles = files.filter(file => {
+        const ext = getFileExtension(file.name);
+        const isValidByExt = validExtensions.document.includes(ext);
+        const isValidByType = file.type && file.type !== 'application/octet-stream' 
+          ? validTypes.document.includes(file.type)
+          : false;
+        return isValidByExt || isValidByType;
+      });
 
-    // Also validate by extension as fallback
-    const validExtensions: Record<string, string[]> = {
-      audio: ['mp3', 'm4a', 'aac', 'ogg', 'wav', 'webm'],
-      image: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
-      video: ['mp4', 'webm', 'mov', 'avi'],
-      document: ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'],
-      sticker: ['webp', 'png'],
-    };
+      if (validFiles.length === 0) {
+        toast.error('Nenhum arquivo válido selecionado. Extensões aceitas: ' + validExtensions.document.join(', '));
+        return;
+      }
 
-    const fileExtension = getFileExtension(file.name);
-    // Priorizar extensão quando file.type está vazio ou é genérico
-    const isValidByExtension = validExtensions[contentType]?.includes(fileExtension);
-    const isValidByType = file.type && file.type !== 'application/octet-stream' 
-      ? validTypes[contentType]?.includes(file.type)
-      : false;
-
-    console.log('[Playbook Form] Validation:', { isValidByType, isValidByExtension, fileExtension, fileType: file.type });
-
-    // Aceitar se válido por extensão OU por tipo
-    if (!isValidByType && !isValidByExtension) {
-      toast.error(`Tipo de arquivo inválido para ${contentType}. Extensões aceitas: ${validExtensions[contentType]?.join(', ')}`);
-      return;
-    }
-
-    setMediaFile(file);
-    setExistingMediaUrl(null);
-
-    // Create preview
-    if (contentType === 'image' || contentType === 'sticker') {
-      const reader = new FileReader();
-      reader.onload = e => setMediaPreview(e.target?.result as string);
-      reader.readAsDataURL(file);
-    } else if (contentType === 'audio' || contentType === 'video') {
-      setMediaPreview(URL.createObjectURL(file));
+      // Add to existing files
+      setMediaFiles(prev => [...prev, ...validFiles]);
+      setExistingMediaUrl(null);
+      console.log('[Playbook Form] Document files accepted:', validFiles.map(f => f.name));
     } else {
-      setMediaPreview(null);
+      // Other types: single file behavior
+      const file = files[0];
+      const fileExtension = getFileExtension(file.name);
+      const isValidByExtension = validExtensions[contentType]?.includes(fileExtension);
+      const isValidByType = file.type && file.type !== 'application/octet-stream' 
+        ? validTypes[contentType]?.includes(file.type)
+        : false;
+
+      if (!isValidByType && !isValidByExtension) {
+        toast.error(`Tipo de arquivo inválido para ${contentType}. Extensões aceitas: ${validExtensions[contentType]?.join(', ')}`);
+        return;
+      }
+
+      setMediaFile(file);
+      setExistingMediaUrl(null);
+
+      // Create preview
+      if (contentType === 'image' || contentType === 'sticker') {
+        const reader = new FileReader();
+        reader.onload = e => setMediaPreview(e.target?.result as string);
+        reader.readAsDataURL(file);
+      } else if (contentType === 'audio' || contentType === 'video') {
+        setMediaPreview(URL.createObjectURL(file));
+      } else {
+        setMediaPreview(null);
+      }
+
+      console.log('[Playbook Form] File accepted for upload');
     }
 
-    console.log('[Playbook Form] File accepted for upload');
+    // Reset input so same file can be selected again
+    e.target.value = '';
+  };
+
+  // Remove document file by index
+  const removeDocumentFile = (index: number) => {
+    setMediaFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Remove existing document URL by index
+  const removeExistingDocumentUrl = (index: number) => {
+    setExistingMediaUrls(prev => prev.filter((_, i) => i !== index));
+    setExistingMediaFilenames(prev => prev.filter((_, i) => i !== index));
   };
 
   // Handle form submit
@@ -254,9 +302,17 @@ export function PlaybookItemForm({
       return;
     }
 
-    if (['audio', 'image', 'video', 'document', 'sticker'].includes(contentType)) {
+    if (['audio', 'image', 'video', 'sticker'].includes(contentType)) {
       if (!mediaFile && !existingMediaUrl) {
         toast.error('Arquivo é obrigatório');
+        return;
+      }
+    }
+
+    // Document requires at least one file
+    if (contentType === 'document') {
+      if (mediaFiles.length === 0 && existingMediaUrls.length === 0) {
+        toast.error('Pelo menos um arquivo é obrigatório');
         return;
       }
     }
@@ -283,10 +339,38 @@ export function PlaybookItemForm({
       setIsUploading(true);
       console.log('[Playbook Form] Starting submit...', { contentType, hasMediaFile: !!mediaFile, hasExistingUrl: !!existingMediaUrl });
       
-      let mediaUrl = existingMediaUrl;
+      let mediaUrl: string | null = existingMediaUrl;
+      let mediaFilename: string | null = mediaFile?.name || editingItem?.media_filename || null;
 
-      // Upload new file if needed
-      if (mediaFile) {
+      // Handle document uploads (multiple files)
+      if (contentType === 'document') {
+        const uploadedUrls: string[] = [];
+        const uploadedFilenames: string[] = [];
+
+        // Upload new files
+        for (const file of mediaFiles) {
+          console.log('[Playbook Form] Uploading document:', file.name);
+          try {
+            const url = await uploadMedia(file);
+            uploadedUrls.push(url);
+            uploadedFilenames.push(file.name);
+          } catch (uploadError: any) {
+            console.error('[Playbook Form] Upload failed:', uploadError);
+            toast.error(`Falha no upload de ${file.name}: ${uploadError.message || 'Erro desconhecido'}`);
+            return;
+          }
+        }
+
+        // Combine with existing URLs
+        const allUrls = [...existingMediaUrls, ...uploadedUrls];
+        const allFilenames = [...existingMediaFilenames, ...uploadedFilenames];
+
+        mediaUrl = allUrls.length > 0 ? allUrls.join('|') : null;
+        mediaFilename = allFilenames.length > 0 ? allFilenames.join('|') : null;
+
+        console.log('[Playbook Form] Document upload complete:', { urls: allUrls.length, filenames: allFilenames.length });
+      } else if (mediaFile) {
+        // Single file upload for other types
         console.log('[Playbook Form] Uploading file:', mediaFile.name);
         try {
           mediaUrl = await uploadMedia(mediaFile);
@@ -306,8 +390,10 @@ export function PlaybookItemForm({
         folder_id: folderId,
         text_content: contentType === 'text' ? textContent : null,
         media_url: mediaUrl,
-        media_filename: mediaFile?.name || editingItem?.media_filename,
-        media_size: mediaFile?.size || editingItem?.media_size,
+        media_filename: mediaFilename,
+        media_size: contentType === 'document' 
+          ? (mediaFiles.reduce((sum, f) => sum + f.size, 0) || editingItem?.media_size)
+          : (mediaFile?.size || editingItem?.media_size),
         media_caption: contentType === 'image' ? mediaCaption : null,
         list_items: contentType === 'list' ? listItems.filter(item => item.title.trim()) : null,
         // Link fields
@@ -447,6 +533,10 @@ export function PlaybookItemForm({
                       setMediaFile(null);
                       setMediaPreview(null);
                       setExistingMediaUrl(null);
+                      // Reset multiple files
+                      setMediaFiles([]);
+                      setExistingMediaUrls([]);
+                      setExistingMediaFilenames([]);
                     }}
                   >
                     {option.icon}
@@ -744,7 +834,8 @@ export function PlaybookItemForm({
               </div>
             )}
 
-            {['audio', 'image', 'video', 'document', 'sticker'].includes(contentType) && (
+            {/* Non-document media types */}
+            {['audio', 'image', 'video', 'sticker'].includes(contentType) && (
               <div className="space-y-2">
                 <Label>Arquivo *</Label>
                 <input
@@ -816,16 +907,6 @@ export function PlaybookItemForm({
                       />
                     )}
 
-                    {/* Document preview */}
-                    {contentType === 'document' && (
-                      <div className="p-4 bg-muted flex items-center gap-3">
-                        <File className="h-8 w-8 text-muted-foreground" />
-                        <span className="text-sm">
-                          {mediaFile?.name || editingItem?.media_filename}
-                        </span>
-                      </div>
-                    )}
-
                     {/* Remove button */}
                     <Button
                       type="button"
@@ -842,26 +923,122 @@ export function PlaybookItemForm({
                     </Button>
                   </div>
                 )}
+              </div>
+            )}
 
-                {/* Caption field for image type - appears below file upload */}
-                {contentType === 'image' && (mediaPreview || existingMediaUrl) && (
-                  <div className="space-y-2 mt-4">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="mediaCaption">Legenda (opcional)</Label>
-                      <VariablePickerDropdown
-                        onSelectVariable={(variable) => {
-                          setMediaCaption(prev => prev + variable);
-                        }}
-                      />
+            {/* Document type - multiple files support */}
+            {contentType === 'document' && (
+              <div className="space-y-2">
+                <Label>Arquivos * (você pode selecionar múltiplos)</Label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={getAcceptedFileTypes()}
+                  multiple
+                  onChange={handleFileSelect}
+                  className="hidden"
+                />
+
+                {/* Show upload button when no files */}
+                {mediaFiles.length === 0 && existingMediaUrls.length === 0 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full h-32 border-dashed"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">
+                        Clique para fazer upload de documentos
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        PDF, Word, Excel, PowerPoint
+                      </span>
                     </div>
-                    <WhatsAppFormattingToolbar
-                      value={mediaCaption}
-                      onChange={setMediaCaption}
-                      placeholder="Digite a legenda que será enviada junto com a imagem..."
-                      rows={3}
-                    />
+                  </Button>
+                )}
+
+                {/* List of existing files (from editing) */}
+                {existingMediaUrls.length > 0 && (
+                  <div className="space-y-2">
+                    {existingMediaUrls.map((url, index) => (
+                      <div key={`existing-${index}`} className="p-3 bg-muted rounded-lg flex items-center gap-3">
+                        <File className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <span className="flex-1 text-sm truncate">
+                          {existingMediaFilenames[index] || `Documento ${index + 1}`}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0"
+                          onClick={() => removeExistingDocumentUrl(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 )}
+
+                {/* List of new files to upload */}
+                {mediaFiles.length > 0 && (
+                  <div className="space-y-2">
+                    {mediaFiles.map((file, index) => (
+                      <div key={`new-${index}`} className="p-3 bg-muted rounded-lg flex items-center gap-3">
+                        <File className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <span className="flex-1 text-sm truncate">{file.name}</span>
+                        <span className="text-xs text-muted-foreground shrink-0">
+                          {(file.size / 1024 / 1024).toFixed(1)} MB
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 shrink-0"
+                          onClick={() => removeDocumentFile(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add more files button */}
+                {(mediaFiles.length > 0 || existingMediaUrls.length > 0) && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar mais arquivos
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Caption field for image type - appears below file upload */}
+            {contentType === 'image' && (mediaPreview || existingMediaUrl) && (
+              <div className="space-y-2 mt-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="mediaCaption">Legenda (opcional)</Label>
+                  <VariablePickerDropdown
+                    onSelectVariable={(variable) => {
+                      setMediaCaption(prev => prev + variable);
+                    }}
+                  />
+                </div>
+                <WhatsAppFormattingToolbar
+                  value={mediaCaption}
+                  onChange={setMediaCaption}
+                  placeholder="Digite a legenda que será enviada junto com a imagem..."
+                  rows={3}
+                />
               </div>
             )}
           </div>

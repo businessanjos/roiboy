@@ -264,7 +264,9 @@ export function PlaybookDialog({
           )}
           {item.media_filename && (
             <p className="text-sm text-muted-foreground truncate">
-              {item.media_filename}
+              {item.content_type === 'document' && item.media_filename.includes('|')
+                ? `${item.media_filename.split('|').length} arquivos`
+                : item.media_filename}
             </p>
           )}
           {item.usage_count > 0 && (
