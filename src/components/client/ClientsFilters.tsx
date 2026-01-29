@@ -154,6 +154,7 @@ export function ClientsFilters({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="active">Ativo</SelectItem>
                   <SelectItem value="expired">Expirado</SelectItem>
                   <SelectItem value="urgent">Expira em 30 dias</SelectItem>
                   <SelectItem value="warning">Expira em 60 dias</SelectItem>
@@ -222,7 +223,7 @@ export function ClientsFilters({
               )}
               {filterContract !== "all" && (
                 <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
-                  Contrato: {filterContract === "expired" ? "Expirado" : filterContract === "urgent" ? "30 dias" : filterContract === "warning" ? "60 dias" : filterContract === "ok" ? "Vigente" : filterContract === "pending" ? "Pendente" : "Sem contrato"}
+                  Contrato: {filterContract === "active" ? "Ativo" : filterContract === "expired" ? "Expirado" : filterContract === "urgent" ? "30 dias" : filterContract === "warning" ? "60 dias" : filterContract === "ok" ? "Vigente" : filterContract === "pending" ? "Pendente" : "Sem contrato"}
                   <button onClick={() => setFilterContract("all")} className="hover:text-destructive">
                     <X className="h-3 w-3" />
                   </button>
