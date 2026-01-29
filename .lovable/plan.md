@@ -1,85 +1,103 @@
 
+# Plano: Remover Campos Personalizados da Lista de Clientes
 
-# Plano: Investigar e Corrigir Problemas na Aba Agenda do Cliente
+## Problema Identificado
 
-## Situacao Atual
+Na aba Clientes, a tabela de listagem está exibindo todos os campos personalizados configurados para "mostrar em clientes" (`show_in_clients = true`). Isso resulta em diversas colunas desnecessárias aparecendo entre "Responsável" e "Ação", como:
+- Área de atuação
+- Qual o Nome e Profissão do seu Cônjuge?
+- Data de Nascimento dos Filhos
+- E diversos outros campos...
 
-Ao analisar o codigo e a imagem fornecida, identifiquei uma **discrepancia significativa**:
+## Locais Afetados no Código
 
-### O Que Encontrei no Codigo Atual
+### Arquivo: `src/pages/Clients.tsx`
 
-| Elemento | Status no Codigo |
-|----------|------------------|
-| Coluna "Acoes" com editar/excluir | **NAO EXISTE** |
-| Tabela "Proximos Eventos" | Existe, mas **sem botoes de edicao** |
-| Funcionalidade | **Somente leitura** (apenas checkbox de participacao) |
+| Linha | Código | Uso |
+|-------|--------|-----|
+| 463-469 | `fetchCustomFields()` | Carrega campos com `show_in_clients = true` |
+| 2092-2096 | Loop `customFields.map()` | Renderiza cabeçalhos das colunas |
+| 2460-2472 | Loop `customFields.map()` | Renderiza células com `FieldValueEditor` |
+| 2103, 2110 | `colSpan={5 + customFields.length}` | Calcula span para células de loading/empty |
 
-### O Que a Imagem Mostra
+## Solucao
 
-A imagem mostra claramente uma coluna "Acoes" com icones de lapis (editar) e lixeira (excluir) que **nao existem** no componente `ClientAgenda.tsx` atual.
+Remover completamente a renderizacao dos campos personalizados na tabela de clientes:
 
----
+1. **Remover o loop que renderiza colunas de campos personalizados no cabecalho**
+   - Linhas 2092-2096: Deletar o mapeamento que cria `<TableHead>` para cada campo
 
-## Memoria do Sistema
+2. **Remover o loop que renderiza celulas de campos personalizados no corpo**
+   - Linhas 2460-2472: Deletar o mapeamento que cria `<TableCell>` para cada campo
 
-Conforme registrado na memoria do projeto:
+3. **Ajustar os colSpan das celulas de loading/empty**
+   - Linhas 2103 e 2110: Alterar de `5 + customFields.length` para um valor fixo (9 colunas fixas)
 
-> "Client agenda 'Agenda de Entregas' section is now **read-only**. Users cannot create, edit, or delete global events from the client profile. All global events are managed exclusively from the /events page."
+## Resultado Esperado
 
-Isso confirma que a funcionalidade de edicao foi **intencionalmente removida** do perfil do cliente.
+A tabela de clientes tera apenas as colunas fixas:
+1. Cliente (sticky)
+2. Produto
+3. Contrato
+4. Roizometro
+5. E-Score
+6. Conexao
+7. V-NPS
+8. Responsavel
+9. Acao
 
----
+Os campos personalizados continuarao funcionando normalmente:
+- No formulario de criacao de cliente (já existente)
+- Na página de detalhes do cliente (perfil)
+- No gerenciador de campos (botao "Campos")
 
-## Possiveis Cenarios
+## Codigo a Ser Modificado
 
-### Cenario A: A imagem e de uma versao anterior
-A funcionalidade de edicao existia anteriormente e foi removida. Os botoes que aparecem na imagem sao de uma versao desatualizada em cache.
+### 1. Remover colunas de campos no cabecalho (linhas 2092-2096):
+```typescript
+// REMOVER ESTE BLOCO:
+{customFields.map((field) => (
+  <TableHead key={field.id} className="font-medium text-center min-w-[120px]">
+    {field.name}
+  </TableHead>
+))}
+```
 
-### Cenario B: Ha codigo customizado nao sincronizado
-Existe uma modificacao local ou fork que adicionou esses botoes.
+### 2. Remover celulas de campos no corpo (linhas 2460-2472):
+```typescript
+// REMOVER ESTE BLOCO:
+{customFields.map((field) => (
+  <TableCell key={field.id} className="text-center">
+    {accountId && (
+      <FieldValueEditor
+        field={field}
+        clientId={client.id}
+        accountId={accountId}
+        currentValue={fieldValues[client.id]?.[field.id]}
+        onValueChange={(fieldId, newValue) => handleFieldValueChange(client.id, fieldId, newValue)}
+      />
+    )}
+  </TableCell>
+))}
+```
 
-### Cenario C: O usuario quer que a funcionalidade seja adicionada
-O usuario espera poder editar eventos diretamente do perfil do cliente.
+### 3. Ajustar colSpan (linhas 2103 e 2110):
+```typescript
+// DE:
+colSpan={5 + customFields.length}
 
----
+// PARA:
+colSpan={9}
+```
 
-## Sobre o Problema de Data/Hora
+## Arquivos a Modificar
 
-Analisei os dados no banco:
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/pages/Clients.tsx` | Remover renderizacao de campos personalizados da tabela |
 
-| Evento | No Banco (UTC) | Convertido Brasil (UTC-3) |
-|--------|----------------|---------------------------|
-| ETERNUM CLUB / PRESENCIAL | 2026-03-15 03:00:00+00 | 15/03/2026 00:00 |
-| Implementacao Clinica | 2026-10-22 13:00:00+00 | 22/10/2026 10:00 |
+## Impacto
 
-A formatacao atual usa `format(new Date(event.scheduled_at), "dd/MM/yyyy HH:mm")` que e **correta** para timestamps com timezone.
-
-**Possivel causa da data errada**: Se os eventos estao sendo salvos com timezone incorreto (ex: salvando hora local como UTC), a exibicao ficara errada.
-
----
-
-## Proximos Passos - Preciso de Esclarecimento
-
-Antes de implementar correcoes, preciso entender melhor o cenario:
-
-**Opcao 1: Adicionar funcionalidade de edicao**
-Implementar botoes de editar/excluir na tabela de "Proximos Eventos" no perfil do cliente, permitindo modificar eventos diretamente.
-
-**Opcao 2: Corrigir apenas o timezone**
-Manter a aba como read-only mas corrigir possiveis problemas de exibicao de data/hora.
-
-**Opcao 3: Redirecionar para pagina de eventos**
-Manter read-only mas adicionar um link/botao para editar o evento na pagina principal de eventos (`/events`).
-
----
-
-## Pergunta ao Usuario
-
-Para que eu possa implementar a solucao correta:
-
-1. **Voce quer poder editar eventos diretamente na aba Agenda do perfil do cliente?** (Isso reverteria a decisao de manter read-only)
-
-2. **Ou a edicao deveria ser feita na pagina de Eventos (`/events`) e a aba Agenda do cliente deve apenas exibir os dados?**
-
-3. **O problema de data esta acontecendo ao criar/editar eventos, ou apenas na exibicao?**
-
+- **Nenhuma perda de funcionalidade**: Os campos personalizados continuam existindo e funcionando
+- **Apenas remocao visual da tabela**: A listagem fica mais limpa e focada nos dados essenciais
+- **Campos editaveis no perfil**: O usuario pode editar campos personalizados acessando o perfil individual do cliente
