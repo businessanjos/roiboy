@@ -1,38 +1,77 @@
 
-# Plano: Reverter Filtro "Ativo" para Status Apenas
+# Plano: Adicionar Opção "Não Enviar" ao Dropdown de Convite
 
-## Alteração a Fazer
+## Alteração Proposta
 
-Reverter a lógica do filtro "Ativo" para considerar apenas contratos com `status === "active"`, removendo a verificação de data de término.
+Adicionar a opção "Não Enviar" ao dropdown "Quando enviar o convite" no componente `MeetingConfigDialog`.
 
 ## Arquivo a Modificar
 
-**supabase/functions/list-clients/index.ts**
+**src/components/tasks/MeetingConfigDialog.tsx**
 
-## Alteracao
+## Alterações
 
-**De (linhas 276-285):**
+### 1. Adicionar a opção no array de opções (linha 20-25)
+
 ```typescript
-} else if (contractFilter === "active") {
-  // Filter by contract status = active OR future end date (regardless of status)
-  filteredClients = filteredClients.filter(c => {
-    if (!c.contract) return false;
-    const endDate = c.contract.end_date;
-    if (c.contract.status === "active") return true;
-    if (endDate && new Date(endDate) >= new Date()) return true;
-    return false;
-  });
-} else {
+const EMAIL_ADVANCE_OPTIONS = [
+  { value: "none", label: "Não enviar" },        // <-- NOVA OPÇÃO
+  { value: "immediate", label: "Enviar agora" },
+  { value: "10min", label: "10 minutos antes" },
+  { value: "1hour", label: "1 hora antes" },
+  { value: "1day", label: "1 dia antes" },
+];
 ```
 
-**Para:**
+### 2. Ajustar a lógica para não enviar email quando selecionado "none" (linha 184)
+
+Na função `handleCreateMeeting`, ajustar para considerar `emailAdvance === "none"` como não enviar:
+
 ```typescript
-} else if (contractFilter === "active") {
-  // Filter by contract status = active only
-  filteredClients = filteredClients.filter(c => c.contract?.status === "active");
-} else {
+send_email: sendEmail && emailAdvance !== "none",
 ```
 
-## Resultado
+### 3. Ajustar o toast de confirmação (linhas 200-210)
 
-O filtro "Ativo" retornara apenas clientes cujo contrato tem `status = "active"`, ignorando contratos com outros status mesmo que tenham data de termino futura.
+Adicionar tratamento para quando "Não enviar" for selecionado:
+
+```typescript
+if (sendEmail && participantEmail && emailAdvance !== "none") {
+  // lógica existente de toasts de envio
+} else if (emailAdvance === "none") {
+  toast.info("Reunião criada sem envio de convite por email");
+} else if (!participantEmail) {
+  toast.info("Compartilhe o link da reunião com o participante");
+} else {
+  toast.info("Reunião criada sem envio de convite por email");
+}
+```
+
+### 4. Ocultar campo de mensagem quando "Não enviar" selecionado (linha 305)
+
+Ajustar a condição para mostrar as opções de email:
+
+```typescript
+{sendEmail && emailAdvance !== "none" && (
+  <>
+    {/* Email Message */}
+    ...
+  </>
+)}
+```
+
+Mas manter o dropdown visível para permitir alterar a opção.
+
+## Resultado Esperado
+
+O dropdown "Quando enviar o convite" terá as seguintes opções:
+- ⚪ Não enviar
+- Enviar agora
+- 10 minutos antes
+- 1 hora antes
+- 1 dia antes
+
+Quando "Não enviar" for selecionado:
+- O campo de mensagem será ocultado
+- A reunião será criada sem envio de email
+- O usuário receberá a confirmação de que não foi enviado convite
