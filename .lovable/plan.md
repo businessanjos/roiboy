@@ -1,77 +1,83 @@
 
-# Plano: Adicionar Opção "Não Enviar" ao Dropdown de Convite
+# Plano: Corrigir Atualização da View Materializada de Métricas
 
-## Alteração Proposta
+## Problema Identificado
 
-Adicionar a opção "Não Enviar" ao dropdown "Quando enviar o convite" no componente `MeetingConfigDialog`.
+A view materializada `client_latest_metrics` não está sendo atualizada quando contratos são criados ou modificados. Isso causa dados desatualizados no filtro de clientes.
 
-## Arquivo a Modificar
+### Evidências Encontradas
 
-**src/components/tasks/MeetingConfigDialog.tsx**
+| Cliente | Status na View | Status Real |
+|---------|---------------|-------------|
+| Andréia Forcione | ended | active |
+| Fabiola Korin | paused | active |
+| Nathália Martins Ribas | paused | active |
 
-## Alterações
+A Michele tem **84 clientes com contrato active** no banco, mas o filtro mostra apenas **61** porque a view está desatualizada.
 
-### 1. Adicionar a opção no array de opções (linha 20-25)
+## Solução Proposta
 
-```typescript
-const EMAIL_ADVANCE_OPTIONS = [
-  { value: "none", label: "Não enviar" },        // <-- NOVA OPÇÃO
-  { value: "immediate", label: "Enviar agora" },
-  { value: "10min", label: "10 minutos antes" },
-  { value: "1hour", label: "1 hora antes" },
-  { value: "1day", label: "1 dia antes" },
-];
+### Ação 1: Criar Trigger para Refresh Automático
+
+Criar um trigger na tabela `client_contracts` que atualiza a view materializada quando contratos são criados ou modificados.
+
+```sql
+-- Função que agenda o refresh da view
+CREATE OR REPLACE FUNCTION trigger_refresh_client_metrics()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Usar pg_notify para agendar refresh assíncrono
+  -- Evita bloquear a transação
+  PERFORM pg_notify('refresh_client_metrics', 'refresh');
+  RETURN COALESCE(NEW, OLD);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Trigger após INSERT
+CREATE TRIGGER trigger_refresh_metrics_on_contract_insert
+AFTER INSERT ON client_contracts
+FOR EACH STATEMENT
+EXECUTE FUNCTION trigger_refresh_client_metrics();
+
+-- Trigger após UPDATE
+CREATE TRIGGER trigger_refresh_metrics_on_contract_update
+AFTER UPDATE ON client_contracts
+FOR EACH STATEMENT
+EXECUTE FUNCTION trigger_refresh_client_metrics();
 ```
 
-### 2. Ajustar a lógica para não enviar email quando selecionado "none" (linha 184)
+### Ação 2: Criar Edge Function para Escutar Notificações
 
-Na função `handleCreateMeeting`, ajustar para considerar `emailAdvance === "none"` como não enviar:
+Ou, alternativamente, criar um refresh periódico via cron job:
 
-```typescript
-send_email: sendEmail && emailAdvance !== "none",
+```sql
+-- Usar pg_cron para refresh a cada 5 minutos
+SELECT cron.schedule(
+  'refresh-client-metrics',
+  '*/5 * * * *',
+  'SELECT refresh_client_latest_metrics()'
+);
 ```
 
-### 3. Ajustar o toast de confirmação (linhas 200-210)
+### Ação 3: Refresh Manual Imediato
 
-Adicionar tratamento para quando "Não enviar" for selecionado:
+Executar o refresh manualmente agora para corrigir os dados existentes.
 
-```typescript
-if (sendEmail && participantEmail && emailAdvance !== "none") {
-  // lógica existente de toasts de envio
-} else if (emailAdvance === "none") {
-  toast.info("Reunião criada sem envio de convite por email");
-} else if (!participantEmail) {
-  toast.info("Compartilhe o link da reunião com o participante");
-} else {
-  toast.info("Reunião criada sem envio de convite por email");
-}
-```
+## Arquivos a Modificar
 
-### 4. Ocultar campo de mensagem quando "Não enviar" selecionado (linha 305)
+| Arquivo | Alteração |
+|---------|-----------|
+| Nova migration SQL | Criar trigger de refresh ou configurar pg_cron |
 
-Ajustar a condição para mostrar as opções de email:
+## Alternativa Mais Simples (Recomendada)
 
-```typescript
-{sendEmail && emailAdvance !== "none" && (
-  <>
-    {/* Email Message */}
-    ...
-  </>
-)}
-```
+Como o refresh de materialized view pode ser custoso, a melhor solução é **não usar materialized view** para dados críticos de contrato e sim fazer a consulta em tempo real:
 
-Mas manter o dropdown visível para permitir alterar a opção.
+1. Modificar a edge function `list-clients` para buscar o contrato mais recente diretamente da tabela `client_contracts` ao invés da view materializada
+2. Manter a view apenas para dados menos críticos (vnps, score)
+
+Isso garante dados sempre atualizados sem depender de triggers.
 
 ## Resultado Esperado
 
-O dropdown "Quando enviar o convite" terá as seguintes opções:
-- ⚪ Não enviar
-- Enviar agora
-- 10 minutos antes
-- 1 hora antes
-- 1 dia antes
-
-Quando "Não enviar" for selecionado:
-- O campo de mensagem será ocultado
-- A reunião será criada sem envio de email
-- O usuário receberá a confirmação de que não foi enviado convite
+Após implementação, o filtro "Ativo" retornará os **84 clientes** da Michele que realmente têm contrato com status `active`.
