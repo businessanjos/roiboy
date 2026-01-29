@@ -23,6 +23,7 @@ import {
   MapPin,
   QrCode,
   Link as LinkIcon,
+  Pencil,
 } from "lucide-react";
 import { ClientTasks } from "./ClientTasks";
 import { format, isPast, isFuture, isToday } from "date-fns";
@@ -30,8 +31,7 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
-
-type EventType = "live" | "material" | "mentoria" | "workshop" | "masterclass" | "webinar" | "imersao" | "plantao" | "launch" | "campaign" | "content" | "partnership" | "fair" | "movimento" | "viagem" | "autoridade" | "other";
+import { EventEditDialog, EventData, EventType } from "@/components/events/EventEditDialog";
 
 interface Event {
   id: string;
@@ -42,6 +42,7 @@ interface Event {
   address: string | null;
   checkin_code: string | null;
   scheduled_at: string | null;
+  ends_at: string | null;
   duration_minutes: number | null;
   meeting_url: string | null;
   material_url: string | null;
@@ -111,6 +112,8 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
   const [feedbacks, setFeedbacks] = useState<ClientEventFeedback[]>([]);
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState<string | null>(null);
+  const [editingEvent, setEditingEvent] = useState<EventData | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchAccountId();
@@ -355,6 +358,29 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
   );
   const materialsEvents = events.filter((e) => e.event_type === "material");
 
+  const handleEditEvent = (event: EventWithProducts) => {
+    const eventData: EventData = {
+      id: event.id,
+      title: event.title,
+      description: event.description,
+      event_type: event.event_type,
+      modality: event.modality,
+      address: event.address,
+      scheduled_at: event.scheduled_at,
+      ends_at: event.ends_at,
+      duration_minutes: event.duration_minutes,
+      meeting_url: event.meeting_url,
+      material_url: event.material_url,
+      is_recurring: event.is_recurring,
+      event_products: event.event_products.map(ep => ({
+        product_id: ep.product_id,
+        products: { id: ep.product_id, name: "" }
+      })),
+    };
+    setEditingEvent(eventData);
+    setEditDialogOpen(true);
+  };
+
   const renderEventTable = (eventsList: EventWithProducts[], title: string, icon: React.ReactNode, showParticipation?: boolean) => {
     if (eventsList.length === 0) return null;
 
@@ -374,7 +400,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                 <TableHead>Modalidade</TableHead>
                 <TableHead>Data/Hora</TableHead>
                 {showParticipation && <TableHead>Status</TableHead>}
-                <TableHead className="text-right">Link</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -388,6 +414,13 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                 const eventTypeInfo = getEventTypeInfo(event.event_type);
                 const isTodayEvent = event.scheduled_at && isToday(new Date(event.scheduled_at));
                 const hasLink = event.meeting_url || event.material_url;
+
+                // Format date properly - scheduled_at is stored as UTC timestamp
+                const formatEventDate = (dateString: string | null) => {
+                  if (!dateString) return "-";
+                  const date = new Date(dateString);
+                  return format(date, "dd/MM/yyyy HH:mm", { locale: ptBR });
+                };
 
                 return (
                   <TableRow 
@@ -445,7 +478,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                       {event.scheduled_at ? (
                         <div className="flex items-center gap-1 text-sm">
                           <Clock className="h-3 w-3" />
-                          {format(new Date(event.scheduled_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          {formatEventDate(event.scheduled_at)}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">-</span>
@@ -471,19 +504,28 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                       </TableCell>
                     )}
                     <TableCell className="text-right">
-                      {hasLink ? (
-                        <Button variant="ghost" size="icon" asChild>
-                          <a
-                            href={event.meeting_url || event.material_url || "#"}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <LinkIcon className="h-4 w-4" />
-                          </a>
+                      <div className="flex items-center justify-end gap-1">
+                        {hasLink && (
+                          <Button variant="ghost" size="icon" asChild>
+                            <a
+                              href={event.meeting_url || event.material_url || "#"}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Abrir link"
+                            >
+                              <LinkIcon className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleEditEvent(event)}
+                          title="Editar evento"
+                        >
+                          <Pencil className="h-4 w-4" />
                         </Button>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -636,6 +678,14 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       <div className="border-t pt-6 mt-6">
         <ClientTasks clientId={clientId} />
       </div>
+
+      {/* Event Edit Dialog */}
+      <EventEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        event={editingEvent}
+        onSuccess={fetchEvents}
+      />
     </div>
   );
 }
