@@ -3,6 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
 import { SectorId } from "@/config/sectors";
 
+// Team roles that automatically have access to Operations sector
+const OPERATION_TEAM_ROLES = ["CX", "CS", "Consultor"];
+
 interface SectorAccess {
   sector_id: SectorId;
   role_in_sector: string | null;
@@ -21,6 +24,7 @@ export function useSectorAccess() {
   const authUserId = currentUser?.auth_user_id;
   const accountId = currentUser?.account_id;
   const userRole = currentUser?.role;
+  const teamRoleName = currentUser?.team_role_name;
 
   const { data: sectorAccess = [], isLoading } = useQuery({
     queryKey: ["user-sector-access", userId],
@@ -77,6 +81,13 @@ export function useSectorAccess() {
     
     // Admins have access to all other sectors
     if (userRole === "admin") return true;
+    
+    // Bypass for operation team roles in operacoes sector
+    if (sectorId === "operacoes" && teamRoleName) {
+      if (OPERATION_TEAM_ROLES.includes(teamRoleName)) {
+        return true;
+      }
+    }
     
     return sectorAccess.some((access) => access.sector_id === sectorId);
   };
