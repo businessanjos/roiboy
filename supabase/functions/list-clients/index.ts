@@ -273,6 +273,9 @@ Deno.serve(async (req) => {
     if (contractFilter && contractFilter !== "all") {
       if (contractFilter === "none") {
         filteredClients = filteredClients.filter(c => !c.contract);
+      } else if (contractFilter === "active") {
+        // Filter by contract status = active (regardless of expiration date)
+        filteredClients = filteredClients.filter(c => c.contract?.status === "active");
       } else {
         filteredClients = filteredClients.filter(c => {
           if (!c.contract) return false;
