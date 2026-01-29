@@ -1,83 +1,115 @@
 
-# Plano: Corrigir Duplicação de Contratos na Aba de Triagem
+# Plano: Reverter Contrato e Cliente ao Reabrir Negócio
 
-## Problema Identificado
+## Contexto
 
-A cliente **Camila De Azevedo Dos Santos** tem 2 contratos no banco de dados (datas: 28/01/2026 e 29/01/2026), mas cada um aparece **2 vezes** na tela, totalizando 4 entradas.
+Quando um negócio é reaberto, o contrato criado e o cliente convertido devem ser "desfeitos" automaticamente, retornando o cliente para a triagem se o negócio for ganho novamente.
 
-### Causa Raiz
+## Solução
 
-A página `Contracts.tsx` renderiza **duas tabelas simultaneamente** na aba de triagem:
+### 1. Adicionar Campo `deal_id` na Tabela `client_contracts`
 
-1. `ContractTriageQueue` (linhas 1933-1946) - tabela específica de triagem com botões "Puxar" e "Atribuir"
-2. Tabela genérica de contratos (linhas 1950-2093) - tabela padrão com botões "Ver Contrato" e "Excluir"
+Criar uma coluna para vincular diretamente o contrato ao negócio que o originou:
 
-A tabela genérica está **fora do bloco condicional** `{activeTab === "triagem" && ...}`, sendo renderizada em todas as abas.
-
-```text
-ESTRUTURA ATUAL (INCORRETA):
-
-{activeTab === "triagem" && (
-  <>
-    <Card info="Clientes aguardando..." />
-    <ContractTriageQueue ... />    ← Tabela 1 (com Puxar/Atribuir)
-  </>
-)}
-
-<Card>                              ← Tabela 2 (SEMPRE renderizada!)
-  <Table>{filteredContracts}</Table>
-</Card>
+```sql
+ALTER TABLE client_contracts 
+ADD COLUMN deal_id UUID REFERENCES deals(id) ON DELETE SET NULL;
 ```
 
-### Evidência Visual da Duplicação
+### 2. Modificar Criação de Contrato (SalesPipeline.tsx)
 
-Na imagem enviada, é possível ver:
-- **Tabela 1** (topo): Colunas "Cliente | Tipo | Valor | Data Início | Status | Ações" com botões **Puxar** e **Atribuir a...**
-- **Tabela 2** (abaixo): Colunas "Cliente | Tipo | Valor | Período | Status | Ações" com botão **Ver Contrato**
-
-São duas tabelas distintas mostrando os mesmos dados!
-
-## Solução Proposta
-
-Adicionar condição para **não renderizar** a tabela genérica quando a aba ativa for "triagem".
-
-## Arquivo a Modificar
-
-**src/pages/Contracts.tsx**
-
-## Alteração
-
-### Ocultar tabela genérica na aba de triagem (linha ~1950)
-
-Envolver a tabela genérica de contratos com uma condição:
+Ao criar o contrato quando o deal é ganho, salvar o `deal_id`:
 
 ```typescript
-{/* Contracts Table - hide on triagem tab since it has its own component */}
-{activeTab !== "triagem" && (
-  <Card>
-    <CardContent className="p-0">
-      {filteredContracts.length === 0 ? (
-        // ... empty state
-      ) : (
-        <Table>
-          // ... tabela de contratos
-        </Table>
-      )}
-    </CardContent>
-  </Card>
-)}
+const contractData = {
+  // ... campos existentes
+  deal_id: dealId, // NOVO: vincular ao deal
+};
 ```
 
-## Detalhes Técnicos
+### 3. Modificar `reopenDeal` (useDeals.tsx)
 
-| Aspecto | Situação Atual | Após Correção |
-|---------|----------------|---------------|
-| Aba "Conciliação" | Tabela genérica | Tabela genérica |
-| Aba "Triagem" | ContractTriageQueue + Tabela genérica (duplicado!) | Apenas ContractTriageQueue |
-| Aba "Conciliados" | Tabela genérica | Tabela genérica |
+Quando reabrir um negócio **que estava GANHO**, executar:
+
+1. **Deletar o contrato** vinculado ao deal (via `deal_id`)
+2. **Limpar `responsible_user_id`** do cliente (volta para triagem)
+3. Manter o cliente convertido (não deletar o cliente)
+
+```typescript
+const reopenDeal = async (dealId: string): Promise<boolean> => {
+  const currentDeal = deals.find(d => d.id === dealId);
+  
+  // Só reverter se estava GANHO
+  if (currentDeal?.status === 'won') {
+    // 1. Deletar contrato vinculado a este deal
+    await supabase
+      .from('client_contracts')
+      .delete()
+      .eq('deal_id', dealId);
+    
+    // 2. Remover responsável do cliente (volta para triagem)
+    if (currentDeal.client_id) {
+      await supabase
+        .from('clients')
+        .update({ responsible_user_id: null })
+        .eq('id', currentDeal.client_id);
+    }
+  }
+  
+  // 3. Reabrir o deal normalmente
+  await supabase
+    .from('deals')
+    .update({ status: 'open', won_at: null, ... })
+    .eq('id', dealId);
+};
+```
+
+### 4. Limpeza dos Dados Atuais
+
+Deletar o contrato duplicado mais antigo da Camila:
+
+```sql
+DELETE FROM client_contracts 
+WHERE id = 'a2c13116-322d-4840-820a-5deb277ae0d0';
+```
+
+Atualizar o contrato restante para incluir o `deal_id`:
+
+```sql
+UPDATE client_contracts 
+SET deal_id = '079510a1-c19a-451b-a3fc-e881faa7ef26'
+WHERE id = 'b9dddbb4-d5d6-4f91-abf7-5597b2baf496';
+```
+
+## Arquivos a Modificar
+
+| Arquivo | Alteração |
+|---------|-----------|
+| **Database** | Adicionar coluna `deal_id` em `client_contracts` |
+| `src/hooks/useDeals.tsx` | Modificar `reopenDeal` para deletar contrato e limpar cliente |
+| `src/pages/SalesPipeline.tsx` | Passar `deal_id` ao criar contrato |
+
+## Fluxo Final
+
+```text
+NEGÓCIO GANHO:
+  Lead → Cliente (sem responsible_user_id) → Contrato (deal_id)
+  
+NEGÓCIO REABERTO:
+  ❌ Contrato deletado
+  Cliente.responsible_user_id → null
+  Cliente permanece na base
+  Deal → status: open
+  
+NEGÓCIO GANHO NOVAMENTE:
+  Novo Contrato (deal_id)
+  Cliente continua sem responsible_user_id
+  → Aparece na Triagem normalmente
+```
 
 ## Resultado Esperado
 
-- Na aba "Triagem", cada contrato aparecerá **apenas uma vez**
-- A cliente Camila aparecerá com seus 2 contratos (um por linha), não 4
-- O badge "Triagem 2" refletirá corretamente os 2 contratos
+- Camila aparecerá **1 vez** na Conciliação (contrato mantido)
+- Camila aparecerá **1 vez** na Triagem (cliente sem responsável)
+- Futuros "reabrir" de negócios ganhos não criarão duplicações
+- O sistema mantém rastreabilidade completa (deal_id no contrato)
