@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect, useMemo } from "react";
+import { useRef, useLayoutEffect, useMemo, useState, useCallback, useEffect } from "react";
 import { MessageSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message } from "@/hooks/useZappData";
@@ -22,6 +22,8 @@ export function ZappMessagesList({
   onRetryMessage,
 }: ZappMessagesListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
   // Deduplicate messages to prevent visual duplicates from race conditions
   // Priority: real messages over temp, dedupe by external_message_id when available
@@ -105,6 +107,35 @@ export function ZappMessagesList({
     return result;
   }, [messages]);
 
+  // Scroll to quoted message handler
+  const handleScrollToQuoted = useCallback((quotedMessageId: string) => {
+    // Find message by external_message_id OR local id
+    const targetMessage = deduplicatedMessages.find(
+      m => m.external_message_id === quotedMessageId || m.id === quotedMessageId
+    );
+    
+    if (targetMessage) {
+      const element = messageRefs.current.get(targetMessage.id);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightedMessageId(targetMessage.id);
+        
+        // Remove highlight after 2 seconds
+        setTimeout(() => setHighlightedMessageId(null), 2000);
+      }
+    }
+  }, [deduplicatedMessages]);
+
+  // Clean up old refs when messages change
+  useEffect(() => {
+    const currentIds = new Set(deduplicatedMessages.map(m => m.id));
+    messageRefs.current.forEach((_, id) => {
+      if (!currentIds.has(id)) {
+        messageRefs.current.delete(id);
+      }
+    });
+  }, [deduplicatedMessages]);
+
   // Auto-scroll to bottom when messages change
   useLayoutEffect(() => {
     if (messagesEndRef.current && deduplicatedMessages.length > 0) {
@@ -126,16 +157,24 @@ export function ZappMessagesList({
               new Date(message.created_at).toDateString() !== new Date(deduplicatedMessages[index - 1].created_at).toDateString();
 
             return (
-              <ZappMessageBubble
+              <div
                 key={message.id}
-                message={message}
-                showTimestamp={showTimestamp}
-                isGroup={isGroup}
-                onReply={onReplyMessage}
-                onDelete={onDeleteMessage}
-                onEdit={onEditMessage}
-                onRetry={onRetryMessage}
-              />
+                ref={(el) => {
+                  if (el) messageRefs.current.set(message.id, el);
+                }}
+              >
+                <ZappMessageBubble
+                  message={message}
+                  showTimestamp={showTimestamp}
+                  isGroup={isGroup}
+                  onReply={onReplyMessage}
+                  onDelete={onDeleteMessage}
+                  onEdit={onEditMessage}
+                  onRetry={onRetryMessage}
+                  onScrollToQuoted={handleScrollToQuoted}
+                  isHighlighted={highlightedMessageId === message.id}
+                />
+              </div>
             );
           })
         )}

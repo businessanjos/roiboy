@@ -45,6 +45,8 @@ interface ZappMessageBubbleProps {
   onDelete?: (messageId: string) => void;
   onEdit?: (messageId: string, newContent: string) => Promise<void>;
   onRetry?: (message: Message) => void;
+  onScrollToQuoted?: (quotedMessageId: string) => void;
+  isHighlighted?: boolean;
 }
 
 // Function to handle file download with correct filename (fetch-to-blob pattern)
@@ -169,6 +171,8 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   onDelete,
   onEdit,
   onRetry,
+  onScrollToQuoted,
+  isHighlighted,
 }: ZappMessageBubbleProps) {
   const { toast } = useToast();
   const [showActions, setShowActions] = useState(false);
@@ -316,12 +320,14 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
         )}>
           {/* Message bubble */}
           <div className={cn(
-            "px-3 py-2 rounded-lg relative shadow overflow-hidden flex-1 min-w-0",
+            "px-3 py-2 rounded-lg relative shadow overflow-hidden flex-1 min-w-0 transition-all duration-300",
             message.is_from_client
               ? "bg-zapp-message-in text-zapp-text rounded-tl-none"
               : "bg-zapp-message-out text-zapp-text rounded-tr-none",
             // Visual indicator for failed messages
-            message.send_status === "failed" && "ring-2 ring-red-500/50 bg-red-950/30"
+            message.send_status === "failed" && "ring-2 ring-red-500/50 bg-red-950/30",
+            // Highlight effect when scrolled to
+            isHighlighted && "ring-2 ring-zapp-accent animate-pulse"
           )}>
           {/* Sender name for group messages */}
           {message.is_from_client && isGroup && message.sender_name && (
@@ -333,9 +339,19 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             </p>
           )}
           
-          {/* Quoted message bar (reply) */}
+          {/* Quoted message bar (reply) - Clickable to scroll to original */}
           {message.quoted_content && (
-            <div className="bg-black/20 border-l-4 border-zapp-accent/60 px-2 py-1.5 mb-2 rounded-r">
+            <div 
+              className={cn(
+                "bg-black/20 border-l-4 border-zapp-accent/60 px-2 py-1.5 mb-2 rounded-r",
+                message.quoted_message_id && "cursor-pointer hover:bg-black/30 transition-colors"
+              )}
+              onClick={() => {
+                if (message.quoted_message_id && onScrollToQuoted) {
+                  onScrollToQuoted(message.quoted_message_id);
+                }
+              }}
+            >
               <p className="text-xs font-medium text-zapp-accent truncate">
                 {message.quoted_sender_name || ""}
               </p>
