@@ -1,83 +1,70 @@
 
-
-# Plano: Garantir Acesso Irrestrito para Equipe Anjos Business
+# Plano: Corrigir Limite de 50 Clientes na Listagem
 
 ## Problema Identificado
 
-A conta da Maria (e toda a equipe Anjos Business) está sendo bloqueada pela lógica de verificação de assinatura no `useSubscriptionStatus.tsx`. A conta tem:
-- `subscription_status: "trial"` 
-- `trial_ends_at: null` (sem data de expiração)
-- `payment_method_configured: false`
+A consultora Michele Santos tem **240 clientes totais** (84 com contrato ativo), mas o filtro retorna apenas **50 clientes**.
 
-A lógica atual exige que usuários em trial tenham `payment_method_configured = true`, o que bloqueia a Maria e outros membros da equipe.
+### Causa Raiz
 
-## Solução Proposta
+Na edge function `list-clients`, linha 54, existe uma limitacao forcada:
 
-Modificar a lógica de `useSubscriptionStatus` para dar acesso completo quando a conta não tiver data de expiração de trial definida (`trial_ends_at = null`). Isso funciona como um "trial infinito" para contas de desenvolvimento/internas.
-
-## Alterações Técnicas
-
-### Arquivo: `src/hooks/useSubscriptionStatus.tsx`
-
-**Modificar a lógica de verificação de acesso (linhas 87-97):**
-
-De:
 ```typescript
-const paidStatuses = ["active", "paid", "trialing", "pending"];
-const hasActiveSubscription = paidStatuses.includes(account.subscription_status || "");
+// Reduced max limit from 200 to 50 to optimize Cloud costs
+const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 50);
+```
 
-// For trial users: must have payment method configured to access
-const isInTrial = account.subscription_status === "trial" && !isTrialExpired;
-const trialWithPayment = isInTrial && account.payment_method_configured;
+Essa alteracao foi feita anteriormente para "otimizar custos de Cloud", porem causa problemas quando usuarios precisam ver mais clientes.
 
-const hasAccess = hasActiveSubscription || trialWithPayment;
+O frontend solicita 200 clientes, mas a edge function ignora e retorna apenas 50.
+
+## Dados da Michele Santos
+
+| Metrica | Quantidade |
+|---------|-----------|
+| Total de clientes | 240 |
+| Contratos ativos | 84-85 |
+| Contratos encerrados | 93 |
+| Contratos cancelados | 31 |
+| Outros status | 31 |
+
+Ela mencionou ter "86 alunas" - que corresponde aproximadamente aos 84-85 contratos ativos.
+
+## Solucao Proposta
+
+Aumentar o limite maximo para 200 (ou remover o limite forcado) na edge function, permitindo que o frontend controle a paginacao.
+
+### Alteracao no Arquivo
+
+**Arquivo: `supabase/functions/list-clients/index.ts`**
+
+**Linha 54** - Alterar de:
+```typescript
+const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 50);
 ```
 
 Para:
 ```typescript
-const paidStatuses = ["active", "paid", "trialing", "pending"];
-const hasActiveSubscription = paidStatuses.includes(account.subscription_status || "");
-
-// Trial logic
-const isInTrial = account.subscription_status === "trial";
-
-// Grant access if:
-// 1. Has active subscription (active, paid, trialing, pending)
-// 2. Trial with no expiration date set (internal/dev accounts)
-// 3. Trial not expired and has payment method configured
-const hasUnlimitedTrial = isInTrial && !trialEndsAt; // No expiration = unlimited trial
-const hasValidTrial = isInTrial && !isTrialExpired && account.payment_method_configured;
-
-const hasAccess = hasActiveSubscription || hasUnlimitedTrial || hasValidTrial;
+const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 200);
 ```
 
-## Justificativa da Solução
+## Justificativa
 
-1. **Retrocompatibilidade**: Contas normais com `trial_ends_at` definido continuam funcionando como antes
-2. **Flexibilidade**: Contas internas/dev podem ter `trial_ends_at = null` para acesso permanente
-3. **Sem necessidade de migração**: Apenas alteração de lógica no código
-4. **Segurança**: Não cria brechas - apenas contas configuradas especificamente com `trial_ends_at = null` terão esse benefício
+1. O limite de 50 e muito baixo para usuarios com muitos clientes
+2. 200 ainda e um limite razoavel que nao sobrecarrega o sistema
+3. O frontend ja solicita 200, entao nao precisa de outras alteracoes
+4. A paginacao continua funcionando normalmente para bases maiores
 
-## Comportamento Esperado
+## Impacto
 
-| Cenário | `subscription_status` | `trial_ends_at` | `payment_method` | `hasAccess` |
-|---------|----------------------|-----------------|------------------|-------------|
-| Conta Anjos Business | trial | null | false | ✅ TRUE |
-| Cliente novo em trial | trial | 2026-02-05 | false | ❌ FALSE |
-| Cliente trial com cartão | trial | 2026-02-05 | true | ✅ TRUE |
-| Cliente trial expirado | trial | 2026-01-01 | false | ❌ FALSE |
-| Cliente pagante | active | null | true | ✅ TRUE |
-
-## Arquivos a Modificar
-
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/hooks/useSubscriptionStatus.tsx` | Adicionar lógica de "trial ilimitado" quando `trial_ends_at = null` |
+| Cenario | Antes | Depois |
+|---------|-------|--------|
+| Michele filtra seus clientes | 50 resultados | Ate 200 resultados |
+| Usuarios com poucos clientes | Sem mudanca | Sem mudanca |
+| Performance | Leve aumento de carga | Aceitavel |
 
 ## Resultado Esperado
 
-1. Maria e toda equipe Anjos Business terão acesso imediato
-2. A tela de carregamento infinito será resolvida
-3. Clientes futuros em trial normal continuarão com as regras de negócio existentes
-4. Não há necessidade de alterar dados no banco
-
+1. Michele vera todos os seus 84 clientes com contrato ativo ao filtrar
+2. A contagem total (86 mencionados vs 84 reais) esta dentro da margem esperada
+3. Outros usuarios com muitos clientes tambem serao beneficiados
