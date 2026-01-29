@@ -180,13 +180,22 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch all enrichment data in parallel using the materialized view
-    const [metricsResult, pendingFormsResult, teamUsersResult] = await Promise.all([
-      // Get pre-aggregated metrics from materialized view
+    // Fetch all enrichment data in parallel
+    // Use materialized view for vnps/score but fetch contracts directly for real-time accuracy
+    const [metricsResult, contractsResult, pendingFormsResult, teamUsersResult] = await Promise.all([
+      // Get pre-aggregated metrics from materialized view (vnps, score only)
       supabase
         .from("client_latest_metrics")
-        .select("client_id, vnps, score, contract, has_conversation, message_count")
+        .select("client_id, vnps, score, has_conversation, message_count")
         .in("client_id", clientIds),
+      
+      // Get latest contract directly from client_contracts for real-time accuracy
+      supabase
+        .from("client_contracts")
+        .select("client_id, status, start_date, end_date, value, product_id")
+        .eq("account_id", accountId)
+        .in("client_id", clientIds)
+        .order("created_at", { ascending: false }),
       
       // Get pending form sends
       supabase
@@ -225,6 +234,21 @@ Deno.serve(async (req) => {
     const metricsMap = new Map();
     metricsResult.data?.forEach(m => metricsMap.set(m.client_id, m));
 
+    // Build contracts map - get the latest contract per client
+    const contractsMap = new Map();
+    contractsResult.data?.forEach(c => {
+      // Only set if not already set (first one is latest due to order)
+      if (!contractsMap.has(c.client_id)) {
+        contractsMap.set(c.client_id, {
+          status: c.status,
+          start_date: c.start_date,
+          end_date: c.end_date,
+          value: c.value,
+          product_id: c.product_id
+        });
+      }
+    });
+
     const pendingFormsMap = new Map();
     pendingFormsResult.data?.forEach(pf => {
       if (!pendingFormsMap.has(pf.client_id)) {
@@ -242,6 +266,7 @@ Deno.serve(async (req) => {
     // Enrich clients with all data
     const enrichedClients = clients?.map(client => {
       const metrics = metricsMap.get(client.id) || {};
+      const contract = contractsMap.get(client.id) || null;
       const responsibleUser = client.responsible_user_id 
         ? teamUsersMap.get(client.responsible_user_id) 
         : null;
@@ -251,7 +276,7 @@ Deno.serve(async (req) => {
         products: client.client_products?.map((cp: any) => cp.products).filter(Boolean) || [],
         vnps: metrics.vnps || null,
         score: metrics.score || null,
-        contract: metrics.contract || null,
+        contract: contract,
         has_conversation: metrics.has_conversation || false,
         message_count: metrics.message_count || 0,
         pending_forms: pendingFormsMap.get(client.id) || [],
