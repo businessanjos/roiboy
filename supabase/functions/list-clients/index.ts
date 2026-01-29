@@ -156,6 +156,34 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Add contract "active" filter BEFORE pagination - fetch eligible client IDs first
+    let activeContractClientIds: string[] | null = null;
+    if (contractFilter === "active") {
+      const { data: activeContracts } = await supabase
+        .from("client_contracts")
+        .select("client_id")
+        .eq("account_id", accountId)
+        .eq("status", "active");
+      
+      activeContractClientIds = [...new Set(activeContracts?.map(c => c.client_id) || [])];
+      
+      if (activeContractClientIds.length === 0) {
+        // No clients have active contracts
+        return new Response(
+          JSON.stringify({
+            clients: [],
+            total: 0,
+            limit,
+            offset,
+            team_users: []
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      query = query.in("id", activeContractClientIds);
+    }
+
     const { data: clients, error: clientsError, count } = await query;
 
     if (clientsError) {
@@ -294,12 +322,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Apply server-side contract filter
-    if (contractFilter && contractFilter !== "all") {
+    // Apply server-side contract filter (skip "active" as it's applied pre-pagination)
+    if (contractFilter && contractFilter !== "all" && contractFilter !== "active") {
       if (contractFilter === "none") {
         filteredClients = filteredClients.filter(c => !c.contract);
-      } else if (contractFilter === "active") {
-        filteredClients = filteredClients.filter(c => c.contract?.status === "active");
       } else {
         filteredClients = filteredClients.filter(c => {
           if (!c.contract) return false;
