@@ -1,98 +1,80 @@
 
-
-# Plano: Adicionar Opção "Ativo" ao Filtro de Contratos
+# Análise: Discrepância na Contagem de Clientes Ativos da Michele Santos
 
 ## Problema Identificado
 
-O filtro de "Contrato" na página de Clientes atualmente oferece estas opções:
-- Todos
-- Expirado (contratos com data de fim no passado)
-- Expira em 30 dias
-- Expira em 60 dias  
-- Vigente (contratos com data de fim futura > 90 dias)
-- Sem contrato
+A consultora Michele Santos tem **86 alunas** segundo ela, mas o filtro "Ativo" retorna apenas **61 clientes**.
 
-**Falta a opção "Ativo"** que filtraria por contratos com `status = "active"`, independente da data de expiração.
+### Causa Raiz
 
-### Diferença entre "Vigente" e "Ativo"
-- **Vigente**: Filtro baseado na **data de expiração** (não expirado, com mais de 90 dias restantes)
-- **Ativo**: Filtro baseado no **status do contrato** (`contract.status === "active"`)
+Existem **23 clientes com contratos que têm status "Encerrado" (ended) mas data de término FUTURA** - como o caso da Andréia Forcione mostrada no print (contrato encerra em 04/12/2026).
 
-Um contrato pode ter status "active" mas estar prestes a expirar (30 dias), o que o classificaria como "urgent" no filtro atual, mas ainda deveria aparecer quando filtrado por "Ativo".
+O filtro "Ativo" atual verifica apenas `contract.status === "active"`, ignorando contratos que:
+- Têm status diferente de "active" (ex: "ended", "suspended")
+- Mas ainda estão vigentes pela data de término
 
-## Solução Proposta
+### Dados Reais da Michele Santos
 
-Adicionar a opção "Ativo" (`value="active"`) ao dropdown de filtro de contratos em dois lugares:
-1. Frontend: `src/pages/Clients.tsx`
-2. Backend: `supabase/functions/list-clients/index.ts`
+| Status do Contrato | Com Data Futura | Total |
+|-------------------|-----------------|-------|
+| **active** | 83-85 | 85 |
+| **ended** (encerrado) | **23** | 93 |
+| suspended | 10 | 10 |
+| dropout_7d | 11 | 12 |
+| cancelled | 13 | 31 |
+| dismissed | 8 | 9 |
 
-## Alterações Técnicas
+**84 (ativos) + 23 (encerrados com data futura) = 107 clientes** que poderiam ser considerados "ativos" dependendo da interpretação.
 
-### 1. Frontend - src/pages/Clients.tsx
+O número **86** que a Michele menciona provavelmente se refere aos **84 contratos status=active + alguns poucos com outros status mas data futura**.
 
-**Linha 1974-1981** - Adicionar opção "Ativo" no dropdown:
+## O Que Está Acontecendo
 
-```typescript
-<SelectContent>
-  <SelectItem value="all">Todos</SelectItem>
-  <SelectItem value="active">Ativo</SelectItem>      // <-- NOVA OPÇÃO
-  <SelectItem value="expired">Expirado</SelectItem>
-  <SelectItem value="urgent">Expira em 30 dias</SelectItem>
-  <SelectItem value="warning">Expira em 60 dias</SelectItem>
-  <SelectItem value="ok">Vigente</SelectItem>
-  <SelectItem value="none">Sem contrato</SelectItem>
-</SelectContent>
-```
+A view materializada `client_latest_metrics` retorna o contrato com prioridade:
+1. Primeiro: contratos com `status = 'active'`
+2. Segundo: contratos com `status = 'pending'`
+3. Terceiro: outros status
 
-**Linha 2048-2055** - Atualizar o resumo de filtros ativos:
+Por isso, quando o cliente tem um contrato "ended" (encerrado), ele aparece na listagem com esse status, mesmo que a data de término seja futura.
 
-```typescript
-Contrato: {filterContract === "active" ? "Ativo" : filterContract === "expired" ? "Expirado" : ...}
-```
+## Duas Opções de Solução
 
-### 2. Backend - supabase/functions/list-clients/index.ts
+### Opção A: Problema de Dados (Recomendado)
+Os 23 contratos com status "ended" mas data futura são **dados incorretos**. Um contrato não deveria ter status "encerrado" se ainda não terminou.
 
-**Linhas 272-292** - Adicionar tratamento para `contractFilter === "active"`:
+**Ação:** Corrigir os dados no banco, alterando o status desses contratos de "ended" para "active".
+
+### Opção B: Ajustar a Lógica do Filtro
+Modificar o filtro "Ativo" para considerar **tanto o status quanto a data de término**:
 
 ```typescript
-if (contractFilter && contractFilter !== "all") {
-  if (contractFilter === "none") {
-    filteredClients = filteredClients.filter(c => !c.contract);
-  } else if (contractFilter === "active") {
-    // NOVO: Filtrar por status do contrato = active
-    filteredClients = filteredClients.filter(c => c.contract?.status === "active");
-  } else {
-    // ... resto da lógica de datas existente
-  }
+// Em list-clients/index.ts, linha 276-278
+if (contractFilter === "active") {
+  filteredClients = filteredClients.filter(c => {
+    if (!c.contract) return false;
+    // Considerar ativo se:
+    // 1. Status é "active" OU
+    // 2. Data de término é futura (independente do status)
+    const endDate = c.contract.end_date;
+    if (c.contract.status === "active") return true;
+    if (endDate && new Date(endDate) >= new Date()) return true;
+    return false;
+  });
 }
 ```
 
-### 3. Componente ClientsFilters.tsx (opcional)
-
-Se este componente também for usado, adicionar a mesma opção:
-
-**Linhas 155-163**:
-```typescript
-<SelectItem value="active">Ativo</SelectItem>
-```
-
-**Linha 225** - Atualizar exibição do badge:
-```typescript
-filterContract === "active" ? "Ativo" : ...
-```
-
-## Arquivos a Modificar
+## Arquivos a Modificar (se Opção B)
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/Clients.tsx` | Adicionar opção "Ativo" no Select e no badge de filtros ativos |
-| `supabase/functions/list-clients/index.ts` | Adicionar lógica para filtrar por `contract.status === "active"` |
-| `src/components/client/ClientsFilters.tsx` | Adicionar opção "Ativo" (se usado) |
+| `supabase/functions/list-clients/index.ts` | Alterar lógica do filtro "active" para incluir contratos com data futura |
 
-## Resultado Esperado
+## Recomendação
 
-Ao selecionar "Ativo" no filtro de Contrato:
-1. Serão exibidos apenas clientes cujo contrato tem `status = "active"`
-2. Isso inclui contratos ativos que estão prestes a expirar
-3. A Michele Santos poderá filtrar suas alunas com contratos ativos facilmente
+**Antes de implementar mudanças no código**, sugiro verificar:
 
+1. Por que esses 23 contratos têm status "ended" mas data futura?
+2. Isso foi um erro de entrada de dados ou uma regra de negócio?
+3. Se for erro, o correto seria corrigir os dados
+
+Se a Michele confirmar que essas 23 alunas realmente deveriam aparecer como "ativas", então implementamos a Opção B.
