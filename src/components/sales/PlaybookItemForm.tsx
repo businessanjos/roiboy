@@ -755,7 +755,7 @@ export function PlaybookItemForm({
                   className="hidden"
                 />
 
-                {!mediaPreview && !existingMediaUrl ? (
+                {!mediaFile && !mediaPreview && !existingMediaUrl ? (
                   <Button
                     type="button"
                     variant="outline"
