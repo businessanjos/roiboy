@@ -1,83 +1,98 @@
 
-# Plano: Corrigir Atualização da View Materializada de Métricas
+# Plano: Corrigir Filtro de Contrato Aplicado Antes da Paginação
 
 ## Problema Identificado
 
-A view materializada `client_latest_metrics` não está sendo atualizada quando contratos são criados ou modificados. Isso causa dados desatualizados no filtro de clientes.
+O filtro de contrato está sendo aplicado **depois** da paginação, causando resultados incorretos:
 
-### Evidências Encontradas
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ FLUXO ATUAL (INCORRETO)                                     │
+├─────────────────────────────────────────────────────────────┤
+│ 1. Busca 50 clientes da Michele (ordenados por nome)        │
+│ 2. Enriquece com dados de contrato de client_contracts      │
+│ 3. Aplica filtro: contract.status === "active"              │
+│ 4. Resultado: ~70 clientes (perdendo os que foram           │
+│    filtrados após a paginação)                              │
+└─────────────────────────────────────────────────────────────┘
 
-| Cliente | Status na View | Status Real |
-|---------|---------------|-------------|
-| Andréia Forcione | ended | active |
-| Fabiola Korin | paused | active |
-| Nathália Martins Ribas | paused | active |
-
-A Michele tem **84 clientes com contrato active** no banco, mas o filtro mostra apenas **61** porque a view está desatualizada.
+┌─────────────────────────────────────────────────────────────┐
+│ FLUXO CORRETO                                               │
+├─────────────────────────────────────────────────────────────┤
+│ 1. Busca IDs dos clientes com contrato active               │
+│ 2. Filtra clientes por esses IDs + responsible_user         │
+│ 3. Aplica paginação (50 por página)                         │
+│ 4. Enriquece com dados adicionais                           │
+│ 5. Resultado: 84 clientes em 2 páginas                      │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Solução Proposta
 
-### Ação 1: Criar Trigger para Refresh Automático
+Modificar a Edge Function `list-clients` para aplicar o filtro de contrato **antes** da paginação, usando uma subquery para buscar os client_ids elegíveis.
 
-Criar um trigger na tabela `client_contracts` que atualiza a view materializada quando contratos são criados ou modificados.
+## Arquivo a Modificar
 
-```sql
--- Função que agenda o refresh da view
-CREATE OR REPLACE FUNCTION trigger_refresh_client_metrics()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- Usar pg_notify para agendar refresh assíncrono
-  -- Evita bloquear a transação
-  PERFORM pg_notify('refresh_client_metrics', 'refresh');
-  RETURN COALESCE(NEW, OLD);
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+**supabase/functions/list-clients/index.ts**
 
--- Trigger após INSERT
-CREATE TRIGGER trigger_refresh_metrics_on_contract_insert
-AFTER INSERT ON client_contracts
-FOR EACH STATEMENT
-EXECUTE FUNCTION trigger_refresh_client_metrics();
+## Alterações Detalhadas
 
--- Trigger após UPDATE
-CREATE TRIGGER trigger_refresh_metrics_on_contract_update
-AFTER UPDATE ON client_contracts
-FOR EACH STATEMENT
-EXECUTE FUNCTION trigger_refresh_client_metrics();
+### 1. Buscar IDs de clientes com contrato active antes da query principal
+
+Quando `contractFilter === "active"`, primeiro buscar os client_ids que têm contrato com status active:
+
+```typescript
+// Se filtro de contrato active, buscar IDs elegíveis primeiro
+let contractFilterClientIds: string[] | null = null;
+if (contractFilter === "active") {
+  const { data: activeContracts } = await supabase
+    .from("client_contracts")
+    .select("client_id")
+    .eq("account_id", accountId)
+    .eq("status", "active");
+  
+  contractFilterClientIds = [...new Set(activeContracts?.map(c => c.client_id) || [])];
+  
+  if (contractFilterClientIds.length === 0) {
+    // Nenhum cliente com contrato active
+    return Response com lista vazia;
+  }
+}
 ```
 
-### Ação 2: Criar Edge Function para Escutar Notificações
+### 2. Aplicar filtro na query principal
 
-Ou, alternativamente, criar um refresh periódico via cron job:
+Adicionar o filtro de client_ids na query principal de clientes, antes da paginação:
 
-```sql
--- Usar pg_cron para refresh a cada 5 minutos
-SELECT cron.schedule(
-  'refresh-client-metrics',
-  '*/5 * * * *',
-  'SELECT refresh_client_latest_metrics()'
-);
+```typescript
+// Aplicar filtro de contrato active (antes da paginação)
+if (contractFilterClientIds && contractFilterClientIds.length > 0) {
+  query = query.in("id", contractFilterClientIds);
+}
 ```
 
-### Ação 3: Refresh Manual Imediato
+### 3. Remover filtro pós-paginação para "active"
 
-Executar o refresh manualmente agora para corrigir os dados existentes.
+Ajustar a lógica que aplica filtros após o enriquecimento para não processar "active" novamente:
 
-## Arquivos a Modificar
+```typescript
+if (contractFilter && contractFilter !== "all" && contractFilter !== "active") {
+  // Filtros de data (expired, urgent, warning, ok, none)
+  // Esses ainda precisam ser aplicados pós-enriquecimento
+}
+```
 
-| Arquivo | Alteração |
-|---------|-----------|
-| Nova migration SQL | Criar trigger de refresh ou configurar pg_cron |
+## Detalhes Técnicos
 
-## Alternativa Mais Simples (Recomendada)
-
-Como o refresh de materialized view pode ser custoso, a melhor solução é **não usar materialized view** para dados críticos de contrato e sim fazer a consulta em tempo real:
-
-1. Modificar a edge function `list-clients` para buscar o contrato mais recente diretamente da tabela `client_contracts` ao invés da view materializada
-2. Manter a view apenas para dados menos críticos (vnps, score)
-
-Isso garante dados sempre atualizados sem depender de triggers.
+| Item | Antes | Depois |
+|------|-------|--------|
+| Filtro active | Pós-paginação | Pré-paginação via subquery |
+| Outros filtros (expired, urgent, etc.) | Pós-paginação | Mantém pós-paginação |
+| Performance | N queries | N+1 query (para active) |
+| Precisão | Incorreta | Correta |
 
 ## Resultado Esperado
 
-Após implementação, o filtro "Ativo" retornará os **84 clientes** da Michele que realmente têm contrato com status `active`.
+- Michele Santos verá **84 clientes** ao filtrar por "Contrato: Ativo"
+- A paginação funcionará corretamente (páginas de 50)
+- Total exibido corresponderá ao número real de clientes filtrados
