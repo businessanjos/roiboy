@@ -1,70 +1,98 @@
 
-# Plano: Corrigir Limite de 50 Clientes na Listagem
+
+# Plano: Adicionar Opção "Ativo" ao Filtro de Contratos
 
 ## Problema Identificado
 
-A consultora Michele Santos tem **240 clientes totais** (84 com contrato ativo), mas o filtro retorna apenas **50 clientes**.
+O filtro de "Contrato" na página de Clientes atualmente oferece estas opções:
+- Todos
+- Expirado (contratos com data de fim no passado)
+- Expira em 30 dias
+- Expira em 60 dias  
+- Vigente (contratos com data de fim futura > 90 dias)
+- Sem contrato
 
-### Causa Raiz
+**Falta a opção "Ativo"** que filtraria por contratos com `status = "active"`, independente da data de expiração.
 
-Na edge function `list-clients`, linha 54, existe uma limitacao forcada:
+### Diferença entre "Vigente" e "Ativo"
+- **Vigente**: Filtro baseado na **data de expiração** (não expirado, com mais de 90 dias restantes)
+- **Ativo**: Filtro baseado no **status do contrato** (`contract.status === "active"`)
+
+Um contrato pode ter status "active" mas estar prestes a expirar (30 dias), o que o classificaria como "urgent" no filtro atual, mas ainda deveria aparecer quando filtrado por "Ativo".
+
+## Solução Proposta
+
+Adicionar a opção "Ativo" (`value="active"`) ao dropdown de filtro de contratos em dois lugares:
+1. Frontend: `src/pages/Clients.tsx`
+2. Backend: `supabase/functions/list-clients/index.ts`
+
+## Alterações Técnicas
+
+### 1. Frontend - src/pages/Clients.tsx
+
+**Linha 1974-1981** - Adicionar opção "Ativo" no dropdown:
 
 ```typescript
-// Reduced max limit from 200 to 50 to optimize Cloud costs
-const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 50);
+<SelectContent>
+  <SelectItem value="all">Todos</SelectItem>
+  <SelectItem value="active">Ativo</SelectItem>      // <-- NOVA OPÇÃO
+  <SelectItem value="expired">Expirado</SelectItem>
+  <SelectItem value="urgent">Expira em 30 dias</SelectItem>
+  <SelectItem value="warning">Expira em 60 dias</SelectItem>
+  <SelectItem value="ok">Vigente</SelectItem>
+  <SelectItem value="none">Sem contrato</SelectItem>
+</SelectContent>
 ```
 
-Essa alteracao foi feita anteriormente para "otimizar custos de Cloud", porem causa problemas quando usuarios precisam ver mais clientes.
+**Linha 2048-2055** - Atualizar o resumo de filtros ativos:
 
-O frontend solicita 200 clientes, mas a edge function ignora e retorna apenas 50.
+```typescript
+Contrato: {filterContract === "active" ? "Ativo" : filterContract === "expired" ? "Expirado" : ...}
+```
 
-## Dados da Michele Santos
+### 2. Backend - supabase/functions/list-clients/index.ts
 
-| Metrica | Quantidade |
+**Linhas 272-292** - Adicionar tratamento para `contractFilter === "active"`:
+
+```typescript
+if (contractFilter && contractFilter !== "all") {
+  if (contractFilter === "none") {
+    filteredClients = filteredClients.filter(c => !c.contract);
+  } else if (contractFilter === "active") {
+    // NOVO: Filtrar por status do contrato = active
+    filteredClients = filteredClients.filter(c => c.contract?.status === "active");
+  } else {
+    // ... resto da lógica de datas existente
+  }
+}
+```
+
+### 3. Componente ClientsFilters.tsx (opcional)
+
+Se este componente também for usado, adicionar a mesma opção:
+
+**Linhas 155-163**:
+```typescript
+<SelectItem value="active">Ativo</SelectItem>
+```
+
+**Linha 225** - Atualizar exibição do badge:
+```typescript
+filterContract === "active" ? "Ativo" : ...
+```
+
+## Arquivos a Modificar
+
+| Arquivo | Alteração |
 |---------|-----------|
-| Total de clientes | 240 |
-| Contratos ativos | 84-85 |
-| Contratos encerrados | 93 |
-| Contratos cancelados | 31 |
-| Outros status | 31 |
-
-Ela mencionou ter "86 alunas" - que corresponde aproximadamente aos 84-85 contratos ativos.
-
-## Solucao Proposta
-
-Aumentar o limite maximo para 200 (ou remover o limite forcado) na edge function, permitindo que o frontend controle a paginacao.
-
-### Alteracao no Arquivo
-
-**Arquivo: `supabase/functions/list-clients/index.ts`**
-
-**Linha 54** - Alterar de:
-```typescript
-const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 50);
-```
-
-Para:
-```typescript
-const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 200);
-```
-
-## Justificativa
-
-1. O limite de 50 e muito baixo para usuarios com muitos clientes
-2. 200 ainda e um limite razoavel que nao sobrecarrega o sistema
-3. O frontend ja solicita 200, entao nao precisa de outras alteracoes
-4. A paginacao continua funcionando normalmente para bases maiores
-
-## Impacto
-
-| Cenario | Antes | Depois |
-|---------|-------|--------|
-| Michele filtra seus clientes | 50 resultados | Ate 200 resultados |
-| Usuarios com poucos clientes | Sem mudanca | Sem mudanca |
-| Performance | Leve aumento de carga | Aceitavel |
+| `src/pages/Clients.tsx` | Adicionar opção "Ativo" no Select e no badge de filtros ativos |
+| `supabase/functions/list-clients/index.ts` | Adicionar lógica para filtrar por `contract.status === "active"` |
+| `src/components/client/ClientsFilters.tsx` | Adicionar opção "Ativo" (se usado) |
 
 ## Resultado Esperado
 
-1. Michele vera todos os seus 84 clientes com contrato ativo ao filtrar
-2. A contagem total (86 mencionados vs 84 reais) esta dentro da margem esperada
-3. Outros usuarios com muitos clientes tambem serao beneficiados
+Ao selecionar "Ativo" no filtro de Contrato:
+1. Serão exibidos apenas clientes cujo contrato tem `status = "active"`
+2. Isso inclui contratos ativos que estão prestes a expirar
+3. A Michele Santos poderá filtrar suas alunas com contratos ativos facilmente
+
