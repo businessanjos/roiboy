@@ -6,8 +6,8 @@ import { ConfigurableVisualCard } from "../visuals/ConfigurableVisualCard";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-// Free position compactor: no compaction, prevents collision, items don't push others
-const freePositionCompactor = getCompactor(null, false, true);
+// Free position compactor: no compaction, allows overlap, true free-form positioning
+const freePositionCompactor = getCompactor(null, true, false);
 
 interface LayoutItem {
   i: string;
