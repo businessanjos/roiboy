@@ -1,75 +1,96 @@
 
-# Plano: Permitir Posicionamento Livre com Espaçamentos no Grid de Insights
+
+# Plano: Corrigir Acesso ao ROY zAPP para Usuários com Cargo CX
 
 ## Problema Identificado
 
-Ao arrastar visuais no dashboard de Insights, quando o visual fica próximo de outro, ele "gruda" (snap) automaticamente, impedindo que você deixe espaçamentos personalizados entre os visuais.
+A usuária Maria (cargo CX) não consegue acessar o ROY zAPP no setor de Operações, mesmo tendo:
+- Permissão `royzapp.access` configurada no cargo CX
+- Registro ativo em `user_sector_access` para o setor `operacoes`
+- Cargo CX que deveria ter acesso automático ao setor de Operações
 
 ## Causa Raiz
 
-No arquivo `src/components/insights/grid/InsightsGrid.tsx`, o compactor está configurado como:
+Existe uma **inconsistência arquitetural** entre dois hooks que verificam acesso a setores:
 
+| Hook | Lógica de Bypass por Cargo | Usado por |
+|------|---------------------------|-----------|
+| `useUserSectorAccess.tsx` | Concede acesso automático ao setor `operacoes` para cargos CX, CS, Consultor | Outras partes do sistema |
+| `useSectorAccess.tsx` | **NAO TEM** essa lógica | ROY zAPP / ZappSectorSelector |
+
+O hook `useSectorAccess` (usado pelo ROY zAPP) verifica apenas:
+1. Se e super_admin (para diretoria)
+2. Se `role === "admin"`
+3. Se tem registro explicito em `user_sector_access`
+
+**Falta a verificacao de cargo (team_role_name)** que permite bypass automatico para CX, CS, Consultor no setor de operacoes.
+
+## Solucao Proposta
+
+Adicionar a mesma logica de bypass por cargo no hook `useSectorAccess.tsx` que ja existe no `useUserSectorAccess.tsx` e no `Sidebar.tsx`.
+
+## Alteracoes Tecnicas
+
+### Arquivo: `src/hooks/useSectorAccess.tsx`
+
+**1. Adicionar constante para cargos de operacao (antes da funcao):**
 ```typescript
-const freePositionCompactor = getCompactor(null, false, true);
+const OPERATION_TEAM_ROLES = ["CX", "CS", "Consultor"];
 ```
 
-Os parâmetros são:
-| Parâmetro | Valor Atual | Significado |
-|-----------|-------------|-------------|
-| `type` | `null` | Sem compactação automática |
-| `allowOverlap` | `false` | **Não permite sobreposição** |
-| `preventCollision` | `true` | **Bloqueia movimento para evitar colisão** |
-
-O problema: com `preventCollision: true`, quando você arrasta um item próximo a outro, o grid **bloqueia** a posição para evitar que os itens se toquem, causando o efeito de "snap".
-
-## Solução Proposta
-
-Alterar a configuração do compactor para permitir posicionamento totalmente livre:
-
+**2. Obter team_role_name do currentUser:**
 ```typescript
-// DE (configuração atual):
-const freePositionCompactor = getCompactor(null, false, true);
-
-// PARA (nova configuração):
-const freePositionCompactor = getCompactor(null, true, false);
+const teamRoleName = currentUser?.team_role_name;
 ```
 
-Novos parâmetros:
-| Parâmetro | Novo Valor | Resultado |
-|-----------|------------|-----------|
-| `type` | `null` | Mantém sem compactação |
-| `allowOverlap` | `true` | **Permite posicionar livremente** |
-| `preventCollision` | `false` | **Não bloqueia movimento** |
+**3. Modificar a funcao `hasSectorAccess` para incluir verificacao de cargo:**
 
-## Comportamento Esperado Após a Mudança
+De:
+```typescript
+const hasSectorAccess = (sectorId: SectorId): boolean => {
+  if (sectorId === "diretoria") {
+    return isSuperAdmin;
+  }
+  if (userRole === "admin") return true;
+  return sectorAccess.some((access) => access.sector_id === sectorId);
+};
+```
 
-1. **Posicionamento livre**: Você poderá colocar visuais em qualquer posição do grid
-2. **Espaçamentos personalizados**: Será possível deixar gaps entre visuais conforme desejado
-3. **Sobreposição permitida**: Se arrastar um visual sobre outro, ele ficará sobreposto (comportamento PowerBI)
-4. **Sem snap automático**: Os visuais não "grudarão" uns nos outros
+Para:
+```typescript
+const hasSectorAccess = (sectorId: SectorId): boolean => {
+  if (sectorId === "diretoria") {
+    return isSuperAdmin;
+  }
+  if (userRole === "admin") return true;
+  
+  // Bypass para cargos de operacao no setor de operacoes
+  if (sectorId === "operacoes" && teamRoleName) {
+    if (OPERATION_TEAM_ROLES.includes(teamRoleName)) {
+      return true;
+    }
+  }
+  
+  return sectorAccess.some((access) => access.sector_id === sectorId);
+};
+```
 
-## Arquivo a Modificar
+## Resultado Esperado
 
-| Arquivo | Alteração |
+Apos a correcao:
+1. Usuarios com cargo CX, CS ou Consultor terao acesso automatico ao setor de Operacoes no ROY zAPP
+2. Maria podera ver e selecionar o setor de Operacoes no seletor de setores
+3. A consistencia entre os hooks sera mantida
+
+## Arquivos a Modificar
+
+| Arquivo | Alteracao |
 |---------|-----------|
-| `src/components/insights/grid/InsightsGrid.tsx` | Alterar linha 10 para usar `getCompactor(null, true, false)` |
+| `src/hooks/useSectorAccess.tsx` | Adicionar logica de bypass por cargo para setor de operacoes |
 
-## Detalhes Técnicos
+## Nota sobre Consistencia
 
-A mudança é de uma única linha:
+Esta correcao alinha o comportamento do `useSectorAccess` com o `useUserSectorAccess` e o `Sidebar`, garantindo que:
+- Cargos CX, CS, Consultor sempre tenham acesso ao setor de Operacoes
+- A experiencia do usuario seja consistente em toda a plataforma
 
-```diff
-- const freePositionCompactor = getCompactor(null, false, true);
-+ const freePositionCompactor = getCompactor(null, true, false);
-```
-
-Também atualizarei o comentário explicativo:
-
-```diff
-- // Free position compactor: no compaction, prevents collision, items don't push others
-+ // Free position compactor: no compaction, allows overlap, true free-form positioning
-```
-
-## Nota sobre Sobreposição
-
-Com `allowOverlap: true`, será possível sobrepor visuais. Este é o comportamento esperado em dashboards estilo PowerBI, onde o usuário tem controle total sobre o layout. Se um visual ficar sobre outro acidentalmente, basta arrastá-lo para corrigir.
