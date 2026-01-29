@@ -18,6 +18,7 @@ const PLATFORMS = [
 ];
 
 const EMAIL_ADVANCE_OPTIONS = [
+  { value: "none", label: "Não enviar" },
   { value: "immediate", label: "Enviar agora" },
   { value: "10min", label: "10 minutos antes" },
   { value: "1hour", label: "1 hora antes" },
@@ -181,7 +182,7 @@ Até lá!`;
           email_message: formattedMessage,
           email_subject: `Reunião: ${taskTitle}`,
           lead_id: leadId,
-          send_email: sendEmail,
+          send_email: sendEmail && emailAdvance !== "none",
         },
       });
 
@@ -197,12 +198,14 @@ Até lá!`;
         onMeetingCreated(data.meeting_url, platform);
         toast.success("Reunião criada com sucesso!");
         
-        if (sendEmail && participantEmail) {
+        if (sendEmail && participantEmail && emailAdvance !== "none") {
           if (emailAdvance === "immediate") {
             toast.info("Convite enviado para " + participantEmail);
           } else {
             toast.info(`Convite será enviado ${EMAIL_ADVANCE_OPTIONS.find(o => o.value === emailAdvance)?.label.toLowerCase()}`);
           }
+        } else if (emailAdvance === "none") {
+          toast.info("Reunião criada sem envio de convite por email");
         } else if (!participantEmail) {
           toast.info("Compartilhe o link da reunião com o participante");
         } else {
@@ -324,19 +327,21 @@ Até lá!`;
                 </Select>
               </div>
 
-              {/* Email Message */}
-              <div className="space-y-2">
-                <Label>Mensagem do Convite</Label>
-                <Textarea
-                  value={emailMessage}
-                  onChange={(e) => setEmailMessage(e.target.value)}
-                  rows={6}
-                  className="font-mono text-sm"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Use {"{nome}"}, {"{data}"}, {"{horario}"}, {"{link}"}, {"{senha}"} para personalizar
-                </p>
-              </div>
+              {/* Email Message - hidden when "none" is selected */}
+              {emailAdvance !== "none" && (
+                <div className="space-y-2">
+                  <Label>Mensagem do Convite</Label>
+                  <Textarea
+                    value={emailMessage}
+                    onChange={(e) => setEmailMessage(e.target.value)}
+                    rows={6}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Use {"{nome}"}, {"{data}"}, {"{horario}"}, {"{link}"}, {"{senha}"} para personalizar
+                  </p>
+                </div>
+              )}
             </>
           )}
         </div>
