@@ -332,19 +332,6 @@ export const ClientsTableRow = memo(function ClientsTableRow({
         )}
       </TableCell>
 
-      {/* Custom Field Cells */}
-      {customFields.map((field) => (
-        <TableCell key={field.id} className="text-center min-w-[120px]">
-          <FieldValueEditor
-            field={field}
-            currentValue={fieldValues[field.id]}
-            onValueChange={(fieldId, newValue) => onFieldValueChange(client.id, fieldId, newValue)}
-            clientId={client.id}
-            accountId={accountId}
-          />
-        </TableCell>
-      ))}
-
       {/* Actions Cell */}
       <TableCell className="text-right">
         <div className="flex items-center justify-end gap-1">

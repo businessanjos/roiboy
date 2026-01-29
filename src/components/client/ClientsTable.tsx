@@ -57,11 +57,6 @@ export const ClientsTable = memo(function ClientsTable({
         <TableHead className="font-medium text-center min-w-[100px]">Conexão</TableHead>
         <TableHead className="font-medium text-center min-w-[80px]">V-NPS</TableHead>
         <TableHead className="font-medium text-center min-w-[120px]">Responsável</TableHead>
-        {customFields.map((field) => (
-          <TableHead key={field.id} className="font-medium text-center min-w-[120px]">
-            {field.name}
-          </TableHead>
-        ))}
         <TableHead className="font-medium text-right min-w-[80px]">Ação</TableHead>
       </TableRow>
     </TableHeader>
