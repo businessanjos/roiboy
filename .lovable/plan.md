@@ -1,183 +1,83 @@
 
-# Plano: Suporte a Múltiplos Arquivos no Playbook (Tipo Documento)
 
-## Visão Geral
+# Plano: Garantir Acesso Irrestrito para Equipe Anjos Business
 
-Atualmente, cada item do Playbook aceita apenas **um arquivo**. Para permitir múltiplos documentos em um único item, precisamos modificar a estrutura de dados e a interface do formulário.
+## Problema Identificado
 
-## Abordagem Escolhida
+A conta da Maria (e toda a equipe Anjos Business) está sendo bloqueada pela lógica de verificação de assinatura no `useSubscriptionStatus.tsx`. A conta tem:
+- `subscription_status: "trial"` 
+- `trial_ends_at: null` (sem data de expiração)
+- `payment_method_configured: false`
 
-Vou implementar suporte a **múltiplos arquivos apenas para o tipo "Documento"**, mantendo os outros tipos (imagem, áudio, vídeo, sticker) com arquivo único, pois faz mais sentido operacionalmente.
+A lógica atual exige que usuários em trial tenham `payment_method_configured = true`, o que bloqueia a Maria e outros membros da equipe.
+
+## Solução Proposta
+
+Modificar a lógica de `useSubscriptionStatus` para dar acesso completo quando a conta não tiver data de expiração de trial definida (`trial_ends_at = null`). Isso funciona como um "trial infinito" para contas de desenvolvimento/internas.
 
 ## Alterações Técnicas
 
-### 1. Atualizar Estado do Formulário
+### Arquivo: `src/hooks/useSubscriptionStatus.tsx`
 
-**Arquivo: `src/components/sales/PlaybookItemForm.tsx`**
+**Modificar a lógica de verificação de acesso (linhas 87-97):**
 
-Adicionar estados para gerenciar múltiplos arquivos:
-
+De:
 ```typescript
-// Estado para múltiplos arquivos (documentos)
-const [mediaFiles, setMediaFiles] = useState<File[]>([]);
-const [existingMediaUrls, setExistingMediaUrls] = useState<string[]>([]);
+const paidStatuses = ["active", "paid", "trialing", "pending"];
+const hasActiveSubscription = paidStatuses.includes(account.subscription_status || "");
+
+// For trial users: must have payment method configured to access
+const isInTrial = account.subscription_status === "trial" && !isTrialExpired;
+const trialWithPayment = isInTrial && account.payment_method_configured;
+
+const hasAccess = hasActiveSubscription || trialWithPayment;
 ```
 
-### 2. Modificar Input de Arquivo
-
-Adicionar atributo `multiple` apenas para documentos:
-
+Para:
 ```typescript
-<input
-  ref={fileInputRef}
-  type="file"
-  accept={getAcceptedFileTypes()}
-  multiple={contentType === 'document'} // Múltiplos apenas para documentos
-  onChange={handleFileSelect}
-  className="hidden"
-/>
+const paidStatuses = ["active", "paid", "trialing", "pending"];
+const hasActiveSubscription = paidStatuses.includes(account.subscription_status || "");
+
+// Trial logic
+const isInTrial = account.subscription_status === "trial";
+
+// Grant access if:
+// 1. Has active subscription (active, paid, trialing, pending)
+// 2. Trial with no expiration date set (internal/dev accounts)
+// 3. Trial not expired and has payment method configured
+const hasUnlimitedTrial = isInTrial && !trialEndsAt; // No expiration = unlimited trial
+const hasValidTrial = isInTrial && !isTrialExpired && account.payment_method_configured;
+
+const hasAccess = hasActiveSubscription || hasUnlimitedTrial || hasValidTrial;
 ```
 
-### 3. Atualizar Handler de Seleção de Arquivos
+## Justificativa da Solução
 
-```typescript
-const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const files = Array.from(e.target.files || []);
-  if (files.length === 0) return;
+1. **Retrocompatibilidade**: Contas normais com `trial_ends_at` definido continuam funcionando como antes
+2. **Flexibilidade**: Contas internas/dev podem ter `trial_ends_at = null` para acesso permanente
+3. **Sem necessidade de migração**: Apenas alteração de lógica no código
+4. **Segurança**: Não cria brechas - apenas contas configuradas especificamente com `trial_ends_at = null` terão esse benefício
 
-  // Para documentos: permitir múltiplos
-  if (contentType === 'document') {
-    // Validar cada arquivo
-    const validFiles = files.filter(file => {
-      const ext = getFileExtension(file.name);
-      return validExtensions.document.includes(ext);
-    });
-    
-    if (validFiles.length === 0) {
-      toast.error('Nenhum arquivo válido selecionado');
-      return;
-    }
-    
-    // Adicionar aos arquivos existentes
-    setMediaFiles(prev => [...prev, ...validFiles]);
-    setExistingMediaUrl(null);
-  } else {
-    // Outros tipos: manter comportamento de arquivo único
-    // ... código existente
-  }
-};
-```
+## Comportamento Esperado
 
-### 4. Atualizar Preview para Múltiplos Documentos
-
-Exibir lista de documentos com opção de remover individualmente:
-
-```typescript
-{contentType === 'document' && mediaFiles.length > 0 && (
-  <div className="space-y-2">
-    {mediaFiles.map((file, index) => (
-      <div key={index} className="p-3 bg-muted rounded-lg flex items-center gap-3">
-        <File className="h-5 w-5 text-muted-foreground" />
-        <span className="flex-1 text-sm truncate">{file.name}</span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6"
-          onClick={() => removeFile(index)}
-        >
-          <X className="h-3 w-3" />
-        </Button>
-      </div>
-    ))}
-    {/* Botão para adicionar mais */}
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      className="w-full"
-      onClick={() => fileInputRef.current?.click()}
-    >
-      <Plus className="h-4 w-4 mr-2" />
-      Adicionar mais arquivos
-    </Button>
-  </div>
-)}
-```
-
-### 5. Modificar Lógica de Upload
-
-No `handleSubmit`, fazer upload de todos os arquivos:
-
-```typescript
-// Para documentos: upload de múltiplos arquivos
-if (contentType === 'document' && mediaFiles.length > 0) {
-  const uploadedUrls: string[] = [];
-  const uploadedFilenames: string[] = [];
-  
-  for (const file of mediaFiles) {
-    const url = await uploadMedia(file);
-    uploadedUrls.push(url);
-    uploadedFilenames.push(file.name);
-  }
-  
-  // Combinar com URLs existentes (se editando)
-  mediaUrl = [...existingMediaUrls, ...uploadedUrls].join('|');
-  mediaFilename = uploadedFilenames.join('|');
-}
-```
-
-### 6. Atualizar Exibição no PlaybookDialog
-
-**Arquivo: `src/components/sales/PlaybookDialog.tsx`**
-
-Modificar a exibição de itens de documento para mostrar contador de arquivos:
-
-```typescript
-{item.content_type === 'document' && item.media_filename && (
-  <p className="text-sm text-muted-foreground truncate">
-    {item.media_filename.includes('|') 
-      ? `${item.media_filename.split('|').length} arquivos`
-      : item.media_filename}
-  </p>
-)}
-```
-
-## Estrutura de Dados
-
-Para armazenar múltiplos arquivos, vou usar o caractere `|` como separador:
-
-| Campo | Exemplo com Múltiplos Arquivos |
-|-------|-------------------------------|
-| `media_url` | `https://...file1.pdf\|https://...file2.pdf` |
-| `media_filename` | `contrato.pdf\|anexo.pdf` |
-
-Isso permite:
-- Manter compatibilidade com itens existentes (sem `|` = arquivo único)
-- Não requer migração do banco de dados
-- Fácil de parsear com `split('|')`
+| Cenário | `subscription_status` | `trial_ends_at` | `payment_method` | `hasAccess` |
+|---------|----------------------|-----------------|------------------|-------------|
+| Conta Anjos Business | trial | null | false | ✅ TRUE |
+| Cliente novo em trial | trial | 2026-02-05 | false | ❌ FALSE |
+| Cliente trial com cartão | trial | 2026-02-05 | true | ✅ TRUE |
+| Cliente trial expirado | trial | 2026-01-01 | false | ❌ FALSE |
+| Cliente pagante | active | null | true | ✅ TRUE |
 
 ## Arquivos a Modificar
 
-| Arquivo | Alterações |
-|---------|------------|
-| `src/components/sales/PlaybookItemForm.tsx` | Estados múltiplos, handler atualizado, preview de lista, upload em lote |
-| `src/components/sales/PlaybookDialog.tsx` | Exibição de múltiplos arquivos |
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/hooks/useSubscriptionStatus.tsx` | Adicionar lógica de "trial ilimitado" quando `trial_ends_at = null` |
 
 ## Resultado Esperado
 
-1. Usuário seleciona tipo "Documento"
-2. Clica para upload e pode selecionar **múltiplos arquivos de uma vez**
-3. Arquivos aparecem em lista com botão de remover individual
-4. Pode clicar em "Adicionar mais arquivos" para adicionar mais
-5. Ao salvar, todos os arquivos são enviados e armazenados
-6. No PlaybookDialog, mostra "3 arquivos" em vez do nome do arquivo
+1. Maria e toda equipe Anjos Business terão acesso imediato
+2. A tela de carregamento infinito será resolvida
+3. Clientes futuros em trial normal continuarão com as regras de negócio existentes
+4. Não há necessidade de alterar dados no banco
 
-## Testes Recomendados
-
-1. Fazer upload de múltiplos PDFs de uma vez
-2. Adicionar mais arquivos em sequência
-3. Remover arquivos individualmente da lista
-4. Salvar e verificar se todos foram enviados
-5. Editar item existente e adicionar mais arquivos
-6. Verificar exibição correta no PlaybookDialog
