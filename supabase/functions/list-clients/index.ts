@@ -274,14 +274,7 @@ Deno.serve(async (req) => {
       if (contractFilter === "none") {
         filteredClients = filteredClients.filter(c => !c.contract);
       } else if (contractFilter === "active") {
-        // Filter by contract status = active OR future end date (regardless of status)
-        filteredClients = filteredClients.filter(c => {
-          if (!c.contract) return false;
-          const endDate = c.contract.end_date;
-          if (c.contract.status === "active") return true;
-          if (endDate && new Date(endDate) >= new Date()) return true;
-          return false;
-        });
+        filteredClients = filteredClients.filter(c => c.contract?.status === "active");
       } else {
         filteredClients = filteredClients.filter(c => {
           if (!c.contract) return false;
