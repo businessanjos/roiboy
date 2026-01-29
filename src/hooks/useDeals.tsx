@@ -483,6 +483,39 @@ export function useDeals() {
     const previousStatus = currentDeal?.status === 'won' ? 'Ganho' : 'Perdido';
 
     try {
+      // If deal was WON, we need to reverse the contract and client triage status
+      if (currentDeal?.status === 'won') {
+        // 1. Delete the contract linked to this deal
+        const { error: contractDeleteError } = await supabase
+          .from('client_contracts')
+          .delete()
+          .eq('deal_id', dealId)
+          .eq('account_id', currentUser.account_id);
+
+        if (contractDeleteError) {
+          console.error('[reopenDeal] Error deleting linked contract:', contractDeleteError);
+          // Non-blocking - continue even if no contract was found
+        } else {
+          console.log('[reopenDeal] Linked contract deleted successfully');
+        }
+
+        // 2. Remove responsible_user_id from client (returns to triage queue)
+        if (currentDeal.client_id) {
+          const { error: clientUpdateError } = await supabase
+            .from('clients')
+            .update({ responsible_user_id: null })
+            .eq('id', currentDeal.client_id)
+            .eq('account_id', currentUser.account_id);
+
+          if (clientUpdateError) {
+            console.error('[reopenDeal] Error clearing client responsible:', clientUpdateError);
+          } else {
+            console.log('[reopenDeal] Client returned to triage queue');
+          }
+        }
+      }
+
+      // 3. Reopen the deal
       const { error } = await supabase
         .from('deals')
         .update({ 
@@ -511,7 +544,9 @@ export function useDeals() {
 
       toast({
         title: "Negociação reaberta",
-        description: "A negociação voltou ao pipeline",
+        description: currentDeal?.status === 'won' 
+          ? "A negociação voltou ao pipeline e o contrato foi removido"
+          : "A negociação voltou ao pipeline",
       });
 
       return true;
