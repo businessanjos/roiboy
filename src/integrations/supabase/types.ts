@@ -1127,6 +1127,7 @@ export type Database = {
           contract_type: string
           created_at: string
           currency: string
+          deal_id: string | null
           end_date: string | null
           file_name: string | null
           file_url: string | null
@@ -1157,6 +1158,7 @@ export type Database = {
           contract_type?: string
           created_at?: string
           currency?: string
+          deal_id?: string | null
           end_date?: string | null
           file_name?: string | null
           file_url?: string | null
@@ -1187,6 +1189,7 @@ export type Database = {
           contract_type?: string
           created_at?: string
           currency?: string
+          deal_id?: string | null
           end_date?: string | null
           file_name?: string | null
           file_url?: string | null
@@ -1230,6 +1233,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracts_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
             referencedColumns: ["id"]
           },
           {

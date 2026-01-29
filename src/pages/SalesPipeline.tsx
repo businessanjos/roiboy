@@ -485,6 +485,7 @@ export default function SalesPipeline() {
         const contractData = {
           client_id: clientId,
           account_id: currentUser.account_id,
+          deal_id: dealId, // Link contract to deal for reopening logic
           start_date: today,
           value: deal.value || 0,
           contract_type: 'Compra',
