@@ -1,85 +1,75 @@
 
-# Plano: Remover Campos Personalizados da Lista de Clientes (Correção)
+# Plano: Permitir Posicionamento Livre com Espaçamentos no Grid de Insights
 
-## Diagnóstico do Problema
+## Problema Identificado
 
-As alterações anteriores foram feitas nos componentes errados:
-- ❌ `src/components/client/ClientsTable.tsx` - **NÃO É USADO** na página principal
-- ❌ `src/components/client/ClientsTableRow.tsx` - **NÃO É USADO** na página principal
-- ✅ `src/pages/Clients.tsx` - **ESTE É O ARQUIVO CORRETO** que renderiza a tabela diretamente
+Ao arrastar visuais no dashboard de Insights, quando o visual fica próximo de outro, ele "gruda" (snap) automaticamente, impedindo que você deixe espaçamentos personalizados entre os visuais.
 
-A página `Clients.tsx` tem sua própria implementação inline da tabela que não utiliza os componentes separados.
+## Causa Raiz
 
-## Locais a Modificar em `src/pages/Clients.tsx`
+No arquivo `src/components/insights/grid/InsightsGrid.tsx`, o compactor está configurado como:
 
-| Linha | Código | O que fazer |
-|-------|--------|-------------|
-| 2092-2096 | `customFields.map()` no header | **REMOVER** - Gera colunas para cada campo |
-| 2103 | `colSpan={5 + customFields.length}` | **ALTERAR** para `colSpan={9}` |
-| 2110 | `colSpan={5 + customFields.length}` | **ALTERAR** para `colSpan={9}` |
-| 2460-2472 | `customFields.map()` no body | **REMOVER** - Gera células para cada campo |
-
-## Código a Remover
-
-### 1. Remover colunas no cabeçalho (linhas 2092-2096):
 ```typescript
-// REMOVER ESTE BLOCO:
-{customFields.map((field) => (
-  <TableHead key={field.id} className="font-medium text-center min-w-[120px]">
-    {field.name}
-  </TableHead>
-))}
+const freePositionCompactor = getCompactor(null, false, true);
 ```
 
-### 2. Remover células no corpo (linhas 2460-2472):
+Os parâmetros são:
+| Parâmetro | Valor Atual | Significado |
+|-----------|-------------|-------------|
+| `type` | `null` | Sem compactação automática |
+| `allowOverlap` | `false` | **Não permite sobreposição** |
+| `preventCollision` | `true` | **Bloqueia movimento para evitar colisão** |
+
+O problema: com `preventCollision: true`, quando você arrasta um item próximo a outro, o grid **bloqueia** a posição para evitar que os itens se toquem, causando o efeito de "snap".
+
+## Solução Proposta
+
+Alterar a configuração do compactor para permitir posicionamento totalmente livre:
+
 ```typescript
-// REMOVER ESTE BLOCO:
-{customFields.map((field) => (
-  <TableCell key={field.id} className="text-center">
-    {accountId && (
-      <FieldValueEditor
-        field={field}
-        clientId={client.id}
-        accountId={accountId}
-        currentValue={fieldValues[client.id]?.[field.id]}
-        onValueChange={(fieldId, newValue) => handleFieldValueChange(client.id, fieldId, newValue)}
-      />
-    )}
-  </TableCell>
-))}
+// DE (configuração atual):
+const freePositionCompactor = getCompactor(null, false, true);
+
+// PARA (nova configuração):
+const freePositionCompactor = getCompactor(null, true, false);
 ```
 
-### 3. Corrigir colSpan (linhas 2103 e 2110):
-```typescript
-// DE:
-colSpan={5 + customFields.length}
+Novos parâmetros:
+| Parâmetro | Novo Valor | Resultado |
+|-----------|------------|-----------|
+| `type` | `null` | Mantém sem compactação |
+| `allowOverlap` | `true` | **Permite posicionar livremente** |
+| `preventCollision` | `false` | **Não bloqueia movimento** |
 
-// PARA:
-colSpan={9}
-```
+## Comportamento Esperado Após a Mudança
 
-## Resultado Esperado
+1. **Posicionamento livre**: Você poderá colocar visuais em qualquer posição do grid
+2. **Espaçamentos personalizados**: Será possível deixar gaps entre visuais conforme desejado
+3. **Sobreposição permitida**: Se arrastar um visual sobre outro, ele ficará sobreposto (comportamento PowerBI)
+4. **Sem snap automático**: Os visuais não "grudarão" uns nos outros
 
-A tabela terá apenas as 9 colunas fixas:
-
-| # | Coluna |
-|---|--------|
-| 1 | Cliente (sticky) |
-| 2 | Produto |
-| 3 | Contrato |
-| 4 | Roizômetro |
-| 5 | E-Score |
-| 6 | Conexão |
-| 7 | V-NPS |
-| 8 | Responsável |
-| 9 | Ação |
-
-## Arquivos a Modificar
+## Arquivo a Modificar
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/Clients.tsx` | Remover mapeamento de campos personalizados e ajustar colSpan |
+| `src/components/insights/grid/InsightsGrid.tsx` | Alterar linha 10 para usar `getCompactor(null, true, false)` |
 
-## Nota Sobre Componentes Não Utilizados
+## Detalhes Técnicos
 
-Os componentes `ClientsTable.tsx` e `ClientsTableRow.tsx` já foram modificados anteriormente, mas não estão sendo usados pela página principal. Esses componentes podem ser removidos no futuro ou mantidos para uso posterior, mas não afetam a renderização atual.
+A mudança é de uma única linha:
+
+```diff
+- const freePositionCompactor = getCompactor(null, false, true);
++ const freePositionCompactor = getCompactor(null, true, false);
+```
+
+Também atualizarei o comentário explicativo:
+
+```diff
+- // Free position compactor: no compaction, prevents collision, items don't push others
++ // Free position compactor: no compaction, allows overlap, true free-form positioning
+```
+
+## Nota sobre Sobreposição
+
+Com `allowOverlap: true`, será possível sobrepor visuais. Este é o comportamento esperado em dashboards estilo PowerBI, onde o usuário tem controle total sobre o layout. Se um visual ficar sobre outro acidentalmente, basta arrastá-lo para corrigir.
