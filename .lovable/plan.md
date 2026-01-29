@@ -1,59 +1,27 @@
 
-# Plano: Remover Campos Personalizados da Lista de Clientes
+# Plano: Remover Campos Personalizados da Lista de Clientes (Correção)
 
-## Problema Identificado
+## Diagnóstico do Problema
 
-Na aba Clientes, a tabela de listagem está exibindo todos os campos personalizados configurados para "mostrar em clientes" (`show_in_clients = true`). Isso resulta em diversas colunas desnecessárias aparecendo entre "Responsável" e "Ação", como:
-- Área de atuação
-- Qual o Nome e Profissão do seu Cônjuge?
-- Data de Nascimento dos Filhos
-- E diversos outros campos...
+As alterações anteriores foram feitas nos componentes errados:
+- ❌ `src/components/client/ClientsTable.tsx` - **NÃO É USADO** na página principal
+- ❌ `src/components/client/ClientsTableRow.tsx` - **NÃO É USADO** na página principal
+- ✅ `src/pages/Clients.tsx` - **ESTE É O ARQUIVO CORRETO** que renderiza a tabela diretamente
 
-## Locais Afetados no Código
+A página `Clients.tsx` tem sua própria implementação inline da tabela que não utiliza os componentes separados.
 
-### Arquivo: `src/pages/Clients.tsx`
+## Locais a Modificar em `src/pages/Clients.tsx`
 
-| Linha | Código | Uso |
-|-------|--------|-----|
-| 463-469 | `fetchCustomFields()` | Carrega campos com `show_in_clients = true` |
-| 2092-2096 | Loop `customFields.map()` | Renderiza cabeçalhos das colunas |
-| 2460-2472 | Loop `customFields.map()` | Renderiza células com `FieldValueEditor` |
-| 2103, 2110 | `colSpan={5 + customFields.length}` | Calcula span para células de loading/empty |
+| Linha | Código | O que fazer |
+|-------|--------|-------------|
+| 2092-2096 | `customFields.map()` no header | **REMOVER** - Gera colunas para cada campo |
+| 2103 | `colSpan={5 + customFields.length}` | **ALTERAR** para `colSpan={9}` |
+| 2110 | `colSpan={5 + customFields.length}` | **ALTERAR** para `colSpan={9}` |
+| 2460-2472 | `customFields.map()` no body | **REMOVER** - Gera células para cada campo |
 
-## Solucao
+## Código a Remover
 
-Remover completamente a renderizacao dos campos personalizados na tabela de clientes:
-
-1. **Remover o loop que renderiza colunas de campos personalizados no cabecalho**
-   - Linhas 2092-2096: Deletar o mapeamento que cria `<TableHead>` para cada campo
-
-2. **Remover o loop que renderiza celulas de campos personalizados no corpo**
-   - Linhas 2460-2472: Deletar o mapeamento que cria `<TableCell>` para cada campo
-
-3. **Ajustar os colSpan das celulas de loading/empty**
-   - Linhas 2103 e 2110: Alterar de `5 + customFields.length` para um valor fixo (9 colunas fixas)
-
-## Resultado Esperado
-
-A tabela de clientes tera apenas as colunas fixas:
-1. Cliente (sticky)
-2. Produto
-3. Contrato
-4. Roizometro
-5. E-Score
-6. Conexao
-7. V-NPS
-8. Responsavel
-9. Acao
-
-Os campos personalizados continuarao funcionando normalmente:
-- No formulario de criacao de cliente (já existente)
-- Na página de detalhes do cliente (perfil)
-- No gerenciador de campos (botao "Campos")
-
-## Codigo a Ser Modificado
-
-### 1. Remover colunas de campos no cabecalho (linhas 2092-2096):
+### 1. Remover colunas no cabeçalho (linhas 2092-2096):
 ```typescript
 // REMOVER ESTE BLOCO:
 {customFields.map((field) => (
@@ -63,7 +31,7 @@ Os campos personalizados continuarao funcionando normalmente:
 ))}
 ```
 
-### 2. Remover celulas de campos no corpo (linhas 2460-2472):
+### 2. Remover células no corpo (linhas 2460-2472):
 ```typescript
 // REMOVER ESTE BLOCO:
 {customFields.map((field) => (
@@ -81,7 +49,7 @@ Os campos personalizados continuarao funcionando normalmente:
 ))}
 ```
 
-### 3. Ajustar colSpan (linhas 2103 e 2110):
+### 3. Corrigir colSpan (linhas 2103 e 2110):
 ```typescript
 // DE:
 colSpan={5 + customFields.length}
@@ -90,14 +58,28 @@ colSpan={5 + customFields.length}
 colSpan={9}
 ```
 
+## Resultado Esperado
+
+A tabela terá apenas as 9 colunas fixas:
+
+| # | Coluna |
+|---|--------|
+| 1 | Cliente (sticky) |
+| 2 | Produto |
+| 3 | Contrato |
+| 4 | Roizômetro |
+| 5 | E-Score |
+| 6 | Conexão |
+| 7 | V-NPS |
+| 8 | Responsável |
+| 9 | Ação |
+
 ## Arquivos a Modificar
 
-| Arquivo | Alteracao |
+| Arquivo | Alteração |
 |---------|-----------|
-| `src/pages/Clients.tsx` | Remover renderizacao de campos personalizados da tabela |
+| `src/pages/Clients.tsx` | Remover mapeamento de campos personalizados e ajustar colSpan |
 
-## Impacto
+## Nota Sobre Componentes Não Utilizados
 
-- **Nenhuma perda de funcionalidade**: Os campos personalizados continuam existindo e funcionando
-- **Apenas remocao visual da tabela**: A listagem fica mais limpa e focada nos dados essenciais
-- **Campos editaveis no perfil**: O usuario pode editar campos personalizados acessando o perfil individual do cliente
+Os componentes `ClientsTable.tsx` e `ClientsTableRow.tsx` já foram modificados anteriormente, mas não estão sendo usados pela página principal. Esses componentes podem ser removidos no futuro ou mantidos para uso posterior, mas não afetam a renderização atual.
