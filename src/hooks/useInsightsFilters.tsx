@@ -43,12 +43,12 @@ const InsightsFiltersContext = createContext<InsightsFiltersContextType | null>(
 const getDefaultFilters = (): InsightsFilters => {
   const now = new Date();
   return {
-    startDate: startOfMonth(now).toISOString(),
-    endDate: endOfMonth(now).toISOString(),
+    startDate: startOfYear(now).toISOString(),
+    endDate: endOfYear(now).toISOString(),
     userId: "all",
     stageId: "all",
     productId: "all",
-    preset: "month",
+    preset: "year",
   };
 };
 
