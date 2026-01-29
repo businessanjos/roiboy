@@ -1947,150 +1947,152 @@ export default function Contracts() {
             </>
           )}
 
-      {/* Contracts Table */}
-      <Card>
-        <CardContent className="p-0">
-          {filteredContracts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <FileText className="h-12 w-12 mb-4 opacity-50" />
-              <p className="text-lg font-medium">Nenhum contrato encontrado</p>
-              <p className="text-sm">
-                {searchTerm || statusFilter !== "all" || typeFilter !== "all"
-                  ? "Tente ajustar os filtros"
-                  : "Os contratos criados nos clientes aparecerão aqui"}
-              </p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Período</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredContracts.map((contract) => {
-                  const statusConfig = CONTRACT_STATUS_CONFIG[contract.status] || CONTRACT_STATUS_CONFIG.active;
-                  const StatusIcon = statusConfig.icon;
-                  
-                  return (
-                    <TableRow key={contract.id} className="group">
-                      <TableCell>
-                        <div 
-                          className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                          onClick={() => navigate(`/clients/${contract.client_id}`)}
-                        >
-                          <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
-                            {contract.client?.avatar_url ? (
-                              <img 
-                                src={contract.client.avatar_url} 
-                                alt={contract.client.full_name}
-                                className="w-9 h-9 rounded-full object-cover"
-                              />
-                            ) : (
-                              <Users className="h-4 w-4 text-muted-foreground" />
-                            )}
+      {/* Contracts Table - hide on triagem tab since it has its own component */}
+      {activeTab !== "triagem" && (
+        <Card>
+          <CardContent className="p-0">
+            {filteredContracts.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <FileText className="h-12 w-12 mb-4 opacity-50" />
+                <p className="text-lg font-medium">Nenhum contrato encontrado</p>
+                <p className="text-sm">
+                  {searchTerm || statusFilter !== "all" || typeFilter !== "all"
+                    ? "Tente ajustar os filtros"
+                    : "Os contratos criados nos clientes aparecerão aqui"}
+                </p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Período</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredContracts.map((contract) => {
+                    const statusConfig = CONTRACT_STATUS_CONFIG[contract.status] || CONTRACT_STATUS_CONFIG.active;
+                    const StatusIcon = statusConfig.icon;
+                    
+                    return (
+                      <TableRow key={contract.id} className="group">
+                        <TableCell>
+                          <div 
+                            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => navigate(`/clients/${contract.client_id}`)}
+                          >
+                            <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+                              {contract.client?.avatar_url ? (
+                                <img 
+                                  src={contract.client.avatar_url} 
+                                  alt={contract.client.full_name}
+                                  className="w-9 h-9 rounded-full object-cover"
+                                />
+                              ) : (
+                                <Users className="h-4 w-4 text-muted-foreground" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm hover:underline">{contract.client?.full_name || "Cliente"}</p>
+                              {contract.product && (
+                                <Badge 
+                                  className="text-xs font-medium whitespace-nowrap shadow-sm mt-1"
+                                  style={{ 
+                                    backgroundColor: contract.product.color || '#6b7280',
+                                    borderColor: contract.product.color || '#6b7280',
+                                    color: '#fff',
+                                    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                                    boxShadow: `0 0 8px ${contract.product.color || '#6b7280'}50`
+                                  }}
+                                >
+                                  {contract.product.name}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium text-sm hover:underline">{contract.client?.full_name || "Cliente"}</p>
-                            {contract.product && (
-                              <Badge 
-                                className="text-xs font-medium whitespace-nowrap shadow-sm mt-1"
-                                style={{ 
-                                  backgroundColor: contract.product.color || '#6b7280',
-                                  borderColor: contract.product.color || '#6b7280',
-                                  color: '#fff',
-                                  textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                                  boxShadow: `0 0 8px ${contract.product.color || '#6b7280'}50`
-                                }}
-                              >
-                                {contract.product.name}
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {CONTRACT_TYPES[contract.contract_type] || contract.contract_type}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium text-sm">
-                          {formatCurrency(contract.value)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col gap-0.5">
+                        </TableCell>
+                        <TableCell>
                           <span className="text-sm">
-                            {format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}
-                            {contract.end_date && (
-                              <span className="text-muted-foreground"> →</span>
-                            )}
+                            {CONTRACT_TYPES[contract.contract_type] || contract.contract_type}
                           </span>
-                          {contract.end_date && (
+                        </TableCell>
+                        <TableCell>
+                          <span className="font-medium text-sm">
+                            {formatCurrency(contract.value)}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5">
                             <span className="text-sm">
-                              {format(new Date(contract.end_date), "dd/MM/yyyy", { locale: ptBR })}
+                              {format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}
+                              {contract.end_date && (
+                                <span className="text-muted-foreground"> →</span>
+                              )}
                             </span>
-                          )}
-                          {contract.status === "active" && getExpiryBadge(contract.end_date)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="outline" 
-                          className={cn("text-xs", statusConfig.className)}
-                        >
-                          <StatusIcon className="h-3 w-3 mr-1" />
-                          {statusConfig.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {activeTab === "fila" && (
-                            <ConciliateButton
-                              contractId={contract.id}
-                              validation={conciliationValidations.get(contract.id)}
-                              onSuccess={fetchContracts}
-                            />
-                          )}
-                          <Button
-                            variant="default"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedContract(contract);
-                              setDetailSheetOpen(true);
-                            }}
+                            {contract.end_date && (
+                              <span className="text-sm">
+                                {format(new Date(contract.end_date), "dd/MM/yyyy", { locale: ptBR })}
+                              </span>
+                            )}
+                            {contract.status === "active" && getExpiryBadge(contract.end_date)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="outline" 
+                            className={cn("text-xs", statusConfig.className)}
                           >
-                            <Eye className="h-4 w-4 mr-1" />
-                            Ver Contrato
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setContractToDelete(contract);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                            <StatusIcon className="h-3 w-3 mr-1" />
+                            {statusConfig.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {activeTab === "fila" && (
+                              <ConciliateButton
+                                contractId={contract.id}
+                                validation={conciliationValidations.get(contract.id)}
+                                onSuccess={fetchContracts}
+                              />
+                            )}
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedContract(contract);
+                                setDetailSheetOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Ver Contrato
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setContractToDelete(contract);
+                                setDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
           </TabsContent>
         )}
       </Tabs>
