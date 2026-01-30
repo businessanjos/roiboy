@@ -5021,6 +5021,45 @@ export type Database = {
           },
         ]
       }
+      form_fields: {
+        Row: {
+          created_at: string | null
+          display_order: number
+          field_id: string
+          form_id: string
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number
+          field_id: string
+          form_id: string
+          id?: string
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number
+          field_id?: string
+          form_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_fields_field_id_fkey"
+            columns: ["field_id"]
+            isOneToOne: false
+            referencedRelation: "custom_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_fields_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_responses: {
         Row: {
           account_id: string
