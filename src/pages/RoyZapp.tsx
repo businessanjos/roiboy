@@ -168,6 +168,23 @@ export default function RoyZapp() {
     }
   }, [assignments]);
 
+  // Detect when selected conversation doesn't belong to current sector (orphan validation)
+  useEffect(() => {
+    if (!selectedConversation || !selectedSectorId || assignments.length === 0) return;
+    
+    // Check if the selected conversation exists in current sector's assignments
+    const existsInCurrentSector = assignments.some(
+      a => a.id === selectedConversation.id
+    );
+    
+    if (!existsInCurrentSector) {
+      // Conversation is from another sector - clear selection
+      console.log("[RoyZapp] Selected conversation not in current sector, clearing selection");
+      setSelectedConversation(null);
+      toast.info("A conversa aberta pertence a outro setor e foi fechada");
+    }
+  }, [selectedConversation, assignments, selectedSectorId]);
+
   // Handle URL parameters for auto-selecting or creating conversations
   const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
   
