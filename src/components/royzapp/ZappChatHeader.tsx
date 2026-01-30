@@ -15,6 +15,7 @@ import {
   Link2,
   Trash2,
   X,
+  Pencil,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,7 @@ interface ZappChatHeaderProps {
   onClientLinked?: () => void;
   onDeleteConversation?: () => void;
   onDismissConversation?: () => void;
+  onOpenEditGroup?: () => void;
 }
 
 export const ZappChatHeader = memo(function ZappChatHeader({
@@ -76,6 +78,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   onClientLinked,
   onDeleteConversation,
   onDismissConversation,
+  onOpenEditGroup,
 }: ZappChatHeaderProps) {
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const conversationId = assignment.zapp_conversation_id || assignment.zapp_conversation?.id;
@@ -104,7 +107,13 @@ export const ZappChatHeader = memo(function ZappChatHeader({
         </Button>
         <div 
           className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={() => clientId && onOpenClientEdit(clientId)}
+          onClick={() => {
+            if (isGroup && onOpenEditGroup) {
+              onOpenEditGroup();
+            } else if (clientId) {
+              onOpenClientEdit(clientId);
+            }
+          }}
         >
           <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
             <AvatarImage src={contactInfo.avatar || undefined} />
@@ -331,6 +340,15 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                   </>
                 )}
                 <DropdownMenuSeparator className="bg-zapp-border" />
+                {isGroup && onOpenEditGroup && (
+                  <DropdownMenuItem 
+                    className="text-zapp-text hover:bg-zapp-hover"
+                    onClick={onOpenEditGroup}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Editar Grupo
+                  </DropdownMenuItem>
+                )}
                 {isGroup && onDismissConversation && (
                   <DropdownMenuItem 
                     className="text-amber-500 hover:bg-amber-500/10"
