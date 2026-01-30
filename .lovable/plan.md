@@ -1,166 +1,225 @@
 
-# Plano: Campos Personalizados Individuais por Formulário
+# Plano: Edge Function de Teste Manual para Momentos CX
 
-## Resumo do Problema
-
-Atualmente, os campos personalizados (`custom_fields`) são **globais** - compartilhados entre todos os formulários e módulos do sistema (Clientes, Deals, Leads). Isso causa problemas como:
-
-1. **Duplicação**: Campos criados via "Gerenciar Campos" de um formulário aparecem em outros formulários
-2. **Poluição de dados**: Campos específicos de CX aparecem em Vendas e vice-versa
-3. **Ordem inconsistente**: A ordem dos campos não é preservada corretamente por formulário
-
-## Solução Proposta
-
-Criar uma relação de **campos específicos por formulário** através de uma nova tabela intermediária que vincula campos a formulários individuais.
+## Objetivo
+Criar uma edge function que permite enviar um Momento CX para um número de telefone customizado (diferente do cliente) para fins de teste, e adicionar um botão discreto no dialog de edição para acionar esse teste.
 
 ---
 
 ## Arquitetura da Solução
 
-### Nova Tabela: `form_fields`
+### 1. Nova Edge Function: `test-cx-moment-send`
 
-Cria uma relação many-to-many entre `forms` e `custom_fields`:
+**Localização:** `supabase/functions/test-cx-moment-send/index.ts`
 
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| id | uuid | PK |
-| form_id | uuid | FK para forms |
-| field_id | uuid | FK para custom_fields |
-| display_order | integer | Ordem de exibição no formulário |
-| created_at | timestamp | Data de criação |
+**Parâmetros de entrada:**
+| Parâmetro | Tipo | Descrição |
+|-----------|------|-----------|
+| `life_event_id` | uuid | ID do momento CX a testar |
+| `test_phone` | string | Número de telefone para receber o teste (formato E.164) |
 
-### Lógica de Escopo
-
-1. **Criação de campos**: Ao criar um campo em "Gerenciar Campos" de um formulário, ele será **exclusivo desse formulário**
-2. **Listagem**: "Campos do Formulário" mostrará **apenas** campos vinculados a esse formulário específico
-3. **Ordem**: A ordem vem de `form_fields.display_order`, não mais de `custom_fields.display_order`
-
----
-
-## Fluxo Visual
+**Fluxo:**
 
 ```text
-Formulário CX-001           Formulário CX-002
-      |                           |
-      v                           v
-  form_fields                 form_fields
-  (field_ids: A, B, C)        (field_ids: D, E)
-      |                           |
-      v                           v
-  custom_fields              custom_fields
-  A: "Nome Completo"         D: "CNPJ"
-  B: "Data Nascimento"       E: "Razão Social"  
-  C: "Animal Estimação"
+1. Receber life_event_id + test_phone
+           |
+           v
+2. Buscar dados do momento CX
+   - message, title, event_type
+   - images anexadas
+           |
+           v
+3. Buscar dados do cliente
+   - full_name (para substituir variáveis)
+           |
+           v
+4. Buscar integração WhatsApp ativa
+   - Tabela: integrations (config JSONB)
+   - Filtro: type=whatsapp, status=connected, sector_id=operacoes
+           |
+           v
+5. Personalizar mensagem
+   - Substituir {nome}, {primeiro_nome}, {momento_titulo}
+           |
+           v
+6. Enviar via uazapi
+   - Texto primeiro
+   - Depois imagens (se houver)
+           |
+           v
+7. Retornar resultado (success/error)
+   - NÃO atualiza status do momento
 ```
 
----
+### 2. Correção do Schema de Integração
 
-## Alterações Necessárias
+A função usará a tabela `integrations` corretamente:
 
-### 1. Migração de Banco de Dados
+```typescript
+// Buscar integração WhatsApp
+const { data: integrations } = await supabase
+  .from("integrations")
+  .select("id, config, sector_id")
+  .eq("account_id", moment.account_id)
+  .eq("type", "whatsapp")
+  .eq("status", "connected")
+  .eq("sector_id", "operacoes")
+  .limit(1);
 
-Criar tabela `form_fields`:
+const integration = integrations?.[0];
+if (!integration) {
+  // Fallback para qualquer integração ativa
+  const { data: fallback } = await supabase
+    .from("integrations")
+    .select("id, config, sector_id")
+    .eq("account_id", moment.account_id)
+    .eq("type", "whatsapp")
+    .eq("status", "connected")
+    .limit(1);
+  integration = fallback?.[0];
+}
 
-```sql
-CREATE TABLE form_fields (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  form_id uuid NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
-  field_id uuid NOT NULL REFERENCES custom_fields(id) ON DELETE CASCADE,
-  display_order integer NOT NULL DEFAULT 0,
-  created_at timestamp with time zone DEFAULT now(),
-  UNIQUE(form_id, field_id)
-);
-
--- RLS policies
-ALTER TABLE form_fields ENABLE ROW LEVEL SECURITY;
+// Extrair dados do config JSONB
+const provider = integration.config?.provider; // "uazapi"
+const instanceToken = integration.config?.instance_token;
+const apiUrl = UAZAPI_URL; // Variável de ambiente
 ```
 
-### 2. Novo Componente: `FormFieldsManager.tsx`
+### 3. Botão de Teste no Dialog
 
-Um gerenciador de campos **específico para formulários**, diferente do `CustomFieldsManager` global:
+**Localização:** `src/components/client/ClientLifeEvents.tsx`
 
-- Cria campos novos que ficam automaticamente vinculados ao formulário atual
-- Mostra apenas campos desse formulário
-- Permite reordenar campos (atualiza `form_fields.display_order`)
-- Permite excluir campos (remove da relação e opcionalmente do `custom_fields`)
+**Posição:** No `DialogFooter`, antes do botão "Cancelar", um botão discreto (ghost/link style)
 
-### 3. Modificações em `Forms.tsx`
+**Comportamento:**
+- Só aparece ao EDITAR um momento existente (`editingEvent !== null`)
+- Só aparece se `formAutoSend` estiver ativo
+- Abre um mini-dialog/popover para inserir o número de teste
+- Valida formato do telefone
+- Chama a edge function
 
-| Área | Mudança |
-|------|---------|
-| `fetchCustomFields()` | Buscar campos via `form_fields` filtrado por `form_id` |
-| `selectedFields` | Derivar de `form_fields` em vez de `custom_fields` global |
-| `handleSave()` | Salvar relação em `form_fields` com ordem correta |
-| Botão "Gerenciar Campos" | Abrir `FormFieldsManager` passando `formId` |
-
-### 4. Atualizar `CustomFieldsManager.tsx`
-
-Adicionar prop opcional `formId`:
-- Se `formId` estiver presente: modo exclusivo para formulário
-- Se `formId` não estiver: modo global (atual - para Clientes/Deals/Leads)
-
----
-
-## Fluxo do Usuário
+**UI Mock:**
 
 ```text
-1. Usuário abre "Editar Formulário"
-           |
-           v
-2. Clica em "Gerenciar Campos"
-           |
-           v
-3. Vê apenas campos DESTE formulário
-           |
-           v
-4. Cria novo campo "Profissão"
-           |
-           v
-5. Campo salvo em:
-   - custom_fields (definição)
-   - form_fields (vínculo com este form)
-           |
-           v
-6. Campo aparece APENAS neste formulário
+┌─────────────────────────────────────────────────┐
+│                DialogFooter                      │
+├─────────────────────────────────────────────────┤
+│ [🔬 Testar envio]   [Cancelar]  [Salvar]        │
+│                          ↓                       │
+│              ┌──────────────────────────┐        │
+│              │ Número para teste:       │        │
+│              │ [+5531971237088        ] │        │
+│              │ [Enviar Teste]           │        │
+│              └──────────────────────────┘        │
+└─────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Migração de Dados Existentes
+## Alterações em Arquivos
 
-Para formulários existentes, criar registros em `form_fields` baseado no JSON `forms.fields`:
+### Arquivos a Criar
 
-```sql
--- Migrar dados existentes
-INSERT INTO form_fields (form_id, field_id, display_order)
-SELECT 
-  f.id as form_id,
-  (elem::text)::uuid as field_id,
-  (row_number() OVER (PARTITION BY f.id))::integer as display_order
-FROM forms f,
-  jsonb_array_elements(f.fields) WITH ORDINALITY AS t(elem, ord)
-WHERE jsonb_typeof(f.fields) = 'array'
-  AND f.fields != '[]'::jsonb
-ON CONFLICT (form_id, field_id) DO NOTHING;
+| Arquivo | Descrição |
+|---------|-----------|
+| `supabase/functions/test-cx-moment-send/index.ts` | Edge function de teste manual |
+
+### Arquivos a Modificar
+
+| Arquivo | Mudança |
+|---------|---------|
+| `supabase/config.toml` | Adicionar configuração `verify_jwt = false` |
+| `src/components/client/ClientLifeEvents.tsx` | Adicionar botão de teste + popover + handler |
+
+---
+
+## Detalhes da Implementação
+
+### Edge Function: Envio de Mensagem
+
+```typescript
+// Enviar texto via UAZAPI
+const cleanPhone = testPhone.replace(/\D/g, "");
+
+const textResponse = await fetch(`${UAZAPI_URL}/sendText`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${instanceToken}`,
+  },
+  body: JSON.stringify({
+    phone: cleanPhone,
+    message: personalizedMessage,
+  }),
+});
+
+// Enviar imagens (se houver)
+for (const image of images) {
+  await new Promise(resolve => setTimeout(resolve, 2000)); // Delay
+  
+  await fetch(`${UAZAPI_URL}/sendMedia`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${instanceToken}`,
+    },
+    body: JSON.stringify({
+      phone: cleanPhone,
+      type: "image",
+      media: image.image_url,
+      caption: "",
+    }),
+  });
+}
+```
+
+### Frontend: Handler de Teste
+
+```typescript
+const [testDialogOpen, setTestDialogOpen] = useState(false);
+const [testPhone, setTestPhone] = useState("+55");
+const [sendingTest, setSendingTest] = useState(false);
+
+const handleTestSend = async () => {
+  if (!editingEvent || !testPhone.trim()) return;
+  
+  setSendingTest(true);
+  try {
+    const { data, error } = await supabase.functions.invoke("test-cx-moment-send", {
+      body: {
+        life_event_id: editingEvent.id,
+        test_phone: testPhone,
+      },
+    });
+    
+    if (error) throw error;
+    if (!data.success) throw new Error(data.error);
+    
+    toast.success("Teste enviado com sucesso!");
+    setTestDialogOpen(false);
+  } catch (error) {
+    toast.error(error.message || "Erro ao enviar teste");
+  } finally {
+    setSendingTest(false);
+  }
+};
 ```
 
 ---
 
-## Arquivos a Modificar/Criar
+## Segurança
 
-| Arquivo | Ação |
-|---------|------|
-| Nova migração SQL | Criar tabela `form_fields` + migração de dados |
-| `src/components/forms/FormFieldsManager.tsx` | **CRIAR** - Gerenciador de campos por formulário |
-| `src/pages/Forms.tsx` | Refatorar para usar `form_fields` |
-| `src/components/forms/index.ts` | Exportar novo componente |
+- A edge function valida que o usuário tem acesso ao `account_id` do momento
+- Usa `verify_jwt = false` mas valida o token manualmente via `getClaims()`
+- Não modifica o status do momento (apenas leitura + envio externo)
+- Logs de teste não são persistidos como envios oficiais
 
 ---
 
 ## Benefícios
 
-1. **Isolamento total**: Campos de um formulário não aparecem em outros
-2. **Ordem preservada**: Cada formulário tem sua própria ordem de campos
-3. **Simplicidade para o usuário**: "Gerenciar Campos" mostra apenas o relevante
-4. **Compatibilidade**: Campos globais continuam funcionando para Clientes/Deals/Leads
-5. **Sem duplicação visual**: Elimina o problema dos dois "Nome Completo"
+1. **Teste seguro**: Não altera o status do momento original
+2. **Número customizado**: Permite testar em qualquer número
+3. **Discreto**: Botão só aparece para momentos existentes com auto-send
+4. **Completo**: Testa texto + imagens exatamente como seria enviado
+5. **Diagnóstico**: Retorna erros detalhados para debugging
