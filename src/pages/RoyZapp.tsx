@@ -168,22 +168,91 @@ export default function RoyZapp() {
     }
   }, [assignments]);
 
-  // Detect when selected conversation doesn't belong to current sector (orphan validation)
+  // Detect when selected conversation doesn't belong to current sector
+  // For GROUPS: auto-create assignment in current sector (multi-sector support)
+  // For INDIVIDUALS: clear selection (sector isolation)
   useEffect(() => {
-    if (!selectedConversation || !selectedSectorId || assignments.length === 0) return;
+    if (!selectedConversation || !selectedSectorId || !currentUser?.account_id) return;
+    if (!currentSectorDepartmentId) return;
     
     // Check if the selected conversation exists in current sector's assignments
     const existsInCurrentSector = assignments.some(
       a => a.id === selectedConversation.id
     );
     
-    if (!existsInCurrentSector) {
-      // Conversation is from another sector - clear selection
-      console.log("[RoyZapp] Selected conversation not in current sector, clearing selection");
+    if (existsInCurrentSector) return; // Already in this sector, nothing to do
+    
+    // Check if it's a group conversation
+    const isGroup = selectedConversation.zapp_conversation?.is_group;
+    const zappConvId = selectedConversation.zapp_conversation_id || selectedConversation.zapp_conversation?.id;
+    
+    if (!zappConvId) {
       setSelectedConversation(null);
-      toast.info("A conversa aberta pertence a outro setor e foi fechada");
+      return;
     }
-  }, [selectedConversation, assignments, selectedSectorId]);
+    
+    if (isGroup) {
+      // GROUPS: Auto-create assignment in current sector (multi-sector support)
+      const createAssignmentForCurrentSector = async () => {
+        // First check if an assignment already exists for this conversation in this department
+        const { data: existingAssignment } = await supabase
+          .from("zapp_conversation_assignments")
+          .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
+          .eq("zapp_conversation_id", zappConvId)
+          .eq("department_id", currentSectorDepartmentId)
+          .neq("status", "closed")
+          .maybeSingle();
+        
+        if (existingAssignment) {
+          // Assignment exists but wasn't in our assignments list (refresh issue)
+          setSelectedConversation(existingAssignment);
+          setAssignments(prev => {
+            const exists = prev.some(a => a.id === existingAssignment.id);
+            return exists ? prev : [existingAssignment, ...prev];
+          });
+          return;
+        }
+        
+        // Create new assignment for this sector
+        const { data: newAssignment, error } = await supabase
+          .from("zapp_conversation_assignments")
+          .insert({
+            account_id: currentUser.account_id,
+            zapp_conversation_id: zappConvId,
+            agent_id: currentAgent?.id || null,
+            status: currentAgent ? "active" : "triage",
+            department_id: currentSectorDepartmentId,
+            assigned_at: currentAgent ? new Date().toISOString() : null,
+          })
+          .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
+          .single();
+        
+        if (error) {
+          console.error("[RoyZapp] Failed to create multi-sector assignment:", error);
+          toast.error("Erro ao abrir grupo neste setor");
+          setSelectedConversation(null);
+          return;
+        }
+        
+        if (newAssignment) {
+          const enrichedAssignment = {
+            ...newAssignment,
+            agent: currentAgent || null
+          };
+          setSelectedConversation(enrichedAssignment);
+          setAssignments(prev => [enrichedAssignment, ...prev]);
+          toast.success("Grupo aberto neste setor!");
+        }
+      };
+      
+      createAssignmentForCurrentSector();
+    } else {
+      // INDIVIDUAL CONTACTS: Clear selection (must be handled by original sector)
+      console.log("[RoyZapp] Individual conversation from another sector, clearing selection");
+      setSelectedConversation(null);
+      toast.info("Conversa individual pertence a outro setor");
+    }
+  }, [selectedConversation, assignments, selectedSectorId, currentSectorDepartmentId, currentUser?.account_id, currentAgent]);
 
   // Handle URL parameters for auto-selecting or creating conversations
   const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
