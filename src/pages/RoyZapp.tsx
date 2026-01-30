@@ -3775,6 +3775,34 @@ export default function RoyZapp() {
             messageInputRef.current?.focus();
             toast.info("Mensagem restaurada para reenvio");
           }}
+          onRetryMediaDownload={async (messageId) => {
+            // Reset status to pending and trigger download
+            const { error } = await supabase
+              .from("zapp_messages")
+              .update({ media_download_status: "pending" })
+              .eq("id", messageId);
+            
+            if (error) {
+              toast.error("Erro ao solicitar redownload");
+              return;
+            }
+            
+            // Invoke download function
+            supabase.functions.invoke("download-media", {
+              body: { message_ids: [messageId] }
+            }).then(({ data, error: invokeError }) => {
+              if (invokeError) {
+                toast.error("Erro ao baixar mídia");
+              } else if (data?.successful > 0) {
+                // Refresh messages to get the new URL
+                if (selectedConversation?.zapp_conversation_id) {
+                  fetchMessages(selectedConversation.zapp_conversation_id);
+                }
+              }
+            });
+            
+            toast.info("Tentando baixar mídia novamente...");
+          }}
           onMentionInsert={(mention) => {
             setPendingMentions(prev => [...prev, { phone: mention.phone, jid: mention.jid }]);
           }}

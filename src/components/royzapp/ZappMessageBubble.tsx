@@ -45,6 +45,7 @@ interface ZappMessageBubbleProps {
   onDelete?: (messageId: string) => void;
   onEdit?: (messageId: string, newContent: string) => Promise<void>;
   onRetry?: (message: Message) => void;
+  onRetryMediaDownload?: (messageId: string) => void;
   onScrollToQuoted?: (quotedMessageId: string) => void;
   isHighlighted?: boolean;
 }
@@ -171,6 +172,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   onDelete,
   onEdit,
   onRetry,
+  onRetryMediaDownload,
   onScrollToQuoted,
   isHighlighted,
 }: ZappMessageBubbleProps) {
@@ -362,16 +364,36 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
           )}
           
           {/* Media content - show loading state ONLY for pending downloads without a URL */}
+          {/* Media loading states */}
           {message.media_download_status === "pending" && message.media_type && !message.media_url && message.media_type !== "sticker" && (
             <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center p-4 gap-2">
               <Loader2 className="h-5 w-5 animate-spin text-zapp-text-muted" />
               <span className="text-xs text-zapp-text-muted">Carregando mídia...</span>
             </div>
           )}
-          {message.media_download_status === "failed" && message.media_type && !message.media_url && message.media_type !== "sticker" && (
+          {message.media_download_status === "downloading" && message.media_type && !message.media_url && message.media_type !== "sticker" && (
             <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center p-4 gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-500" />
-              <span className="text-xs text-zapp-text-muted">Falha ao carregar mídia</span>
+              <Loader2 className="h-5 w-5 animate-spin text-zapp-text-muted" />
+              <span className="text-xs text-zapp-text-muted">Baixando mídia...</span>
+            </div>
+          )}
+          {message.media_download_status === "failed" && message.media_type && !message.media_url && message.media_type !== "sticker" && (
+            <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex flex-col items-center justify-center p-4 gap-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                <span className="text-xs text-zapp-text-muted">Falha ao carregar mídia</span>
+              </div>
+              {onRetryMediaDownload && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRetryMediaDownload(message.id)}
+                  className="text-xs text-zapp-accent hover:text-zapp-accent/80"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Tentar novamente
+                </Button>
+              )}
             </div>
           )}
           

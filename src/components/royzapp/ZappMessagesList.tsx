@@ -11,6 +11,7 @@ interface ZappMessagesListProps {
   onDeleteMessage?: (messageId: string) => void;
   onEditMessage?: (messageId: string, newContent: string) => Promise<void>;
   onRetryMessage?: (message: Message) => void;
+  onRetryMediaDownload?: (messageId: string) => void;
 }
 
 export function ZappMessagesList({
@@ -20,6 +21,7 @@ export function ZappMessagesList({
   onDeleteMessage,
   onEditMessage,
   onRetryMessage,
+  onRetryMediaDownload,
 }: ZappMessagesListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -171,6 +173,7 @@ export function ZappMessagesList({
                   onDelete={onDeleteMessage}
                   onEdit={onEditMessage}
                   onRetry={onRetryMessage}
+                  onRetryMediaDownload={onRetryMediaDownload}
                   onScrollToQuoted={handleScrollToQuoted}
                   isHighlighted={highlightedMessageId === message.id}
                 />
