@@ -1722,6 +1722,7 @@ export type Database = {
           id: string
           image_url: string | null
           is_recurring: boolean
+          message: string | null
           reminder_days_before: number | null
           source: string
           title: string
@@ -1737,6 +1738,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_recurring?: boolean
+          message?: string | null
           reminder_days_before?: number | null
           source?: string
           title: string
@@ -1752,6 +1754,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           is_recurring?: boolean
+          message?: string | null
           reminder_days_before?: number | null
           source?: string
           title?: string

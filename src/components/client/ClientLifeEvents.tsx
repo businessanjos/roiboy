@@ -83,6 +83,7 @@ interface LifeEvent {
   event_type: string;
   event_date: string | null;
   title: string;
+  message: string | null;
   description: string | null;
   is_recurring: boolean;
   reminder_days_before: number | null;
@@ -143,6 +144,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
   const [formType, setFormType] = useState("birthday");
   const [formTitle, setFormTitle] = useState("");
   const [formDate, setFormDate] = useState("");
+  const [formMessage, setFormMessage] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formRecurring, setFormRecurring] = useState(false);
   const [formReminderDays, setFormReminderDays] = useState("7");
@@ -251,6 +253,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
     setFormType("birthday");
     setFormTitle("");
     setFormDate("");
+    setFormMessage("");
     setFormDescription("");
     setFormRecurring(false);
     setFormReminderDays("7");
@@ -272,6 +275,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
     setFormType(event.event_type);
     setFormTitle(event.title);
     setFormDate(event.event_date || "");
+    setFormMessage(event.message || "");
     setFormDescription(event.description || "");
     setFormRecurring(event.is_recurring);
     setFormReminderDays(String(event.reminder_days_before || 7));
@@ -341,6 +345,11 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
       return;
     }
 
+    if (!formMessage.trim()) {
+      toast.error("Mensagem é obrigatória");
+      return;
+    }
+
     if (!currentUser?.account_id) {
       toast.error("Usuário não encontrado");
       return;
@@ -351,6 +360,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
       const eventData = {
         event_type: formType,
         title: formTitle.trim(),
+        message: formMessage.trim(),
         event_date: formDate || null,
         description: formDescription.trim() || null,
         is_recurring: formRecurring,
@@ -796,7 +806,20 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Descrição (opcional)</Label>
+              <Label>Mensagem *</Label>
+              <Textarea
+                placeholder="Mensagem que será enviada ao cliente..."
+                value={formMessage}
+                onChange={(e) => setFormMessage(e.target.value)}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Variáveis disponíveis: <code className="bg-muted px-1 rounded">{"{nome}"}</code>, <code className="bg-muted px-1 rounded">{"{primeiro_nome}"}</code>, <code className="bg-muted px-1 rounded">{"{momento_titulo}"}</code>
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Descrição (opcional - uso interno)</Label>
               <Textarea
                 placeholder="Detalhes sobre o momento..."
                 value={formDescription}
