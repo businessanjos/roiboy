@@ -112,8 +112,8 @@ serve(async (req) => {
 
     const results: { id: string; success: boolean; url?: string; error?: string }[] = [];
 
-    // Process in batches of 5 to avoid timeout
-    const batchSize = 5;
+    // Process in batches of 8 for faster throughput (each has 30s individual timeout)
+    const batchSize = 8;
     
     for (let i = 0; i < messages.length; i += batchSize) {
       const batch = messages.slice(i, i + batchSize);
