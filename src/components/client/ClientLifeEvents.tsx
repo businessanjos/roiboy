@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Dialog,
   DialogContent,
@@ -861,8 +862,8 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
           setDialogOpen(open);
         }}
       >
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="max-h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="px-6 pt-6">
             <DialogTitle>
               {editingEvent ? "Editar" : "Novo"} Momento CX
             </DialogTitle>
@@ -871,7 +872,8 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <ScrollArea className="flex-1 max-h-[calc(90vh-180px)]">
+            <div className="space-y-4 px-6 py-4">
             <div className="space-y-2">
               <Label>Tipo de Momento</Label>
               <Select value={formType} onValueChange={setFormType}>
@@ -1084,9 +1086,10 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
                 )}
               </div>
             )}
-          </div>
+            </div>
+          </ScrollArea>
 
-          <DialogFooter>
+          <DialogFooter className="px-6 pb-6 pt-4 border-t">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancelar
             </Button>
