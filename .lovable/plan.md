@@ -1,144 +1,188 @@
 
-# Plano: Corrigir Grupos Não Aparecendo na Barra Lateral
+# Plano: Edição de Nome de Grupos no RoyZapp
 
-## Diagnóstico Completo
+## Problema Identificado
 
-### Causa Raiz Identificada
-Após investigação detalhada do código, identifiquei que o problema está no **filtro de multi-instância** em `src/hooks/useZappData.tsx`.
-
-### Fluxo do Problema
-
-1. Usuário pesquisa grupo via "Nova Conversa"
-2. Grupo é encontrado (busca cross-sector, sem filtro de integration_id)
-3. Assignment é criado e adicionado ao estado via `setAssignments(prev => [enrichedAssignment, ...prev])`
-4. **PROBLEMA CRÍTICO**: O hook `useZappData` retorna `assignments: filteredAssignments` (linha 922)
-5. O `filteredAssignments` é um `useMemo` que aplica filtro de `integrationId` (linhas 881-905)
-6. Se o `zapp_conversation.integration_id` do grupo for diferente do `selectedIntegrationId`, o grupo é **IMEDIATAMENTE REMOVIDO** pelo filtro
-7. **RESULTADO**: Grupo desaparece da lista instantaneamente após ser adicionado
-
-### Logs de Console Confirmam
-Os logs mostram:
-```
-[ZappData] Fetched 332 assignments for department 2374659b-7f4e-45cc-849e-7e23eaf28159 (sector: operacoes)
-[ZappData] MULTI-INSTANCE: Filtered to 307 assignments for integration dbb6109c-da1d-4ce8-a119-b7da13dd73fa
-```
-
-Isso significa que 25 assignments (incluindo grupos de outras integrações) são REMOVIDOS pelo filtro.
+Quando o usuário tenta editar o nome de um grupo no RoyZapp, o sistema abre o dialog "Cadastrar Contato" que exige nome e telefone. Isso não faz sentido para grupos - grupos não precisam ser cadastrados como contatos e devem ter seu nome editado livremente.
 
 ---
 
 ## Solução
 
-### Modificar o filtro de integração para SEMPRE permitir GRUPOS
-
-**Lógica Atual** (linhas 892-899):
-```typescript
-// Include conversation if:
-// 1. It belongs to this exact integration, OR
-// 2. It has no integration_id (legacy) but belongs to the same sector
-const matchesIntegration = convIntegrationId === integrationId;
-const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
-
-return matchesIntegration || isLegacySameSector;
-```
-
-**Lógica Corrigida**:
-```typescript
-// Include conversation if:
-// 1. It belongs to this exact integration, OR
-// 2. It has no integration_id (legacy) but belongs to the same sector, OR
-// 3. It's a GROUP (groups are cross-integration by nature and user explicitly opened it)
-const isGroup = (a.zapp_conversation as { is_group?: boolean } | null)?.is_group === true;
-const matchesIntegration = convIntegrationId === integrationId;
-const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
-
-return matchesIntegration || isLegacySameSector || isGroup;
-```
-
-### Por que isso é correto:
-
-| Razão | Justificativa |
-|-------|--------------|
-| Grupos são entidades compartilhadas | Um mesmo grupo pode ser acessado por múltiplas instâncias do WhatsApp |
-| Já há filtro por departamento | Linha 875 já garante que só retornamos assignments do setor atual |
-| Usuário abriu explicitamente | Se o assignment existe para esse setor, é porque o usuário quis abri-lo |
-| Consistência de UX | Grupos devem persistir na lista até serem "Dispensados" |
+Criar um fluxo separado para edição de grupos que:
+1. **Não exige cadastro de cliente/lead**
+2. **Permite edição direta do nome do grupo**
+3. **Atualiza tanto no WhatsApp quanto no banco de dados local**
 
 ---
 
-## Alteração Técnica
+## Alterações Técnicas
 
-### Arquivo: `src/hooks/useZappData.tsx`
+### 1. Novo Dialog: `ZappEditGroupDialog.tsx`
 
-#### Linhas 886-900 - Adicionar condição para grupos:
+Criar um dialog simples para edição de grupos com:
+- Campo de nome do grupo
+- Botão de salvar
+- Chamada à edge function `uazapi-manager` com ação `update_group_name`
+- Atualização do `contact_name` na tabela `zapp_conversations`
 
 ```typescript
-if (integrationId) {
-  const beforeCount = filtered.length;
-  filtered = filtered.filter(a => {
-    // Access integration_id, sector_id, and is_group via type assertion
-    const zappConv = a.zapp_conversation as { 
-      integration_id?: string; 
-      sector_id?: string;
-      is_group?: boolean;
-    } | null;
-    const convIntegrationId = zappConv?.integration_id;
-    const convSectorId = zappConv?.sector_id;
-    const isGroup = zappConv?.is_group === true;
-    
-    // Include conversation if:
-    // 1. It belongs to this exact integration, OR
-    // 2. It has no integration_id (legacy) but belongs to the same sector, OR
-    // 3. It's a GROUP (groups are cross-integration by nature - user explicitly opened it)
-    const matchesIntegration = convIntegrationId === integrationId;
-    const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
-    
-    return matchesIntegration || isLegacySameSector || isGroup;
-  });
-  
-  if (filtered.length !== beforeCount) {
-    console.log(`[ZappData] MULTI-INSTANCE: Filtered to ${filtered.length} assignments for integration ${integrationId} (from ${beforeCount}, includes legacy same-sector and groups)`);
-  }
+// Estrutura básica do dialog
+interface ZappEditGroupDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  conversationId: string;
+  groupJid: string;
+  currentName: string;
+  onSuccess?: () => void;
 }
 ```
 
----
+### 2. Modificar `ZappChatHeader.tsx`
 
-## Fluxo Corrigido
-
-```
-Usuário abre grupo via "Nova Conversa"
-              │
-              ▼
-    Assignment criado no banco
-              │
-              ▼
-    setAssignments adiciona ao estado original
-              │
-              ▼
-    useMemo recalcula filteredAssignments
-              │
-              ▼
-    Filtro verifica: É grupo? ─── Sim ──► PERMITE (mesmo que integration_id diferente)
-              │
-              ▼
-    GRUPO APARECE NA BARRA LATERAL ✓
+**Adicionar nova prop:**
+```typescript
+onOpenEditGroup?: () => void;
 ```
 
+**Modificar o clique no header (linha 105-107):**
+
+De:
+```typescript
+onClick={() => clientId && onOpenClientEdit(clientId)}
+```
+
+Para:
+```typescript
+onClick={() => {
+  if (isGroup && onOpenEditGroup) {
+    onOpenEditGroup();
+  } else if (clientId) {
+    onOpenClientEdit(clientId);
+  }
+}}
+```
+
+**Adicionar opção no menu dropdown para grupos:**
+```typescript
+{isGroup && onOpenEditGroup && (
+  <DropdownMenuItem 
+    className="text-zapp-text hover:bg-zapp-hover"
+    onClick={onOpenEditGroup}
+  >
+    <Pencil className="h-4 w-4 mr-2" />
+    Editar Grupo
+  </DropdownMenuItem>
+)}
+```
+
+### 3. Modificar `ZappChatView.tsx`
+
+Propagar a nova prop `onOpenEditGroup`.
+
+### 4. Modificar `RoyZapp.tsx`
+
+**Adicionar estados:**
+```typescript
+const [editGroupDialogOpen, setEditGroupDialogOpen] = useState(false);
+```
+
+**Criar função de callback:**
+```typescript
+const openEditGroupDialog = () => {
+  setEditGroupDialogOpen(true);
+};
+```
+
+**Passar prop para ZappChatView:**
+```typescript
+onOpenEditGroup={
+  selectedConversation?.zapp_conversation?.is_group 
+    ? openEditGroupDialog 
+    : undefined
+}
+```
+
+**Renderizar o dialog:**
+```tsx
+{selectedConversation?.zapp_conversation?.is_group && (
+  <ZappEditGroupDialog
+    open={editGroupDialogOpen}
+    onOpenChange={setEditGroupDialogOpen}
+    conversationId={selectedConversation.zapp_conversation.id}
+    groupJid={selectedConversation.zapp_conversation.group_jid || ""}
+    currentName={selectedConversation.zapp_conversation.contact_name || ""}
+    onSuccess={() => fetchData()}
+  />
+)}
+```
+
+### 5. Lógica de Atualização no Dialog
+
+A função de salvar chamará:
+
+```typescript
+// 1. Atualizar nome no WhatsApp via UAZAPI
+const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+  body: { 
+    action: "update_group_name",
+    group_id: groupJid,
+    group_name: newName,
+  },
+});
+
+// 2. Atualizar contact_name na zapp_conversations (backup/sync local)
+await supabase
+  .from("zapp_conversations")
+  .update({ contact_name: newName })
+  .eq("id", conversationId);
+```
+
 ---
 
-## Arquivo a Modificar
+## Fluxo do Usuário
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/hooks/useZappData.tsx` | Adicionar `isGroup` como terceira condição no filtro de multi-instância (1 bloco de ~20 linhas) |
+```text
+Usuário clica no nome do grupo (header)
+          │
+          ▼
+    É grupo? ─── Sim ──► Abre dialog "Editar Grupo"
+       │                          │
+       │                          ▼
+       │                 Campo com nome atual
+       │                          │
+       │                          ▼
+       │                 Usuário edita e clica "Salvar"
+       │                          │
+       │                          ▼
+       │                 Chama uazapi-manager (update_group_name)
+       │                          │
+       │                          ▼
+       │                 Atualiza zapp_conversations.contact_name
+       │                          │
+       │                          ▼
+       │                 Toast: "Nome do grupo atualizado!"
+       │
+       └── Não ──► Comportamento anterior (abre cliente/cadastro)
+```
 
 ---
 
-## Por que tenho certeza de que isso resolve
+## Arquivos a Modificar/Criar
 
-1. **Identifiquei a causa exata**: O filtro de `integrationId` está removendo grupos de outras integrações
-2. **Os logs confirmam**: 25 assignments são removidos pelo filtro
-3. **A solução é cirúrgica**: Adicionar uma única condição `|| isGroup`
-4. **Não quebra nada existente**: Grupos JÁ estão filtrados por departamento, garantindo isolamento de setor
-5. **Respeita a arquitetura**: Mantemos o filtro para conversas individuais, apenas flexibilizamos para grupos
+| Arquivo | Ação |
+|---------|------|
+| `src/components/royzapp/dialogs/ZappEditGroupDialog.tsx` | **CRIAR** - Dialog de edição de grupo |
+| `src/components/royzapp/dialogs/index.ts` | Exportar novo dialog |
+| `src/components/royzapp/ZappChatHeader.tsx` | Adicionar prop `onOpenEditGroup` e lógica condicional |
+| `src/components/royzapp/ZappChatView.tsx` | Propagar nova prop |
+| `src/pages/RoyZapp.tsx` | Adicionar estado, função e renderizar dialog |
+
+---
+
+## Benefícios
+
+- Grupos podem ter nome editado sem precisar de cadastro
+- Fluxo intuitivo - clicar no nome abre edição
+- Sincronização com WhatsApp real via UAZAPI
+- Atualização local para refletir imediatamente na interface
