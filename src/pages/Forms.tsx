@@ -69,7 +69,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
+import { FormFieldsManager } from "@/components/forms/FormFieldsManager";
 import { FormResponseViewer } from "@/components/forms/FormResponseViewer";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
 import { FormAppearanceEditor } from "@/components/forms/FormAppearanceEditor";
@@ -114,59 +114,7 @@ interface Form {
   _count?: number;
 }
 
-interface SortableFieldItemProps {
-  field: CustomField;
-  onRemove: (id: string) => void;
-  getFieldTypeBadge: (type: string) => React.ReactNode;
-}
-
-function SortableFieldItem({ field, onRemove, getFieldTypeBadge }: SortableFieldItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: field.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`flex items-center gap-2 p-2 bg-background border rounded-md ${
-        isDragging ? "opacity-50 shadow-lg" : ""
-      }`}
-    >
-      <button
-        type="button"
-        className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
-        {...attributes}
-        {...listeners}
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <div className="flex-1 min-w-0">
-        <span className="text-sm font-medium">{field.name}</span>
-      </div>
-      {getFieldTypeBadge(field.field_type)}
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-6 w-6 p-0"
-        onClick={() => onRemove(field.id)}
-      >
-        <X className="h-3 w-3" />
-      </Button>
-    </div>
-  );
-}
+// SortableFieldItem removed - field ordering is now managed in FormFieldsManager
 
 // Form Templates
 interface FormTemplate {
@@ -727,24 +675,47 @@ export default function Forms() {
     }
   };
 
-  const fetchCustomFields = async () => {
+  const fetchCustomFields = async (formIdToFetch?: string) => {
     try {
-      const { data, error } = await supabase
-        .from("custom_fields")
-        .select("id, name, field_type, options, is_required, show_in_clients, show_in_deals, show_in_leads")
-        .eq("is_active", true)
-        .order("display_order", { ascending: true });
+      const targetFormId = formIdToFetch || editingForm?.id;
+      
+      if (targetFormId) {
+        // Fetch fields specific to this form via form_fields junction table
+        const { data, error } = await supabase
+          .from("form_fields")
+          .select(`
+            id,
+            display_order,
+            field_id,
+            custom_fields!inner (
+              id,
+              name,
+              field_type,
+              options,
+              is_required
+            )
+          `)
+          .eq("form_id", targetFormId)
+          .order("display_order");
 
-      if (error) throw error;
-      
-      // Filtrar campos: apenas show_in_clients=true OU campos genéricos (não exclusivos de deals/leads)
-      // Isso evita que campos de Vendas (show_in_deals) apareçam em formulários CX/Operações
-      const filteredFields = (data || []).filter(field => 
-        field.show_in_clients === true || 
-        (!field.show_in_deals && !field.show_in_leads)
-      );
-      
-      setCustomFields(filteredFields);
+        if (error) throw error;
+
+        const mappedFields = (data || []).map(ff => ({
+          id: ff.custom_fields.id,
+          name: ff.custom_fields.name,
+          field_type: ff.custom_fields.field_type,
+          options: ff.custom_fields.options,
+          is_required: ff.custom_fields.is_required,
+        }));
+        
+        setCustomFields(mappedFields);
+        // Auto-select all fields from this form
+        setSelectedFields(mappedFields.map(f => f.id));
+      } else {
+        // No form context - show empty (new forms start with no fields)
+        setCustomFields([]);
+        setSelectedFields([]);
+      }
     } catch (error: any) {
       console.error("Error fetching custom fields:", error);
     }
@@ -763,17 +734,19 @@ export default function Forms() {
     setDialogOpen(true);
   };
 
-  const openEditDialog = (form: Form) => {
+  const openEditDialog = async (form: Form) => {
     setEditingForm(form);
     setFormTitle(form.title);
     setFormDescription(form.description || "");
-    setSelectedFields(form.fields || []);
     setRequireClientInfo(form.require_client_info);
     setFormSectorId(form.sector_id);
     setFormAppearance(form.appearance || {});
     setEditDialogTab("fields");
     setShowTemplates(false);
     setDialogOpen(true);
+    
+    // Fetch fields from form_fields table
+    await fetchCustomFields(form.id);
   };
 
   // Check if user can edit/delete a form based on sector permissions
@@ -843,20 +816,26 @@ export default function Forms() {
       return;
     }
 
-    if (selectedFields.length === 0) {
-      toast.error("Selecione pelo menos um campo");
+    // For existing forms, fields come from form_fields table
+    // For new forms created via template, we need to create form_fields entries
+    if (editingForm) {
+      // Editing - selectedFields represent what's in form_fields, no validation needed
+      // as fields are managed via FormFieldsManager
+    } else if (selectedFields.length === 0 && !showTemplates) {
+      toast.error("Adicione pelo menos um campo usando 'Gerenciar Campos'");
       return;
     }
 
     setSaving(true);
     try {
       if (editingForm) {
+        // Update form metadata only - fields are managed via form_fields table
         const { error } = await supabase
           .from("forms")
           .update({
             title: formTitle.trim(),
             description: formDescription.trim() || null,
-            fields: selectedFields,
+            fields: selectedFields, // Keep for backward compatibility
             require_client_info: requireClientInfo,
             sector_id: formSectorId,
             appearance: JSON.parse(JSON.stringify(formAppearance)),
@@ -864,20 +843,47 @@ export default function Forms() {
           .eq("id", editingForm.id);
 
         if (error) throw error;
+        
+        // Update form_fields display_order based on selectedFields order
+        for (let i = 0; i < selectedFields.length; i++) {
+          await supabase
+            .from("form_fields")
+            .update({ display_order: i })
+            .eq("form_id", editingForm.id)
+            .eq("field_id", selectedFields[i]);
+        }
+        
         toast.success("Formulário atualizado!");
       } else {
+        // Create new form
         const insertData = {
           account_id: currentUser!.account_id,
           title: formTitle.trim(),
           description: formDescription.trim() || null,
-          fields: selectedFields,
+          fields: selectedFields, // Keep for backward compatibility
           require_client_info: requireClientInfo,
           sector_id: formSectorId,
           appearance: JSON.parse(JSON.stringify(formAppearance)),
         };
-        const { error } = await supabase.from("forms").insert(insertData);
+        const { data: newForm, error } = await supabase
+          .from("forms")
+          .insert(insertData)
+          .select("id")
+          .single();
 
         if (error) throw error;
+        
+        // Create form_fields entries for template fields
+        if (selectedFields.length > 0 && newForm) {
+          const formFieldsToInsert = selectedFields.map((fieldId, index) => ({
+            form_id: newForm.id,
+            field_id: fieldId,
+            display_order: index,
+          }));
+          
+          await supabase.from("form_fields").insert(formFieldsToInsert);
+        }
+        
         toast.success("Formulário criado!");
       }
 
@@ -1032,13 +1038,7 @@ export default function Forms() {
     }
   };
 
-  const toggleField = (fieldId: string) => {
-    setSelectedFields((prev) =>
-      prev.includes(fieldId)
-        ? prev.filter((id) => id !== fieldId)
-        : [...prev, fieldId]
-    );
-  };
+  // toggleField removed - field selection is now managed in FormFieldsManager
 
   const getFieldTypeBadge = (type: string) => {
     const types: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
@@ -1598,26 +1598,39 @@ export default function Forms() {
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
-                        <Label>Campos do Formulário *</Label>
+                        <Label>Campos do Formulário</Label>
                         <p className="text-sm text-muted-foreground">
-                          Selecione os campos personalizados que aparecerão no formulário
+                          Crie e organize os campos que aparecerão no formulário
                         </p>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCustomFieldsDialogOpen(true)}
-                      >
-                        <Settings2 className="h-4 w-4 mr-2" />
-                        Gerenciar Campos
-                      </Button>
+                      {editingForm && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCustomFieldsDialogOpen(true)}
+                        >
+                          <Settings2 className="h-4 w-4 mr-2" />
+                          Gerenciar Campos
+                        </Button>
+                      )}
                     </div>
 
-                    {customFields.length === 0 ? (
+                    {!editingForm ? (
                       <Card>
                         <CardContent className="py-6 text-center">
                           <p className="text-muted-foreground mb-3">
-                            Nenhum campo personalizado criado.
+                            Salve o formulário primeiro para adicionar campos personalizados.
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Ou use um dos modelos acima para começar rapidamente.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : customFields.length === 0 ? (
+                      <Card>
+                        <CardContent className="py-6 text-center">
+                          <p className="text-muted-foreground mb-3">
+                            Nenhum campo criado para este formulário.
                           </p>
                           <Button
                             variant="outline"
@@ -1631,18 +1644,14 @@ export default function Forms() {
                       </Card>
                     ) : (
                       <div className="space-y-3">
-                        {/* Available fields to select */}
-                        <div className="border rounded-lg divide-y max-h-[200px] overflow-y-auto">
-                          {customFields.map((field) => (
+                        {/* Display fields in order - managed via FormFieldsManager */}
+                        <div className="border rounded-lg divide-y max-h-[250px] overflow-y-auto">
+                          {customFields.map((field, index) => (
                             <div
                               key={field.id}
-                              className="flex items-center gap-3 p-3 hover:bg-muted/50 cursor-pointer"
-                              onClick={() => toggleField(field.id)}
+                              className="flex items-center gap-3 p-3"
                             >
-                              <Checkbox
-                                checked={selectedFields.includes(field.id)}
-                                onCheckedChange={() => toggleField(field.id)}
-                              />
+                              <span className="text-xs text-muted-foreground w-6">{index + 1}.</span>
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium text-foreground">{field.name}</p>
                                 {field.is_required && (
@@ -1656,42 +1665,10 @@ export default function Forms() {
                           ))}
                         </div>
 
-                        {/* Sortable selected fields */}
-                        {selectedFields.length > 0 && (
-                          <div className="space-y-2">
-                            <Label className="text-sm text-muted-foreground">
-                              Ordem dos campos (arraste para reordenar)
-                            </Label>
-                            <DndContext
-                              sensors={sensors}
-                              collisionDetection={closestCenter}
-                              onDragEnd={handleDragEnd}
-                            >
-                              <SortableContext
-                                items={selectedFields}
-                                strategy={verticalListSortingStrategy}
-                              >
-                                <div className="space-y-2">
-                                  {getSelectedFieldsData().map((field) => (
-                                    <SortableFieldItem
-                                      key={field.id}
-                                      field={field}
-                                      onRemove={toggleField}
-                                      getFieldTypeBadge={getFieldTypeBadge}
-                                    />
-                                  ))}
-                                </div>
-                              </SortableContext>
-                            </DndContext>
-                          </div>
-                        )}
+                        <p className="text-sm text-muted-foreground">
+                          {customFields.length} campo(s) • Use "Gerenciar Campos" para adicionar, remover ou reordenar
+                        </p>
                       </div>
-                    )}
-
-                    {selectedFields.length > 0 && (
-                      <p className="text-sm text-muted-foreground">
-                        {selectedFields.length} campo(s) selecionado(s)
-                      </p>
                     )}
                   </div>
                 </TabsContent>
@@ -1962,16 +1939,20 @@ export default function Forms() {
         </DialogContent>
       </Dialog>
 
-      {/* Custom Fields Manager */}
-      <CustomFieldsManager
-        open={customFieldsDialogOpen}
-        onOpenChange={(open) => {
-          setCustomFieldsDialogOpen(open);
-          if (!open) {
-            fetchCustomFields();
-          }
-        }}
-      />
+      {/* Form Fields Manager - specific to current form */}
+      {editingForm && (
+        <FormFieldsManager
+          formId={editingForm.id}
+          open={customFieldsDialogOpen}
+          onOpenChange={(open) => {
+            setCustomFieldsDialogOpen(open);
+            if (!open) {
+              fetchCustomFields(editingForm.id);
+            }
+          }}
+          onFieldsChange={() => fetchCustomFields(editingForm.id)}
+        />
+      )}
     </div>
   );
 }
