@@ -191,27 +191,23 @@ export function useMessageAssistant({
   // OPTIMIZATION: Disabled auto-refresh when suggestions are already loaded
   useEffect(() => {
     if (!suggestionsEnabled || lastMessages.length === 0) {
-      console.log("[AI Suggestions] Disabled or no messages");
       setSuggestions([]);
       return;
     }
 
     // Skip if rate limited due to 402 error
     if (isRateLimited()) {
-      console.log("[AI Suggestions] Skipping - rate limited after 402 error");
       return;
     }
 
     // OPTIMIZATION: Skip auto-refresh if suggestions are already loaded
     // User can manually refresh using the refresh button if needed
     if (suggestions.length > 0) {
-      console.log("[AI Suggestions] Already have suggestions, skipping auto-refresh");
       return;
     }
 
     // Wait for account_id to be available
     if (!currentUser?.account_id) {
-      console.log("[AI Suggestions] Waiting for account_id...");
       return;
     }
 
@@ -219,7 +215,6 @@ export function useMessageAssistant({
     // If the last message is from the agent (seller), there's nothing to reply to
     const lastMessage = lastMessages[lastMessages.length - 1];
     if (!lastMessage?.is_from_client) {
-      console.log("[AI Suggestions] Last message is from agent, no suggestions needed");
       setSuggestions([]);
       return;
     }
@@ -234,7 +229,6 @@ export function useMessageAssistant({
     if (conversationId) {
       const cached = getCachedSuggestions(conversationId, messagesSignature);
       if (cached) {
-        console.log("[AI Suggestions] Using cached suggestions for conversation:", conversationId);
         setSuggestions(cached.suggestions);
         setCurrentSpinPhase(cached.currentSpinPhase);
         lastMessagesRef.current = messagesSignature;
@@ -247,7 +241,6 @@ export function useMessageAssistant({
     }
 
     suggestionsTimeoutRef.current = setTimeout(async () => {
-      console.log("[AI Suggestions] Fetching suggestions for sector:", sectorId);
       setIsLoadingSuggestions(true);
       lastMessagesRef.current = messagesSignature;
 
@@ -284,7 +277,6 @@ export function useMessageAssistant({
           return;
         }
 
-        console.log("[AI Suggestions] Received:", data?.suggestions?.length || 0, "suggestions", "SPIN phase:", data?.currentSpinPhase);
         if (data?.suggestions) {
           setSuggestions(data.suggestions);
           

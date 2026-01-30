@@ -573,7 +573,6 @@ export function useZappData(options: UseZappDataOptions = {}) {
   const fetchMessagesRef = useRef<(id: string) => Promise<void>>();
   
   const fetchMessages = useCallback(async (zappConversationId: string) => {
-    console.log("[ZappData] fetchMessages called for:", zappConversationId);
     try {
       // Fetch latest 100 messages (ordered descending, then reverse for display)
       // IMPORTANT: Do NOT filter out deleted messages - they should be shown with placeholder
@@ -589,8 +588,6 @@ export function useZappData(options: UseZappDataOptions = {}) {
       
       // Reverse to get chronological order (oldest first for display)
       const reversedData = (data || []).reverse();
-      
-      console.log("[ZappData] fetched messages count:", reversedData.length);
       
       const msgs = reversedData.map((m: any) => ({
         id: m.id,
@@ -619,19 +616,9 @@ export function useZappData(options: UseZappDataOptions = {}) {
       }));
       
       setMessages(msgs);
-      console.log("[ZappData] setMessages called with", msgs.length, "messages");
       
       // OPTIMIZATION: Disabled auto-retry for media downloads to reduce cloud consumption
       // Media is now only downloaded when user explicitly clicks "Tentar novamente"
-      // This prevents thousands of redundant API calls when conversations are opened
-      const pendingMediaCount = (data || []).filter((m: any) => 
-        m.media_type && !m.media_url && 
-        (m.media_download_status === "pending" || m.media_download_status === "failed")
-      ).length;
-      
-      if (pendingMediaCount > 0) {
-        console.log(`[ZappData] ${pendingMediaCount} messages have pending/failed media - user can click to retry`);
-      }
     } catch (error) {
       console.error("Error fetching messages:", error);
     }
@@ -642,9 +629,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
 
   // Initial data fetch - re-fetch when sector changes
   useEffect(() => {
-    console.log("[ZappData] useEffect triggered, account_id:", currentUser?.account_id, "sectorId:", sectorId);
     if (currentUser?.account_id) {
-      console.log("[ZappData] Calling fetchData for sector:", sectorId);
       fetchData();
       checkWhatsAppStatus();
     }
@@ -660,8 +645,6 @@ export function useZappData(options: UseZappDataOptions = {}) {
   useEffect(() => {
     if (!currentUser?.account_id) return;
 
-    console.log("[ZappData] Setting up realtime subscriptions for account:", currentUser.account_id);
-
     const conversationsChannel = supabase
       .channel('zapp-conversations-realtime')
       .on(
@@ -673,18 +656,14 @@ export function useZappData(options: UseZappDataOptions = {}) {
           filter: `account_id=eq.${currentUser.account_id}`
         },
         (payload) => {
-          console.log("[ZappData] zapp_conversations change detected:", payload.eventType);
-          
           // CRITICAL SECURITY: Validate account_id matches current user
           const payloadAccountId = (payload.new as any)?.account_id || (payload.old as any)?.account_id;
           if (payloadAccountId && payloadAccountId !== currentUser?.account_id) {
-            console.warn("[ZappData] SECURITY: Ignoring realtime event from different account");
             return;
           }
           
           // CRITICAL: Only process if we have a sector selected
           if (!sectorId) {
-            console.log("[ZappData] Ignoring realtime event - no sector selected");
             return;
           }
           // Fetch immediately for new conversations, debounce for updates
@@ -704,11 +683,8 @@ export function useZappData(options: UseZappDataOptions = {}) {
           filter: `account_id=eq.${currentUser.account_id}`
         },
         (payload) => {
-          console.log("[ZappData] zapp_conversation_assignments change detected:", payload.eventType, payload);
-          
           // CRITICAL: Only process if we have a sector selected
           if (!sectorId) {
-            console.log("[ZappData] Ignoring realtime event - no sector selected");
             return;
           }
           
@@ -717,7 +693,6 @@ export function useZappData(options: UseZappDataOptions = {}) {
           const currentDeptId = currentDepartmentIdRef.current;
           
           if (payloadDeptId && currentDeptId && payloadDeptId !== currentDeptId) {
-            console.log(`[ZappData] SECURITY: Ignoring realtime event for different department (${payloadDeptId} != ${currentDeptId})`);
             return;
           }
           
@@ -734,18 +709,15 @@ export function useZappData(options: UseZappDataOptions = {}) {
         },
         (payload) => {
           const newMsg = payload.new as any;
-          console.log("[ZappData] zapp_messages INSERT detected:", newMsg?.id);
           
           // CRITICAL SECURITY: Validate account_id matches current user
           const payloadAccountId = newMsg?.account_id;
           if (payloadAccountId && payloadAccountId !== currentUser?.account_id) {
-            console.warn("[ZappData] SECURITY: Ignoring message event from different account");
             return;
           }
           
           // CRITICAL: Only process if we have a sector selected
           if (!sectorId) {
-            console.log("[ZappData] Ignoring realtime event - no sector selected");
             return;
           }
           
@@ -789,11 +761,8 @@ export function useZappData(options: UseZappDataOptions = {}) {
             setMessages(prev => {
               const exists = prev.some(m => m.id === newMsg.id);
               if (exists) {
-                console.log(`[ZappData] Message ${newMsg.id} already exists in state, skipping INSERT`);
                 return prev;
               }
-              // If doesn't exist and this is for the current conversation, could add it
-              // But for now, just trigger assignment refresh to update preview
               return prev;
             });
           }
@@ -812,11 +781,9 @@ export function useZappData(options: UseZappDataOptions = {}) {
         },
         (payload) => {
           const newData = payload.new as any;
-          console.log("[ZappData] zapp_messages UPDATE detected:", newData?.id);
           
           // CRITICAL SECURITY: Validate account_id matches current user
           if (newData?.account_id && newData.account_id !== currentUser?.account_id) {
-            console.warn("[ZappData] SECURITY: Ignoring message UPDATE event from different account");
             return;
           }
           
@@ -827,7 +794,6 @@ export function useZappData(options: UseZappDataOptions = {}) {
               // If message doesn't exist in current state, it's for a different conversation
               const messageExists = prevMessages.some(msg => msg.id === newData.id);
               if (!messageExists) {
-                console.log("[ZappData] Ignoring UPDATE for message not in current conversation:", newData.id);
                 return prevMessages;
               }
               return prevMessages.map(msg => 
@@ -859,12 +825,9 @@ export function useZappData(options: UseZappDataOptions = {}) {
           }
         }
       )
-      .subscribe((status) => {
-        console.log("[ZappData] Realtime subscription status:", status);
-      });
+      .subscribe();
 
     return () => {
-      console.log("[ZappData] Cleaning up realtime subscriptions");
       if (realtimeFetchTimeoutRef.current) {
         clearTimeout(realtimeFetchTimeoutRef.current);
       }
