@@ -13,6 +13,7 @@ interface Recipient {
   phone: string;
   event_type: string;
   event_title: string;
+  event_message: string | null;
   event_date: string | null;
   send_order: number;
 }
@@ -191,7 +192,8 @@ serve(async (req) => {
           .replace(/\{sobrenome\}/gi, sobrenome)
           .replace(/\{momento_titulo\}/gi, recipient.event_title)
           .replace(/\{momento_tipo\}/gi, recipient.event_type)
-          .replace(/\{momento_data\}/gi, momentoData);
+          .replace(/\{momento_data\}/gi, momentoData)
+          .replace(/\{momento_mensagem\}/gi, recipient.event_message || "");
 
         // Mark as sending
         await supabase
