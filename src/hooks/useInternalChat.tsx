@@ -57,12 +57,13 @@ export function useInternalChat() {
   const queryClient = useQueryClient();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
 
-  // Fetch all chats for current user
+  // Fetch all chats for current user - OPTIMIZED to avoid N+1 queries
   const { data: chats = [], isLoading: chatsLoading } = useQuery({
     queryKey: ['internal-chats', currentUser?.account_id],
     queryFn: async () => {
-      if (!currentUser?.account_id) return [];
+      if (!currentUser?.account_id || !currentUser?.id) return [];
 
+      // Fetch chats with participants
       const { data: chatsData, error } = await supabase
         .from('internal_chats')
         .select(`
@@ -83,56 +84,62 @@ export function useInternalChat() {
         .order('updated_at', { ascending: false });
 
       if (error) throw error;
+      if (!chatsData || chatsData.length === 0) return [];
 
-      // Get last message for each chat
-      const chatsWithLastMessage = await Promise.all(
-        (chatsData || []).map(async (chat: any) => {
-          const { data: lastMsg } = await supabase
-            .from('internal_messages')
-            .select('*, sender:sender_id(id, name, avatar_url)')
-            .eq('chat_id', chat.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+      const chatIds = chatsData.map((c: any) => c.id);
 
-          // Count unread messages
-          const myParticipation = chat.internal_chat_participants?.find(
-            (p: any) => p.user_id === currentUser.id
-          );
-          
-          let unreadCount = 0;
-          if (myParticipation?.last_read_at) {
-            const { count } = await supabase
-              .from('internal_messages')
-              .select('*', { count: 'exact', head: true })
-              .eq('chat_id', chat.id)
-              .gt('created_at', myParticipation.last_read_at)
-              .neq('sender_id', currentUser.id);
-            unreadCount = count || 0;
-          } else {
-            const { count } = await supabase
-              .from('internal_messages')
-              .select('*', { count: 'exact', head: true })
-              .eq('chat_id', chat.id)
-              .neq('sender_id', currentUser.id);
-            unreadCount = count || 0;
-          }
+      // OPTIMIZATION: Batch fetch last messages for all chats in ONE query
+      // Instead of N queries (one per chat), we do 1 query with RPC-style approach
+      const { data: allMessages } = await supabase
+        .from('internal_messages')
+        .select('id, chat_id, content, message_type, created_at, sender:sender_id(id, name, avatar_url)')
+        .in('chat_id', chatIds)
+        .order('created_at', { ascending: false });
 
-          return {
-            ...chat,
-            participants: chat.internal_chat_participants?.map((p: any) => ({
-              ...p,
-              user: p.users
-            })),
-            last_message: lastMsg,
-            unread_count: unreadCount
-          };
-        })
-      );
+      // Group messages by chat_id and take the first (most recent) for each
+      const lastMessageByChat: Record<string, any> = {};
+      (allMessages || []).forEach((msg: any) => {
+        if (!lastMessageByChat[msg.chat_id]) {
+          lastMessageByChat[msg.chat_id] = msg;
+        }
+      });
 
-      return chatsWithLastMessage as InternalChat[];
+      // OPTIMIZATION: Calculate unread counts locally from already fetched messages
+      // Instead of N count queries, we process the data we already have
+      const unreadCountByChat: Record<string, number> = {};
+      chatsData.forEach((chat: any) => {
+        const myParticipation = chat.internal_chat_participants?.find(
+          (p: any) => p.user_id === currentUser.id
+        );
+        const lastReadAt = myParticipation?.last_read_at ? new Date(myParticipation.last_read_at) : null;
+        
+        // Count messages in this chat that are unread (after last_read_at and not from me)
+        const chatMessages = (allMessages || []).filter(
+          (m: any) => m.chat_id === chat.id && m.sender?.id !== currentUser.id
+        );
+        
+        if (lastReadAt) {
+          unreadCountByChat[chat.id] = chatMessages.filter(
+            (m: any) => new Date(m.created_at) > lastReadAt
+          ).length;
+        } else {
+          unreadCountByChat[chat.id] = chatMessages.length;
+        }
+      });
+
+      // Assemble final result
+      return chatsData.map((chat: any) => ({
+        ...chat,
+        participants: chat.internal_chat_participants?.map((p: any) => ({
+          ...p,
+          user: p.users
+        })),
+        last_message: lastMessageByChat[chat.id] || null,
+        unread_count: unreadCountByChat[chat.id] || 0
+      })) as InternalChat[];
     },
     enabled: !!currentUser?.account_id,
+    staleTime: 30000, // 30 seconds - reduce refetches
   });
 
   // Fetch messages for selected chat

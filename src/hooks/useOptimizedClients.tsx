@@ -152,8 +152,9 @@ export function useOptimizedClients(options: UseOptimizedClientsOptions = {}) {
     queryKey,
     queryFn: fetchClients,
     enabled: !!currentUser?.account_id && !!currentUser?.id,
-    staleTime: 30000, // 30 seconds
-    gcTime: 300000, // 5 minutes (formerly cacheTime)
+    staleTime: 60000, // 60 seconds - reduce API calls significantly
+    gcTime: 300000, // 5 minutes cache
+    refetchOnWindowFocus: false, // Don't refetch on tab focus
   });
 
   const totalPages = Math.ceil((data?.total || 0) / limit);

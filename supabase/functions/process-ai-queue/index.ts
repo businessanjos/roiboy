@@ -25,6 +25,41 @@ serve(async (req) => {
 
     console.log("Starting AI queue processing...");
 
+    // OPTIMIZATION: First, clean up stale jobs that have been processing for too long (>5 min)
+    // This prevents jobs from getting stuck indefinitely
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { data: staleJobs } = await supabase
+      .from("ai_analysis_queue")
+      .update({
+        status: "failed",
+        error_message: "Timeout: job was processing for too long",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("status", "processing")
+      .lt("started_at", fiveMinutesAgo)
+      .select("id");
+    
+    if (staleJobs && staleJobs.length > 0) {
+      console.log(`Cleaned up ${staleJobs.length} stale processing jobs`);
+    }
+
+    // OPTIMIZATION: Also clean up jobs that have exceeded max_attempts
+    // These would just keep failing and consuming resources
+    const { data: exhaustedJobs } = await supabase
+      .from("ai_analysis_queue")
+      .update({
+        status: "failed",
+        error_message: "Max attempts exceeded",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("status", "pending")
+      .gte("attempts", 3)
+      .select("id");
+    
+    if (exhaustedJobs && exhaustedJobs.length > 0) {
+      console.log(`Cleaned up ${exhaustedJobs.length} exhausted jobs (max attempts exceeded)`);
+    }
+
     // Fetch pending jobs ordered by priority (higher first) and creation time
     const { data: jobs, error: fetchError } = await supabase
       .from("ai_analysis_queue")
@@ -36,6 +71,7 @@ serve(async (req) => {
         attempts
       `)
       .eq("status", "pending")
+      .lt("attempts", 3) // Only get jobs that haven't exceeded attempts
       .order("priority", { ascending: false })
       .order("created_at", { ascending: true })
       .limit(BATCH_SIZE);
