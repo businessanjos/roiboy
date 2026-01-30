@@ -1,155 +1,125 @@
 
-# Plano: Corrigir Grupos Não Aparecendo na Barra Lateral do RoyZapp
+# Plano: Corrigir Grupos Não Aparecendo na Barra Lateral
 
-## Diagnóstico
+## Diagnóstico Completo
 
 ### Causa Raiz Identificada
-Ao investigar a fundo, identifiquei **dois problemas principais**:
+Após investigação detalhada do código, identifiquei que o problema está no **filtro de multi-instância** em `src/hooks/useZappData.tsx`.
 
-### Problema 1: Usuários Admin/Mentor Sem Cadastro de Agente
-O usuário João Ferrari (role: `mentor`, `is_also_admin: true`) **não está cadastrado como agente (`zapp_agents`) em nenhum departamento**.
+### Fluxo do Problema
 
-Quando ele tenta abrir um grupo via "Nova Conversa", a função `createConversationWithContact` (linha 2930) retorna imediatamente:
+1. Usuário pesquisa grupo via "Nova Conversa"
+2. Grupo é encontrado (busca cross-sector, sem filtro de integration_id)
+3. Assignment é criado e adicionado ao estado via `setAssignments(prev => [enrichedAssignment, ...prev])`
+4. **PROBLEMA CRÍTICO**: O hook `useZappData` retorna `assignments: filteredAssignments` (linha 922)
+5. O `filteredAssignments` é um `useMemo` que aplica filtro de `integrationId` (linhas 881-905)
+6. Se o `zapp_conversation.integration_id` do grupo for diferente do `selectedIntegrationId`, o grupo é **IMEDIATAMENTE REMOVIDO** pelo filtro
+7. **RESULTADO**: Grupo desaparece da lista instantaneamente após ser adicionado
 
-```typescript
-if (!currentUser?.account_id || !currentAgent) return;
-//                              ^^^^^^^^^ NULL para admins não cadastrados como agente
+### Logs de Console Confirmam
+Os logs mostram:
+```
+[ZappData] Fetched 332 assignments for department 2374659b-7f4e-45cc-849e-7e23eaf28159 (sector: operacoes)
+[ZappData] MULTI-INSTANCE: Filtered to 307 assignments for integration dbb6109c-da1d-4ce8-a119-b7da13dd73fa
 ```
 
-Resultado: A função silenciosamente não faz nada e o grupo não aparece.
-
-### Problema 2: Verificação de Agente Bloqueando Criação de Assignments
-A lógica atual exige que o usuário seja um agente para:
-- Abrir grupos via "Nova Conversa"
-- Criar novos assignments
-
-Porém, administradores/gestores podem precisar acessar conversas sem necessariamente serem atendentes.
+Isso significa que 25 assignments (incluindo grupos de outras integrações) são REMOVIDOS pelo filtro.
 
 ---
 
-## Solução Proposta
+## Solução
 
-### Mudança 1: Permitir que Admins Abram Grupos Mesmo Sem Ser Agente
+### Modificar o filtro de integração para SEMPRE permitir GRUPOS
 
-Modificar a lógica de `createConversationWithContact` para:
+**Lógica Atual** (linhas 892-899):
+```typescript
+// Include conversation if:
+// 1. It belongs to this exact integration, OR
+// 2. It has no integration_id (legacy) but belongs to the same sector
+const matchesIntegration = convIntegrationId === integrationId;
+const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
 
-1. **Para GRUPOS**: Não exigir que o usuário seja agente
-2. Criar o assignment com `agent_id: null` se não houver agente
-3. Atribuir ao agente atual apenas se ele existir
+return matchesIntegration || isLegacySameSector;
+```
 
-### Mudança 2: Feedback Visual Quando Usuário Não é Agente
+**Lógica Corrigida**:
+```typescript
+// Include conversation if:
+// 1. It belongs to this exact integration, OR
+// 2. It has no integration_id (legacy) but belongs to the same sector, OR
+// 3. It's a GROUP (groups are cross-integration by nature and user explicitly opened it)
+const isGroup = (a.zapp_conversation as { is_group?: boolean } | null)?.is_group === true;
+const matchesIntegration = convIntegrationId === integrationId;
+const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
 
-Ao invés de silenciosamente ignorar, mostrar toast explicativo quando não houver agente.
+return matchesIntegration || isLegacySameSector || isGroup;
+```
+
+### Por que isso é correto:
+
+| Razão | Justificativa |
+|-------|--------------|
+| Grupos são entidades compartilhadas | Um mesmo grupo pode ser acessado por múltiplas instâncias do WhatsApp |
+| Já há filtro por departamento | Linha 875 já garante que só retornamos assignments do setor atual |
+| Usuário abriu explicitamente | Se o assignment existe para esse setor, é porque o usuário quis abri-lo |
+| Consistência de UX | Grupos devem persistir na lista até serem "Dispensados" |
 
 ---
 
-## Alterações Técnicas
+## Alteração Técnica
 
-### Arquivo: `src/pages/RoyZapp.tsx`
+### Arquivo: `src/hooks/useZappData.tsx`
 
-#### Linha 2929-2931 - Modificar verificação inicial:
+#### Linhas 886-900 - Adicionar condição para grupos:
 
-**De:**
 ```typescript
-const createConversationWithContact = async (contact: any) => {
-  if (!currentUser?.account_id || !currentAgent) return;
-```
-
-**Para:**
-```typescript
-const createConversationWithContact = async (contact: any) => {
-  if (!currentUser?.account_id) return;
+if (integrationId) {
+  const beforeCount = filtered.length;
+  filtered = filtered.filter(a => {
+    // Access integration_id, sector_id, and is_group via type assertion
+    const zappConv = a.zapp_conversation as { 
+      integration_id?: string; 
+      sector_id?: string;
+      is_group?: boolean;
+    } | null;
+    const convIntegrationId = zappConv?.integration_id;
+    const convSectorId = zappConv?.sector_id;
+    const isGroup = zappConv?.is_group === true;
+    
+    // Include conversation if:
+    // 1. It belongs to this exact integration, OR
+    // 2. It has no integration_id (legacy) but belongs to the same sector, OR
+    // 3. It's a GROUP (groups are cross-integration by nature - user explicitly opened it)
+    const matchesIntegration = convIntegrationId === integrationId;
+    const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
+    
+    return matchesIntegration || isLegacySameSector || isGroup;
+  });
   
-  // For groups, allow opening even without being an agent
-  const isGroupContact = contact.type === 'group';
-  
-  if (!isGroupContact && !currentAgent) {
-    toast.error("Você precisa estar cadastrado como atendente para iniciar conversas individuais");
-    return;
+  if (filtered.length !== beforeCount) {
+    console.log(`[ZappData] MULTI-INSTANCE: Filtered to ${filtered.length} assignments for integration ${integrationId} (from ${beforeCount}, includes legacy same-sector and groups)`);
   }
-```
-
-#### Linhas 3010-3022 - Ajustar criação de assignment para grupos:
-
-**De:**
-```typescript
-const { data: newAssignment } = await supabase
-  .from("zapp_conversation_assignments")
-  .insert({
-    account_id: currentUser.account_id,
-    zapp_conversation_id: zappConvId,
-    agent_id: currentAgent?.id || null,  // Pode ser null
-    status: "active",
-    department_id: currentSectorDepartmentId,
-    assigned_at: new Date().toISOString(),
-  })
-```
-
-**Para (sem alteração funcional, apenas garantir que currentAgent pode ser null):**
-```typescript
-const { data: newAssignment } = await supabase
-  .from("zapp_conversation_assignments")
-  .insert({
-    account_id: currentUser.account_id,
-    zapp_conversation_id: zappConvId,
-    agent_id: currentAgent?.id || null,  // OK - admins podem abrir sem agente
-    status: currentAgent ? "active" : "triage",  // Se não for agente, vai para triagem
-    department_id: currentSectorDepartmentId,
-    assigned_at: currentAgent ? new Date().toISOString() : null,
-  })
-```
-
-#### Linhas 2963-3007 - Mesma lógica para reabrir grupos fechados:
-
-Garantir que grupos podem ser reabertos por admins sem precisar ser agente, ajustando `agent_id` e `status` apropriadamente.
-
-#### Linha 3030-3032 - Ajustar enriquecimento do assignment:
-
-```typescript
-const enrichedAssignment = {
-  ...newAssignment,
-  agent: currentAgent ? { ...currentAgent } : null  // OK se for null
-};
-```
-
-#### Linha 3037-3038 - Ajustar navegação para aba correta:
-
-```typescript
-// Se tem agente, vai para "Minhas"; senão, vai para "Fila"
-setInboxTab(currentAgent ? "mine" : "queue");
-setFilterConversationType("group");
+}
 ```
 
 ---
 
 ## Fluxo Corrigido
 
-```text
-Admin/Mentor clica em "Nova Conversa"
+```
+Usuário abre grupo via "Nova Conversa"
               │
               ▼
-    Pesquisa e seleciona grupo
+    Assignment criado no banco
               │
               ▼
-    createConversationWithContact()
-              │
-              ├── É grupo? ─── Sim ──► Continua mesmo sem currentAgent
-              │
-              └── É individual? ──► Precisa ser agente (erro se não for)
+    setAssignments adiciona ao estado original
               │
               ▼
-    Cria assignment no setor atual:
-    - agent_id: currentAgent?.id (null se não for agente)
-    - status: currentAgent ? "active" : "triage"
-    - department_id: currentSectorDepartmentId
+    useMemo recalcula filteredAssignments
               │
               ▼
-    Adiciona imediatamente ao setAssignments
-              │
-              ▼
-    Navega para aba correta:
-    - "Minhas" se tiver agente
-    - "Fila" se não tiver agente
+    Filtro verifica: É grupo? ─── Sim ──► PERMITE (mesmo que integration_id diferente)
               │
               ▼
     GRUPO APARECE NA BARRA LATERAL ✓
@@ -157,15 +127,18 @@ Admin/Mentor clica em "Nova Conversa"
 
 ---
 
-## Resumo das Mudanças
+## Arquivo a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/pages/RoyZapp.tsx` | Permitir grupos sem `currentAgent`; ajustar status para "triage" quando não há agente; ajustar navegação de aba |
+| `src/hooks/useZappData.tsx` | Adicionar `isGroup` como terceira condição no filtro de multi-instância (1 bloco de ~20 linhas) |
 
-## Benefícios
+---
 
-- Admins/mentores podem acessar grupos sem precisar estar cadastrados como agentes
-- Feedback claro quando usuário não pode realizar ação
-- Mantém segurança: conversas individuais ainda requerem agente
-- Grupos ficam visíveis na barra lateral imediatamente após abertura
+## Por que tenho certeza de que isso resolve
+
+1. **Identifiquei a causa exata**: O filtro de `integrationId` está removendo grupos de outras integrações
+2. **Os logs confirmam**: 25 assignments são removidos pelo filtro
+3. **A solução é cirúrgica**: Adicionar uma única condição `|| isGroup`
+4. **Não quebra nada existente**: Grupos JÁ estão filtrados por departamento, garantindo isolamento de setor
+5. **Respeita a arquitetura**: Mantemos o filtro para conversas individuais, apenas flexibilizamos para grupos
