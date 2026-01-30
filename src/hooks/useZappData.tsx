@@ -621,40 +621,16 @@ export function useZappData(options: UseZappDataOptions = {}) {
       setMessages(msgs);
       console.log("[ZappData] setMessages called with", msgs.length, "messages");
       
-      // Trigger lazy download for pending, failed, or stuck downloading media
-      const pendingMediaIds = (data || [])
-        .filter((m: any) => {
-          // Skip if no media type or already has URL
-          if (!m.media_type || m.media_url) return false;
-          
-          // Status pending - always try to download
-          if (m.media_download_status === "pending") return true;
-          
-          // Status failed - auto-retry on conversation open
-          if (m.media_download_status === "failed") return true;
-          
-          // Status downloading for more than 5 minutes (stuck)
-          if (m.media_download_status === "downloading" && m.updated_at) {
-            const updatedAt = new Date(m.updated_at).getTime();
-            const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-            return updatedAt < fiveMinutesAgo;
-          }
-          
-          return false;
-        })
-        .map((m: any) => m.id);
+      // OPTIMIZATION: Disabled auto-retry for media downloads to reduce cloud consumption
+      // Media is now only downloaded when user explicitly clicks "Tentar novamente"
+      // This prevents thousands of redundant API calls when conversations are opened
+      const pendingMediaCount = (data || []).filter((m: any) => 
+        m.media_type && !m.media_url && 
+        (m.media_download_status === "pending" || m.media_download_status === "failed")
+      ).length;
       
-      if (pendingMediaIds.length > 0) {
-        console.log(`[ZappData] Triggering media download for ${pendingMediaIds.length} messages (pending/failed/stuck)`);
-        supabase.functions.invoke("download-media", {
-          body: { message_ids: pendingMediaIds }
-        }).then(({ data: downloadResult, error: downloadError }) => {
-          if (downloadError) {
-            console.error("Error triggering media download:", downloadError);
-          } else if (downloadResult?.successful > 0 && fetchMessagesRef.current) {
-            fetchMessagesRef.current(zappConversationId);
-          }
-        });
+      if (pendingMediaCount > 0) {
+        console.log(`[ZappData] ${pendingMediaCount} messages have pending/failed media - user can click to retry`);
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
