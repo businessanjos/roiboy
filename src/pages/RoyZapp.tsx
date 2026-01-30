@@ -2927,7 +2927,15 @@ export default function RoyZapp() {
 
   // Create new conversation with contact (lead or client based on sector)
   const createConversationWithContact = async (contact: any) => {
-    if (!currentUser?.account_id || !currentAgent) return;
+    if (!currentUser?.account_id) return;
+    
+    // For groups, allow opening even without being an agent
+    const isGroupContact = contact.type === 'group';
+    
+    if (!isGroupContact && !currentAgent) {
+      toast.error("Você precisa estar cadastrado como atendente para iniciar conversas individuais");
+      return;
+    }
     
     setCreatingConversation(true);
     try {
@@ -2961,13 +2969,13 @@ export default function RoyZapp() {
           setCreatingConversation(false);
           return;
         } else if (closedAssignment) {
-          // Reopen closed group - GROUPS ARE AUTO-ASSIGNED TO CURRENT AGENT
+          // Reopen closed group - assigned to agent if available, otherwise triage
           await supabase
             .from("zapp_conversation_assignments")
             .update({ 
-              status: "active",  // Groups go directly to active, not triage
-              agent_id: currentAgent?.id || null,  // Assign to current agent
-              assigned_at: new Date().toISOString(),
+              status: currentAgent ? "active" : "triage",  // Active if agent, triage otherwise
+              agent_id: currentAgent?.id || null,  // Assign to current agent if available
+              assigned_at: currentAgent ? new Date().toISOString() : null,
               updated_at: new Date().toISOString() 
             })
             .eq("id", closedAssignment.id);
@@ -2998,7 +3006,7 @@ export default function RoyZapp() {
           
           toast.success("Grupo reaberto!");
           setNewConversationDialogOpen(false);
-          setInboxTab("mine"); // Go to "Minhas" tab since group is auto-assigned
+          setInboxTab(currentAgent ? "mine" : "queue"); // Go to correct tab based on agent
           setFilterConversationType("group"); // Switch to groups tab
           
           // CRITICAL FIX: Delay fetchData to prevent overwriting local state
@@ -3007,16 +3015,16 @@ export default function RoyZapp() {
           setCreatingConversation(false);
           return;
         } else {
-          // Create new assignment for group - GROUPS ARE AUTO-ASSIGNED TO CURRENT AGENT
+          // Create new assignment for group - assigned to agent if available
           const { data: newAssignment } = await supabase
             .from("zapp_conversation_assignments")
             .insert({
               account_id: currentUser.account_id,
               zapp_conversation_id: zappConvId,
-              agent_id: currentAgent?.id || null,  // Assign to current agent immediately
-              status: "active",  // Groups go directly to active, not triage
+              agent_id: currentAgent?.id || null,  // Assign to current agent if available
+              status: currentAgent ? "active" : "triage",  // Active if agent, triage otherwise
               department_id: currentSectorDepartmentId,
-              assigned_at: new Date().toISOString(),  // Set assignment time
+              assigned_at: currentAgent ? new Date().toISOString() : null,  // Only set if agent
             })
             .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
             .single();
@@ -3034,7 +3042,7 @@ export default function RoyZapp() {
           
           toast.success("Grupo adicionado!");
           setNewConversationDialogOpen(false);
-          setInboxTab("mine"); // Go to "Minhas" tab since group is auto-assigned
+          setInboxTab(currentAgent ? "mine" : "queue"); // Go to correct tab based on agent
           setFilterConversationType("group"); // Switch to groups tab
           
           // CRITICAL FIX: Delay fetchData to prevent overwriting local state
