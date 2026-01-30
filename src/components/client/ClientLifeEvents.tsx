@@ -71,6 +71,10 @@ import {
   Send,
   ImagePlus,
   X,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { differenceInDays, addYears, isBefore } from "date-fns";
@@ -92,6 +96,11 @@ interface LifeEvent {
   image_url: string | null;
   // Images from related table
   images?: LifeEventImage[];
+  // Scheduled send fields
+  scheduled_send_at: string | null;
+  send_status: "pending" | "scheduled" | "sent" | "failed" | "cancelled";
+  sent_at: string | null;
+  send_error: string | null;
 }
 
 interface LifeEventImage {
@@ -148,6 +157,8 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
   const [formDescription, setFormDescription] = useState("");
   const [formRecurring, setFormRecurring] = useState(false);
   const [formReminderDays, setFormReminderDays] = useState("7");
+  const [formAutoSend, setFormAutoSend] = useState(false);
+  const [formSendTime, setFormSendTime] = useState("09:00");
 
   // Image upload state - now supports multiple images
   const [formImageFiles, setFormImageFiles] = useState<File[]>([]);
@@ -257,6 +268,8 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
     setFormDescription("");
     setFormRecurring(false);
     setFormReminderDays("7");
+    setFormAutoSend(false);
+    setFormSendTime("09:00");
     setEditingEvent(null);
     setFormImageFiles([]);
     setFormImagePreviews([]);
@@ -279,6 +292,19 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
     setFormDescription(event.description || "");
     setFormRecurring(event.is_recurring);
     setFormReminderDays(String(event.reminder_days_before || 7));
+    
+    // Set auto-send fields
+    const hasSchedule = !!event.scheduled_send_at;
+    setFormAutoSend(hasSchedule);
+    if (hasSchedule && event.scheduled_send_at) {
+      const scheduledDate = new Date(event.scheduled_send_at);
+      const hours = String(scheduledDate.getHours()).padStart(2, '0');
+      const minutes = String(scheduledDate.getMinutes()).padStart(2, '0');
+      setFormSendTime(`${hours}:${minutes}`);
+    } else {
+      setFormSendTime("09:00");
+    }
+    
     setFormImageFiles([]);
     setFormImagePreviews([]);
     setImagesToDelete([]);
@@ -339,6 +365,27 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
     setExistingImages(prev => prev.filter(img => img.id !== imageId));
   };
 
+  // Calculate scheduled_send_at based on date, time and recurrence
+  const calculateScheduledSendAt = (): string | null => {
+    if (!formAutoSend || !formDate) return null;
+    
+    const [year, month, day] = formDate.split('-').map(Number);
+    const [hours, minutes] = formSendTime.split(':').map(Number);
+    
+    let sendDate = new Date(year, month - 1, day, hours, minutes);
+    
+    // Para eventos recorrentes, calcular próxima ocorrência
+    if (formRecurring) {
+      const today = new Date();
+      sendDate.setFullYear(today.getFullYear());
+      if (sendDate < today) {
+        sendDate.setFullYear(today.getFullYear() + 1);
+      }
+    }
+    
+    return sendDate.toISOString();
+  };
+
   const handleSave = async () => {
     if (!formTitle.trim()) {
       toast.error("Título é obrigatório");
@@ -350,6 +397,16 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
       return;
     }
 
+    if (formAutoSend && !formDate) {
+      toast.error("Data é obrigatória para envio automático");
+      return;
+    }
+
+    if (formAutoSend && !formSendTime) {
+      toast.error("Horário é obrigatório para envio automático");
+      return;
+    }
+
     if (!currentUser?.account_id) {
       toast.error("Usuário não encontrado");
       return;
@@ -357,6 +414,8 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
 
     setSaving(true);
     try {
+      const scheduledSendAt = calculateScheduledSendAt();
+      
       const eventData = {
         event_type: formType,
         title: formTitle.trim(),
@@ -365,6 +424,8 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
         description: formDescription.trim() || null,
         is_recurring: formRecurring,
         reminder_days_before: parseInt(formReminderDays) || 7,
+        scheduled_send_at: scheduledSendAt,
+        send_status: scheduledSendAt ? 'scheduled' : 'pending',
       };
 
       let eventId: string;
@@ -622,6 +683,52 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
                             ? "Amanhã"
                             : `em ${daysUntil}d`}
                         </Badge>
+                      )}
+                      {/* Send status badges */}
+                      {event.send_status === "scheduled" && event.scheduled_send_at && (
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="gap-1 text-[10px] h-5 border-blue-500/50 text-blue-600 bg-blue-50">
+                                <Clock className="h-2.5 w-2.5" />
+                                Agendado
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {new Date(event.scheduled_send_at).toLocaleString("pt-BR")}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {event.send_status === "sent" && (
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="gap-1 text-[10px] h-5 border-green-500/50 text-green-600 bg-green-50">
+                                <CheckCircle2 className="h-2.5 w-2.5" />
+                                Enviado
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {event.sent_at ? new Date(event.sent_at).toLocaleString("pt-BR") : "Enviado"}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      {event.send_status === "failed" && (
+                        <TooltipProvider delayDuration={300}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge variant="outline" className="gap-1 text-[10px] h-5 border-red-500/50 text-red-600 bg-red-50">
+                                <XCircle className="h-2.5 w-2.5" />
+                                Falhou
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              {event.send_error || "Erro no envio"}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                     {event.description && (
@@ -927,6 +1034,54 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
                     <SelectItem value="30">30 dias</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+
+            {/* Auto-send toggle */}
+            <div className="flex items-center justify-between border-t pt-4">
+              <div className="space-y-0.5">
+                <Label className="flex items-center gap-2">
+                  <Send className="h-4 w-4 text-primary" />
+                  Enviar automaticamente
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Dispara a mensagem via WhatsApp na data selecionada
+                </p>
+              </div>
+              <Switch checked={formAutoSend} onCheckedChange={setFormAutoSend} />
+            </div>
+
+            {formAutoSend && (
+              <div className="space-y-2 bg-primary/5 p-3 rounded-lg border border-primary/20">
+                <Label className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Horário de envio
+                </Label>
+                <Input
+                  type="time"
+                  value={formSendTime}
+                  onChange={(e) => setFormSendTime(e.target.value)}
+                  className="w-32"
+                />
+                {formDate && (
+                  <p className="text-xs text-muted-foreground">
+                    {formRecurring ? (
+                      <>Próximo envio: {(() => {
+                        const [year, month, day] = formDate.split('-').map(Number);
+                        const [hours, minutes] = formSendTime.split(':').map(Number);
+                        let sendDate = new Date(year, month - 1, day, hours, minutes);
+                        const today = new Date();
+                        sendDate.setFullYear(today.getFullYear());
+                        if (sendDate < today) {
+                          sendDate.setFullYear(today.getFullYear() + 1);
+                        }
+                        return sendDate.toLocaleString("pt-BR");
+                      })()}</>
+                    ) : (
+                      <>Envio em: {new Date(`${formDate}T${formSendTime}`).toLocaleString("pt-BR")}</>
+                    )}
+                  </p>
+                )}
               </div>
             )}
           </div>

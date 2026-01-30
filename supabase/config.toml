@@ -143,3 +143,6 @@ verify_jwt = false
 
 [functions.oauth-callback]
 verify_jwt = false
+
+[functions.send-cx-moment-auto]
+verify_jwt = false

@@ -1721,9 +1721,14 @@ export type Database = {
           event_type: string
           id: string
           image_url: string | null
+          integration_id: string | null
           is_recurring: boolean
           message: string | null
           reminder_days_before: number | null
+          scheduled_send_at: string | null
+          send_error: string | null
+          send_status: string | null
+          sent_at: string | null
           source: string
           title: string
           updated_at: string
@@ -1737,9 +1742,14 @@ export type Database = {
           event_type: string
           id?: string
           image_url?: string | null
+          integration_id?: string | null
           is_recurring?: boolean
           message?: string | null
           reminder_days_before?: number | null
+          scheduled_send_at?: string | null
+          send_error?: string | null
+          send_status?: string | null
+          sent_at?: string | null
           source?: string
           title: string
           updated_at?: string
@@ -1753,9 +1763,14 @@ export type Database = {
           event_type?: string
           id?: string
           image_url?: string | null
+          integration_id?: string | null
           is_recurring?: boolean
           message?: string | null
           reminder_days_before?: number | null
+          scheduled_send_at?: string | null
+          send_error?: string | null
+          send_status?: string | null
+          sent_at?: string | null
           source?: string
           title?: string
           updated_at?: string
