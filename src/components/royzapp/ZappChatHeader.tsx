@@ -14,6 +14,7 @@ import {
   CheckCircle,
   Link2,
   Trash2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +37,7 @@ interface ZappChatHeaderProps {
   currentAgentId: string | null;
   showLeadOption?: boolean;
   accountId?: string;
+  isGroup?: boolean;
   onBack: () => void;
   onOpenClientEdit: (clientId: string) => void;
   onAssignToMe: (assignmentId: string) => void;
@@ -49,6 +51,7 @@ interface ZappChatHeaderProps {
   onOpenLinkClient?: () => void;
   onClientLinked?: () => void;
   onDeleteConversation?: () => void;
+  onDismissConversation?: () => void;
 }
 
 export const ZappChatHeader = memo(function ZappChatHeader({
@@ -58,6 +61,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   currentAgentId,
   showLeadOption = false,
   accountId,
+  isGroup = false,
   onBack,
   onOpenClientEdit,
   onAssignToMe,
@@ -71,6 +75,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   onOpenLinkClient,
   onClientLinked,
   onDeleteConversation,
+  onDismissConversation,
 }: ZappChatHeaderProps) {
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const conversationId = assignment.zapp_conversation_id || assignment.zapp_conversation?.id;
@@ -326,6 +331,15 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                   </>
                 )}
                 <DropdownMenuSeparator className="bg-zapp-border" />
+                {isGroup && onDismissConversation && (
+                  <DropdownMenuItem 
+                    className="text-amber-500 hover:bg-amber-500/10"
+                    onClick={onDismissConversation}
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Dispensar grupo
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem 
                   className="text-red-500 hover:bg-red-500/10"
                   onClick={onDeleteConversation}

@@ -168,9 +168,9 @@ export default function RoyZapp() {
     }
   }, [assignments]);
 
-  // Detect when selected conversation doesn't belong to current sector
-  // For GROUPS: auto-create assignment in current sector (multi-sector support)
-  // For INDIVIDUALS: clear selection (sector isolation)
+  // Detect when selected INDIVIDUAL conversation doesn't belong to current sector
+  // INDIVIDUAL CONTACTS: clear selection (sector isolation)
+  // GROUPS: handled differently - they persist until user clicks "Dispensar"
   useEffect(() => {
     if (!selectedConversation || !selectedSectorId || !currentUser?.account_id) return;
     if (!currentSectorDepartmentId) return;
@@ -184,75 +184,45 @@ export default function RoyZapp() {
     
     // Check if it's a group conversation
     const isGroup = selectedConversation.zapp_conversation?.is_group;
-    const zappConvId = selectedConversation.zapp_conversation_id || selectedConversation.zapp_conversation?.id;
     
-    if (!zappConvId) {
-      setSelectedConversation(null);
+    if (isGroup) {
+      // GROUPS: Don't auto-clear - groups persist until "Dispensar" is clicked
+      // The assignment creation happens when user opens group via "Nova Conversa"
       return;
     }
     
-    if (isGroup) {
-      // GROUPS: Auto-create assignment in current sector (multi-sector support)
-      const createAssignmentForCurrentSector = async () => {
-        // First check if an assignment already exists for this conversation in this department
-        const { data: existingAssignment } = await supabase
-          .from("zapp_conversation_assignments")
-          .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
-          .eq("zapp_conversation_id", zappConvId)
-          .eq("department_id", currentSectorDepartmentId)
-          .neq("status", "closed")
-          .maybeSingle();
-        
-        if (existingAssignment) {
-          // Assignment exists but wasn't in our assignments list (refresh issue)
-          setSelectedConversation(existingAssignment);
-          setAssignments(prev => {
-            const exists = prev.some(a => a.id === existingAssignment.id);
-            return exists ? prev : [existingAssignment, ...prev];
-          });
-          return;
-        }
-        
-        // Create new assignment for this sector
-        const { data: newAssignment, error } = await supabase
-          .from("zapp_conversation_assignments")
-          .insert({
-            account_id: currentUser.account_id,
-            zapp_conversation_id: zappConvId,
-            agent_id: currentAgent?.id || null,
-            status: currentAgent ? "active" : "triage",
-            department_id: currentSectorDepartmentId,
-            assigned_at: currentAgent ? new Date().toISOString() : null,
-          })
-          .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
-          .single();
-        
-        if (error) {
-          console.error("[RoyZapp] Failed to create multi-sector assignment:", error);
-          toast.error("Erro ao abrir grupo neste setor");
-          setSelectedConversation(null);
-          return;
-        }
-        
-        if (newAssignment) {
-          const enrichedAssignment = {
-            ...newAssignment,
-            agent: currentAgent || null
-          };
-          setSelectedConversation(enrichedAssignment);
-          setAssignments(prev => [enrichedAssignment, ...prev]);
-          toast.success("Grupo aberto neste setor!");
-        }
-      };
+    // INDIVIDUAL CONTACTS: Clear selection (must be handled by original sector)
+    console.log("[RoyZapp] Individual conversation from another sector, clearing selection");
+    setSelectedConversation(null);
+    toast.info("Conversa individual pertence a outro setor");
+  }, [selectedConversation, assignments, selectedSectorId, currentSectorDepartmentId, currentUser?.account_id]);
+  
+  // Function to dismiss group conversation (close assignment)
+  const dismissGroupConversation = async () => {
+    if (!selectedConversation) return;
+    
+    try {
+      // Close this assignment (removes from current sector's list)
+      const { error } = await supabase
+        .from("zapp_conversation_assignments")
+        .update({ 
+          status: "closed", 
+          closed_at: new Date().toISOString() 
+        })
+        .eq("id", selectedConversation.id);
       
-      createAssignmentForCurrentSector();
-    } else {
-      // INDIVIDUAL CONTACTS: Clear selection (must be handled by original sector)
-      console.log("[RoyZapp] Individual conversation from another sector, clearing selection");
+      if (error) throw error;
+      
+      toast.success("Grupo dispensado!");
       setSelectedConversation(null);
-      toast.info("Conversa individual pertence a outro setor");
+      
+      // Remove from local state immediately
+      setAssignments(prev => prev.filter(a => a.id !== selectedConversation.id));
+    } catch (error) {
+      console.error("Error dismissing group:", error);
+      toast.error("Erro ao dispensar grupo");
     }
-  }, [selectedConversation, assignments, selectedSectorId, currentSectorDepartmentId, currentUser?.account_id, currentAgent]);
+  };
 
   // Handle URL parameters for auto-selecting or creating conversations
   const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
@@ -3713,6 +3683,36 @@ export default function RoyZapp() {
           onUpdateFlag={updateConversationFlag}
           onOpenTagConversationDialog={openConversationTagDialog}
           onDeleteConversation={deleteConversation}
+          onDismissConversation={async (assignmentId) => {
+            // Find the assignment to dismiss
+            const assignment = assignments.find(a => a.id === assignmentId);
+            if (!assignment) return;
+            
+            try {
+              const { error } = await supabase
+                .from("zapp_conversation_assignments")
+                .update({ 
+                  status: "closed", 
+                  closed_at: new Date().toISOString() 
+                })
+                .eq("id", assignmentId);
+              
+              if (error) throw error;
+              
+              toast.success("Grupo dispensado!");
+              
+              // Clear selection if this was the selected conversation
+              if (selectedConversation?.id === assignmentId) {
+                setSelectedConversation(null);
+              }
+              
+              // Remove from local state
+              setAssignments(prev => prev.filter(a => a.id !== assignmentId));
+            } catch (error) {
+              console.error("Error dismissing group:", error);
+              toast.error("Erro ao dispensar grupo");
+            }
+          }}
           onToggleWhatsAppConnection={toggleWhatsAppConnection}
           onRoundRobinChange={(checked) => {
             setRoundRobinEnabled(checked);
@@ -3825,6 +3825,11 @@ export default function RoyZapp() {
           onOpenLinkClient={() => setLinkClientDialogOpen(true)}
           onClientLinked={() => fetchData()}
           onDeleteConversation={() => setPermanentDeleteDialogOpen(true)}
+          onDismissConversation={
+            selectedConversation?.zapp_conversation?.is_group 
+              ? dismissGroupConversation 
+              : undefined
+          }
           accountId={currentUser?.account_id}
           showLeadOption={hasVendasAccess}
           onMessageChange={setMessageInput}

@@ -131,6 +131,7 @@ interface ZappConversationPanelProps {
   onUpdateFlag: (conversationId: string, flag: string, value: boolean) => void;
   onOpenTagConversationDialog: (assignmentId: string) => void;
   onDeleteConversation: (conversationId: string) => void;
+  onDismissConversation?: (conversationId: string) => void;
   onToggleWhatsAppConnection: () => void;
   onRoundRobinChange: (checked: boolean) => void;
   onRespectLimitChange: (checked: boolean) => void;
@@ -214,6 +215,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onUpdateFlag,
   onOpenTagConversationDialog,
   onDeleteConversation,
+  onDismissConversation,
   onToggleWhatsAppConnection,
   onRoundRobinChange,
   onRespectLimitChange,
@@ -697,6 +699,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                           onUpdateFlag={onUpdateFlag}
                           onOpenTagDialog={onOpenTagConversationDialog}
                           onDeleteConversation={onDeleteConversation}
+                          onDismissConversation={onDismissConversation}
                           getAgentName={getAgentName}
                         />
                       ))}
@@ -722,6 +725,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                               onUpdateFlag={onUpdateFlag}
                               onOpenTagDialog={onOpenTagConversationDialog}
                               onDeleteConversation={onDeleteConversation}
+                              onDismissConversation={onDismissConversation}
                               getAgentName={getAgentName}
                             />
                           ))}
@@ -745,6 +749,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                     onUpdateFlag={onUpdateFlag}
                     onOpenTagDialog={onOpenTagConversationDialog}
                     onDeleteConversation={onDeleteConversation}
+                    onDismissConversation={onDismissConversation}
                     getAgentName={getAgentName}
                   />
                 ))}

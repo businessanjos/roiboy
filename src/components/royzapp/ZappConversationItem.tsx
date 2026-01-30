@@ -15,6 +15,7 @@ import {
   Ban,
   Trash2,
   Clock,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +41,7 @@ interface ZappConversationItemProps {
   onUpdateFlag: (zappConvId: string, flag: string, value: boolean) => void;
   onOpenTagDialog: (assignmentId: string) => void;
   onDeleteConversation: (assignmentId: string) => void;
+  onDismissConversation?: (assignmentId: string) => void;
   getAgentName: (agentId: string | null) => string | null;
 }
 
@@ -89,6 +91,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
   onUpdateFlag,
   onOpenTagDialog,
   onDeleteConversation,
+  onDismissConversation,
   getAgentName,
 }: ZappConversationItemProps) {
   const contact = getContactInfo(assignment);
@@ -247,6 +250,18 @@ export const ZappConversationItem = memo(function ZappConversationItem({
                       <Ban className="h-4 w-4 mr-3" />
                       {contact.isBlocked ? "Desbloquear" : "Bloquear"}
                     </DropdownMenuItem>
+                    {contact.isGroup && onDismissConversation && (
+                      <DropdownMenuItem 
+                        className="text-amber-500 hover:bg-amber-500/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDismissConversation(assignment.id);
+                        }}
+                      >
+                        <X className="h-4 w-4 mr-3" />
+                        Dispensar grupo
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem 
                       className="text-red-400 hover:bg-zapp-hover"
                       onClick={(e) => {
