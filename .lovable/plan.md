@@ -1,124 +1,166 @@
 
-# Plano: Corrigir Atualização do Nome do Grupo no Header
+# Plano: Campos Personalizados Individuais por Formulário
 
-## Diagnóstico
+## Resumo do Problema
 
-### Problema Identificado
-O header não atualiza o nome do grupo após edição porque há uma falha na sincronização do estado `selectedConversation`.
+Atualmente, os campos personalizados (`custom_fields`) são **globais** - compartilhados entre todos os formulários e módulos do sistema (Clientes, Deals, Leads). Isso causa problemas como:
 
-### Fluxo Atual
+1. **Duplicação**: Campos criados via "Gerenciar Campos" de um formulário aparecem em outros formulários
+2. **Poluição de dados**: Campos específicos de CX aparecem em Vendas e vice-versa
+3. **Ordem inconsistente**: A ordem dos campos não é preservada corretamente por formulário
 
-1. Usuário edita nome do grupo → `ZappEditGroupDialog.handleSave()` 
-2. Banco de dados atualizado (`zapp_conversations.contact_name`)
-3. `onSuccess()` chama `fetchData()`
-4. `fetchData()` atualiza o array `assignments` com dados novos
-5. **PROBLEMA**: O `useEffect` de sincronização (linha 148-170) **NÃO verifica `contact_name`**
-6. `selectedConversation` permanece com dados antigos
-7. Header mostra nome antigo (derivado de `selectedConversation`)
-8. Sidebar mostra nome novo (derivado de `assignments`)
+## Solução Proposta
 
-### Código do `useEffect` Problemático
+Criar uma relação de **campos específicos por formulário** através de uma nova tabela intermediária que vincula campos a formulários individuais.
 
-```typescript
-// Linha 148-170 - Só verifica client/lead, NÃO verifica contact_name
-useEffect(() => {
-  if (selectedConversation && assignments.length > 0) {
-    const updatedAssignment = assignments.find(a => a.id === selectedConversation.id);
-    if (updatedAssignment) {
-      if (currentClientId !== updatedClientId || 
-          currentLeadId !== updatedLeadId ||
-          currentClientName !== updatedClientName ||
-          currentLeadName !== updatedLeadName) {  // ← NÃO inclui contact_name!
-        setSelectedConversation(updatedAssignment);
-      }
-    }
-  }
-}, [assignments]);
+---
+
+## Arquitetura da Solução
+
+### Nova Tabela: `form_fields`
+
+Cria uma relação many-to-many entre `forms` e `custom_fields`:
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid | PK |
+| form_id | uuid | FK para forms |
+| field_id | uuid | FK para custom_fields |
+| display_order | integer | Ordem de exibição no formulário |
+| created_at | timestamp | Data de criação |
+
+### Lógica de Escopo
+
+1. **Criação de campos**: Ao criar um campo em "Gerenciar Campos" de um formulário, ele será **exclusivo desse formulário**
+2. **Listagem**: "Campos do Formulário" mostrará **apenas** campos vinculados a esse formulário específico
+3. **Ordem**: A ordem vem de `form_fields.display_order`, não mais de `custom_fields.display_order`
+
+---
+
+## Fluxo Visual
+
+```text
+Formulário CX-001           Formulário CX-002
+      |                           |
+      v                           v
+  form_fields                 form_fields
+  (field_ids: A, B, C)        (field_ids: D, E)
+      |                           |
+      v                           v
+  custom_fields              custom_fields
+  A: "Nome Completo"         D: "CNPJ"
+  B: "Data Nascimento"       E: "Razão Social"  
+  C: "Animal Estimação"
 ```
 
 ---
 
-## Solução
+## Alterações Necessárias
 
-### Adicionar verificação de `contact_name` no `useEffect` de sincronização
+### 1. Migração de Banco de Dados
 
-**Arquivo:** `src/pages/RoyZapp.tsx`
+Criar tabela `form_fields`:
 
-**Linhas 147-170** - Modificar para incluir `contact_name`:
+```sql
+CREATE TABLE form_fields (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  form_id uuid NOT NULL REFERENCES forms(id) ON DELETE CASCADE,
+  field_id uuid NOT NULL REFERENCES custom_fields(id) ON DELETE CASCADE,
+  display_order integer NOT NULL DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  UNIQUE(form_id, field_id)
+);
 
-```typescript
-// Sync selectedConversation when assignments are updated (e.g., after linking to a lead or editing group name)
-useEffect(() => {
-  if (selectedConversation && assignments.length > 0) {
-    const updatedAssignment = assignments.find(a => a.id === selectedConversation.id);
-    if (updatedAssignment) {
-      // Check if the linked client, lead, OR contact_name has changed
-      const currentClientId = selectedConversation.zapp_conversation?.client_id;
-      const updatedClientId = updatedAssignment.zapp_conversation?.client_id;
-      const currentLeadId = selectedConversation.zapp_conversation?.lead_id;
-      const updatedLeadId = updatedAssignment.zapp_conversation?.lead_id;
-      const currentClientName = selectedConversation.zapp_conversation?.client?.full_name;
-      const updatedClientName = updatedAssignment.zapp_conversation?.client?.full_name;
-      const currentLeadName = selectedConversation.zapp_conversation?.lead?.full_name;
-      const updatedLeadName = updatedAssignment.zapp_conversation?.lead?.full_name;
-      // NEW: Track contact_name for groups
-      const currentContactName = selectedConversation.zapp_conversation?.contact_name;
-      const updatedContactName = updatedAssignment.zapp_conversation?.contact_name;
-      
-      if (currentClientId !== updatedClientId || 
-          currentLeadId !== updatedLeadId ||
-          currentClientName !== updatedClientName ||
-          currentLeadName !== updatedLeadName ||
-          currentContactName !== updatedContactName) {  // ← ADICIONAR ESTA CONDIÇÃO
-        setSelectedConversation(updatedAssignment);
-      }
-    }
-  }
-}, [assignments]);
+-- RLS policies
+ALTER TABLE form_fields ENABLE ROW LEVEL SECURITY;
+```
+
+### 2. Novo Componente: `FormFieldsManager.tsx`
+
+Um gerenciador de campos **específico para formulários**, diferente do `CustomFieldsManager` global:
+
+- Cria campos novos que ficam automaticamente vinculados ao formulário atual
+- Mostra apenas campos desse formulário
+- Permite reordenar campos (atualiza `form_fields.display_order`)
+- Permite excluir campos (remove da relação e opcionalmente do `custom_fields`)
+
+### 3. Modificações em `Forms.tsx`
+
+| Área | Mudança |
+|------|---------|
+| `fetchCustomFields()` | Buscar campos via `form_fields` filtrado por `form_id` |
+| `selectedFields` | Derivar de `form_fields` em vez de `custom_fields` global |
+| `handleSave()` | Salvar relação em `form_fields` com ordem correta |
+| Botão "Gerenciar Campos" | Abrir `FormFieldsManager` passando `formId` |
+
+### 4. Atualizar `CustomFieldsManager.tsx`
+
+Adicionar prop opcional `formId`:
+- Se `formId` estiver presente: modo exclusivo para formulário
+- Se `formId` não estiver: modo global (atual - para Clientes/Deals/Leads)
+
+---
+
+## Fluxo do Usuário
+
+```text
+1. Usuário abre "Editar Formulário"
+           |
+           v
+2. Clica em "Gerenciar Campos"
+           |
+           v
+3. Vê apenas campos DESTE formulário
+           |
+           v
+4. Cria novo campo "Profissão"
+           |
+           v
+5. Campo salvo em:
+   - custom_fields (definição)
+   - form_fields (vínculo com este form)
+           |
+           v
+6. Campo aparece APENAS neste formulário
 ```
 
 ---
 
-## Fluxo Corrigido
+## Migração de Dados Existentes
 
-```
-Usuário edita nome do grupo → handleSave()
-                │
-                ▼
-    Atualiza banco de dados (contact_name)
-                │
-                ▼
-    onSuccess() → fetchData()
-                │
-                ▼
-    assignments atualizado com novo nome
-                │
-                ▼
-    useEffect detecta: currentContactName !== updatedContactName ← NOVO!
-                │
-                ▼
-    setSelectedConversation(updatedAssignment)
-                │
-                ▼
-    selectedContactInfo recalculado via useMemo
-                │
-                ▼
-    Header atualiza imediatamente ✓
+Para formulários existentes, criar registros em `form_fields` baseado no JSON `forms.fields`:
+
+```sql
+-- Migrar dados existentes
+INSERT INTO form_fields (form_id, field_id, display_order)
+SELECT 
+  f.id as form_id,
+  (elem::text)::uuid as field_id,
+  (row_number() OVER (PARTITION BY f.id))::integer as display_order
+FROM forms f,
+  jsonb_array_elements(f.fields) WITH ORDINALITY AS t(elem, ord)
+WHERE jsonb_typeof(f.fields) = 'array'
+  AND f.fields != '[]'::jsonb
+ON CONFLICT (form_id, field_id) DO NOTHING;
 ```
 
 ---
 
-## Resumo das Mudanças
+## Arquivos a Modificar/Criar
 
-| Arquivo | Linhas | Mudança |
-|---------|--------|---------|
-| `src/pages/RoyZapp.tsx` | 147-170 | Adicionar verificação de `contact_name` no useEffect de sincronização |
+| Arquivo | Ação |
+|---------|------|
+| Nova migração SQL | Criar tabela `form_fields` + migração de dados |
+| `src/components/forms/FormFieldsManager.tsx` | **CRIAR** - Gerenciador de campos por formulário |
+| `src/pages/Forms.tsx` | Refatorar para usar `form_fields` |
+| `src/components/forms/index.ts` | Exportar novo componente |
 
 ---
 
-## Por que isso resolve o problema
+## Benefícios
 
-- O `useEffect` passará a detectar mudanças em `contact_name`
-- Quando o nome do grupo for alterado, o `selectedConversation` será atualizado automaticamente
-- O `selectedContactInfo` (useMemo) será recalculado com o novo `selectedConversation`
-- O header exibirá o nome correto imediatamente
+1. **Isolamento total**: Campos de um formulário não aparecem em outros
+2. **Ordem preservada**: Cada formulário tem sua própria ordem de campos
+3. **Simplicidade para o usuário**: "Gerenciar Campos" mostra apenas o relevante
+4. **Compatibilidade**: Campos globais continuam funcionando para Clientes/Deals/Leads
+5. **Sem duplicação visual**: Elimina o problema dos dois "Nome Completo"
