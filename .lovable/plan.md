@@ -1,37 +1,13 @@
 
-# Plano: Corrigir Conversa Invisível na Barra Lateral do ROY zAPP
+# Plano: Permitir Grupos em Múltiplos Setores Simultaneamente
 
-## Diagnóstico
+## Situação Atual
 
-### O Que Está Acontecendo
-A conversa "Henrique & Leticia - Eternum Club" está visível no painel de chat (lado direito) com status "Em atendimento", mas não aparece na lista lateral de conversas.
+Quando você abre uma conversa de grupo que pertence a outro setor (como "Operações"), o sistema fecha a conversa e mostra a mensagem "A conversa aberta pertence a outro setor". Isso é restritivo demais para grupos.
 
-### Causa Raiz Identificada
-A conversa possui assignments apenas para os setores **Operações** e **Diretoria**:
+## Objetivo
 
-| Departamento | Setor | Status | Agente |
-|--------------|-------|--------|--------|
-| Operações | operacoes | active | Atribuído |
-| Diretoria | diretoria | triage | Sem agente |
-
-Porém, o usuário está no setor **"ROY zAPP"** (sector_id: `royzapp`). Como não existe assignment desta conversa para o departamento "ROY zAPP", ela não aparece na lista filtrada.
-
-### Como a Conversa Foi Aberta?
-A conversa pode ter sido selecionada via:
-1. URL com parâmetro `?conversation=xxx`
-2. Notificação de nova mensagem
-3. Estado herdado de sessão anterior em outro setor
-
-O problema é que não há lógica que **limpe a conversa selecionada** quando ela não pertence ao setor atual.
-
----
-
-## Solução
-
-Implementar uma validação que verifica se a conversa selecionada pertence ao setor atual. Se não pertencer, oferecer opção de criar um assignment local ou limpar a seleção.
-
-### Abordagem Escolhida
-Adicionar um `useEffect` que detecta quando a conversa selecionada não está na lista de assignments do setor atual e apresenta um aviso com opções ao usuário.
+Permitir que grupos sejam atendidos em múltiplos setores ao mesmo tempo. Cada setor terá seu próprio assignment (ticket) para o mesmo grupo.
 
 ---
 
@@ -39,125 +15,162 @@ Adicionar um `useEffect` que detecta quando a conversa selecionada não está na
 
 ### Arquivo: `src/pages/RoyZapp.tsx`
 
-#### 1. Adicionar Validação de Conversa Órfã (novo useEffect)
+#### 1. Substituir Validação "Órfã" por Lógica de Multi-Setor
 
-Após a linha ~170 (onde está o useEffect de sincronização), adicionar:
+Substituir o `useEffect` atual (linhas 171-186) que limpa a conversa por uma lógica inteligente que:
+
+1. Detecta quando a conversa selecionada não está nos assignments do setor atual
+2. Verifica se é um **grupo** (somente grupos podem estar em múltiplos setores)
+3. Se for grupo: **cria automaticamente um novo assignment** no setor atual
+4. Se for contato individual: mantém o comportamento de limpar (evita duplicação de tickets)
 
 ```typescript
 // Detect when selected conversation doesn't belong to current sector
 useEffect(() => {
-  if (!selectedConversation || !selectedSectorId || assignments.length === 0) return;
+  if (!selectedConversation || !selectedSectorId || !currentUser?.account_id) return;
+  if (!currentSectorDepartmentId) return;
   
   // Check if the selected conversation exists in current sector's assignments
   const existsInCurrentSector = assignments.some(
     a => a.id === selectedConversation.id
   );
   
-  if (!existsInCurrentSector) {
-    // Conversation is from another sector - clear selection
-    console.log("[RoyZapp] Selected conversation not in current sector, clearing selection");
+  if (existsInCurrentSector) return; // Already in this sector, nothing to do
+  
+  // Check if it's a group conversation
+  const isGroup = selectedConversation.zapp_conversation?.is_group;
+  const zappConvId = selectedConversation.zapp_conversation_id || selectedConversation.zapp_conversation?.id;
+  
+  if (!zappConvId) {
     setSelectedConversation(null);
-    toast.info("A conversa aberta pertence a outro setor e foi fechada");
-  }
-}, [selectedConversation, assignments, selectedSectorId]);
-```
-
-#### 2. Alternativa: Oferecer Opção de Puxar Conversa
-
-Se preferirmos que o usuário possa "puxar" a conversa para o setor atual, podemos:
-
-1. Detectar a conversa órfã
-2. Mostrar um diálogo perguntando se quer criar um assignment no setor atual
-3. Se sim, criar novo assignment para o departamento atual
-
-```typescript
-// State for orphan conversation dialog
-const [orphanConversation, setOrphanConversation] = useState<ConversationAssignment | null>(null);
-
-// Detect orphan
-useEffect(() => {
-  if (!selectedConversation || !selectedSectorId || assignments.length === 0) return;
-  
-  const existsInCurrentSector = assignments.some(a => a.id === selectedConversation.id);
-  
-  if (!existsInCurrentSector && !orphanConversation) {
-    setOrphanConversation(selectedConversation);
-  }
-}, [selectedConversation, assignments, selectedSectorId]);
-
-// Handle pulling orphan conversation to current sector
-const pullOrphanToCurrentSector = async () => {
-  if (!orphanConversation || !currentSectorDepartmentId || !currentUser?.account_id) return;
-  
-  const zappConvId = orphanConversation.zapp_conversation_id || orphanConversation.zapp_conversation?.id;
-  if (!zappConvId) return;
-  
-  // Create new assignment for current sector
-  const { data, error } = await supabase
-    .from("zapp_conversation_assignments")
-    .insert({
-      account_id: currentUser.account_id,
-      zapp_conversation_id: zappConvId,
-      agent_id: currentAgent?.id || null,
-      department_id: currentSectorDepartmentId,
-      status: currentAgent ? "active" : "triage",
-    })
-    .select()
-    .single();
-  
-  if (!error && data) {
-    setAssignments(prev => [data, ...prev]);
-    setSelectedConversation(data);
-    toast.success("Conversa puxada para este setor!");
+    return;
   }
   
-  setOrphanConversation(null);
-};
-
-const dismissOrphan = () => {
-  setSelectedConversation(null);
-  setOrphanConversation(null);
-};
+  if (isGroup) {
+    // GROUPS: Auto-create assignment in current sector (multi-sector support)
+    const createAssignmentForCurrentSector = async () => {
+      // First check if an assignment already exists for this conversation in this department
+      const { data: existingAssignment } = await supabase
+        .from("zapp_conversation_assignments")
+        .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
+        .eq("zapp_conversation_id", zappConvId)
+        .eq("department_id", currentSectorDepartmentId)
+        .neq("status", "closed")
+        .maybeSingle();
+      
+      if (existingAssignment) {
+        // Assignment exists but wasn't in our assignments list (refresh issue)
+        setSelectedConversation(existingAssignment);
+        setAssignments(prev => {
+          const exists = prev.some(a => a.id === existingAssignment.id);
+          return exists ? prev : [existingAssignment, ...prev];
+        });
+        return;
+      }
+      
+      // Create new assignment for this sector
+      const { data: newAssignment, error } = await supabase
+        .from("zapp_conversation_assignments")
+        .insert({
+          account_id: currentUser.account_id,
+          zapp_conversation_id: zappConvId,
+          agent_id: currentAgent?.id || null,
+          status: currentAgent ? "active" : "triage",
+          department_id: currentSectorDepartmentId,
+          assigned_at: currentAgent ? new Date().toISOString() : null,
+        })
+        .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
+        .single();
+      
+      if (error) {
+        console.error("[RoyZapp] Failed to create multi-sector assignment:", error);
+        toast.error("Erro ao abrir grupo neste setor");
+        setSelectedConversation(null);
+        return;
+      }
+      
+      if (newAssignment) {
+        const enrichedAssignment = {
+          ...newAssignment,
+          agent: currentAgent || null
+        };
+        setSelectedConversation(enrichedAssignment);
+        setAssignments(prev => [enrichedAssignment, ...prev]);
+        toast.success("Grupo aberto neste setor!");
+      }
+    };
+    
+    createAssignmentForCurrentSector();
+  } else {
+    // INDIVIDUAL CONTACTS: Clear selection (must be handled by original sector)
+    console.log("[RoyZapp] Individual conversation from another sector, clearing selection");
+    setSelectedConversation(null);
+    toast.info("Conversa individual pertence a outro setor");
+  }
+}, [selectedConversation, assignments, selectedSectorId, currentSectorDepartmentId, currentUser?.account_id, currentAgent]);
 ```
 
 ---
 
-## Recomendação
+## Fluxo de Dados
 
-A **solução simples** (Alternativa 1 - limpar automaticamente) é mais segura porque:
-1. Evita duplicação de assignments entre setores
-2. Mantém isolamento rigoroso de conversas por setor
-3. É consistente com a memória `roy-zapp-sector-isolation-fix-v2-pt`
-
-Se o usuário precisar atender essa conversa no setor "ROY zAPP", ele deve:
-1. Acessar o setor correto (Operações ou Diretoria)
-2. Ou transferir a conversa para o departamento ROY zAPP usando a função de transferência
+```text
+Usuário abre grupo de outro setor (ex: via URL)
+                    │
+                    ▼
+     useEffect detecta conversa "órfã"
+                    │
+                    ▼
+         É um grupo? ─── Não ──► Limpa seleção
+                │                 (comportamento atual)
+               Sim
+                │
+                ▼
+    Verifica se já tem assignment
+    no department atual
+                │
+                ├── Sim ──► Usa o existente
+                │
+                └── Não ──► Cria novo assignment
+                            │
+                            ▼
+                     Adiciona à lista local
+                            │
+                            ▼
+                     Grupo aparece na sidebar
+                     E está em atendimento!
+```
 
 ---
 
-## Fluxo Após Correção
+## Benefícios
 
-```
-Usuário abre conversa de outro setor
-            │
-            ▼
-useEffect detecta que conversa não está em assignments
-            │
-            ▼
-Limpa selectedConversation e mostra toast
-            │
-            ▼
-Painel de chat fica vazio, lista mostra conversas corretas
-```
+| Antes | Depois |
+|-------|--------|
+| Grupo fechava ao trocar de setor | Grupo abre automaticamente no novo setor |
+| Precisava criar assignment manualmente | Assignment criado automaticamente |
+| Apenas 1 setor podia atender o grupo | Múltiplos setores atendem simultaneamente |
+| Perdia contexto ao trocar de setor | Cada setor mantém seu próprio ticket |
 
 ---
 
-## Arquivos a Modificar
+## Casos de Uso
 
-1. **src/pages/RoyZapp.tsx** - Adicionar useEffect de validação (~5 linhas)
+1. **Grupo de cliente VIP**: Atendido por Operações e Diretoria ao mesmo tempo
+2. **Grupo de leads**: Vendas e Marketing acompanham simultaneamente  
+3. **Grupo de projeto**: Operações e Financeiro coordenam juntos
 
-## Impacto
+---
 
-- Correção imediata do bug visual
-- Prevenção de confusão do usuário ao ver conversa que não pode gerenciar
-- Mantém consistência do isolamento por setor
+## Considerações de Segurança
+
+- Contatos individuais continuam isolados por setor (não duplica tickets)
+- Cada setor tem seu próprio status de atendimento (triage, active, closed)
+- Histórico de mensagens é compartilhado (é o mesmo grupo no WhatsApp)
+- Cada setor pode ter agente diferente atribuído
+
+---
+
+## Arquivo a Modificar
+
+1. **src/pages/RoyZapp.tsx** - Substituir useEffect de validação órfã (~40 linhas)
