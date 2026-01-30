@@ -76,6 +76,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
+  FlaskConical,
 } from "lucide-react";
 import { toast } from "sonner";
 import { differenceInDays, addYears, isBefore } from "date-fns";
@@ -168,6 +169,11 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
   const [imagesToDelete, setImagesToDelete] = useState<string[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  // Test send state
+  const [testPopoverOpen, setTestPopoverOpen] = useState(false);
+  const [testPhone, setTestPhone] = useState("+55");
+  const [sendingTest, setSendingTest] = useState(false);
 
   // Gallery lightbox state
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -1087,14 +1093,80 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
             )}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Salvar
-            </Button>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {/* Test send button - only show when editing existing event with auto-send enabled */}
+            {editingEvent && formAutoSend && (
+              <Popover open={testPopoverOpen} onOpenChange={setTestPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-muted-foreground hover:text-foreground mr-auto"
+                  >
+                    <FlaskConical className="h-4 w-4 mr-1.5" />
+                    Testar envio
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72" align="start">
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium">Número para teste</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Envie o momento para um número de teste (não altera o status original)
+                      </p>
+                    </div>
+                    <Input
+                      placeholder="+5531999999999"
+                      value={testPhone}
+                      onChange={(e) => setTestPhone(e.target.value)}
+                    />
+                    <Button 
+                      className="w-full" 
+                      size="sm"
+                      disabled={sendingTest || !testPhone.trim()}
+                      onClick={async () => {
+                        if (!editingEvent || !testPhone.trim()) return;
+                        
+                        setSendingTest(true);
+                        try {
+                          const { data, error } = await supabase.functions.invoke("test-cx-moment-send", {
+                            body: {
+                              life_event_id: editingEvent.id,
+                              test_phone: testPhone,
+                            },
+                          });
+                          
+                          if (error) throw error;
+                          if (!data?.success) throw new Error(data?.error || "Erro desconhecido");
+                          
+                          toast.success(data.message || "Teste enviado com sucesso!");
+                          setTestPopoverOpen(false);
+                        } catch (error: unknown) {
+                          const errMsg = error instanceof Error ? error.message : "Erro ao enviar teste";
+                          toast.error(errMsg);
+                        } finally {
+                          setSendingTest(false);
+                        }
+                      }}
+                    >
+                      {sendingTest && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      <Send className="h-4 w-4 mr-1.5" />
+                      Enviar Teste
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+            
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Salvar
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

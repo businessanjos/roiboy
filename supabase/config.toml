@@ -146,3 +146,6 @@ verify_jwt = false
 
 [functions.send-cx-moment-auto]
 verify_jwt = false
+
+[functions.test-cx-moment-send]
+verify_jwt = false
