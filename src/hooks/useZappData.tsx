@@ -617,8 +617,25 @@ export function useZappData(options: UseZappDataOptions = {}) {
       
       setMessages(msgs);
       
-      // OPTIMIZATION: Disabled auto-retry for media downloads to reduce cloud consumption
-      // Media is now only downloaded when user explicitly clicks "Tentar novamente"
+      // REACTIVATED: Auto-download pending media when conversation is opened
+      // This triggers lazy download for media that webhook couldn't process immediately
+      const pendingMediaMsgs = msgs.filter(
+        (m) => m.media_download_status === "pending" 
+          && m.media_type 
+          && m.media_type !== "sticker"
+          && !m.media_url
+      );
+
+      if (pendingMediaMsgs.length > 0) {
+        // Limit to 10 to avoid timeout (edge function processes in batches of 8)
+        const idsToDownload = pendingMediaMsgs.slice(0, 10).map((m) => m.id);
+        console.log(`[ZappData] Triggering auto-download for ${idsToDownload.length} pending media`);
+        
+        // Fire-and-forget to avoid blocking UI - realtime will update when completed
+        supabase.functions.invoke("download-media", {
+          body: { message_ids: idsToDownload }
+        }).catch((err) => console.error("[ZappData] Auto-download error:", err));
+      }
     } catch (error) {
       console.error("Error fetching messages:", error);
     }
