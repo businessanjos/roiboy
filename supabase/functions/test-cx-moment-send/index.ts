@@ -157,18 +157,18 @@ serve(async (req) => {
     if (personalizedMessage.trim()) {
       try {
         if (provider === "uazapi") {
-          const apiUrl = `${UAZAPI_URL}/sendText`;
+          const apiUrl = `${UAZAPI_URL}/send/text`;
           console.log(`Sending text to ${apiUrl}`);
           
           const response = await fetch(apiUrl, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${instanceToken}`,
+              "token": instanceToken,
             },
             body: JSON.stringify({
-              phone: cleanPhone,
-              message: personalizedMessage,
+              number: cleanPhone,
+              text: personalizedMessage,
             }),
           });
 
@@ -199,20 +199,20 @@ serve(async (req) => {
           await new Promise(resolve => setTimeout(resolve, 2000));
 
           if (provider === "uazapi") {
-            const apiUrl = `${UAZAPI_URL}/sendMedia`;
+            const apiUrl = `${UAZAPI_URL}/send/media`;
             console.log(`Sending image to ${apiUrl}: ${image.image_url}`);
             
             const response = await fetch(apiUrl, {
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${instanceToken}`,
+                "token": instanceToken,
               },
               body: JSON.stringify({
-                phone: cleanPhone,
+                number: cleanPhone,
                 type: "image",
-                media: image.image_url,
-                caption: "",
+                file: image.image_url,
+                text: "",
               }),
             });
 
