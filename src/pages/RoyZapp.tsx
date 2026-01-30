@@ -33,6 +33,7 @@ import {
   ZappNewConversationDialog,
   ZappCloseTicketDialog,
   ZappLinkClientDialog,
+  ZappEditGroupDialog,
 } from "@/components/royzapp/dialogs";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { SectorId, sectors } from "@/config/sectors";
@@ -716,6 +717,9 @@ export default function RoyZapp() {
   
   // Link client dialog state
   const [linkClientDialogOpen, setLinkClientDialogOpen] = useState(false);
+  
+  // Edit group dialog state
+  const [editGroupDialogOpen, setEditGroupDialogOpen] = useState(false);
   
   // Permanent delete conversation dialog state
   const [permanentDeleteDialogOpen, setPermanentDeleteDialogOpen] = useState(false);
@@ -3838,6 +3842,11 @@ export default function RoyZapp() {
               ? dismissGroupConversation 
               : undefined
           }
+          onOpenEditGroup={
+            selectedConversation?.zapp_conversation?.is_group 
+              ? () => setEditGroupDialogOpen(true) 
+              : undefined
+          }
           accountId={currentUser?.account_id}
           showLeadOption={hasVendasAccess}
           onMessageChange={setMessageInput}
@@ -4253,6 +4262,18 @@ export default function RoyZapp() {
             setLinkClientDialogOpen(false);
             fetchData();
           }}
+        />
+      )}
+
+      {/* Edit Group Dialog */}
+      {selectedConversation?.zapp_conversation?.is_group && (
+        <ZappEditGroupDialog
+          open={editGroupDialogOpen}
+          onOpenChange={setEditGroupDialogOpen}
+          conversationId={selectedConversation.zapp_conversation.id}
+          groupJid={selectedConversation.zapp_conversation.group_jid || ""}
+          currentName={selectedConversation.zapp_conversation.contact_name || ""}
+          onSuccess={() => fetchData()}
         />
       )}
 
