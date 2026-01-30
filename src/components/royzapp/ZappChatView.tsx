@@ -79,6 +79,7 @@ interface ZappChatViewProps {
   onDeleteMessage?: (messageId: string) => void;
   onEditMessage?: (messageId: string, newContent: string) => Promise<void>;
   onRetryMessage?: (message: Message) => void;
+  onRetryMediaDownload?: (messageId: string) => void;
   onMentionInsert?: (mention: MentionData) => void;
   // Signature
   signatureEnabled?: boolean;
@@ -147,6 +148,7 @@ export function ZappChatView({
   onDeleteMessage,
   onEditMessage,
   onRetryMessage,
+  onRetryMediaDownload,
   onMentionInsert,
   signatureEnabled,
   hasSignature,
@@ -261,6 +263,7 @@ export function ZappChatView({
         onDeleteMessage={onDeleteMessage}
         onEditMessage={onEditMessage}
         onRetryMessage={onRetryMessage}
+        onRetryMediaDownload={onRetryMediaDownload}
       />
 
       {/* AI Assist Bar - above message input */}
