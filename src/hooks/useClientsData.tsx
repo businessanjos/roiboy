@@ -68,7 +68,8 @@ export function useClients(options?: { page?: number; pageSize?: number; search?
         totalPages: Math.ceil((count ?? 0) / pageSize),
       };
     },
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 60 * 5, // 5 minutes - reduce refetches
+    gcTime: 1000 * 60 * 15, // 15 minutes cache
   });
 }
 
@@ -194,7 +195,8 @@ export function useClientEnrichments(clientIds: string[]) {
       return enrichments;
     },
     enabled: clientIds.length > 0,
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 15,
   });
 }
 
@@ -212,7 +214,8 @@ export function useCustomFields() {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 60 * 15, // 15 minutes - custom fields rarely change
+    gcTime: 1000 * 60 * 30,
   });
 }
 
@@ -244,7 +247,8 @@ export function useFieldValues(clientIds: string[]) {
       return grouped;
     },
     enabled: clientIds.length > 0,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    gcTime: 1000 * 60 * 20,
   });
 }
 
@@ -262,7 +266,8 @@ export function useProducts() {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 60 * 15, // 15 minutes - products rarely change
+    gcTime: 1000 * 60 * 30,
   });
 }
 
@@ -279,7 +284,8 @@ export function useTeamUsers() {
       if (error) throw error;
       return data || [];
     },
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 60 * 15, // 15 minutes - team rarely changes
+    gcTime: 1000 * 60 * 30,
   });
 }
 
@@ -315,7 +321,8 @@ export function usePendingFormSends(clientIds: string[]) {
       return grouped;
     },
     enabled: clientIds.length > 0,
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    gcTime: 1000 * 60 * 20,
   });
 }
 

@@ -76,7 +76,8 @@ export function useProducts() {
       if (error) throw error;
       return (data || []) as Product[];
     },
-    staleTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 60 * 15, // 15 minutes - products rarely change
+    gcTime: 1000 * 60 * 30, // 30 minutes cache
   });
 }
 
@@ -211,7 +212,8 @@ export function useClientsWithScores() {
 
       return clientsWithScores;
     },
-    staleTime: 1000 * 60 * 2, // 2 minutes
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    gcTime: 1000 * 60 * 15, // 15 minutes cache
   });
 }
 
@@ -258,7 +260,8 @@ export function useUpcomingLifeEvents() {
 
       return upcoming as LifeEvent[];
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 10, // 10 minutes - life events don't change often
+    gcTime: 1000 * 60 * 20,
   });
 }
 
@@ -302,7 +305,8 @@ export function useROIStats() {
         recentCategories,
       } as ROIStats;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    gcTime: 1000 * 60 * 20,
   });
 }
 
@@ -335,7 +339,8 @@ export function useRiskStats() {
         lowRiskCount: low,
       } as RiskStats;
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    gcTime: 1000 * 60 * 20,
   });
 }
 
@@ -355,7 +360,8 @@ export function useContractData() {
       if (error) throw error;
       return (data || []) as ContractData[];
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    gcTime: 1000 * 60 * 20,
   });
 }
 
