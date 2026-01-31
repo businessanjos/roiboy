@@ -112,7 +112,7 @@ export function useWhatsAppDashboardData() {
   const { filters } = useInsightsFilters();
 
   return useQuery({
-    queryKey: ['whatsapp-dashboard', filters.startDate, filters.endDate],
+    queryKey: ['whatsapp-dashboard', filters.startDate, filters.endDate, filters.userId, filters.productId],
   queryFn: async (): Promise<WhatsAppDashboardData> => {
       // Get current auth user
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -134,24 +134,44 @@ export function useWhatsAppDashboardData() {
 
       const accountId = userData.account_id;
 
-      // 1. Pipeline by Stage
+      // Build filter conditions
+      const userFilter = filters.userId !== 'all' ? filters.userId : null;
+
+      // 1. Pipeline by Stage - need to fetch deals separately to apply filters
       const { data: stagesData } = await supabase
         .from('deal_stages')
-        .select(`
-          id,
-          name,
-          color,
-          display_order,
-          deals!left(id, value, status)
-        `)
+        .select('id, name, color, display_order')
         .eq('account_id', accountId)
         .order('display_order');
 
+      // Fetch deals with filters applied
+      let dealsQuery = supabase
+        .from('deals')
+        .select('id, value, status, stage_id, responsible_user_id, created_at')
+        .eq('account_id', accountId)
+        .gte('created_at', filters.startDate)
+        .lte('created_at', filters.endDate);
+
+      if (userFilter) {
+        dealsQuery = dealsQuery.eq('responsible_user_id', userFilter);
+      }
+
+      const { data: allDealsFiltered } = await dealsQuery;
+
+      // Group deals by stage
+      const dealsByStage: Record<string, Array<{ id: string; value: number | null; status: string }>> = {};
+      (allDealsFiltered || []).forEach(deal => {
+        const stageId = deal.stage_id || '';
+        if (!dealsByStage[stageId]) {
+          dealsByStage[stageId] = [];
+        }
+        dealsByStage[stageId].push(deal);
+      });
+
       const stageDistribution: StageDistribution[] = (stagesData || []).map(stage => {
-        // Count ALL deals in each stage (not just open)
-        const allDeals = stage.deals || [];
-        const count = allDeals.length;
-        const value = allDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
+        const stageDeals = dealsByStage[stage.id] || [];
+        const count = stageDeals.length;
+        const value = stageDeals.reduce((sum: number, d) => sum + (d.value || 0), 0);
         return {
           name: stage.name,
           count,
@@ -168,20 +188,15 @@ export function useWhatsAppDashboardData() {
         stage.conversionPct = Math.round((stage.count / maxCount) * 100);
       });
 
-      // 2. Overall stats
-      const { data: dealsStats } = await supabase
-        .from('deals')
-        .select('status')
-        .eq('account_id', accountId);
-
-      const totalDeals = dealsStats?.length || 0;
-      const wonDeals = dealsStats?.filter(d => d.status === 'won').length || 0;
-      const lostDeals = dealsStats?.filter(d => d.status === 'lost').length || 0;
+      // 2. Overall stats (from filtered deals)
+      const totalDeals = allDealsFiltered?.length || 0;
+      const wonDeals = allDealsFiltered?.filter(d => d.status === 'won').length || 0;
+      const lostDeals = allDealsFiltered?.filter(d => d.status === 'lost').length || 0;
       const overallConversion = totalDeals > 0 ? Math.round((wonDeals / totalDeals) * 100) : 0;
 
-      // 3. Leads by day (last 14 days)
-      const fourteenDaysAgo = new Date();
-      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+      // 3. Leads by day (using filter date range)
+      const filterStartDate = new Date(filters.startDate);
+      const filterEndDate = new Date(filters.endDate);
 
       // First, find the "Origem da Venda" custom field with its options
       const { data: origemField } = await supabase
@@ -193,12 +208,19 @@ export function useWhatsAppDashboardData() {
         .single();
 
       // Get deals with their custom field values for "Origem da Venda"
-      const { data: dealsbyDay } = await supabase
+      let dealsbyDayQuery = supabase
         .from('deals')
-        .select('id, created_at')
+        .select('id, created_at, responsible_user_id')
         .eq('account_id', accountId)
-        .gte('created_at', fourteenDaysAgo.toISOString())
+        .gte('created_at', filters.startDate)
+        .lte('created_at', filters.endDate)
         .order('created_at');
+
+      if (userFilter) {
+        dealsbyDayQuery = dealsbyDayQuery.eq('responsible_user_id', userFilter);
+      }
+
+      const { data: dealsbyDay } = await dealsbyDayQuery;
 
       // Build a map of option value -> label for quick lookup
       const optionsMap: Record<string, string> = {};
@@ -246,9 +268,12 @@ export function useWhatsAppDashboardData() {
 
       const leadsByDayMap: Record<string, { count: number; sources: Record<string, number> }> = {};
       
-      // Initialize all 14 days
-      for (let i = 13; i >= 0; i--) {
-        const date = new Date();
+      // Initialize days in the filter range (limit to last 30 days for performance)
+      const daysDiff = Math.ceil((filterEndDate.getTime() - filterStartDate.getTime()) / (1000 * 60 * 60 * 24));
+      const daysToShow = Math.min(daysDiff, 30);
+      
+      for (let i = daysToShow - 1; i >= 0; i--) {
+        const date = new Date(filterEndDate);
         date.setDate(date.getDate() - i);
         const dateStr = date.toISOString().split('T')[0];
         leadsByDayMap[dateStr] = { count: 0, sources: {} };
@@ -266,18 +291,30 @@ export function useWhatsAppDashboardData() {
 
       const leadsByDay: LeadsByDay[] = Object.entries(leadsByDayMap).map(([date, data]) => ({
         date,
-        label: new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+        label: new Date(date + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
         count: data.count,
         sources: data.sources,
       }));
 
       // 4. Time per transition - calculate time spent in each stage before moving to next
-      const { data: activities } = await supabase
+      // Filter activities based on the filtered deals
+      const filteredDealIds = (allDealsFiltered || []).map(d => d.id);
+      
+      let activitiesQuery = supabase
         .from('deal_activities')
         .select('deal_id, type, old_value, new_value, created_at')
         .eq('account_id', accountId)
         .eq('type', 'stage_change')
+        .gte('created_at', filters.startDate)
+        .lte('created_at', filters.endDate)
         .order('created_at');
+
+      // If we have specific deals from filters, only get activities for those
+      if (filteredDealIds.length > 0 && filteredDealIds.length < 1000) {
+        activitiesQuery = activitiesQuery.in('deal_id', filteredDealIds);
+      }
+
+      const { data: activities } = await activitiesQuery;
 
       // Build a map of stage name -> display_order for sorting
       const stageOrderMap: Record<string, number> = {};
