@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
-  LineChart, 
-  Line, 
+  BarChart, 
+  Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
   Legend
 } from "recharts";
+import { TrendingUp } from "lucide-react";
 
 interface LeadsByDay {
   date: string;
@@ -22,7 +23,7 @@ interface LeadsByDayChartProps {
   isLoading?: boolean;
 }
 
-const COLORS = {
+const SOURCE_COLORS: Record<string, string> = {
   'WhatsApp': '#25D366',
   'Instagram': '#E1306C',
   'Facebook': '#1877F2',
@@ -36,10 +37,13 @@ export function LeadsByDayChart({ data, isLoading }: LeadsByDayChartProps) {
     return (
       <Card className="col-span-2">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Leads por Dia</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            Leads Novos por Dia
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-[250px] animate-pulse bg-muted rounded" />
+          <div className="h-[280px] animate-pulse bg-muted rounded" />
         </CardContent>
       </Card>
     );
@@ -53,24 +57,47 @@ export function LeadsByDayChart({ data, isLoading }: LeadsByDayChartProps) {
 
   const chartData = data.map(d => ({
     label: d.label,
-    total: d.count,
     ...d.sources,
   }));
 
   const totalLeads = data.reduce((sum, d) => sum + d.count, 0);
+  const sourcesArray = Array.from(allSources);
 
   return (
     <Card className="col-span-2">
-      <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Leads por Dia (Últimos 14 dias)</CardTitle>
-        <span className="text-sm font-medium text-muted-foreground">
-          Total: <span className="text-foreground font-bold">{totalLeads}</span>
-        </span>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Leads Novos por Dia
+            </CardTitle>
+          </div>
+          <div className="flex items-center gap-4">
+            {/* Legend */}
+            <div className="flex items-center gap-3 text-xs">
+              {sourcesArray.slice(0, 5).map((source) => (
+                <div key={source} className="flex items-center gap-1">
+                  <div 
+                    className="w-3 h-3 rounded-sm"
+                    style={{ backgroundColor: SOURCE_COLORS[source] || '#6B7280' }}
+                  />
+                  <span className="text-muted-foreground">{source}</span>
+                </div>
+              ))}
+            </div>
+            {/* Total */}
+            <div className="text-right">
+              <span className="text-2xl font-bold text-primary">{totalLeads}</span>
+              <p className="text-xs text-muted-foreground">Total 14 dias</p>
+            </div>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
             <XAxis 
               dataKey="label" 
               tick={{ fontSize: 11 }}
@@ -89,28 +116,16 @@ export function LeadsByDayChart({ data, isLoading }: LeadsByDayChartProps) {
                 borderRadius: '8px',
               }}
             />
-            <Line 
-              type="monotone" 
-              dataKey="total" 
-              stroke="hsl(var(--primary))" 
-              strokeWidth={2}
-              dot={{ fill: 'hsl(var(--primary))', r: 3 }}
-              name="Total"
-            />
-            {Array.from(allSources).slice(0, 5).map((source) => (
-              <Line
+            {sourcesArray.slice(0, 5).map((source) => (
+              <Bar
                 key={source}
-                type="monotone"
                 dataKey={source}
-                stroke={COLORS[source as keyof typeof COLORS] || '#6B7280'}
-                strokeWidth={1.5}
-                strokeDasharray="3 3"
-                dot={false}
-                name={source}
+                stackId="sources"
+                fill={SOURCE_COLORS[source] || '#6B7280'}
+                radius={[0, 0, 0, 0]}
               />
             ))}
-            <Legend />
-          </LineChart>
+          </BarChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
