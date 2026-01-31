@@ -38,17 +38,32 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
   // For a true funnel: calculate CUMULATIVE totals from bottom to top
   // Each stage = its count + all stages below it (representing leads that passed through)
   
+  // Calculate total won deals
+  const totalWonDeals = stages.reduce((sum, s) => sum + (s.wonCount || 0), 0);
+  
+  // Add "Venda" as the final stage
+  const stagesWithVenda = [
+    ...stages,
+    {
+      name: 'Venda',
+      count: totalWonDeals,
+      color: '#10b981', // emerald-500
+      conversionPct: 0,
+      wonCount: totalWonDeals,
+    }
+  ];
+  
   // Calculate cumulative counts (from bottom to top)
   const cumulativeCounts: number[] = [];
-  for (let i = stages.length - 1; i >= 0; i--) {
-    const belowTotal = i < stages.length - 1 ? cumulativeCounts[i + 1] : 0;
-    cumulativeCounts[i] = stages[i].count + belowTotal;
+  for (let i = stagesWithVenda.length - 1; i >= 0; i--) {
+    const belowTotal = i < stagesWithVenda.length - 1 ? cumulativeCounts[i + 1] : 0;
+    cumulativeCounts[i] = stagesWithVenda[i].count + belowTotal;
   }
   
   const maxCumulative = cumulativeCounts[0] || 1; // First stage has the highest cumulative
   
   // Calculate metrics for each stage
-  const stagesWithMetrics = stages.map((stage, index) => {
+  const stagesWithMetrics = stagesWithVenda.map((stage, index) => {
     const cumulativeCount = cumulativeCounts[index];
     const prevCumulative = index > 0 ? cumulativeCounts[index - 1] : cumulativeCount;
     
@@ -63,6 +78,7 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
       cumulativeCount,
       conversionFromPrev,
       widthPct,
+      isVendaStage: stage.name === 'Venda',
     };
   });
 
@@ -76,10 +92,6 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
       </CardHeader>
       <CardContent className="space-y-1.5">
         {stagesWithMetrics.map((stage, index) => {
-          // Calculate percentage of total won deals that were won at this stage
-          const totalWon = stages.reduce((sum, s) => sum + (s.wonCount || 0), 0);
-          const wonPct = totalWon > 0 ? Math.round(((stage.wonCount || 0) / totalWon) * 100) : 0;
-          
           return (
             <div 
               key={stage.name}
@@ -87,19 +99,20 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
             >
               {/* Funnel bar - centered to create funnel shape */}
               <div 
-                className="h-9 rounded-md flex items-center justify-between px-3 transition-all"
+                className={`h-9 rounded-md flex items-center justify-between px-3 transition-all ${stage.isVendaStage ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`}
                 style={{ 
                   width: `${stage.widthPct}%`,
                   minWidth: '140px',
                   backgroundColor: stage.color,
                 }}
               >
-                <span className="text-sm font-medium text-white truncate">
+                <span className="text-sm font-medium text-white truncate flex items-center gap-1">
+                  {stage.isVendaStage && '🏆'}
                   {stage.name}
                 </span>
                 <div className="flex items-center gap-2 ml-2">
                   <span className="text-sm font-bold text-white">
-                    {stage.cumulativeCount}
+                    {stage.isVendaStage ? stage.count : stage.cumulativeCount}
                   </span>
                   {index > 0 && (
                     <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded text-white">
@@ -108,12 +121,6 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
                   )}
                 </div>
               </div>
-              {/* Won deals at this stage */}
-              {(stage.wonCount || 0) > 0 && (
-                <span className="text-[10px] text-emerald-600 font-medium">
-                  🏆 {stage.wonCount} ganhos aqui ({wonPct}%)
-                </span>
-              )}
             </div>
           );
         })}
