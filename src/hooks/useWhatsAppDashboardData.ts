@@ -58,6 +58,49 @@ export interface WhatsAppDashboardData {
 
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+// Normalize source names to standardized categories
+function normalizeSource(rawSource: string | null): string {
+  if (!rawSource) return 'Outros';
+  
+  const source = rawSource.toLowerCase().trim();
+  
+  // WhatsApp
+  if (source.includes('whatsapp') || source.includes('zap')) {
+    return 'WhatsApp';
+  }
+  
+  // Instagram
+  if (source.includes('insta') || source.includes('instagram')) {
+    return 'Instagram';
+  }
+  
+  // Tráfego Pago / Ads
+  if (source.includes('traf') || source.includes('ads') || source.includes('imp-') || source.includes('studio-')) {
+    return 'Tráfego Pago';
+  }
+  
+  // Facebook
+  if (source.includes('facebook') || source.includes('fb')) {
+    return 'Facebook';
+  }
+  
+  // Indicação / Referral
+  if (source.includes('indica') || source.includes('referral') || source.includes('podcast')) {
+    return 'Indicação';
+  }
+  
+  // Site / Organic
+  if (source.includes('site') || source.includes('org-') || source.includes('organic')) {
+    return 'Site';
+  }
+  
+  // Contract renewal is internal
+  if (source.includes('contract') || source.includes('renewal')) {
+    return 'Renovação';
+  }
+  
+  return 'Outros';
+}
 export function useWhatsAppDashboardData() {
   const { filters } = useInsightsFilters();
 
@@ -153,7 +196,7 @@ export function useWhatsAppDashboardData() {
         const dateStr = deal.created_at.split('T')[0];
         if (leadsByDayMap[dateStr]) {
           leadsByDayMap[dateStr].count++;
-          const source = deal.source || 'Outros';
+          const source = normalizeSource(deal.source);
           leadsByDayMap[dateStr].sources[source] = (leadsByDayMap[dateStr].sources[source] || 0) + 1;
         }
       });
