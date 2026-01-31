@@ -1077,6 +1077,15 @@ function DealListView({
                         {deal.status === 'won' ? 'Ganha' : 'Perdida'}
                       </Badge>
                     )}
+                    {/* Won date - shown only for won deals */}
+                    {deal.status === 'won' && deal.won_at && (
+                      <div className="flex items-center gap-1 text-sm text-emerald-600">
+                        <Calendar className="h-3.5 w-3.5" />
+                        <span>
+                          {new Date(deal.won_at).toLocaleDateString('pt-BR')}
+                        </span>
+                      </div>
+                    )}
                     <span className="font-semibold">
                       {formatCurrency(deal.value)}
                     </span>
