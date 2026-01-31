@@ -24,7 +24,7 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
+          <div className="space-y-2 flex flex-col items-center">
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="h-10 bg-muted rounded animate-pulse" style={{ width: `${100 - i * 12}%` }} />
             ))}
@@ -34,14 +34,19 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
     );
   }
 
-  // Calculate base (first stage count)
-  const baseCount = stages.length > 0 ? Math.max(stages[0].count, 1) : 1;
+  // For a true funnel: calculate cumulative conversion from stage 1
+  // First stage = 100% width, subsequent stages shrink based on conversion rate
+  const maxCount = Math.max(...stages.map(s => s.count), 1);
   
-  // Calculate percentages relative to the previous stage
+  // Calculate metrics for each stage
   const stagesWithMetrics = stages.map((stage, index) => {
+    // Conversion rate: this stage count / previous stage count
     const prevCount = index > 0 ? stages[index - 1].count : stage.count;
-    const conversionFromPrev = prevCount > 0 ? Math.round((stage.count / prevCount) * 100) : 0;
-    const widthPct = Math.max((stage.count / baseCount) * 100, 5); // min 5% width for visibility
+    const conversionFromPrev = index === 0 ? 100 : (prevCount > 0 ? Math.round((stage.count / prevCount) * 100) : 0);
+    
+    // Width: relative to the max count in the funnel (so largest stage is 100%)
+    // This creates a proper funnel shape where each bar width reflects its volume
+    const widthPct = Math.max((stage.count / maxCount) * 100, 15); // min 15% width for visibility
     
     return {
       ...stage,
@@ -58,18 +63,18 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
           Funil de Vendas
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-1.5">
         {stagesWithMetrics.map((stage, index) => (
           <div 
             key={stage.name}
-            className="flex items-center gap-3"
+            className="flex flex-col items-center"
           >
-            {/* Funnel bar */}
+            {/* Funnel bar - centered to create funnel shape */}
             <div 
-              className="h-9 rounded-r-md flex items-center justify-between px-3 transition-all"
+              className="h-9 rounded-md flex items-center justify-between px-3 transition-all"
               style={{ 
                 width: `${stage.widthPct}%`,
-                minWidth: '120px',
+                minWidth: '140px',
                 backgroundColor: stage.color,
               }}
             >
