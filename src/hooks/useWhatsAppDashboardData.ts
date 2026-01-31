@@ -63,11 +63,19 @@ export function useWhatsAppDashboardData() {
 
   return useQuery({
     queryKey: ['whatsapp-dashboard', filters.startDate, filters.endDate],
-    queryFn: async (): Promise<WhatsAppDashboardData> => {
+  queryFn: async (): Promise<WhatsAppDashboardData> => {
+      // Get current auth user
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!authUser?.id) {
+        throw new Error('User not authenticated');
+      }
+
       // Get user's account_id
       const { data: userData } = await supabase
         .from('users')
         .select('account_id')
+        .eq('auth_user_id', authUser.id)
         .single();
 
       if (!userData?.account_id) {
