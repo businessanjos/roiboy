@@ -51,8 +51,8 @@ export function TimePerStageCard({
           Tempo por Etapa
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
+      <CardContent className="pt-0">
+        <div className="space-y-2">
           {transitions.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               Sem dados de transição disponíveis
@@ -61,54 +61,54 @@ export function TimePerStageCard({
             <>
               {/* Stage transitions */}
               {transitions.map((t, i) => (
-                <div key={i} className="flex items-center justify-between text-sm py-1">
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                <div key={i} className="flex items-center justify-between text-xs py-0.5">
+                  <div className="flex items-center gap-1 text-muted-foreground">
                     <ArrowRight className="h-3 w-3 flex-shrink-0" />
                     <span className="truncate">{t.from} → {t.to}</span>
                   </div>
-                  <span className="font-semibold ml-2">
+                  <span className="font-semibold ml-2 whitespace-nowrap">
                     {t.avgDays} dias
                   </span>
                 </div>
               ))}
 
               {/* Divider */}
-              <div className="border-t pt-3 mt-3 space-y-3">
+              <div className="border-t pt-2 mt-2 space-y-2">
                 {/* Time to schedule */}
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1 text-muted-foreground">
                     <Timer className="h-3 w-3 flex-shrink-0" />
                     <span>Tempo até Agendamento</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <span className="font-semibold">{timeToSchedule}</span>
-                    <span className="text-xs text-red-500">↘-5%</span>
+                    <span className="text-[10px] text-red-500">↘-5%</span>
                   </div>
                 </div>
 
                 {/* Average response time */}
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1 text-muted-foreground">
                     <Zap className="h-3 w-3 flex-shrink-0" />
                     <span>Tempo Médio Resposta</span>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     <span className="font-semibold">{avgResponseTime}</span>
-                    <span className="text-xs text-red-500">↘-12%</span>
+                    <span className="text-[10px] text-red-500">↘-12%</span>
                   </div>
                 </div>
 
                 {/* Total cycle */}
-                <div className="flex items-center justify-between text-sm bg-primary/5 -mx-4 px-4 py-2 rounded">
-                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                <div className="flex items-center justify-between text-xs bg-primary/5 -mx-4 px-4 py-1.5 rounded">
+                  <div className="flex items-center gap-1 text-muted-foreground">
                     <RefreshCcw className="h-3 w-3 flex-shrink-0" />
                     <span className="font-medium">Ciclo Total de Vendas</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-primary">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-base font-bold text-primary">
                       {totalCycleDays} dias
                     </span>
-                    <span className="text-xs text-red-500">↘-8%</span>
+                    <span className="text-[10px] text-red-500">↘-8%</span>
                   </div>
                 </div>
               </div>
