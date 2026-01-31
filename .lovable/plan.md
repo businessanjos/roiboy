@@ -1,135 +1,63 @@
 
-# Plano: Corrigir Edge Function de Teste CX Moment
+# Plano: Corrigir Validação de Sucesso na Edge Function
 
 ## Problema Identificado
 
-A edge function `test-cx-moment-send` está usando endpoints e formato de requisição incorretos da API UAZAPI, resultando em erro "Method Not Allowed" (405).
-
-## Diagnóstico Detalhado
-
-Comparando os logs de erro com o código funcional do `uazapi-manager`:
-
-```text
-Atual (ERRADO):
-- URL: ${UAZAPI_URL}/sendText
-- Headers: { "Authorization": "Bearer ${token}" }
-- Body: { phone, message }
-
-Correto (uazapi-manager):
-- URL: ${UAZAPI_URL}/send/text
-- Headers: { "token": instanceToken }
-- Body: { number, text }
+A mensagem de texto **foi enviada com sucesso**, conforme os logs:
+```json
+{
+  "chatid": "553171237088@s.whatsapp.net",
+  "messageid": "3EB03DBB331DA165FF3834",
+  "status": "Pending",
+  "text": "Prezada, Alda. 🪽 Queremos te desejar..."
+}
 ```
 
-## Correções Necessárias
+Porém o código considera como falha porque a validação usa campos incorretos:
 
-### 1. Endpoint de Texto
+| Verificação no código | Resposta real | Resultado |
+|----------------------|---------------|-----------|
+| `result.error === false` | Campo não existe (`undefined`) | Falso |
+| `result.status === "PENDING"` | `"Pending"` (capitalização diferente) | Falso |
+| `result.messageId` | `"messageid"` (lowercase) | Falso |
 
-| Item | Valor Errado | Valor Correto |
-|------|--------------|---------------|
-| URL | `/sendText` | `/send/text` |
-| Header | `Authorization: Bearer ${token}` | `token: ${token}` |
-| Campo telefone | `phone` | `number` |
-| Campo mensagem | `message` | `text` |
+## Correção Necessária
 
-### 2. Endpoint de Mídia (Imagens)
+Atualizar a validação para aceitar os formatos reais da resposta UAZAPI:
 
-| Item | Valor Errado | Valor Correto |
-|------|--------------|---------------|
-| URL | `/sendMedia` | `/send/media` |
-| Campo telefone | `phone` | `number` |
-| Campo URL | `media` | `file` |
-| Campo legenda | `caption` | `text` |
+**Linha 178** - Verificação de sucesso para texto:
+```typescript
+// De:
+if (result.error === false || result.status === "PENDING" || result.messageId) {
+
+// Para:
+if (result.error === false || result.chatid || result.messageid || result.messageId || result.status?.toLowerCase() === "pending") {
+```
+
+**Linha 222** - Verificação de sucesso para imagens:
+```typescript
+// De:
+if (result.error === false || result.status === "PENDING" || result.messageId) {
+
+// Para:
+if (result.error === false || result.chatid || result.messageid || result.messageId || result.status?.toLowerCase() === "pending") {
+```
 
 ## Arquivo a Modificar
 
 `supabase/functions/test-cx-moment-send/index.ts`
 
-### Mudanças no Envio de Texto (linhas 163-173)
+## Resumo das Mudanças
 
-De:
-```typescript
-const response = await fetch(apiUrl, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${instanceToken}`,
-  },
-  body: JSON.stringify({
-    phone: cleanPhone,
-    message: personalizedMessage,
-  }),
-});
-```
-
-Para:
-```typescript
-const response = await fetch(apiUrl, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "token": instanceToken,
-  },
-  body: JSON.stringify({
-    number: cleanPhone,
-    text: personalizedMessage,
-  }),
-});
-```
-
-### Mudanças na URL do Texto (linha 160)
-
-De:
-```typescript
-const apiUrl = `${UAZAPI_URL}/sendText`;
-```
-
-Para:
-```typescript
-const apiUrl = `${UAZAPI_URL}/send/text`;
-```
-
-### Mudanças no Envio de Mídia (linhas 202-217)
-
-De:
-```typescript
-const apiUrl = `${UAZAPI_URL}/sendMedia`;
-const response = await fetch(apiUrl, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "Authorization": `Bearer ${instanceToken}`,
-  },
-  body: JSON.stringify({
-    phone: cleanPhone,
-    type: "image",
-    media: image.image_url,
-    caption: "",
-  }),
-});
-```
-
-Para:
-```typescript
-const apiUrl = `${UAZAPI_URL}/send/media`;
-const response = await fetch(apiUrl, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "token": instanceToken,
-  },
-  body: JSON.stringify({
-    number: cleanPhone,
-    type: "image",
-    file: image.image_url,
-    text: "",
-  }),
-});
-```
+A verificação de sucesso passa a aceitar:
+- `result.error === false` - Formato antigo
+- `result.chatid` - Novo campo presente na resposta real
+- `result.messageid` - Campo em lowercase (formato real)
+- `result.messageId` - Campo em camelCase (fallback)
+- `result.status?.toLowerCase() === "pending"` - Verifica "Pending", "PENDING", "pending"
 
 ## Resultado Esperado
 
-Após a correção:
-1. Texto será enviado corretamente via `/send/text`
-2. Imagens serão enviadas via `/send/media` com o formato correto
-3. O teste do momento CX para o número customizado funcionará
+1. Texto enviado será reconhecido como sucesso
+2. Imagens serão enviadas (dependem do texto ter sucesso)
+3. Toast mostrará "Teste enviado com sucesso!"
