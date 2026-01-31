@@ -34,22 +34,32 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
     );
   }
 
-  // For a true funnel: calculate cumulative conversion from stage 1
-  // First stage = 100% width, subsequent stages shrink based on conversion rate
-  const maxCount = Math.max(...stages.map(s => s.count), 1);
+  // For a true funnel: calculate CUMULATIVE totals from bottom to top
+  // Each stage = its count + all stages below it (representing leads that passed through)
+  
+  // Calculate cumulative counts (from bottom to top)
+  const cumulativeCounts: number[] = [];
+  for (let i = stages.length - 1; i >= 0; i--) {
+    const belowTotal = i < stages.length - 1 ? cumulativeCounts[i + 1] : 0;
+    cumulativeCounts[i] = stages[i].count + belowTotal;
+  }
+  
+  const maxCumulative = cumulativeCounts[0] || 1; // First stage has the highest cumulative
   
   // Calculate metrics for each stage
   const stagesWithMetrics = stages.map((stage, index) => {
-    // Conversion rate: this stage count / previous stage count
-    const prevCount = index > 0 ? stages[index - 1].count : stage.count;
-    const conversionFromPrev = index === 0 ? 100 : (prevCount > 0 ? Math.round((stage.count / prevCount) * 100) : 0);
+    const cumulativeCount = cumulativeCounts[index];
+    const prevCumulative = index > 0 ? cumulativeCounts[index - 1] : cumulativeCount;
     
-    // Width: relative to the max count in the funnel (so largest stage is 100%)
-    // This creates a proper funnel shape where each bar width reflects its volume
-    const widthPct = Math.max((stage.count / maxCount) * 100, 15); // min 15% width for visibility
+    // Conversion rate: this cumulative / previous cumulative (always <= 100%)
+    const conversionFromPrev = index === 0 ? 100 : (prevCumulative > 0 ? Math.round((cumulativeCount / prevCumulative) * 100) : 0);
+    
+    // Width: relative to the first stage cumulative (funnel narrows down)
+    const widthPct = Math.max((cumulativeCount / maxCumulative) * 100, 15); // min 15% width for visibility
     
     return {
       ...stage,
+      cumulativeCount,
       conversionFromPrev,
       widthPct,
     };
@@ -83,7 +93,7 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
               </span>
               <div className="flex items-center gap-2 ml-2">
                 <span className="text-sm font-bold text-white">
-                  {stage.count}
+                  {stage.cumulativeCount}
                 </span>
                 {index > 0 && (
                   <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded text-white">
