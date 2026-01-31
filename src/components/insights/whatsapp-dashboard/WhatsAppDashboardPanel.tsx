@@ -15,28 +15,43 @@ import { CollapsibleSection } from "./CollapsibleSection";
 export function WhatsAppDashboardPanel() {
   const { data, isLoading } = useWhatsAppDashboardData();
 
-  // Calculate stage to stage conversion rates from actual transitions
-  // Use the avgTimePerTransition data which already tracks real stage movements
-  const stageConversions = data?.avgTimePerTransition && data.avgTimePerTransition.length >= 2 
-    ? data.avgTimePerTransition.slice(0, 2).map(transition => ({
-        from: transition.from,
-        to: transition.to,
-        // Calculate rate based on actual flow: use stageDistribution to find counts
-        rate: (() => {
-          const fromStage = data.stageDistribution?.find(s => s.name === transition.from);
-          const toStage = data.stageDistribution?.find(s => s.name === transition.to);
-          // For a proper conversion rate, we need the count of deals that actually made the transition
-          // Since we don't have that directly, let's calculate as min(to, from) / max(to, from) * 100
-          // This gives a more realistic "progression rate"
-          if (fromStage && toStage && fromStage.count > 0 && toStage.count > 0) {
-            // Use the smaller count divided by larger to show what % successfully moved
-            const larger = Math.max(fromStage.count, toStage.count);
-            const smaller = Math.min(fromStage.count, toStage.count);
-            return Math.round((smaller / larger) * 100);
-          }
-          return 0;
-        })()
-      }))
+  // Calculate cumulative counts for proper funnel conversion display
+  const stages = data?.stageDistribution || [];
+  const cumulativeCounts: number[] = [];
+  for (let i = stages.length - 1; i >= 0; i--) {
+    const belowTotal = i < stages.length - 1 ? cumulativeCounts[i + 1] : 0;
+    cumulativeCounts[i] = stages[i].count + belowTotal;
+  }
+
+  // Calculate stage to stage conversion rates using cumulative values
+  const stageConversions = stages.length >= 2 
+    ? stages.slice(0, 2).map((stage, index) => {
+        if (index === 0) {
+          // First stage to second stage
+          const fromCumulative = cumulativeCounts[0] || 0;
+          const toCumulative = cumulativeCounts[1] || 0;
+          const rate = fromCumulative > 0 ? Math.round((toCumulative / fromCumulative) * 100) : 0;
+          return {
+            from: stages[0].name,
+            to: stages[1]?.name || '',
+            rate,
+            fromCount: fromCumulative,
+            toCount: toCumulative,
+          };
+        } else {
+          // Second stage to third stage
+          const fromCumulative = cumulativeCounts[1] || 0;
+          const toCumulative = cumulativeCounts[2] || 0;
+          const rate = fromCumulative > 0 ? Math.round((toCumulative / fromCumulative) * 100) : 0;
+          return {
+            from: stages[1].name,
+            to: stages[2]?.name || '',
+            rate,
+            fromCount: fromCumulative,
+            toCount: toCumulative,
+          };
+        }
+      })
     : [];
 
   return (
@@ -87,6 +102,8 @@ export function WhatsAppDashboardPanel() {
           <ConversionScoreCards 
             overallConversion={data?.overallConversion || 0}
             stageConversions={stageConversions}
+            wonDeals={data?.wonDeals || 0}
+            totalDeals={data?.totalDeals || 0}
             isLoading={isLoading}
           />
         </CollapsibleSection>
