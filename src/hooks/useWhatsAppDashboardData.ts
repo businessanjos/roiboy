@@ -272,6 +272,12 @@ export function useWhatsAppDashboardData() {
         .eq('type', 'stage_change')
         .order('created_at');
 
+      // Build a map of stage name -> display_order for sorting
+      const stageOrderMap: Record<string, number> = {};
+      (stagesData || []).forEach(stage => {
+        stageOrderMap[stage.name] = stage.display_order;
+      });
+
       // Group by deal and calculate time spent in each stage
       const transitionTimes: Record<string, number[]> = {};
       const dealActivities: Record<string, any[]> = {};
@@ -311,8 +317,7 @@ export function useWhatsAppDashboardData() {
         }
       });
 
-      // Get top transitions by frequency, sorted by display_order would be ideal
-      // For now, sort by occurrence count and take top 5
+      // Get transitions and sort by the 'from' stage's display_order (funnel order)
       const sortedTransitions = Object.entries(transitionTimes)
         .map(([key, times]) => {
           const [from, to] = key.split('->');
@@ -320,12 +325,18 @@ export function useWhatsAppDashboardData() {
           return { 
             from, 
             to, 
-            avgDays: Math.round(avgDays * 10) / 10, // One decimal place for precision
-            count: times.length 
+            avgDays: Math.round(avgDays * 10) / 10,
+            count: times.length,
+            fromOrder: stageOrderMap[from] ?? 999,
+            toOrder: stageOrderMap[to] ?? 999,
           };
         })
         .filter(t => t.count >= 2) // Only show transitions that happened at least twice
-        .sort((a, b) => b.count - a.count)
+        .sort((a, b) => {
+          // Sort by 'from' stage order first, then by 'to' stage order
+          if (a.fromOrder !== b.fromOrder) return a.fromOrder - b.fromOrder;
+          return a.toOrder - b.toOrder;
+        })
         .slice(0, 5);
 
       const avgTimePerTransition: TimeTransition[] = sortedTransitions.map(({ from, to, avgDays }) => ({
