@@ -5,3 +5,4 @@ export { InsightsPanelItem } from "./InsightsPanelItem";
 export { CreatePanelDialog } from "./CreatePanelDialog";
 export { RenamePanelDialog } from "./RenamePanelDialog";
 export { DeletePanelDialog } from "./DeletePanelDialog";
+export { InsightsSidebarProvider, useInsightsSidebar } from "./InsightsSidebarContext";
