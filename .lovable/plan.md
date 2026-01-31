@@ -1,139 +1,63 @@
 
 # Plano: Correção do Isolamento de Conversas por Instância no RoyZapp
 
+## Status: ✅ IMPLEMENTADO
+
 ## Problema Identificado
 
-A conversa da **Amanda Amaral** (telefone: `+557399164182`) está aparecendo para o **Everton Pieri** quando ele acessa o setor de Vendas, mesmo que essa conversa pertença à instância "Whatsapp Jota" do **Jonathan Marcato**.
+A conversa da **Amanda Amaral** (telefone: `+557399164182`) estava aparecendo para o **Everton Pieri** quando ele acessava o setor de Vendas, mesmo que essa conversa pertencesse à instância "Whatsapp Jota" do **Jonathan Marcato**.
 
 ### Causa Raiz
 
-O filtro por `integration_id` no hook `useZappData.tsx` **só é aplicado quando `integrationId` é explicitamente passado como parâmetro**:
-
-```typescript
-if (integrationId) {
-  // Aplica filtro - caso contrário, retorna TODAS as conversas do setor
-}
-```
-
-Quando o `integrationId` não é passado (ou é `undefined`), **todas as conversas do departamento são exibidas**, independentemente de qual instância WhatsApp elas pertencem. Isso viola o princípio de isolamento multi-instância.
-
-### Cenários Problemáticos
-
-1. **Navegação direta** para `/roy-zapp?sector=vendas` sem `integrationId` na URL
-2. **Refresh da página** quando o `integrationId` não está persistido na URL
-3. **Fallback sem integrações** no hook `useSidebarZappNavigation` (linha 74-77)
-4. **Usuários Admin** podem ver todas as conversas se acessarem sem instância específica
+O filtro por `integration_id` no hook `useZappData.tsx` **só era aplicado quando `integrationId` era explicitamente passado como parâmetro**.
 
 ---
 
-## Solução Proposta
+## Solução Implementada
 
-### 1. Garantir que `integrationId` seja SEMPRE passado
+### 1. Auto-seleção de Instância (RoyZapp.tsx)
 
-Modificar a lógica para que, quando um setor tem múltiplas instâncias e nenhuma preferência do usuário está salva, o sistema:
-- Force a seleção de uma instância antes de exibir conversas
-- Ou aplique o fallback para a primeira instância conectada
+Adicionado `useEffect` que, quando o setor está selecionado mas `integrationId` é `undefined`:
+- Busca a preferência do usuário na tabela `user_instance_preferences`
+- Se não houver preferência, usa a primeira integração conectada do setor
+- Atualiza a URL com o `integrationId` selecionado
 
-**Arquivo:** `src/pages/RoyZapp.tsx`
+### 2. Persistência na URL (RoyZapp.tsx)
 
-**Mudança:** Quando o `selectedSectorId` está definido mas `selectedIntegrationId` é `undefined`, buscar automaticamente a instância preferida do usuário ou mostrar o seletor de instância.
-
-### 2. Aplicar filtro por `integration_id` como regra obrigatória
-
-**Arquivo:** `src/hooks/useZappData.tsx`
-
-**Mudança:** Quando houver múltiplas instâncias no setor e `integrationId` não for especificado, retornar array vazio e logar um warning. Isso força a seleção explícita de uma instância.
-
-```typescript
-// Nova lógica proposta
-if (!integrationId) {
-  // Verificar se o setor tem múltiplas instâncias
-  // Se sim, não exibir conversas até que uma seja selecionada
-  console.warn("[ZappData] No integrationId specified - filtering disabled");
-  // Pode-se retornar vazio ou aplicar fallback para primeira instância
-}
-```
-
-### 3. Persistir `integrationId` na URL
-
-**Arquivo:** `src/pages/RoyZapp.tsx`
-
-**Mudança:** Quando o usuário selecionar uma instância via `ZappSectorSelector`, atualizar a URL usando `useSearchParams` para incluir o `integrationId`. Isso garante que:
-- Refresh da página mantém a instância selecionada
+Alterado `useSearchParams` para modo de escrita (`setSearchParams`) permitindo:
+- Atualizar a URL quando instância é selecionada
+- Manter a instância após refresh da página
 - Links compartilhados abrem na instância correta
 
-### 4. Buscar preferência do usuário automaticamente
+### 3. Filtro por integration_id (useZappData.tsx)
 
-**Arquivo:** `src/pages/RoyZapp.tsx`
+Implementado filtro em memória em dois locais:
+- `fetchAssignmentsOnly()`: filtro aplicado após busca do banco
+- `fetchData()`: mesmo filtro aplicado
 
-**Mudança:** Criar um `useEffect` que, quando `selectedSectorId` está definido mas `selectedIntegrationId` é `undefined`, busque a preferência do usuário na tabela `user_instance_preferences` e aplique automaticamente.
+**Lógica de Filtro:**
+- Grupos (`is_group=true`): Visíveis cross-instância (comportamento intencional)
+- Contatos individuais: Filtrados por `integration_id`
+- Conversas legacy (sem `integration_id`): Mantidas visíveis
+
+### 4. Warnings de Segurança
+
+Adicionados `console.warn()` quando:
+- Setor selecionado mas sem `integrationId` especificado
+- Possível vazamento de conversas cross-instância
 
 ---
 
-## Detalhes Técnicos
+## Arquivos Modificados
 
-### Mudanças no `RoyZapp.tsx`
-
-1. Adicionar `useEffect` para sincronizar preferência de instância:
-```typescript
-useEffect(() => {
-  if (selectedSectorId && !selectedIntegrationId && currentUser?.auth_user_id) {
-    // Buscar preferência do usuário
-    const fetchPreference = async () => {
-      const { data } = await supabase
-        .from("user_instance_preferences")
-        .select("integration_id")
-        .eq("user_id", currentUser.auth_user_id)
-        .eq("sector_id", selectedSectorId)
-        .maybeSingle();
-      
-      if (data?.integration_id) {
-        setSelectedIntegrationId(data.integration_id);
-        // Atualizar URL
-        setSearchParams(prev => {
-          prev.set('integrationId', data.integration_id);
-          return prev;
-        });
-      }
-    };
-    fetchPreference();
-  }
-}, [selectedSectorId, selectedIntegrationId, currentUser?.auth_user_id]);
-```
-
-2. Atualizar URL quando instância for selecionada via `ZappSectorSelector`:
-```typescript
-const [searchParams, setSearchParams] = useSearchParams();
-
-// No callback do ZappSectorSelector:
-onSelectSector={(sectorId, integrationId) => {
-  setSelectedSectorId(sectorId);
-  setSelectedIntegrationId(integrationId);
-  // Persistir na URL
-  setSearchParams(prev => {
-    prev.set('sector', sectorId);
-    if (integrationId) prev.set('integrationId', integrationId);
-    return prev;
-  });
-}}
-```
-
-### Mudanças no `useZappData.tsx`
-
-1. Adicionar log de warning quando `integrationId` não é especificado em setor com múltiplas instâncias
-2. Opcionalmente, forçar retorno vazio se o setor exigir isolamento por instância
+1. `src/pages/RoyZapp.tsx` - Auto-seleção e persistência na URL
+2. `src/hooks/useZappData.tsx` - Filtro por integration_id
 
 ---
 
 ## Impacto
 
 - **Usuários normais**: Verão apenas conversas da sua instância preferida
-- **Admins**: Também respeitarão o filtro por instância (podem trocar manualmente se precisarem ver outra)
+- **Admins**: Também respeitarão o filtro por instância (podem trocar manualmente)
 - **Grupos**: Continuarão visíveis cross-instância (comportamento intencional)
 - **Conversas legacy**: Continuarão visíveis para o setor original
-
-## Arquivos a Modificar
-
-1. `src/pages/RoyZapp.tsx` - Auto-seleção de instância e persistência na URL
-2. `src/hooks/useZappData.tsx` - Enforcement do filtro por integração (warning/fallback)
-

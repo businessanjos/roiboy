@@ -76,7 +76,7 @@ export default function RoyZapp() {
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const { hasVendasAccess, hasSectorAccess } = useSectorAccess();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   
   // Get sector and integrationId from URL if provided
   const sectorFromUrl = searchParams.get('sector') as SectorId | null;
@@ -85,6 +85,58 @@ export default function RoyZapp() {
   // Sector selection state - initialize from URL if provided
   const [selectedSectorId, setSelectedSectorId] = useState<SectorId | null>(sectorFromUrl);
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<string | undefined>(integrationFromUrl || undefined);
+  
+  // Auto-fetch user's preferred instance when sector is selected but integrationId is missing
+  useEffect(() => {
+    if (!selectedSectorId || selectedIntegrationId || !currentUser?.auth_user_id || !currentUser?.account_id) return;
+    
+    const fetchInstancePreference = async () => {
+      try {
+        // First, check if user has a saved preference for this sector
+        const { data: preference } = await supabase
+          .from("user_instance_preferences")
+          .select("integration_id")
+          .eq("user_id", currentUser.auth_user_id)
+          .eq("sector_id", selectedSectorId)
+          .maybeSingle();
+        
+        if (preference?.integration_id) {
+          console.log(`[RoyZapp] Auto-selecting preferred instance: ${preference.integration_id}`);
+          setSelectedIntegrationId(preference.integration_id);
+          setSearchParams(prev => {
+            prev.set('integrationId', preference.integration_id);
+            return prev;
+          }, { replace: true });
+          return;
+        }
+        
+        // No preference saved - fallback to first connected integration for this sector
+        const { data: integrations } = await supabase
+          .from("integrations")
+          .select("id, display_name")
+          .eq("account_id", currentUser.account_id)
+          .eq("sector_id", selectedSectorId)
+          .eq("status", "connected")
+          .order("created_at", { ascending: true })
+          .limit(1);
+        
+        if (integrations && integrations.length > 0) {
+          console.log(`[RoyZapp] Auto-selecting first integration: ${integrations[0].id}`);
+          setSelectedIntegrationId(integrations[0].id);
+          setSearchParams(prev => {
+            prev.set('integrationId', integrations[0].id);
+            return prev;
+          }, { replace: true });
+        } else {
+          console.log(`[RoyZapp] No integrations found for sector ${selectedSectorId}`);
+        }
+      } catch (error) {
+        console.error("[RoyZapp] Error fetching instance preference:", error);
+      }
+    };
+    
+    fetchInstancePreference();
+  }, [selectedSectorId, selectedIntegrationId, currentUser?.auth_user_id, currentUser?.account_id, setSearchParams]);
   
   // Use centralized data hook with sector filtering
   const {

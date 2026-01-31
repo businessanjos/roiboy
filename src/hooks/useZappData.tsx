@@ -176,7 +176,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
       
       // CRITICAL: Filter by department_id at the database level
       // Fetch ALL assignments (including closed) - filtering done in frontend
-      const { data: assignmentsData, error: assignmentsError } = await supabase
+      let assignmentsQuery = supabase
         .from("zapp_conversation_assignments")
         .select(`
           *,
@@ -190,11 +190,39 @@ export function useZappData(options: UseZappDataOptions = {}) {
         .eq("department_id", dept.id) // CRITICAL: Filter by department
         .order("updated_at", { ascending: false })
         .limit(500);
+      
+      // CRITICAL: Filter by integration_id for instance isolation
+      // Groups are allowed to be visible cross-instance, but individual contacts must be isolated
+      if (integrationId) {
+        // When integrationId is provided, filter individual conversations by it
+        // Groups can still appear cross-instance (handled in frontend with OR logic)
+        console.log(`[ZappData] fetchAssignmentsOnly: Filtering by integrationId ${integrationId}`);
+      } else {
+        // SECURITY WARNING: No integrationId specified - this may leak conversations
+        console.warn("[ZappData] fetchAssignmentsOnly: No integrationId - individual conversations may be visible cross-instance");
+      }
+      
+      const { data: assignmentsData, error: assignmentsError } = await assignmentsQuery;
 
       if (assignmentsError) throw assignmentsError;
       
-      console.log(`[ZappData] Fetched ${assignmentsData?.length || 0} assignments for department ${dept.id} (sector: ${sectorId})`);
-      setAssignments(assignmentsData || []);
+      // Apply integration_id filtering in-memory for more precise control
+      // Groups (is_group=true) ignore integrationId filter - they're visible cross-instance
+      // Individual contacts are filtered by integrationId
+      let filteredAssignments = assignmentsData || [];
+      if (integrationId) {
+        filteredAssignments = filteredAssignments.filter((a: any) => {
+          const conv = a.zapp_conversation;
+          if (!conv) return true; // Keep if no conversation data
+          if (conv.is_group) return true; // Groups visible cross-instance
+          // Individual: must match integrationId OR have no integrationId (legacy)
+          return conv.integration_id === integrationId || !conv.integration_id;
+        });
+        console.log(`[ZappData] Filtered from ${assignmentsData?.length || 0} to ${filteredAssignments.length} by integrationId ${integrationId}`);
+      }
+      
+      console.log(`[ZappData] Fetched ${filteredAssignments.length} assignments for department ${dept.id} (sector: ${sectorId})`);
+      setAssignments(filteredAssignments);
       
       // Update client products for new clients
       const clientIds = (assignmentsData || [])
@@ -227,7 +255,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
     } catch (error) {
       console.error("Error fetching assignments:", error);
     }
-  }, [currentUser?.account_id, sectorId]);
+  }, [currentUser?.account_id, sectorId, integrationId]);
 
   // Debounced fetch for realtime
   const debouncedFetchAssignments = useCallback(() => {
@@ -433,7 +461,26 @@ export function useZappData(options: UseZappDataOptions = {}) {
       
       setTeamUsers((usersData || []) as TeamUser[]);
       setTeamRoles(rolesData || []);
-      setAssignments(assignmentsData || []);
+      
+      // Apply integration_id filtering for instance isolation in fetchData too
+      // Groups (is_group=true) ignore integrationId filter - they're visible cross-instance
+      // Individual contacts are filtered by integrationId
+      let filteredAssignments = assignmentsData || [];
+      if (integrationId) {
+        filteredAssignments = filteredAssignments.filter((a: any) => {
+          const conv = a.zapp_conversation;
+          if (!conv) return true; // Keep if no conversation data
+          if (conv.is_group) return true; // Groups visible cross-instance
+          // Individual: must match integrationId OR have no integrationId (legacy)
+          return conv.integration_id === integrationId || !conv.integration_id;
+        });
+        console.log(`[ZappData] fetchData: Filtered from ${assignmentsData?.length || 0} to ${filteredAssignments.length} by integrationId ${integrationId}`);
+      } else if (sectorId) {
+        // SECURITY WARNING: No integrationId specified - this may leak conversations
+        console.warn("[ZappData] fetchData: No integrationId - individual conversations may be visible cross-instance");
+      }
+      
+      setAssignments(filteredAssignments);
       setTags(tagsData || []);
       
       // Fetch available products
@@ -567,7 +614,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.account_id, currentUser?.id, updateAgentHeartbeat, sectorId]);
+  }, [currentUser?.account_id, currentUser?.id, updateAgentHeartbeat, sectorId, integrationId]);
 
   // Fetch messages - using ref to avoid stale closure issues
   const fetchMessagesRef = useRef<(id: string) => Promise<void>>();
