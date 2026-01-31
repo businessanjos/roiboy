@@ -175,7 +175,7 @@ serve(async (req) => {
           const result = await response.json();
           console.log("UAZAPI text response:", result);
 
-          if (result.error === false || result.status === "PENDING" || result.messageId) {
+          if (result.error === false || result.chatid || result.messageid || result.messageId || result.status?.toLowerCase() === "pending") {
             messageSent = true;
           } else {
             sendError = result.message || result.error || "Erro ao enviar mensagem";
@@ -219,7 +219,7 @@ serve(async (req) => {
             const result = await response.json();
             console.log("UAZAPI image response:", result);
 
-            if (result.error === false || result.status === "PENDING" || result.messageId) {
+            if (result.error === false || result.chatid || result.messageid || result.messageId || result.status?.toLowerCase() === "pending") {
               imagesSent++;
             }
           }
