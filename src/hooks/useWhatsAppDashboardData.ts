@@ -175,10 +175,10 @@ export function useWhatsAppDashboardData() {
       const fourteenDaysAgo = new Date();
       fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
-      // First, find the "Origem da Venda" custom field
+      // First, find the "Origem da Venda" custom field with its options
       const { data: origemField } = await supabase
         .from('custom_fields')
-        .select('id')
+        .select('id, field_type, options')
         .eq('account_id', accountId)
         .eq('name', 'Origem da Venda')
         .eq('is_active', true)
@@ -192,19 +192,46 @@ export function useWhatsAppDashboardData() {
         .gte('created_at', fourteenDaysAgo.toISOString())
         .order('created_at');
 
+      // Build a map of option value -> label for quick lookup
+      const optionsMap: Record<string, string> = {};
+      if (origemField?.options && Array.isArray(origemField.options)) {
+        (origemField.options as Array<{ value: string; label: string }>).forEach(opt => {
+          optionsMap[opt.value] = opt.label;
+        });
+      }
+
       // If we have the origem field, fetch the values for each deal
       let dealOrigemMap: Record<string, string> = {};
       if (origemField?.id && dealsbyDay && dealsbyDay.length > 0) {
         const dealIds = dealsbyDay.map(d => d.id);
         const { data: fieldValues } = await supabase
           .from('deal_field_values')
-          .select('deal_id, value_text')
+          .select('deal_id, value_text, value_json')
           .eq('field_id', origemField.id)
           .in('deal_id', dealIds);
 
         (fieldValues || []).forEach(fv => {
-          if (fv.value_text) {
-            dealOrigemMap[fv.deal_id] = fv.value_text;
+          let sourceLabel: string | null = null;
+          
+          // Handle multi_select (stored in value_json as array of option values)
+          if (origemField.field_type === 'multi_select' && fv.value_json) {
+            const values = fv.value_json as string[];
+            if (Array.isArray(values) && values.length > 0) {
+              // Use the first selected option's label
+              sourceLabel = optionsMap[values[0]] || values[0];
+            }
+          }
+          // Handle select (stored in value_text as option value)
+          else if (origemField.field_type === 'select' && fv.value_text) {
+            sourceLabel = optionsMap[fv.value_text] || fv.value_text;
+          }
+          // Handle text (stored directly in value_text)
+          else if (fv.value_text) {
+            sourceLabel = fv.value_text;
+          }
+          
+          if (sourceLabel) {
+            dealOrigemMap[fv.deal_id] = sourceLabel;
           }
         });
       }
