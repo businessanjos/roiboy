@@ -208,7 +208,7 @@ export function useWhatsAppDashboardData() {
         sources: data.sources,
       }));
 
-      // 4. Time per transition (simplified - using deal_activities)
+      // 4. Time per transition - calculate time spent in each stage before moving to next
       const { data: activities } = await supabase
         .from('deal_activities')
         .select('deal_id, type, old_value, new_value, created_at')
@@ -216,37 +216,67 @@ export function useWhatsAppDashboardData() {
         .eq('type', 'stage_change')
         .order('created_at');
 
-      // Group by deal and calculate transitions
+      // Group by deal and calculate time spent in each stage
       const transitionTimes: Record<string, number[]> = {};
       const dealActivities: Record<string, any[]> = {};
       
       (activities || []).forEach(act => {
+        // Skip invalid activities
+        if (!act.old_value || !act.new_value) return;
+        // Skip same-stage transitions (duplicates)
+        if (act.old_value === act.new_value) return;
+        
         if (!dealActivities[act.deal_id]) {
           dealActivities[act.deal_id] = [];
         }
         dealActivities[act.deal_id].push(act);
       });
 
+      // Calculate time for each unique transition (from -> to)
       Object.values(dealActivities).forEach(acts => {
         acts.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        for (let i = 1; i < acts.length; i++) {
-          const from = acts[i].old_value || 'unknown';
-          const to = acts[i].new_value || 'unknown';
+        
+        for (let i = 0; i < acts.length; i++) {
+          const from = acts[i].old_value;
+          const to = acts[i].new_value;
           const key = `${from}->${to}`;
-          const diffMs = new Date(acts[i].created_at).getTime() - new Date(acts[i-1].created_at).getTime();
-          const diffDays = diffMs / (1000 * 60 * 60 * 24);
-          if (!transitionTimes[key]) transitionTimes[key] = [];
-          transitionTimes[key].push(diffDays);
+          
+          // Calculate time spent in 'from' stage
+          // For first activity, we'd need deal.created_at, so skip or use 0
+          // For subsequent activities, use time since previous activity
+          if (i > 0) {
+            const diffMs = new Date(acts[i].created_at).getTime() - new Date(acts[i-1].created_at).getTime();
+            const diffDays = diffMs / (1000 * 60 * 60 * 24);
+            if (diffDays >= 0) {
+              if (!transitionTimes[key]) transitionTimes[key] = [];
+              transitionTimes[key].push(diffDays);
+            }
+          }
         }
       });
 
-      const avgTimePerTransition: TimeTransition[] = Object.entries(transitionTimes)
+      // Get top transitions by frequency, sorted by display_order would be ideal
+      // For now, sort by occurrence count and take top 5
+      const sortedTransitions = Object.entries(transitionTimes)
         .map(([key, times]) => {
           const [from, to] = key.split('->');
-          const avgDays = times.reduce((a, b) => a + b, 0) / times.length;
-          return { from, to, avgDays: Math.round(avgDays) };
+          const avgDays = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0;
+          return { 
+            from, 
+            to, 
+            avgDays: Math.round(avgDays * 10) / 10, // One decimal place for precision
+            count: times.length 
+          };
         })
+        .filter(t => t.count >= 2) // Only show transitions that happened at least twice
+        .sort((a, b) => b.count - a.count)
         .slice(0, 5);
+
+      const avgTimePerTransition: TimeTransition[] = sortedTransitions.map(({ from, to, avgDays }) => ({
+        from,
+        to,
+        avgDays: Math.round(avgDays)
+      }));
 
       const totalCycleDays = avgTimePerTransition.reduce((sum, t) => sum + t.avgDays, 0);
 
