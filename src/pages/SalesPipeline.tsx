@@ -8,6 +8,7 @@ import { useSectorUsers } from "@/hooks/useSectorUsers";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { notifyContractCreated } from "@/hooks/useContractNotifications";
+import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
 import {
   fetchDealCustomFieldValues,
   updateClientWithDealData,
@@ -19,7 +20,9 @@ import { DealDialog } from "@/components/sales/DealDialog";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { DealStagesManager } from "@/components/sales/DealStagesManager";
 import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
+import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { PipelineFilterButton } from "@/components/sales/PipelineFilterButton";
+import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
 import { ActiveFilter, applyFilterToDeals } from "@/hooks/usePipelineFilters";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -84,6 +87,7 @@ export default function SalesPipeline() {
   const { leads, loading: leadsLoading, refetch: refetchLeads } = useLeads();
   const { users: salesUsers } = useSectorUsers({ sectorId: "vendas" });
   const { isAdmin } = usePermissions();
+  const { validateDealOutcome } = useRequiredFieldsValidation();
 
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
@@ -100,6 +104,22 @@ export default function SalesPipeline() {
   const [lostMonthFilter, setLostMonthFilter] = useState<string>('all');
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
+  
+  // State for required fields validation modal on won/lost
+  const [outcomeRequiredFieldsModal, setOutcomeRequiredFieldsModal] = useState<{
+    open: boolean;
+    dealId: string;
+    dealTitle: string;
+    outcomeType: "won" | "lost";
+    missingFields: CustomField[];
+    pendingLostReason?: string;
+  }>({
+    open: false,
+    dealId: "",
+    dealTitle: "",
+    outcomeType: "won",
+    missingFields: [],
+  });
 
   // Handle URL query param to open deal detail automatically
   useEffect(() => {
@@ -269,7 +289,7 @@ export default function SalesPipeline() {
     setIsNewDealOpen(false);
   };
 
-  const handleMarkAsWon = async (dealId: string) => {
+  const handleMarkAsWon = async (dealId: string, skipValidation = false) => {
     // CRITICAL FIX: Prevent double-click
     if (processingWonDealId) {
       toast.warning("Aguarde, processando negócio anterior...");
@@ -281,6 +301,21 @@ export default function SalesPipeline() {
     if (!deal) {
       toast.error("Negociação não encontrada");
       return;
+    }
+
+    // Validate required fields for "won" outcome (unless skipping after modal fill)
+    if (!skipValidation && currentUser?.account_id) {
+      const validation = await validateDealOutcome(dealId, "won", currentUser.account_id);
+      if (!validation.canMoveToStage && validation.missingFields.length > 0) {
+        setOutcomeRequiredFieldsModal({
+          open: true,
+          dealId,
+          dealTitle: deal.title,
+          outcomeType: "won",
+          missingFields: validation.missingFields,
+        });
+        return;
+      }
     }
 
     setProcessingWonDealId(dealId);
@@ -549,10 +584,48 @@ export default function SalesPipeline() {
     }
   };
 
-  const handleMarkAsLost = async (dealId: string, reason?: string) => {
+  const handleMarkAsLost = async (dealId: string, reason?: string, skipValidation = false) => {
+    // Find the deal for validation
+    const deal = deals.find(d => d.id === dealId);
+    if (!deal) {
+      toast.error("Negociação não encontrada");
+      return;
+    }
+
+    // Validate required fields for "lost" outcome (unless skipping after modal fill)
+    if (!skipValidation && currentUser?.account_id) {
+      const validation = await validateDealOutcome(dealId, "lost", currentUser.account_id);
+      if (!validation.canMoveToStage && validation.missingFields.length > 0) {
+        setOutcomeRequiredFieldsModal({
+          open: true,
+          dealId,
+          dealTitle: deal.title,
+          outcomeType: "lost",
+          missingFields: validation.missingFields,
+          pendingLostReason: reason,
+        });
+        return;
+      }
+    }
+
     await markAsLost(dealId, reason);
     setIsDetailOpen(false);
     setSelectedDeal(null);
+  };
+
+  // Callback when required fields are filled for won/lost outcome
+  const handleOutcomeRequiredFieldsComplete = async () => {
+    const { dealId, outcomeType, pendingLostReason } = outcomeRequiredFieldsModal;
+    
+    setOutcomeRequiredFieldsModal(prev => ({ ...prev, open: false }));
+    
+    if (outcomeType === "won") {
+      // Re-call handleMarkAsWon with skip validation flag
+      await handleMarkAsWon(dealId, true);
+    } else {
+      // Re-call handleMarkAsLost with skip validation flag
+      await handleMarkAsLost(dealId, pendingLostReason, true);
+    }
   };
 
   const handleDeleteDeal = async (dealId: string) => {
@@ -884,6 +957,19 @@ export default function SalesPipeline() {
         open={isFieldsDialogOpen}
         onOpenChange={setIsFieldsDialogOpen}
         sectorContext="deals"
+      />
+
+      {/* Required Fields Modal for Won/Lost outcomes */}
+      <RequiredFieldsModal
+        open={outcomeRequiredFieldsModal.open}
+        onOpenChange={(open) => setOutcomeRequiredFieldsModal(prev => ({ ...prev, open }))}
+        dealId={outcomeRequiredFieldsModal.dealId}
+        dealTitle={outcomeRequiredFieldsModal.dealTitle}
+        targetStageName=""
+        missingFields={outcomeRequiredFieldsModal.missingFields}
+        accountId={currentUser?.account_id || ""}
+        onComplete={handleOutcomeRequiredFieldsComplete}
+        outcomeType={outcomeRequiredFieldsModal.outcomeType}
       />
     </>
   );
