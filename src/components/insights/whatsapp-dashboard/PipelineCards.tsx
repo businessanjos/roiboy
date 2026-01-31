@@ -27,8 +27,16 @@ const formatCurrency = (value: number) => {
 };
 
 export function PipelineCards({ stages, isLoading }: PipelineCardsProps) {
-  // Calculate total leads (sum of ALL deals across all stages)
-  const totalLeads = stages.reduce((sum, stage) => sum + stage.count, 0);
+  // Calculate CUMULATIVE counts for proper funnel visualization
+  // Each stage = its count + all stages below it (representing leads that passed through)
+  const cumulativeCounts: number[] = [];
+  for (let i = stages.length - 1; i >= 0; i--) {
+    const belowTotal = i < stages.length - 1 ? cumulativeCounts[i + 1] : 0;
+    cumulativeCounts[i] = stages[i].count + belowTotal;
+  }
+  
+  // Total leads = cumulative at first stage (top of funnel)
+  const totalLeads = cumulativeCounts[0] || 0;
   const baseCount = Math.max(totalLeads, 1);
 
   if (isLoading) {
@@ -71,10 +79,12 @@ export function PipelineCards({ stages, isLoading }: PipelineCardsProps) {
     >
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {stages.map((stage, index) => {
-          const conversionPct = index === 0 ? 100 : Math.round((stage.count / baseCount) * 100);
-          const prevCount = index > 0 ? stages[index - 1].count : stage.count;
-          const growth = prevCount > 0 ? Math.round(((stage.count - prevCount) / prevCount) * 100) : 0;
-          const isPositive = growth >= 0;
+          const cumulativeCount = cumulativeCounts[index];
+          const prevCumulative = index > 0 ? cumulativeCounts[index - 1] : cumulativeCount;
+          
+          // Conversion: this cumulative / previous cumulative (always <= 100%)
+          const conversionPct = index === 0 ? 100 : (prevCumulative > 0 ? Math.round((cumulativeCount / prevCumulative) * 100) : 0);
+          
           const isFirstStage = index === 0;
           
           return (
@@ -99,24 +109,12 @@ export function PipelineCards({ stages, isLoading }: PipelineCardsProps) {
                   </p>
                 </div>
 
-                {/* Count with total reference */}
+                {/* Cumulative count with conversion */}
                 <div className="flex items-baseline gap-1 mb-1">
-                  <p className="text-2xl font-bold">{stage.count}</p>
+                  <p className="text-2xl font-bold">{cumulativeCount}</p>
                   {!isFirstStage && (
-                    <span className="text-sm text-muted-foreground">/ {baseCount}</span>
-                  )}
-                  {/* Growth indicator */}
-                  {!isFirstStage && (
-                    <span className={cn(
-                      "text-xs flex items-center ml-auto",
-                      isPositive ? "text-green-500" : "text-red-500"
-                    )}>
-                      {isPositive ? (
-                        <TrendingUp className="h-3 w-3 mr-0.5" />
-                      ) : (
-                        <TrendingDown className="h-3 w-3 mr-0.5" />
-                      )}
-                      {isPositive ? '+' : ''}{growth}%
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      ({stage.count} nesta etapa)
                     </span>
                   )}
                 </div>
