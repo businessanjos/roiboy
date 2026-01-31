@@ -175,12 +175,39 @@ export function useWhatsAppDashboardData() {
       const fourteenDaysAgo = new Date();
       fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
+      // First, find the "Origem da Venda" custom field
+      const { data: origemField } = await supabase
+        .from('custom_fields')
+        .select('id')
+        .eq('account_id', accountId)
+        .eq('name', 'Origem da Venda')
+        .eq('is_active', true)
+        .single();
+
+      // Get deals with their custom field values for "Origem da Venda"
       const { data: dealsbyDay } = await supabase
         .from('deals')
-        .select('created_at, source')
+        .select('id, created_at')
         .eq('account_id', accountId)
         .gte('created_at', fourteenDaysAgo.toISOString())
         .order('created_at');
+
+      // If we have the origem field, fetch the values for each deal
+      let dealOrigemMap: Record<string, string> = {};
+      if (origemField?.id && dealsbyDay && dealsbyDay.length > 0) {
+        const dealIds = dealsbyDay.map(d => d.id);
+        const { data: fieldValues } = await supabase
+          .from('deal_field_values')
+          .select('deal_id, value_text')
+          .eq('field_id', origemField.id)
+          .in('deal_id', dealIds);
+
+        (fieldValues || []).forEach(fv => {
+          if (fv.value_text) {
+            dealOrigemMap[fv.deal_id] = fv.value_text;
+          }
+        });
+      }
 
       const leadsByDayMap: Record<string, { count: number; sources: Record<string, number> }> = {};
       
@@ -196,7 +223,8 @@ export function useWhatsAppDashboardData() {
         const dateStr = deal.created_at.split('T')[0];
         if (leadsByDayMap[dateStr]) {
           leadsByDayMap[dateStr].count++;
-          const source = normalizeSource(deal.source);
+          // Use the custom field value directly, or "Outros" if not set
+          const source = dealOrigemMap[deal.id] || 'Outros';
           leadsByDayMap[dateStr].sources[source] = (leadsByDayMap[dateStr].sources[source] || 0) + 1;
         }
       });
