@@ -80,16 +80,20 @@ export function WhatsAppDashboardPanel() {
           subtitle="Análise de velocidade e eficiência"
           icon={<Filter className="h-5 w-5 text-primary" />}
         >
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <SalesFunnelChart 
-              stages={data?.stageDistribution || []} 
-              isLoading={isLoading}
-            />
-            <TimePerStageCard 
-              transitions={data?.avgTimePerTransition || []}
-              totalCycleDays={data?.totalCycleDays || 0}
-              isLoading={isLoading}
-            />
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div className="lg:col-span-3">
+              <SalesFunnelChart 
+                stages={data?.stageDistribution || []} 
+                isLoading={isLoading}
+              />
+            </div>
+            <div className="lg:col-span-2">
+              <TimePerStageCard 
+                transitions={data?.avgTimePerTransition || []}
+                totalCycleDays={data?.totalCycleDays || 0}
+                isLoading={isLoading}
+              />
+            </div>
           </div>
         </CollapsibleSection>
 

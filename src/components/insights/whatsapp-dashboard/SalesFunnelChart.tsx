@@ -99,14 +99,14 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
             >
               {/* Funnel bar - centered to create funnel shape */}
               <div 
-                className={`h-9 rounded-md flex items-center justify-between px-3 transition-all ${stage.isVendaStage ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`}
+                className={`h-10 rounded-md flex items-center justify-between px-4 transition-all ${stage.isVendaStage ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`}
                 style={{ 
                   width: `${stage.widthPct}%`,
-                  minWidth: '140px',
+                  minWidth: '180px',
                   backgroundColor: stage.color,
                 }}
               >
-                <span className="text-sm font-medium text-white truncate flex items-center gap-1">
+                <span className="text-sm font-medium text-white flex items-center gap-1.5">
                   {stage.isVendaStage && '🏆'}
                   {stage.name}
                 </span>
