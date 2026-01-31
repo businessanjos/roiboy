@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { CollapsibleSection } from "./CollapsibleSection";
 
 interface StageData {
   name: string;
@@ -32,17 +33,16 @@ export function PipelineCards({ stages, isLoading }: PipelineCardsProps) {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold">Pipeline de Conversão</h2>
-            <p className="text-sm text-muted-foreground">Análise detalhada do funil de vendas</p>
-          </div>
+      <CollapsibleSection
+        title="Pipeline de Conversão"
+        subtitle="Análise detalhada do funil de vendas"
+        rightContent={
           <div className="text-right">
             <p className="text-sm text-muted-foreground">Total Leads</p>
             <div className="h-8 w-16 bg-muted rounded animate-pulse" />
           </div>
-        </div>
+        }
+      >
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <Card key={i} className="animate-pulse">
@@ -54,23 +54,21 @@ export function PipelineCards({ stages, isLoading }: PipelineCardsProps) {
             </Card>
           ))}
         </div>
-      </div>
+      </CollapsibleSection>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Pipeline de Conversão</h2>
-          <p className="text-sm text-muted-foreground">Análise detalhada do funil de vendas</p>
-        </div>
+    <CollapsibleSection
+      title="Pipeline de Conversão"
+      subtitle="Análise detalhada do funil de vendas"
+      rightContent={
         <div className="text-right">
           <p className="text-sm text-muted-foreground">Total Leads</p>
           <p className="text-3xl font-bold">{totalLeads}</p>
         </div>
-      </div>
-      
+      }
+    >
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         {stages.map((stage, index) => {
           const conversionPct = index === 0 ? 100 : Math.round((stage.count / baseCount) * 100);
@@ -132,6 +130,6 @@ export function PipelineCards({ stages, isLoading }: PipelineCardsProps) {
           );
         })}
       </div>
-    </div>
+    </CollapsibleSection>
   );
 }

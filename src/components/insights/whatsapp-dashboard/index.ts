@@ -7,3 +7,4 @@ export { TimePerStageCard } from "./TimePerStageCard";
 export { EngagementByPeriodCards } from "./EngagementByPeriodCards";
 export { EngagementByDayCards } from "./EngagementByDayCards";
 export { TimeSavedCard } from "./TimeSavedCard";
+export { CollapsibleSection } from "./CollapsibleSection";
