@@ -43,7 +43,7 @@ export function ConversionScoreCards({
         <p className="text-sm text-muted-foreground mb-1">Conversão Total</p>
         <p className="text-2xl font-bold text-primary">{overallConversion}%</p>
         <p className="text-xs text-muted-foreground mt-1">
-          {wonDeals} ÷ {totalDeals}
+          {wonDeals} vendas / {totalDeals} leads
         </p>
       </div>
 
@@ -55,7 +55,7 @@ export function ConversionScoreCards({
           </p>
           <p className="text-2xl font-bold">{conv.rate}%</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {conv.toCount ?? 0} ÷ {conv.fromCount ?? 0}
+            {conv.toCount ?? 0} em {conv.to} / {conv.fromCount ?? 0} em {conv.from}
           </p>
         </div>
       ))}
