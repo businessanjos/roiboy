@@ -1,52 +1,67 @@
-# Plano Atual: Concluído ✅
 
-## Implementação Realizada: Campos Obrigatórios para Ganho/Perdido
+# Plano: Exibir Data de Fechamento nos Negócios Ganhos
 
-A funcionalidade foi implementada com sucesso. Agora os campos personalizados de negócios podem ser configurados como obrigatórios especificamente para as ações de "Ganho" e "Perdido".
+## Contexto
 
-### Arquivos Modificados
+O sistema já possui o campo `won_at` na tabela `deals` que é preenchido automaticamente quando um negócio é marcado como ganho. Porém, essa informação não está sendo exibida na listagem de negócios ganhos.
 
-1. **`src/components/custom-fields/CustomFieldsManager.tsx`**
-   - Adicionados checkboxes "Ao dar Ganho" (com ícone Trophy verde) e "Ao dar Perdido" (com ícone XCircle vermelho)
-   - Os checkboxes ficam independentes da opção "Todas as etapas"
-   - Valores "won" e "lost" são armazenados no array `required_stages`
+## Solução
 
-2. **`src/hooks/useRequiredFieldsValidation.tsx`**
-   - Adicionada nova função `validateDealOutcome(dealId, outcome, accountId)`
-   - Filtra campos onde `required_stages` inclui "won" ou "lost"
-   - Retorna campos faltantes da mesma forma que `validateDealMove`
+Adicionar a exibição da data de fechamento diretamente na linha do negócio ganho, entre o badge de status/etapa e o valor.
 
-3. **`src/components/sales/RequiredFieldsModal.tsx`**
-   - Adicionada prop opcional `outcomeType` ("won" | "lost")
-   - Mensagens e botões contextuais:
-     - "Para marcar como Ganha..." / "Preencher e Ganhar"
-     - "Para marcar como Perdida..." / "Preencher e Perder"
+## Mudanças Propostas
 
-4. **`src/pages/SalesPipeline.tsx`**
-   - `handleMarkAsWon` agora valida campos obrigatórios antes de prosseguir
-   - `handleMarkAsLost` também valida campos obrigatórios
-   - Adicionado estado `outcomeRequiredFieldsModal` para controlar o modal
-   - Callback `handleOutcomeRequiredFieldsComplete` re-executa a ação após preenchimento
+### Arquivo: `src/pages/SalesPipeline.tsx`
 
-### Como Funciona
+Modificar o componente `DealListView` para exibir a data de fechamento quando o negócio for ganho:
 
-1. Usuário marca um campo como obrigatório e seleciona "Ao dar Ganho" e/ou "Ao dar Perdido"
-2. Ao clicar em "Ganhar" ou "Perder" um negócio, o sistema valida se há campos faltantes
-3. Se houver, exibe o `RequiredFieldsModal` com os campos obrigatórios
-4. Após preenchimento, a ação de ganho/perda é executada automaticamente
+1. Na seção de badges/informações à direita do card, adicionar a data `won_at` formatada:
 
-### Estrutura do `required_stages`
+```text
+Antes:
+[Avatar] [Barra Colorida] [Nome do Deal]           [Badge Etapa] [R$ Valor]
+                          [Nome do Contato]
 
-```json
-// Obrigatório ao dar ganho
-["won"]
-
-// Obrigatório ao perder
-["lost"]
-
-// Obrigatório em todas as etapas + ganho
-["all", "won"]
-
-// Obrigatório em etapas específicas + perdido
-["uuid-etapa-1", "lost"]
+Depois (para negócios ganhos):
+[Avatar] [Barra Colorida] [Nome do Deal]           [Badge Etapa] [📅 01/01/2025] [R$ Valor]
+                          [Nome do Contato]
 ```
+
+2. Usar o ícone `Calendar` do lucide-react (já importado no arquivo)
+3. Formatar a data no padrão brasileiro (DD/MM/YYYY)
+4. Exibir apenas quando `deal.status === 'won'` e `deal.won_at` existir
+
+### Código de Implementação
+
+Dentro do bloco de informações à direita (linha ~1060), adicionar após o badge de status e antes do valor:
+
+```tsx
+{/* Won date - shown only for won deals */}
+{deal.status === 'won' && deal.won_at && (
+  <div className="flex items-center gap-1 text-sm text-emerald-600">
+    <Calendar className="h-3.5 w-3.5" />
+    <span>
+      {new Date(deal.won_at).toLocaleDateString('pt-BR')}
+    </span>
+  </div>
+)}
+```
+
+## Resultado Visual Esperado
+
+A lista de negócios ganhos exibirá:
+
+```text
+[Avatar] [Cor] [INSIDE-RM] Anini Beatriz    [Proposta Enviada] [Ganha] [📅 15/01/2025] R$ 70.800,00
+              Anini Beatriz
+```
+
+## Impacto
+
+- **Visual**: Informação clara de quando cada negócio foi fechado
+- **Análise**: Facilita identificar rapidamente a cronologia das vendas
+- **Consistência**: Segue o mesmo padrão visual do motivo de perda nos negócios perdidos
+
+## Arquivo a Modificar
+
+1. `src/pages/SalesPipeline.tsx` - Componente `DealListView` (linhas ~1060-1083)
