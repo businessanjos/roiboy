@@ -74,36 +74,44 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-1.5">
-        {stagesWithMetrics.map((stage, index) => (
-          <div 
-            key={stage.name}
-            className="flex flex-col items-center"
-          >
-            {/* Funnel bar - centered to create funnel shape */}
+        {stagesWithMetrics.map((stage, index) => {
+          // Calculate percentage of deals won in this stage vs total
+          const stageWonPct = maxCumulative > 0 ? Math.round((stage.count / maxCumulative) * 100) : 0;
+          
+          return (
             <div 
-              className="h-9 rounded-md flex items-center justify-between px-3 transition-all"
-              style={{ 
-                width: `${stage.widthPct}%`,
-                minWidth: '140px',
-                backgroundColor: stage.color,
-              }}
+              key={stage.name}
+              className="flex flex-col items-center"
             >
-              <span className="text-sm font-medium text-white truncate">
-                {stage.name}
-              </span>
-              <div className="flex items-center gap-2 ml-2">
-                <span className="text-sm font-bold text-white">
-                  {stage.cumulativeCount}
+              {/* Funnel bar - centered to create funnel shape */}
+              <div 
+                className="h-9 rounded-md flex items-center justify-between px-3 transition-all"
+                style={{ 
+                  width: `${stage.widthPct}%`,
+                  minWidth: '180px',
+                  backgroundColor: stage.color,
+                }}
+              >
+                <span className="text-sm font-medium text-white truncate">
+                  {stage.name}
                 </span>
-                {index > 0 && (
-                  <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded text-white">
-                    {stage.conversionFromPrev}%
+                <div className="flex items-center gap-2 ml-2">
+                  <span className="text-xs text-white/80">
+                    {stage.count} aqui ({stageWonPct}%)
                   </span>
-                )}
+                  <span className="text-sm font-bold text-white">
+                    {stage.cumulativeCount}
+                  </span>
+                  {index > 0 && (
+                    <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded text-white">
+                      {stage.conversionFromPrev}%
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
   );
