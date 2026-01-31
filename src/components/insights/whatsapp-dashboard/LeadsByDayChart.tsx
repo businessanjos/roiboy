@@ -29,14 +29,26 @@ const SOURCE_COLORS: Record<string, string> = {
   'Facebook': '#1877F2',
   'Site': '#6366f1',
   'Indicação': '#F59E0B',
+  'Tráfego Pago': '#8B5CF6',
+  'Renovação': '#10B981',
   'Outros': '#6B7280',
 };
 
+// Define order priority for sources
+const SOURCE_ORDER = ['WhatsApp', 'Instagram', 'Tráfego Pago', 'Facebook', 'Site', 'Indicação', 'Renovação', 'Outros'];
+
 export function LeadsByDayChart({ data, isLoading }: LeadsByDayChartProps) {
-  // Get all unique sources
+  // Get all unique sources and sort by priority
   const allSources = new Set<string>();
   data.forEach(d => {
     Object.keys(d.sources).forEach(s => allSources.add(s));
+  });
+
+  // Sort sources by predefined order
+  const sourcesArray = Array.from(allSources).sort((a, b) => {
+    const aIdx = SOURCE_ORDER.indexOf(a);
+    const bIdx = SOURCE_ORDER.indexOf(b);
+    return (aIdx === -1 ? 999 : aIdx) - (bIdx === -1 ? 999 : bIdx);
   });
 
   const chartData = data.map(d => ({
@@ -45,7 +57,6 @@ export function LeadsByDayChart({ data, isLoading }: LeadsByDayChartProps) {
   }));
 
   const totalLeads = data.reduce((sum, d) => sum + d.count, 0);
-  const sourcesArray = Array.from(allSources);
 
   if (isLoading) {
     return (
