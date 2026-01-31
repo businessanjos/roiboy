@@ -9,6 +9,7 @@ interface StageDistribution {
   color: string;
   displayOrder: number;
   conversionPct: number;
+  wonCount: number; // deals won while in this stage
 }
 
 interface LeadsByDay {
@@ -147,7 +148,7 @@ export function useWhatsAppDashboardData() {
       // Fetch deals with filters applied
       let dealsQuery = supabase
         .from('deals')
-        .select('id, value, status, stage_id, responsible_user_id, created_at')
+        .select('id, value, status, stage_id, responsible_user_id, created_at, won_at')
         .eq('account_id', accountId)
         .gte('created_at', filters.startDate)
         .lte('created_at', filters.endDate);
@@ -160,18 +161,26 @@ export function useWhatsAppDashboardData() {
 
       // Group deals by stage
       const dealsByStage: Record<string, Array<{ id: string; value: number | null; status: string }>> = {};
+      const wonDealsByStage: Record<string, number> = {}; // Count of deals won while in each stage
+      
       (allDealsFiltered || []).forEach(deal => {
         const stageId = deal.stage_id || '';
         if (!dealsByStage[stageId]) {
           dealsByStage[stageId] = [];
         }
         dealsByStage[stageId].push(deal);
+        
+        // Count deals that were won (they were in this stage when marked as won)
+        if (deal.status === 'won') {
+          wonDealsByStage[stageId] = (wonDealsByStage[stageId] || 0) + 1;
+        }
       });
 
       const stageDistribution: StageDistribution[] = (stagesData || []).map(stage => {
         const stageDeals = dealsByStage[stage.id] || [];
         const count = stageDeals.length;
         const value = stageDeals.reduce((sum: number, d) => sum + (d.value || 0), 0);
+        const wonCount = wonDealsByStage[stage.id] || 0;
         return {
           name: stage.name,
           count,
@@ -179,6 +188,7 @@ export function useWhatsAppDashboardData() {
           color: stage.color || '#6366f1',
           displayOrder: stage.display_order,
           conversionPct: 0,
+          wonCount,
         };
       });
 
