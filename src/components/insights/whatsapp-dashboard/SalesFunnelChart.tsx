@@ -6,6 +6,7 @@ interface StageData {
   count: number;
   color: string;
   conversionPct: number;
+  wonCount?: number;
 }
 
 interface SalesFunnelChartProps {
@@ -75,8 +76,9 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
       </CardHeader>
       <CardContent className="space-y-1.5">
         {stagesWithMetrics.map((stage, index) => {
-          // Calculate percentage of deals in this stage vs total leads
-          const stageWonPct = maxCumulative > 0 ? Math.round((stage.count / maxCumulative) * 100) : 0;
+          // Calculate percentage of total won deals that were won at this stage
+          const totalWon = stages.reduce((sum, s) => sum + (s.wonCount || 0), 0);
+          const wonPct = totalWon > 0 ? Math.round(((stage.wonCount || 0) / totalWon) * 100) : 0;
           
           return (
             <div 
@@ -106,10 +108,12 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
                   )}
                 </div>
               </div>
-              {/* Stage count below the bar */}
-              <span className="text-[10px] text-muted-foreground">
-                {stage.count} nesta etapa ({stageWonPct}%)
-              </span>
+              {/* Won deals at this stage */}
+              {(stage.wonCount || 0) > 0 && (
+                <span className="text-[10px] text-emerald-600 font-medium">
+                  🏆 {stage.wonCount} ganhos aqui ({wonPct}%)
+                </span>
+              )}
             </div>
           );
         })}
