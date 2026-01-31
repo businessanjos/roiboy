@@ -75,20 +75,20 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
       </CardHeader>
       <CardContent className="space-y-1.5">
         {stagesWithMetrics.map((stage, index) => {
-          // Calculate percentage of deals won in this stage vs total
+          // Calculate percentage of deals in this stage vs total leads
           const stageWonPct = maxCumulative > 0 ? Math.round((stage.count / maxCumulative) * 100) : 0;
           
           return (
             <div 
               key={stage.name}
-              className="flex flex-col items-center"
+              className="flex flex-col items-center gap-0.5"
             >
               {/* Funnel bar - centered to create funnel shape */}
               <div 
                 className="h-9 rounded-md flex items-center justify-between px-3 transition-all"
                 style={{ 
                   width: `${stage.widthPct}%`,
-                  minWidth: '180px',
+                  minWidth: '140px',
                   backgroundColor: stage.color,
                 }}
               >
@@ -96,9 +96,6 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
                   {stage.name}
                 </span>
                 <div className="flex items-center gap-2 ml-2">
-                  <span className="text-xs text-white/80">
-                    {stage.count} aqui ({stageWonPct}%)
-                  </span>
                   <span className="text-sm font-bold text-white">
                     {stage.cumulativeCount}
                   </span>
@@ -109,6 +106,10 @@ export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
                   )}
                 </div>
               </div>
+              {/* Stage count below the bar */}
+              <span className="text-[10px] text-muted-foreground">
+                {stage.count} nesta etapa ({stageWonPct}%)
+              </span>
             </div>
           );
         })}
