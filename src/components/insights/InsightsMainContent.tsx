@@ -20,6 +20,8 @@ export function InsightsMainContent() {
     updateVisual,
   } = useInsightsDashboards();
 
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+
   const handleLayoutChange = useCallback(
     async (layouts: Array<{ id: string; layout: any }>) => {
       for (const { id, layout } of layouts) {
@@ -28,8 +30,14 @@ export function InsightsMainContent() {
     },
     [updateVisual]
   );
-  
-  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+
+  // Check if this is a WhatsApp/Conversas dashboard - MUST be before any conditional returns
+  const isWhatsAppDashboard = useMemo(() => {
+    const name = activeDashboard?.name?.toLowerCase() || '';
+    return name.includes('conversas') || name.includes('whatsapp');
+  }, [activeDashboard?.name]);
+
+  const hasVisuals = visuals && visuals.length > 0;
 
   // Loading state
   if (isLoading) {
@@ -81,14 +89,6 @@ export function InsightsMainContent() {
       </div>
     );
   }
-
-  // Check if this is a WhatsApp/Conversas dashboard (show custom panel if empty)
-  const isWhatsAppDashboard = useMemo(() => {
-    const name = activeDashboard?.name?.toLowerCase() || '';
-    return name.includes('conversas') || name.includes('whatsapp');
-  }, [activeDashboard?.name]);
-
-  const hasVisuals = visuals && visuals.length > 0;
 
   // If it's a WhatsApp dashboard and has no custom visuals, show the special panel
   if (isWhatsAppDashboard && !hasVisuals && !isLoadingVisuals) {
