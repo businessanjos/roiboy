@@ -281,13 +281,24 @@ export function useWhatsAppDashboardData() {
       const totalCycleDays = avgTimePerTransition.reduce((sum, t) => sum + t.avgDays, 0);
 
       // 5. WhatsApp engagement by period (vendas sector)
-      const { data: integrations } = await supabase
-        .from('integrations')
-        .select('id')
-        .eq('account_id', accountId)
-        .eq('sector_id', 'vendas');
-
-      const integrationIds = (integrations || []).map(i => i.id);
+      // Use a more efficient query approach with nested select
+      const { data: messagesData } = await supabase
+        .from('zapp_messages')
+        .select(`
+          direction,
+          sent_at,
+          zapp_conversations!inner(
+            integration_id,
+            integrations!inner(
+              account_id,
+              sector_id
+            )
+          )
+        `)
+        .eq('zapp_conversations.integrations.account_id', accountId)
+        .eq('zapp_conversations.integrations.sector_id', 'vendas')
+        .gte('sent_at', filters.startDate)
+        .lte('sent_at', filters.endDate);
 
       let engagementByPeriod: EngagementByPeriod[] = [
         { period: 'Manhã', inbound: 0, outbound: 0, total: 0, responseRate: 0 },
@@ -307,60 +318,40 @@ export function useWhatsAppDashboardData() {
       let totalInbound = 0;
       let totalOutbound = 0;
 
-      if (integrationIds.length > 0) {
-        // Get conversations for these integrations
-        const { data: conversations } = await supabase
-          .from('zapp_conversations')
-          .select('id')
-          .in('integration_id', integrationIds);
+      (messagesData || []).forEach(msg => {
+        const hour = new Date(msg.sent_at).getHours();
+        const dow = new Date(msg.sent_at).getDay();
+        const isInbound = msg.direction === 'inbound';
 
-        const conversationIds = (conversations || []).map(c => c.id);
+        totalMessages++;
+        if (isInbound) totalInbound++;
+        else totalOutbound++;
 
-        if (conversationIds.length > 0) {
-          // Get messages within date range
-          const { data: messages } = await supabase
-            .from('zapp_messages')
-            .select('direction, sent_at')
-            .in('zapp_conversation_id', conversationIds)
-            .gte('sent_at', filters.startDate)
-            .lte('sent_at', filters.endDate);
+        // By period
+        let periodIdx = 2; // Noite default
+        if (hour >= 8 && hour < 12) periodIdx = 0; // Manhã
+        else if (hour >= 12 && hour < 18) periodIdx = 1; // Tarde
 
-          (messages || []).forEach(msg => {
-            const hour = new Date(msg.sent_at).getHours();
-            const dow = new Date(msg.sent_at).getDay();
-            const isInbound = msg.direction === 'inbound';
-
-            totalMessages++;
-            if (isInbound) totalInbound++;
-            else totalOutbound++;
-
-            // By period
-            let periodIdx = 2; // Noite default
-            if (hour >= 8 && hour < 12) periodIdx = 0; // Manhã
-            else if (hour >= 12 && hour < 18) periodIdx = 1; // Tarde
-
-            if (isInbound) {
-              engagementByPeriod[periodIdx].inbound++;
-            } else {
-              engagementByPeriod[periodIdx].outbound++;
-            }
-            engagementByPeriod[periodIdx].total++;
-
-            // By day of week
-            if (isInbound) {
-              engagementByDayOfWeek[dow].inbound++;
-            } else {
-              engagementByDayOfWeek[dow].outbound++;
-            }
-            engagementByDayOfWeek[dow].total++;
-          });
-
-          // Calculate response rates
-          engagementByPeriod.forEach(p => {
-            p.responseRate = p.inbound > 0 ? Math.round((p.outbound / p.inbound) * 100) : 0;
-          });
+        if (isInbound) {
+          engagementByPeriod[periodIdx].inbound++;
+        } else {
+          engagementByPeriod[periodIdx].outbound++;
         }
-      }
+        engagementByPeriod[periodIdx].total++;
+
+        // By day of week
+        if (isInbound) {
+          engagementByDayOfWeek[dow].inbound++;
+        } else {
+          engagementByDayOfWeek[dow].outbound++;
+        }
+        engagementByDayOfWeek[dow].total++;
+      });
+
+      // Calculate response rates
+      engagementByPeriod.forEach(p => {
+        p.responseRate = p.inbound > 0 ? Math.round((p.outbound / p.inbound) * 100) : 0;
+      });
 
       return {
         stageDistribution,
