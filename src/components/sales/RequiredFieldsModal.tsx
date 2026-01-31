@@ -24,6 +24,8 @@ interface RequiredFieldsModalProps {
   missingFields: CustomField[];
   accountId: string;
   onComplete: () => void;
+  /** Optional: "won" or "lost" - changes the dialog messaging */
+  outcomeType?: "won" | "lost";
 }
 
 export function RequiredFieldsModal({
@@ -35,6 +37,7 @@ export function RequiredFieldsModal({
   missingFields,
   accountId,
   onComplete,
+  outcomeType,
 }: RequiredFieldsModalProps) {
   const [values, setValues] = useState<Record<string, any>>({});
   const [saving, setSaving] = useState(false);
@@ -118,14 +121,34 @@ export function RequiredFieldsModal({
     setValues(prev => ({ ...prev, [fieldId]: newValue }));
   };
 
+  // Generate contextual messaging based on outcome type
+  const getDescription = () => {
+    if (outcomeType === "won") {
+      return `Para marcar "${dealTitle}" como Ganha, preencha os campos abaixo:`;
+    }
+    if (outcomeType === "lost") {
+      return `Para marcar "${dealTitle}" como Perdida, preencha os campos abaixo:`;
+    }
+    return `Para mover "${dealTitle}" para a etapa "${targetStageName}", preencha os campos abaixo:`;
+  };
+
+  const getButtonLabel = () => {
+    if (outcomeType === "won") {
+      return "Preencher e Ganhar";
+    }
+    if (outcomeType === "lost") {
+      return "Preencher e Perder";
+    }
+    return "Preencher e Mover";
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Campos Obrigatórios</DialogTitle>
           <DialogDescription>
-            Para mover "{dealTitle}" para a etapa "{targetStageName}",
-            preencha os campos abaixo:
+            {getDescription()}
           </DialogDescription>
         </DialogHeader>
 
@@ -152,7 +175,7 @@ export function RequiredFieldsModal({
           </Button>
           <Button onClick={handleSave} disabled={!allFieldsFilled || saving}>
             {saving && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-            Preencher e Mover
+            {getButtonLabel()}
           </Button>
         </DialogFooter>
       </DialogContent>

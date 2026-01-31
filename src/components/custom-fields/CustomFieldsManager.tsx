@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, GripVertical, Settings2, Pencil, X, CheckCircle2, ListChecks, Calendar, Hash, Type, ToggleLeft, Users, Instagram, MapPin, FolderPlus, Check, ChevronDown, ChevronRight, Folder, Search } from "lucide-react";
+import { Plus, Trash2, GripVertical, Settings2, Pencil, X, CheckCircle2, ListChecks, Calendar, Hash, Type, ToggleLeft, Users, Instagram, MapPin, FolderPlus, Check, ChevronDown, ChevronRight, Folder, Search, Trophy, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -742,9 +742,14 @@ export function CustomFieldsManager({
                     checked={requiredStages.includes("all")}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        setRequiredStages(["all"]);
+                        // Keep won/lost if already selected, add "all"
+                        setRequiredStages(prev => {
+                          const outcomes = prev.filter(s => s === "won" || s === "lost");
+                          return ["all", ...outcomes];
+                        });
                       } else {
-                        setRequiredStages([]);
+                        // Remove all but keep won/lost
+                        setRequiredStages(prev => prev.filter(s => s === "won" || s === "lost"));
                       }
                     }}
                     className="h-4 w-4 rounded border-input bg-background"
@@ -775,6 +780,51 @@ export function CustomFieldsManager({
                     </label>
                   </div>
                 ))}
+
+                {/* Separator */}
+                <div className="border-t my-2" />
+
+                {/* Won option */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="stage-won"
+                    checked={requiredStages.includes("won")}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setRequiredStages(prev => [...prev, "won"]);
+                      } else {
+                        setRequiredStages(prev => prev.filter(id => id !== "won"));
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-input bg-background"
+                  />
+                  <label htmlFor="stage-won" className="text-sm cursor-pointer flex items-center gap-1.5">
+                    <Trophy className="h-3.5 w-3.5 text-emerald-500" />
+                    Ao dar Ganho
+                  </label>
+                </div>
+
+                {/* Lost option */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="stage-lost"
+                    checked={requiredStages.includes("lost")}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setRequiredStages(prev => [...prev, "lost"]);
+                      } else {
+                        setRequiredStages(prev => prev.filter(id => id !== "lost"));
+                      }
+                    }}
+                    className="h-4 w-4 rounded border-input bg-background"
+                  />
+                  <label htmlFor="stage-lost" className="text-sm cursor-pointer flex items-center gap-1.5">
+                    <XCircle className="h-3.5 w-3.5 text-red-500" />
+                    Ao dar Perdido
+                  </label>
+                </div>
               </div>
             </div>
           )}
