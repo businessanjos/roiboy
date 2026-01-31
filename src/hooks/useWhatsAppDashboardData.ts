@@ -58,6 +58,13 @@ export interface WhatsAppDashboardData {
 
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+// Convert UTC date to Brasília timezone (UTC-3)
+function toBrasiliaTime(date: Date): Date {
+  // Get UTC time and subtract 3 hours for Brasília
+  const utcTime = date.getTime() + (date.getTimezoneOffset() * 60000);
+  return new Date(utcTime - (3 * 60 * 60 * 1000));
+}
+
 // Normalize source names to standardized categories
 function normalizeSource(rawSource: string | null): string {
   if (!rawSource) return 'Outros';
@@ -386,8 +393,10 @@ export function useWhatsAppDashboardData() {
       let totalOutbound = 0;
 
       (messagesData || []).forEach(msg => {
-        const hour = new Date(msg.sent_at).getHours();
-        const dow = new Date(msg.sent_at).getDay();
+        // Convert to Brasília timezone for consistent analysis
+        const brasiliaDate = toBrasiliaTime(new Date(msg.sent_at));
+        const hour = brasiliaDate.getHours();
+        const dow = brasiliaDate.getDay();
         const isInbound = msg.direction === 'inbound';
 
         totalMessages++;
