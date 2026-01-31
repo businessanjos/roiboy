@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { BarChart3, Plus } from "lucide-react";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { InsightsFilterBar } from "./InsightsFilterBar";
@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddVisualModal } from "./AddVisualModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
-
+import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
 export function InsightsMainContent() {
   const { 
     activeDashboard, 
@@ -82,7 +82,18 @@ export function InsightsMainContent() {
     );
   }
 
+  // Check if this is a WhatsApp/Conversas dashboard (show custom panel if empty)
+  const isWhatsAppDashboard = useMemo(() => {
+    const name = activeDashboard?.name?.toLowerCase() || '';
+    return name.includes('conversas') || name.includes('whatsapp');
+  }, [activeDashboard?.name]);
+
   const hasVisuals = visuals && visuals.length > 0;
+
+  // If it's a WhatsApp dashboard and has no custom visuals, show the special panel
+  if (isWhatsAppDashboard && !hasVisuals && !isLoadingVisuals) {
+    return <WhatsAppDashboardPanel />;
+  }
 
   return (
     <div className="flex-1 overflow-auto">
