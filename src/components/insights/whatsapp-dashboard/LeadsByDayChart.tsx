@@ -23,7 +23,8 @@ interface LeadsByDayChartProps {
   isLoading?: boolean;
 }
 
-const SOURCE_COLORS: Record<string, string> = {
+// Predefined colors for known sources
+const KNOWN_SOURCE_COLORS: Record<string, string> = {
   'WhatsApp': '#25D366',
   'Instagram': '#E1306C',
   'Facebook': '#1877F2',
@@ -34,7 +35,33 @@ const SOURCE_COLORS: Record<string, string> = {
   'Outros': '#6B7280',
 };
 
-// Define order priority for sources
+// Dynamic color palette for sources not in predefined list
+const DYNAMIC_COLORS = [
+  '#3B82F6', // Blue
+  '#10B981', // Emerald
+  '#F59E0B', // Amber
+  '#EF4444', // Red
+  '#8B5CF6', // Violet
+  '#EC4899', // Pink
+  '#06B6D4', // Cyan
+  '#84CC16', // Lime
+  '#F97316', // Orange
+  '#6366F1', // Indigo
+  '#14B8A6', // Teal
+  '#A855F7', // Purple
+];
+
+// Generate color for a source
+function getSourceColor(source: string, index: number): string {
+  // Check if it's a known source
+  if (KNOWN_SOURCE_COLORS[source]) {
+    return KNOWN_SOURCE_COLORS[source];
+  }
+  // Otherwise use dynamic color based on index
+  return DYNAMIC_COLORS[index % DYNAMIC_COLORS.length];
+}
+
+// Define order priority for sources (known sources first)
 const SOURCE_ORDER = ['WhatsApp', 'Instagram', 'Tráfego Pago', 'Facebook', 'Site', 'Indicação', 'Renovação', 'Outros'];
 
 export function LeadsByDayChart({ data, isLoading }: LeadsByDayChartProps) {
@@ -80,12 +107,12 @@ export function LeadsByDayChart({ data, isLoading }: LeadsByDayChartProps) {
       rightContent={
         <div className="flex items-center gap-4">
           {/* Legend */}
-          <div className="hidden md:flex items-center gap-3 text-xs">
-            {sourcesArray.slice(0, 5).map((source) => (
+          <div className="hidden md:flex items-center gap-3 text-xs flex-wrap">
+            {sourcesArray.slice(0, 6).map((source, index) => (
               <div key={source} className="flex items-center gap-1">
                 <div 
                   className="w-3 h-3 rounded-sm"
-                  style={{ backgroundColor: SOURCE_COLORS[source] || '#6B7280' }}
+                  style={{ backgroundColor: getSourceColor(source, index) }}
                 />
                 <span className="text-muted-foreground">{source}</span>
               </div>
@@ -122,12 +149,12 @@ export function LeadsByDayChart({ data, isLoading }: LeadsByDayChartProps) {
                   borderRadius: '8px',
                 }}
               />
-              {sourcesArray.slice(0, 5).map((source) => (
+              {sourcesArray.map((source, index) => (
                 <Bar
                   key={source}
                   dataKey={source}
                   stackId="sources"
-                  fill={SOURCE_COLORS[source] || '#6B7280'}
+                  fill={getSourceColor(source, index)}
                   radius={[0, 0, 0, 0]}
                 />
               ))}
