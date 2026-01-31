@@ -141,9 +141,10 @@ export function useWhatsAppDashboardData() {
         .order('display_order');
 
       const stageDistribution: StageDistribution[] = (stagesData || []).map(stage => {
-        const openDeals = (stage.deals || []).filter((d: any) => d.status === 'open');
-        const count = openDeals.length;
-        const value = openDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
+        // Count ALL deals in each stage (not just open)
+        const allDeals = stage.deals || [];
+        const count = allDeals.length;
+        const value = allDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
         return {
           name: stage.name,
           count,
@@ -154,7 +155,7 @@ export function useWhatsAppDashboardData() {
         };
       });
 
-      // Calculate conversion percentages relative to first stage
+      // Calculate conversion percentages relative to max stage count
       const maxCount = Math.max(...stageDistribution.map(s => s.count), 1);
       stageDistribution.forEach(stage => {
         stage.conversionPct = Math.round((stage.count / maxCount) * 100);
