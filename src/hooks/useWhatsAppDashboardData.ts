@@ -306,7 +306,7 @@ export function useWhatsAppDashboardData() {
         sources: data.sources,
       }));
 
-      // 4. Time per transition - calculate time spent in each stage before moving to next
+      // 4. Time per transition - calculate average time between consecutive funnel stages
       // Filter activities based on the filtered deals
       const filteredDealIds = (allDealsFiltered || []).map(d => d.id);
       
@@ -326,20 +326,19 @@ export function useWhatsAppDashboardData() {
 
       const { data: activities } = await activitiesQuery;
 
-      // Build a map of stage name -> display_order for sorting
+      // Build ordered stage list from stagesData (already sorted by display_order)
+      const orderedStages = (stagesData || []).map(s => s.name);
+      
+      // Build a map of stage name -> display_order for quick lookup
       const stageOrderMap: Record<string, number> = {};
       (stagesData || []).forEach(stage => {
         stageOrderMap[stage.name] = stage.display_order;
       });
 
-      // Group by deal and calculate time spent in each stage
-      const transitionTimes: Record<string, number[]> = {};
+      // Group activities by deal
       const dealActivities: Record<string, any[]> = {};
-      
       (activities || []).forEach(act => {
-        // Skip invalid activities
         if (!act.old_value || !act.new_value) return;
-        // Skip same-stage transitions (duplicates)
         if (act.old_value === act.new_value) return;
         
         if (!dealActivities[act.deal_id]) {
@@ -348,8 +347,21 @@ export function useWhatsAppDashboardData() {
         dealActivities[act.deal_id].push(act);
       });
 
-      // Calculate time for each unique transition (from -> to)
-      Object.values(dealActivities).forEach(acts => {
+      // Calculate time for each consecutive stage pair in the funnel
+      const consecutiveTransitionTimes: Record<string, number[]> = {};
+      
+      // Initialize for each consecutive stage pair
+      for (let i = 0; i < orderedStages.length - 1; i++) {
+        const key = `${orderedStages[i]}->${orderedStages[i + 1]}`;
+        consecutiveTransitionTimes[key] = [];
+      }
+      // Add transition to "Venda" from the last stage
+      if (orderedStages.length > 0) {
+        consecutiveTransitionTimes[`${orderedStages[orderedStages.length - 1]}->Venda`] = [];
+      }
+
+      // Process each deal's activities to find times between consecutive stages
+      Object.entries(dealActivities).forEach(([dealId, acts]) => {
         acts.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         
         for (let i = 0; i < acts.length; i++) {
@@ -357,47 +369,68 @@ export function useWhatsAppDashboardData() {
           const to = acts[i].new_value;
           const key = `${from}->${to}`;
           
-          // Calculate time spent in 'from' stage
-          // For first activity, we'd need deal.created_at, so skip or use 0
-          // For subsequent activities, use time since previous activity
-          if (i > 0) {
-            const diffMs = new Date(acts[i].created_at).getTime() - new Date(acts[i-1].created_at).getTime();
-            const diffDays = diffMs / (1000 * 60 * 60 * 24);
-            if (diffDays >= 0) {
-              if (!transitionTimes[key]) transitionTimes[key] = [];
-              transitionTimes[key].push(diffDays);
+          // Only track if this is a consecutive forward transition
+          if (consecutiveTransitionTimes[key] !== undefined) {
+            if (i > 0) {
+              const diffMs = new Date(acts[i].created_at).getTime() - new Date(acts[i-1].created_at).getTime();
+              const diffDays = diffMs / (1000 * 60 * 60 * 24);
+              if (diffDays >= 0) {
+                consecutiveTransitionTimes[key].push(diffDays);
+              }
             }
           }
         }
       });
 
-      // Get transitions and sort by the 'from' stage's display_order (funnel order)
-      const sortedTransitions = Object.entries(transitionTimes)
-        .map(([key, times]) => {
-          const [from, to] = key.split('->');
-          const avgDays = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0;
-          return { 
-            from, 
-            to, 
-            avgDays: Math.round(avgDays * 10) / 10,
-            count: times.length,
-            fromOrder: stageOrderMap[from] ?? 999,
-            toOrder: stageOrderMap[to] ?? 999,
-          };
-        })
-        .filter(t => t.count >= 2) // Only show transitions that happened at least twice
-        .sort((a, b) => {
-          // Sort by 'from' stage order first, then by 'to' stage order
-          if (a.fromOrder !== b.fromOrder) return a.fromOrder - b.fromOrder;
-          return a.toOrder - b.toOrder;
-        })
-        .slice(0, 5);
+      // Also track time to "Venda" for won deals
+      const wonDealsData = (allDealsFiltered || []).filter(d => d.status === 'won');
+      wonDealsData.forEach(deal => {
+        const dealActs = dealActivities[deal.id];
+        if (dealActs && dealActs.length > 0 && deal.won_at) {
+          const lastActivity = dealActs[dealActs.length - 1];
+          const lastStageName = lastActivity.new_value;
+          const key = `${lastStageName}->Venda`;
+          
+          if (consecutiveTransitionTimes[key] !== undefined) {
+            const diffMs = new Date(deal.won_at).getTime() - new Date(lastActivity.created_at).getTime();
+            const diffDays = diffMs / (1000 * 60 * 60 * 24);
+            if (diffDays >= 0) {
+              consecutiveTransitionTimes[key].push(diffDays);
+            }
+          }
+        }
+      });
 
-      const avgTimePerTransition: TimeTransition[] = sortedTransitions.map(({ from, to, avgDays }) => ({
-        from,
-        to,
-        avgDays: Math.round(avgDays)
-      }));
+      // Build ordered transitions array following funnel sequence
+      const avgTimePerTransition: TimeTransition[] = [];
+      
+      for (let i = 0; i < orderedStages.length - 1; i++) {
+        const from = orderedStages[i];
+        const to = orderedStages[i + 1];
+        const key = `${from}->${to}`;
+        const times = consecutiveTransitionTimes[key] || [];
+        const avgDays = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0;
+        
+        avgTimePerTransition.push({
+          from,
+          to,
+          avgDays: Math.round(avgDays)
+        });
+      }
+      
+      // Add final transition to Venda
+      if (orderedStages.length > 0) {
+        const lastStage = orderedStages[orderedStages.length - 1];
+        const key = `${lastStage}->Venda`;
+        const times = consecutiveTransitionTimes[key] || [];
+        const avgDays = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0;
+        
+        avgTimePerTransition.push({
+          from: lastStage,
+          to: 'Venda',
+          avgDays: Math.round(avgDays)
+        });
+      }
 
       const totalCycleDays = avgTimePerTransition.reduce((sum, t) => sum + t.avgDays, 0);
 
