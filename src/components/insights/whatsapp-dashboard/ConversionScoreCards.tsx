@@ -1,78 +1,54 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { TrendingUp, ArrowRight, Target } from "lucide-react";
 
 interface ConversionScoreCardsProps {
   overallConversion: number;
-  totalDeals: number;
-  wonDeals: number;
-  lostDeals: number;
+  stageConversions?: { from: string; to: string; rate: number }[];
   isLoading?: boolean;
 }
 
 export function ConversionScoreCards({ 
-  overallConversion, 
-  totalDeals, 
-  wonDeals,
-  lostDeals,
+  overallConversion,
+  stageConversions = [],
   isLoading 
 }: ConversionScoreCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i} className="animate-pulse">
-            <CardContent className="p-4">
-              <div className="h-4 bg-muted rounded w-1/2 mb-3" />
-              <div className="h-8 bg-muted rounded w-1/3" />
-            </CardContent>
-          </Card>
+          <div key={i} className="text-center animate-pulse">
+            <div className="h-4 bg-muted rounded w-3/4 mx-auto mb-2" />
+            <div className="h-8 bg-muted rounded w-1/2 mx-auto" />
+          </div>
         ))}
       </div>
     );
   }
 
-  const openDeals = totalDeals - wonDeals - lostDeals;
+  // Default stage conversions if not provided
+  const defaultConversions = [
+    { from: 'Lead', to: 'Contato Feito', rate: 0 },
+    { from: 'Contato Feito', to: 'Proposta Enviada', rate: 0 },
+  ];
+
+  const conversions = stageConversions.length > 0 ? stageConversions : defaultConversions;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-      <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Target className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium text-muted-foreground">Conversão Total</span>
-          </div>
-          <p className="text-3xl font-bold text-primary">{overallConversion}%</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {wonDeals} ganhos de {totalDeals} negócios
-          </p>
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-3 gap-6 py-4 border-t border-b border-border/50">
+      {/* Overall Conversion */}
+      <div className="text-center">
+        <p className="text-sm text-muted-foreground mb-1">Conversão Total</p>
+        <p className="text-2xl font-bold text-primary">{overallConversion}%</p>
+      </div>
 
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <TrendingUp className="h-4 w-4 text-green-500" />
-            <span className="text-sm font-medium text-muted-foreground">Negócios Ganhos</span>
-          </div>
-          <p className="text-3xl font-bold text-green-500">{wonDeals}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {openDeals} em andamento
+      {/* Stage to Stage Conversions */}
+      {conversions.slice(0, 2).map((conv, index) => (
+        <div key={index} className="text-center">
+          <p className="text-sm text-muted-foreground mb-1">
+            {conv.from} → {conv.to}
           </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <ArrowRight className="h-4 w-4 text-red-500" />
-            <span className="text-sm font-medium text-muted-foreground">Negócios Perdidos</span>
-          </div>
-          <p className="text-3xl font-bold text-red-500">{lostDeals}</p>
-          <p className="text-xs text-muted-foreground mt-1">
-            {totalDeals > 0 ? Math.round((lostDeals / totalDeals) * 100) : 0}% do total
-          </p>
-        </CardContent>
-      </Card>
+          <p className="text-2xl font-bold">{conv.rate}%</p>
+        </div>
+      ))}
     </div>
   );
 }

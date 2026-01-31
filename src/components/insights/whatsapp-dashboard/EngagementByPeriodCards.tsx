@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sun, Sunset, Moon, TrendingUp } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface EngagementPeriod {
@@ -17,24 +17,18 @@ interface EngagementByPeriodCardsProps {
 
 const PERIOD_CONFIG = {
   'Manhã': {
-    icon: Sun,
-    hours: '8h - 12h',
-    gradient: 'from-orange-500/20 to-yellow-500/10',
+    hours: '8h-12h',
   },
   'Tarde': {
-    icon: Sunset,
-    hours: '12h - 18h',
-    gradient: 'from-blue-500/20 to-purple-500/10',
+    hours: '12h-18h',
   },
   'Noite': {
-    icon: Moon,
-    hours: '18h - 22h',
-    gradient: 'from-indigo-500/20 to-blue-500/10',
+    hours: '18h-22h',
   },
 };
 
 const formatNumber = (n: number) => {
-  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+  if (n >= 1000) return `${(n / 1000).toFixed(0)}k`;
   return n.toString();
 };
 
@@ -42,12 +36,12 @@ export function EngagementByPeriodCards({ data, isLoading }: EngagementByPeriodC
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground">Engajamento por Período</h3>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <h3 className="text-sm font-medium text-muted-foreground">Por Período do Dia</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <Card key={i} className="animate-pulse">
               <CardContent className="p-4">
-                <div className="h-16 bg-muted rounded" />
+                <div className="h-24 bg-muted rounded" />
               </CardContent>
             </Card>
           ))}
@@ -56,61 +50,70 @@ export function EngagementByPeriodCards({ data, isLoading }: EngagementByPeriodC
     );
   }
 
-  const maxTotal = Math.max(...data.map(d => d.total), 1);
+  // Find best period
   const bestPeriod = data.reduce((best, curr) => 
-    curr.total > best.total ? curr : best, data[0]);
+    curr.responseRate > best.responseRate ? curr : best, data[0]);
 
   return (
     <div className="space-y-4">
-      <h3 className="text-sm font-medium text-muted-foreground">Engajamento por Período</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <h3 className="text-sm font-medium text-muted-foreground">Por Período do Dia</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {data.map((period) => {
           const config = PERIOD_CONFIG[period.period];
-          const Icon = config.icon;
-          const isBest = period.period === bestPeriod.period && period.total > 0;
+          const isBest = period.period === bestPeriod?.period && period.responseRate > 0;
 
           return (
             <Card 
               key={period.period}
               className={cn(
                 "relative overflow-hidden",
-                isBest && "ring-2 ring-primary"
+                isBest && "bg-primary/5 ring-1 ring-primary/20"
               )}
             >
-              <div className={cn("absolute inset-0 bg-gradient-to-br opacity-50", config.gradient)} />
-              <CardContent className="p-4 relative">
+              <CardContent className="p-4">
+                {/* Header with period name and best badge */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">{period.period}</span>
+                    <span className="font-medium">{period.period} ({config.hours})</span>
                   </div>
                   {isBest && (
-                    <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <TrendingUp className="h-3 w-3" />
-                      Melhor
+                    <span className="text-xs bg-primary text-primary-foreground px-2 py-0.5 rounded-full flex items-center gap-1">
+                      ✦ Melhor Horário
                     </span>
                   )}
+                  {!isBest && (
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground mb-2">{config.hours}</p>
-                
-                <div className="space-y-1.5 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Recebidas:</span>
-                    <span className="font-medium">{formatNumber(period.inbound)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Enviadas:</span>
-                    <span className="font-medium">{formatNumber(period.outbound)}</span>
-                  </div>
-                  <div className="flex justify-between pt-1 border-t">
-                    <span className="text-muted-foreground">Taxa resp.:</span>
-                    <span className={cn(
-                      "font-bold",
-                      period.responseRate >= 100 ? "text-green-500" :
-                      period.responseRate >= 70 ? "text-yellow-500" : "text-red-500"
+
+                {/* Response Rate - Main Metric */}
+                <p className={cn(
+                  "text-4xl font-bold mb-1",
+                  isBest ? "text-primary" : ""
+                )}>
+                  {period.responseRate}%
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">Taxa de resposta</p>
+
+                {/* Secondary metrics */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className={cn(
+                      "text-xl font-bold",
+                      isBest ? "text-primary" : ""
                     )}>
-                      {period.responseRate}%
-                    </span>
+                      {formatNumber(period.inbound)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Mensagens Recebidas</p>
+                  </div>
+                  <div>
+                    <p className={cn(
+                      "text-xl font-bold",
+                      isBest ? "text-primary" : ""
+                    )}>
+                      {formatNumber(period.total)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Volume de Leads</p>
                   </div>
                 </div>
               </CardContent>
