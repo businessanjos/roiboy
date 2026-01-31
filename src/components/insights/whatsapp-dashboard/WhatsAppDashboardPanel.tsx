@@ -1,4 +1,4 @@
-import { MessageSquare, Clock, TrendingUp, Filter } from "lucide-react";
+import { Clock, Filter, TrendingUp, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useWhatsAppDashboardData } from "@/hooks/useWhatsAppDashboardData";
 import { PipelineCards } from "./PipelineCards";
@@ -10,6 +10,7 @@ import { EngagementByPeriodCards } from "./EngagementByPeriodCards";
 import { EngagementByDayCards } from "./EngagementByDayCards";
 import { TimeSavedCard } from "./TimeSavedCard";
 import { InsightsFilterBar } from "../InsightsFilterBar";
+import { CollapsibleSection } from "./CollapsibleSection";
 
 export function WhatsAppDashboardPanel() {
   const { data, isLoading } = useWhatsAppDashboardData();
@@ -55,59 +56,74 @@ export function WhatsAppDashboardPanel() {
         />
 
         {/* Funnel & Time per Stage */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <SalesFunnelChart 
-            stages={data?.stageDistribution || []} 
-            isLoading={isLoading}
-          />
-          <TimePerStageCard 
-            transitions={data?.avgTimePerTransition || []}
-            totalCycleDays={data?.totalCycleDays || 0}
-            isLoading={isLoading}
-          />
-        </div>
+        <CollapsibleSection
+          title="Funil e Tempo"
+          subtitle="Análise de velocidade e eficiência"
+          icon={<Filter className="h-5 w-5 text-primary" />}
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SalesFunnelChart 
+              stages={data?.stageDistribution || []} 
+              isLoading={isLoading}
+            />
+            <TimePerStageCard 
+              transitions={data?.avgTimePerTransition || []}
+              totalCycleDays={data?.totalCycleDays || 0}
+              isLoading={isLoading}
+            />
+          </div>
+        </CollapsibleSection>
 
         {/* Conversion Score Cards */}
-        <ConversionScoreCards 
-          overallConversion={data?.overallConversion || 0}
-          stageConversions={stageConversions}
-          isLoading={isLoading}
-        />
-
-        {/* Leads Section */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Leads e Qualificação</h2>
-          <LeadsByDayChart 
-            data={data?.leadsByDay || []} 
+        <CollapsibleSection
+          title="Taxas de Conversão"
+          subtitle="Indicadores de performance do funil"
+          icon={<TrendingUp className="h-5 w-5 text-primary" />}
+        >
+          <ConversionScoreCards 
+            overallConversion={data?.overallConversion || 0}
+            stageConversions={stageConversions}
             isLoading={isLoading}
           />
-        </div>
+        </CollapsibleSection>
 
-        {/* WhatsApp Engagement Section */}
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Análise de Engajamento
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <EngagementByPeriodCards 
-              data={data?.engagementByPeriod || []}
-              isLoading={isLoading}
-            />
-            <EngagementByDayCards 
-              data={data?.engagementByDayOfWeek || []}
-              isLoading={isLoading}
-            />
-          </CardContent>
-        </Card>
-
-        {/* Time Saved Card */}
-        <TimeSavedCard 
-          totalMessages={data?.totalMessages || 0}
+        {/* Leads Section */}
+        <LeadsByDayChart 
+          data={data?.leadsByDay || []} 
           isLoading={isLoading}
         />
+
+        {/* WhatsApp Engagement Section */}
+        <CollapsibleSection
+          title="Análise de Engajamento"
+          subtitle="Padrões de resposta por período e dia"
+          icon={<Clock className="h-5 w-5 text-primary" />}
+        >
+          <Card>
+            <CardContent className="pt-4 space-y-6">
+              <EngagementByPeriodCards 
+                data={data?.engagementByPeriod || []}
+                isLoading={isLoading}
+              />
+              <EngagementByDayCards 
+                data={data?.engagementByDayOfWeek || []}
+                isLoading={isLoading}
+              />
+            </CardContent>
+          </Card>
+        </CollapsibleSection>
+
+        {/* Time Saved Card */}
+        <CollapsibleSection
+          title="Tempo Economizado"
+          subtitle="Impacto da automação"
+          icon={<Zap className="h-5 w-5 text-primary" />}
+        >
+          <TimeSavedCard 
+            totalMessages={data?.totalMessages || 0}
+            isLoading={isLoading}
+          />
+        </CollapsibleSection>
       </div>
     </div>
   );
