@@ -27,8 +27,8 @@ const formatCurrency = (value: number) => {
 };
 
 export function PipelineCards({ stages, isLoading }: PipelineCardsProps) {
-  // Calculate total leads (first stage count)
-  const totalLeads = stages.length > 0 ? stages[0].count : 0;
+  // Calculate total leads (sum of ALL deals across all stages)
+  const totalLeads = stages.reduce((sum, stage) => sum + stage.count, 0);
   const baseCount = Math.max(totalLeads, 1);
 
   if (isLoading) {
