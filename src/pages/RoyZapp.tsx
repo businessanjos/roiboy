@@ -3161,12 +3161,13 @@ export default function RoyZapp() {
       
       let zappConvId: string | null = null;
       
-      // PRIORIZAR busca por telefone (constraint real é account_id + phone_e164)
+      // PRIORIZAR busca por telefone + integration_id (cada instância tem sua própria conversa)
       const { data: convByPhone } = await supabase
         .from("zapp_conversations")
         .select("id, lead_id, client_id")
         .eq("account_id", currentUser.account_id)
         .eq("phone_e164", normalizedPhone)
+        .eq("integration_id", selectedIntegrationId)
         .eq("is_group", false)
         .maybeSingle();
       
