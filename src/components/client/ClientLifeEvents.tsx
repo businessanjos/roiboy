@@ -1094,8 +1094,8 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            {/* Test send button - only show when editing existing event with auto-send enabled */}
-            {editingEvent && formAutoSend && (
+            {/* Test send button - show when editing any existing event */}
+            {editingEvent && (
               <Popover open={testPopoverOpen} onOpenChange={setTestPopoverOpen}>
                 <PopoverTrigger asChild>
                   <Button 
