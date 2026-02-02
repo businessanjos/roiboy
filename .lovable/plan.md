@@ -1,122 +1,78 @@
 
-# Plano: Correção do Envio de Áudio no ROY zAPP
+# Plano: Tornar Email Opcional para Google Meet
 
-## Diagnóstico Completo
+## Situação Atual
 
-### Problema Identificado
-O erro **"Não foi possível enviar a mídia"** ocorre quando o áudio é enviado via UAZAPI. A investigação revelou:
+O diálogo de configuração de reunião **bloqueia** a criação de reuniões Google Meet quando não há email do participante:
 
-1. **Formato WebM Incompatível**: O navegador grava áudio em formato `audio/webm` ou `audio/ogg;codecs=opus`, mas a API UAZAPI (WhatsApp) **não suporta nativamente WebM** - apenas OGG ou MP3 para áudios tipo PTT (Push-To-Talk/voz).
+| Localização | Comportamento Atual |
+|-------------|---------------------|
+| Linha 128-131 | Valida e exibe erro se Google Meet sem email |
+| Linha 275-277 | Mostra "(Opcional)" apenas para Zoom |
+| Linha 282-286 | Mostra mensagem de erro apenas para Google |
+| Linha 353 | Botão desabilitado se Google sem email |
 
-2. **Registro sem media_url**: Várias mensagens de áudio outbound no banco têm `media_url: null` enquanto `media_mimetype: audio/ogg; codecs=opus`, indicando que o webhook UAZAPI está retornando confirmações mas o frontend pode estar falhando no upload ou na chamada à edge function.
+**Porém**, a edge function `create-meeting` já suporta criar reuniões Google Meet sem participante:
+- Linha 234: `...(participantEmail && { attendees: [{ email: participantEmail }] })` - Só adiciona participantes se email existir
+- Linhas 212-217: Fallback gera link mesmo sem OAuth configurado
 
-3. **Fluxo Atual**:
-```
-┌─────────────┐     ┌──────────────┐     ┌───────────────┐     ┌────────────┐
-│ Gravação    │────▶│ Upload para  │────▶│ uazapi-manager│────▶│ UAZAPI API │
-│ MediaRecorder│     │ Storage      │     │ Edge Function │     │ /send/media│
-│ (webm/ogg)  │     │ (zapp-media) │     │               │     │            │
-└─────────────┘     └──────────────┘     └───────────────┘     └────────────┘
-                                                                      │
-                                                          ❌ Rejeita WebM
-                                                          ✅ Aceita OGG/MP3
-```
+## Modificações Necessárias
 
-### Causa Raiz
-O código tenta usar `audio/ogg;codecs=opus` quando disponível (linha 1945-1951 do RoyZapp.tsx), mas nem todos os navegadores suportam gravação nativa em OGG. Quando o browser usa WebM:
-- O upload para storage funciona ✅
-- A chamada UAZAPI **falha** porque WhatsApp não aceita WebM ❌
+### Arquivo: `src/components/tasks/MeetingConfigDialog.tsx`
 
-## Solução Proposta
+| Linha | Mudança |
+|-------|---------|
+| 128-131 | Remover validação que bloqueia Google Meet sem email |
+| 275-277 | Mostrar "(Opcional)" para ambas plataformas |
+| 282-286 | Remover mensagem de erro específica para Google |
+| 287-291 | Mostrar mesma mensagem de "compartilhar link" para ambas plataformas |
+| 353 | Remover condição que desabilita botão para Google sem email |
 
-### Estratégia 1: Conversão Server-Side (Recomendada)
-Converter o áudio WebM para OGG no backend antes de enviar para UAZAPI.
-
-**Modificações:**
-
-#### 1. Edge Function `uazapi-manager/index.ts`
-Adicionar lógica para detectar formato WebM e converter:
+### Detalhes Técnicos
 
 ```typescript
-// Antes de enviar para UAZAPI
-if (media_type === "audio" && media_url.includes('.webm')) {
-  console.log('[AUDIO] WebM detected, fetching for conversion...');
-  
-  // Fetch the WebM file
-  const audioResponse = await fetch(media_url);
-  const audioBuffer = await audioResponse.arrayBuffer();
-  
-  // Re-upload como OGG (WhatsApp aceita WebM internamente via UAZAPI quando enviado com type: "audio")
-  // OU usar FFmpeg via edge function dedicada
+// ANTES (linha 128-131)
+if (platform === "google" && !participantEmail) {
+  toast.error("O Google Meet requer email do participante");
+  return;
 }
+
+// DEPOIS - Remover este bloco completamente
+
+// ANTES (linha 275-277)
+{platform === "zoom" && (
+  <span className="text-xs text-muted-foreground font-normal">(Opcional)</span>
+)}
+
+// DEPOIS - Mostrar sempre
+<span className="text-xs text-muted-foreground font-normal">(Opcional)</span>
+
+// ANTES (linha 282-291) - Dois blocos separados
+{!participantEmail && platform === "google" && (
+  <p className="text-xs text-destructive">O Google Meet requer email...</p>
+)}
+{!participantEmail && platform === "zoom" && (
+  <p className="text-xs text-muted-foreground">Você poderá compartilhar...</p>
+)}
+
+// DEPOIS - Mensagem unificada
+{!participantEmail && (
+  <p className="text-xs text-muted-foreground">
+    Você poderá compartilhar o link da reunião manualmente
+  </p>
+)}
+
+// ANTES (linha 353)
+disabled={loading || (platform === "google" && !participantEmail)}
+
+// DEPOIS
+disabled={loading}
 ```
-
-#### 2. Alternativa Simples: Ajustar Tipo de Mídia
-O UAZAPI pode aceitar WebM se enviado com `type: "document"` em vez de `type: "ptt"`:
-
-```typescript
-const mediaEndpoints = isAudio ? [
-  // Primeiro: tentar como PTT normal
-  { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: "ptt", file: media_url } },
-  // Segundo: tentar como audio (não PTT)
-  { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: "audio", file: media_url } },
-  // NOVO Terceiro: tentar como documento de áudio (fallback)
-  { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: "document", file: media_url, docName: "audio.webm" } },
-] : [...]
-```
-
-### Estratégia 2: Forçar Formato OGG no Frontend (Complementar)
-Garantir que o frontend sempre use OGG quando possível:
-
-#### `src/pages/RoyZapp.tsx` (linhas 1943-1955)
-```typescript
-// Priorizar OGG que é compatível com WhatsApp
-let mimeType = 'audio/webm'; // fallback
-const preferredFormats = [
-  'audio/ogg;codecs=opus',  // Melhor compatibilidade WhatsApp
-  'audio/ogg',
-  'audio/mp4',              // Alguns browsers suportam
-  'audio/webm;codecs=opus',
-  'audio/webm'
-];
-
-for (const format of preferredFormats) {
-  if (MediaRecorder.isTypeSupported(format)) {
-    mimeType = format;
-    break;
-  }
-}
-```
-
-### Estratégia 3: Mensagem de Erro Mais Específica
-Melhorar o feedback para o usuário quando o formato não é suportado:
-
-```typescript
-// No catch do sendAudioMessage
-if (error.message.includes("mídia") || error.message.includes("media")) {
-  toast.error("Formato de áudio não suportado pelo WhatsApp. Tente novamente.");
-} else {
-  toast.error(error.message || "Erro ao enviar áudio");
-}
-```
-
-## Arquivos a Modificar
-
-| Arquivo | Modificação |
-|---------|-------------|
-| `supabase/functions/uazapi-manager/index.ts` | Adicionar endpoint fallback para documento de áudio |
-| `src/pages/RoyZapp.tsx` | Melhorar detecção de formato OGG no MediaRecorder |
-| `src/pages/RoyZapp.tsx` | Melhorar mensagem de erro para formato incompatível |
-
-## Plano de Implementação
-
-1. **Fase 1 - Quick Fix**: Adicionar fallback de documento na edge function
-2. **Fase 2 - Melhoria Frontend**: Priorizar formatos compatíveis no MediaRecorder
-3. **Fase 3 - Conversão (Opcional)**: Implementar conversão WebM→OGG se necessário
 
 ## Resultado Esperado
 
-1. Áudios gravados em OGG funcionarão normalmente ✅
-2. Áudios em WebM terão fallback para envio como documento ✅
-3. Usuário receberá feedback claro se o envio falhar ✅
-4. Logs detalhados para debug em caso de falhas ✅
+1. Usuário pode criar reuniões Google Meet **sem** email do participante
+2. Label "(Opcional)" aparece para ambas plataformas
+3. Mensagem informativa unificada quando não há email
+4. Botão "Criar Reunião" sempre habilitado (exceto durante loading)
+5. Link da reunião é gerado e pode ser compartilhado manualmente
