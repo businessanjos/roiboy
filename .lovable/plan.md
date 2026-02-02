@@ -1,74 +1,122 @@
 
-# Plano: Remover Campos de Vendas dos Formulários de Operações
+# Plano: Correção do Envio de Áudio no ROY zAPP
 
-## Diagnóstico
+## Diagnóstico Completo
 
-Através da análise do banco de dados, foi identificado que **campos exclusivos de Vendas** foram manualmente vinculados a um formulário do setor de Operações ("Cadastro Empresarial"):
+### Problema Identificado
+O erro **"Não foi possível enviar a mídia"** ocorre quando o áudio é enviado via UAZAPI. A investigação revelou:
 
-| Campo | Pertence a | Vinculado em |
-|-------|------------|--------------|
-| MQL | Vendas (show_in_deals = true) | Cadastro Empresarial (Operações) |
-| Origem da Venda | Vendas (show_in_deals = true) | Cadastro Empresarial (Operações) |
-| Gravação da Sessão | Vendas (show_in_deals = true) | Cadastro Empresarial (Operações) |
-| Descrição da Negociação da Venda | Vendas (show_in_deals = true) | Cadastro Empresarial (Operações) |
+1. **Formato WebM Incompatível**: O navegador grava áudio em formato `audio/webm` ou `audio/ogg;codecs=opus`, mas a API UAZAPI (WhatsApp) **não suporta nativamente WebM** - apenas OGG ou MP3 para áudios tipo PTT (Push-To-Talk/voz).
 
-## Solução em 2 Partes
+2. **Registro sem media_url**: Várias mensagens de áudio outbound no banco têm `media_url: null` enquanto `media_mimetype: audio/ogg; codecs=opus`, indicando que o webhook UAZAPI está retornando confirmações mas o frontend pode estar falhando no upload ou na chamada à edge function.
 
-### Parte 1: Limpeza do Banco de Dados
-
-Executar uma migração SQL para remover os vínculos incorretos da tabela `form_fields`:
-
-```sql
--- Remover campos de Vendas (show_in_deals = true, show_in_clients = false) 
--- que estão vinculados a formulários de Operações
-DELETE FROM form_fields 
-WHERE id IN (
-  SELECT ff.id
-  FROM form_fields ff
-  JOIN custom_fields cf ON ff.field_id = cf.id
-  JOIN forms f ON ff.form_id = f.id
-  WHERE f.sector_id = 'operacoes'
-    AND cf.show_in_deals = true
-    AND cf.show_in_clients = false
-);
+3. **Fluxo Atual**:
+```
+┌─────────────┐     ┌──────────────┐     ┌───────────────┐     ┌────────────┐
+│ Gravação    │────▶│ Upload para  │────▶│ uazapi-manager│────▶│ UAZAPI API │
+│ MediaRecorder│     │ Storage      │     │ Edge Function │     │ /send/media│
+│ (webm/ogg)  │     │ (zapp-media) │     │               │     │            │
+└─────────────┘     └──────────────┘     └───────────────┘     └────────────┘
+                                                                      │
+                                                          ❌ Rejeita WebM
+                                                          ✅ Aceita OGG/MP3
 ```
 
-**Registros a serem removidos:**
-- `form_field_id: cf6ecdc7-ce70-4b61-be04-7675e18e9e1f` (MQL)
-- `form_field_id: 362575db-dfa9-4cd8-8c16-d1337a66420d` (Origem da Venda)
-- `form_field_id: 0cd361a7-2a78-469f-91ed-1639ac949c18` (Gravação da Sessão)
-- `form_field_id: 5a5b1594-f19d-4e37-9621-513be27df852` (Descrição da Negociação da Venda)
+### Causa Raiz
+O código tenta usar `audio/ogg;codecs=opus` quando disponível (linha 1945-1951 do RoyZapp.tsx), mas nem todos os navegadores suportam gravação nativa em OGG. Quando o browser usa WebM:
+- O upload para storage funciona ✅
+- A chamada UAZAPI **falha** porque WhatsApp não aceita WebM ❌
 
-### Parte 2: Prevenção Futura (Opcional)
+## Solução Proposta
 
-Para evitar que isso aconteça novamente, podemos adicionar validação no `FormFieldsManager.tsx` ao criar/vincular campos:
+### Estratégia 1: Conversão Server-Side (Recomendada)
+Converter o áudio WebM para OGG no backend antes de enviar para UAZAPI.
+
+**Modificações:**
+
+#### 1. Edge Function `uazapi-manager/index.ts`
+Adicionar lógica para detectar formato WebM e converter:
 
 ```typescript
-// Ao criar um novo campo vinculado a um formulário de um setor específico,
-// garantir que as flags de setor correspondam ao setor do formulário
-const { data: formData } = await supabase
-  .from("forms")
-  .select("sector_id")
-  .eq("id", formId)
-  .single();
+// Antes de enviar para UAZAPI
+if (media_type === "audio" && media_url.includes('.webm')) {
+  console.log('[AUDIO] WebM detected, fetching for conversion...');
+  
+  // Fetch the WebM file
+  const audioResponse = await fetch(media_url);
+  const audioBuffer = await audioResponse.arrayBuffer();
+  
+  // Re-upload como OGG (WhatsApp aceita WebM internamente via UAZAPI quando enviado com type: "audio")
+  // OU usar FFmpeg via edge function dedicada
+}
+```
 
-// Definir flags baseado no setor do formulário
-const sectorFlags = {
-  show_in_clients: formData.sector_id === 'operacoes',
-  show_in_deals: formData.sector_id === 'vendas',
-  show_in_leads: formData.sector_id === 'marketing',
-};
+#### 2. Alternativa Simples: Ajustar Tipo de Mídia
+O UAZAPI pode aceitar WebM se enviado com `type: "document"` em vez de `type: "ptt"`:
+
+```typescript
+const mediaEndpoints = isAudio ? [
+  // Primeiro: tentar como PTT normal
+  { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: "ptt", file: media_url } },
+  // Segundo: tentar como audio (não PTT)
+  { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: "audio", file: media_url } },
+  // NOVO Terceiro: tentar como documento de áudio (fallback)
+  { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: "document", file: media_url, docName: "audio.webm" } },
+] : [...]
+```
+
+### Estratégia 2: Forçar Formato OGG no Frontend (Complementar)
+Garantir que o frontend sempre use OGG quando possível:
+
+#### `src/pages/RoyZapp.tsx` (linhas 1943-1955)
+```typescript
+// Priorizar OGG que é compatível com WhatsApp
+let mimeType = 'audio/webm'; // fallback
+const preferredFormats = [
+  'audio/ogg;codecs=opus',  // Melhor compatibilidade WhatsApp
+  'audio/ogg',
+  'audio/mp4',              // Alguns browsers suportam
+  'audio/webm;codecs=opus',
+  'audio/webm'
+];
+
+for (const format of preferredFormats) {
+  if (MediaRecorder.isTypeSupported(format)) {
+    mimeType = format;
+    break;
+  }
+}
+```
+
+### Estratégia 3: Mensagem de Erro Mais Específica
+Melhorar o feedback para o usuário quando o formato não é suportado:
+
+```typescript
+// No catch do sendAudioMessage
+if (error.message.includes("mídia") || error.message.includes("media")) {
+  toast.error("Formato de áudio não suportado pelo WhatsApp. Tente novamente.");
+} else {
+  toast.error(error.message || "Erro ao enviar áudio");
+}
 ```
 
 ## Arquivos a Modificar
 
-| Componente | Ação |
-|------------|------|
-| Banco de Dados | Migração para remover vínculos incorretos |
-| `FormFieldsManager.tsx` | (Opcional) Adicionar validação de setor ao criar campos |
+| Arquivo | Modificação |
+|---------|-------------|
+| `supabase/functions/uazapi-manager/index.ts` | Adicionar endpoint fallback para documento de áudio |
+| `src/pages/RoyZapp.tsx` | Melhorar detecção de formato OGG no MediaRecorder |
+| `src/pages/RoyZapp.tsx` | Melhorar mensagem de erro para formato incompatível |
+
+## Plano de Implementação
+
+1. **Fase 1 - Quick Fix**: Adicionar fallback de documento na edge function
+2. **Fase 2 - Melhoria Frontend**: Priorizar formatos compatíveis no MediaRecorder
+3. **Fase 3 - Conversão (Opcional)**: Implementar conversão WebM→OGG se necessário
 
 ## Resultado Esperado
 
-1. Os campos "Origem da Venda", "Gravação da Sessão", "Descrição da Negociação da Venda" e "MQL" **não aparecerão mais** nos formulários de Operações
-2. Campos de Operações continuarão funcionando normalmente
-3. Futuras criações de campos respeitarão o isolamento de setor
+1. Áudios gravados em OGG funcionarão normalmente ✅
+2. Áudios em WebM terão fallback para envio como documento ✅
+3. Usuário receberá feedback claro se o envio falhar ✅
+4. Logs detalhados para debug em caso de falhas ✅
