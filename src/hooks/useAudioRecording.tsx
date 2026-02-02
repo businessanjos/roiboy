@@ -24,6 +24,29 @@ export function useAudioRecording(): UseAudioRecordingReturn {
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Helper function to detect best audio format for WhatsApp compatibility
+  const getBestAudioMimeType = (): { mimeType: string; extension: string } => {
+    // Priority: OGG formats (best WhatsApp compatibility) > MP4 > WebM (fallback)
+    const preferredFormats = [
+      { mimeType: 'audio/ogg;codecs=opus', extension: 'ogg' },
+      { mimeType: 'audio/ogg', extension: 'ogg' },
+      { mimeType: 'audio/mp4', extension: 'mp4' },
+      { mimeType: 'audio/webm;codecs=opus', extension: 'webm' },
+      { mimeType: 'audio/webm', extension: 'webm' },
+    ];
+    
+    for (const format of preferredFormats) {
+      if (MediaRecorder.isTypeSupported(format.mimeType)) {
+        console.log(`[AudioRecording] Using format: ${format.mimeType}`);
+        return format;
+      }
+    }
+    
+    // Ultimate fallback
+    console.warn('[AudioRecording] No preferred format supported, using default webm');
+    return { mimeType: 'audio/webm', extension: 'webm' };
+  };
+
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -34,11 +57,9 @@ export function useAudioRecording(): UseAudioRecordingReturn {
         } 
       });
       
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-          ? 'audio/webm;codecs=opus' 
-          : 'audio/webm'
-      });
+      const { mimeType, extension } = getBestAudioMimeType();
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
       
       audioChunksRef.current = [];
       
@@ -52,11 +73,13 @@ export function useAudioRecording(): UseAudioRecordingReturn {
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
         
-        // Create audio blob
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        // Create audio blob with correct MIME type (matches recording format)
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         const audioUrl = URL.createObjectURL(audioBlob);
         
-        // Set preview state
+        console.log(`[AudioRecording] Recording complete: ${mimeType}, size: ${audioBlob.size} bytes`);
+        
+        // Set preview state with extension info
         setAudioPreview({
           blob: audioBlob,
           url: audioUrl,
