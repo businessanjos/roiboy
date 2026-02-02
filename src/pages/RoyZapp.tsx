@@ -496,9 +496,16 @@ export default function RoyZapp() {
       
       if (newAssignmentData) {
         setSelectedConversation(newAssignmentData);
+        // CRITICAL FIX: Add immediately to local list to prevent race condition
+        setAssignments(prev => {
+          const exists = prev.some(a => a.id === newAssignmentData.id);
+          if (exists) return prev;
+          return [newAssignmentData, ...prev];
+        });
       }
       
-      fetchData(); // Update list in background
+      // CRITICAL FIX: Delay fetchData to prevent overwriting local state
+      setTimeout(() => fetchData(), 2000);
     } catch (error) {
       console.error("Error creating conversation from URL:", error);
       toast.error("Erro ao criar conversa");
@@ -3311,9 +3318,16 @@ export default function RoyZapp() {
       
       if (newAssignmentData) {
         setSelectedConversation(newAssignmentData);
+        // CRITICAL FIX: Add immediately to local list to prevent race condition
+        setAssignments(prev => {
+          const exists = prev.some(a => a.id === newAssignmentData.id);
+          if (exists) return prev;
+          return [newAssignmentData, ...prev];
+        });
       }
       
-      fetchData(); // Update list in background
+      // CRITICAL FIX: Delay fetchData to prevent overwriting local state
+      setTimeout(() => fetchData(), 2000);
     } catch (error: any) {
       console.error("Error creating conversation:", error);
       toast.error(error.message || "Erro ao criar conversa");
