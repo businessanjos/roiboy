@@ -1,91 +1,199 @@
 
-# Plano: Substituir "Previsão" por "Ganho em" para Negócios Ganhos
+# Plano: Encerramento de Confirmações de Presença (RSVP)
 
 ## Contexto
 
-Na janela de detalhes do negócio (DealDetailSheet), o quarto card sempre mostra "PREVISÃO" com a data esperada de fechamento. Quando o negócio já foi marcado como ganho, essa informação não faz mais sentido — o usuário quer ver a data em que o negócio foi efetivamente fechado.
+O sistema atual permite que participantes confirmem presença via link público (`/rsvp/:token`). No entanto, não existe controle sobre quando essas confirmações podem ser aceitas. O usuário precisa de:
 
-## Solução
+1. **Encerramento manual** - Botão para fechar as confirmações imediatamente
+2. **Encerramento automático** - Data/hora limite para aceitar confirmações
+3. **Mensagem de encerramento** - Texto personalizado exibido quando encerrado
 
-Modificar o quarto card no grid de estatísticas para mostrar condicionalmente:
-- **"Ganho em"** com a data `won_at` quando `deal.status === 'won'`
-- **"Previsão"** com a data `expected_close_date` para negócios abertos/perdidos
+## Mudanças no Banco de Dados
 
-## Mudança no Arquivo
+### Novos campos na tabela `events`
 
-**Arquivo:** `src/components/sales/DealDetailSheet.tsx`  
-**Linhas:** 709-719
-
-### Antes:
-```tsx
-<div className="rounded-lg border p-3 bg-muted/30">
-  <div className="flex items-center gap-1.5 mb-1">
-    <Calendar className="h-3.5 w-3.5 text-violet-500" />
-    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Previsão</span>
-  </div>
-  <p className="text-lg font-bold text-foreground">
-    {deal.expected_close_date
-      ? format(new Date(deal.expected_close_date), "dd/MM/yy")
-      : "—"}
-  </p>
-</div>
+```sql
+ALTER TABLE public.events
+ADD COLUMN rsvp_closed boolean NOT NULL DEFAULT false,
+ADD COLUMN rsvp_deadline timestamptz,
+ADD COLUMN rsvp_closure_message text;
 ```
 
-### Depois:
-```tsx
-<div className="rounded-lg border p-3 bg-muted/30">
-  {deal.status === 'won' && deal.won_at ? (
-    <>
-      <div className="flex items-center gap-1.5 mb-1">
-        <Trophy className="h-3.5 w-3.5 text-emerald-500" />
-        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Ganho em</span>
-      </div>
-      <p className="text-lg font-bold text-emerald-500">
-        {format(new Date(deal.won_at), "dd/MM/yy")}
-      </p>
-    </>
-  ) : (
-    <>
-      <div className="flex items-center gap-1.5 mb-1">
-        <Calendar className="h-3.5 w-3.5 text-violet-500" />
-        <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Previsão</span>
-      </div>
-      <p className="text-lg font-bold text-foreground">
-        {deal.expected_close_date
-          ? format(new Date(deal.expected_close_date), "dd/MM/yy")
-          : "—"}
-      </p>
-    </>
-  )}
-</div>
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `rsvp_closed` | boolean | Encerramento manual (toggle) |
+| `rsvp_deadline` | timestamptz | Data/hora para encerramento automático |
+| `rsvp_closure_message` | text | Mensagem personalizada para exibir |
+
+### Atualização da função `get_participant_by_rsvp_token`
+
+Adicionar os novos campos ao retorno para que o frontend saiba o status:
+
+```sql
+RETURNS TABLE (
+  -- campos existentes...
+  event_rsvp_closed boolean,
+  event_rsvp_deadline timestamptz,
+  event_rsvp_closure_message text
+)
 ```
 
-## Resultado Visual
+### Atualização da função `submit_rsvp_response`
 
-**Negócio Aberto:**
-```
-┌─────────────┬─────────────┐
-│ 💵 VALOR    │ 📈 PROBABILIDADE │
-│ R$ 156.000  │ 0%               │
-├─────────────┼──────────────────┤
-│ ⏰ IDADE    │ 📅 PREVISÃO      │
-│ 9 dias      │ —                │
-└─────────────┴──────────────────┘
-```
+Adicionar validação antes de aceitar a resposta:
 
-**Negócio Ganho:**
-```
-┌─────────────┬─────────────┐
-│ 💵 VALOR    │ 📈 PROBABILIDADE │
-│ R$ 156.000  │ 0%               │
-├─────────────┼──────────────────┤
-│ ⏰ IDADE    │ 🏆 GANHO EM      │  ← Verde/emerald
-│ 9 dias      │ 31/01/25         │
-└─────────────┴──────────────────┘
+```sql
+-- Verificar se RSVP está encerrado
+SELECT rsvp_closed, rsvp_deadline INTO v_rsvp_closed, v_rsvp_deadline
+FROM events WHERE id = v_event_id;
+
+IF v_rsvp_closed OR (v_rsvp_deadline IS NOT NULL AND now() > v_rsvp_deadline) THEN
+  RETURN jsonb_build_object(
+    'success', false, 
+    'error', 'As confirmações para este evento foram encerradas.'
+  );
+END IF;
 ```
 
-## Notas Técnicas
+## Mudanças na Interface
 
-- O ícone `Trophy` já está importado no arquivo (linha 48)
-- O campo `deal.won_at` já existe na interface `Deal` e é preenchido automaticamente ao marcar como ganho
-- A função `format` do date-fns já está importada
+### 1. EventEditDialog (`src/components/events/EventEditDialog.tsx`)
+
+Adicionar seção "Confirmações de Presença" com:
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│ Confirmações de Presença                                │
+├─────────────────────────────────────────────────────────┤
+│ [Toggle] Encerrar confirmações manualmente              │
+│                                                         │
+│ Encerramento automático:                                │
+│ [📅 ___________ ] [🕐 ___:___ ]  (opcional)             │
+│                                                         │
+│ Mensagem ao encerrar: (opcional)                        │
+│ [________________________________]                      │
+│ [________________________________]                      │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Novos estados:**
+```typescript
+const [rsvpClosed, setRsvpClosed] = useState(false);
+const [rsvpDeadline, setRsvpDeadline] = useState("");
+const [rsvpClosureMessage, setRsvpClosureMessage] = useState("");
+```
+
+**Atualização na interface EventData:**
+```typescript
+export interface EventData {
+  // ... campos existentes
+  rsvp_closed?: boolean;
+  rsvp_deadline?: string | null;
+  rsvp_closure_message?: string | null;
+}
+```
+
+### 2. PublicRSVP (`src/pages/PublicRSVP.tsx`)
+
+**Atualização na interface RSVPData:**
+```typescript
+interface RSVPData {
+  // ... campos existentes
+  event_rsvp_closed: boolean;
+  event_rsvp_deadline: string | null;
+  event_rsvp_closure_message: string | null;
+}
+```
+
+**Lógica de verificação:**
+```typescript
+const isRsvpClosed = () => {
+  if (data?.event_rsvp_closed) return true;
+  if (data?.event_rsvp_deadline && new Date(data.event_rsvp_deadline) < new Date()) {
+    return true;
+  }
+  return false;
+};
+```
+
+**Nova tela quando encerrado:**
+```text
+┌─────────────────────────────────────┐
+│            ⏰                       │
+│                                     │
+│    Confirmações Encerradas          │
+│                                     │
+│    [Mensagem personalizada ou       │
+│     mensagem padrão]                │
+│                                     │
+│    ─────────────────────────────    │
+│    Evento: [Nome do Evento]         │
+│    📅 15 de Janeiro, 2026           │
+│    🕐 19:00 - 22:00                 │
+└─────────────────────────────────────┘
+```
+
+## Arquivos a Modificar
+
+1. **Nova migração SQL**
+   - Adicionar colunas `rsvp_closed`, `rsvp_deadline`, `rsvp_closure_message`
+   - Atualizar função `get_participant_by_rsvp_token`
+   - Atualizar função `submit_rsvp_response`
+
+2. **`src/components/events/EventEditDialog.tsx`**
+   - Adicionar estados para os novos campos
+   - Adicionar seção no formulário com Switch + DateTimePicker + Textarea
+   - Incluir campos na mutation de update
+
+3. **`src/pages/PublicRSVP.tsx`**
+   - Atualizar interface RSVPData
+   - Adicionar função `isRsvpClosed()`
+   - Renderizar tela de encerramento quando aplicável
+
+## Detalhes Técnicos
+
+### Componentes UI a utilizar
+
+- `Switch` do shadcn/ui para o toggle de encerramento manual
+- `Input type="datetime-local"` para a data/hora limite
+- `Textarea` para a mensagem personalizada
+- Ícone `Clock` ou `CalendarOff` do lucide-react para a tela de encerrado
+
+### Mensagem padrão
+
+Se `rsvp_closure_message` estiver vazio, exibir:
+> "As confirmações de presença para este evento foram encerradas. Para mais informações, entre em contato com o organizador."
+
+### Validação de deadline
+
+- Se `rsvp_deadline` for preenchido, deve ser uma data futura
+- O campo só deve ser editável se `rsvp_closed` for `false`
+- Mostrar contagem regressiva ou "Encerra em X dias" na UI do evento
+
+## Fluxo do Usuário
+
+```text
+Organizador                                  Participante
+    │                                              │
+    ├──► Cria evento                               │
+    │                                              │
+    ├──► Envia links de RSVP ─────────────────────►│
+    │                                              │
+    │    [Opcional] Define deadline automático     │
+    │    Ex: 3 dias antes do evento                │
+    │                                              ├──► Acessa link
+    │                                              │    ✓ Confirma/Declina
+    ├──► Após deadline ou toggle manual            │
+    │                                              │
+    │                                              ├──► Acessa link
+    │                                              │    ✗ "Confirmações encerradas"
+    │                                              │
+```
+
+## Impacto
+
+- **Controle total**: Organizador decide quando parar de aceitar confirmações
+- **Automação**: Deadline automático evita esquecimentos
+- **UX clara**: Mensagem personalizada informa o participante
+- **Segurança**: Validação no backend (RPC) garante que ninguém consiga confirmar após encerramento
