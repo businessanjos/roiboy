@@ -902,37 +902,12 @@ export function useZappData(options: UseZappDataOptions = {}) {
       console.warn(`[ZappData] SECURITY: Filtered out ${assignments.length - filtered.length} assignments that didn't match department`);
     }
     
-    // CRITICAL: If integrationId is specified, filter by integration_id but INCLUDE:
-    // 1. Legacy conversations (no integration_id) that belong to this sector
-    // 2. GROUPS - they are cross-integration by nature (user explicitly opened them)
-    // This prevents missing conversations after multi-instance migration
-    if (integrationId) {
-      const beforeCount = filtered.length;
-      filtered = filtered.filter(a => {
-        // Access integration_id, sector_id, and is_group via type assertion
-        const zappConv = a.zapp_conversation as { 
-          integration_id?: string; 
-          sector_id?: string;
-          is_group?: boolean;
-        } | null;
-        const convIntegrationId = zappConv?.integration_id;
-        const convSectorId = zappConv?.sector_id;
-        const isGroup = zappConv?.is_group === true;
-        
-        // Include conversation if:
-        // 1. It belongs to this exact integration, OR
-        // 2. It has no integration_id (legacy) but belongs to the same sector, OR
-        // 3. It's a GROUP (groups are cross-integration - user explicitly opened it)
-        const matchesIntegration = convIntegrationId === integrationId;
-        const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
-        
-        return matchesIntegration || isLegacySameSector || isGroup;
-      });
-      
-      if (filtered.length !== beforeCount) {
-        console.log(`[ZappData] MULTI-INSTANCE: Filtered to ${filtered.length} assignments for integration ${integrationId} (from ${beforeCount}, includes legacy same-sector and groups)`);
-      }
-    }
+    // CROSS-SECTOR FIX: Removed integration_id filter entirely
+    // Visibility is controlled ONLY by department_id (already filtered above via SQL + safety check)
+    // integration_id is used ONLY for sending messages (determines which WhatsApp instance to use)
+    // This allows conversations to be accessible cross-instance within the same department
+    // If per-instance filtering is needed later, implement as optional UI toggle, not a hard block
+    console.log(`[ZappData] filteredAssignments: ${filtered.length} assignments for sector ${sectorId} (no integration filter - cross-instance access enabled)`);
     
     return filtered;
   }, [assignments, departments, sectorId, integrationId]);
