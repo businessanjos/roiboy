@@ -1,46 +1,130 @@
 
-# Plano: Exibir Botão "Testar envio" Sempre ao Editar
+# Plano: Corrigir Acesso Cross-Setor para Conversas Individuais
 
-## Objetivo
+## Diagnóstico
 
-Alterar a condição de exibição do botão "Testar envio" para que ele apareça sempre que um Momento CX existente estiver sendo editado, independentemente do toggle "Enviar automaticamente".
+O erro "Conversa individual pertence a outro setor" ocorre por uma **race condition** no fluxo de criação de conversas:
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ Fluxo Atual (Bug)                                            │
+├──────────────────────────────────────────────────────────────┤
+│ 1. Usuario clica em "Nova Conversa" e seleciona contato      │
+│ 2. Sistema cria assignment no banco de dados                 │
+│ 3. Sistema faz setSelectedConversation(newAssignment)        │
+│ 4. Sistema chama fetchData() para atualizar lista            │
+│ 5. ANTES do fetchData completar, useEffect é disparado       │
+│ 6. useEffect verifica: "assignment existe em assignments?"   │
+│ 7. assignments ainda está VAZIO (fetchData não completou)    │
+│ 8. useEffect assume que é de outro setor e limpa seleção     │
+│ 9. Usuario vê "Conversa individual pertence a outro setor"   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Porque funciona para grupos?**
+Grupos usam um padrão diferente que adiciona o assignment imediatamente à lista local:
+```typescript
+setSelectedConversation(enrichedAssignment);
+setAssignments(prev => [enrichedAssignment, ...prev]); // <-- Isso previne o race condition
+```
+
+## Solução
+
+Aplicar o mesmo padrão usado para grupos às conversas individuais:
+
+1. **Adicionar assignment imediatamente à lista local** após criar no banco
+2. **Usar delay no fetchData** para evitar sobrescrever o estado local
 
 ## Arquivo a Modificar
 
-`src/components/clients/ClientLifeEvents.tsx`
+`src/pages/RoyZapp.tsx`
 
-## Mudança
+## Mudanças Necessárias
 
-### Condição Atual (linha ~469)
-```tsx
-{editingEvent && formAutoSend && (
-  <Popover>
-    ...
-  </Popover>
-)}
+### 1. Criar Conversa via "Nova Conversa" (linhas ~3312-3316)
+
+**Código Atual:**
+```typescript
+if (newAssignmentData) {
+  setSelectedConversation(newAssignmentData);
+}
+
+fetchData(); // Update list in background
 ```
 
-### Nova Condição
-```tsx
-{editingEvent && (
-  <Popover>
-    ...
-  </Popover>
-)}
+**Código Corrigido:**
+```typescript
+if (newAssignmentData) {
+  setSelectedConversation(newAssignmentData);
+  // CRITICAL FIX: Add immediately to local list to prevent race condition
+  setAssignments(prev => {
+    const exists = prev.some(a => a.id === newAssignmentData.id);
+    if (exists) return prev;
+    return [newAssignmentData, ...prev];
+  });
+}
+
+// CRITICAL FIX: Delay fetchData to prevent overwriting local state
+setTimeout(() => fetchData(), 2000);
 ```
 
-## Justificativa
+### 2. Criar Conversa via URL (linhas ~497-501)
 
-O botão de teste é útil para verificar se a mensagem e imagem estão configuradas corretamente, mesmo quando o envio automático não está ativado. Isso permite:
+Aplicar a mesma correção na função `createConversationFromUrl`:
 
-- Testar a formatação da mensagem antes de ativar o envio automático
-- Verificar se a imagem anexada será enviada corretamente
-- Validar as variáveis como `{nome}` e `{primeiro_nome}`
+**Código Atual:**
+```typescript
+if (newAssignmentData) {
+  setSelectedConversation(newAssignmentData);
+}
 
-## Impacto
+fetchData(); // Update list in background
+```
 
-| Antes | Depois |
-|-------|--------|
-| Botão visível apenas com toggle ativo | Botão visível sempre ao editar momento existente |
-| Usuário precisa ativar toggle para testar | Teste disponível independente da configuração |
+**Código Corrigido:**
+```typescript
+if (newAssignmentData) {
+  setSelectedConversation(newAssignmentData);
+  // CRITICAL FIX: Add immediately to local list
+  setAssignments(prev => {
+    const exists = prev.some(a => a.id === newAssignmentData.id);
+    if (exists) return prev;
+    return [newAssignmentData, ...prev];
+  });
+}
 
+// CRITICAL FIX: Delay fetchData to prevent overwriting local state  
+setTimeout(() => fetchData(), 2000);
+```
+
+## Por que isso resolve?
+
+```text
+┌──────────────────────────────────────────────────────────────┐
+│ Fluxo Corrigido                                              │
+├──────────────────────────────────────────────────────────────┤
+│ 1. Usuario clica em "Nova Conversa" e seleciona contato      │
+│ 2. Sistema cria assignment no banco de dados                 │
+│ 3. Sistema faz setSelectedConversation(newAssignment)        │
+│ 4. Sistema faz setAssignments([newAssignment, ...prev])      │
+│ 5. useEffect é disparado                                     │
+│ 6. useEffect verifica: "assignment existe em assignments?"   │
+│ 7. SIM - assignment foi adicionado na etapa 4                │
+│ 8. useEffect retorna sem fazer nada                          │
+│ 9. Conversa abre normalmente                                 │
+│ 10. 2 segundos depois, fetchData() sincroniza com banco      │
+└──────────────────────────────────────────────────────────────┘
+```
+
+## Resumo das Alterações
+
+| Local | Alteração |
+|-------|-----------|
+| Linha ~3312-3316 (createConversationWithContact) | Adicionar assignment à lista local + delay fetchData |
+| Linha ~497-501 (createConversationFromUrl) | Mesma correção acima |
+
+## Notas Técnicas
+
+- A correção segue o mesmo padrão já utilizado para grupos (linhas 3098-3109)
+- O delay de 2 segundos no fetchData evita que o fetch do banco sobrescreva o estado local antes da UI estabilizar
+- A verificação `exists` previne duplicação na lista
