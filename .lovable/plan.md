@@ -1,101 +1,74 @@
 
-# Plano: Correção Definitiva do Isolamento por Instância WhatsApp
+# Plano: Remover Campos de Vendas dos Formulários de Operações
 
-## Problemas Identificados
+## Diagnóstico
 
-### Problema 1: Fallback de Busca no Frontend Ignora Instância
-**Arquivo:** `src/pages/RoyZapp.tsx` (Linhas 3190-3203)
+Através da análise do banco de dados, foi identificado que **campos exclusivos de Vendas** foram manualmente vinculados a um formulário do setor de Operações ("Cadastro Empresarial"):
 
-Quando o usuário seleciona "Tathiana Marinho" no dialog "Nova Conversa":
-1. A busca primária por `phone_e164 + integration_id` não encontra (correto - não existe para esta instância)
-2. O fallback busca por `lead_id` ou `client_id` **SEM filtrar por `integration_id`**
-3. Encontra a conversa de OUTRA instância
-4. Tenta abrir essa conversa, mas ela é filtrada da lista lateral
-5. O validador detecta e mostra "Conversa pertence a outro setor"
+| Campo | Pertence a | Vinculado em |
+|-------|------------|--------------|
+| MQL | Vendas (show_in_deals = true) | Cadastro Empresarial (Operações) |
+| Origem da Venda | Vendas (show_in_deals = true) | Cadastro Empresarial (Operações) |
+| Gravação da Sessão | Vendas (show_in_deals = true) | Cadastro Empresarial (Operações) |
+| Descrição da Negociação da Venda | Vendas (show_in_deals = true) | Cadastro Empresarial (Operações) |
 
-### Problema 2: Webhook LAYER 1 Rouba Conversas
-**Arquivo:** `supabase/functions/uazapi-webhook/index.ts` (Linhas 856-911)
+## Solução em 2 Partes
 
-Quando chega uma mensagem de um número que tem conversa em outra instância:
-1. Busca primária por `phone + integration_id` falha
-2. LAYER 1 busca cross-integration e encontra conversa de outro setor
-3. **ATUALIZA a conversa para a instância que recebeu a mensagem** (linhas 879-890)
-4. Isso "rouba" a conversa de um setor para outro
+### Parte 1: Limpeza do Banco de Dados
 
-### Problema 3: Webhook LAYER 2 Mescla Conversas
-**Arquivo:** `supabase/functions/uazapi-webhook/index.ts` (Linhas 913-1005)
+Executar uma migração SQL para remover os vínculos incorretos da tabela `form_fields`:
 
-Se existem múltiplas conversas com o mesmo número:
-1. Move todas as mensagens para uma única conversa
-2. Atualiza todos os assignments
-3. **Deleta as conversas "duplicatas"** (linha 968-971)
-4. Isso destrói o isolamento por instância
-
-## Solução
-
-### Correção 1: Frontend - Adicionar `integration_id` ao Fallback
-
-```typescript
-// Linha 3197 - Adicionar filtro de integration_id
-const { data: convById } = await supabase
-  .from("zapp_conversations")
-  .select("id")
-  .eq("account_id", currentUser.account_id)
-  .eq(idField, contact.id)
-  .eq("integration_id", selectedIntegrationId)  // ADICIONAR
-  .maybeSingle();
+```sql
+-- Remover campos de Vendas (show_in_deals = true, show_in_clients = false) 
+-- que estão vinculados a formulários de Operações
+DELETE FROM form_fields 
+WHERE id IN (
+  SELECT ff.id
+  FROM form_fields ff
+  JOIN custom_fields cf ON ff.field_id = cf.id
+  JOIN forms f ON ff.form_id = f.id
+  WHERE f.sector_id = 'operacoes'
+    AND cf.show_in_deals = true
+    AND cf.show_in_clients = false
+);
 ```
 
-### Correção 2: Webhook - Remover LAYER 1 Cross-Integration
+**Registros a serem removidos:**
+- `form_field_id: cf6ecdc7-ce70-4b61-be04-7675e18e9e1f` (MQL)
+- `form_field_id: 362575db-dfa9-4cd8-8c16-d1337a66420d` (Origem da Venda)
+- `form_field_id: 0cd361a7-2a78-469f-91ed-1639ac949c18` (Gravação da Sessão)
+- `form_field_id: 5a5b1594-f19d-4e37-9621-513be27df852` (Descrição da Negociação da Venda)
 
-Remover completamente as linhas 856-911 que buscam cross-integration e atualizam a conversa para outra instância.
+### Parte 2: Prevenção Futura (Opcional)
 
-O correto é: se não encontrou conversa para ESTA instância específica, **criar uma nova** (já acontece depois).
+Para evitar que isso aconteça novamente, podemos adicionar validação no `FormFieldsManager.tsx` ao criar/vincular campos:
 
-### Correção 3: Webhook - Remover LAYER 2 AUTO-UNIFY
+```typescript
+// Ao criar um novo campo vinculado a um formulário de um setor específico,
+// garantir que as flags de setor correspondam ao setor do formulário
+const { data: formData } = await supabase
+  .from("forms")
+  .select("sector_id")
+  .eq("id", formId)
+  .single();
 
-Remover completamente as linhas 913-1005 que:
-- Buscam TODAS as conversas do mesmo telefone
-- Mesclam duplicatas
-- Atualizam integration_id e sector_id
-
-Cada instância DEVE ter sua própria conversa separada.
+// Definir flags baseado no setor do formulário
+const sectorFlags = {
+  show_in_clients: formData.sector_id === 'operacoes',
+  show_in_deals: formData.sector_id === 'vendas',
+  show_in_leads: formData.sector_id === 'marketing',
+};
+```
 
 ## Arquivos a Modificar
 
-| Arquivo | Ação |
-|---------|------|
-| `src/pages/RoyZapp.tsx` | Adicionar `.eq("integration_id", selectedIntegrationId)` no fallback (linha 3197) |
-| `supabase/functions/uazapi-webhook/index.ts` | Remover LAYER 1 cross-integration (linhas 856-911) |
-| `supabase/functions/uazapi-webhook/index.ts` | Remover LAYER 2 AUTO-UNIFY (linhas 913-1005) |
-
-## Fluxo Após Correção
-
-```
-CENÁRIO: Tathiana Marinho conversa com Vendas e Operações
-
-┌─────────────────────────────────────────────────────────────┐
-│ INSTÂNCIA "Eternum Club" (Vendas)                           │
-├─────────────────────────────────────────────────────────────┤
-│ • Conversa ID: abc123                                       │
-│ • phone_e164: +5511999887766                                │
-│ • integration_id: eternum-vendas                            │
-│ • Mensagens: Histórico exclusivo de Vendas                  │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│ INSTÂNCIA "Operações" (Operações)                           │
-├─────────────────────────────────────────────────────────────┤
-│ • Conversa ID: xyz789 (DIFERENTE!)                          │
-│ • phone_e164: +5511999887766 (MESMO TELEFONE)               │
-│ • integration_id: operacoes                                 │
-│ • Mensagens: Histórico exclusivo de Operações               │
-└─────────────────────────────────────────────────────────────┘
-```
+| Componente | Ação |
+|------------|------|
+| Banco de Dados | Migração para remover vínculos incorretos |
+| `FormFieldsManager.tsx` | (Opcional) Adicionar validação de setor ao criar campos |
 
 ## Resultado Esperado
 
-1. Cada instância WhatsApp terá sua própria conversa isolada com cada contato
-2. Mensagens não "vazam" entre instâncias
-3. Usuário pode criar nova conversa em qualquer instância, mesmo que o contato já tenha conversa em outra
-4. O erro "Conversa pertence a outro setor" não ocorrerá mais
+1. Os campos "Origem da Venda", "Gravação da Sessão", "Descrição da Negociação da Venda" e "MQL" **não aparecerão mais** nos formulários de Operações
+2. Campos de Operações continuarão funcionando normalmente
+3. Futuras criações de campos respeitarão o isolamento de setor
