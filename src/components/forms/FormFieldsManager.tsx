@@ -330,6 +330,20 @@ export function FormFieldsManager({
 
     setSaving(true);
     try {
+      // Buscar sector_id do formulário para definir flags corretas
+      const { data: formData } = await supabase
+        .from("forms")
+        .select("sector_id")
+        .eq("id", formId)
+        .single();
+
+      // Definir flags baseado no setor do formulário
+      const sectorFlags = {
+        show_in_clients: formData?.sector_id === 'operacoes',
+        show_in_deals: formData?.sector_id === 'vendas',
+        show_in_leads: formData?.sector_id === 'marketing',
+      };
+
       const needsOptions = ["select", "multi_select"].includes(fieldType);
       const validOptions = needsOptions 
         ? options.filter(opt => opt.label.trim()).map(opt => ({
@@ -363,9 +377,9 @@ export function FormFieldsManager({
             options: validOptions,
             is_required: isRequired,
             is_active: true,
-            show_in_clients: false, // Form-specific fields don't show in clients by default
-            show_in_deals: false,
-            show_in_leads: false,
+            show_in_clients: sectorFlags.show_in_clients,
+            show_in_deals: sectorFlags.show_in_deals,
+            show_in_leads: sectorFlags.show_in_leads,
           })
           .select("id")
           .single();
