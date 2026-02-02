@@ -2582,6 +2582,10 @@ serve(async (req) => {
         
         // According to UAZAPI docs: /send/media with type: "ptt" for voice messages
         // Supported types: image, video, document, audio, myaudio, ptt, ptv, sticker
+        // IMPORTANT: WebM is often rejected by WhatsApp - we add document fallback
+        const isWebm = media_url.toLowerCase().includes('.webm');
+        const audioFileName = isWebm ? 'audio.webm' : 'audio.ogg';
+        
         const mediaEndpoints = isAudio ? [
           // PRIMARY: /send/media with type: ptt (voice message) - per UAZAPI v2 docs
           { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: "ptt", file: media_url } },
@@ -2589,6 +2593,8 @@ serve(async (req) => {
           { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: "myaudio", file: media_url } },
           // Alternative: audio type (non-voice)
           { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: "audio", file: media_url } },
+          // FALLBACK: Send as document if all audio types fail (WebM compatibility)
+          { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: "document", file: media_url, docName: audioFileName } },
         ] : [
           // For images/videos/documents: /send/media with appropriate type
           { url: `/send/media`, method: "POST", body: { number: cleanPhone, type: media_type, file: media_url, text: caption || "" } },
@@ -2662,6 +2668,10 @@ serve(async (req) => {
         // For audio: use /send/media with type: "ptt" (same as individual chats)
         const isAudio = media_type === "audio";
         
+        // IMPORTANT: WebM is often rejected by WhatsApp - we add document fallback
+        const isWebm = media_url.toLowerCase().includes('.webm');
+        const audioFileName = isWebm ? 'audio.webm' : 'audio.ogg';
+        
         const mediaEndpoints = isAudio ? [
           // PRIMARY: /send/media with type: ptt (voice message) - per UAZAPI v2 docs
           { url: `/send/media`, method: "POST", body: { number: groupJid, type: "ptt", file: media_url } },
@@ -2669,6 +2679,8 @@ serve(async (req) => {
           { url: `/send/media`, method: "POST", body: { number: groupJid, type: "myaudio", file: media_url } },
           // Alternative: audio type (non-voice)
           { url: `/send/media`, method: "POST", body: { number: groupJid, type: "audio", file: media_url } },
+          // FALLBACK: Send as document if all audio types fail (WebM compatibility)
+          { url: `/send/media`, method: "POST", body: { number: groupJid, type: "document", file: media_url, docName: audioFileName } },
         ] : [
           // For images/videos/documents: /send/media with appropriate type
           { url: `/send/media`, method: "POST", body: { number: groupJid, type: media_type, file: media_url, text: caption || "", docName: file_name || "" } },
