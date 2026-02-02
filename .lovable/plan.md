@@ -1,130 +1,134 @@
 
 # Plano: Corrigir Acesso Cross-Setor para Conversas Individuais
 
-## Diagnóstico
+## Diagnóstico Confirmado
 
-O erro "Conversa individual pertence a outro setor" ocorre por uma **race condition** no fluxo de criação de conversas:
+O problema é causado por um **filtro incorreto de `integration_id`** que impede o acesso cross-setor a conversas individuais.
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ Fluxo Atual (Bug)                                            │
-├──────────────────────────────────────────────────────────────┤
-│ 1. Usuario clica em "Nova Conversa" e seleciona contato      │
-│ 2. Sistema cria assignment no banco de dados                 │
-│ 3. Sistema faz setSelectedConversation(newAssignment)        │
-│ 4. Sistema chama fetchData() para atualizar lista            │
-│ 5. ANTES do fetchData completar, useEffect é disparado       │
-│ 6. useEffect verifica: "assignment existe em assignments?"   │
-│ 7. assignments ainda está VAZIO (fetchData não completou)    │
-│ 8. useEffect assume que é de outro setor e limpa seleção     │
-│ 9. Usuario vê "Conversa individual pertence a outro setor"   │
-└──────────────────────────────────────────────────────────────┘
-```
-
-**Porque funciona para grupos?**
-Grupos usam um padrão diferente que adiciona o assignment imediatamente à lista local:
-```typescript
-setSelectedConversation(enrichedAssignment);
-setAssignments(prev => [enrichedAssignment, ...prev]); // <-- Isso previne o race condition
-```
-
-## Solução
-
-Aplicar o mesmo padrão usado para grupos às conversas individuais:
-
-1. **Adicionar assignment imediatamente à lista local** após criar no banco
-2. **Usar delay no fetchData** para evitar sobrescrever o estado local
-
-## Arquivo a Modificar
-
-`src/pages/RoyZapp.tsx`
-
-## Mudanças Necessárias
-
-### 1. Criar Conversa via "Nova Conversa" (linhas ~3312-3316)
-
-**Código Atual:**
-```typescript
-if (newAssignmentData) {
-  setSelectedConversation(newAssignmentData);
-}
-
-fetchData(); // Update list in background
-```
-
-**Código Corrigido:**
-```typescript
-if (newAssignmentData) {
-  setSelectedConversation(newAssignmentData);
-  // CRITICAL FIX: Add immediately to local list to prevent race condition
-  setAssignments(prev => {
-    const exists = prev.some(a => a.id === newAssignmentData.id);
-    if (exists) return prev;
-    return [newAssignmentData, ...prev];
-  });
-}
-
-// CRITICAL FIX: Delay fetchData to prevent overwriting local state
-setTimeout(() => fetchData(), 2000);
-```
-
-### 2. Criar Conversa via URL (linhas ~497-501)
-
-Aplicar a mesma correção na função `createConversationFromUrl`:
-
-**Código Atual:**
-```typescript
-if (newAssignmentData) {
-  setSelectedConversation(newAssignmentData);
-}
-
-fetchData(); // Update list in background
-```
-
-**Código Corrigido:**
-```typescript
-if (newAssignmentData) {
-  setSelectedConversation(newAssignmentData);
-  // CRITICAL FIX: Add immediately to local list
-  setAssignments(prev => {
-    const exists = prev.some(a => a.id === newAssignmentData.id);
-    if (exists) return prev;
-    return [newAssignmentData, ...prev];
-  });
-}
-
-// CRITICAL FIX: Delay fetchData to prevent overwriting local state  
-setTimeout(() => fetchData(), 2000);
-```
-
-## Por que isso resolve?
+### Fluxo do Bug
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│ Fluxo Corrigido                                              │
-├──────────────────────────────────────────────────────────────┤
-│ 1. Usuario clica em "Nova Conversa" e seleciona contato      │
-│ 2. Sistema cria assignment no banco de dados                 │
-│ 3. Sistema faz setSelectedConversation(newAssignment)        │
-│ 4. Sistema faz setAssignments([newAssignment, ...prev])      │
-│ 5. useEffect é disparado                                     │
-│ 6. useEffect verifica: "assignment existe em assignments?"   │
-│ 7. SIM - assignment foi adicionado na etapa 4                │
-│ 8. useEffect retorna sem fazer nada                          │
-│ 9. Conversa abre normalmente                                 │
-│ 10. 2 segundos depois, fetchData() sincroniza com banco      │
-└──────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│ CENÁRIO DO PROBLEMA                                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│ 1. Vendas cria conversa com cliente (integration_id = "vendas-inst")    │
+│ 2. Conversa é transferida para Operações (department_id = "operacoes")  │
+│ 3. Usuário de Operações usa integration_id = "operacoes-inst"           │
+│ 4. useZappData filtra: conv.integration_id !== "operacoes-inst"         │
+│ 5. Conversa é REMOVIDA da lista assignments                             │
+│ 6. useEffect detecta: selectedConversation não está em assignments      │
+│ 7. Sistema dispara: "Conversa individual pertence a outro setor"        │
+└─────────────────────────────────────────────────────────────────────────┘
+
+EVIDÊNCIA DOS LOGS:
+"Filtered from 340 to 313 by integrationId dbb6109c-..."
+= 27 conversas REMOVIDAS incorretamente!
 ```
 
-## Resumo das Alterações
+### Conceitos Importantes
 
-| Local | Alteração |
-|-------|-----------|
-| Linha ~3312-3316 (createConversationWithContact) | Adicionar assignment à lista local + delay fetchData |
-| Linha ~497-501 (createConversationFromUrl) | Mesma correção acima |
+| Conceito | Propósito | Deve Filtrar? |
+|----------|-----------|---------------|
+| `department_id` (assignment) | Define qual SETOR é responsável | SIM - Isolamento de setor |
+| `integration_id` (conversation) | Define qual INSTÂNCIA WhatsApp usa | NÃO - Apenas para envio |
 
-## Notas Técnicas
+## Solução Proposta
 
-- A correção segue o mesmo padrão já utilizado para grupos (linhas 3098-3109)
-- O delay de 2 segundos no fetchData evita que o fetch do banco sobrescreva o estado local antes da UI estabilizar
-- A verificação `exists` previne duplicação na lista
+**Remover o filtro de `integration_id` para visibilidade de conversas.**
+
+O `integration_id` no `zapp_conversation` serve apenas para saber qual instância WhatsApp usar para enviar mensagens, **não** para controlar visibilidade. O controle de visibilidade é feito pelo `department_id` no assignment.
+
+### Arquivos a Modificar
+
+#### 1. `src/hooks/useZappData.tsx`
+
+**Remover o filtro de integration_id na função `fetchAssignmentsOnly`** (linhas ~209-222):
+
+```typescript
+// REMOVER ESTE BLOCO:
+let filteredAssignments = assignmentsData || [];
+if (integrationId) {
+  filteredAssignments = filteredAssignments.filter((a: any) => {
+    const conv = a.zapp_conversation;
+    if (!conv) return true;
+    if (conv.is_group) return true;
+    return conv.integration_id === integrationId || !conv.integration_id;
+  });
+}
+```
+
+**Substituir por:**
+```typescript
+// CONVERSAS SÃO FILTRADAS APENAS POR department_id (já feito na query)
+// O integration_id é usado APENAS para envio de mensagens, não para visibilidade
+const filteredAssignments = assignmentsData || [];
+console.log(`[ZappData] Fetched ${filteredAssignments.length} assignments for department ${dept.id} (sector: ${sectorId})`);
+```
+
+**Remover o filtro de integration_id na função `fetchData`** (linhas ~465-481):
+
+```typescript
+// REMOVER ESTE BLOCO:
+let filteredAssignments = assignmentsData || [];
+if (integrationId) {
+  filteredAssignments = filteredAssignments.filter((a: any) => {
+    // ... filtro por integration_id
+  });
+}
+```
+
+**Substituir por:**
+```typescript
+// CONVERSAS SÃO FILTRADAS APENAS POR department_id (já feito na query)
+// O integration_id define qual instância WhatsApp usar para ENVIAR, não visibilidade
+const filteredAssignments = assignmentsData || [];
+```
+
+#### 2. `src/pages/RoyZapp.tsx`
+
+**Opcional: Melhorar o useEffect de validação** para logar mais contexto quando detectar problema (ajuda debug futuro):
+
+```typescript
+// Linha ~252 - adicionar mais contexto no log
+console.log("[RoyZapp] Individual conversation from another sector", {
+  selectedId: selectedConversation.id,
+  assignmentsCount: assignments.length,
+  existsInList: assignments.some(a => a.id === selectedConversation.id),
+  conversationIntegrationId: selectedConversation.zapp_conversation?.integration_id,
+  selectedIntegrationId,
+});
+```
+
+## Impacto da Mudança
+
+| Antes | Depois |
+|-------|--------|
+| 27 conversas filtradas em Operações | Todas as 340 conversas visíveis |
+| Erro "pertence a outro setor" | Conversas acessíveis normalmente |
+| Filtro por integration_id bloqueia | Filtro apenas por department_id |
+
+## Segurança Mantida
+
+O isolamento de setor **continua funcionando** porque:
+
+1. A query do banco filtra por `department_id` (linha 190)
+2. Cada setor tem seu próprio department_id
+3. Conversas só aparecem se tiverem assignment naquele departamento
+4. `integration_id` continua sendo usado para ENVIAR mensagens (define qual instância WhatsApp usar)
+
+## Nota sobre Multi-Instância
+
+Se um setor tiver múltiplas instâncias WhatsApp (ex: Vendas com 2 números), o filtro por `integration_id` pode fazer sentido **dentro do mesmo setor** para que cada atendente veja apenas conversas do seu número. Mas isso deve ser implementado de forma diferente:
+
+- Criar um toggle "Ver apenas minhas conversas" no UI
+- Não bloquear acesso cross-setor
+
+Por enquanto, remover o filtro resolve o problema reportado.
+
+## Resumo Técnico
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/hooks/useZappData.tsx` | Remover filtro de `integration_id` em `fetchAssignmentsOnly` (~linhas 209-222) |
+| `src/hooks/useZappData.tsx` | Remover filtro de `integration_id` em `fetchData` (~linhas 465-481) |
+| `src/pages/RoyZapp.tsx` | (Opcional) Melhorar logs de debug |
