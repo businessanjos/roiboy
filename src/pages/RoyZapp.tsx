@@ -3188,6 +3188,7 @@ export default function RoyZapp() {
         }
       } else {
         // Fallback: buscar por lead_id/client_id (caso telefone seja diferente)
+        // IMPORTANTE: Filtrar por integration_id para manter isolamento por instância
         if (isLeadContact || isClientContact) {
           const idField = isLeadContact ? 'lead_id' : 'client_id';
           const { data: convById } = await supabase
@@ -3195,6 +3196,7 @@ export default function RoyZapp() {
             .select("id")
             .eq("account_id", currentUser.account_id)
             .eq(idField, contact.id)
+            .eq("integration_id", selectedIntegrationId)
             .maybeSingle();
           
           if (convById) {
