@@ -1,79 +1,69 @@
 
-# Plano: Corrigir o Filtro de Integration que Remove Conversas Cross-Setor
+# Plano: Separar Conversas por Instância WhatsApp
 
-## Diagnóstico Definitivo
+## Problema Identificado
 
-O problema REAL foi encontrado! As correções anteriores de race condition estão sendo **completamente anuladas** por um filtro adicional no `useMemo` chamado `filteredAssignments`.
-
-### Evidência dos Logs
-
-```
-[ZappData] fetchData: Loaded 340 assignments for sector operacoes
-[ZappData] MULTI-INSTANCE: Filtered to 312 assignments for integration dbb6109c-...
-                           ↑↑↑ AQUI ESTÁ O PROBLEMA ↑↑↑
+Atualmente o sistema tem um índice único que impede múltiplas conversas por telefone:
+```sql
+UNIQUE (account_id, phone_e164) WHERE (is_group = false)
 ```
 
-O sistema carrega 340 conversas do banco, mas o `useMemo` filtra para 312, **removendo 28 conversas individuais** que não pertencem à instância WhatsApp atual.
-
-### Fluxo do Bug
-
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│ SEQUÊNCIA DO BUG                                                       │
-├────────────────────────────────────────────────────────────────────────┤
-│ 1. Usuario clica em "Ana Paula Cardoso" no dialog "Nova Conversa"      │
-│ 2. Sistema encontra assignment existente (criado por outra instância)  │
-│ 3. Sistema chama setSelectedConversation(assignmentData)               │
-│ 4. Sistema chama setAssignments(prev => [...prev, assignmentData])     │
-│ 5. useMemo "filteredAssignments" RE-EXECUTA                            │
-│ 6. useMemo filtra: conv.integration_id !== selectedIntegrationId       │
-│ 7. useMemo REMOVE a conversa adicionada no passo 4                     │
-│ 8. RoyZapp recebe assignments SEM a conversa selecionada               │
-│ 9. useEffect de validação: "não existe em assignments"                 │
-│ 10. Sistema limpa seleção: "Conversa pertence a outro setor"           │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
-### Código Problemático
-
-```typescript
-// src/hooks/useZappData.tsx - linhas 909-929
-if (integrationId) {
-  filtered = filtered.filter(a => {
-    const matchesIntegration = convIntegrationId === integrationId;
-    const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
-    const isGroup = zappConv?.is_group === true;
-    
-    // PROBLEMA: Remove conversas individuais de outras instâncias!
-    return matchesIntegration || isLegacySameSector || isGroup;
-  });
-}
-```
+Isso significa que só pode existir **UMA conversa** por contato, independente da instância WhatsApp usada.
 
 ## Solução
 
-Remover o filtro de `integration_id` do `useMemo`, já que:
+### 1. Migração de Banco de Dados
 
-1. O isolamento de setor é garantido pelo `department_id` (filtrado no SQL)
-2. O `integration_id` serve apenas para definir qual instância WhatsApp usar para ENVIAR mensagens
-3. Conversas podem ser acessadas de qualquer instância dentro do mesmo departamento
+Alterar o índice único para incluir `integration_id`:
 
-## Arquivo a Modificar
+```sql
+-- Remover índice antigo
+DROP INDEX IF EXISTS zapp_conversations_account_phone_unique;
 
-`src/hooks/useZappData.tsx`
+-- Criar novo índice que permite uma conversa por contato POR INSTÂNCIA
+CREATE UNIQUE INDEX zapp_conversations_account_phone_integration_unique 
+ON zapp_conversations (account_id, phone_e164, integration_id) 
+WHERE (is_group = false);
+```
 
-## Mudança Necessária
+### 2. `src/pages/RoyZapp.tsx` - Busca de Conversa Existente
 
-### Remover o Bloco de Filtro por Integration (linhas 905-935)
+**Arquivo:** `src/pages/RoyZapp.tsx`  
+**Local:** Linhas 3165-3171 (busca por telefone)
 
-**Código Atual:**
+Adicionar filtro por `integration_id` na busca:
+
 ```typescript
-// CRITICAL: If integrationId is specified, filter by integration_id but INCLUDE:
-// 1. Legacy conversations (no integration_id) that belong to this sector
-// 2. GROUPS - they are cross-integration by nature (user explicitly opened them)
-// This prevents missing conversations after multi-instance migration
+// ANTES (encontrava qualquer conversa com o telefone)
+const { data: convByPhone } = await supabase
+  .from("zapp_conversations")
+  .select("id, lead_id, client_id")
+  .eq("account_id", currentUser.account_id)
+  .eq("phone_e164", normalizedPhone)
+  .eq("is_group", false)
+  .maybeSingle();
+
+// DEPOIS (encontra apenas conversa da instância atual)
+const { data: convByPhone } = await supabase
+  .from("zapp_conversations")
+  .select("id, lead_id, client_id")
+  .eq("account_id", currentUser.account_id)
+  .eq("phone_e164", normalizedPhone)
+  .eq("integration_id", selectedIntegrationId)  // NOVO: filtrar por instância
+  .eq("is_group", false)
+  .maybeSingle();
+```
+
+### 3. `src/hooks/useZappData.tsx` - Restaurar Filtro de Instância
+
+**Arquivo:** `src/hooks/useZappData.tsx`  
+**Local:** Linhas 905-912
+
+Restaurar o filtro de `integration_id` para isolar conversas entre instâncias:
+
+```typescript
+// Restaurar filtro de integration_id para isolar conversas entre instâncias
 if (integrationId) {
-  const beforeCount = filtered.length;
   filtered = filtered.filter(a => {
     const zappConv = a.zapp_conversation as { 
       integration_id?: string; 
@@ -84,42 +74,51 @@ if (integrationId) {
     const convSectorId = zappConv?.sector_id;
     const isGroup = zappConv?.is_group === true;
     
+    // Include conversation if:
+    // 1. It belongs to this exact integration, OR
+    // 2. It has no integration_id (legacy) but belongs to the same sector, OR
+    // 3. It's a GROUP (groups are cross-integration)
     const matchesIntegration = convIntegrationId === integrationId;
     const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
     
     return matchesIntegration || isLegacySameSector || isGroup;
   });
-  
-  if (filtered.length !== beforeCount) {
-    console.log(`[ZappData] MULTI-INSTANCE: Filtered to ${filtered.length}...`);
-  }
 }
 ```
 
-**Código Corrigido:**
-```typescript
-// CROSS-SECTOR FIX: Remove integration_id filter entirely
-// Visibility is controlled ONLY by department_id (filtered in SQL query)
-// integration_id is used ONLY for sending messages (determines which WhatsApp instance to use)
-// This allows conversations to be accessible cross-instance within the same department
-console.log(`[ZappData] filteredAssignments: ${filtered.length} assignments for sector ${sectorId} (no integration filter)`);
+## Fluxo Após Correção
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│ CENÁRIO: Mesmo contato, instâncias diferentes                          │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│ Instância "Eternum Club" (Vendas)                                      │
+│ ├── Conversa com Ana Paula (+5511999...) → ID: abc123                  │
+│ └── Mensagens específicas desta instância                              │
+│                                                                        │
+│ Instância "Jonathan Marcato" (Vendas)                                  │
+│ ├── Conversa com Ana Paula (+5511999...) → ID: xyz789 (DIFERENTE!)     │
+│ └── Mensagens específicas desta instância                              │
+│                                                                        │
+│ Instância "Operações" (Operações)                                      │
+│ ├── Conversa com Ana Paula (+5511999...) → ID: def456 (DIFERENTE!)     │
+│ └── Mensagens específicas desta instância                              │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Por que vai funcionar
+## Resumo das Alterações
 
-| Conceito | Antes | Depois |
-|----------|-------|--------|
-| Filtro de setor | department_id (SQL) | department_id (SQL) |
-| Filtro de instância | integration_id (useMemo) | REMOVIDO |
-| Conversas visíveis | 312 (filtradas) | 340 (todas do departamento) |
-| Cross-instance | Bloqueado | Permitido |
+| Componente | Alteração |
+|------------|-----------|
+| Banco de Dados | Novo índice único incluindo `integration_id` |
+| `RoyZapp.tsx` | Busca de conversa filtra por `integration_id` |
+| `useZappData.tsx` | Restaurar filtro de `integration_id` na lista |
 
-## Impacto
+## Resultado Esperado
 
-1. Conversas de TODAS as instâncias WhatsApp do mesmo setor ficam visíveis
-2. Não quebra isolamento de setor (isso continua no SQL)
-3. Resolve 100% do erro "Conversa pertence a outro setor"
-
-## Nota sobre Multi-Instância
-
-Se o usuário quiser ver apenas conversas de uma instância específica, isso pode ser implementado como um **filtro opcional na UI** (toggle "Ver apenas minhas conversas"), não como um bloqueio de acesso.
+1. Cada instância WhatsApp terá suas próprias conversas isoladas
+2. Mensagens de uma instância não aparecem em outra
+3. O mesmo contato pode ter conversas diferentes com cada instância
+4. Grupos continuam cross-integration (compartilhados)
