@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -13,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Save, Pencil, Copy, Link, RefreshCw, Upload, FileText, X, Loader2, Image as ImageIcon } from "lucide-react";
+import { Save, Pencil, Copy, Link, RefreshCw, Upload, FileText, X, Loader2, Image as ImageIcon, CalendarOff } from "lucide-react";
 import { toast } from "sonner";
 
 interface Event {
@@ -33,6 +35,9 @@ interface Event {
   status: string | null;
   public_registration_code: string | null;
   invitation_file_url: string | null;
+  rsvp_closed?: boolean;
+  rsvp_deadline?: string | null;
+  rsvp_closure_message?: string | null;
 }
 
 interface Props {
@@ -48,6 +53,21 @@ export default function EventOverviewTab({ event, accountId, onUpdate }: Props) 
   const [generatingCode, setGeneratingCode] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // RSVP closure states
+  const [rsvpClosed, setRsvpClosed] = useState(event.rsvp_closed ?? false);
+  const [rsvpDeadline, setRsvpDeadline] = useState(event.rsvp_deadline || "");
+  const [rsvpClosureMessage, setRsvpClosureMessage] = useState(event.rsvp_closure_message || "");
+  const [savingRsvpSettings, setSavingRsvpSettings] = useState(false);
+
+  // Sync RSVP states when event prop changes
+  useEffect(() => {
+    setRsvpClosed(event.rsvp_closed ?? false);
+    setRsvpDeadline(event.rsvp_deadline || "");
+    setRsvpClosureMessage(event.rsvp_closure_message || "");
+  }, [event.rsvp_closed, event.rsvp_deadline, event.rsvp_closure_message]);
+
+  const isRsvpCurrentlyClosed = rsvpClosed || (rsvpDeadline && new Date(rsvpDeadline) < new Date());
   
   const [formData, setFormData] = useState({
     title: event.title,
@@ -82,6 +102,29 @@ export default function EventOverviewTab({ event, accountId, onUpdate }: Props) 
       toast.error("Erro ao gerar código de inscrição");
     } finally {
       setGeneratingCode(false);
+    }
+  };
+
+  const saveRsvpSettings = async () => {
+    setSavingRsvpSettings(true);
+    try {
+      const { error } = await supabase
+        .from("events")
+        .update({
+          rsvp_closed: rsvpClosed,
+          rsvp_deadline: rsvpDeadline || null,
+          rsvp_closure_message: rsvpClosureMessage || null,
+        })
+        .eq("id", event.id);
+      
+      if (error) throw error;
+      toast.success("Configurações de RSVP salvas!");
+      onUpdate();
+    } catch (error) {
+      console.error("Error saving RSVP settings:", error);
+      toast.error("Erro ao salvar configurações");
+    } finally {
+      setSavingRsvpSettings(false);
     }
   };
 
@@ -402,6 +445,81 @@ export default function EventOverviewTab({ event, accountId, onUpdate }: Props) 
                   <>
                     <Link className="h-4 w-4 mr-2" />
                     Gerar Link de Inscrição
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+
+          {/* RSVP Closure Controls */}
+          {event.public_registration_code && (
+            <div className="mt-6 pt-6 border-t space-y-4">
+              <div className="flex items-center gap-2 mb-3">
+                <CalendarOff className="h-4 w-4 text-muted-foreground" />
+                <Label className="font-medium">Controle de Confirmações</Label>
+                {isRsvpCurrentlyClosed && (
+                  <Badge variant="destructive">Encerrado</Badge>
+                )}
+              </div>
+              
+              {/* Toggle encerrar manualmente */}
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label className="text-sm">Encerrar confirmações</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {rsvpClosed 
+                      ? "Link bloqueado - ninguém pode confirmar" 
+                      : "Link ativo - confirmações abertas"}
+                  </p>
+                </div>
+                <Switch
+                  checked={rsvpClosed}
+                  onCheckedChange={setRsvpClosed}
+                />
+              </div>
+
+              {/* Data limite automática */}
+              {!rsvpClosed && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Encerrar automaticamente em:</Label>
+                  <Input
+                    type="datetime-local"
+                    value={rsvpDeadline}
+                    onChange={(e) => setRsvpDeadline(e.target.value)}
+                    className="max-w-xs"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Após esta data, novas confirmações serão bloqueadas
+                  </p>
+                </div>
+              )}
+
+              {/* Mensagem de encerramento */}
+              <div className="space-y-2">
+                <Label className="text-sm">Mensagem quando encerrado (opcional)</Label>
+                <Textarea
+                  value={rsvpClosureMessage}
+                  onChange={(e) => setRsvpClosureMessage(e.target.value)}
+                  placeholder="Ex: As confirmações foram encerradas. Agradecemos o interesse!"
+                  rows={2}
+                />
+              </div>
+
+              {/* Botão salvar */}
+              <Button 
+                onClick={saveRsvpSettings} 
+                disabled={savingRsvpSettings}
+                size="sm"
+              >
+                {savingRsvpSettings ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Salvar Configurações
                   </>
                 )}
               </Button>

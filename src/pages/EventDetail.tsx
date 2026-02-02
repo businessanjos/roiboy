@@ -64,6 +64,9 @@ interface Event {
   account_id: string;
   public_registration_code: string | null;
   invitation_file_url: string | null;
+  rsvp_closed: boolean;
+  rsvp_deadline: string | null;
+  rsvp_closure_message: string | null;
 }
 
 export default function EventDetail() {
