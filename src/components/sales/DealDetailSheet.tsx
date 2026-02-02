@@ -707,15 +707,29 @@ export function DealDetailSheet({
                     <p className="text-lg font-bold text-foreground">{daysSinceCreation} dias</p>
                   </div>
                   <div className="rounded-lg border p-3 bg-muted/30">
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <Calendar className="h-3.5 w-3.5 text-violet-500" />
-                      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Previsão</span>
-                    </div>
-                    <p className="text-lg font-bold text-foreground">
-                      {deal.expected_close_date
-                        ? format(new Date(deal.expected_close_date), "dd/MM/yy")
-                        : "—"}
-                    </p>
+                    {deal.status === 'won' && deal.won_at ? (
+                      <>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Trophy className="h-3.5 w-3.5 text-emerald-500" />
+                          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Ganho em</span>
+                        </div>
+                        <p className="text-lg font-bold text-emerald-500">
+                          {format(new Date(deal.won_at), "dd/MM/yy")}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Calendar className="h-3.5 w-3.5 text-violet-500" />
+                          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Previsão</span>
+                        </div>
+                        <p className="text-lg font-bold text-foreground">
+                          {deal.expected_close_date
+                            ? format(new Date(deal.expected_close_date), "dd/MM/yy")
+                            : "—"}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
 
