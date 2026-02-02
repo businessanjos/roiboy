@@ -42,9 +42,11 @@ import {
   MapPin,
   Clock,
   Calendar,
+  CalendarOff,
 } from "lucide-react";
 import { eachDayOfInterval, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Switch } from "@/components/ui/switch";
 
 export type EventType = "live" | "material" | "mentoria" | "workshop" | "masterclass" | "webinar" | "imersao" | "plantao" | "launch" | "campaign" | "content" | "partnership" | "fair" | "movimento" | "viagem" | "autoridade" | "other";
 
@@ -67,6 +69,9 @@ export interface EventData {
   material_url: string | null;
   is_recurring: boolean;
   event_products: EventProduct[];
+  rsvp_closed?: boolean;
+  rsvp_deadline?: string | null;
+  rsvp_closure_message?: string | null;
 }
 
 interface EventEditDialogProps {
@@ -97,6 +102,9 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
   const [isRecurring, setIsRecurring] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [daySchedules, setDaySchedules] = useState<Record<string, { startTime: string; endTime: string }>>({});
+  const [rsvpClosed, setRsvpClosed] = useState(false);
+  const [rsvpDeadline, setRsvpDeadline] = useState("");
+  const [rsvpClosureMessage, setRsvpClosureMessage] = useState("");
 
   // Fetch account ID
   const { data: accountId } = useQuery({
@@ -143,6 +151,9 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
       setIsRecurring(event.is_recurring);
       setSelectedProducts(event.event_products.map(ep => ep.product_id));
       setDaySchedules({});
+      setRsvpClosed(event.rsvp_closed ?? false);
+      setRsvpDeadline(utcToLocalDateTime(event.rsvp_deadline));
+      setRsvpClosureMessage(event.rsvp_closure_message || "");
     }
   }, [event, open]);
 
@@ -163,6 +174,9 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
         meeting_url: meetingUrl.trim() || null,
         material_url: materialUrl.trim() || null,
         is_recurring: isRecurring,
+        rsvp_closed: rsvpClosed,
+        rsvp_deadline: rsvpDeadline ? localDateTimeToUTC(rsvpDeadline) : null,
+        rsvp_closure_message: rsvpClosureMessage.trim() || null,
       };
 
       const { error } = await supabase
@@ -487,6 +501,55 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
                     </div>
                   ))
                 )}
+              </div>
+            </div>
+
+            {/* RSVP Closure Section */}
+            <div className="space-y-3 pt-4 border-t">
+              <div className="flex items-center gap-2">
+                <CalendarOff className="h-4 w-4 text-muted-foreground" />
+                <Label className="font-medium">Confirmações de Presença</Label>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="rsvp_closed" className="text-sm">Encerrar confirmações manualmente</Label>
+                  <p className="text-xs text-muted-foreground">
+                    {rsvpClosed ? "Confirmações encerradas" : "Confirmações abertas"}
+                  </p>
+                </div>
+                <Switch
+                  id="rsvp_closed"
+                  checked={rsvpClosed}
+                  onCheckedChange={setRsvpClosed}
+                />
+              </div>
+
+              {!rsvpClosed && (
+                <div className="space-y-2">
+                  <Label htmlFor="rsvp_deadline">Encerramento automático (opcional)</Label>
+                  <Input
+                    id="rsvp_deadline"
+                    type="datetime-local"
+                    value={rsvpDeadline}
+                    onChange={(e) => setRsvpDeadline(e.target.value)}
+                    placeholder="Definir prazo limite"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Após essa data/hora, novas confirmações serão bloqueadas automaticamente
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="rsvp_closure_message">Mensagem ao encerrar (opcional)</Label>
+                <Textarea
+                  id="rsvp_closure_message"
+                  value={rsvpClosureMessage}
+                  onChange={(e) => setRsvpClosureMessage(e.target.value)}
+                  placeholder="Ex: As confirmações foram encerradas. Para dúvidas, entre em contato pelo WhatsApp..."
+                  rows={2}
+                />
               </div>
             </div>
           </div>
