@@ -1,92 +1,35 @@
 
-# Plano: Encerramento de Confirmações de Presença (RSVP)
+# Plano: Adicionar Controles de Encerramento na Seção RSVP
 
-## Contexto
+## O Problema
 
-O sistema atual permite que participantes confirmem presença via link público (`/rsvp/:token`). No entanto, não existe controle sobre quando essas confirmações podem ser aceitas. O usuário precisa de:
+A funcionalidade de encerrar confirmações foi implementada apenas no `EventEditDialog.tsx` (o diálogo que aparece ao editar evento da lista geral). Porém, você está usando a **página de detalhes do evento** (`/events/:id`), onde a seção RSVP está localizada no componente `EventOverviewTab.tsx` — e lá não tem esses controles.
 
-1. **Encerramento manual** - Botão para fechar as confirmações imediatamente
-2. **Encerramento automático** - Data/hora limite para aceitar confirmações
-3. **Mensagem de encerramento** - Texto personalizado exibido quando encerrado
+## Solução
 
-## Mudanças no Banco de Dados
+Adicionar os controles de encerramento diretamente na seção RSVP da página de detalhes do evento, logo abaixo do link e código de inscrição.
 
-### Novos campos na tabela `events`
+## Arquivos a Modificar
 
-```sql
-ALTER TABLE public.events
-ADD COLUMN rsvp_closed boolean NOT NULL DEFAULT false,
-ADD COLUMN rsvp_deadline timestamptz,
-ADD COLUMN rsvp_closure_message text;
-```
+### 1. `src/pages/EventDetail.tsx`
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `rsvp_closed` | boolean | Encerramento manual (toggle) |
-| `rsvp_deadline` | timestamptz | Data/hora para encerramento automático |
-| `rsvp_closure_message` | text | Mensagem personalizada para exibir |
+**Atualizar a interface `Event`** para incluir os novos campos:
 
-### Atualização da função `get_participant_by_rsvp_token`
-
-Adicionar os novos campos ao retorno para que o frontend saiba o status:
-
-```sql
-RETURNS TABLE (
-  -- campos existentes...
-  event_rsvp_closed boolean,
-  event_rsvp_deadline timestamptz,
-  event_rsvp_closure_message text
-)
-```
-
-### Atualização da função `submit_rsvp_response`
-
-Adicionar validação antes de aceitar a resposta:
-
-```sql
--- Verificar se RSVP está encerrado
-SELECT rsvp_closed, rsvp_deadline INTO v_rsvp_closed, v_rsvp_deadline
-FROM events WHERE id = v_event_id;
-
-IF v_rsvp_closed OR (v_rsvp_deadline IS NOT NULL AND now() > v_rsvp_deadline) THEN
-  RETURN jsonb_build_object(
-    'success', false, 
-    'error', 'As confirmações para este evento foram encerradas.'
-  );
-END IF;
-```
-
-## Mudanças na Interface
-
-### 1. EventEditDialog (`src/components/events/EventEditDialog.tsx`)
-
-Adicionar seção "Confirmações de Presença" com:
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│ Confirmações de Presença                                │
-├─────────────────────────────────────────────────────────┤
-│ [Toggle] Encerrar confirmações manualmente              │
-│                                                         │
-│ Encerramento automático:                                │
-│ [📅 ___________ ] [🕐 ___:___ ]  (opcional)             │
-│                                                         │
-│ Mensagem ao encerrar: (opcional)                        │
-│ [________________________________]                      │
-│ [________________________________]                      │
-└─────────────────────────────────────────────────────────┘
-```
-
-**Novos estados:**
 ```typescript
-const [rsvpClosed, setRsvpClosed] = useState(false);
-const [rsvpDeadline, setRsvpDeadline] = useState("");
-const [rsvpClosureMessage, setRsvpClosureMessage] = useState("");
+interface Event {
+  // ... campos existentes
+  rsvp_closed: boolean;
+  rsvp_deadline: string | null;
+  rsvp_closure_message: string | null;
+}
 ```
 
-**Atualização na interface EventData:**
+### 2. `src/components/events/EventOverviewTab.tsx`
+
+**Atualizar a interface `Event`** local para incluir os mesmos campos:
+
 ```typescript
-export interface EventData {
+interface Event {
   // ... campos existentes
   rsvp_closed?: boolean;
   rsvp_deadline?: string | null;
@@ -94,106 +37,177 @@ export interface EventData {
 }
 ```
 
-### 2. PublicRSVP (`src/pages/PublicRSVP.tsx`)
-
-**Atualização na interface RSVPData:**
+**Adicionar imports necessários:**
 ```typescript
-interface RSVPData {
-  // ... campos existentes
-  event_rsvp_closed: boolean;
-  event_rsvp_deadline: string | null;
-  event_rsvp_closure_message: string | null;
-}
+import { Switch } from "@/components/ui/switch";
+import { CalendarOff } from "lucide-react";
 ```
 
-**Lógica de verificação:**
+**Adicionar estados para controle:**
 ```typescript
-const isRsvpClosed = () => {
-  if (data?.event_rsvp_closed) return true;
-  if (data?.event_rsvp_deadline && new Date(data.event_rsvp_deadline) < new Date()) {
-    return true;
+const [rsvpClosed, setRsvpClosed] = useState(event.rsvp_closed ?? false);
+const [rsvpDeadline, setRsvpDeadline] = useState(event.rsvp_deadline || "");
+const [rsvpClosureMessage, setRsvpClosureMessage] = useState(event.rsvp_closure_message || "");
+const [savingRsvpSettings, setSavingRsvpSettings] = useState(false);
+```
+
+**Adicionar função para salvar configurações RSVP:**
+```typescript
+const saveRsvpSettings = async () => {
+  setSavingRsvpSettings(true);
+  try {
+    const { error } = await supabase
+      .from("events")
+      .update({
+        rsvp_closed: rsvpClosed,
+        rsvp_deadline: rsvpDeadline || null,
+        rsvp_closure_message: rsvpClosureMessage || null,
+      })
+      .eq("id", event.id);
+    
+    if (error) throw error;
+    toast.success("Configurações de RSVP salvas!");
+    onUpdate();
+  } catch (error) {
+    toast.error("Erro ao salvar configurações");
+  } finally {
+    setSavingRsvpSettings(false);
   }
-  return false;
 };
 ```
 
-**Nova tela quando encerrado:**
-```text
-┌─────────────────────────────────────┐
-│            ⏰                       │
-│                                     │
-│    Confirmações Encerradas          │
-│                                     │
-│    [Mensagem personalizada ou       │
-│     mensagem padrão]                │
-│                                     │
-│    ─────────────────────────────    │
-│    Evento: [Nome do Evento]         │
-│    📅 15 de Janeiro, 2026           │
-│    🕐 19:00 - 22:00                 │
-└─────────────────────────────────────┘
+**Adicionar seção de controles RSVP** (após a linha 389, dentro do card RSVP):
+
+```tsx
+{/* RSVP Closure Controls */}
+{event.public_registration_code && (
+  <div className="mt-6 pt-6 border-t space-y-4">
+    <div className="flex items-center gap-2 mb-3">
+      <CalendarOff className="h-4 w-4 text-muted-foreground" />
+      <Label className="font-medium">Controle de Confirmações</Label>
+    </div>
+    
+    {/* Toggle encerrar manualmente */}
+    <div className="flex items-center justify-between">
+      <div className="space-y-0.5">
+        <Label className="text-sm">Encerrar confirmações</Label>
+        <p className="text-xs text-muted-foreground">
+          {rsvpClosed 
+            ? "Link bloqueado - ninguém pode confirmar" 
+            : "Link ativo - confirmações abertas"}
+        </p>
+      </div>
+      <Switch
+        checked={rsvpClosed}
+        onCheckedChange={setRsvpClosed}
+      />
+    </div>
+
+    {/* Data limite automática */}
+    {!rsvpClosed && (
+      <div className="space-y-2">
+        <Label className="text-sm">Encerrar automaticamente em:</Label>
+        <Input
+          type="datetime-local"
+          value={rsvpDeadline}
+          onChange={(e) => setRsvpDeadline(e.target.value)}
+          className="max-w-xs"
+        />
+        <p className="text-xs text-muted-foreground">
+          Após esta data, novas confirmações serão bloqueadas
+        </p>
+      </div>
+    )}
+
+    {/* Mensagem de encerramento */}
+    <div className="space-y-2">
+      <Label className="text-sm">Mensagem quando encerrado (opcional)</Label>
+      <Textarea
+        value={rsvpClosureMessage}
+        onChange={(e) => setRsvpClosureMessage(e.target.value)}
+        placeholder="Ex: As confirmações foram encerradas..."
+        rows={2}
+      />
+    </div>
+
+    {/* Botão salvar */}
+    <Button 
+      onClick={saveRsvpSettings} 
+      disabled={savingRsvpSettings}
+      size="sm"
+    >
+      {savingRsvpSettings ? (
+        <>
+          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          Salvando...
+        </>
+      ) : (
+        <>
+          <Save className="h-4 w-4 mr-2" />
+          Salvar Configurações
+        </>
+      )}
+    </Button>
+  </div>
+)}
 ```
 
-## Arquivos a Modificar
+## Resultado Visual
 
-1. **Nova migração SQL**
-   - Adicionar colunas `rsvp_closed`, `rsvp_deadline`, `rsvp_closure_message`
-   - Atualizar função `get_participant_by_rsvp_token`
-   - Atualizar função `submit_rsvp_response`
-
-2. **`src/components/events/EventEditDialog.tsx`**
-   - Adicionar estados para os novos campos
-   - Adicionar seção no formulário com Switch + DateTimePicker + Textarea
-   - Incluir campos na mutation de update
-
-3. **`src/pages/PublicRSVP.tsx`**
-   - Atualizar interface RSVPData
-   - Adicionar função `isRsvpClosed()`
-   - Renderizar tela de encerramento quando aplicável
-
-## Detalhes Técnicos
-
-### Componentes UI a utilizar
-
-- `Switch` do shadcn/ui para o toggle de encerramento manual
-- `Input type="datetime-local"` para a data/hora limite
-- `Textarea` para a mensagem personalizada
-- Ícone `Clock` ou `CalendarOff` do lucide-react para a tela de encerrado
-
-### Mensagem padrão
-
-Se `rsvp_closure_message` estiver vazio, exibir:
-> "As confirmações de presença para este evento foram encerradas. Para mais informações, entre em contato com o organizador."
-
-### Validação de deadline
-
-- Se `rsvp_deadline` for preenchido, deve ser uma data futura
-- O campo só deve ser editável se `rsvp_closed` for `false`
-- Mostrar contagem regressiva ou "Encerra em X dias" na UI do evento
-
-## Fluxo do Usuário
+Após a implementação, a seção RSVP ficará assim:
 
 ```text
-Organizador                                  Participante
-    │                                              │
-    ├──► Cria evento                               │
-    │                                              │
-    ├──► Envia links de RSVP ─────────────────────►│
-    │                                              │
-    │    [Opcional] Define deadline automático     │
-    │    Ex: 3 dias antes do evento                │
-    │                                              ├──► Acessa link
-    │                                              │    ✓ Confirma/Declina
-    ├──► Após deadline ou toggle manual            │
-    │                                              │
-    │                                              ├──► Acessa link
-    │                                              │    ✗ "Confirmações encerradas"
-    │                                              │
+┌─────────────────────────────────────────────────────────────┐
+│ 🔗 RSVP                                                     │
+│ Compartilhe este link para inscrição                        │
+├─────────────────────────────────────────────────────────────┤
+│ [ https://...lovable.app/inscricao/RSV006 ]  [📋 Copiar]   │
+│                                                             │
+│ Código: RSV006    🔄 Gerar novo código                      │
+│                                                             │
+│ ─────────────────────────────────────────────────────────── │
+│ 🚫 Controle de Confirmações                                 │
+│                                                             │
+│ Encerrar confirmações              ○─────────○ [Toggle]    │
+│ Link ativo - confirmações abertas                           │
+│                                                             │
+│ Encerrar automaticamente em:                                │
+│ [ 📅 ___/___/_____  🕐 __:__ ]                             │
+│ Após esta data, novas confirmações serão bloqueadas         │
+│                                                             │
+│ Mensagem quando encerrado (opcional):                       │
+│ [_________________________________________________]         │
+│ [_________________________________________________]         │
+│                                                             │
+│ [ 💾 Salvar Configurações ]                                 │
+│ ─────────────────────────────────────────────────────────── │
+│ Arquivo do Convite (opcional)                               │
+│ ...                                                         │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Impacto
+## Status Visual do RSVP
 
-- **Controle total**: Organizador decide quando parar de aceitar confirmações
-- **Automação**: Deadline automático evita esquecimentos
-- **UX clara**: Mensagem personalizada informa o participante
-- **Segurança**: Validação no backend (RPC) garante que ninguém consiga confirmar após encerramento
+Quando encerrado (manual ou por deadline), mostrar badge visual:
+
+```tsx
+{(rsvpClosed || (rsvpDeadline && new Date(rsvpDeadline) < new Date())) && (
+  <Badge variant="destructive" className="ml-2">
+    Encerrado
+  </Badge>
+)}
+```
+
+## Resumo das Mudanças
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `EventDetail.tsx` | Adicionar campos RSVP na interface `Event` |
+| `EventOverviewTab.tsx` | Adicionar interface atualizada, estados, função de save, e UI de controles |
+
+## Notas Técnicas
+
+- Os campos já existem no banco de dados (migração anterior)
+- A query `select("*")` já traz todos os campos automaticamente
+- A validação no backend (RPC `submit_rsvp_response`) já bloqueia confirmações quando encerrado
+- A página pública (`PublicRSVP.tsx`) já mostra a mensagem de encerramento
