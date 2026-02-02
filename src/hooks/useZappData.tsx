@@ -206,21 +206,10 @@ export function useZappData(options: UseZappDataOptions = {}) {
 
       if (assignmentsError) throw assignmentsError;
       
-      // Apply integration_id filtering in-memory for more precise control
-      // Groups (is_group=true) ignore integrationId filter - they're visible cross-instance
-      // Individual contacts are filtered by integrationId
-      let filteredAssignments = assignmentsData || [];
-      if (integrationId) {
-        filteredAssignments = filteredAssignments.filter((a: any) => {
-          const conv = a.zapp_conversation;
-          if (!conv) return true; // Keep if no conversation data
-          if (conv.is_group) return true; // Groups visible cross-instance
-          // Individual: must match integrationId OR have no integrationId (legacy)
-          return conv.integration_id === integrationId || !conv.integration_id;
-        });
-        console.log(`[ZappData] Filtered from ${assignmentsData?.length || 0} to ${filteredAssignments.length} by integrationId ${integrationId}`);
-      }
-      
+      // CROSS-SECTOR FIX: Visibility is controlled ONLY by department_id (filtered in SQL query above)
+      // integration_id is used ONLY for sending messages (determines which WhatsApp instance to use)
+      // Removing integration_id filter allows conversations to be accessible across instances
+      const filteredAssignments = assignmentsData || [];
       console.log(`[ZappData] Fetched ${filteredAssignments.length} assignments for department ${dept.id} (sector: ${sectorId})`);
       setAssignments(filteredAssignments);
       
@@ -462,23 +451,11 @@ export function useZappData(options: UseZappDataOptions = {}) {
       setTeamUsers((usersData || []) as TeamUser[]);
       setTeamRoles(rolesData || []);
       
-      // Apply integration_id filtering for instance isolation in fetchData too
-      // Groups (is_group=true) ignore integrationId filter - they're visible cross-instance
-      // Individual contacts are filtered by integrationId
-      let filteredAssignments = assignmentsData || [];
-      if (integrationId) {
-        filteredAssignments = filteredAssignments.filter((a: any) => {
-          const conv = a.zapp_conversation;
-          if (!conv) return true; // Keep if no conversation data
-          if (conv.is_group) return true; // Groups visible cross-instance
-          // Individual: must match integrationId OR have no integrationId (legacy)
-          return conv.integration_id === integrationId || !conv.integration_id;
-        });
-        console.log(`[ZappData] fetchData: Filtered from ${assignmentsData?.length || 0} to ${filteredAssignments.length} by integrationId ${integrationId}`);
-      } else if (sectorId) {
-        // SECURITY WARNING: No integrationId specified - this may leak conversations
-        console.warn("[ZappData] fetchData: No integrationId - individual conversations may be visible cross-instance");
-      }
+      // CROSS-SECTOR FIX: Visibility is controlled ONLY by department_id (filtered in SQL query above)
+      // integration_id is used ONLY for sending messages (determines which WhatsApp instance to use)
+      // This allows conversations to be accessible cross-instance within the same department
+      const filteredAssignments = assignmentsData || [];
+      console.log(`[ZappData] fetchData: Loaded ${filteredAssignments.length} assignments for sector ${sectorId}`);
       
       setAssignments(filteredAssignments);
       setTags(tagsData || []);

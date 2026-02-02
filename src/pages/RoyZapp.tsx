@@ -249,7 +249,14 @@ export default function RoyZapp() {
     }
     
     // INDIVIDUAL CONTACTS: Clear selection (must be handled by original sector)
-    console.log("[RoyZapp] Individual conversation from another sector, clearing selection");
+    console.log("[RoyZapp] Individual conversation from another sector", {
+      selectedId: selectedConversation.id,
+      assignmentsCount: assignments.length,
+      existsInList: assignments.some(a => a.id === selectedConversation.id),
+      selectedIntegrationId,
+      departmentId: selectedConversation.department_id,
+      currentSectorDepartmentId,
+    });
     setSelectedConversation(null);
     toast.info("Conversa individual pertence a outro setor");
   }, [selectedConversation, assignments, selectedSectorId, currentSectorDepartmentId, currentUser?.account_id]);
