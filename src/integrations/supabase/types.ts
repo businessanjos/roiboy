@@ -4224,6 +4224,9 @@ export type Database = {
           notes: string | null
           public_registration_code: string | null
           public_registration_enabled: boolean | null
+          rsvp_closed: boolean
+          rsvp_closure_message: string | null
+          rsvp_deadline: string | null
           scheduled_at: string | null
           start_time: string | null
           status: string | null
@@ -4262,6 +4265,9 @@ export type Database = {
           notes?: string | null
           public_registration_code?: string | null
           public_registration_enabled?: boolean | null
+          rsvp_closed?: boolean
+          rsvp_closure_message?: string | null
+          rsvp_deadline?: string | null
           scheduled_at?: string | null
           start_time?: string | null
           status?: string | null
@@ -4300,6 +4306,9 @@ export type Database = {
           notes?: string | null
           public_registration_code?: string | null
           public_registration_enabled?: boolean | null
+          rsvp_closed?: boolean
+          rsvp_closure_message?: string | null
+          rsvp_deadline?: string | null
           scheduled_at?: string | null
           start_time?: string | null
           status?: string | null
@@ -10585,6 +10594,9 @@ export type Database = {
           event_id: string
           event_meeting_url: string
           event_modality: string
+          event_rsvp_closed: boolean
+          event_rsvp_closure_message: string
+          event_rsvp_deadline: string
           event_scheduled_at: string
           event_title: string
           guest_name: string

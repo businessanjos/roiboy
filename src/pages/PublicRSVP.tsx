@@ -12,7 +12,8 @@ import {
   Clock, 
   Video, 
   Check, 
-  X, 
+  X,
+  CalendarOff,
   CheckCircle2,
   XCircle,
   PartyPopper
@@ -33,6 +34,9 @@ interface RSVPData {
   client_name: string | null;
   rsvp_status: string;
   rsvp_responded_at: string | null;
+  event_rsvp_closed: boolean;
+  event_rsvp_deadline: string | null;
+  event_rsvp_closure_message: string | null;
 }
 
 export default function PublicRSVP() {
@@ -89,6 +93,16 @@ export default function PublicRSVP() {
   };
 
   const participantName = data?.client_name || data?.guest_name || "Convidado";
+  
+  const isRsvpClosed = (): boolean => {
+    if (data?.event_rsvp_closed) return true;
+    if (data?.event_rsvp_deadline && new Date(data.event_rsvp_deadline) < new Date()) {
+      return true;
+    }
+    return false;
+  };
+  
+  const defaultClosureMessage = "As confirmações de presença para este evento foram encerradas. Para mais informações, entre em contato com o organizador.";
 
   if (loading) {
     return (
@@ -122,6 +136,54 @@ export default function PublicRSVP() {
   }
 
   const hasResponded = data?.rsvp_status === "confirmed" || data?.rsvp_status === "declined";
+  const rsvpClosed = isRsvpClosed();
+
+  // Show RSVP closed screen when closed and not yet responded
+  if (rsvpClosed && !hasResponded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
+        <Card className="w-full max-w-lg">
+          <CardHeader className="text-center pb-2">
+            <CalendarOff className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+            <CardTitle className="text-2xl">Confirmações Encerradas</CardTitle>
+            <CardDescription className="text-base mt-2">
+              {data?.event_rsvp_closure_message || defaultClosureMessage}
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            {/* Event Info */}
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <h3 className="font-semibold text-lg">{data?.event_title}</h3>
+              
+              <div className="flex flex-wrap gap-4 text-sm">
+                {data?.event_scheduled_at && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span>
+                      {format(new Date(data.event_scheduled_at), "dd 'de' MMMM, yyyy", { locale: ptBR })}
+                    </span>
+                  </div>
+                )}
+                
+                {data?.event_scheduled_at && (
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span>
+                      {format(new Date(data.event_scheduled_at), "HH:mm", { locale: ptBR })}
+                      {data?.event_ends_at && (
+                        <> - {format(new Date(data.event_ends_at), "HH:mm", { locale: ptBR })}</>
+                      )}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
