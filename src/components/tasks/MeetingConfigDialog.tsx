@@ -124,12 +124,6 @@ Até lá!`;
   };
 
   const handleCreateMeeting = async () => {
-    // Email obrigatório APENAS para Google Meet
-    if (platform === "google" && !participantEmail) {
-      toast.error("O Google Meet requer email do participante");
-      return;
-    }
-
     if (!dueDate) {
       toast.error("A atividade precisa ter uma data definida");
       return;
@@ -269,22 +263,15 @@ Até lá!`;
 
           {/* Participant Email - Read Only */}
           <div className="space-y-2">
-            <Label className="flex items-center gap-2">
+          <Label className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
               Email do Participante
-              {platform === "zoom" && (
-                <span className="text-xs text-muted-foreground font-normal">(Opcional)</span>
-              )}
+              <span className="text-xs text-muted-foreground font-normal">(Opcional)</span>
             </Label>
             <div className="p-2 bg-muted rounded-md text-sm">
               {participantEmail || "Email não disponível"}
             </div>
-            {!participantEmail && platform === "google" && (
-              <p className="text-xs text-destructive">
-                O Google Meet requer email do participante
-              </p>
-            )}
-            {!participantEmail && platform === "zoom" && (
+            {!participantEmail && (
               <p className="text-xs text-muted-foreground">
                 Você poderá compartilhar o link da reunião manualmente
               </p>
@@ -350,7 +337,7 @@ Até lá!`;
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleCreateMeeting} disabled={loading || (platform === "google" && !participantEmail)}>
+          <Button onClick={handleCreateMeeting} disabled={loading}>
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
