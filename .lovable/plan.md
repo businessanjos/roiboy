@@ -1,199 +1,125 @@
 
-# Plano: Corrigir Race Condition na Funcao createConversationWithContact
+# Plano: Corrigir o Filtro de Integration que Remove Conversas Cross-Setor
 
-## Diagnostico Final
+## Diagnóstico Definitivo
 
-O problema persiste porque as correcoes anteriores foram aplicadas APENAS na funcao `createConversationFromUrl` (navegacao via URL), mas NAO na funcao `createConversationWithContact` (botao "Nova Conversa" no dialog).
+O problema REAL foi encontrado! As correções anteriores de race condition estão sendo **completamente anuladas** por um filtro adicional no `useMemo` chamado `filteredAssignments`.
 
-### Fluxos SEM Correcao (causa do bug)
+### Evidência dos Logs
 
-```text
-┌───────────────────────────────────────────────────────────────────────┐
-│ FUNCAO: createConversationWithContact (linhas 3017-3360)              │
-├───────────────────────────────────────────────────────────────────────┤
-│                                                                       │
-│ FLUXO 1: Abrir Grupo Existente (linhas 3053-3054)                     │
-│ ─────────────────────────────────────────────────────────────────────│
-│ if (assignmentData) setSelectedConversation(assignmentData);          │
-│ fetchData();  <-- PROBLEMA: Chama imediatamente!                      │
-│                                                                       │
-│ FLUXO 2: Abrir Contato Individual Existente (linhas 3220-3223)        │
-│ ─────────────────────────────────────────────────────────────────────│
-│ if (assignmentData) {                                                 │
-│   setSelectedConversation(assignmentData);                            │
-│ }                                                                     │
-│ fetchData();  <-- PROBLEMA: Chama imediatamente!                      │
-│                                                                       │
-│ FLUXO 3: Reabrir Contato Individual Fechado (linhas 3256-3259)        │
-│ ─────────────────────────────────────────────────────────────────────│
-│ if (reopenedData) {                                                   │
-│   setSelectedConversation(reopenedData);                              │
-│ }                                                                     │
-│ fetchData();  <-- PROBLEMA: Chama imediatamente!                      │
-│                                                                       │
-└───────────────────────────────────────────────────────────────────────┘
+```
+[ZappData] fetchData: Loaded 340 assignments for sector operacoes
+[ZappData] MULTI-INSTANCE: Filtered to 312 assignments for integration dbb6109c-...
+                           ↑↑↑ AQUI ESTÁ O PROBLEMA ↑↑↑
 ```
 
-### Race Condition Explicada
+O sistema carrega 340 conversas do banco, mas o `useMemo` filtra para 312, **removendo 28 conversas individuais** que não pertencem à instância WhatsApp atual.
+
+### Fluxo do Bug
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
-│ SEQUENCIA DO BUG                                                       │
+│ SEQUÊNCIA DO BUG                                                       │
 ├────────────────────────────────────────────────────────────────────────┤
-│ 1. Usuario clica "Nova Conversa" e seleciona "Ana Paula Cardoso"       │
-│ 2. Sistema encontra assignment existente no banco                      │
-│ 3. Sistema executa setSelectedConversation(assignmentData)             │
-│ 4. Sistema executa fetchData() IMEDIATAMENTE                           │
-│ 5. useEffect de validacao (linha 231) dispara ANTES do fetchData       │
-│ 6. useEffect verifica: assignments.some(a => a.id === selected.id)     │
-│ 7. FALHA: assignments ainda esta VAZIO ou com dados antigos            │
-│ 8. useEffect assume "outro setor" e limpa selecao                      │
-│ 9. Usuario ve: "Conversa individual pertence a outro setor"            │
+│ 1. Usuario clica em "Ana Paula Cardoso" no dialog "Nova Conversa"      │
+│ 2. Sistema encontra assignment existente (criado por outra instância)  │
+│ 3. Sistema chama setSelectedConversation(assignmentData)               │
+│ 4. Sistema chama setAssignments(prev => [...prev, assignmentData])     │
+│ 5. useMemo "filteredAssignments" RE-EXECUTA                            │
+│ 6. useMemo filtra: conv.integration_id !== selectedIntegrationId       │
+│ 7. useMemo REMOVE a conversa adicionada no passo 4                     │
+│ 8. RoyZapp recebe assignments SEM a conversa selecionada               │
+│ 9. useEffect de validação: "não existe em assignments"                 │
+│ 10. Sistema limpa seleção: "Conversa pertence a outro setor"           │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Solucao
+### Código Problemático
 
-Aplicar a MESMA correcao ja usada em outros fluxos: adicionar o assignment imediatamente a lista local ANTES do useEffect disparar.
+```typescript
+// src/hooks/useZappData.tsx - linhas 909-929
+if (integrationId) {
+  filtered = filtered.filter(a => {
+    const matchesIntegration = convIntegrationId === integrationId;
+    const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
+    const isGroup = zappConv?.is_group === true;
+    
+    // PROBLEMA: Remove conversas individuais de outras instâncias!
+    return matchesIntegration || isLegacySameSector || isGroup;
+  });
+}
+```
+
+## Solução
+
+Remover o filtro de `integration_id` do `useMemo`, já que:
+
+1. O isolamento de setor é garantido pelo `department_id` (filtrado no SQL)
+2. O `integration_id` serve apenas para definir qual instância WhatsApp usar para ENVIAR mensagens
+3. Conversas podem ser acessadas de qualquer instância dentro do mesmo departamento
 
 ## Arquivo a Modificar
 
-`src/pages/RoyZapp.tsx`
+`src/hooks/useZappData.tsx`
 
-## Mudancas Necessarias
+## Mudança Necessária
 
-### Correcao 1: Abrir Grupo Existente (linhas 3045-3058)
+### Remover o Bloco de Filtro por Integration (linhas 905-935)
 
-**Codigo Atual:**
+**Código Atual:**
 ```typescript
-if (activeAssignment) {
-  const { data: assignmentData } = await supabase...;
+// CRITICAL: If integrationId is specified, filter by integration_id but INCLUDE:
+// 1. Legacy conversations (no integration_id) that belong to this sector
+// 2. GROUPS - they are cross-integration by nature (user explicitly opened them)
+// This prevents missing conversations after multi-instance migration
+if (integrationId) {
+  const beforeCount = filtered.length;
+  filtered = filtered.filter(a => {
+    const zappConv = a.zapp_conversation as { 
+      integration_id?: string; 
+      sector_id?: string;
+      is_group?: boolean;
+    } | null;
+    const convIntegrationId = zappConv?.integration_id;
+    const convSectorId = zappConv?.sector_id;
+    const isGroup = zappConv?.is_group === true;
+    
+    const matchesIntegration = convIntegrationId === integrationId;
+    const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
+    
+    return matchesIntegration || isLegacySameSector || isGroup;
+  });
   
-  if (assignmentData) setSelectedConversation(assignmentData);
-  fetchData();
-  toast.info("Abrindo grupo existente");
-  setNewConversationDialogOpen(false);
-  setCreatingConversation(false);
-  return;
-}
-```
-
-**Codigo Corrigido:**
-```typescript
-if (activeAssignment) {
-  const { data: assignmentData } = await supabase...;
-  
-  if (assignmentData) {
-    setSelectedConversation(assignmentData);
-    // CRITICAL FIX: Add immediately to local list to prevent race condition
-    setAssignments(prev => {
-      const exists = prev.some(a => a.id === assignmentData.id);
-      if (exists) return prev.map(a => a.id === assignmentData.id ? assignmentData : a);
-      return [assignmentData, ...prev];
-    });
+  if (filtered.length !== beforeCount) {
+    console.log(`[ZappData] MULTI-INSTANCE: Filtered to ${filtered.length}...`);
   }
-  // CRITICAL FIX: Delay fetchData to prevent overwriting local state
-  setTimeout(() => fetchData(), 2000);
-  toast.info("Abrindo grupo existente");
-  setNewConversationDialogOpen(false);
-  setCreatingConversation(false);
-  return;
 }
 ```
 
-### Correcao 2: Abrir Contato Individual Existente (linhas 3208-3227)
-
-**Codigo Atual:**
+**Código Corrigido:**
 ```typescript
-if (activeAssignment) {
-  const { data: assignmentData } = await supabase...;
-  
-  if (assignmentData) {
-    setSelectedConversation(assignmentData);
-  }
-  fetchData();
-  toast.info("Abrindo conversa existente");
-  setNewConversationDialogOpen(false);
-  setCreatingConversation(false);
-  return;
-}
+// CROSS-SECTOR FIX: Remove integration_id filter entirely
+// Visibility is controlled ONLY by department_id (filtered in SQL query)
+// integration_id is used ONLY for sending messages (determines which WhatsApp instance to use)
+// This allows conversations to be accessible cross-instance within the same department
+console.log(`[ZappData] filteredAssignments: ${filtered.length} assignments for sector ${sectorId} (no integration filter)`);
 ```
-
-**Codigo Corrigido:**
-```typescript
-if (activeAssignment) {
-  const { data: assignmentData } = await supabase...;
-  
-  if (assignmentData) {
-    setSelectedConversation(assignmentData);
-    // CRITICAL FIX: Add immediately to local list to prevent race condition
-    setAssignments(prev => {
-      const exists = prev.some(a => a.id === assignmentData.id);
-      if (exists) return prev.map(a => a.id === assignmentData.id ? assignmentData : a);
-      return [assignmentData, ...prev];
-    });
-  }
-  // CRITICAL FIX: Delay fetchData to prevent overwriting local state
-  setTimeout(() => fetchData(), 2000);
-  toast.info("Abrindo conversa existente");
-  setNewConversationDialogOpen(false);
-  setCreatingConversation(false);
-  return;
-}
-```
-
-### Correcao 3: Reabrir Contato Individual Fechado (linhas 3228-3261)
-
-**Codigo Atual:**
-```typescript
-} else if (closedAssignment) {
-  // Update status...
-  const { data: reopenedData } = await supabase...;
-  
-  if (reopenedData) {
-    setSelectedConversation(reopenedData);
-  }
-  fetchData();
-  setCreatingConversation(false);
-  return;
-}
-```
-
-**Codigo Corrigido:**
-```typescript
-} else if (closedAssignment) {
-  // Update status...
-  const { data: reopenedData } = await supabase...;
-  
-  if (reopenedData) {
-    setSelectedConversation(reopenedData);
-    // CRITICAL FIX: Add immediately to local list to prevent race condition
-    setAssignments(prev => {
-      const exists = prev.some(a => a.id === reopenedData.id);
-      if (exists) return prev.map(a => a.id === reopenedData.id ? reopenedData : a);
-      return [reopenedData, ...prev];
-    });
-  }
-  // CRITICAL FIX: Delay fetchData to prevent overwriting local state
-  setTimeout(() => fetchData(), 2000);
-  setCreatingConversation(false);
-  return;
-}
-```
-
-## Resumo das Alteracoes
-
-| Local | Linha | Fluxo | Alteracao |
-|-------|-------|-------|-----------|
-| createConversationWithContact | 3053-3054 | Abrir grupo existente | + setAssignments + setTimeout |
-| createConversationWithContact | 3220-3223 | Abrir contato existente | + setAssignments + setTimeout |
-| createConversationWithContact | 3256-3259 | Reabrir contato fechado | + setAssignments + setTimeout |
 
 ## Por que vai funcionar
 
-O padrao `setSelectedConversation` + `setAssignments` + `setTimeout(fetchData, 2000)` ja esta funcionando corretamente para:
-- Grupos reabertos (linha 3086-3101)
-- Grupos novos (linha 3126-3137)
-- Novos assignments de contato (linha 3340-3351)
+| Conceito | Antes | Depois |
+|----------|-------|--------|
+| Filtro de setor | department_id (SQL) | department_id (SQL) |
+| Filtro de instância | integration_id (useMemo) | REMOVIDO |
+| Conversas visíveis | 312 (filtradas) | 340 (todas do departamento) |
+| Cross-instance | Bloqueado | Permitido |
 
-Faltava apenas aplicar aos 3 fluxos acima que ainda usavam `fetchData()` imediato.
+## Impacto
+
+1. Conversas de TODAS as instâncias WhatsApp do mesmo setor ficam visíveis
+2. Não quebra isolamento de setor (isso continua no SQL)
+3. Resolve 100% do erro "Conversa pertence a outro setor"
+
+## Nota sobre Multi-Instância
+
+Se o usuário quiser ver apenas conversas de uma instância específica, isso pode ser implementado como um **filtro opcional na UI** (toggle "Ver apenas minhas conversas"), não como um bloqueio de acesso.
