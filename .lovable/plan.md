@@ -1,124 +1,101 @@
 
-# Plano: Separar Conversas por Instância WhatsApp
+# Plano: Correção Definitiva do Isolamento por Instância WhatsApp
 
-## Problema Identificado
+## Problemas Identificados
 
-Atualmente o sistema tem um índice único que impede múltiplas conversas por telefone:
-```sql
-UNIQUE (account_id, phone_e164) WHERE (is_group = false)
-```
+### Problema 1: Fallback de Busca no Frontend Ignora Instância
+**Arquivo:** `src/pages/RoyZapp.tsx` (Linhas 3190-3203)
 
-Isso significa que só pode existir **UMA conversa** por contato, independente da instância WhatsApp usada.
+Quando o usuário seleciona "Tathiana Marinho" no dialog "Nova Conversa":
+1. A busca primária por `phone_e164 + integration_id` não encontra (correto - não existe para esta instância)
+2. O fallback busca por `lead_id` ou `client_id` **SEM filtrar por `integration_id`**
+3. Encontra a conversa de OUTRA instância
+4. Tenta abrir essa conversa, mas ela é filtrada da lista lateral
+5. O validador detecta e mostra "Conversa pertence a outro setor"
+
+### Problema 2: Webhook LAYER 1 Rouba Conversas
+**Arquivo:** `supabase/functions/uazapi-webhook/index.ts` (Linhas 856-911)
+
+Quando chega uma mensagem de um número que tem conversa em outra instância:
+1. Busca primária por `phone + integration_id` falha
+2. LAYER 1 busca cross-integration e encontra conversa de outro setor
+3. **ATUALIZA a conversa para a instância que recebeu a mensagem** (linhas 879-890)
+4. Isso "rouba" a conversa de um setor para outro
+
+### Problema 3: Webhook LAYER 2 Mescla Conversas
+**Arquivo:** `supabase/functions/uazapi-webhook/index.ts` (Linhas 913-1005)
+
+Se existem múltiplas conversas com o mesmo número:
+1. Move todas as mensagens para uma única conversa
+2. Atualiza todos os assignments
+3. **Deleta as conversas "duplicatas"** (linha 968-971)
+4. Isso destrói o isolamento por instância
 
 ## Solução
 
-### 1. Migração de Banco de Dados
-
-Alterar o índice único para incluir `integration_id`:
-
-```sql
--- Remover índice antigo
-DROP INDEX IF EXISTS zapp_conversations_account_phone_unique;
-
--- Criar novo índice que permite uma conversa por contato POR INSTÂNCIA
-CREATE UNIQUE INDEX zapp_conversations_account_phone_integration_unique 
-ON zapp_conversations (account_id, phone_e164, integration_id) 
-WHERE (is_group = false);
-```
-
-### 2. `src/pages/RoyZapp.tsx` - Busca de Conversa Existente
-
-**Arquivo:** `src/pages/RoyZapp.tsx`  
-**Local:** Linhas 3165-3171 (busca por telefone)
-
-Adicionar filtro por `integration_id` na busca:
+### Correção 1: Frontend - Adicionar `integration_id` ao Fallback
 
 ```typescript
-// ANTES (encontrava qualquer conversa com o telefone)
-const { data: convByPhone } = await supabase
+// Linha 3197 - Adicionar filtro de integration_id
+const { data: convById } = await supabase
   .from("zapp_conversations")
-  .select("id, lead_id, client_id")
+  .select("id")
   .eq("account_id", currentUser.account_id)
-  .eq("phone_e164", normalizedPhone)
-  .eq("is_group", false)
-  .maybeSingle();
-
-// DEPOIS (encontra apenas conversa da instância atual)
-const { data: convByPhone } = await supabase
-  .from("zapp_conversations")
-  .select("id, lead_id, client_id")
-  .eq("account_id", currentUser.account_id)
-  .eq("phone_e164", normalizedPhone)
-  .eq("integration_id", selectedIntegrationId)  // NOVO: filtrar por instância
-  .eq("is_group", false)
+  .eq(idField, contact.id)
+  .eq("integration_id", selectedIntegrationId)  // ADICIONAR
   .maybeSingle();
 ```
 
-### 3. `src/hooks/useZappData.tsx` - Restaurar Filtro de Instância
+### Correção 2: Webhook - Remover LAYER 1 Cross-Integration
 
-**Arquivo:** `src/hooks/useZappData.tsx`  
-**Local:** Linhas 905-912
+Remover completamente as linhas 856-911 que buscam cross-integration e atualizam a conversa para outra instância.
 
-Restaurar o filtro de `integration_id` para isolar conversas entre instâncias:
+O correto é: se não encontrou conversa para ESTA instância específica, **criar uma nova** (já acontece depois).
 
-```typescript
-// Restaurar filtro de integration_id para isolar conversas entre instâncias
-if (integrationId) {
-  filtered = filtered.filter(a => {
-    const zappConv = a.zapp_conversation as { 
-      integration_id?: string; 
-      sector_id?: string;
-      is_group?: boolean;
-    } | null;
-    const convIntegrationId = zappConv?.integration_id;
-    const convSectorId = zappConv?.sector_id;
-    const isGroup = zappConv?.is_group === true;
-    
-    // Include conversation if:
-    // 1. It belongs to this exact integration, OR
-    // 2. It has no integration_id (legacy) but belongs to the same sector, OR
-    // 3. It's a GROUP (groups are cross-integration)
-    const matchesIntegration = convIntegrationId === integrationId;
-    const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
-    
-    return matchesIntegration || isLegacySameSector || isGroup;
-  });
-}
-```
+### Correção 3: Webhook - Remover LAYER 2 AUTO-UNIFY
+
+Remover completamente as linhas 913-1005 que:
+- Buscam TODAS as conversas do mesmo telefone
+- Mesclam duplicatas
+- Atualizam integration_id e sector_id
+
+Cada instância DEVE ter sua própria conversa separada.
+
+## Arquivos a Modificar
+
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/RoyZapp.tsx` | Adicionar `.eq("integration_id", selectedIntegrationId)` no fallback (linha 3197) |
+| `supabase/functions/uazapi-webhook/index.ts` | Remover LAYER 1 cross-integration (linhas 856-911) |
+| `supabase/functions/uazapi-webhook/index.ts` | Remover LAYER 2 AUTO-UNIFY (linhas 913-1005) |
 
 ## Fluxo Após Correção
 
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│ CENÁRIO: Mesmo contato, instâncias diferentes                          │
-├────────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│ Instância "Eternum Club" (Vendas)                                      │
-│ ├── Conversa com Ana Paula (+5511999...) → ID: abc123                  │
-│ └── Mensagens específicas desta instância                              │
-│                                                                        │
-│ Instância "Jonathan Marcato" (Vendas)                                  │
-│ ├── Conversa com Ana Paula (+5511999...) → ID: xyz789 (DIFERENTE!)     │
-│ └── Mensagens específicas desta instância                              │
-│                                                                        │
-│ Instância "Operações" (Operações)                                      │
-│ ├── Conversa com Ana Paula (+5511999...) → ID: def456 (DIFERENTE!)     │
-│ └── Mensagens específicas desta instância                              │
-│                                                                        │
-└────────────────────────────────────────────────────────────────────────┘
 ```
+CENÁRIO: Tathiana Marinho conversa com Vendas e Operações
 
-## Resumo das Alterações
+┌─────────────────────────────────────────────────────────────┐
+│ INSTÂNCIA "Eternum Club" (Vendas)                           │
+├─────────────────────────────────────────────────────────────┤
+│ • Conversa ID: abc123                                       │
+│ • phone_e164: +5511999887766                                │
+│ • integration_id: eternum-vendas                            │
+│ • Mensagens: Histórico exclusivo de Vendas                  │
+└─────────────────────────────────────────────────────────────┘
 
-| Componente | Alteração |
-|------------|-----------|
-| Banco de Dados | Novo índice único incluindo `integration_id` |
-| `RoyZapp.tsx` | Busca de conversa filtra por `integration_id` |
-| `useZappData.tsx` | Restaurar filtro de `integration_id` na lista |
+┌─────────────────────────────────────────────────────────────┐
+│ INSTÂNCIA "Operações" (Operações)                           │
+├─────────────────────────────────────────────────────────────┤
+│ • Conversa ID: xyz789 (DIFERENTE!)                          │
+│ • phone_e164: +5511999887766 (MESMO TELEFONE)               │
+│ • integration_id: operacoes                                 │
+│ • Mensagens: Histórico exclusivo de Operações               │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ## Resultado Esperado
 
-1. Cada instância WhatsApp terá suas próprias conversas isoladas
-2. Mensagens de uma instância não aparecem em outra
-3. O mesmo contato pode ter conversas diferentes com cada instância
-4. Grupos continuam cross-integration (compartilhados)
+1. Cada instância WhatsApp terá sua própria conversa isolada com cada contato
+2. Mensagens não "vazam" entre instâncias
+3. Usuário pode criar nova conversa em qualquer instância, mesmo que o contato já tenha conversa em outra
+4. O erro "Conversa pertence a outro setor" não ocorrerá mais
