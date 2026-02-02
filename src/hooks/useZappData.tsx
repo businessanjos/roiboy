@@ -902,12 +902,34 @@ export function useZappData(options: UseZappDataOptions = {}) {
       console.warn(`[ZappData] SECURITY: Filtered out ${assignments.length - filtered.length} assignments that didn't match department`);
     }
     
-    // CROSS-SECTOR FIX: Removed integration_id filter entirely
-    // Visibility is controlled ONLY by department_id (already filtered above via SQL + safety check)
-    // integration_id is used ONLY for sending messages (determines which WhatsApp instance to use)
-    // This allows conversations to be accessible cross-instance within the same department
-    // If per-instance filtering is needed later, implement as optional UI toggle, not a hard block
-    console.log(`[ZappData] filteredAssignments: ${filtered.length} assignments for sector ${sectorId} (no integration filter - cross-instance access enabled)`);
+    // INSTANCE ISOLATION: Filter by integration_id to keep conversations isolated per WhatsApp instance
+    // Each instance (phone number) has its own separate conversation with the same contact
+    if (integrationId) {
+      const beforeCount = filtered.length;
+      filtered = filtered.filter(a => {
+        const zappConv = a.zapp_conversation as { 
+          integration_id?: string; 
+          sector_id?: string;
+          is_group?: boolean;
+        } | null;
+        const convIntegrationId = zappConv?.integration_id;
+        const convSectorId = zappConv?.sector_id;
+        const isGroup = zappConv?.is_group === true;
+        
+        // Include conversation if:
+        // 1. It belongs to this exact integration, OR
+        // 2. It has no integration_id (legacy) but belongs to the same sector, OR
+        // 3. It's a GROUP (groups are cross-integration by nature)
+        const matchesIntegration = convIntegrationId === integrationId;
+        const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
+        
+        return matchesIntegration || isLegacySameSector || isGroup;
+      });
+      
+      if (filtered.length !== beforeCount) {
+        console.log(`[ZappData] INSTANCE ISOLATION: Filtered to ${filtered.length} assignments for integration ${integrationId.substring(0, 8)}...`);
+      }
+    }
     
     return filtered;
   }, [assignments, departments, sectorId, integrationId]);
