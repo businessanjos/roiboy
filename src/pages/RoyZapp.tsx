@@ -407,8 +407,15 @@ export default function RoyZapp() {
           
           if (assignmentData) {
             setSelectedConversation(assignmentData);
+            // CRITICAL FIX: Add immediately to local list to prevent race condition
+            setAssignments(prev => {
+              const exists = prev.some(a => a.id === assignmentData.id);
+              if (exists) return prev.map(a => a.id === assignmentData.id ? assignmentData : a);
+              return [assignmentData, ...prev];
+            });
           }
-          fetchData();
+          // CRITICAL FIX: Delay fetchData to prevent overwriting local state
+          setTimeout(() => fetchData(), 2000);
           toast.info("Abrindo conversa existente");
           setCreatingConversation(false);
           return;
@@ -441,8 +448,15 @@ export default function RoyZapp() {
           
           if (reopenedData) {
             setSelectedConversation(reopenedData);
+            // CRITICAL FIX: Add immediately to local list to prevent race condition
+            setAssignments(prev => {
+              const exists = prev.some(a => a.id === reopenedData.id);
+              if (exists) return prev.map(a => a.id === reopenedData.id ? reopenedData : a);
+              return [reopenedData, ...prev];
+            });
           }
-          fetchData();
+          // CRITICAL FIX: Delay fetchData to prevent overwriting local state
+          setTimeout(() => fetchData(), 2000);
           setCreatingConversation(false);
           return;
         }
