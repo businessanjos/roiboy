@@ -128,6 +128,9 @@ export function useZappData(options: UseZappDataOptions = {}) {
 
   // Ref to store current department ID for realtime validation
   const currentDepartmentIdRef = useRef<string | null>(null);
+  
+  // Ref to store current conversation ID for realtime message validation
+  const currentConversationIdRef = useRef<string | null>(null);
 
   // Fetch assignments only (for realtime updates)
   // CRITICAL: Always filter by department_id to ensure sector isolation
@@ -597,6 +600,9 @@ export function useZappData(options: UseZappDataOptions = {}) {
   const fetchMessagesRef = useRef<(id: string) => Promise<void>>();
   
   const fetchMessages = useCallback(async (zappConversationId: string) => {
+    // Track which conversation is currently being viewed for realtime validation
+    currentConversationIdRef.current = zappConversationId;
+    
     try {
       // Fetch latest 100 messages (ordered descending, then reverse for display)
       // IMPORTANT: Do NOT filter out deleted messages - they should be shown with placeholder
@@ -668,7 +674,12 @@ export function useZappData(options: UseZappDataOptions = {}) {
   // Keep ref updated
   fetchMessagesRef.current = fetchMessages;
 
-  // Initial data fetch - re-fetch when sector changes
+  // Helper to clear current conversation tracking (call when closing conversation)
+  const clearCurrentConversation = useCallback(() => {
+    currentConversationIdRef.current = null;
+    setMessages([]);
+  }, []);
+
   useEffect(() => {
     if (currentUser?.account_id) {
       fetchData();
@@ -796,15 +807,54 @@ export function useZappData(options: UseZappDataOptions = {}) {
             }
           }
           
-          // CRITICAL FIX: Check if message already exists in local state before adding
-          // This prevents duplicates from realtime when frontend already added the message
+          // CRITICAL FIX: Check if message already exists and ADD if new
           if (newMsg?.id) {
+            // Get current selected conversation to validate
+            const selectedConvId = currentConversationIdRef.current;
+            
+            // If message is from another conversation, just update sidebar
+            if (selectedConvId && newMsg.zapp_conversation_id !== selectedConvId) {
+              debouncedFetchAssignments();
+              return;
+            }
+            
+            // Format the new message to match our Message interface
+            const newFormattedMsg: Message = {
+              id: newMsg.id,
+              content: newMsg.content,
+              is_from_client: newMsg.direction === 'inbound',
+              created_at: newMsg.created_at,
+              message_type: newMsg.message_type || 'text',
+              media_url: newMsg.media_url,
+              media_type: newMsg.media_type,
+              media_mimetype: newMsg.media_mimetype,
+              media_filename: newMsg.media_filename,
+              audio_duration_sec: newMsg.audio_duration_sec,
+              sender_name: newMsg.sender_name,
+              delivery_status: newMsg.delivery_status,
+              media_download_status: newMsg.media_download_status,
+              external_message_id: newMsg.external_message_id,
+              transcription: newMsg.transcription,
+              is_deleted: newMsg.is_deleted,
+              quoted_message_id: newMsg.quoted_message_id,
+              quoted_content: newMsg.quoted_content,
+              quoted_sender_name: newMsg.quoted_sender_name,
+              is_edited: newMsg.is_edited,
+            };
+
             setMessages(prev => {
-              const exists = prev.some(m => m.id === newMsg.id);
+              // Check for duplicates by id or external_message_id
+              const exists = prev.some(m => 
+                m.id === newMsg.id || 
+                (m.external_message_id && newMsg.external_message_id && m.external_message_id === newMsg.external_message_id)
+              );
               if (exists) {
-                return prev;
+                return prev; // Ignora duplicata
               }
-              return prev;
+              
+              // ADD the new message to the end of the list
+              console.log("[ZappData] Realtime: Adding new message to state:", newMsg.id);
+              return [...prev, newFormattedMsg];
             });
           }
           
@@ -875,6 +925,40 @@ export function useZappData(options: UseZappDataOptions = {}) {
       supabase.removeChannel(conversationsChannel);
     };
   }, [currentUser?.account_id, debouncedFetchAssignments, fetchAssignmentsOnly]);
+
+  // FALLBACK POLLING: Backup mechanism to ensure messages sync even if realtime fails
+  // Only polls if conversation is open AND last local message is older than 30s
+  useEffect(() => {
+    const conversationId = currentConversationIdRef.current;
+    if (!conversationId) return;
+    
+    const pollInterval = setInterval(() => {
+      const currentConvId = currentConversationIdRef.current;
+      if (!currentConvId) return;
+      
+      setMessages(currentMessages => {
+        // If no messages, trigger fetch
+        if (currentMessages.length === 0) {
+          fetchMessagesRef.current?.(currentConvId);
+          return currentMessages;
+        }
+        
+        // Check if last message is older than 30 seconds
+        const lastLocalMsg = currentMessages[currentMessages.length - 1];
+        if (lastLocalMsg) {
+          const lastMsgTime = new Date(lastLocalMsg.created_at).getTime();
+          const now = Date.now();
+          if (now - lastMsgTime > 30000) {
+            console.log("[ZappData] Polling fallback: Fetching messages for sync");
+            fetchMessagesRef.current?.(currentConvId);
+          }
+        }
+        return currentMessages;
+      });
+    }, 30000);
+    
+    return () => clearInterval(pollInterval);
+  }, []);
 
   // CRITICAL: Extra security layer - filter assignments by sector AND integration
   // Data should already be filtered at query level, but this is a safety check
@@ -966,6 +1050,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
     fetchMessages,
     setMessages,
     setAssignments,
+    clearCurrentConversation,
   };
 }
 
