@@ -538,6 +538,16 @@ function SystemEventItem({
               <span className={cn("text-xs font-medium", config.textColor)}>
                 {config.label}
               </span>
+              {/* Display user name for followup, financial and sales events */}
+              {(event.type === "followup" || event.type === "financial" || event.type === "sales") && 
+                event.metadata?.user_name && (
+                <>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-xs text-muted-foreground">
+                    por {event.metadata.user_name}
+                  </span>
+                </>
+              )}
               {event.metadata?.source && (
                 <>
                   <span className="text-muted-foreground">·</span>
