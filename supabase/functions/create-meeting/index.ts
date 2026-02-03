@@ -21,45 +21,108 @@ interface CreateMeetingRequest {
   send_email?: boolean;
 }
 
+async function refreshZoomToken(
+  refreshToken: string
+): Promise<{ access_token: string; refresh_token?: string; expires_in: number } | null> {
+  const clientId = Deno.env.get("ZOOM_CLIENT_ID");
+  const clientSecret = Deno.env.get("ZOOM_CLIENT_SECRET");
+  
+  if (!clientId || !clientSecret || !refreshToken) {
+    return null;
+  }
+
+  try {
+    const response = await fetch("https://zoom.us/oauth/token", {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Failed to refresh Zoom token:", await response.text());
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error refreshing Zoom token:", error);
+    return null;
+  }
+}
+
 async function createZoomMeeting(
   startTime: string,
   endTime: string,
   title: string,
-  participantEmail?: string // Now optional
+  participantEmail: string | undefined,
+  supabaseClient: any,
+  userId?: string
 ): Promise<{ meeting_url: string; meeting_id: string; meeting_password: string }> {
-  const clientId = Deno.env.get("ZOOM_CLIENT_ID");
-  const clientSecret = Deno.env.get("ZOOM_CLIENT_SECRET");
-  const accountId = Deno.env.get("ZOOM_ACCOUNT_ID");
+  let accessToken: string | null = null;
+  let refreshToken: string | null = null;
+  let expiresAt: number | null = null;
 
-  if (!clientId || !clientSecret || !accountId) {
-    throw new Error("Zoom credentials not configured. Please add ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET, and ZOOM_ACCOUNT_ID.");
+  // Get user-level OAuth tokens from user_integrations
+  if (userId) {
+    const { data: userIntegration } = await supabaseClient
+      .from("user_integrations")
+      .select("access_token, refresh_token, expires_at")
+      .eq("user_id", userId)
+      .eq("provider", "zoom")
+      .maybeSingle();
+
+    if (userIntegration?.access_token) {
+      accessToken = userIntegration.access_token;
+      refreshToken = userIntegration.refresh_token;
+      expiresAt = userIntegration.expires_at;
+      console.log("Using user-level Zoom OAuth tokens");
+    }
   }
 
-  // Get access token using Server-to-Server OAuth
-  const tokenResponse = await fetch("https://zoom.us/oauth/token", {
-    method: "POST",
-    headers: {
-      "Authorization": `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: `grant_type=account_credentials&account_id=${accountId}`,
-  });
-
-  if (!tokenResponse.ok) {
-    const errorText = await tokenResponse.text();
-    console.error("Zoom token error:", errorText);
-    throw new Error("Failed to authenticate with Zoom");
+  // Check if token needs refresh
+  if (accessToken && expiresAt && refreshToken) {
+    const now = Math.floor(Date.now() / 1000);
+    if (expiresAt < now + 300) { // 5 minute buffer
+      console.log("Zoom token expired or expiring soon, refreshing...");
+      const newTokens = await refreshZoomToken(refreshToken);
+      if (newTokens) {
+        accessToken = newTokens.access_token;
+        const newExpiresAt = Math.floor(Date.now() / 1000) + newTokens.expires_in;
+        
+        // Update stored token
+        if (userId) {
+          await supabaseClient
+            .from("user_integrations")
+            .update({ 
+              access_token: accessToken,
+              refresh_token: newTokens.refresh_token || refreshToken,
+              expires_at: newExpiresAt,
+              updated_at: new Date().toISOString()
+            })
+            .eq("user_id", userId)
+            .eq("provider", "zoom");
+        }
+        console.log("Zoom token refreshed successfully");
+      }
+    }
   }
 
-  const tokenData = await tokenResponse.json();
-  const accessToken = tokenData.access_token;
+  if (!accessToken) {
+    throw new Error("Zoom não conectado. Por favor, conecte sua conta Zoom em Configurações → Integrações.");
+  }
 
-  // Calculate duration in minutes
+  // Calculate duration
   const start = new Date(startTime);
   const end = new Date(endTime);
   const durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
 
-  // Create meeting
+  // Create meeting using user's access token
   const meetingResponse = await fetch("https://api.zoom.us/v2/users/me/meetings", {
     method: "POST",
     headers: {
@@ -68,7 +131,7 @@ async function createZoomMeeting(
     },
     body: JSON.stringify({
       topic: title,
-      type: 2, // Scheduled meeting
+      type: 2,
       start_time: startTime,
       duration: durationMinutes,
       timezone: "America/Sao_Paulo",
@@ -77,7 +140,6 @@ async function createZoomMeeting(
         participant_video: true,
         join_before_host: true,
         waiting_room: false,
-        // Only add invitees if email is provided
         ...(participantEmail && { meeting_invitees: [{ email: participantEmail }] }),
       },
     }),
@@ -86,7 +148,7 @@ async function createZoomMeeting(
   if (!meetingResponse.ok) {
     const errorText = await meetingResponse.text();
     console.error("Zoom meeting creation error:", errorText);
-    throw new Error("Failed to create Zoom meeting");
+    throw new Error("Falha ao criar reunião no Zoom. Tente reconectar sua conta.");
   }
 
   const meetingData = await meetingResponse.json();
@@ -310,7 +372,14 @@ serve(async (req) => {
     let meetingResult: { meeting_url: string; meeting_id: string; meeting_password: string };
 
     if (platform === "zoom") {
-      meetingResult = await createZoomMeeting(start_time, end_time, title, participant_email);
+      meetingResult = await createZoomMeeting(
+        start_time,
+        end_time,
+        title,
+        participant_email,
+        supabase,
+        internalUserId
+      );
     } else {
       meetingResult = await createGoogleMeetMeeting(
         start_time,
