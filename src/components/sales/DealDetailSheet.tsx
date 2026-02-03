@@ -767,26 +767,26 @@ export function DealDetailSheet({
                   )}
 
                   {/* Responsible User */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 overflow-hidden">
                     <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <span className="text-xs text-muted-foreground min-w-[50px]">Resp.</span>
-                    <div className="flex items-center gap-2 flex-1">
+                    <span className="text-xs text-muted-foreground min-w-[40px]">Resp.</span>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
                       {deal.responsible_user ? (
                         <>
-                          <Avatar className="h-5 w-5">
+                          <Avatar className="h-5 w-5 flex-shrink-0">
                             <AvatarImage src={deal.responsible_user.avatar_url || undefined} />
                             <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
                               {getInitials(deal.responsible_user.name)}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-sm">{deal.responsible_user.name}</span>
+                          <span className="text-sm truncate">{deal.responsible_user.name}</span>
                         </>
                       ) : (
                         <span className="text-sm text-muted-foreground italic">Sem responsável</span>
                       )}
                     </div>
                     {!isClosed && (
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1 flex-shrink-0">
                         <Button
                           variant="ghost"
                           size="sm"
