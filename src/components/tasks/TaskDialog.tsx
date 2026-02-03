@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Loader2, Video, ExternalLink, RefreshCw } from "lucide-react";
+import { Loader2, Video, ExternalLink, RefreshCw, Copy, Check } from "lucide-react";
 import { MeetingConfigDialog } from "./MeetingConfigDialog";
 
 interface User {
@@ -109,6 +109,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   const [meetingPlatform, setMeetingPlatform] = useState<string | null>(task?.meeting_platform || null);
   const [participantEmail, setParticipantEmail] = useState<string>("");
   const [participantName, setParticipantName] = useState<string>("");
+  const [copied, setCopied] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -382,6 +383,15 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
     return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
   };
 
+  const copyMeetingUrl = async () => {
+    if (meetingUrl) {
+      await navigator.clipboard.writeText(meetingUrl);
+      setCopied(true);
+      toast.success("Link copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -589,30 +599,52 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
              t.name.toLowerCase().includes("meet"))
           ) && (
             <div className="space-y-2">
-              {meetingUrl ? (
-                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                  <Video className="h-4 w-4 text-primary" />
-                  <span className="text-sm flex-1">
-                    {meetingPlatform === "zoom" ? "🔵 Zoom" : "🟢 Google Meet"} configurado
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setMeetingDialogOpen(true)}
-                    title="Recriar reunião"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(meetingUrl, "_blank")}
-                  >
-                    <ExternalLink className="h-4 w-4 mr-1" />
-                    Abrir
-                  </Button>
+          {meetingUrl ? (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                    <Video className="h-4 w-4 text-primary" />
+                    <span className="text-sm flex-1">
+                      {meetingPlatform === "zoom" ? "🔵 Zoom" : "🟢 Google Meet"} configurado
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setMeetingDialogOpen(true)}
+                      title="Recriar reunião"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(meetingUrl, "_blank")}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      Abrir
+                    </Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={meetingUrl}
+                      readOnly
+                      className="text-xs font-mono bg-muted/50"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={copyMeetingUrl}
+                      title="Copiar link"
+                    >
+                      {copied ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <Button
