@@ -343,29 +343,57 @@ export default function RoyZapp() {
       
       let zappConvId: string | null = null;
       
-      // PRIORIZAR busca por telefone (constraint real é account_id + phone_e164)
-      const { data: convByPhone } = await supabase
+      // PRIORIZAR busca por telefone + integration_id (cada instância tem sua própria conversa)
+      let convByPhone = await supabase
         .from("zapp_conversations")
-        .select("id, lead_id, client_id")
+        .select("id, lead_id, client_id, integration_id")
         .eq("account_id", currentUser.account_id)
         .eq("phone_e164", normalizedPhone)
+        .eq("integration_id", selectedIntegrationId)
         .eq("is_group", false)
         .maybeSingle();
       
-      if (convByPhone) {
-        zappConvId = convByPhone.id;
+      // FALLBACK: Buscar conversa LEGADA (mesmo telefone, mesmo setor, sem integration_id)
+      // Isso resolve duplicação de conversas criadas antes do sistema multi-instância
+      if (!convByPhone?.data && selectedSectorId) {
+        const { data: legacyConv } = await supabase
+          .from("zapp_conversations")
+          .select("id, lead_id, client_id, integration_id")
+          .eq("account_id", currentUser.account_id)
+          .eq("phone_e164", normalizedPhone)
+          .eq("sector_id", selectedSectorId)
+          .is("integration_id", null)
+          .eq("is_group", false)
+          .order("last_message_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (legacyConv) {
+          // Migrar conversa legada para o novo formato com integration_id
+          console.log("[RoyZapp] Conversa legada encontrada e migrada:", legacyConv.id);
+          await supabase
+            .from("zapp_conversations")
+            .update({ integration_id: selectedIntegrationId })
+            .eq("id", legacyConv.id);
+          
+          convByPhone = { data: legacyConv, error: null, count: null, status: 200, statusText: "OK" };
+        }
+      }
+      
+      if (convByPhone?.data) {
+        zappConvId = convByPhone.data.id;
         
         // Atualizar lead_id/client_id se não estiver vinculado
-        if (isLead && !convByPhone.lead_id && contact.id) {
+        if (isLead && !convByPhone.data.lead_id && contact.id) {
           await supabase
             .from("zapp_conversations")
             .update({ lead_id: contact.id, contact_name: contact.full_name })
-            .eq("id", convByPhone.id);
-        } else if (!isLead && !convByPhone.client_id && contact.id) {
+            .eq("id", convByPhone.data.id);
+        } else if (!isLead && !convByPhone.data.client_id && contact.id) {
           await supabase
             .from("zapp_conversations")
             .update({ client_id: contact.id, contact_name: contact.full_name })
-            .eq("id", convByPhone.id);
+            .eq("id", convByPhone.data.id);
         }
       } else {
         // Fallback: buscar por lead_id/client_id (caso telefone seja diferente)
@@ -374,6 +402,7 @@ export default function RoyZapp() {
           .select("id")
           .eq("account_id", currentUser.account_id)
           .eq(idField, contact.id)
+          .eq("integration_id", selectedIntegrationId)
           .maybeSingle();
         
         if (convById) {
@@ -3212,29 +3241,56 @@ export default function RoyZapp() {
       let zappConvId: string | null = null;
       
       // PRIORIZAR busca por telefone + integration_id (cada instância tem sua própria conversa)
-      const { data: convByPhone } = await supabase
+      let convByPhone = await supabase
         .from("zapp_conversations")
-        .select("id, lead_id, client_id")
+        .select("id, lead_id, client_id, integration_id")
         .eq("account_id", currentUser.account_id)
         .eq("phone_e164", normalizedPhone)
         .eq("integration_id", selectedIntegrationId)
         .eq("is_group", false)
         .maybeSingle();
       
-      if (convByPhone) {
-        zappConvId = convByPhone.id;
+      // FALLBACK: Buscar conversa LEGADA (mesmo telefone, mesmo setor, sem integration_id)
+      // Isso resolve duplicação de conversas criadas antes do sistema multi-instância
+      if (!convByPhone?.data && selectedSectorId) {
+        const { data: legacyConv } = await supabase
+          .from("zapp_conversations")
+          .select("id, lead_id, client_id, integration_id")
+          .eq("account_id", currentUser.account_id)
+          .eq("phone_e164", normalizedPhone)
+          .eq("sector_id", selectedSectorId)
+          .is("integration_id", null)
+          .eq("is_group", false)
+          .order("last_message_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (legacyConv) {
+          // Migrar conversa legada para o novo formato com integration_id
+          console.log("[RoyZapp] Conversa legada encontrada e migrada:", legacyConv.id);
+          await supabase
+            .from("zapp_conversations")
+            .update({ integration_id: selectedIntegrationId })
+            .eq("id", legacyConv.id);
+          
+          convByPhone = { data: legacyConv, error: null, count: null, status: 200, statusText: "OK" };
+        }
+      }
+      
+      if (convByPhone?.data) {
+        zappConvId = convByPhone.data.id;
         
         // Atualizar lead_id/client_id se não estiver vinculado (baseado no tipo do contato)
-        if (isLeadContact && !convByPhone.lead_id && contact.id) {
+        if (isLeadContact && !convByPhone.data.lead_id && contact.id) {
           await supabase
             .from("zapp_conversations")
             .update({ lead_id: contact.id, contact_name: contact.full_name })
-            .eq("id", convByPhone.id);
-        } else if (isClientContact && !convByPhone.client_id && contact.id) {
+            .eq("id", convByPhone.data.id);
+        } else if (isClientContact && !convByPhone.data.client_id && contact.id) {
           await supabase
             .from("zapp_conversations")
             .update({ client_id: contact.id, contact_name: contact.full_name })
-            .eq("id", convByPhone.id);
+            .eq("id", convByPhone.data.id);
         }
       } else {
         // Fallback: buscar por lead_id/client_id (caso telefone seja diferente)

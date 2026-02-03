@@ -848,6 +848,37 @@ serve(async (req) => {
           existingZappConvo = data;
           
           // ============================================
+          // LEGACY CONVERSATION FALLBACK
+          // ============================================
+          // Search for legacy conversations (created before multi-instance) that have no integration_id
+          // This prevents duplicate conversations when sending to contacts with existing history
+          
+          if (!existingZappConvo && phone && sectorId && integrationId) {
+            const { data: legacyData } = await supabase
+              .from("zapp_conversations")
+              .select("id, unread_count, integration_id, contact_name, client_id, lead_id, phone_e164, sector_id")
+              .eq("account_id", accountId)
+              .eq("phone_e164", phone)
+              .eq("sector_id", sectorId)
+              .is("integration_id", null)
+              .eq("is_group", false)
+              .order("last_message_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            
+            if (legacyData) {
+              existingZappConvo = legacyData;
+              console.log(`[LEGACY] Found legacy conversation ${legacyData.id}, updating integration_id to ${integrationId}`);
+              
+              // Migrate legacy conversation to new format with integration_id
+              await supabase
+                .from("zapp_conversations")
+                .update({ integration_id: integrationId })
+                .eq("id", legacyData.id);
+            }
+          }
+          
+          // ============================================
           // PHONE NORMALIZATION FALLBACK (SAME INSTANCE ONLY)
           // ============================================
           // Only try alternate phone format for BR numbers WITHIN THE SAME INSTANCE
