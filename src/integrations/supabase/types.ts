@@ -10136,6 +10136,7 @@ export type Database = {
           sender_name: string | null
           sender_phone: string | null
           sent_at: string
+          synced_from_history: boolean | null
           transcription: string | null
           updated_at: string | null
           zapp_conversation_id: string
@@ -10166,6 +10167,7 @@ export type Database = {
           sender_name?: string | null
           sender_phone?: string | null
           sent_at?: string
+          synced_from_history?: boolean | null
           transcription?: string | null
           updated_at?: string | null
           zapp_conversation_id: string
@@ -10196,6 +10198,7 @@ export type Database = {
           sender_name?: string | null
           sender_phone?: string | null
           sent_at?: string
+          synced_from_history?: boolean | null
           transcription?: string | null
           updated_at?: string | null
           zapp_conversation_id?: string
