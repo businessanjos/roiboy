@@ -1,52 +1,93 @@
-# ✅ CONCLUÍDO: Correção do Bug de Realtime no ROY zAPP
 
-## Resumo das Correções Implementadas
+# Plano: Exibir Nome do Usuário nos Anexos da Timeline
 
-### 1. Bug Principal Corrigido (linhas 801-850)
-O código agora **adiciona corretamente** as novas mensagens ao estado:
+## Situação Atual
+
+Na timeline do perfil do cliente (setor Operações), quando um documento ou imagem é anexado, a interface exibe apenas:
+- Nome do arquivo
+- Tipo do documento
+- Tamanho do arquivo
+- Data do upload
+
+**Porém**, o nome do usuário que fez o upload **já está disponível** nos dados (`event.metadata.user_name`), mas não está sendo renderizado na interface.
+
+| Componente | Exibe Usuário? | Local |
+|------------|----------------|-------|
+| `CommentItem` (notas de texto) | ✅ Sim | Linha 316 |
+| `SystemEventItem` (anexos/documentos) | ❌ Não | Linhas 536-551 |
+
+## Modificações Necessárias
+
+### Arquivo: `src/components/client/Timeline.tsx`
+
+A função `SystemEventItem` (linha 485) precisa ser modificada para exibir o nome do usuário que anexou o documento, de forma similar ao `CommentItem`.
+
+#### Localização Exata
+O bloco de informações do item está entre as linhas **534-551**. A modificação será feita para incluir o nome do usuário logo abaixo do label de categoria:
 
 ```typescript
-// CÓDIGO CORRIGIDO
-setMessages(prev => {
-  const exists = prev.some(m => 
-    m.id === newMsg.id || 
-    (m.external_message_id && newMsg.external_message_id && m.external_message_id === newMsg.external_message_id)
-  );
-  if (exists) {
-    return prev; // Ignora duplicata
-  }
-  
-  // ADD the new message to the end of the list
-  console.log("[ZappData] Realtime: Adding new message to state:", newMsg.id);
-  return [...prev, newFormattedMsg];
-});
+// ANTES (linhas 537-551)
+<div className="flex items-center gap-1.5 mt-0.5">
+  <span className={cn("text-xs font-medium", config.textColor)}>
+    {config.label}
+  </span>
+  {event.metadata?.source && (
+    <>
+      <span className="text-muted-foreground">·</span>
+      <span className="text-xs text-muted-foreground">
+        {event.metadata.source === "whatsapp_text" ? "WhatsApp" : ...}
+      </span>
+    </>
+  )}
+</div>
+
+// DEPOIS - Adicionar nome do usuário para tipos followup, financial e sales
+<div className="flex items-center gap-1.5 mt-0.5">
+  <span className={cn("text-xs font-medium", config.textColor)}>
+    {config.label}
+  </span>
+  {/* NOVO: Exibir nome do usuário que anexou */}
+  {(event.type === "followup" || event.type === "financial" || event.type === "sales") && 
+    event.metadata?.user_name && (
+    <>
+      <span className="text-muted-foreground">·</span>
+      <span className="text-xs text-muted-foreground">
+        por {event.metadata.user_name}
+      </span>
+    </>
+  )}
+  {event.metadata?.source && (
+    // ... resto do código existente
+  )}
+</div>
 ```
 
-### 2. Ref para Rastrear Conversa Atual
-Adicionado `currentConversationIdRef` para validar que mensagens pertencem à conversa aberta:
-- Atualizado em `fetchMessages()` quando uma conversa é aberta
-- Verificado no handler de realtime para evitar mensagens de outras conversas
-- Limpo via `clearCurrentConversation()` quando a conversa é fechada
+## Resultado Visual
 
-### 3. Polling Fallback de 30 segundos
-Adicionado mecanismo de backup que:
-- Verifica a cada 30s se há atraso na sincronização
-- Só dispara fetch se a última mensagem local for mais antiga que 30s
-- Garante sincronização mesmo se realtime websocket falhar
+### Antes:
+```
+📎 planilha faturamento (1).xlsx
+   Acompanhamento
+   └── Planilha Excel · 78.2 KB                      ⬇️  cerca de 16 horas
+```
 
-### 4. Deduplicação Melhorada
-Agora verifica tanto `id` quanto `external_message_id` para evitar duplicatas
+### Depois:
+```
+📎 planilha faturamento (1).xlsx
+   Acompanhamento · por Maria
+   └── Planilha Excel · 78.2 KB                      ⬇️  cerca de 16 horas
+```
 
-## Arquivos Modificados
-- `src/hooks/useZappData.tsx`
-  - Linha 132-133: Adicionado `currentConversationIdRef`
-  - Linha 602-605: Atualiza ref quando conversa é aberta
-  - Linha 678-680: Adicionado `clearCurrentConversation()` helper
-  - Linhas 805-850: Corrigido handler de INSERT para adicionar mensagens
-  - Linhas 927-954: Adicionado polling fallback
+## Resumo das Alterações
 
-## Resultado
-- ✅ Novas mensagens aparecem automaticamente sem recarregar
-- ✅ Mensagens isoladas por conversa (não vazam entre conversas)
-- ✅ Duplicatas filtradas (id + external_message_id)
-- ✅ Fallback de polling garante sincronização
+| Local | Mudança |
+|-------|---------|
+| Linhas 537-551 | Adicionar exibição do `user_name` para eventos de tipo `followup`, `financial` e `sales` |
+
+## Resultado Esperado
+
+1. ✅ Documentos anexados mostrarão "Acompanhamento · por [Nome do Usuário]"
+2. ✅ Notas financeiras mostrarão "Nota Financeira · por [Nome do Usuário]"
+3. ✅ Notas de vendas mostrarão "Nota de Vendas · por [Nome do Usuário]"
+4. ✅ Eventos do sistema (ROI, riscos, etc.) continuam sem alteração
+5. ✅ Mantida a compatibilidade com eventos que não têm usuário associado
