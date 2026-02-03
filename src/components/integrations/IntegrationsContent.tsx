@@ -157,6 +157,17 @@ export function IntegrationsContent() {
     return integration.expires_at < now;
   };
 
+  // Verificar se token pode ter problemas (além de apenas expirado)
+  const hasTokenIssues = (integration: UserIntegration): { type: 'expired' | 'incomplete'; message: string } | null => {
+    // Token expirado
+    if (isTokenExpired(integration)) return { type: 'expired', message: 'Sessão expirada' };
+    
+    // Sem email (indica problema no escopo user:read:user)
+    if (!integration.user_email) return { type: 'incomplete', message: 'Conexão incompleta' };
+    
+    return null;
+  };
+
   const handleOAuthConnect = async (provider: "google" | "zoom") => {
     setConnectingProvider(provider);
     try {
@@ -437,33 +448,40 @@ export function IntegrationsContent() {
             <CardContent className="space-y-6">
               {zoomUserIntegration ? (
                 <div className="space-y-4">
-                  {/* Alert for expired token */}
-                  {isTokenExpired(zoomUserIntegration) && (
-                    <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                      <XCircle className="h-5 w-5 text-destructive" />
-                      <div className="flex-1">
-                        <p className="font-medium text-destructive">Sessão expirada</p>
-                        <p className="text-sm text-muted-foreground">
-                          Reconecte sua conta Zoom para continuar criando reuniões.
-                        </p>
+                  {/* Alert for token issues (expired or incomplete) */}
+                  {(() => {
+                    const issue = hasTokenIssues(zoomUserIntegration);
+                    if (!issue) return null;
+                    
+                    return (
+                      <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                        <XCircle className="h-5 w-5 text-destructive" />
+                        <div className="flex-1">
+                          <p className="font-medium text-destructive">{issue.message}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {issue.type === 'expired' 
+                              ? 'Reconecte sua conta Zoom para continuar criando reuniões.'
+                              : 'Sua conexão Zoom precisa ser reautorizada com as permissões corretas.'}
+                          </p>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleOAuthConnect("zoom")}
+                          disabled={connectingProvider === "zoom"}
+                        >
+                          {connectingProvider === "zoom" ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Reconectar
+                            </>
+                          )}
+                        </Button>
                       </div>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => handleOAuthConnect("zoom")}
-                        disabled={connectingProvider === "zoom"}
-                      >
-                        {connectingProvider === "zoom" ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Reconectar
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
+                    );
+                  })()}
                   <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                     <CheckCircle2 className="h-5 w-5 text-green-500" />
                     <div className="flex-1">
