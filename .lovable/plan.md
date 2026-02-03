@@ -1,93 +1,125 @@
 
-# Plano: Exibir Nome do Usuário nos Anexos da Timeline
+# Plano: Corrigir Problema de Mensagens do ROY zAPP para Jonathan Marcato
 
-## Situação Atual
+## Diagnóstico Confirmado
 
-Na timeline do perfil do cliente (setor Operações), quando um documento ou imagem é anexado, a interface exibe apenas:
-- Nome do arquivo
-- Tipo do documento
-- Tamanho do arquivo
-- Data do upload
+A investigação completa revelou que a instância **"Whatsapp Jota"** do vendedor Jonathan Marcato (554399540408) está conectada corretamente ao WhatsApp, porém o **webhook não está configurado na API do UAZAPI**.
 
-**Porém**, o nome do usuário que fez o upload **já está disponível** nos dados (`event.metadata.user_name`), mas não está sendo renderizado na interface.
+### Evidências
 
-| Componente | Exibe Usuário? | Local |
-|------------|----------------|-------|
-| `CommentItem` (notas de texto) | ✅ Sim | Linha 316 |
-| `SystemEventItem` (anexos/documentos) | ❌ Não | Linhas 536-551 |
+| Verificação | Resultado |
+|-------------|-----------|
+| Status da instância no UAZAPI | ✅ `state: "open"` (conectado) |
+| Webhook no UAZAPI | ❌ `webhook_configured: false` |
+| Webhook no banco de dados | ⚠️ `webhook_configured: true` (desatualizado) |
+| Última mensagem recebida | 31/01/2026 (3+ dias atrás) |
+| Outras instâncias funcionando | ✅ Eternum Club e Diretoria operacionais |
+
+### Causa Raiz
+
+A função `configureWebhook` no `uazapi-manager` está falhando com erros "Method Not Allowed" (HTTP 405) em todos os endpoints tentados:
+- `/webhook/set`
+- `/webhook`
+- `/instance/webhook`
+- `/settings/webhook`
+
+Isso indica que a API UAZAPI mudou seus endpoints ou requer formato diferente.
 
 ## Modificações Necessárias
 
-### Arquivo: `src/components/client/Timeline.tsx`
+### Arquivo: `supabase/functions/uazapi-manager/index.ts`
 
-A função `SystemEventItem` (linha 485) precisa ser modificada para exibir o nome do usuário que anexou o documento, de forma similar ao `CommentItem`.
+#### Correção 1: Adicionar novos endpoints de webhook compatíveis com UAZAPI GO v2
 
-#### Localização Exata
-O bloco de informações do item está entre as linhas **534-551**. A modificação será feita para incluir o nome do usuário logo abaixo do label de categoria:
+Atualizar a função `configureWebhook` (linhas 137-196) para incluir endpoints adicionais:
 
 ```typescript
-// ANTES (linhas 537-551)
-<div className="flex items-center gap-1.5 mt-0.5">
-  <span className={cn("text-xs font-medium", config.textColor)}>
-    {config.label}
-  </span>
-  {event.metadata?.source && (
-    <>
-      <span className="text-muted-foreground">·</span>
-      <span className="text-xs text-muted-foreground">
-        {event.metadata.source === "whatsapp_text" ? "WhatsApp" : ...}
-      </span>
-    </>
-  )}
-</div>
-
-// DEPOIS - Adicionar nome do usuário para tipos followup, financial e sales
-<div className="flex items-center gap-1.5 mt-0.5">
-  <span className={cn("text-xs font-medium", config.textColor)}>
-    {config.label}
-  </span>
-  {/* NOVO: Exibir nome do usuário que anexou */}
-  {(event.type === "followup" || event.type === "financial" || event.type === "sales") && 
-    event.metadata?.user_name && (
-    <>
-      <span className="text-muted-foreground">·</span>
-      <span className="text-xs text-muted-foreground">
-        por {event.metadata.user_name}
-      </span>
-    </>
-  )}
-  {event.metadata?.source && (
-    // ... resto do código existente
-  )}
-</div>
+// Adicionar endpoint que pode funcionar para UAZAPI GO v2
+const webhookEndpoints = [
+  // Novos endpoints (UAZAPI GO v2 documentação)
+  { url: `/instance/setWebhook`, method: "POST", body: webhookBody },
+  { url: `/webhook/set`, method: "POST", body: webhookBody },
+  { url: `/webhook`, method: "POST", body: webhookBody },
+  { url: `/instance/webhook`, method: "POST", body: webhookBody },
+  { url: `/settings/webhook`, method: "POST", body: webhookBody },
+  // PUT methods as fallback
+  { url: `/instance/setWebhook`, method: "PUT", body: webhookBody },
+  { url: `/webhook/set`, method: "PUT", body: webhookBody },
+  { url: `/webhook`, method: "PUT", body: webhookBody },
+];
 ```
 
-## Resultado Visual
+#### Correção 2: Atualizar formato do corpo do webhook
 
-### Antes:
-```
-📎 planilha faturamento (1).xlsx
-   Acompanhamento
-   └── Planilha Excel · 78.2 KB                      ⬇️  cerca de 16 horas
+O formato atual pode estar incorreto para a versão do UAZAPI em uso:
+
+```typescript
+// Formato alternativo para UAZAPI GO v2
+const webhookBodyAlt = {
+  webhook_url: webhookUrl,
+  webhook_enabled: true,
+  webhook_events: ["messages", "connection", "qrcode", "chats", "groups"]
+};
+
+// Adicionar tentativas com formato alternativo
+const webhookEndpointsAlt = [
+  { url: `/settings`, method: "POST", body: { webhook: webhookBodyAlt } },
+  { url: `/instance/settings`, method: "POST", body: { webhook: webhookBodyAlt } },
+];
 ```
 
-### Depois:
-```
-📎 planilha faturamento (1).xlsx
-   Acompanhamento · por Maria
-   └── Planilha Excel · 78.2 KB                      ⬇️  cerca de 16 horas
+#### Correção 3: Sincronizar estado do banco com a realidade
+
+Atualizar o campo `webhook_configured` no banco apenas quando o webhook for realmente configurado com sucesso no UAZAPI:
+
+```typescript
+// Em status, marcar webhook_configured como false se a config falhar
+webhook_configured: webhookConfigured, // Não usar fallback do banco se não configurou
 ```
 
-## Resumo das Alterações
+### Arquivo: `src/components/admin/WhatsAppIntegrationPanel.tsx` (ou similar)
 
-| Local | Mudança |
-|-------|---------|
-| Linhas 537-551 | Adicionar exibição do `user_name` para eventos de tipo `followup`, `financial` e `sales` |
+#### Correção 4: Adicionar botão manual de reconfiguração com feedback visual
+
+Adicionar um botão que permita ao admin reconfigurar o webhook manualmente com feedback claro se falhar:
+
+```typescript
+// Adicionar alerta visual quando webhook_configured: false
+{integration.webhook_configured === false && (
+  <Alert variant="destructive">
+    <AlertTriangle className="h-4 w-4" />
+    <AlertDescription>
+      Webhook não configurado. Clique em "Reconectar" para corrigir.
+    </AlertDescription>
+  </Alert>
+)}
+```
+
+## Ação Imediata Recomendada
+
+Como a configuração automática está falhando, recomendo:
+
+1. **Acessar o painel do UAZAPI** (`cxroycom.uazapi.com`)
+2. **Localizar a instância "Whatsapp Jota"**
+3. **Configurar manualmente o webhook** com a URL:
+   ```
+   https://mtzoavtbtqflufyccern.supabase.co/functions/v1/uazapi-webhook
+   ```
+4. **Ativar os eventos**: `messages`, `connection`, `qrcode`, `chats`, `groups`
+
+## Resumo das Alterações de Código
+
+| Arquivo | Mudança |
+|---------|---------|
+| `uazapi-manager/index.ts` | Adicionar endpoints `/instance/setWebhook` |
+| `uazapi-manager/index.ts` | Adicionar formato alternativo de webhook body |
+| `uazapi-manager/index.ts` | Sincronizar campo `webhook_configured` com estado real |
+| Painel Admin | Adicionar alerta visual para webhooks não configurados |
 
 ## Resultado Esperado
 
-1. ✅ Documentos anexados mostrarão "Acompanhamento · por [Nome do Usuário]"
-2. ✅ Notas financeiras mostrarão "Nota Financeira · por [Nome do Usuário]"
-3. ✅ Notas de vendas mostrarão "Nota de Vendas · por [Nome do Usuário]"
-4. ✅ Eventos do sistema (ROI, riscos, etc.) continuam sem alteração
-5. ✅ Mantida a compatibilidade com eventos que não têm usuário associado
+1. ✅ Sistema detecta automaticamente quando webhook não está configurado
+2. ✅ Múltiplos formatos de configuração são tentados
+3. ✅ Admin recebe feedback visual quando há problema
+4. ✅ Opção de configuração manual no painel UAZAPI como fallback
+5. ✅ Mensagens do Jonathan voltam a aparecer no ROY zAPP
