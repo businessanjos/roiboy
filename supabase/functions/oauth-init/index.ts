@@ -94,10 +94,10 @@ serve(async (req) => {
 
       const redirectUri = `${supabaseUrl}/functions/v1/oauth-callback`;
 
-      // Escopos necessários para criar reuniões e obter refresh_token válido
+      // Escopos de usuário (não admin) para criar reuniões
       const scopes = [
-        "meeting:write:admin",  // Criar reuniões
-        "user:read:admin",      // Obter email do usuário
+        "meeting:write:meeting",  // Criar reuniões (escopo de usuário)
+        "user:read:user",         // Obter email do usuário (escopo de usuário)
       ].join(" ");
 
       const authUrl = new URL("https://zoom.us/oauth/authorize");
