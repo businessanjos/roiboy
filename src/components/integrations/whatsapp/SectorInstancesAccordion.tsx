@@ -119,6 +119,7 @@ export function SectorInstancesAccordion({
                       isAdmin={isAdmin}
                       onEdit={setEditingInstance}
                       onRemove={handleRemoveInstance}
+                      onRefresh={onRefresh}
                     />
                   ))}
 
