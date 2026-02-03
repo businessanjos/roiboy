@@ -1301,8 +1301,11 @@ export default function RoyZapp() {
       toast.success(`Status alterado para: ${STATUS_CONFIG[newStatus].label}`);
       fetchData();
       
-      // Update selected conversation locally
-      if (selectedConversation?.id === assignmentId) {
+      // When closing, clear selection so conversation disappears from view
+      if (newStatus === "closed" && selectedConversation?.id === assignmentId) {
+        setSelectedConversation(null);
+      } else if (selectedConversation?.id === assignmentId) {
+        // For other status changes, just update locally
         setSelectedConversation(prev => prev ? {
           ...prev,
           status: newStatus
