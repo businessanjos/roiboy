@@ -370,10 +370,10 @@ serve(async (req) => {
       send_email,
     } = body;
 
-    // Get task to find account_id
+    // Get task to find account_id and assigned_to (responsável)
     const { data: task, error: taskError } = await supabase
       .from("internal_tasks")
-      .select("account_id, created_by")
+      .select("account_id, assigned_to, created_by")
       .eq("id", task_id)
       .single();
 
@@ -381,10 +381,10 @@ serve(async (req) => {
       throw new Error("Task not found");
     }
 
-    // Use the internal user_id directly (task.created_by is already the internal ID from public.users)
-    // This matches the user_id stored in user_integrations table
-    const internalUserId = task.created_by || undefined;
-    console.log(`Creating meeting for internal user_id: ${internalUserId}`);
+    // Use the assigned_to (Responsável) user's credentials for meeting creation
+    // Falls back to created_by if no responsible is assigned
+    const internalUserId = task.assigned_to || task.created_by || undefined;
+    console.log(`Creating meeting for responsible user_id: ${internalUserId} (assigned_to: ${task.assigned_to}, created_by: ${task.created_by})`);
 
     // Create meeting based on platform
     let meetingResult: { meeting_url: string; meeting_id: string; meeting_password: string };
