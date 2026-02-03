@@ -151,6 +151,12 @@ export function IntegrationsContent() {
     return userIntegrations.find(i => i.provider === provider);
   };
 
+  const isTokenExpired = (integration: UserIntegration) => {
+    if (!integration.expires_at) return false;
+    const now = Math.floor(Date.now() / 1000);
+    return integration.expires_at < now;
+  };
+
   const handleOAuthConnect = async (provider: "google" | "zoom") => {
     setConnectingProvider(provider);
     try {
@@ -431,6 +437,33 @@ export function IntegrationsContent() {
             <CardContent className="space-y-6">
               {zoomUserIntegration ? (
                 <div className="space-y-4">
+                  {/* Alert for expired token */}
+                  {isTokenExpired(zoomUserIntegration) && (
+                    <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <XCircle className="h-5 w-5 text-destructive" />
+                      <div className="flex-1">
+                        <p className="font-medium text-destructive">Sessão expirada</p>
+                        <p className="text-sm text-muted-foreground">
+                          Reconecte sua conta Zoom para continuar criando reuniões.
+                        </p>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleOAuthConnect("zoom")}
+                        disabled={connectingProvider === "zoom"}
+                      >
+                        {connectingProvider === "zoom" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                            Reconectar
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
                   <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                     <CheckCircle2 className="h-5 w-5 text-green-500" />
                     <div className="flex-1">

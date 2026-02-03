@@ -23,37 +23,38 @@ interface CreateMeetingRequest {
 
 async function refreshZoomToken(
   refreshToken: string
-): Promise<{ access_token: string; refresh_token?: string; expires_in: number } | null> {
+): Promise<{ access_token: string; refresh_token?: string; expires_in: number }> {
   const clientId = Deno.env.get("ZOOM_CLIENT_ID");
   const clientSecret = Deno.env.get("ZOOM_CLIENT_SECRET");
   
   if (!clientId || !clientSecret || !refreshToken) {
-    return null;
+    throw new Error("ZOOM_RECONNECT_REQUIRED");
   }
 
-  try {
-    const response = await fetch("https://zoom.us/oauth/token", {
-      method: "POST",
-      headers: {
-        "Authorization": `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-      }),
-    });
+  const response = await fetch("https://zoom.us/oauth/token", {
+    method: "POST",
+    headers: {
+      "Authorization": `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: refreshToken,
+    }),
+  });
 
-    if (!response.ok) {
-      console.error("Failed to refresh Zoom token:", await response.text());
-      return null;
+  const responseData = await response.json();
+
+  if (!response.ok) {
+    console.error("Failed to refresh Zoom token:", responseData);
+    // Se for invalid_grant, o refresh_token é inválido e precisa reconectar
+    if (responseData.error === "invalid_grant") {
+      throw new Error("ZOOM_RECONNECT_REQUIRED");
     }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error refreshing Zoom token:", error);
-    return null;
+    throw new Error(`Zoom token refresh failed: ${responseData.error || "Unknown error"}`);
   }
+
+  return responseData;
 }
 
 async function createZoomMeeting(
@@ -90,8 +91,8 @@ async function createZoomMeeting(
     const now = Math.floor(Date.now() / 1000);
     if (expiresAt < now + 300) { // 5 minute buffer
       console.log("Zoom token expired or expiring soon, refreshing...");
-      const newTokens = await refreshZoomToken(refreshToken);
-      if (newTokens) {
+      try {
+        const newTokens = await refreshZoomToken(refreshToken);
         accessToken = newTokens.access_token;
         const newExpiresAt = Math.floor(Date.now() / 1000) + newTokens.expires_in;
         
@@ -109,6 +110,11 @@ async function createZoomMeeting(
             .eq("provider", "zoom");
         }
         console.log("Zoom token refreshed successfully");
+      } catch (refreshError: any) {
+        if (refreshError.message === "ZOOM_RECONNECT_REQUIRED") {
+          throw new Error("Sua sessão do Zoom expirou. Por favor, reconecte sua conta em Configurações → Integrações.");
+        }
+        throw refreshError;
       }
     }
   }

@@ -94,13 +94,20 @@ serve(async (req) => {
 
       const redirectUri = `${supabaseUrl}/functions/v1/oauth-callback`;
 
+      // Escopos necessários para criar reuniões e obter refresh_token válido
+      const scopes = [
+        "meeting:write:admin",  // Criar reuniões
+        "user:read:admin",      // Obter email do usuário
+      ].join(" ");
+
       const authUrl = new URL("https://zoom.us/oauth/authorize");
       authUrl.searchParams.set("response_type", "code");
       authUrl.searchParams.set("client_id", clientId);
       authUrl.searchParams.set("redirect_uri", redirectUri);
+      authUrl.searchParams.set("scope", scopes);
       authUrl.searchParams.set("state", state);
 
-      console.log("Generated Zoom OAuth URL");
+      console.log("Generated Zoom OAuth URL with scopes:", scopes);
 
       return new Response(
         JSON.stringify({ 
