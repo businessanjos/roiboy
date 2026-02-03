@@ -934,6 +934,49 @@ serve(async (req) => {
           // Cross-integration search and unification was causing conversations to "leak" between sectors
         }
 
+        // ============================================
+        // AUTO-UNIFY DUPLICATE CONVERSATIONS
+        // ============================================
+        // If we found a conversation with integration_id, check if there's also a legacy one
+        // If so, merge them to eliminate duplicate entries in the UI
+        
+        if (existingZappConvo && phone && sectorId && integrationId && !isGroupMessage) {
+          const { data: legacyDuplicate } = await supabase
+            .from("zapp_conversations")
+            .select("id")
+            .eq("account_id", accountId)
+            .eq("phone_e164", phone)
+            .eq("sector_id", sectorId)
+            .is("integration_id", null)
+            .eq("is_group", false)
+            .neq("id", existingZappConvo.id)
+            .maybeSingle();
+          
+          if (legacyDuplicate) {
+            console.log(`[AUTO-UNIFY] Merging legacy ${legacyDuplicate.id} into ${existingZappConvo.id}`);
+            
+            // 1. Move all messages from legacy to current
+            await supabase
+              .from("zapp_messages")
+              .update({ zapp_conversation_id: existingZappConvo.id })
+              .eq("zapp_conversation_id", legacyDuplicate.id);
+            
+            // 2. Delete assignments from legacy conversation
+            await supabase
+              .from("zapp_conversation_assignments")
+              .delete()
+              .eq("zapp_conversation_id", legacyDuplicate.id);
+            
+            // 3. Delete legacy conversation
+            await supabase
+              .from("zapp_conversations")
+              .delete()
+              .eq("id", legacyDuplicate.id);
+            
+            console.log(`[AUTO-UNIFY] Completed: legacy conversation ${legacyDuplicate.id} deleted, messages moved to ${existingZappConvo.id}`);
+          }
+        }
+
         if (existingZappConvo) {
           zappConversationId = existingZappConvo.id;
           
