@@ -1,95 +1,146 @@
 
-# Plano: Limpar Conversa Selecionada ao Finalizar via Dropdown
 
-## Problema Identificado
+# Plano: Sincronização de Histórico de Mensagens do WhatsApp
 
-Quando o usuário muda o status de uma conversa para **"Finalizado"** através do dropdown no header, a conversa:
+## Situação Diagnosticada
 
-| O que acontece | Esperado | Atual |
-|----------------|----------|-------|
-| Status atualizado no banco | ✅ Sim | ✅ Sim |
-| Conversa removida da lista lateral | ✅ Sim | ✅ Sim |
-| **Conversa fechada no painel principal** | ✅ Sim | ❌ **NÃO** |
+A instância **"Whatsapp Jota"** do vendedor Jonathan Marcato apresenta:
 
-A conversa permanece aberta porque `setSelectedConversation(null)` **nunca é chamado** quando o status muda para `closed` via dropdown.
+| Verificação | Resultado |
+|-------------|-----------|
+| Conexão WhatsApp | ✅ Conectado (`state: "open"`) |
+| Webhook configurado | ❌ **Não** (`webhook_configured: false`) |
+| Última mensagem recebida | 31/01/2026 15:56 (sexta-feira) |
+| Período sem mensagens | 31/01 ~ 03/02 (4 dias) |
 
-## Comparação com o Dialog de Finalização
+**Causa**: O webhook nunca foi configurado corretamente no UAZAPI, então as mensagens desse período não foram capturadas.
 
-O botão "Finalizar" (verde com CheckCircle) usa o `ZappCloseTicketDialog`, que **corretamente** limpa a seleção no callback:
+---
 
-```typescript
-// ZappCloseTicketDialog onSuccess (linha 4360-4364)
-onSuccess={() => {
-  setCloseTicketDialogOpen(false);
-  setSelectedConversation(null); // ✅ Limpa corretamente
-  fetchData();
-}}
+## Solução Proposta
+
+Implementar uma nova funcionalidade de **Sincronização de Histórico de Mensagens** que permita:
+
+1. Buscar mensagens históricas diretamente da API do UAZAPI
+2. Inserir no banco de dados as mensagens que faltam
+3. Disponibilizar um botão "Sincronizar Histórico" no painel administrativo
+
+---
+
+## Modificações Técnicas
+
+### 1. Nova Action no Edge Function `uazapi-manager`
+
+Adicionar a action `sync-chat-history` que:
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    sync-chat-history                        │
+├─────────────────────────────────────────────────────────────┤
+│ 1. Recebe: integration_id, phone ou chat_id, days (padrão 7)│
+│ 2. Busca mensagens via UAZAPI endpoints:                    │
+│    - /chat/messages/{chatId}                                │
+│    - /chat/{phone}/messages                                 │
+│    - /fetchMessages/{chatId}                                │
+│ 3. Para cada mensagem:                                      │
+│    - Verifica se já existe (external_message_id)            │
+│    - Se não existe, insere em zapp_messages                 │
+│ 4. Retorna: synced_count, already_existed, errors           │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Porém, o dropdown de status **não faz isso**:
+### 2. Endpoint de Busca no UAZAPI
+
+Testar os seguintes endpoints disponíveis na API UAZAPI:
 
 ```typescript
-// updateConversationStatus (linhas 1305-1309)
-if (selectedConversation?.id === assignmentId) {
-  setSelectedConversation(prev => prev ? {
-    ...prev,
-    status: newStatus  // ❌ Apenas atualiza status, não limpa
-  } : null);
-}
+const historyEndpoints = [
+  { url: `/chat/fetchMessages/${chatId}`, method: "POST", body: { limit: 100 } },
+  { url: `/chat/messages/${chatId}`, method: "GET" },
+  { url: `/chat/${phone}/messages`, method: "GET" },
+  { url: `/messages/list`, method: "POST", body: { chatId, limit: 100 } },
+];
 ```
 
-## Modificação Necessária
+### 3. UI: Botão de Sincronização
 
-### Arquivo: `src/pages/RoyZapp.tsx`
+Adicionar no painel de Diagnóstico do WhatsApp (`WhatsAppDiagnostics.tsx`):
 
-Atualizar a função `updateConversationStatus` para **limpar a conversa selecionada** quando o novo status for `closed`:
-
-```typescript
-// ANTES (linhas 1304-1310)
-// Update selected conversation locally
-if (selectedConversation?.id === assignmentId) {
-  setSelectedConversation(prev => prev ? {
-    ...prev,
-    status: newStatus
-  } : null);
-}
-
-// DEPOIS
-// When closing, clear selection so conversation disappears from view
-if (newStatus === "closed" && selectedConversation?.id === assignmentId) {
-  setSelectedConversation(null);
-} else if (selectedConversation?.id === assignmentId) {
-  // For other status changes, just update locally
-  setSelectedConversation(prev => prev ? {
-    ...prev,
-    status: newStatus
-  } : null);
-}
+```text
+┌──────────────────────────────────────────────────────────┐
+│ Whatsapp Jota                    [🔄 Sincronizar]        │
+│ ✅ Conectado | ⚠️ Webhook não configurado                │
+│                                                          │
+│ [Sincronizar Histórico (últimos 7 dias)]                 │
+│                                                          │
+│ Útil para recuperar mensagens perdidas quando o          │
+│ webhook esteve desconfigurado.                           │
+└──────────────────────────────────────────────────────────┘
 ```
 
-## Resultado Visual
+---
 
-### Antes (bug atual):
-1. Usuário clica no status → "Finalizado"
-2. Toast mostra "Status alterado para: Finalizado"
-3. Conversa SAI da lista lateral ✅
-4. **Conversa CONTINUA aberta no chat** ❌
-
-### Depois (correção):
-1. Usuário clica no status → "Finalizado"
-2. Toast mostra "Status alterado para: Finalizado"
-3. Conversa SAI da lista lateral ✅
-4. **Painel de chat volta ao estado vazio** ✅
-
-## Resumo das Alterações
+## Arquivos a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/pages/RoyZapp.tsx` (linhas 1304-1310) | Limpar `selectedConversation` quando status = `closed` |
+| `supabase/functions/uazapi-manager/index.ts` | Adicionar action `sync-chat-history` |
+| `src/pages/admin/WhatsAppDiagnostics.tsx` | Adicionar botão "Sincronizar Histórico" |
+
+---
+
+## Fluxo de Sincronização
+
+```text
+Usuário clica "Sincronizar Histórico"
+            │
+            ▼
+    Chama uazapi-manager
+    action: sync-chat-history
+    integration_id: 026d6fef...
+    days: 7
+            │
+            ▼
+    Busca conversas ativas
+    (zapp_conversations)
+            │
+            ▼
+    Para cada conversa:
+    ┌───────────────────────────────────┐
+    │ 1. Extrai chatId ou phone         │
+    │ 2. Chama UAZAPI /chat/messages    │
+    │ 3. Para cada mensagem recebida:   │
+    │    - Verifica external_message_id │
+    │    - Se não existe → INSERT       │
+    └───────────────────────────────────┘
+            │
+            ▼
+    Retorna resultado:
+    { synced: 47, skipped: 153, errors: 0 }
+```
+
+---
+
+## Ação Imediata Recomendada
+
+Enquanto a funcionalidade é implementada, **configurar manualmente o webhook** no painel UAZAPI:
+
+1. Acessar: `cxroycom.uazapi.com`
+2. Localizar instância: **Whatsapp Jota**
+3. Configurar webhook URL:
+   ```
+   https://mtzoavtbtqflufyccern.supabase.co/functions/v1/uazapi-webhook
+   ```
+4. Ativar eventos: `messages`, `connection`, `qrcode`, `chats`, `groups`, `history`
+
+Isso garantirá que **novas mensagens** comecem a ser capturadas imediatamente.
+
+---
 
 ## Resultado Esperado
 
-1. ✅ Conversa finalizada desaparece imediatamente da lista lateral
-2. ✅ Painel de chat é limpo, mostrando estado vazio (ou próxima conversa)
-3. ✅ Usuário não fica confuso com conversa "fantasma" aberta
-4. ✅ Comportamento consistente entre dropdown e dialog de finalização
+1. ✅ Botão "Sincronizar Histórico" disponível no painel administrativo
+2. ✅ Capacidade de recuperar mensagens de períodos com webhook inativo
+3. ✅ Mensagens do Jonathan dos últimos 7 dias sincronizadas
+4. ✅ Webhook reconfigurado para capturar novas mensagens
+
