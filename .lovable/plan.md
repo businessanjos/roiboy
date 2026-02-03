@@ -1,315 +1,210 @@
 
 
-# Plano: Migrar Zoom para OAuth 2.0 Authorization Code Grant
+# Plano: Melhorar Integração OAuth do Zoom
 
-## Diagnóstico
+## Problemas Identificados
 
-O erro `unsupported_grant_type` ocorre porque a função `createZoomMeeting` usa autenticação **Server-to-Server OAuth** (`grant_type=account_credentials`), mas o aplicativo Zoom é do tipo **General App (User-managed)** que requer o fluxo **Authorization Code Grant**.
+### 1. Falta de escopo `offline_access` no Zoom OAuth
+No arquivo `supabase/functions/oauth-init/index.ts`, a URL do Zoom OAuth **não inclui o escopo necessário** para obter um refresh_token válido:
 
-### Boa notícia
+```typescript
+// Código atual (linha 97-101) - SEM ESCOPOS
+const authUrl = new URL("https://zoom.us/oauth/authorize");
+authUrl.searchParams.set("response_type", "code");
+authUrl.searchParams.set("client_id", clientId);
+authUrl.searchParams.set("redirect_uri", redirectUri);
+authUrl.searchParams.set("state", state);
+// ❌ NÃO TEM: scope com meeting:write + offline_access
+```
 
-O fluxo OAuth para Zoom **JÁ ESTÁ IMPLEMENTADO** nas Edge Functions:
-- `oauth-init`: Gera URL de autorização do Zoom ✅
-- `oauth-callback`: Troca o código por tokens e salva em `user_integrations` ✅
+Comparação com Google (que funciona):
+```typescript
+// Google inclui access_type: "offline" (linha 68)
+authUrl.searchParams.set("access_type", "offline");
+authUrl.searchParams.set("prompt", "consent");
+```
 
-O problema está **APENAS** na função `create-meeting` que ignora esses tokens e tenta usar `account_credentials`.
+### 2. Token expira e refresh falha com `invalid_grant`
+- O Zoom só fornece refresh_token válido se os escopos corretos forem solicitados
+- Sem isso, o refresh_token não funciona após expirar
+
+### 3. Sem tratamento de erro claro quando reconexão é necessária
+- Quando o refresh falha, o erro `invalid_grant` não é comunicado claramente ao usuário
 
 ---
 
 ## Modificações Necessárias
 
-### Arquivo: `supabase/functions/create-meeting/index.ts`
+### Arquivo 1: `supabase/functions/oauth-init/index.ts`
 
-#### 1. Adicionar função `refreshZoomToken`
+Adicionar escopos do Zoom na URL de autorização:
 
 ```typescript
+if (provider === "zoom") {
+  const clientId = Deno.env.get("ZOOM_CLIENT_ID");
+  if (!clientId) {
+    throw new Error("ZOOM_CLIENT_ID not configured");
+  }
+
+  const state = btoa(JSON.stringify({
+    user_id: user.id,
+    redirect_path,
+    provider: "zoom"
+  }));
+
+  const redirectUri = `${supabaseUrl}/functions/v1/oauth-callback`;
+
+  // Escopos necessários para criar reuniões e renovar tokens
+  const scopes = [
+    "meeting:write:admin",  // Criar reuniões
+    "user:read:admin",      // Obter email do usuário
+  ].join(" ");
+
+  const authUrl = new URL("https://zoom.us/oauth/authorize");
+  authUrl.searchParams.set("response_type", "code");
+  authUrl.searchParams.set("client_id", clientId);
+  authUrl.searchParams.set("redirect_uri", redirectUri);
+  authUrl.searchParams.set("scope", scopes);  // ← ADICIONAR
+  authUrl.searchParams.set("state", state);
+
+  console.log("Generated Zoom OAuth URL with scopes:", scopes);
+  // ...
+}
+```
+
+### Arquivo 2: `supabase/functions/create-meeting/index.ts`
+
+Melhorar tratamento de erro quando refresh falha:
+
+```typescript
+// Na função refreshZoomToken
 async function refreshZoomToken(
   refreshToken: string
 ): Promise<{ access_token: string; refresh_token?: string; expires_in: number } | null> {
-  const clientId = Deno.env.get("ZOOM_CLIENT_ID");
-  const clientSecret = Deno.env.get("ZOOM_CLIENT_SECRET");
+  // ... código existente ...
+
+  const responseData = await response.json();
   
-  if (!clientId || !clientSecret || !refreshToken) {
-    return null;
-  }
-
-  try {
-    const response = await fetch("https://zoom.us/oauth/token", {
-      method: "POST",
-      headers: {
-        "Authorization": `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error("Failed to refresh Zoom token:", await response.text());
-      return null;
+  if (!response.ok) {
+    console.error("Failed to refresh Zoom token:", responseData);
+    // Retornar objeto de erro específico
+    if (responseData.error === "invalid_grant") {
+      throw new Error("ZOOM_RECONNECT_REQUIRED");
     }
-
-    return await response.json();
-  } catch (error) {
-    console.error("Error refreshing Zoom token:", error);
     return null;
   }
+
+  return responseData;
 }
-```
 
-#### 2. Reescrever função `createZoomMeeting`
-
-Alterar de:
-```typescript
-async function createZoomMeeting(
-  startTime: string,
-  endTime: string,
-  title: string,
-  participantEmail?: string
-)
-```
-
-Para:
-```typescript
-async function createZoomMeeting(
-  startTime: string,
-  endTime: string,
-  title: string,
-  participantEmail: string | undefined,
-  supabaseClient: any,
-  userId?: string
-)
-```
-
-**Nova lógica:**
-1. Buscar tokens do usuário em `user_integrations` (igual ao Google)
-2. Verificar se token expirou e fazer refresh se necessário
-3. Usar o `access_token` para criar a reunião
-4. Se não houver tokens, retornar erro pedindo para conectar a conta Zoom
-
-```typescript
-async function createZoomMeeting(
-  startTime: string,
-  endTime: string,
-  title: string,
-  participantEmail: string | undefined,
-  supabaseClient: any,
-  userId?: string
-): Promise<{ meeting_url: string; meeting_id: string; meeting_password: string }> {
-  let accessToken: string | null = null;
-  let refreshToken: string | null = null;
-  let expiresAt: number | null = null;
-
-  // Get user-level OAuth tokens from user_integrations
-  if (userId) {
-    const { data: userIntegration } = await supabaseClient
-      .from("user_integrations")
-      .select("access_token, refresh_token, expires_at")
-      .eq("user_id", userId)
-      .eq("provider", "zoom")
-      .maybeSingle();
-
-    if (userIntegration?.access_token) {
-      accessToken = userIntegration.access_token;
-      refreshToken = userIntegration.refresh_token;
-      expiresAt = userIntegration.expires_at;
-      console.log("Using user-level Zoom OAuth tokens");
-    }
-  }
-
-  // Check if token needs refresh
-  if (accessToken && expiresAt && refreshToken) {
-    const now = Math.floor(Date.now() / 1000);
-    if (expiresAt < now + 300) { // 5 minute buffer
-      console.log("Zoom token expired or expiring soon, refreshing...");
+// Na função createZoomMeeting, tratar erro específico
+if (accessToken && expiresAt && refreshToken) {
+  const now = Math.floor(Date.now() / 1000);
+  if (expiresAt < now + 300) {
+    console.log("Zoom token expired or expiring soon, refreshing...");
+    try {
       const newTokens = await refreshZoomToken(refreshToken);
       if (newTokens) {
         accessToken = newTokens.access_token;
-        const newExpiresAt = Math.floor(Date.now() / 1000) + newTokens.expires_in;
-        
-        // Update stored token
-        if (userId) {
-          await supabaseClient
-            .from("user_integrations")
-            .update({ 
-              access_token: accessToken,
-              refresh_token: newTokens.refresh_token || refreshToken,
-              expires_at: newExpiresAt,
-              updated_at: new Date().toISOString()
-            })
-            .eq("user_id", userId)
-            .eq("provider", "zoom");
-        }
-        console.log("Zoom token refreshed successfully");
+        // ... atualizar tokens ...
       }
+    } catch (refreshError: any) {
+      if (refreshError.message === "ZOOM_RECONNECT_REQUIRED") {
+        throw new Error("Sua sessão do Zoom expirou. Por favor, reconecte sua conta em Configurações → Integrações.");
+      }
+      throw refreshError;
     }
   }
-
-  if (!accessToken) {
-    throw new Error("Zoom não conectado. Por favor, conecte sua conta Zoom em Configurações → Integrações.");
-  }
-
-  // Calculate duration
-  const start = new Date(startTime);
-  const end = new Date(endTime);
-  const durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
-
-  // Create meeting using user's access token
-  const meetingResponse = await fetch("https://api.zoom.us/v2/users/me/meetings", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      topic: title,
-      type: 2,
-      start_time: startTime,
-      duration: durationMinutes,
-      timezone: "America/Sao_Paulo",
-      settings: {
-        host_video: true,
-        participant_video: true,
-        join_before_host: true,
-        waiting_room: false,
-        ...(participantEmail && { meeting_invitees: [{ email: participantEmail }] }),
-      },
-    }),
-  });
-
-  if (!meetingResponse.ok) {
-    const errorText = await meetingResponse.text();
-    console.error("Zoom meeting creation error:", errorText);
-    throw new Error("Falha ao criar reunião no Zoom. Tente reconectar sua conta.");
-  }
-
-  const meetingData = await meetingResponse.json();
-  return {
-    meeting_url: meetingData.join_url,
-    meeting_id: meetingData.id.toString(),
-    meeting_password: meetingData.password || "",
-  };
 }
 ```
 
-#### 3. Atualizar chamada da função
+### Arquivo 3: `src/components/integrations/IntegrationsContent.tsx`
 
-De:
-```typescript
-if (platform === "zoom") {
-  meetingResult = await createZoomMeeting(start_time, end_time, title, participant_email);
-}
-```
+Adicionar indicador de token expirado e botão de reconexão:
 
-Para:
 ```typescript
-if (platform === "zoom") {
-  meetingResult = await createZoomMeeting(
-    start_time, 
-    end_time, 
-    title, 
-    participant_email,
-    supabase,
-    internalUserId
-  );
-}
+// Adicionar função para verificar se token está expirado
+const isTokenExpired = (integration: UserIntegration) => {
+  if (!integration.expires_at) return false;
+  const now = Math.floor(Date.now() / 1000);
+  return integration.expires_at < now;
+};
+
+// Na UI do Zoom, mostrar alerta se token expirado
+{zoomUserIntegration && isTokenExpired(zoomUserIntegration) && (
+  <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+    <XCircle className="h-5 w-5 text-destructive" />
+    <div className="flex-1">
+      <p className="font-medium text-destructive">Sessão expirada</p>
+      <p className="text-sm text-muted-foreground">
+        Reconecte sua conta Zoom para continuar criando reuniões.
+      </p>
+    </div>
+    <Button
+      variant="destructive"
+      size="sm"
+      onClick={() => handleOAuthConnect("zoom")}
+      disabled={connectingProvider === "zoom"}
+    >
+      <RefreshCw className="h-4 w-4 mr-2" />
+      Reconectar
+    </Button>
+  </div>
+)}
 ```
 
 ---
 
-## Fluxo Completo
+## Fluxo Corrigido
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                    FLUXO OAUTH DO ZOOM                          │
+│                  FLUXO OAUTH CORRIGIDO                          │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│   1. CONEXÃO (única vez)                                        │
-│   ━━━━━━━━━━━━━━━━━━━━━━                                        │
-│   Usuário → Configurações → Integrações → Conectar Zoom         │
-│                      │                                          │
-│                      ▼                                          │
-│             oauth-init (gera URL Zoom)                          │
-│                      │                                          │
-│                      ▼                                          │
-│             Zoom autoriza → oauth-callback                      │
-│                      │                                          │
-│                      ▼                                          │
-│             Tokens salvos em user_integrations                  │
+│   ANTES (problema):                                             │
+│   oauth-init → URL sem escopos → refresh_token inválido         │
+│                                                                 │
+│   DEPOIS (correção):                                            │
+│   oauth-init → URL com scopes: meeting:write:admin,             │
+│                                user:read:admin                  │
+│             → refresh_token VÁLIDO                              │
+│             → Renovação automática funciona                     │
 │                                                                 │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│   2. CRIAÇÃO DE REUNIÃO (cada vez)                              │
-│   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                              │
-│   Usuário → Criar Tarefa → Configurar Reunião → Zoom            │
-│                      │                                          │
-│                      ▼                                          │
-│             create-meeting Edge Function                        │
-│                      │                                          │
-│                      ▼                                          │
-│   ┌─────────────────────────────────────────────────────┐       │
-│   │ 1. Buscar tokens do usuário em user_integrations   │       │
-│   │ 2. Se token expirado → refresh com refresh_token   │       │
-│   │ 3. Usar access_token para criar reunião            │       │
-│   │ 4. Se sem tokens → erro "Conecte sua conta Zoom"   │       │
-│   └─────────────────────────────────────────────────────┘       │
-│                      │                                          │
-│                      ▼                                          │
-│             Reunião criada na conta DO USUÁRIO                  │
+│   TRATAMENTO DE ERRO:                                           │
+│                                                                 │
+│   Se refresh falhar com invalid_grant:                          │
+│   1. Mostrar alerta "Sessão expirada" na UI                     │
+│   2. Botão "Reconectar" visível                                 │
+│   3. Erro claro ao criar reunião                                │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## O que será removido
-
-| Código Antigo | Status |
-|---------------|--------|
-| `ZOOM_ACCOUNT_ID` | ❌ Não será mais necessário |
-| `grant_type=account_credentials` | ❌ Removido |
-| Autenticação Server-to-Server | ❌ Removida |
-
----
-
-## O que já funciona (sem alteração)
-
-| Componente | Status |
-|------------|--------|
-| `oauth-init` (gerar URL Zoom) | ✅ Mantido |
-| `oauth-callback` (salvar tokens) | ✅ Mantido |
-| Tabela `user_integrations` | ✅ Mantida |
-| Interface de conexão em Settings | ✅ Mantida |
-
----
-
-## Arquivo a Modificar
+## Arquivos a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `supabase/functions/create-meeting/index.ts` | Reescrever `createZoomMeeting` para usar OAuth do usuário |
+| `supabase/functions/oauth-init/index.ts` | Adicionar escopos `meeting:write:admin` e `user:read:admin` na URL do Zoom |
+| `supabase/functions/create-meeting/index.ts` | Melhorar tratamento de erro `invalid_grant` com mensagem clara |
+| `src/components/integrations/IntegrationsContent.tsx` | Mostrar alerta quando token está expirado e botão de reconexão |
 
 ---
 
-## Requisito para o Usuário
+## Ação Necessária Após Implementação
 
-Após esta alteração, cada usuário que quiser criar reuniões no Zoom precisará:
-
-1. Ir em **Configurações → Integrações**
-2. Clicar em **Conectar** ao lado do Zoom
-3. Autorizar o aplicativo com sua conta Zoom pessoal
-
-Depois disso, todas as reuniões serão criadas na conta Zoom desse usuário.
+O usuário atual precisará **reconectar a conta Zoom** (desconectar e conectar novamente) para obter novos tokens com os escopos corretos.
 
 ---
 
 ## Resultado Esperado
 
-1. ✅ Erro `unsupported_grant_type` corrigido
-2. ✅ Cada usuário usa sua própria conta Zoom
-3. ✅ Tokens são armazenados e renovados automaticamente
-4. ✅ `ZOOM_ACCOUNT_ID` não é mais necessário
-5. ✅ Mensagem clara se o usuário não tiver conectado sua conta
+1. Novos tokens do Zoom incluirão refresh_token válido
+2. Renovação automática funcionará corretamente
+3. Se falhar, usuário verá mensagem clara pedindo reconexão
+4. UI mostrará indicador visual de sessão expirada
 
