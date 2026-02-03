@@ -3280,6 +3280,49 @@ export default function RoyZapp() {
       if (convByPhone?.data) {
         zappConvId = convByPhone.data.id;
         
+        // ============================================
+        // AUTO-UNIFY DUPLICATE CONVERSATIONS
+        // ============================================
+        // Check if there's a legacy duplicate (same phone, same sector, no integration_id)
+        // and merge it to eliminate duplicate entries in the conversation list
+        
+        if (selectedSectorId && selectedIntegrationId) {
+          const { data: legacyDuplicate } = await supabase
+            .from("zapp_conversations")
+            .select("id")
+            .eq("account_id", currentUser.account_id)
+            .eq("phone_e164", normalizedPhone)
+            .eq("sector_id", selectedSectorId)
+            .is("integration_id", null)
+            .eq("is_group", false)
+            .neq("id", convByPhone.data.id)
+            .maybeSingle();
+          
+          if (legacyDuplicate) {
+            console.log(`[AUTO-UNIFY] Merging legacy ${legacyDuplicate.id} into ${convByPhone.data.id}`);
+            
+            // 1. Move all messages from legacy to current
+            await supabase
+              .from("zapp_messages")
+              .update({ zapp_conversation_id: convByPhone.data.id })
+              .eq("zapp_conversation_id", legacyDuplicate.id);
+            
+            // 2. Delete assignments from legacy conversation
+            await supabase
+              .from("zapp_conversation_assignments")
+              .delete()
+              .eq("zapp_conversation_id", legacyDuplicate.id);
+            
+            // 3. Delete legacy conversation
+            await supabase
+              .from("zapp_conversations")
+              .delete()
+              .eq("id", legacyDuplicate.id);
+            
+            console.log(`[AUTO-UNIFY] Completed: legacy conversation deleted`);
+          }
+        }
+        
         // Atualizar lead_id/client_id se não estiver vinculado (baseado no tipo do contato)
         if (isLeadContact && !convByPhone.data.lead_id && contact.id) {
           await supabase
