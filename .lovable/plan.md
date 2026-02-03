@@ -1,218 +1,186 @@
 
-# Plano: Adicionar Opção "Atualizar Mensagens" no Menu de Ações
 
-## Objetivo
+# Plano: Exibir Link da Reunião + Correção de Credenciais Zoom
 
-Inserir uma nova opção **"Atualizar Mensagens"** no dropdown de mais ações (⋮) do ROY zAPP que busca mensagens do WhatsApp que chegaram no aplicativo mas ainda não foram capturadas pela plataforma.
+## Diagnóstico do Erro
 
-## Análise Técnica
+O usuário tentou criar uma reunião e recebeu o erro:
 
-### O que já existe
+```
+Error: Zoom credentials not configured. 
+Please add ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET, and ZOOM_ACCOUNT_ID.
+```
 
-| Componente | Status |
-|------------|--------|
-| Edge Function `sync-chat-history` | ✅ Já implementada |
-| Deduplicação por `external_message_id` | ✅ Já funciona |
-| Exemplo de uso em Admin | ✅ `WhatsAppDiagnostics.tsx` |
+### Status das Credenciais
 
-A action `sync-chat-history` no `uazapi-manager` já:
-- Busca mensagens do UAZAPI via múltiplos endpoints
-- Verifica se cada mensagem já existe (por `external_message_id`)
-- Só insere mensagens que **não existem** no banco
-- Marca as mensagens importadas com `synced_from_history: true`
+| Secret | Status |
+|--------|--------|
+| `ZOOM_CLIENT_ID` | ✅ Configurado |
+| `ZOOM_CLIENT_SECRET` | ✅ Configurado |
+| `ZOOM_ACCOUNT_ID` | ❌ **FALTANDO** |
 
-### O que precisa ser feito
-
-Conectar essa funcionalidade ao dropdown de ações do painel de conversas.
+**Solução**: Adicionar o secret `ZOOM_ACCOUNT_ID` nas configurações.
 
 ---
 
-## Modificações Necessárias
+## Nova Funcionalidade: Campo do Link Gerado
 
-### 1. Arquivo: `src/components/royzapp/ZappConversationPanel.tsx`
+Após a reunião ser criada, exibir um campo com o link da reunião para que o usuário possa copiar e compartilhar manualmente.
 
-**Adicionar import do ícone RefreshCw:**
-```typescript
-import { RefreshCw } from "lucide-react";
-```
+### Estado Atual
+- A reunião é criada → dialog fecha → link aparece apenas como botão "Abrir"
+- Não há como visualizar/copiar o link completo facilmente
 
-**Adicionar nova prop na interface (~linha 146):**
-```typescript
-onRefreshMessages?: () => void;
-isRefreshingMessages?: boolean;
-```
-
-**Adicionar parâmetros na desestruturação:**
-```typescript
-onRefreshMessages,
-isRefreshingMessages,
-```
-
-**Adicionar novo item no DropdownMenu (após "Configurações", ~linha 518):**
-```typescript
-<DropdownMenuSeparator className="bg-zapp-border" />
-<DropdownMenuItem 
-  className="text-zapp-text hover:bg-zapp-hover"
-  onClick={onRefreshMessages}
-  disabled={isRefreshingMessages}
->
-  <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshingMessages && "animate-spin")} />
-  {isRefreshingMessages ? "Atualizando..." : "Atualizar Mensagens"}
-</DropdownMenuItem>
-```
-
-### 2. Arquivo: `src/pages/RoyZapp.tsx`
-
-**Adicionar estado para controle de loading (~linha 400):**
-```typescript
-const [isRefreshingMessages, setIsRefreshingMessages] = useState(false);
-```
-
-**Criar função de refresh (~linha 2600, após importRecentConversations):**
-```typescript
-const refreshMessages = useCallback(async () => {
-  if (!selectedIntegrationId) {
-    toast.error("Nenhuma instância WhatsApp selecionada");
-    return;
-  }
-  
-  setIsRefreshingMessages(true);
-  try {
-    const response = await supabase.functions.invoke("uazapi-manager", {
-      body: { 
-        action: "sync-chat-history", 
-        integration_id: selectedIntegrationId,
-        days: 3, // Buscar últimos 3 dias (período recente)
-      },
-    });
-    
-    if (response.error) {
-      throw new Error(response.error.message);
-    }
-    
-    const result = response.data?.data;
-    if (result) {
-      if (result.synced > 0) {
-        toast.success(
-          `${result.synced} mensagens sincronizadas!`,
-          { description: `${result.skipped} já existiam no sistema.` }
-        );
-        // Recarregar mensagens da conversa ativa se houver
-        fetchData();
-      } else {
-        toast.info("Nenhuma mensagem nova encontrada", {
-          description: `${result.skipped} mensagens já estavam sincronizadas.`
-        });
-      }
-    }
-  } catch (error) {
-    console.error("Erro ao atualizar mensagens:", error);
-    toast.error("Erro ao buscar mensagens do WhatsApp");
-  } finally {
-    setIsRefreshingMessages(false);
-  }
-}, [selectedIntegrationId, fetchData]);
-```
-
-**Passar props para ZappConversationPanel (~linha 3893):**
-```typescript
-onRefreshMessages={refreshMessages}
-isRefreshingMessages={isRefreshingMessages}
-```
-
----
-
-## Fluxo de Funcionamento
+### Proposta
+Adicionar um campo de texto readonly com o link da reunião e botão de copiar:
 
 ```text
-Usuário clica no ⋮ → "Atualizar Mensagens"
-                │
-                ▼
-    refreshMessages() chamado
-    setIsRefreshingMessages(true)
-                │
-                ▼
-    Edge Function: sync-chat-history
-    integration_id: selectedIntegrationId
-    days: 3
-                │
-                ▼
-    ┌─────────────────────────────────────┐
-    │ Para cada conversa da instância:    │
-    │ 1. Busca mensagens do UAZAPI        │
-    │ 2. Verifica external_message_id     │
-    │ 3. Se não existe → INSERT           │
-    │    Se existe → SKIP (sem duplicar!) │
-    └─────────────────────────────────────┘
-                │
-                ▼
-    Toast: "X mensagens sincronizadas!"
-    fetchData() para atualizar a UI
+┌─────────────────────────────────────────────────────────────┐
+│ 🟢 Google Meet configurado            [↻] [📋] [Abrir ↗]   │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ https://meet.google.com/abc-defg-hij              [📋] │ │
+│ └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Modificações Técnicas
+
+### 1. Arquivo: `src/components/tasks/TaskDialog.tsx`
+
+**Adicionar imports (~linha 28):**
+```typescript
+import { Loader2, Video, ExternalLink, RefreshCw, Copy, Check } from "lucide-react";
+```
+
+**Adicionar estado para copiar (~linha 100):**
+```typescript
+const [copied, setCopied] = useState(false);
+```
+
+**Adicionar função de copiar:**
+```typescript
+const copyMeetingUrl = async () => {
+  if (meetingUrl) {
+    await navigator.clipboard.writeText(meetingUrl);
+    setCopied(true);
+    toast.success("Link copiado!");
+    setTimeout(() => setCopied(false), 2000);
+  }
+};
+```
+
+**Modificar seção do meeting (~linha 592-616):**
+```typescript
+{meetingUrl ? (
+  <div className="space-y-2">
+    <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+      <Video className="h-4 w-4 text-primary" />
+      <span className="text-sm flex-1">
+        {meetingPlatform === "zoom" ? "🔵 Zoom" : "🟢 Google Meet"} configurado
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => setMeetingDialogOpen(true)}
+        title="Recriar reunião"
+      >
+        <RefreshCw className="h-4 w-4" />
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => window.open(meetingUrl, "_blank")}
+      >
+        <ExternalLink className="h-4 w-4 mr-1" />
+        Abrir
+      </Button>
+    </div>
+    
+    {/* NOVO: Campo com link para copiar */}
+    <div className="flex items-center gap-2">
+      <Input
+        value={meetingUrl}
+        readOnly
+        className="text-xs font-mono bg-muted/50"
+      />
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        onClick={copyMeetingUrl}
+        title="Copiar link"
+      >
+        {copied ? (
+          <Check className="h-4 w-4 text-green-500" />
+        ) : (
+          <Copy className="h-4 w-4" />
+        )}
+      </Button>
+    </div>
+  </div>
+) : (
+  // ... botão existente
+)}
 ```
 
 ---
 
 ## Resultado Visual
 
-O dropdown passará de:
-
+### Antes
 ```text
-┌──────────────────┐
-│ 👥 Equipe        │
-│ 🏢 Departamentos │
-│ ⚙️ Configurações │
-└──────────────────┘
+┌───────────────────────────────────────────────┐
+│ 🟢 Google Meet configurado    [↻]  [Abrir ↗] │
+└───────────────────────────────────────────────┘
 ```
 
-Para:
-
+### Depois
 ```text
-┌────────────────────────┐
-│ 👥 Equipe              │
-│ 🏢 Departamentos       │
-│ ⚙️ Configurações       │
-│ ─────────────────────  │
-│ 🔄 Atualizar Mensagens │
-└────────────────────────┘
+┌───────────────────────────────────────────────────────────┐
+│ 🟢 Google Meet configurado           [↻]      [Abrir ↗]  │
+│ ┌───────────────────────────────────────────────────┬───┐│
+│ │ https://meet.google.com/abc-defg-hij              │📋││
+│ └───────────────────────────────────────────────────┴───┘│
+└───────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Garantia Contra Duplicatas
+## Ação Necessária para Zoom
 
-A função `sync-chat-history` já possui verificação de deduplicação robusta:
+Para que a integração com Zoom funcione, é necessário adicionar o secret:
 
-```typescript
-// Linha 3983-3993 do uazapi-manager
-const { data: existingMsg } = await supabase
-  .from("zapp_messages")
-  .select("id")
-  .eq("external_message_id", messageId)  // ← Chave única do WhatsApp
-  .eq("conversation_id", conversation.id)
-  .maybeSingle();
+**Secret a adicionar:**
+- Nome: `ZOOM_ACCOUNT_ID`
+- Valor: ID da conta Zoom (encontrado no painel de desenvolvedor Zoom: [marketplace.zoom.us](https://marketplace.zoom.us))
 
-if (existingMsg) {
-  skippedCount++;  // ← Pula se já existe
-  continue;
-}
-```
-
-Isso garante que **nenhuma mensagem será duplicada**, mesmo que o usuário clique várias vezes.
+Após adicionar este secret, as reuniões Zoom serão criadas corretamente.
 
 ---
 
-## Resumo das Alterações
+## Arquivos a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `ZappConversationPanel.tsx` | Adicionar import `RefreshCw`, props `onRefreshMessages` e `isRefreshingMessages`, novo `DropdownMenuItem` |
-| `RoyZapp.tsx` | Adicionar estado `isRefreshingMessages`, função `refreshMessages`, passar props ao componente |
+| `src/components/tasks/TaskDialog.tsx` | Adicionar campo do link com botão copiar |
+
+## Dependência
+
+| Item | Status |
+|------|--------|
+| Secret `ZOOM_ACCOUNT_ID` | ⚠️ Precisa ser adicionado pelo usuário |
+
+---
 
 ## Resultado Esperado
 
-1. ✅ Nova opção "Atualizar Mensagens" no dropdown de ações
-2. ✅ Busca mensagens dos últimos 3 dias do WhatsApp
-3. ✅ **Não cria duplicatas** (verificação por `external_message_id`)
-4. ✅ Feedback visual durante a sincronização (ícone girando)
-5. ✅ Toast informando quantas mensagens foram sincronizadas
-6. ✅ UI atualizada automaticamente após sincronização
+1. ✅ Campo visível mostrando o link completo da reunião
+2. ✅ Botão para copiar link para área de transferência
+3. ✅ Feedback visual ao copiar (ícone muda para check)
+4. ✅ Toast confirmando que o link foi copiado
+5. ⚠️ Zoom funcionará após adicionar `ZOOM_ACCOUNT_ID`
+
