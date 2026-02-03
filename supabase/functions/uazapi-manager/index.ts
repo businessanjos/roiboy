@@ -135,6 +135,7 @@ async function logWhatsAppChangeAndNotify(
 }
 
 // Helper function to configure webhook automatically
+// Updated for UAZAPI GO v2 compatibility with multiple endpoint/body formats
 async function configureWebhook(instanceToken: string, instanceName: string, supabaseUrl: string): Promise<boolean> {
   const webhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
   console.log(`Configuring webhook for instance ${instanceName} to ${webhookUrl}`);
@@ -149,14 +150,37 @@ async function configureWebhook(instanceToken: string, instanceName: string, sup
     events: ["messages", "connection", "qrcode", "MESSAGES_UPSERT", "CONNECTION_UPDATE", "QRCODE_UPDATED", "chats", "groups", "history"]
   };
   
+  // Alternative body format for UAZAPI GO v2
+  const webhookBodyAlt = {
+    webhook_url: webhookUrl,
+    webhook_enabled: true,
+    webhook_events: ["messages", "connection", "qrcode", "chats", "groups"]
+  };
+  
+  // Nested settings format for some UAZAPI versions
+  const webhookBodyNested = {
+    webhook: {
+      url: webhookUrl,
+      enabled: true,
+      events: ["messages", "connection", "qrcode", "chats", "groups"]
+    }
+  };
+  
   // Try different endpoints and methods to set webhook
+  // Priority order: UAZAPI GO v2 new endpoints first, then legacy endpoints
   const webhookEndpoints = [
-    // POST methods (most common for UAZAPI)
+    // UAZAPI GO v2 endpoints (highest priority)
+    { url: `/instance/setWebhook`, method: "POST", body: webhookBody },
+    { url: `/instance/setWebhook`, method: "POST", body: webhookBodyAlt },
+    { url: `/instance/settings`, method: "POST", body: webhookBodyNested },
+    { url: `/settings`, method: "POST", body: webhookBodyNested },
+    // Legacy POST endpoints
     { url: `/webhook/set`, method: "POST", body: webhookBody },
     { url: `/webhook`, method: "POST", body: webhookBody },
     { url: `/instance/webhook`, method: "POST", body: webhookBody },
     { url: `/settings/webhook`, method: "POST", body: webhookBody },
     // PUT methods as fallback
+    { url: `/instance/setWebhook`, method: "PUT", body: webhookBody },
     { url: `/webhook/set`, method: "PUT", body: webhookBody },
     { url: `/webhook`, method: "PUT", body: webhookBody },
   ];
@@ -172,12 +196,19 @@ async function configureWebhook(instanceToken: string, instanceName: string, sup
     }
   }
   
+  // URL-encode instance name to handle spaces and special characters
+  const encodedInstanceName = encodeURIComponent(instanceName);
+  
   // Try admin endpoints as fallback (POST first, then PUT)
   const adminWebhookEndpoints = [
-    { url: `/instance/webhook/${instanceName}`, method: "POST", body: webhookBody },
-    { url: `/webhook/${instanceName}`, method: "POST", body: webhookBody },
-    { url: `/instance/webhook/${instanceName}`, method: "PUT", body: webhookBody },
-    { url: `/webhook/${instanceName}`, method: "PUT", body: webhookBody },
+    // UAZAPI GO v2 admin endpoints
+    { url: `/instance/setWebhook/${encodedInstanceName}`, method: "POST", body: webhookBody },
+    { url: `/instance/setWebhook/${encodedInstanceName}`, method: "POST", body: webhookBodyAlt },
+    // Legacy admin endpoints
+    { url: `/instance/webhook/${encodedInstanceName}`, method: "POST", body: webhookBody },
+    { url: `/webhook/${encodedInstanceName}`, method: "POST", body: webhookBody },
+    { url: `/instance/webhook/${encodedInstanceName}`, method: "PUT", body: webhookBody },
+    { url: `/webhook/${encodedInstanceName}`, method: "PUT", body: webhookBody },
   ];
   
   for (const endpoint of adminWebhookEndpoints) {
@@ -191,7 +222,7 @@ async function configureWebhook(instanceToken: string, instanceName: string, sup
     }
   }
   
-  console.log("Could not configure webhook automatically");
+  console.log("Could not configure webhook automatically - manual configuration required");
   return false;
 }
 
@@ -1603,6 +1634,7 @@ serve(async (req) => {
               phone_number: (int.config as { phone_number?: string; owner?: string })?.phone_number || (int.config as { owner?: string })?.owner || "",
               profile_name: (int.config as { profile_name?: string; profileName?: string })?.profile_name || (int.config as { profileName?: string })?.profileName || "",
               profile_pic_url: (int.config as { profile_pic_url?: string; profilePicUrl?: string })?.profile_pic_url || (int.config as { profilePicUrl?: string })?.profilePicUrl || "",
+              webhook_configured: (int.config as { webhook_configured?: boolean })?.webhook_configured ?? null,
               created_at: int.created_at,
             })),
           };
