@@ -1,125 +1,95 @@
 
-# Plano: Corrigir Problema de Mensagens do ROY zAPP para Jonathan Marcato
+# Plano: Limpar Conversa Selecionada ao Finalizar via Dropdown
 
-## Diagnóstico Confirmado
+## Problema Identificado
 
-A investigação completa revelou que a instância **"Whatsapp Jota"** do vendedor Jonathan Marcato (554399540408) está conectada corretamente ao WhatsApp, porém o **webhook não está configurado na API do UAZAPI**.
+Quando o usuário muda o status de uma conversa para **"Finalizado"** através do dropdown no header, a conversa:
 
-### Evidências
+| O que acontece | Esperado | Atual |
+|----------------|----------|-------|
+| Status atualizado no banco | ✅ Sim | ✅ Sim |
+| Conversa removida da lista lateral | ✅ Sim | ✅ Sim |
+| **Conversa fechada no painel principal** | ✅ Sim | ❌ **NÃO** |
 
-| Verificação | Resultado |
-|-------------|-----------|
-| Status da instância no UAZAPI | ✅ `state: "open"` (conectado) |
-| Webhook no UAZAPI | ❌ `webhook_configured: false` |
-| Webhook no banco de dados | ⚠️ `webhook_configured: true` (desatualizado) |
-| Última mensagem recebida | 31/01/2026 (3+ dias atrás) |
-| Outras instâncias funcionando | ✅ Eternum Club e Diretoria operacionais |
+A conversa permanece aberta porque `setSelectedConversation(null)` **nunca é chamado** quando o status muda para `closed` via dropdown.
 
-### Causa Raiz
+## Comparação com o Dialog de Finalização
 
-A função `configureWebhook` no `uazapi-manager` está falhando com erros "Method Not Allowed" (HTTP 405) em todos os endpoints tentados:
-- `/webhook/set`
-- `/webhook`
-- `/instance/webhook`
-- `/settings/webhook`
-
-Isso indica que a API UAZAPI mudou seus endpoints ou requer formato diferente.
-
-## Modificações Necessárias
-
-### Arquivo: `supabase/functions/uazapi-manager/index.ts`
-
-#### Correção 1: Adicionar novos endpoints de webhook compatíveis com UAZAPI GO v2
-
-Atualizar a função `configureWebhook` (linhas 137-196) para incluir endpoints adicionais:
+O botão "Finalizar" (verde com CheckCircle) usa o `ZappCloseTicketDialog`, que **corretamente** limpa a seleção no callback:
 
 ```typescript
-// Adicionar endpoint que pode funcionar para UAZAPI GO v2
-const webhookEndpoints = [
-  // Novos endpoints (UAZAPI GO v2 documentação)
-  { url: `/instance/setWebhook`, method: "POST", body: webhookBody },
-  { url: `/webhook/set`, method: "POST", body: webhookBody },
-  { url: `/webhook`, method: "POST", body: webhookBody },
-  { url: `/instance/webhook`, method: "POST", body: webhookBody },
-  { url: `/settings/webhook`, method: "POST", body: webhookBody },
-  // PUT methods as fallback
-  { url: `/instance/setWebhook`, method: "PUT", body: webhookBody },
-  { url: `/webhook/set`, method: "PUT", body: webhookBody },
-  { url: `/webhook`, method: "PUT", body: webhookBody },
-];
+// ZappCloseTicketDialog onSuccess (linha 4360-4364)
+onSuccess={() => {
+  setCloseTicketDialogOpen(false);
+  setSelectedConversation(null); // ✅ Limpa corretamente
+  fetchData();
+}}
 ```
 
-#### Correção 2: Atualizar formato do corpo do webhook
-
-O formato atual pode estar incorreto para a versão do UAZAPI em uso:
+Porém, o dropdown de status **não faz isso**:
 
 ```typescript
-// Formato alternativo para UAZAPI GO v2
-const webhookBodyAlt = {
-  webhook_url: webhookUrl,
-  webhook_enabled: true,
-  webhook_events: ["messages", "connection", "qrcode", "chats", "groups"]
-};
-
-// Adicionar tentativas com formato alternativo
-const webhookEndpointsAlt = [
-  { url: `/settings`, method: "POST", body: { webhook: webhookBodyAlt } },
-  { url: `/instance/settings`, method: "POST", body: { webhook: webhookBodyAlt } },
-];
+// updateConversationStatus (linhas 1305-1309)
+if (selectedConversation?.id === assignmentId) {
+  setSelectedConversation(prev => prev ? {
+    ...prev,
+    status: newStatus  // ❌ Apenas atualiza status, não limpa
+  } : null);
+}
 ```
 
-#### Correção 3: Sincronizar estado do banco com a realidade
+## Modificação Necessária
 
-Atualizar o campo `webhook_configured` no banco apenas quando o webhook for realmente configurado com sucesso no UAZAPI:
+### Arquivo: `src/pages/RoyZapp.tsx`
+
+Atualizar a função `updateConversationStatus` para **limpar a conversa selecionada** quando o novo status for `closed`:
 
 ```typescript
-// Em status, marcar webhook_configured como false se a config falhar
-webhook_configured: webhookConfigured, // Não usar fallback do banco se não configurou
+// ANTES (linhas 1304-1310)
+// Update selected conversation locally
+if (selectedConversation?.id === assignmentId) {
+  setSelectedConversation(prev => prev ? {
+    ...prev,
+    status: newStatus
+  } : null);
+}
+
+// DEPOIS
+// When closing, clear selection so conversation disappears from view
+if (newStatus === "closed" && selectedConversation?.id === assignmentId) {
+  setSelectedConversation(null);
+} else if (selectedConversation?.id === assignmentId) {
+  // For other status changes, just update locally
+  setSelectedConversation(prev => prev ? {
+    ...prev,
+    status: newStatus
+  } : null);
+}
 ```
 
-### Arquivo: `src/components/admin/WhatsAppIntegrationPanel.tsx` (ou similar)
+## Resultado Visual
 
-#### Correção 4: Adicionar botão manual de reconfiguração com feedback visual
+### Antes (bug atual):
+1. Usuário clica no status → "Finalizado"
+2. Toast mostra "Status alterado para: Finalizado"
+3. Conversa SAI da lista lateral ✅
+4. **Conversa CONTINUA aberta no chat** ❌
 
-Adicionar um botão que permita ao admin reconfigurar o webhook manualmente com feedback claro se falhar:
+### Depois (correção):
+1. Usuário clica no status → "Finalizado"
+2. Toast mostra "Status alterado para: Finalizado"
+3. Conversa SAI da lista lateral ✅
+4. **Painel de chat volta ao estado vazio** ✅
 
-```typescript
-// Adicionar alerta visual quando webhook_configured: false
-{integration.webhook_configured === false && (
-  <Alert variant="destructive">
-    <AlertTriangle className="h-4 w-4" />
-    <AlertDescription>
-      Webhook não configurado. Clique em "Reconectar" para corrigir.
-    </AlertDescription>
-  </Alert>
-)}
-```
-
-## Ação Imediata Recomendada
-
-Como a configuração automática está falhando, recomendo:
-
-1. **Acessar o painel do UAZAPI** (`cxroycom.uazapi.com`)
-2. **Localizar a instância "Whatsapp Jota"**
-3. **Configurar manualmente o webhook** com a URL:
-   ```
-   https://mtzoavtbtqflufyccern.supabase.co/functions/v1/uazapi-webhook
-   ```
-4. **Ativar os eventos**: `messages`, `connection`, `qrcode`, `chats`, `groups`
-
-## Resumo das Alterações de Código
+## Resumo das Alterações
 
 | Arquivo | Mudança |
 |---------|---------|
-| `uazapi-manager/index.ts` | Adicionar endpoints `/instance/setWebhook` |
-| `uazapi-manager/index.ts` | Adicionar formato alternativo de webhook body |
-| `uazapi-manager/index.ts` | Sincronizar campo `webhook_configured` com estado real |
-| Painel Admin | Adicionar alerta visual para webhooks não configurados |
+| `src/pages/RoyZapp.tsx` (linhas 1304-1310) | Limpar `selectedConversation` quando status = `closed` |
 
 ## Resultado Esperado
 
-1. ✅ Sistema detecta automaticamente quando webhook não está configurado
-2. ✅ Múltiplos formatos de configuração são tentados
-3. ✅ Admin recebe feedback visual quando há problema
-4. ✅ Opção de configuração manual no painel UAZAPI como fallback
-5. ✅ Mensagens do Jonathan voltam a aparecer no ROY zAPP
+1. ✅ Conversa finalizada desaparece imediatamente da lista lateral
+2. ✅ Painel de chat é limpo, mostrando estado vazio (ou próxima conversa)
+3. ✅ Usuário não fica confuso com conversa "fantasma" aberta
+4. ✅ Comportamento consistente entre dropdown e dialog de finalização
