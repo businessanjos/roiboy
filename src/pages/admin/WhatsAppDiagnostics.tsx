@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { 
   Wifi, WifiOff, RefreshCw, AlertTriangle, CheckCircle2, 
   MessageSquare, ArrowRight, Clock, Phone, Users, Database,
-  Link2, Unlink, Loader2
+  Link2, Unlink, Loader2, History
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -73,6 +73,7 @@ export default function WhatsAppDiagnostics() {
   const [refreshing, setRefreshing] = useState(false);
   const [syncingLegacy, setSyncingLegacy] = useState(false);
   const [importingChats, setImportingChats] = useState<string | null>(null);
+  const [syncingHistory, setSyncingHistory] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!currentUser?.account_id) return;
@@ -258,6 +259,46 @@ export default function WhatsAppDiagnostics() {
       toast.error(error.message || "Erro ao importar conversas");
     } finally {
       setImportingChats(null);
+    }
+  };
+
+  // Sync message history from UAZAPI
+  const handleSyncHistory = async (integrationId: string, days: number = 7) => {
+    setSyncingHistory(integrationId);
+    try {
+      const response = await supabase.functions.invoke("uazapi-manager", {
+        body: { 
+          action: "sync-chat-history", 
+          integration_id: integrationId,
+          days,
+        },
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      
+      const result = response.data?.data;
+      if (result) {
+        toast.success(
+          `Sincronização concluída! ${result.synced} mensagens sincronizadas, ${result.skipped} já existiam.`,
+          { duration: 5000 }
+        );
+        
+        if (result.errors > 0) {
+          toast.warning(`${result.errors} erros durante sincronização`, { duration: 3000 });
+        }
+      } else {
+        toast.success("Sincronização concluída!");
+      }
+      
+      // Refresh to show new messages
+      fetchData();
+    } catch (error: any) {
+      console.error("Error syncing history:", error);
+      toast.error(error.message || "Erro ao sincronizar histórico");
+    } finally {
+      setSyncingHistory(null);
     }
   };
 
@@ -505,18 +546,34 @@ export default function WhatsAppDiagnostics() {
                           </div>
                         </td>
                         <td className="py-3 px-3">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleImportChats(integration.sector_id)}
-                            disabled={importingChats === integration.sector_id || integration.status !== "connected"}
-                          >
-                            {importingChats === integration.sector_id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              "Importar"
-                            )}
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleImportChats(integration.sector_id)}
+                              disabled={importingChats === integration.sector_id || integration.status !== "connected"}
+                              title="Importar conversas do WhatsApp"
+                            >
+                              {importingChats === integration.sector_id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                "Importar"
+                              )}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSyncHistory(integration.id, 7)}
+                              disabled={syncingHistory === integration.id || integration.status !== "connected"}
+                              title="Sincronizar histórico de mensagens (últimos 7 dias)"
+                            >
+                              {syncingHistory === integration.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <History className="h-3 w-3" />
+                              )}
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
