@@ -1,151 +1,67 @@
 
-# Plano: Detecção Proativa de Tokens Zoom Incompatíveis
-
-## Situação Atual
-
-Após a investigação minuciosa, identifiquei que:
-
-1. **O erro já foi corrigido** - Ambos os usuários (Jonathan e João Ferrari) reconectaram suas contas e agora têm tokens válidos com os escopos corretos (`user:read:user meeting:write:meeting`)
-2. **O código está funcionando** - Os escopos foram atualizados e o fluxo OAuth está correto
-3. **Tokens expiram em 1 hora** - O Zoom tem tokens de curta duração, o que significa que o refresh automático é crucial
+# Plano: Corrigir Overflow do Botão "Transferir"
 
 ## Problema Identificado
 
-O sistema atual só detecta tokens expirados **quando o usuário tenta criar uma reunião**. Se o refresh falhar, o usuário recebe um erro e precisa reconectar manualmente.
+Na imagem, o botão "Transferir" está vazando para fora do container de detalhes do negócio. Isso ocorre porque a linha onde estão o responsável, "Mesclar" e "Transferir" não possui controle adequado de overflow.
 
-**Melhorias necessárias:**
-
-1. Detectar tokens que podem ter problemas (user_email nulo, escopos antigos) **antes** de tentar criar reunião
-2. Mostrar alerta proativo na UI de integrações
-3. Melhorar logs para facilitar diagnóstico
-
----
-
-## Modificações Propostas
-
-### Arquivo 1: `src/components/integrations/IntegrationsContent.tsx`
-
-Adicionar função para detectar tokens potencialmente problemáticos:
+## Análise do Código Atual
 
 ```typescript
-// Verificar se token pode ter problemas (além de apenas expirado)
-const hasTokenIssues = (integration: UserIntegration) => {
-  // Token expirado
-  if (isTokenExpired(integration)) return { type: 'expired', message: 'Sessão expirada' };
-  
-  // Sem email (indica problema no escopo user:read:user)
-  if (!integration.user_email) return { type: 'incomplete', message: 'Conexão incompleta' };
-  
-  return null;
-};
-```
-
-Atualizar a UI para mostrar alertas mais específicos:
-
-```typescript
-{zoomUserIntegration && (() => {
-  const issue = hasTokenIssues(zoomUserIntegration);
-  if (!issue) return null;
-  
-  return (
-    <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-      <XCircle className="h-5 w-5 text-destructive" />
-      <div className="flex-1">
-        <p className="font-medium text-destructive">{issue.message}</p>
-        <p className="text-sm text-muted-foreground">
-          {issue.type === 'expired' 
-            ? 'Reconecte sua conta Zoom para continuar criando reuniões.'
-            : 'Sua conexão Zoom precisa ser reautorizada com as permissões corretas.'}
-        </p>
-      </div>
-      <Button
-        variant="destructive"
-        size="sm"
-        onClick={() => handleOAuthConnect("zoom")}
-        disabled={connectingProvider === "zoom"}
-      >
-        {connectingProvider === "zoom" ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Reconectar
-          </>
-        )}
-      </Button>
+// Linha 770-810
+<div className="flex items-center gap-2">  // ← Sem overflow-hidden
+  <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+  <span className="text-xs text-muted-foreground min-w-[50px]">Resp.</span>
+  <div className="flex items-center gap-2 flex-1">  // ← O nome expande
+    {/* Avatar + Nome */}
+  </div>
+  {!isClosed && (
+    <div className="flex items-center gap-1">  // ← Botões sem flex-shrink-0
+      <Button>Mesclar</Button>
+      <Button>Transferir</Button>  // ← Vaza para fora!
     </div>
-  );
-})()}
+  )}
+</div>
 ```
 
-### Arquivo 2: `supabase/functions/create-meeting/index.ts`
+## Modificação Proposta
 
-Adicionar validação prévia antes de tentar usar o token:
+### Arquivo: `src/components/sales/DealDetailSheet.tsx`
 
+**Linha 770:** Adicionar `overflow-hidden` ao container principal para evitar vazamento.
+
+**Linha 789:** Adicionar `flex-shrink-0` aos botões para que não sejam comprimidos mas também não vazem.
+
+**De:**
 ```typescript
-// Validar token antes de usar
-if (!accessToken) {
-  throw new Error("Zoom não conectado. Por favor, conecte sua conta Zoom em Configurações → Integrações.");
-}
-
-// Verificar se token parece válido (não vazio, tem formato esperado)
-if (accessToken.length < 20) {
-  throw new Error("Token Zoom inválido. Por favor, reconecte sua conta em Configurações → Integrações.");
-}
+<div className="flex items-center gap-2">
 ```
 
-Melhorar logs para diagnóstico:
-
+**Para:**
 ```typescript
-console.log(`Zoom token status: expires_at=${expiresAt}, now=${now}, needs_refresh=${expiresAt < now + 300}`);
+<div className="flex items-center gap-2 overflow-hidden">
 ```
 
----
-
-## Fluxo Proposto
-
-```text
-┌────────────────────────────────────────────────────────────────┐
-│           FLUXO DE DETECÇÃO PROATIVA                           │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│   1. Usuário acessa Configurações → Integrações                │
-│                                                                │
-│   2. Sistema verifica integrações do usuário:                  │
-│      ┌──────────────────────────────────────┐                  │
-│      │ hasTokenIssues(zoomIntegration)      │                  │
-│      │   - Token expirado?                  │                  │
-│      │   - user_email nulo?                 │                  │
-│      │   - Escopos incompatíveis?           │                  │
-│      └──────────────────────────────────────┘                  │
-│                                                                │
-│   3. Se houver problema → Mostra alerta + botão Reconectar     │
-│                                                                │
-│   4. Usuário reconecta → Novos tokens com escopos corretos     │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
+**De (linha 789):**
+```typescript
+<div className="flex items-center gap-1">
 ```
 
----
+**Para:**
+```typescript
+<div className="flex items-center gap-1 flex-shrink-0">
+```
 
-## Arquivos a Modificar
+Também reduzir o `min-w-[50px]` do label "Resp." para `min-w-[40px]` para dar mais espaço.
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/integrations/IntegrationsContent.tsx` | Adicionar `hasTokenIssues()` para detectar tokens problemáticos e exibir alertas específicos |
-| `supabase/functions/create-meeting/index.ts` | Adicionar logs de diagnóstico e validação prévia de token |
+## Resumo das Alterações
 
----
+| Linha | Antes | Depois |
+|-------|-------|--------|
+| 770 | `flex items-center gap-2` | `flex items-center gap-2 overflow-hidden` |
+| 772 | `min-w-[50px]` | `min-w-[40px]` |
+| 789 | `flex items-center gap-1` | `flex items-center gap-1 flex-shrink-0` |
 
-## Benefícios
+## Resultado Esperado
 
-1. **Detecção proativa** - Usuários veem problemas antes de tentar criar reunião
-2. **Mensagens claras** - Diferentes tipos de problema têm mensagens específicas
-3. **Menos frustração** - Botão de reconexão visível e acessível
-4. **Diagnóstico facilitado** - Logs mais detalhados para depuração
-
----
-
-## Nota Importante
-
-Atualmente, **ambos os usuários já têm tokens válidos** após reconectarem. Este plano adiciona camadas de proteção para evitar problemas futuros quando tokens expirarem ou se tornarem inválidos.
+Os botões "Mesclar" e "Transferir" permanecerão dentro do container, e se o espaço for muito limitado, o nome do responsável será truncado ao invés de os botões vazarem.
