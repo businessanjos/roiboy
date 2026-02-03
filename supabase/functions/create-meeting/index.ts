@@ -89,7 +89,10 @@ async function createZoomMeeting(
   // Check if token needs refresh
   if (accessToken && expiresAt && refreshToken) {
     const now = Math.floor(Date.now() / 1000);
-    if (expiresAt < now + 300) { // 5 minute buffer
+    const needsRefresh = expiresAt < now + 300;
+    console.log(`Zoom token status: expires_at=${expiresAt}, now=${now}, needs_refresh=${needsRefresh}`);
+    
+    if (needsRefresh) { // 5 minute buffer
       console.log("Zoom token expired or expiring soon, refreshing...");
       try {
         const newTokens = await refreshZoomToken(refreshToken);
@@ -111,6 +114,7 @@ async function createZoomMeeting(
         }
         console.log("Zoom token refreshed successfully");
       } catch (refreshError: any) {
+        console.error("Zoom token refresh failed:", refreshError.message);
         if (refreshError.message === "ZOOM_RECONNECT_REQUIRED") {
           throw new Error("Sua sessão do Zoom expirou. Por favor, reconecte sua conta em Configurações → Integrações.");
         }
@@ -119,8 +123,16 @@ async function createZoomMeeting(
     }
   }
 
+  // Validar token antes de usar
   if (!accessToken) {
+    console.error("Zoom access token not found for user:", userId);
     throw new Error("Zoom não conectado. Por favor, conecte sua conta Zoom em Configurações → Integrações.");
+  }
+
+  // Verificar se token parece válido (não vazio, tem formato esperado)
+  if (accessToken.length < 20) {
+    console.error("Zoom access token appears invalid (too short):", accessToken.length);
+    throw new Error("Token Zoom inválido. Por favor, reconecte sua conta em Configurações → Integrações.");
   }
 
   // Calculate duration
