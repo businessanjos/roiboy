@@ -699,6 +699,9 @@ export default function RoyZapp() {
   // Import conversations state
   const [importingConversations, setImportingConversations] = useState(false);
   const [importLimit, setImportLimit] = useState("50");
+  
+  // Refresh messages state
+  const [isRefreshingMessages, setIsRefreshingMessages] = useState(false);
 
   // Department dialog state
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
@@ -2593,6 +2596,50 @@ export default function RoyZapp() {
     }
   };
 
+  // Refresh messages from WhatsApp (sync-chat-history)
+  const refreshMessages = useCallback(async () => {
+    if (!selectedIntegrationId) {
+      toast.error("Nenhuma instância WhatsApp selecionada");
+      return;
+    }
+    
+    setIsRefreshingMessages(true);
+    try {
+      const response = await supabase.functions.invoke("uazapi-manager", {
+        body: { 
+          action: "sync-chat-history", 
+          integration_id: selectedIntegrationId,
+          days: 3, // Buscar últimos 3 dias (período recente)
+        },
+      });
+      
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      
+      const result = response.data?.data;
+      if (result) {
+        if (result.synced > 0) {
+          toast.success(
+            `${result.synced} mensagens sincronizadas!`,
+            { description: `${result.skipped} já existiam no sistema.` }
+          );
+          // Recarregar mensagens da conversa ativa se houver
+          fetchData();
+        } else {
+          toast.info("Nenhuma mensagem nova encontrada", {
+            description: `${result.skipped} mensagens já estavam sincronizadas.`
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar mensagens:", error);
+      toast.error("Erro ao buscar mensagens do WhatsApp");
+    } finally {
+      setIsRefreshingMessages(false);
+    }
+  }, [selectedIntegrationId, fetchData]);
+
   // Create client/lead from contact
   const openAddContactDialog = () => {
     if (!selectedConversation?.zapp_conversation) return;
@@ -3890,6 +3937,8 @@ export default function RoyZapp() {
           onPullFromQueue={pullFromQueue}
           notificationPermission={notificationPermission}
           onRequestNotificationPermission={requestNotificationPermission}
+          onRefreshMessages={refreshMessages}
+          isRefreshingMessages={isRefreshingMessages}
           aiAgents={[]} // Hidden for now - TODO: configure AI agents properly
           selectedAIAgent={null}
           onSelectAIAgent={() => {}} // Disabled for now

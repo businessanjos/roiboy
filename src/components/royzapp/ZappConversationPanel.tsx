@@ -12,6 +12,7 @@ import {
   Bot,
   ArrowDownToLine,
   Pin,
+  RefreshCw,
 } from "lucide-react";
 import { getContactInfo } from "./types";
 import { Button } from "@/components/ui/button";
@@ -145,6 +146,10 @@ interface ZappConversationPanelProps {
   getAgentName: (agentId: string) => string;
   onPullFromQueue?: () => void;
   
+  // Refresh messages
+  onRefreshMessages?: () => void;
+  isRefreshingMessages?: boolean;
+  
   // AI Agents
   aiAgents?: AIAgent[];
   selectedAIAgent?: AIAgent | null;
@@ -233,6 +238,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onAutoLearningChange,
   getAgentName,
   onPullFromQueue,
+  onRefreshMessages,
+  isRefreshingMessages,
   aiAgents = [],
   selectedAIAgent,
   onSelectAIAgent,
@@ -515,6 +522,15 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               >
                 <Settings className="h-4 w-4 mr-2" />
                 Configurações
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-zapp-border" />
+              <DropdownMenuItem 
+                className="text-zapp-text hover:bg-zapp-hover"
+                onClick={onRefreshMessages}
+                disabled={isRefreshingMessages}
+              >
+                <RefreshCw className={cn("h-4 w-4 mr-2", isRefreshingMessages && "animate-spin")} />
+                {isRefreshingMessages ? "Atualizando..." : "Atualizar Mensagens"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
