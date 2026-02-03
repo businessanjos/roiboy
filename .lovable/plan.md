@@ -1,186 +1,315 @@
 
 
-# Plano: Exibir Link da Reunião + Correção de Credenciais Zoom
+# Plano: Migrar Zoom para OAuth 2.0 Authorization Code Grant
 
-## Diagnóstico do Erro
+## Diagnóstico
 
-O usuário tentou criar uma reunião e recebeu o erro:
+O erro `unsupported_grant_type` ocorre porque a função `createZoomMeeting` usa autenticação **Server-to-Server OAuth** (`grant_type=account_credentials`), mas o aplicativo Zoom é do tipo **General App (User-managed)** que requer o fluxo **Authorization Code Grant**.
 
-```
-Error: Zoom credentials not configured. 
-Please add ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET, and ZOOM_ACCOUNT_ID.
-```
+### Boa notícia
 
-### Status das Credenciais
+O fluxo OAuth para Zoom **JÁ ESTÁ IMPLEMENTADO** nas Edge Functions:
+- `oauth-init`: Gera URL de autorização do Zoom ✅
+- `oauth-callback`: Troca o código por tokens e salva em `user_integrations` ✅
 
-| Secret | Status |
-|--------|--------|
-| `ZOOM_CLIENT_ID` | ✅ Configurado |
-| `ZOOM_CLIENT_SECRET` | ✅ Configurado |
-| `ZOOM_ACCOUNT_ID` | ❌ **FALTANDO** |
-
-**Solução**: Adicionar o secret `ZOOM_ACCOUNT_ID` nas configurações.
+O problema está **APENAS** na função `create-meeting` que ignora esses tokens e tenta usar `account_credentials`.
 
 ---
 
-## Nova Funcionalidade: Campo do Link Gerado
+## Modificações Necessárias
 
-Após a reunião ser criada, exibir um campo com o link da reunião para que o usuário possa copiar e compartilhar manualmente.
+### Arquivo: `supabase/functions/create-meeting/index.ts`
 
-### Estado Atual
-- A reunião é criada → dialog fecha → link aparece apenas como botão "Abrir"
-- Não há como visualizar/copiar o link completo facilmente
+#### 1. Adicionar função `refreshZoomToken`
 
-### Proposta
-Adicionar um campo de texto readonly com o link da reunião e botão de copiar:
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│ 🟢 Google Meet configurado            [↻] [📋] [Abrir ↗]   │
-│ ┌─────────────────────────────────────────────────────────┐ │
-│ │ https://meet.google.com/abc-defg-hij              [📋] │ │
-│ └─────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Modificações Técnicas
-
-### 1. Arquivo: `src/components/tasks/TaskDialog.tsx`
-
-**Adicionar imports (~linha 28):**
 ```typescript
-import { Loader2, Video, ExternalLink, RefreshCw, Copy, Check } from "lucide-react";
-```
-
-**Adicionar estado para copiar (~linha 100):**
-```typescript
-const [copied, setCopied] = useState(false);
-```
-
-**Adicionar função de copiar:**
-```typescript
-const copyMeetingUrl = async () => {
-  if (meetingUrl) {
-    await navigator.clipboard.writeText(meetingUrl);
-    setCopied(true);
-    toast.success("Link copiado!");
-    setTimeout(() => setCopied(false), 2000);
+async function refreshZoomToken(
+  refreshToken: string
+): Promise<{ access_token: string; refresh_token?: string; expires_in: number } | null> {
+  const clientId = Deno.env.get("ZOOM_CLIENT_ID");
+  const clientSecret = Deno.env.get("ZOOM_CLIENT_SECRET");
+  
+  if (!clientId || !clientSecret || !refreshToken) {
+    return null;
   }
-};
+
+  try {
+    const response = await fetch("https://zoom.us/oauth/token", {
+      method: "POST",
+      headers: {
+        "Authorization": `Basic ${btoa(`${clientId}:${clientSecret}`)}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Failed to refresh Zoom token:", await response.text());
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Error refreshing Zoom token:", error);
+    return null;
+  }
+}
 ```
 
-**Modificar seção do meeting (~linha 592-616):**
+#### 2. Reescrever função `createZoomMeeting`
+
+Alterar de:
 ```typescript
-{meetingUrl ? (
-  <div className="space-y-2">
-    <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-      <Video className="h-4 w-4 text-primary" />
-      <span className="text-sm flex-1">
-        {meetingPlatform === "zoom" ? "🔵 Zoom" : "🟢 Google Meet"} configurado
-      </span>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => setMeetingDialogOpen(true)}
-        title="Recriar reunião"
-      >
-        <RefreshCw className="h-4 w-4" />
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => window.open(meetingUrl, "_blank")}
-      >
-        <ExternalLink className="h-4 w-4 mr-1" />
-        Abrir
-      </Button>
-    </div>
-    
-    {/* NOVO: Campo com link para copiar */}
-    <div className="flex items-center gap-2">
-      <Input
-        value={meetingUrl}
-        readOnly
-        className="text-xs font-mono bg-muted/50"
-      />
-      <Button
-        type="button"
-        variant="outline"
-        size="icon"
-        onClick={copyMeetingUrl}
-        title="Copiar link"
-      >
-        {copied ? (
-          <Check className="h-4 w-4 text-green-500" />
-        ) : (
-          <Copy className="h-4 w-4" />
-        )}
-      </Button>
-    </div>
-  </div>
-) : (
-  // ... botão existente
-)}
+async function createZoomMeeting(
+  startTime: string,
+  endTime: string,
+  title: string,
+  participantEmail?: string
+)
+```
+
+Para:
+```typescript
+async function createZoomMeeting(
+  startTime: string,
+  endTime: string,
+  title: string,
+  participantEmail: string | undefined,
+  supabaseClient: any,
+  userId?: string
+)
+```
+
+**Nova lógica:**
+1. Buscar tokens do usuário em `user_integrations` (igual ao Google)
+2. Verificar se token expirou e fazer refresh se necessário
+3. Usar o `access_token` para criar a reunião
+4. Se não houver tokens, retornar erro pedindo para conectar a conta Zoom
+
+```typescript
+async function createZoomMeeting(
+  startTime: string,
+  endTime: string,
+  title: string,
+  participantEmail: string | undefined,
+  supabaseClient: any,
+  userId?: string
+): Promise<{ meeting_url: string; meeting_id: string; meeting_password: string }> {
+  let accessToken: string | null = null;
+  let refreshToken: string | null = null;
+  let expiresAt: number | null = null;
+
+  // Get user-level OAuth tokens from user_integrations
+  if (userId) {
+    const { data: userIntegration } = await supabaseClient
+      .from("user_integrations")
+      .select("access_token, refresh_token, expires_at")
+      .eq("user_id", userId)
+      .eq("provider", "zoom")
+      .maybeSingle();
+
+    if (userIntegration?.access_token) {
+      accessToken = userIntegration.access_token;
+      refreshToken = userIntegration.refresh_token;
+      expiresAt = userIntegration.expires_at;
+      console.log("Using user-level Zoom OAuth tokens");
+    }
+  }
+
+  // Check if token needs refresh
+  if (accessToken && expiresAt && refreshToken) {
+    const now = Math.floor(Date.now() / 1000);
+    if (expiresAt < now + 300) { // 5 minute buffer
+      console.log("Zoom token expired or expiring soon, refreshing...");
+      const newTokens = await refreshZoomToken(refreshToken);
+      if (newTokens) {
+        accessToken = newTokens.access_token;
+        const newExpiresAt = Math.floor(Date.now() / 1000) + newTokens.expires_in;
+        
+        // Update stored token
+        if (userId) {
+          await supabaseClient
+            .from("user_integrations")
+            .update({ 
+              access_token: accessToken,
+              refresh_token: newTokens.refresh_token || refreshToken,
+              expires_at: newExpiresAt,
+              updated_at: new Date().toISOString()
+            })
+            .eq("user_id", userId)
+            .eq("provider", "zoom");
+        }
+        console.log("Zoom token refreshed successfully");
+      }
+    }
+  }
+
+  if (!accessToken) {
+    throw new Error("Zoom não conectado. Por favor, conecte sua conta Zoom em Configurações → Integrações.");
+  }
+
+  // Calculate duration
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+  const durationMinutes = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+
+  // Create meeting using user's access token
+  const meetingResponse = await fetch("https://api.zoom.us/v2/users/me/meetings", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      topic: title,
+      type: 2,
+      start_time: startTime,
+      duration: durationMinutes,
+      timezone: "America/Sao_Paulo",
+      settings: {
+        host_video: true,
+        participant_video: true,
+        join_before_host: true,
+        waiting_room: false,
+        ...(participantEmail && { meeting_invitees: [{ email: participantEmail }] }),
+      },
+    }),
+  });
+
+  if (!meetingResponse.ok) {
+    const errorText = await meetingResponse.text();
+    console.error("Zoom meeting creation error:", errorText);
+    throw new Error("Falha ao criar reunião no Zoom. Tente reconectar sua conta.");
+  }
+
+  const meetingData = await meetingResponse.json();
+  return {
+    meeting_url: meetingData.join_url,
+    meeting_id: meetingData.id.toString(),
+    meeting_password: meetingData.password || "",
+  };
+}
+```
+
+#### 3. Atualizar chamada da função
+
+De:
+```typescript
+if (platform === "zoom") {
+  meetingResult = await createZoomMeeting(start_time, end_time, title, participant_email);
+}
+```
+
+Para:
+```typescript
+if (platform === "zoom") {
+  meetingResult = await createZoomMeeting(
+    start_time, 
+    end_time, 
+    title, 
+    participant_email,
+    supabase,
+    internalUserId
+  );
+}
 ```
 
 ---
 
-## Resultado Visual
+## Fluxo Completo
 
-### Antes
 ```text
-┌───────────────────────────────────────────────┐
-│ 🟢 Google Meet configurado    [↻]  [Abrir ↗] │
-└───────────────────────────────────────────────┘
-```
-
-### Depois
-```text
-┌───────────────────────────────────────────────────────────┐
-│ 🟢 Google Meet configurado           [↻]      [Abrir ↗]  │
-│ ┌───────────────────────────────────────────────────┬───┐│
-│ │ https://meet.google.com/abc-defg-hij              │📋││
-│ └───────────────────────────────────────────────────┴───┘│
-└───────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                    FLUXO OAUTH DO ZOOM                          │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   1. CONEXÃO (única vez)                                        │
+│   ━━━━━━━━━━━━━━━━━━━━━━                                        │
+│   Usuário → Configurações → Integrações → Conectar Zoom         │
+│                      │                                          │
+│                      ▼                                          │
+│             oauth-init (gera URL Zoom)                          │
+│                      │                                          │
+│                      ▼                                          │
+│             Zoom autoriza → oauth-callback                      │
+│                      │                                          │
+│                      ▼                                          │
+│             Tokens salvos em user_integrations                  │
+│                                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   2. CRIAÇÃO DE REUNIÃO (cada vez)                              │
+│   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━                              │
+│   Usuário → Criar Tarefa → Configurar Reunião → Zoom            │
+│                      │                                          │
+│                      ▼                                          │
+│             create-meeting Edge Function                        │
+│                      │                                          │
+│                      ▼                                          │
+│   ┌─────────────────────────────────────────────────────┐       │
+│   │ 1. Buscar tokens do usuário em user_integrations   │       │
+│   │ 2. Se token expirado → refresh com refresh_token   │       │
+│   │ 3. Usar access_token para criar reunião            │       │
+│   │ 4. Se sem tokens → erro "Conecte sua conta Zoom"   │       │
+│   └─────────────────────────────────────────────────────┘       │
+│                      │                                          │
+│                      ▼                                          │
+│             Reunião criada na conta DO USUÁRIO                  │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Ação Necessária para Zoom
+## O que será removido
 
-Para que a integração com Zoom funcione, é necessário adicionar o secret:
-
-**Secret a adicionar:**
-- Nome: `ZOOM_ACCOUNT_ID`
-- Valor: ID da conta Zoom (encontrado no painel de desenvolvedor Zoom: [marketplace.zoom.us](https://marketplace.zoom.us))
-
-Após adicionar este secret, as reuniões Zoom serão criadas corretamente.
+| Código Antigo | Status |
+|---------------|--------|
+| `ZOOM_ACCOUNT_ID` | ❌ Não será mais necessário |
+| `grant_type=account_credentials` | ❌ Removido |
+| Autenticação Server-to-Server | ❌ Removida |
 
 ---
 
-## Arquivos a Modificar
+## O que já funciona (sem alteração)
+
+| Componente | Status |
+|------------|--------|
+| `oauth-init` (gerar URL Zoom) | ✅ Mantido |
+| `oauth-callback` (salvar tokens) | ✅ Mantido |
+| Tabela `user_integrations` | ✅ Mantida |
+| Interface de conexão em Settings | ✅ Mantida |
+
+---
+
+## Arquivo a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/tasks/TaskDialog.tsx` | Adicionar campo do link com botão copiar |
+| `supabase/functions/create-meeting/index.ts` | Reescrever `createZoomMeeting` para usar OAuth do usuário |
 
-## Dependência
+---
 
-| Item | Status |
-|------|--------|
-| Secret `ZOOM_ACCOUNT_ID` | ⚠️ Precisa ser adicionado pelo usuário |
+## Requisito para o Usuário
+
+Após esta alteração, cada usuário que quiser criar reuniões no Zoom precisará:
+
+1. Ir em **Configurações → Integrações**
+2. Clicar em **Conectar** ao lado do Zoom
+3. Autorizar o aplicativo com sua conta Zoom pessoal
+
+Depois disso, todas as reuniões serão criadas na conta Zoom desse usuário.
 
 ---
 
 ## Resultado Esperado
 
-1. ✅ Campo visível mostrando o link completo da reunião
-2. ✅ Botão para copiar link para área de transferência
-3. ✅ Feedback visual ao copiar (ícone muda para check)
-4. ✅ Toast confirmando que o link foi copiado
-5. ⚠️ Zoom funcionará após adicionar `ZOOM_ACCOUNT_ID`
+1. ✅ Erro `unsupported_grant_type` corrigido
+2. ✅ Cada usuário usa sua própria conta Zoom
+3. ✅ Tokens são armazenados e renovados automaticamente
+4. ✅ `ZOOM_ACCOUNT_ID` não é mais necessário
+5. ✅ Mensagem clara se o usuário não tiver conectado sua conta
 
