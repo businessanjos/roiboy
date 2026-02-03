@@ -1,129 +1,113 @@
 
-# Plano: Corrigir Duplicação de Conversas - Unificação Automática
+# Plano: Criar Constraint Única para Evitar Duplicatas
 
-## Problema Diagnosticado
+## Diagnóstico Final
 
-A correção anterior **só previne novas duplicações**, mas não resolve duplicações já existentes. 
+Existem **9 pares de conversas duplicadas** no setor Vendas:
+- **6 casos**: conversa legada (NULL) + conversa nova (com integration_id)
+- **3 casos**: duas conversas com integration_ids diferentes (permitido - instâncias diferentes)
 
-### Situação Atual
+O problema específico da Monick (`+5575991258078`) é do tipo 1: uma conversa legada + uma nova.
 
-No banco de dados existem **6 pares de conversas duplicadas** - cada par possui:
-- Uma conversa **legada** (sem `integration_id`) com histórico antigo
-- Uma conversa **nova** (com `integration_id`) criada recentemente
+### Índice Atual
 
-**Exemplo - Monick Oliveira Nunes:**
-| Conversa | integration_id | Criada em | Mensagens |
-|----------|---------------|-----------|-----------|
-| `6354b7d9...` (nova) | `ac869d1d...` | 03/02 | 5 |
-| `00b91bf9...` (legada) | NULL | 29/01 | 11 |
-
-### Por Que a Correção Anterior Não Funcionou
-
-O fallback implementado só é executado quando **não encontra nenhuma conversa** com o `integration_id` atual. Mas como a conversa nova já existe (foi criada antes da correção), a busca inicial a encontra e nunca chega no fallback.
-
+O índice único existente:
+```sql
+CREATE UNIQUE INDEX zapp_conversations_account_phone_integration_unique 
+ON public.zapp_conversations (account_id, phone_e164, integration_id) 
+WHERE ((is_group = false) AND (phone_e164 IS NOT NULL) AND (integration_id IS NOT NULL))
 ```
-Fluxo atual (COM BUG):
-1. Buscar por phone + integration_id → ENCONTRA 6354b7d9 ✓
-2. Fallback para legada → NÃO EXECUTADO (já encontrou acima)
-3. Resultado: Duas conversas permanecem separadas ✗
+
+**Problema**: Só protege quando `integration_id IS NOT NULL`. Conversas legadas (NULL) não são cobertas.
+
+---
+
+## Solução em 2 Etapas
+
+### Etapa 1: Limpar Duplicatas Existentes
+
+Antes de criar a constraint, preciso eliminar as duplicatas existentes via uma migração SQL que:
+
+1. Encontra pares de duplicatas (mesmo telefone + setor)
+2. Move todas as mensagens para a conversa mais recente (que tem integration_id)
+3. Deleta a conversa legada duplicada
+
+```sql
+-- Para cada duplicata do tipo legada + nova:
+WITH duplicates AS (
+  SELECT 
+    c1.id as keep_id,      -- Conversa com integration_id (manter)
+    c2.id as delete_id     -- Conversa legada (deletar)
+  FROM zapp_conversations c1
+  JOIN zapp_conversations c2 ON 
+    c1.account_id = c2.account_id 
+    AND c1.phone_e164 = c2.phone_e164
+    AND c1.sector_id = c2.sector_id
+    AND c1.is_group = false
+    AND c2.is_group = false
+    AND c1.integration_id IS NOT NULL
+    AND c2.integration_id IS NULL
+    AND c1.id != c2.id
+)
+-- 1. Mover mensagens
+UPDATE zapp_messages SET zapp_conversation_id = d.keep_id
+FROM duplicates d WHERE zapp_conversation_id = d.delete_id;
+
+-- 2. Deletar assignments
+DELETE FROM zapp_conversation_assignments 
+WHERE zapp_conversation_id IN (SELECT delete_id FROM duplicates);
+
+-- 3. Deletar conversas legadas duplicadas
+DELETE FROM zapp_conversations 
+WHERE id IN (SELECT delete_id FROM duplicates);
+```
+
+### Etapa 2: Criar Índice Único para Conversas Legadas
+
+Adicionar um segundo índice único que proteja conversas sem integration_id:
+
+```sql
+-- Garantir uma conversa por telefone+setor quando integration_id é NULL
+CREATE UNIQUE INDEX zapp_conversations_account_phone_sector_legacy_unique 
+ON public.zapp_conversations (account_id, phone_e164, sector_id) 
+WHERE (
+  is_group = false 
+  AND phone_e164 IS NOT NULL 
+  AND integration_id IS NULL
+);
+```
+
+Este índice garante que:
+- Só pode existir **UMA** conversa legada (sem integration_id) por telefone + setor
+- O índice existente continua garantindo uma conversa por telefone + integration_id
+
+### Alternativa: Forçar migration de todas conversas legadas
+
+Outra opção é migrar TODAS as conversas legadas para receberem o `integration_id` da primeira integração do setor:
+
+```sql
+-- Atualizar conversas legadas com o integration_id do setor
+UPDATE zapp_conversations c
+SET integration_id = (
+  SELECT i.id FROM integrations i 
+  WHERE i.sector_id = c.sector_id 
+    AND i.status = 'connected'
+  ORDER BY i.created_at ASC
+  LIMIT 1
+)
+WHERE c.integration_id IS NULL
+  AND c.is_group = false
+  AND c.sector_id IS NOT NULL;
 ```
 
 ---
 
-## Solução: Unificação Automática de Duplicatas
+## Resumo das Modificações
 
-A solução correta é **detectar e unificar duplicatas existentes** sempre que uma conversa é acessada ou uma mensagem é recebida.
-
-### Fluxo Corrigido
-
-```text
-1. Buscar TODAS as conversas para o telefone no mesmo setor
-   └── Encontrou múltiplas (legada + nova)?
-       └── SIM: Unificar automaticamente
-           ├── Mover todas as mensagens para a conversa mais antiga
-           ├── Mover todos os assignments para a conversa mais antiga
-           ├── Deletar a conversa duplicada
-           └── Usar a conversa unificada
-       └── NÃO: Continuar fluxo normal
-```
-
-### Modificações Técnicas
-
-#### 1. `supabase/functions/uazapi-webhook/index.ts`
-
-Adicionar lógica de unificação após encontrar a conversa:
-
-```typescript
-// APÓS a busca principal (linha ~848), adicionar:
-
-// ============================================
-// AUTO-UNIFY DUPLICATE CONVERSATIONS
-// ============================================
-// If we found a conversation with integration_id, check if there's also a legacy one
-// If so, merge them to prevent showing duplicates in the UI
-
-if (existingZappConvo && phone && sectorId && integrationId) {
-  const { data: legacyDuplicate } = await supabase
-    .from("zapp_conversations")
-    .select("id")
-    .eq("account_id", accountId)
-    .eq("phone_e164", phone)
-    .eq("sector_id", sectorId)
-    .is("integration_id", null)
-    .eq("is_group", false)
-    .neq("id", existingZappConvo.id)
-    .maybeSingle();
-  
-  if (legacyDuplicate) {
-    console.log(`[AUTO-UNIFY] Merging legacy ${legacyDuplicate.id} into ${existingZappConvo.id}`);
-    
-    // 1. Move all messages from legacy to current
-    await supabase
-      .from("zapp_messages")
-      .update({ zapp_conversation_id: existingZappConvo.id })
-      .eq("zapp_conversation_id", legacyDuplicate.id);
-    
-    // 2. Move/delete assignments from legacy
-    await supabase
-      .from("zapp_conversation_assignments")
-      .delete()
-      .eq("zapp_conversation_id", legacyDuplicate.id);
-    
-    // 3. Delete legacy conversation
-    await supabase
-      .from("zapp_conversations")
-      .delete()
-      .eq("id", legacyDuplicate.id);
-    
-    console.log(`[AUTO-UNIFY] Completed: legacy conversation deleted`);
-  }
-}
-```
-
-#### 2. `src/pages/RoyZapp.tsx`
-
-Aplicar a mesma lógica na função `createConversationWithContact`:
-
-Após encontrar uma conversa com `integration_id`, verificar se existe uma duplicata legada e unificá-las.
-
----
-
-## Tabelas Afetadas
-
-| Tabela | Operação |
-|--------|----------|
-| `zapp_messages` | UPDATE para mover mensagens para conversa principal |
-| `zapp_conversation_assignments` | DELETE dos assignments da conversa legada |
-| `zapp_conversations` | DELETE da conversa legada duplicada |
-
----
-
-## Benefícios
-
-1. **Corrige duplicatas existentes** - as 6 duplicatas serão unificadas automaticamente
-2. **Preserva histórico completo** - todas as mensagens ficam na mesma conversa
-3. **Auto-healing** - funciona sob demanda quando a conversa é acessada ou recebe mensagem
-4. **Sem intervenção manual** - o usuário não precisa fazer nada
+| Tipo | Descrição |
+|------|-----------|
+| **Migração SQL** | Limpar duplicatas existentes + criar índice único para legadas |
+| **Nenhum código** | Não precisa alterar código (índice protege no nível do banco) |
 
 ---
 
@@ -131,13 +115,13 @@ Após encontrar uma conversa com `integration_id`, verificar se existe uma dupli
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `supabase/functions/uazapi-webhook/index.ts` | Adicionar lógica de auto-unify após encontrar conversa |
-| `src/pages/RoyZapp.tsx` | Adicionar mesma lógica em `createConversationWithContact` |
+| Migração SQL | Limpar duplicatas + criar constraint `zapp_conversations_account_phone_sector_legacy_unique` |
 
 ---
 
-## Estimativa
+## Benefícios
 
-- **Complexidade**: Média
-- **Risco**: Baixo (operação segura - apenas move dados e deleta duplicatas)
-- **Impacto**: Alto (resolve problema de duplicação para todos os usuários afetados)
+1. **Proteção no nível do banco** - impossível criar duplicatas mesmo com bugs no código
+2. **Limpa duplicatas existentes** - resolve os 6 casos atuais
+3. **Simples** - não requer mudanças de código
+4. **Performático** - índice ajuda nas buscas por telefone+setor
