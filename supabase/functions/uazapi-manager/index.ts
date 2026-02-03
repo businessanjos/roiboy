@@ -20,7 +20,9 @@ interface UazapiRequest {
     | "import-conversations"
     | "delete_message" | "edit_message"
     | "list_instances" | "link_instance"
-    | "add_instance_to_sector" | "update_instance_pin" | "verify_instance_pin" | "list_sector_instances";
+    | "add_instance_to_sector" | "update_instance_pin" | "verify_instance_pin" | "list_sector_instances"
+    | "sync-chat-history";
+  days?: number; // Number of days to sync history (default 7)
   limit?: number;
   instance_name?: string;
   phone?: string;
@@ -3807,6 +3809,255 @@ serve(async (req) => {
         } else {
           result = { edited: true, message_id, success: true };
         }
+        break;
+      }
+
+      case "sync-chat-history": {
+        // Sync message history from UAZAPI for a specific integration
+        // This helps recover messages when webhook was not configured
+        console.log("=== SYNC CHAT HISTORY ===");
+        
+        const daysToSync = payload.days || 7;
+        const targetIntegrationId = integration_id;
+        
+        if (!targetIntegrationId) {
+          return new Response(
+            JSON.stringify({ error: "integration_id é obrigatório" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // Get the integration details
+        const { data: syncIntegration, error: syncIntError } = await supabase
+          .from("integrations")
+          .select("id, config, sector_id, account_id, status")
+          .eq("id", targetIntegrationId)
+          .eq("account_id", accountId)
+          .single();
+        
+        if (syncIntError || !syncIntegration) {
+          return new Response(
+            JSON.stringify({ error: "Integração não encontrada" }),
+            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        const syncInstanceToken = (syncIntegration.config as { instance_token?: string })?.instance_token;
+        
+        if (!syncInstanceToken) {
+          return new Response(
+            JSON.stringify({ error: "Token de instância não encontrado - reconecte o WhatsApp" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        console.log(`[sync-chat-history] Integration: ${targetIntegrationId}, Days: ${daysToSync}`);
+        
+        // Get active conversations for this integration
+        const { data: activeConversations, error: convError } = await supabase
+          .from("zapp_conversations")
+          .select("id, phone_e164, group_jid, is_group, contact_name")
+          .eq("integration_id", targetIntegrationId)
+          .eq("account_id", accountId);
+        
+        if (convError) {
+          console.error("[sync-chat-history] Error fetching conversations:", convError.message);
+          return new Response(
+            JSON.stringify({ error: "Erro ao buscar conversas" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        console.log(`[sync-chat-history] Found ${activeConversations?.length || 0} conversations to sync`);
+        
+        let syncedCount = 0;
+        let skippedCount = 0;
+        let errorCount = 0;
+        const errors: string[] = [];
+        
+        // Calculate date cutoff
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - daysToSync);
+        const cutoffTimestamp = cutoffDate.getTime();
+        
+        // Process each conversation
+        for (const conversation of (activeConversations || [])) {
+          try {
+            // Determine chatId format - UAZAPI expects JID format
+            const chatId = conversation.is_group 
+              ? conversation.group_jid 
+              : `${conversation.phone_e164.replace('+', '')}@s.whatsapp.net`;
+            
+            if (!chatId) {
+              console.log(`[sync-chat-history] Skipping conversation ${conversation.id} - no chatId`);
+              continue;
+            }
+            
+            console.log(`[sync-chat-history] Fetching messages for ${chatId}`);
+            
+            // Try different UAZAPI endpoints to fetch messages
+            // deno-lint-ignore no-explicit-any
+            let messagesData: any = null;
+            
+            // Try endpoint 1: POST /chat/fetchMessages/{chatId}
+            try {
+              messagesData = await uazapiInstanceRequest(
+                `/chat/fetchMessages/${encodeURIComponent(chatId)}`,
+                "POST",
+                syncInstanceToken,
+                { limit: 100 }
+              );
+            } catch (e) {
+              console.log(`[sync-chat-history] fetchMessages failed: ${(e as Error).message}`);
+            }
+            
+            // Try endpoint 2: GET /chat/messages/{chatId}
+            if (!messagesData || !Array.isArray(messagesData)) {
+              try {
+                messagesData = await uazapiInstanceRequest(
+                  `/chat/messages/${encodeURIComponent(chatId)}`,
+                  "GET",
+                  syncInstanceToken
+                );
+              } catch (e) {
+                console.log(`[sync-chat-history] chat/messages failed: ${(e as Error).message}`);
+              }
+            }
+            
+            // Try endpoint 3: POST /messages/list
+            if (!messagesData || !Array.isArray(messagesData)) {
+              try {
+                messagesData = await uazapiInstanceRequest(
+                  `/messages/list`,
+                  "POST",
+                  syncInstanceToken,
+                  { chatId, limit: 100 }
+                );
+              } catch (e) {
+                console.log(`[sync-chat-history] messages/list failed: ${(e as Error).message}`);
+              }
+            }
+            
+            // Extract messages array from response
+            // deno-lint-ignore no-explicit-any
+            let messages: any[] = [];
+            if (Array.isArray(messagesData)) {
+              messages = messagesData;
+            } else if (messagesData?.messages && Array.isArray(messagesData.messages)) {
+              messages = messagesData.messages;
+            } else if (messagesData?.data && Array.isArray(messagesData.data)) {
+              messages = messagesData.data;
+            }
+            
+            console.log(`[sync-chat-history] Got ${messages.length} messages for ${chatId}`);
+            
+            // Process each message
+            for (const msg of messages) {
+              try {
+                // Extract message details based on UAZAPI response format
+                const messageId = msg.key?.id || msg.id || msg.messageId;
+                const messageTimestamp = msg.messageTimestamp || msg.timestamp || msg.created_at;
+                const fromMe = msg.key?.fromMe ?? msg.fromMe ?? false;
+                
+                // Parse timestamp (could be Unix seconds or milliseconds)
+                let msgTime: number;
+                if (typeof messageTimestamp === 'string') {
+                  msgTime = new Date(messageTimestamp).getTime();
+                } else if (messageTimestamp > 1000000000000) {
+                  msgTime = messageTimestamp; // Already in milliseconds
+                } else {
+                  msgTime = messageTimestamp * 1000; // Convert seconds to milliseconds
+                }
+                
+                // Skip messages older than cutoff
+                if (msgTime < cutoffTimestamp) {
+                  continue;
+                }
+                
+                // Skip if no message ID
+                if (!messageId) {
+                  continue;
+                }
+                
+                // Check if message already exists
+                const { data: existingMsg } = await supabase
+                  .from("zapp_messages")
+                  .select("id")
+                  .eq("external_message_id", messageId)
+                  .eq("conversation_id", conversation.id)
+                  .maybeSingle();
+                
+                if (existingMsg) {
+                  skippedCount++;
+                  continue;
+                }
+                
+                // Extract message body
+                const body = msg.message?.conversation || 
+                            msg.message?.extendedTextMessage?.text ||
+                            msg.body ||
+                            msg.text ||
+                            "";
+                
+                // Extract media info if present
+                const hasMedia = !!(msg.message?.imageMessage || 
+                                   msg.message?.audioMessage || 
+                                   msg.message?.documentMessage ||
+                                   msg.message?.videoMessage ||
+                                   msg.mediaType);
+                
+                const mediaType = msg.message?.imageMessage ? "image" :
+                                 msg.message?.audioMessage ? "audio" :
+                                 msg.message?.documentMessage ? "document" :
+                                 msg.message?.videoMessage ? "video" :
+                                 msg.mediaType || null;
+                
+                const mediaUrl = msg.mediaUrl || msg.media_url || null;
+                
+                // Insert the message
+                const { error: insertError } = await supabase
+                  .from("zapp_messages")
+                  .insert({
+                    account_id: accountId,
+                    conversation_id: conversation.id,
+                    external_message_id: messageId,
+                    from_me: fromMe,
+                    body: body || (hasMedia ? `[${mediaType || 'media'}]` : "[mensagem]"),
+                    media_type: mediaType,
+                    media_url: mediaUrl,
+                    created_at: new Date(msgTime).toISOString(),
+                    synced_from_history: true, // Mark as synced from history
+                  });
+                
+                if (insertError) {
+                  console.error(`[sync-chat-history] Insert error:`, insertError.message);
+                  errorCount++;
+                } else {
+                  syncedCount++;
+                }
+              } catch (msgError) {
+                console.error(`[sync-chat-history] Message processing error:`, (msgError as Error).message);
+                errorCount++;
+              }
+            }
+          } catch (convError) {
+            const errorMsg = (convError as Error).message;
+            console.error(`[sync-chat-history] Conversation ${conversation.id} error:`, errorMsg);
+            errors.push(`${conversation.contact_name || conversation.phone_e164}: ${errorMsg}`);
+            errorCount++;
+          }
+        }
+        
+        console.log(`[sync-chat-history] Complete. Synced: ${syncedCount}, Skipped: ${skippedCount}, Errors: ${errorCount}`);
+        
+        result = {
+          synced: syncedCount,
+          skipped: skippedCount,
+          errors: errorCount,
+          error_details: errors.slice(0, 5), // Return first 5 errors
+          conversations_processed: activeConversations?.length || 0,
+          days: daysToSync,
+        };
         break;
       }
 
