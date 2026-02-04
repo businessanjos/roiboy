@@ -1765,22 +1765,123 @@ export default function RoyZapp() {
           }
         }
         
-        // Check for WhatsApp disconnection
+        // Check for permanent errors (don't auto-retry these)
         const isWhatsAppDisconnected = errorMsg.includes("WHATSAPP_DISCONNECTED") || 
                                         errorMsg.includes("desconectado") ||
                                         errorMsg.includes("disconnected");
         
-        // Check for "no LID found" error (number not registered on WhatsApp)
         const isLidNotFound = errorMsg.includes("no LID found") || 
                               errorMsg.includes("LID not found") ||
                               (errorMsg.includes("not found for") && errorMsg.includes("@s.whatsapp.net"));
         
-        // Check for invalid phone number format
         const isInvalidNumber = errorMsg.includes("invalid") || 
                                 errorMsg.includes("Could not parse") ||
                                 errorMsg.includes("not valid") ||
                                 errorMsg.includes("número inválido") ||
                                 errorMsg.includes("formato inválido");
+        
+        const isPermanentError = isWhatsAppDisconnected || isLidNotFound || isInvalidNumber;
+        
+        // Auto-retry once for transient errors (network issues, timeouts, 500s)
+        // The Edge Function already retries 3x, this is an additional frontend fallback
+        const isTransientError = !isPermanentError && (
+          errorMsg.includes("non-2xx") ||
+          errorMsg.includes("timeout") ||
+          errorMsg.includes("network") ||
+          errorMsg.includes("fetch") ||
+          errorMsg.includes("500") ||
+          errorMsg.includes("503") ||
+          errorMsg.includes("502") ||
+          errorMsg.includes("504")
+        );
+        
+        // Check if this is the first attempt (message doesn't have retry marker)
+        const isFirstAttempt = !optimisticMessage.id.includes("-retry");
+        
+        if (isTransientError && isFirstAttempt) {
+          console.log("[RoyZapp] Transient error detected, auto-retrying in 1.5s...");
+          
+          // Update message status to show retry in progress
+          setMessages(prev => prev.map(m => 
+            m.id === tempMessageId 
+              ? { ...m, send_status: "sending" as const, send_error: "Tentando novamente..." }
+              : m
+          ));
+          
+          // Wait and retry
+          await new Promise(r => setTimeout(r, 1500));
+          
+          try {
+            // Recreate payload for retry (same structure as original)
+            const action = isGroup && groupJid ? "send_to_group" : "send_text";
+            const retryPayload: Record<string, unknown> = {
+              action,
+              message: messageContent,
+              sector_id: selectedSectorId,
+              integration_id: selectedIntegrationId,
+            };
+            
+            if (isGroup && groupJid) {
+              retryPayload.group_id = groupJid;
+              if (mentionsToSend.length > 0) {
+                retryPayload.mentions = mentionsToSend.map(m => m.jid);
+              }
+            } else {
+              retryPayload.phone = phone;
+            }
+            
+            if (replyContext?.external_message_id) {
+              retryPayload.quoted_message_id = replyContext.external_message_id;
+              retryPayload.quoted_from_me = !replyContext.is_from_client;
+              if (replyContext.is_from_client && phone) {
+                retryPayload.quoted_participant = phone;
+              }
+            }
+            
+            const { error: retryError } = await supabase.functions.invoke("uazapi-manager", {
+              body: retryPayload,
+            });
+            
+            if (retryError) throw retryError;
+            
+            console.log("[RoyZapp] Auto-retry succeeded!");
+            
+            // Save message to database after successful retry
+            if (conversationId) {
+              const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
+                account_id: accountId,
+                zapp_conversation_id: conversationId,
+                direction: "outbound",
+                content: messageContent,
+                message_type: "text",
+                sent_at: now,
+                quoted_message_id: replyContext?.external_message_id || null,
+                quoted_content: replyContext?.content || null,
+                quoted_sender_name: replyContext?.is_from_client 
+                  ? (replyContext.sender_name || "Cliente") 
+                  : "Você",
+              }).select("id").single();
+              
+              if (insertedMessage) {
+                setMessages(prev => prev.map(m => 
+                  m.id === tempMessageId ? { ...m, id: insertedMessage.id, send_status: "sent" as const, send_error: null } : m
+                ));
+              }
+              
+              supabase.from("zapp_conversations").update({
+                last_message_at: now,
+                last_message_preview: messageContent.substring(0, 100),
+                unread_count: 0,
+              }).eq("id", conversationId);
+            }
+            
+            return; // Success on retry, exit early
+          } catch (retryErr: any) {
+            console.error("[RoyZapp] Auto-retry also failed:", retryErr);
+            // Continue to show error to user
+            errorMsg = retryErr.message || errorMsg;
+          }
+        }
         
         // Determine user-friendly error message
         let userErrorMessage = errorMsg;
@@ -1792,7 +1893,7 @@ export default function RoyZapp() {
           userErrorMessage = "Número de telefone inválido ou não registrado no WhatsApp";
         }
         
-        // Mark message as failed instead of removing it
+        // Mark message as failed
         setMessages(prev => prev.map(m => 
           m.id === tempMessageId 
             ? { 
