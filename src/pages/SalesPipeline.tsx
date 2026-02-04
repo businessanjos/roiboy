@@ -425,6 +425,22 @@ export default function SalesPipeline() {
         }
       }
 
+      // STEP 4.1: Create automatic onboarding items for new client
+      if (clientId && currentUser?.account_id) {
+        try {
+          const { createClientOnboardingItems } = await import("@/utils/clientOnboardingAutomation");
+          await createClientOnboardingItems({
+            clientId,
+            accountId: currentUser.account_id,
+            userId: currentUser.id,
+          });
+          console.log("[MarkAsWon] Onboarding items created for new client");
+        } catch (onboardingError) {
+          console.error("[MarkAsWon] Error creating onboarding items:", onboardingError);
+          // Non-blocking - continue the flow
+        }
+      }
+
       // STEP 4.5: Transfer "Call Comercial Concluída" notes to client timeline
       if (clientId && currentUser?.account_id) {
         try {
