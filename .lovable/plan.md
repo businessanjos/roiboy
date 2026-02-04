@@ -1,127 +1,184 @@
 
-# Plano: Criar Constraint Única para Evitar Duplicatas
 
-## Diagnóstico Final
+# Plano: Adicionar Botão de Excluir Tarefa no TaskDialog
 
-Existem **9 pares de conversas duplicadas** no setor Vendas:
-- **6 casos**: conversa legada (NULL) + conversa nova (com integration_id)
-- **3 casos**: duas conversas com integration_ids diferentes (permitido - instâncias diferentes)
+## Objetivo
 
-O problema específico da Monick (`+5575991258078`) é do tipo 1: uma conversa legada + uma nova.
+Adicionar um botão discreto com ícone de lixeira no **canto inferior esquerdo** do dialog de edição de tarefa. O botão só aparece em modo de edição (quando já existe uma tarefa) e abre uma janela de confirmação antes de excluir.
 
-### Índice Atual
+## Referência Visual
 
-O índice único existente:
-```sql
-CREATE UNIQUE INDEX zapp_conversations_account_phone_integration_unique 
-ON public.zapp_conversations (account_id, phone_e164, integration_id) 
-WHERE ((is_group = false) AND (phone_e164 IS NOT NULL) AND (integration_id IS NOT NULL))
+Baseado na imagem fornecida, o layout atual dos botões é:
+
+```text
+┌──────────────────────────────────────────────────────┐
+│                                                      │
+│              (... campos do formulário ...)          │
+│                                                      │
+│                              [Cancelar]  [Salvar]    │
+└──────────────────────────────────────────────────────┘
 ```
 
-**Problema**: Só protege quando `integration_id IS NOT NULL`. Conversas legadas (NULL) não são cobertas.
+O layout desejado será:
 
----
-
-## Solução em 2 Etapas
-
-### Etapa 1: Limpar Duplicatas Existentes
-
-Antes de criar a constraint, preciso eliminar as duplicatas existentes via uma migração SQL que:
-
-1. Encontra pares de duplicatas (mesmo telefone + setor)
-2. Move todas as mensagens para a conversa mais recente (que tem integration_id)
-3. Deleta a conversa legada duplicada
-
-```sql
--- Para cada duplicata do tipo legada + nova:
-WITH duplicates AS (
-  SELECT 
-    c1.id as keep_id,      -- Conversa com integration_id (manter)
-    c2.id as delete_id     -- Conversa legada (deletar)
-  FROM zapp_conversations c1
-  JOIN zapp_conversations c2 ON 
-    c1.account_id = c2.account_id 
-    AND c1.phone_e164 = c2.phone_e164
-    AND c1.sector_id = c2.sector_id
-    AND c1.is_group = false
-    AND c2.is_group = false
-    AND c1.integration_id IS NOT NULL
-    AND c2.integration_id IS NULL
-    AND c1.id != c2.id
-)
--- 1. Mover mensagens
-UPDATE zapp_messages SET zapp_conversation_id = d.keep_id
-FROM duplicates d WHERE zapp_conversation_id = d.delete_id;
-
--- 2. Deletar assignments
-DELETE FROM zapp_conversation_assignments 
-WHERE zapp_conversation_id IN (SELECT delete_id FROM duplicates);
-
--- 3. Deletar conversas legadas duplicadas
-DELETE FROM zapp_conversations 
-WHERE id IN (SELECT delete_id FROM duplicates);
+```text
+┌──────────────────────────────────────────────────────┐
+│                                                      │
+│              (... campos do formulário ...)          │
+│                                                      │
+│  [🗑]                         [Cancelar]  [Salvar]   │
+└──────────────────────────────────────────────────────┘
 ```
 
-### Etapa 2: Criar Índice Único para Conversas Legadas
+## Modificações Técnicas
 
-Adicionar um segundo índice único que proteja conversas sem integration_id:
+### Arquivo: `src/components/tasks/TaskDialog.tsx`
 
-```sql
--- Garantir uma conversa por telefone+setor quando integration_id é NULL
-CREATE UNIQUE INDEX zapp_conversations_account_phone_sector_legacy_unique 
-ON public.zapp_conversations (account_id, phone_e164, sector_id) 
-WHERE (
-  is_group = false 
-  AND phone_e164 IS NOT NULL 
-  AND integration_id IS NULL
-);
+#### 1. Adicionar imports necessários
+
+Adicionar o ícone `Trash2` do Lucide e os componentes de AlertDialog:
+
+```typescript
+import { Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 ```
 
-Este índice garante que:
-- Só pode existir **UMA** conversa legada (sem integration_id) por telefone + setor
-- O índice existente continua garantindo uma conversa por telefone + integration_id
+#### 2. Adicionar estado para controlar o dialog de confirmação
 
-### Alternativa: Forçar migration de todas conversas legadas
-
-Outra opção é migrar TODAS as conversas legadas para receberem o `integration_id` da primeira integração do setor:
-
-```sql
--- Atualizar conversas legadas com o integration_id do setor
-UPDATE zapp_conversations c
-SET integration_id = (
-  SELECT i.id FROM integrations i 
-  WHERE i.sector_id = c.sector_id 
-    AND i.status = 'connected'
-  ORDER BY i.created_at ASC
-  LIMIT 1
-)
-WHERE c.integration_id IS NULL
-  AND c.is_group = false
-  AND c.sector_id IS NOT NULL;
+```typescript
+const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+const [deleting, setDeleting] = useState(false);
 ```
 
----
+#### 3. Adicionar função de exclusão
 
-## Resumo das Modificações
+```typescript
+const handleDelete = async () => {
+  if (!task?.id) return;
+  
+  setDeleting(true);
+  try {
+    const { error } = await supabase
+      .from("internal_tasks")
+      .delete()
+      .eq("id", task.id);
+      
+    if (error) throw error;
+    
+    logAudit({
+      action: "delete",
+      entityType: "task",
+      entityId: task.id,
+      entityName: task.title,
+    });
+    
+    toast.success("Tarefa excluída!");
+    setDeleteDialogOpen(false);
+    onOpenChange(false);
+    onSuccess();
+  } catch (error: any) {
+    console.error("Error deleting task:", error);
+    toast.error(error.message || "Erro ao excluir tarefa");
+  } finally {
+    setDeleting(false);
+  }
+};
+```
 
-| Tipo | Descrição |
-|------|-----------|
-| **Migração SQL** | Limpar duplicatas existentes + criar índice único para legadas |
-| **Nenhum código** | Não precisa alterar código (índice protege no nível do banco) |
+#### 4. Modificar a área dos botões (linha 675)
 
----
+Alterar de:
+```tsx
+<div className="flex justify-end gap-2 pt-4">
+```
 
-## Arquivos a Modificar
+Para:
+```tsx
+<div className="flex items-center justify-between pt-4">
+  {/* Botão de excluir - só aparece em modo edição */}
+  {task ? (
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      className="text-muted-foreground hover:text-destructive"
+      onClick={() => setDeleteDialogOpen(true)}
+      title="Excluir tarefa"
+    >
+      <Trash2 className="h-4 w-4" />
+    </Button>
+  ) : (
+    <div /> // Espaçador para manter o layout
+  )}
+  
+  <div className="flex gap-2">
+    <Button variant="outline" onClick={() => onOpenChange(false)}>
+      Cancelar
+    </Button>
+    <Button onClick={handleSubmit} disabled={submitting}>
+      {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+      {task ? "Salvar" : "Criar Tarefa"}
+    </Button>
+  </div>
+</div>
+```
+
+#### 5. Adicionar AlertDialog de confirmação
+
+Inserir após o `MeetingConfigDialog` (antes do fechamento do `</Dialog>`):
+
+```tsx
+{/* Delete Confirmation Dialog */}
+<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+  <AlertDialogContent>
+    <AlertDialogHeader>
+      <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
+      <AlertDialogDescription>
+        Esta ação não pode ser desfeita. A tarefa "{task?.title}" será permanentemente excluída.
+      </AlertDialogDescription>
+    </AlertDialogHeader>
+    <AlertDialogFooter>
+      <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+      <AlertDialogAction
+        onClick={handleDelete}
+        disabled={deleting}
+        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+      >
+        {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Excluir
+      </AlertDialogAction>
+    </AlertDialogFooter>
+  </AlertDialogContent>
+</AlertDialog>
+```
+
+## Resultado Visual
+
+| Estado | Comportamento |
+|--------|---------------|
+| **Nova tarefa** | Botão de lixeira **não aparece** (não faz sentido excluir algo que ainda não existe) |
+| **Edição de tarefa** | Botão de lixeira aparece discreto no canto inferior esquerdo |
+| **Ao clicar** | Abre AlertDialog com confirmação "Excluir tarefa?" |
+| **Ao confirmar** | Exclui a tarefa, fecha o dialog, exibe toast de sucesso |
+
+## Arquivo a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| Migração SQL | Limpar duplicatas + criar constraint `zapp_conversations_account_phone_sector_legacy_unique` |
+| `src/components/tasks/TaskDialog.tsx` | Adicionar imports, estados, função de delete, botão e AlertDialog |
 
----
+## Estimativa
 
-## Benefícios
+- **Complexidade**: Baixa
+- **Risco**: Baixo (funcionalidade isolada)
+- **Consistência**: Segue o mesmo padrão usado em `MarketingTaskDialog.tsx` e `ClientTasks.tsx`
 
-1. **Proteção no nível do banco** - impossível criar duplicatas mesmo com bugs no código
-2. **Limpa duplicatas existentes** - resolve os 6 casos atuais
-3. **Simples** - não requer mudanças de código
-4. **Performático** - índice ajuda nas buscas por telefone+setor
