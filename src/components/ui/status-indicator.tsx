@@ -176,7 +176,7 @@ export function QuadrantIndicator({
   return (
     <div
       className={cn(
-        "inline-flex items-center rounded-full font-medium",
+        "inline-flex items-center rounded-full font-medium max-w-full",
         config.bg,
         config.color,
         sizes.padding,
@@ -185,8 +185,8 @@ export function QuadrantIndicator({
         className
       )}
     >
-      <Icon className={sizes.icon} />
-      {showLabel && <span className="whitespace-nowrap">{config.label}</span>}
+      <Icon className={cn(sizes.icon, "flex-shrink-0")} />
+      {showLabel && <span className="truncate">{config.label}</span>}
     </div>
   );
 }
