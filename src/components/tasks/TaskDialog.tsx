@@ -25,8 +25,18 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Loader2, Video, ExternalLink, RefreshCw, Copy, Check } from "lucide-react";
+import { Loader2, Video, ExternalLink, RefreshCw, Copy, Check, Trash2 } from "lucide-react";
 import { MeetingConfigDialog } from "./MeetingConfigDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface User {
   id: string;
@@ -110,6 +120,8 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   const [participantEmail, setParticipantEmail] = useState<string>("");
   const [participantName, setParticipantName] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -389,6 +401,37 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
       setCopied(true);
       toast.success("Link copiado!");
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!task?.id) return;
+    
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("internal_tasks")
+        .delete()
+        .eq("id", task.id);
+        
+      if (error) throw error;
+      
+      logAudit({
+        action: "delete",
+        entityType: "task",
+        entityId: task.id,
+        entityName: task.title,
+      });
+      
+      toast.success("Tarefa excluída!");
+      setDeleteDialogOpen(false);
+      onOpenChange(false);
+      onSuccess();
+    } catch (error: any) {
+      console.error("Error deleting task:", error);
+      toast.error(error.message || "Erro ao excluir tarefa");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -672,14 +715,32 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             </div>
           )}
 
-          <div className="flex justify-end gap-2 pt-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {task ? "Salvar" : "Criar Tarefa"}
-            </Button>
+          <div className="flex items-center justify-between pt-4">
+            {/* Botão de excluir - só aparece em modo edição */}
+            {task ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-destructive"
+                onClick={() => setDeleteDialogOpen(true)}
+                title="Excluir tarefa"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            ) : (
+              <div />
+            )}
+            
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSubmit} disabled={submitting}>
+                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {task ? "Salvar" : "Criar Tarefa"}
+              </Button>
+            </div>
           </div>
         </div>
       </DialogContent>
@@ -702,6 +763,29 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           }}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. A tarefa "{task?.title}" será permanentemente excluída.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
