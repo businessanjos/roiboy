@@ -1,214 +1,194 @@
 
-# Automação de Onboarding de Novos Clientes
+# Correção dos Cards de Métricas do Dashboard
 
-## Objetivo
-Criar automaticamente um evento de Onboarding e duas tarefas padrão ("Implementação da Clínica Ryka" e "Apresentação do Plano de Ação") sempre que um lead for convertido em cliente no fluxo de vendas.
+## Problema Identificado
 
-## O que será criado automaticamente
+Os cards do dashboard estão exibindo valores incorretos por **três razões principais**:
 
-### 1. Evento "Onboarding"
-| Campo | Valor |
-|-------|-------|
-| Título | Onboarding |
-| Descrição | Onboarding Inicial |
-| Tipo de Evento | Live / Encontro |
-| Modalidade | Online |
-| Data/Hora | Vazio (preenchimento manual) |
-| Status de participação | Não participou |
+### 1. Hook `useClientsWithScores` filtra apenas clientes com contratos ativos/pendentes
 
-### 2. Tarefa "Implementação da Clínica Ryka"
-| Campo | Valor |
-|-------|-------|
-| Tipo de Atividade | Implementação da Clínica Ryka |
-| Descrição | Vazio |
-| Responsável | Vazio (preenchimento manual) |
-| Data | Vazio (preenchimento manual) |
-| Prioridade | Média |
-| Status | Pendente |
+```typescript
+// Linhas 91-94 do useDashboardData.tsx
+const { data: contractsData } = await supabase
+  .from("client_contracts")
+  .select("client_id, status")
+  .in("status", ["active", "pending"]); // ⚠️ EXCLUI cancelled, ended, suspended
+```
 
-### 3. Tarefa "Apresentação do Plano de Ação"
-| Campo | Valor |
-|-------|-------|
-| Tipo de Atividade | Apresentação do Plano de Ação |
-| Descrição | Reunião para apresenta o Plano de Ação e tirar dúvidas. |
-| Responsável | Vazio (preenchimento manual) |
-| Data | Vazio (preenchimento manual) |
-| Prioridade | Média |
-| Status | Pendente |
+Isso faz com que clientes que têm **apenas** contratos cancelados/encerrados não apareçam na contagem do dashboard.
+
+### 2. Cards usam status errados para contagem
+
+| Card | Status Usado | Status Correto |
+|------|--------------|----------------|
+| Cancelamentos | `clients.status === "churned"` | `contracts.status === "cancelled"` |
+| Encerramentos | Conta apenas do mês atual | Total de `contracts.status === "ended"` |
+| Congelamentos | `clients.status === "paused"` | `contracts.status === "suspended"` |
+
+### 3. Mistura de métricas de clientes vs contratos
+
+Os cards misturam dados da tabela `clients` (status do cliente) com dados da tabela `client_contracts` (status do contrato), causando inconsistência.
 
 ---
 
-## Detalhes Técnicos
+## Dados Reais no Banco
 
-### Arquivos a Modificar
+| Tabela | Status | Quantidade |
+|--------|--------|------------|
+| `client_contracts` | active | 276 |
+| `client_contracts` | cancelled | 88 |
+| `client_contracts` | ended | 156 |
+| `client_contracts` | suspended | 21 |
+| `client_contracts` | paused | 7 |
+| `clients` | active | 449 |
+| `clients` | churn_risk | 748 |
 
-| Arquivo | Tipo de Alteração |
-|---------|-------------------|
-| `src/pages/SalesPipeline.tsx` | Adicionar função de automação após conversão |
-| `src/utils/clientOnboardingAutomation.ts` | Criar arquivo para lógica de automação |
+---
 
-### Fluxo de Implementação
+## Solução Proposta
 
-```text
-┌─────────────────────────┐
-│   Lead ganha negócio    │
-│   (handleMarkAsWon)     │
-└───────────┬─────────────┘
-            │
-            ▼
-┌─────────────────────────┐
-│ convert_lead_to_client  │
-│    (clientId criado)    │
-└───────────┬─────────────┘
-            │
-            ▼
-┌─────────────────────────┐
-│  NOVO: Automação de     │
-│  Onboarding             │
-└───────────┬─────────────┘
-            │
-   ┌────────┴────────┐
-   │                 │
-   ▼                 ▼
-┌──────────┐  ┌─────────────────┐
-│ Evento   │  │ 2 Tarefas com   │
-│Onboarding│  │ o Cliente       │
-└──────────┘  └─────────────────┘
+### Opção A: Usar RPC para Agregação no Banco (Recomendado)
+
+Criar funções SQL que retornam contagens precisas, evitando o limite de 1000 rows e garantindo precisão:
+
+```sql
+CREATE OR REPLACE FUNCTION get_contract_status_counts(p_account_id UUID)
+RETURNS TABLE(
+  active_count BIGINT,
+  cancelled_count BIGINT,
+  ended_count BIGINT,
+  suspended_count BIGINT,
+  paused_count BIGINT,
+  total_clients BIGINT
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT 
+    COUNT(*) FILTER (WHERE status = 'active') as active_count,
+    COUNT(*) FILTER (WHERE status = 'cancelled') as cancelled_count,
+    COUNT(*) FILTER (WHERE status = 'ended') as ended_count,
+    COUNT(*) FILTER (WHERE status = 'suspended') as suspended_count,
+    COUNT(*) FILTER (WHERE status = 'paused') as paused_count,
+    COUNT(DISTINCT client_id) as total_clients
+  FROM public.client_contracts
+  WHERE account_id = p_account_id;
+$$;
 ```
 
-### 1. Novo Arquivo: `src/utils/clientOnboardingAutomation.ts`
+### Opção B: Modificar Hook para Buscar Todos os Status
 
-Função que encapsula toda a lógica de criação automática:
+Remover o filtro de status no hook e calcular contagens baseadas nos contratos:
 
 ```typescript
-interface OnboardingAutomationParams {
-  clientId: string;
-  accountId: string;
-  userId: string;
-}
-
-export async function createClientOnboardingItems({
-  clientId,
-  accountId,
-  userId
-}: OnboardingAutomationParams): Promise<void> {
-  // 1. Criar evento "Onboarding"
-  // - Tipo: 'live'
-  // - Modalidade: 'online'
-  // - Título: "Onboarding"
-  // - Descrição: "Onboarding Inicial"
-  // - scheduled_at: null (data vazia)
-  // - category: 'operation'
-  
-  // 2. Vincular cliente ao evento (event_participants)
-  // - rsvp_status: 'pending' (aparece como "Não participou")
-  
-  // 3. Buscar activity_types para as tarefas
-  // - "Implementação da Clínica Ryka"
-  // - "Apresentação do Plano de Ação"
-  
-  // 4. Criar tarefa "Implementação da Clínica Ryka"
-  // - client_id: clientId
-  // - assigned_to: null (vazio)
-  // - due_date: null (vazio)
-  // - priority: 'medium'
-  // - status: 'pending'
-  
-  // 5. Criar tarefa "Apresentação do Plano de Ação"
-  // - client_id: clientId
-  // - description: "Reunião para apresenta o Plano de Ação e tirar dúvidas."
-  // - assigned_to: null (vazio)
-  // - due_date: null (vazio)
-  // - priority: 'medium'
-  // - status: 'pending'
-}
-```
-
-### 2. Modificação: `src/pages/SalesPipeline.tsx`
-
-Chamar a função de automação após a conversão do cliente (aproximadamente após linha 426):
-
-```typescript
-// STEP 4.1: Create automatic onboarding items for new client
-if (clientId && currentUser?.account_id) {
-  try {
-    await createClientOnboardingItems({
-      clientId,
-      accountId: currentUser.account_id,
-      userId: currentUser.id,
-    });
-    console.log("[MarkAsWon] Onboarding items created for new client");
-  } catch (onboardingError) {
-    console.error("[MarkAsWon] Error creating onboarding items:", onboardingError);
-    // Non-blocking - continue the flow
-  }
-}
-```
-
-### Estrutura de Dados no Banco
-
-**Evento criado em `events`:**
-```json
-{
-  "account_id": "{{account_id}}",
-  "title": "Onboarding",
-  "description": "Onboarding Inicial",
-  "event_type": "live",
-  "modality": "online",
-  "scheduled_at": null,
-  "category": "operation"
-}
-```
-
-**Participação em `event_participants`:**
-```json
-{
-  "account_id": "{{account_id}}",
-  "event_id": "{{event_id}}",
-  "client_id": "{{client_id}}",
-  "rsvp_status": "pending",
-  "invited_by": "{{user_id}}"
-}
-```
-
-**Tarefas em `internal_tasks`:**
-```json
-[
-  {
-    "account_id": "{{account_id}}",
-    "client_id": "{{client_id}}",
-    "title": "Implementação da Clínica Ryka",
-    "activity_type_id": "{{activity_type_id}}",
-    "status": "pending",
-    "priority": "medium",
-    "created_by": "{{user_id}}"
-  },
-  {
-    "account_id": "{{account_id}}",
-    "client_id": "{{client_id}}",
-    "title": "Apresentação do Plano de Ação",
-    "description": "Reunião para apresenta o Plano de Ação e tirar dúvidas.",
-    "activity_type_id": "{{activity_type_id}}",
-    "status": "pending",
-    "priority": "medium",
-    "created_by": "{{user_id}}"
-  }
-]
+// Buscar TODOS os contratos, não apenas active/pending
+const { data: contractsData } = await supabase
+  .from("client_contracts")
+  .select("client_id, status"); // Sem filtro de status
 ```
 
 ---
 
-## Comportamento Esperado
+## Implementação Detalhada
 
-1. Vendedor marca negócio como "Ganho"
-2. Sistema converte lead em cliente
-3. Sistema cria automaticamente:
-   - 1 evento de Onboarding (aparece na aba Agenda do cliente)
-   - 2 tarefas pendentes (aparecem na seção "Tarefas com o Cliente")
-4. Operações recebe o cliente já com os itens prontos para agendamento
+### Arquivo 1: Criar RPC (Migração SQL)
 
-## Observações
+```sql
+-- Função para obter contagens de status de contratos
+CREATE OR REPLACE FUNCTION get_dashboard_contract_counts(p_account_id UUID)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  result JSON;
+BEGIN
+  SELECT json_build_object(
+    'active', COUNT(*) FILTER (WHERE status = 'active'),
+    'cancelled', COUNT(*) FILTER (WHERE status = 'cancelled'),
+    'ended', COUNT(*) FILTER (WHERE status = 'ended'),
+    'suspended', COUNT(*) FILTER (WHERE status = 'suspended'),
+    'paused', COUNT(*) FILTER (WHERE status = 'paused'),
+    'total_clients', COUNT(DISTINCT client_id)
+  ) INTO result
+  FROM public.client_contracts
+  WHERE account_id = p_account_id;
+  
+  RETURN result;
+END;
+$$;
+```
 
-- A automação não bloqueia o fluxo principal se houver erro
-- Os activity_types são buscados dinamicamente por nome e account_id
-- Se um activity_type não existir para a conta, a tarefa usa apenas o título
+### Arquivo 2: `src/hooks/useDashboardContractStats.ts` (Novo)
+
+```typescript
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+
+interface ContractStats {
+  active: number;
+  cancelled: number;
+  ended: number;
+  suspended: number;
+  paused: number;
+  total_clients: number;
+}
+
+export function useDashboardContractStats(accountId: string | undefined) {
+  return useQuery({
+    queryKey: ["dashboard-contract-stats", accountId],
+    queryFn: async () => {
+      if (!accountId) return null;
+      
+      const { data, error } = await supabase
+        .rpc("get_dashboard_contract_counts", { p_account_id: accountId });
+      
+      if (error) throw error;
+      return data as ContractStats;
+    },
+    enabled: !!accountId,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+```
+
+### Arquivo 3: `src/pages/Dashboard.tsx` (Modificar)
+
+Atualizar os cards para usar os dados corretos:
+
+```tsx
+// Importar novo hook
+import { useDashboardContractStats } from "@/hooks/useDashboardContractStats";
+
+// Usar hook
+const { data: contractStats } = useDashboardContractStats(currentUser?.account_id);
+
+// Atualizar cards
+<p className="text-2xl font-bold">{contractStats?.cancelled ?? 0}</p> // Cancelamentos
+<p className="text-2xl font-bold">{contractStats?.ended ?? 0}</p>     // Encerramentos
+<p className="text-2xl font-bold">{contractStats?.suspended ?? 0}</p> // Congelamentos
+```
+
+---
+
+## Resultado Esperado
+
+| Card | Valor Atual | Valor Correto |
+|------|-------------|---------------|
+| Total Clientes | 271 | ~276+ (clientes únicos com contratos) |
+| Ativos | 271 | 276 (contratos ativos) |
+| Cancelamentos | 0 | 88 |
+| Encerramentos | 0 | 156 |
+| Congelamentos | 0 | 21 (suspended) + 7 (paused) = 28 |
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Ação |
+|---------|------|
+| Migração SQL | Criar função RPC `get_dashboard_contract_counts` |
+| `src/hooks/useDashboardContractStats.ts` | Criar novo hook para chamar RPC |
+| `src/pages/Dashboard.tsx` | Integrar novo hook e corrigir exibição dos cards |
