@@ -1,184 +1,103 @@
 
+# Plano: Corrigir Layout dos Cards de Métricas no Perfil do Cliente
 
-# Plano: Adicionar Botão de Excluir Tarefa no TaskDialog
+## Problema Identificado
 
-## Objetivo
+Analisando a imagem, os cards "ROIzômetro", "E-Score" e "Quadrante" estão com problemas visuais:
 
-Adicionar um botão discreto com ícone de lixeira no **canto inferior esquerdo** do dialog de edição de tarefa. O botão só aparece em modo de edição (quando já existe uma tarefa) e abre uma janela de confirmação antes de excluir.
+1. **ROIzômetro0/100** - O label e o valor estão "grudados" sem espaço
+2. **E-Score** - O texto está quebrando em duas linhas ("E-" / "Score")  
+3. **Quadrante** - O texto "Em Recuperação" está vazando para fora do card
 
-## Referência Visual
+### Causa Raiz
 
-Baseado na imagem fornecida, o layout atual dos botões é:
+O componente `ScoreGauge` usa layout horizontal (`flex items-center justify-between`) para colocar label e valor na mesma linha. Em telas menores ou quando o grid está comprimido (6 colunas), não há espaço suficiente.
 
-```text
-┌──────────────────────────────────────────────────────┐
-│                                                      │
-│              (... campos do formulário ...)          │
-│                                                      │
-│                              [Cancelar]  [Salvar]    │
-└──────────────────────────────────────────────────────┘
+## Solução Proposta
+
+Alterar o layout do `ScoreGauge` para **formato vertical centralizado**, igual aos outros cards (V-NPS, Quadrante, Tendência), criando consistência visual:
+
+### Antes (Layout Horizontal)
+```
+┌─────────────────────────┐
+│ ROIzômetro      0/100   │
+│ ████████████░░░░░░░░░░  │
+└─────────────────────────┘
 ```
 
-O layout desejado será:
-
-```text
-┌──────────────────────────────────────────────────────┐
-│                                                      │
-│              (... campos do formulário ...)          │
-│                                                      │
-│  [🗑]                         [Cancelar]  [Salvar]   │
-└──────────────────────────────────────────────────────┘
+### Depois (Layout Vertical Centralizado)
+```
+┌─────────────────────────┐
+│      ROIzômetro         │
+│        0/100            │
+│ ████████████░░░░░░░░░░  │
+└─────────────────────────┘
 ```
 
-## Modificações Técnicas
+## Modificações
 
-### Arquivo: `src/components/tasks/TaskDialog.tsx`
+### Arquivo: `src/components/ui/score-gauge.tsx`
 
-#### 1. Adicionar imports necessários
+Ajustar o layout do componente:
 
-Adicionar o ícone `Trash2` do Lucide e os componentes de AlertDialog:
-
-```typescript
-import { Trash2 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-```
-
-#### 2. Adicionar estado para controlar o dialog de confirmação
-
-```typescript
-const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-const [deleting, setDeleting] = useState(false);
-```
-
-#### 3. Adicionar função de exclusão
-
-```typescript
-const handleDelete = async () => {
-  if (!task?.id) return;
-  
-  setDeleting(true);
-  try {
-    const { error } = await supabase
-      .from("internal_tasks")
-      .delete()
-      .eq("id", task.id);
-      
-    if (error) throw error;
-    
-    logAudit({
-      action: "delete",
-      entityType: "task",
-      entityId: task.id,
-      entityName: task.title,
-    });
-    
-    toast.success("Tarefa excluída!");
-    setDeleteDialogOpen(false);
-    onOpenChange(false);
-    onSuccess();
-  } catch (error: any) {
-    console.error("Error deleting task:", error);
-    toast.error(error.message || "Erro ao excluir tarefa");
-  } finally {
-    setDeleting(false);
-  }
-};
-```
-
-#### 4. Modificar a área dos botões (linha 675)
-
-Alterar de:
 ```tsx
-<div className="flex justify-end gap-2 pt-4">
-```
-
-Para:
-```tsx
-<div className="flex items-center justify-between pt-4">
-  {/* Botão de excluir - só aparece em modo edição */}
-  {task ? (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      className="text-muted-foreground hover:text-destructive"
-      onClick={() => setDeleteDialogOpen(true)}
-      title="Excluir tarefa"
-    >
-      <Trash2 className="h-4 w-4" />
-    </Button>
-  ) : (
-    <div /> // Espaçador para manter o layout
-  )}
-  
-  <div className="flex gap-2">
-    <Button variant="outline" onClick={() => onOpenChange(false)}>
-      Cancelar
-    </Button>
-    <Button onClick={handleSubmit} disabled={submitting}>
-      {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-      {task ? "Salvar" : "Criar Tarefa"}
-    </Button>
+return (
+  <div className={cn("w-full flex flex-col", config.gap, className)}>
+    {/* Layout vertical centralizado */}
+    <div className="flex flex-col items-center gap-0.5 mb-2">
+      <span className={cn(
+        "font-medium text-muted-foreground whitespace-nowrap", 
+        config.text
+      )}>
+        {label}
+      </span>
+      <span className={cn("font-mono font-bold text-foreground", valueSizes[size])}>
+        {score}
+        <span className="text-muted-foreground font-normal">/{maxScore}</span>
+      </span>
+    </div>
+    {/* Barra de progresso */}
+    <div className={cn(
+      "w-full bg-muted rounded-full overflow-hidden",
+      config.height
+    )}>
+      <div
+        className={cn(
+          "h-full rounded-full bg-gradient-to-r transition-all duration-500 ease-out",
+          getGradientColor()
+        )}
+        style={{ width: `${percentage}%` }}
+      />
+    </div>
   </div>
-</div>
+);
 ```
 
-#### 5. Adicionar AlertDialog de confirmação
+### Arquivo: `src/components/ui/status-indicator.tsx`
 
-Inserir após o `MeetingConfigDialog` (antes do fechamento do `</Dialog>`):
+Adicionar `whitespace-nowrap` no `QuadrantIndicator` para evitar quebra de texto "Em Recuperação":
 
 ```tsx
-{/* Delete Confirmation Dialog */}
-<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-  <AlertDialogContent>
-    <AlertDialogHeader>
-      <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
-      <AlertDialogDescription>
-        Esta ação não pode ser desfeita. A tarefa "{task?.title}" será permanentemente excluída.
-      </AlertDialogDescription>
-    </AlertDialogHeader>
-    <AlertDialogFooter>
-      <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
-      <AlertDialogAction
-        onClick={handleDelete}
-        disabled={deleting}
-        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-      >
-        {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        Excluir
-      </AlertDialogAction>
-    </AlertDialogFooter>
-  </AlertDialogContent>
-</AlertDialog>
+{showLabel && <span className="whitespace-nowrap">{config.label}</span>}
 ```
 
-## Resultado Visual
+## Resultado Esperado
 
-| Estado | Comportamento |
-|--------|---------------|
-| **Nova tarefa** | Botão de lixeira **não aparece** (não faz sentido excluir algo que ainda não existe) |
-| **Edição de tarefa** | Botão de lixeira aparece discreto no canto inferior esquerdo |
-| **Ao clicar** | Abre AlertDialog com confirmação "Excluir tarefa?" |
-| **Ao confirmar** | Exclui a tarefa, fecha o dialog, exibe toast de sucesso |
+| Antes | Depois |
+|-------|--------|
+| ROIzômetro0/100 (grudado) | ROIzômetro (centralizado) |
+| E-Score quebrado em 2 linhas | E-Score em 1 linha |
+| "Em Recuperação" vazando | Texto contido ou truncado |
 
-## Arquivo a Modificar
+## Arquivos a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/components/tasks/TaskDialog.tsx` | Adicionar imports, estados, função de delete, botão e AlertDialog |
+| `src/components/ui/score-gauge.tsx` | Alterar para layout vertical centralizado |
+| `src/components/ui/status-indicator.tsx` | Adicionar `whitespace-nowrap` no QuadrantIndicator |
 
-## Estimativa
+## Benefícios
 
-- **Complexidade**: Baixa
-- **Risco**: Baixo (funcionalidade isolada)
-- **Consistência**: Segue o mesmo padrão usado em `MarketingTaskDialog.tsx` e `ClientTasks.tsx`
-
+1. **Consistência visual** - Todos os cards seguem o mesmo padrão (label em cima, valor embaixo)
+2. **Responsivo** - Funciona bem em qualquer largura de tela
+3. **Legibilidade** - Texto não quebra nem fica grudado
