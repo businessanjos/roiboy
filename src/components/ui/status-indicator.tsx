@@ -186,7 +186,7 @@ export function QuadrantIndicator({
       )}
     >
       <Icon className={sizes.icon} />
-      {showLabel && <span>{config.label}</span>}
+      {showLabel && <span className="whitespace-nowrap">{config.label}</span>}
     </div>
   );
 }
