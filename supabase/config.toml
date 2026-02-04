@@ -149,3 +149,6 @@ verify_jwt = false
 
 [functions.test-cx-moment-send]
 verify_jwt = false
+
+[functions.check-agenda-reminders]
+verify_jwt = false
