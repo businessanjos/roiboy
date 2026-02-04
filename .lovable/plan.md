@@ -1,103 +1,88 @@
 
-# Plano: Corrigir Layout dos Cards de Métricas no Perfil do Cliente
+# Plano: Corrigir Vazamento do Quadrante Card
 
 ## Problema Identificado
 
-Analisando a imagem, os cards "ROIzômetro", "E-Score" e "Quadrante" estão com problemas visuais:
+Analisando a imagem, o badge "Em Recuperação" dentro do card **Quadrante** está vazando para fora dos limites do card. O problema ocorre porque:
 
-1. **ROIzômetro0/100** - O label e o valor estão "grudados" sem espaço
-2. **E-Score** - O texto está quebrando em duas linhas ("E-" / "Score")  
-3. **Quadrante** - O texto "Em Recuperação" está vazando para fora do card
+1. O `QuadrantIndicator` usa `inline-flex` que permite expansão ilimitada
+2. O texto "Em Recuperação" é mais longo que outros labels
+3. Não há controle de overflow no container pai
 
-### Causa Raiz
+## Solução
 
-O componente `ScoreGauge` usa layout horizontal (`flex items-center justify-between`) para colocar label e valor na mesma linha. Em telas menores ou quando o grid está comprimido (6 colunas), não há espaço suficiente.
+Adicionar `max-w-full` e `overflow-hidden` ao `QuadrantIndicator` para garantir que ele respeite os limites do container pai, e também adicionar `truncate` ao texto como fallback de segurança.
 
-## Solução Proposta
+## Modificação
 
-Alterar o layout do `ScoreGauge` para **formato vertical centralizado**, igual aos outros cards (V-NPS, Quadrante, Tendência), criando consistência visual:
+### Arquivo: `src/components/ui/status-indicator.tsx`
 
-### Antes (Layout Horizontal)
-```
-┌─────────────────────────┐
-│ ROIzômetro      0/100   │
-│ ████████████░░░░░░░░░░  │
-└─────────────────────────┘
-```
+Alterar o componente `QuadrantIndicator` (linhas 176-191):
 
-### Depois (Layout Vertical Centralizado)
-```
-┌─────────────────────────┐
-│      ROIzômetro         │
-│        0/100            │
-│ ████████████░░░░░░░░░░  │
-└─────────────────────────┘
-```
-
-## Modificações
-
-### Arquivo: `src/components/ui/score-gauge.tsx`
-
-Ajustar o layout do componente:
-
+**De:**
 ```tsx
 return (
-  <div className={cn("w-full flex flex-col", config.gap, className)}>
-    {/* Layout vertical centralizado */}
-    <div className="flex flex-col items-center gap-0.5 mb-2">
-      <span className={cn(
-        "font-medium text-muted-foreground whitespace-nowrap", 
-        config.text
-      )}>
-        {label}
-      </span>
-      <span className={cn("font-mono font-bold text-foreground", valueSizes[size])}>
-        {score}
-        <span className="text-muted-foreground font-normal">/{maxScore}</span>
-      </span>
-    </div>
-    {/* Barra de progresso */}
-    <div className={cn(
-      "w-full bg-muted rounded-full overflow-hidden",
-      config.height
-    )}>
-      <div
-        className={cn(
-          "h-full rounded-full bg-gradient-to-r transition-all duration-500 ease-out",
-          getGradientColor()
-        )}
-        style={{ width: `${percentage}%` }}
-      />
-    </div>
+  <div
+    className={cn(
+      "inline-flex items-center rounded-full font-medium",
+      config.bg,
+      config.color,
+      sizes.padding,
+      sizes.gap,
+      sizes.text,
+      className
+    )}
+  >
+    <Icon className={sizes.icon} />
+    {showLabel && <span className="whitespace-nowrap">{config.label}</span>}
   </div>
 );
 ```
 
-### Arquivo: `src/components/ui/status-indicator.tsx`
-
-Adicionar `whitespace-nowrap` no `QuadrantIndicator` para evitar quebra de texto "Em Recuperação":
-
+**Para:**
 ```tsx
-{showLabel && <span className="whitespace-nowrap">{config.label}</span>}
+return (
+  <div
+    className={cn(
+      "inline-flex items-center rounded-full font-medium max-w-full",
+      config.bg,
+      config.color,
+      sizes.padding,
+      sizes.gap,
+      sizes.text,
+      className
+    )}
+  >
+    <Icon className={cn(sizes.icon, "flex-shrink-0")} />
+    {showLabel && <span className="truncate">{config.label}</span>}
+  </div>
+);
 ```
 
-## Resultado Esperado
+## Alterações Detalhadas
 
-| Antes | Depois |
-|-------|--------|
-| ROIzômetro0/100 (grudado) | ROIzômetro (centralizado) |
-| E-Score quebrado em 2 linhas | E-Score em 1 linha |
-| "Em Recuperação" vazando | Texto contido ou truncado |
+| Elemento | Antes | Depois | Motivo |
+|----------|-------|--------|--------|
+| Container | `inline-flex items-center` | + `max-w-full` | Limita largura máxima ao container pai |
+| Icon | `{sizes.icon}` | + `flex-shrink-0` | Impede que o ícone seja comprimido |
+| Span | `whitespace-nowrap` | `truncate` | Permite truncar texto com "..." se necessário |
 
-## Arquivos a Modificar
+## Resultado Visual
+
+```
+┌─────────────────────────┐
+│       Quadrante         │
+│  [↗ Em Recuperação]     │  ← Agora contido dentro do card
+└─────────────────────────┘
+```
+
+Se o espaço for muito pequeno, o texto será truncado:
+```
+│  [↗ Em Recupera...]     │
+```
+
+## Arquivo a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/components/ui/score-gauge.tsx` | Alterar para layout vertical centralizado |
-| `src/components/ui/status-indicator.tsx` | Adicionar `whitespace-nowrap` no QuadrantIndicator |
-
-## Benefícios
-
-1. **Consistência visual** - Todos os cards seguem o mesmo padrão (label em cima, valor embaixo)
-2. **Responsivo** - Funciona bem em qualquer largura de tela
-3. **Legibilidade** - Texto não quebra nem fica grudado
+| `src/components/ui/status-indicator.tsx` | Adicionar `max-w-full`, `flex-shrink-0` e trocar `whitespace-nowrap` por `truncate` |
