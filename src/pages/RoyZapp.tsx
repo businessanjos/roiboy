@@ -2951,15 +2951,27 @@ export default function RoyZapp() {
         .limit(10),
       
       // 4. Search groups by name - FILTER BY INTEGRATION for private groups
-      supabase
-        .from("zapp_conversations")
-        .select("id, contact_name, avatar_url, group_jid, sector_id, integration_id")
-        .eq("account_id", currentUser.account_id)
-        .eq("is_group", true)
-        .eq("integration_id", selectedIntegrationId)
-        .ilike("contact_name", `%${textSearch}%`)
-        .order("last_message_at", { ascending: false })
-        .limit(25),
+      // Apply integration filter only if available, otherwise fallback to sector
+      (async () => {
+        let query = supabase
+          .from("zapp_conversations")
+          .select("id, contact_name, avatar_url, group_jid, sector_id, integration_id")
+          .eq("account_id", currentUser.account_id)
+          .eq("is_group", true)
+          .ilike("contact_name", `%${textSearch}%`)
+          .order("last_message_at", { ascending: false })
+          .limit(25);
+        
+        // Apply isolation filter only when integration is selected
+        if (selectedIntegrationId) {
+          query = query.eq("integration_id", selectedIntegrationId);
+        } else if (selectedSectorId) {
+          // Fallback to sector for legacy groups or when no integration selected
+          query = query.eq("sector_id", selectedSectorId);
+        }
+        
+        return query;
+      })(),
     ]);
 
     // Debug logging for cross-sector group search
