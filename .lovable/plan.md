@@ -1,102 +1,96 @@
 
-# Plano: Corrigir Diferença de 3 Horas nas Reuniões Zoom
+# Plano: Corrigir Erro "Erro ao buscar grupos" na Busca de Nova Conversa
 
 ## Problema Identificado
 
-O usuário agenda uma reunião para **13:00** no ROY, mas ela aparece às **16:00** no Zoom. Isso ocorre porque:
+A mensagem "Erro ao buscar grupos" aparece repetidamente porque a query de busca de grupos usa `.eq("integration_id", selectedIntegrationId)` mas `selectedIntegrationId` pode ser `undefined` em algumas situações:
 
-1. O código cria corretamente a data como horário local (13:00 BRT)
-2. Usa `toISOString()` que converte para UTC (16:00 UTC)
-3. Envia para a Edge Function como "2026-01-21T16:00:00.000Z"
-4. A API do Zoom recebe o horário UTC e aplica o timezone `America/Sao_Paulo` novamente
+1. Componente carrega inicialmente sem `integrationId` na URL
+2. A busca assíncrona de preferências/integrações ainda não terminou
+3. Não existem integrações conectadas para o setor
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  FLUXO ATUAL (COM BUG)                                          │
-├─────────────────────────────────────────────────────────────────┤
-│  ROY (13:00 local) → toISOString() → 16:00 UTC → Zoom API       │
-│                                                        ↓        │
-│                              Zoom aplica timezone → 19:00 BRT   │
-│                              (ou interpreta como 16:00 local)   │
-└─────────────────────────────────────────────────────────────────┘
-```
+Quando `selectedIntegrationId` é `undefined`, o Supabase tenta comparar com valor nulo, causando erro na query ou resultados incorretos.
 
-## Solucao
+## Código Atual com Problema
 
-Enviar o horario no formato ISO **sem** conversao para UTC, mantendo os componentes locais. A API do Zoom aceita o formato `YYYY-MM-DDTHH:mm:ss` junto com o campo `timezone` para interpretar corretamente.
-
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│  FLUXO CORRIGIDO                                                │
-├─────────────────────────────────────────────────────────────────┤
-│  ROY (13:00 local) → formato local → 2026-01-21T13:00:00        │
-│                                                        ↓        │
-│                    Zoom API + timezone: America/Sao_Paulo       │
-│                                                        ↓        │
-│                              Resultado: 13:00 BRT (correto!)    │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-## Arquivos a Modificar
-
-### 1. `src/components/tasks/MeetingConfigDialog.tsx`
-
-**Problema:** Linhas 172-173 usam `toISOString()` que converte para UTC.
-
-**Modificacao:** Criar uma funcao auxiliar que formata a data em componentes locais sem conversao UTC.
-
-**Antes:**
 ```tsx
-start_time: startDate.toISOString(),
-end_time: endDate.toISOString(),
+// Linha 2953-2962 em RoyZapp.tsx
+supabase
+  .from("zapp_conversations")
+  .select("id, contact_name, avatar_url, group_jid, sector_id, integration_id")
+  .eq("account_id", currentUser.account_id)
+  .eq("is_group", true)
+  .eq("integration_id", selectedIntegrationId)  // PROBLEMA: Falha se undefined
+  .ilike("contact_name", `%${textSearch}%`)
 ```
 
-**Depois:**
+## Solução
+
+Aplicar filtro condicional: usar `integration_id` se disponível, senão fazer fallback para `sector_id`, mantendo compatibilidade com grupos legados e evitando erros.
+
+## Modificação Proposta
+
+### Arquivo: `src/pages/RoyZapp.tsx`
+
+**Localização**: Função `searchContacts`, linhas ~2953-2962
+
+**De**:
 ```tsx
-// Helper function to format date as local ISO string (without UTC conversion)
-const formatLocalISOString = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
-};
-
-// Na chamada da Edge Function:
-start_time: formatLocalISOString(startDate),
-end_time: formatLocalISOString(endDate),
+// 4. Search groups by name - FILTER BY INTEGRATION for private groups
+supabase
+  .from("zapp_conversations")
+  .select("id, contact_name, avatar_url, group_jid, sector_id, integration_id")
+  .eq("account_id", currentUser.account_id)
+  .eq("is_group", true)
+  .eq("integration_id", selectedIntegrationId)
+  .ilike("contact_name", `%${textSearch}%`)
+  .order("last_message_at", { ascending: false })
+  .limit(25),
 ```
 
-### 2. `supabase/functions/create-meeting/index.ts`
+**Para**:
+```tsx
+// 4. Search groups by name - FILTER BY INTEGRATION for private groups
+// Apply integration filter only if available, otherwise fallback to sector
+(async () => {
+  let query = supabase
+    .from("zapp_conversations")
+    .select("id, contact_name, avatar_url, group_jid, sector_id, integration_id")
+    .eq("account_id", currentUser.account_id)
+    .eq("is_group", true)
+    .ilike("contact_name", `%${textSearch}%`)
+    .order("last_message_at", { ascending: false })
+    .limit(25);
+  
+  // Apply isolation filter only when integration is selected
+  if (selectedIntegrationId) {
+    query = query.eq("integration_id", selectedIntegrationId);
+  } else if (selectedSectorId) {
+    // Fallback to sector for legacy groups or when no integration selected
+    query = query.eq("sector_id", selectedSectorId);
+  }
+  
+  return query;
+})(),
+```
 
-A Edge Function ja configura `timezone: "America/Sao_Paulo"` na requisicao do Zoom (linha 155), entao ela esta preparada para receber horarios locais. Nao precisa de alteracao na logica do Zoom.
+## Lógica do Filtro Condicional
 
-**Verificar:** O mesmo comportamento se aplica ao Google Meet (linhas 310-311). Ambas as APIs usam o campo `timeZone` para interpretar o horario.
+| Cenário | Filtro Aplicado | Comportamento |
+|---------|-----------------|---------------|
+| `selectedIntegrationId` definido | `integration_id = X` | Mostra apenas grupos da instância selecionada |
+| Apenas `selectedSectorId` definido | `sector_id = X` | Mostra grupos do setor (fallback para legados) |
+| Nenhum definido | Sem filtro adicional | Mostra todos os grupos da conta |
 
-## Detalhes Tecnicos
+## Por que Essa Solução Funciona
 
-| Aspecto | Antes | Depois |
-|---------|-------|--------|
-| Formato enviado | `2026-01-21T16:00:00.000Z` (UTC) | `2026-01-21T13:00:00` (local) |
-| Interpretacao Zoom | UTC + timezone = erro | Local + timezone = correto |
-| Compatibilidade | N/A | Google Meet tambem funciona |
+1. **Evita erro de query**: Não passa `undefined` para `.eq()`
+2. **Mantém isolamento de grupos privados**: Quando integração está selecionada, filtra corretamente
+3. **Compatibilidade com legados**: Grupos antigos sem `integration_id` ainda aparecem via fallback de setor
+4. **Graceful degradation**: Se nada estiver selecionado, a busca ainda funciona
 
-## Alternativa Considerada
+## Arquivo a Modificar
 
-Outra opcao seria ajustar a Edge Function para converter UTC de volta para local antes de enviar ao Zoom. Porem, a solucao escolhida (enviar horario local desde o frontend) e mais simples e segue o padrao ja usado em `dateUtils.ts`.
-
-## Impacto
-
-| Cenario | Antes | Depois |
-|---------|-------|--------|
-| Usuario agenda 13:00 | Zoom marca 16:00 | Zoom marca 13:00 |
-| Usuario agenda 09:00 | Zoom marca 12:00 | Zoom marca 09:00 |
-| Qualquer timezone BR | +3h de diferenca | Horario correto |
-
-## Resumo das Modificacoes
-
-| Arquivo | Modificacao |
+| Arquivo | Modificação |
 |---------|-------------|
-| `src/components/tasks/MeetingConfigDialog.tsx` | Trocar `toISOString()` por funcao que formata em horario local |
+| `src/pages/RoyZapp.tsx` | Adicionar verificação condicional antes de aplicar filtro `integration_id` na busca de grupos |
