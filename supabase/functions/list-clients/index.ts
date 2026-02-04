@@ -156,19 +156,22 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Add contract "active" filter BEFORE pagination - fetch eligible client IDs first
-    let activeContractClientIds: string[] | null = null;
-    if (contractFilter === "active") {
-      const { data: activeContracts } = await supabase
+    // Add contract status filter BEFORE pagination - fetch eligible client IDs first
+    // Supports: active, cancelled, suspended (status-based filters)
+    let statusContractClientIds: string[] | null = null;
+    const statusBasedFilters = ["active", "cancelled", "suspended"];
+    
+    if (statusBasedFilters.includes(contractFilter)) {
+      const { data: statusContracts } = await supabase
         .from("client_contracts")
         .select("client_id")
         .eq("account_id", accountId)
-        .eq("status", "active");
+        .eq("status", contractFilter);
       
-      activeContractClientIds = [...new Set(activeContracts?.map(c => c.client_id) || [])];
+      statusContractClientIds = [...new Set(statusContracts?.map(c => c.client_id) || [])];
       
-      if (activeContractClientIds.length === 0) {
-        // No clients have active contracts
+      if (statusContractClientIds.length === 0) {
+        // No clients have contracts with this status
         return new Response(
           JSON.stringify({
             clients: [],
@@ -181,7 +184,7 @@ Deno.serve(async (req) => {
         );
       }
       
-      query = query.in("id", activeContractClientIds);
+      query = query.in("id", statusContractClientIds);
     }
 
     const { data: clients, error: clientsError, count } = await query;
@@ -322,8 +325,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Apply server-side contract filter (skip "active" as it's applied pre-pagination)
-    if (contractFilter && contractFilter !== "all" && contractFilter !== "active") {
+    // Apply server-side contract filter (skip status-based filters as they're applied pre-pagination)
+    const statusBasedContractFilters = ["active", "cancelled", "suspended"];
+    if (contractFilter && contractFilter !== "all" && !statusBasedContractFilters.includes(contractFilter)) {
       if (contractFilter === "none") {
         filteredClients = filteredClients.filter(c => !c.contract);
       } else {
