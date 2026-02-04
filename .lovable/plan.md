@@ -1,123 +1,102 @@
 
-# Plano: Isolamento de Grupos Privados por Instância WhatsApp
+# Plano: Corrigir Diferença de 3 Horas nas Reuniões Zoom
 
 ## Problema Identificado
 
-Grupos privados (onde apenas uma instância WhatsApp específica participa, como "Jonathan Marcato") estão aparecendo na busca de outras instâncias (como "Eternum Club") porque:
+O usuário agenda uma reunião para **13:00** no ROY, mas ela aparece às **16:00** no Zoom. Isso ocorre porque:
 
-1. A busca de grupos na dialog "Nova Conversa" filtra apenas por `account_id`, não por `integration_id`
-2. Cada grupo no WhatsApp é registrado na tabela `zapp_conversations` com um `integration_id` específico (a instância que recebeu mensagens do grupo)
-3. A query atual retorna TODOS os grupos da conta, independente de qual instância está selecionada
+1. O código cria corretamente a data como horário local (13:00 BRT)
+2. Usa `toISOString()` que converte para UTC (16:00 UTC)
+3. Envia para a Edge Function como "2026-01-21T16:00:00.000Z"
+4. A API do Zoom recebe o horário UTC e aplica o timezone `America/Sao_Paulo` novamente
 
-### Dados Atuais
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  FLUXO ATUAL (COM BUG)                                          │
+├─────────────────────────────────────────────────────────────────┤
+│  ROY (13:00 local) → toISOString() → 16:00 UTC → Zoom API       │
+│                                                        ↓        │
+│                              Zoom aplica timezone → 19:00 BRT   │
+│                              (ou interpreta como 16:00 local)   │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-| Instância | integration_id | Telefone | Setor |
-|-----------|---------------|----------|-------|
-| Jonathan Marcato | ac869d1d-... | 554399540408 | vendas |
-| [CANAL] Eternum Club | dbb6109c-... | 554388346806 | operacoes |
-| [COMERCIAL] Eternum Club | c3baa312-... | 554388382681 | vendas |
+## Solucao
 
-## Comportamento Desejado
+Enviar o horario no formato ISO **sem** conversao para UTC, mantendo os componentes locais. A API do Zoom aceita o formato `YYYY-MM-DDTHH:mm:ss` junto com o campo `timezone` para interpretar corretamente.
 
-- **Grupos com apenas 1 instância**: Devem aparecer SOMENTE para essa instância
-- **Grupos com múltiplas instâncias**: Podem aparecer para todas as instâncias que participam
-
-Como cada instância que participa de um grupo terá seu próprio registro `zapp_conversations` (com seu `integration_id`), basta filtrar pela instância selecionada.
-
-## Solução
-
-Modificar a query de busca de grupos para filtrar pelo `integration_id` da instância atualmente selecionada. Isso garante que apenas grupos onde a instância selecionada participa apareçam nos resultados.
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│  FLUXO CORRIGIDO                                                │
+├─────────────────────────────────────────────────────────────────┤
+│  ROY (13:00 local) → formato local → 2026-01-21T13:00:00        │
+│                                                        ↓        │
+│                    Zoom API + timezone: America/Sao_Paulo       │
+│                                                        ↓        │
+│                              Resultado: 13:00 BRT (correto!)    │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ## Arquivos a Modificar
 
-### 1. `src/pages/RoyZapp.tsx`
+### 1. `src/components/tasks/MeetingConfigDialog.tsx`
 
-**Localização**: Função `searchContacts` (linhas ~2953-2962)
+**Problema:** Linhas 172-173 usam `toISOString()` que converte para UTC.
 
-**Modificação**: Adicionar filtro `integration_id` na query de grupos
+**Modificacao:** Criar uma funcao auxiliar que formata a data em componentes locais sem conversao UTC.
 
-**Antes**:
+**Antes:**
 ```tsx
-// 4. Search groups by name (cross-sector: no sector filter)
-supabase
-  .from("zapp_conversations")
-  .select("id, contact_name, avatar_url, group_jid, sector_id")
-  .eq("account_id", currentUser.account_id)
-  .eq("is_group", true)
-  .ilike("contact_name", `%${textSearch}%`)
-  .order("last_message_at", { ascending: false })
-  .limit(25),
+start_time: startDate.toISOString(),
+end_time: endDate.toISOString(),
 ```
 
-**Depois**:
+**Depois:**
 ```tsx
-// 4. Search groups by name - FILTER BY INTEGRATION for private groups
-supabase
-  .from("zapp_conversations")
-  .select("id, contact_name, avatar_url, group_jid, sector_id, integration_id")
-  .eq("account_id", currentUser.account_id)
-  .eq("is_group", true)
-  .eq("integration_id", selectedIntegrationId)  // NOVO: Isola grupos por instância
-  .ilike("contact_name", `%${textSearch}%`)
-  .order("last_message_at", { ascending: false })
-  .limit(25),
+// Helper function to format date as local ISO string (without UTC conversion)
+const formatLocalISOString = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
+
+// Na chamada da Edge Function:
+start_time: formatLocalISOString(startDate),
+end_time: formatLocalISOString(endDate),
 ```
 
-## Considerações Técnicas
+### 2. `supabase/functions/create-meeting/index.ts`
 
-### Por que filtrar por `integration_id`?
+A Edge Function ja configura `timezone: "America/Sao_Paulo"` na requisicao do Zoom (linha 155), entao ela esta preparada para receber horarios locais. Nao precisa de alteracao na logica do Zoom.
 
-1. **Isolamento Nativo**: Cada conversa de grupo já está vinculada à instância que a recebeu via `integration_id`
-2. **Simplicidade**: Não requer cache de participantes (tabela `whatsapp_group_participants` está vazia)
-3. **Performance**: Usa índice existente na query
+**Verificar:** O mesmo comportamento se aplica ao Google Meet (linhas 310-311). Ambas as APIs usam o campo `timeZone` para interpretar o horario.
 
-### Cenários de Uso
-
-| Cenário | Comportamento |
-|---------|---------------|
-| Grupo privado "Cliente + Jonathan Marcato" | Aparece só em "Jonathan Marcato" |
-| Grupo com múltiplas instâncias | Cada instância tem seu próprio registro, aparece corretamente para cada uma |
-| Buscar grupo de outro setor | Só aparece se a instância selecionada participa desse grupo |
-
-### Edge Case: Grupos Legados
-
-Grupos criados antes do sistema multi-instância podem não ter `integration_id`. Para manter compatibilidade, a query pode incluir fallback para `sector_id` se `integration_id` não estiver definido.
-
-**Versão com Fallback**:
-```tsx
-// Build group query with integration filtering
-let groupQuery = supabase
-  .from("zapp_conversations")
-  .select("id, contact_name, avatar_url, group_jid, sector_id, integration_id")
-  .eq("account_id", currentUser.account_id)
-  .eq("is_group", true)
-  .ilike("contact_name", `%${textSearch}%`)
-  .order("last_message_at", { ascending: false })
-  .limit(25);
-
-// Filter by integration if available (isolates private groups)
-if (selectedIntegrationId) {
-  groupQuery = groupQuery.eq("integration_id", selectedIntegrationId);
-} else if (selectedSectorId) {
-  // Fallback to sector for legacy groups without integration_id
-  groupQuery = groupQuery.eq("sector_id", selectedSectorId);
-}
-```
-
-## Impacto
+## Detalhes Tecnicos
 
 | Aspecto | Antes | Depois |
 |---------|-------|--------|
-| Grupos de "Jonathan Marcato" | Visíveis para todas as instâncias | Visíveis só para "Jonathan Marcato" |
-| Busca cross-sector de grupos | Permitida sem restrição | Restrita à instância selecionada |
-| Performance | Retorna muitos grupos | Retorna apenas grupos relevantes |
+| Formato enviado | `2026-01-21T16:00:00.000Z` (UTC) | `2026-01-21T13:00:00` (local) |
+| Interpretacao Zoom | UTC + timezone = erro | Local + timezone = correto |
+| Compatibilidade | N/A | Google Meet tambem funciona |
 
-## Arquivos Modificados
+## Alternativa Considerada
 
-| Arquivo | Modificação |
+Outra opcao seria ajustar a Edge Function para converter UTC de volta para local antes de enviar ao Zoom. Porem, a solucao escolhida (enviar horario local desde o frontend) e mais simples e segue o padrao ja usado em `dateUtils.ts`.
+
+## Impacto
+
+| Cenario | Antes | Depois |
+|---------|-------|--------|
+| Usuario agenda 13:00 | Zoom marca 16:00 | Zoom marca 13:00 |
+| Usuario agenda 09:00 | Zoom marca 12:00 | Zoom marca 09:00 |
+| Qualquer timezone BR | +3h de diferenca | Horario correto |
+
+## Resumo das Modificacoes
+
+| Arquivo | Modificacao |
 |---------|-------------|
-| `src/pages/RoyZapp.tsx` | Adicionar filtro `integration_id` na função `searchContacts` |
-
-## Resultado Esperado
-
-Ao buscar grupos na instância "Eternum Club", apenas grupos onde essa instância participa serão exibidos. Grupos privados da instância "Jonathan Marcato" não aparecerão mais na busca.
+| `src/components/tasks/MeetingConfigDialog.tsx` | Trocar `toISOString()` por funcao que formata em horario local |
