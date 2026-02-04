@@ -1,194 +1,217 @@
 
-# Correção dos Cards de Métricas do Dashboard
+# Sistema de Notificações para Agenda (Tarefas e Eventos)
 
-## Problema Identificado
-
-Os cards do dashboard estão exibindo valores incorretos por **três razões principais**:
-
-### 1. Hook `useClientsWithScores` filtra apenas clientes com contratos ativos/pendentes
-
-```typescript
-// Linhas 91-94 do useDashboardData.tsx
-const { data: contractsData } = await supabase
-  .from("client_contracts")
-  .select("client_id, status")
-  .in("status", ["active", "pending"]); // ⚠️ EXCLUI cancelled, ended, suspended
-```
-
-Isso faz com que clientes que têm **apenas** contratos cancelados/encerrados não apareçam na contagem do dashboard.
-
-### 2. Cards usam status errados para contagem
-
-| Card | Status Usado | Status Correto |
-|------|--------------|----------------|
-| Cancelamentos | `clients.status === "churned"` | `contracts.status === "cancelled"` |
-| Encerramentos | Conta apenas do mês atual | Total de `contracts.status === "ended"` |
-| Congelamentos | `clients.status === "paused"` | `contracts.status === "suspended"` |
-
-### 3. Mistura de métricas de clientes vs contratos
-
-Os cards misturam dados da tabela `clients` (status do cliente) com dados da tabela `client_contracts` (status do contrato), causando inconsistência.
+## Objetivo
+Implementar um sistema de notificações automáticas que alerta os responsáveis sobre:
+1. **Lembretes do dia**: Quando chega a data de uma tarefa/evento
+2. **Alertas de atraso**: Quando uma tarefa/evento passa da data limite sem ser concluído
 
 ---
 
-## Dados Reais no Banco
+## Arquitetura da Solução
 
-| Tabela | Status | Quantidade |
-|--------|--------|------------|
-| `client_contracts` | active | 276 |
-| `client_contracts` | cancelled | 88 |
-| `client_contracts` | ended | 156 |
-| `client_contracts` | suspended | 21 |
-| `client_contracts` | paused | 7 |
-| `clients` | active | 449 |
-| `clients` | churn_risk | 748 |
+```text
+┌─────────────────────────────────────────────────────────────┐
+│                    CRON (diário/horário)                     │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│           Edge Function: check-agenda-reminders              │
+│                                                              │
+│  1. Busca tarefas com due_date = HOJE e status ≠ done       │
+│  2. Busca tarefas com due_date < HOJE e status ≠ done       │
+│  3. Busca eventos com scheduled_at = HOJE                    │
+│  4. Busca eventos com scheduled_at < HOJE (não realizados)  │
+│  5. Cria notificações para os responsáveis                  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Tabela: notifications                     │
+│    (INSERT dispara realtime → toast + push no browser)      │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Solução Proposta
+## Regras de Notificação
 
-### Opção A: Usar RPC para Agregação no Banco (Recomendado)
+### 1. Tarefas (`internal_tasks`)
 
-Criar funções SQL que retornam contagens precisas, evitando o limite de 1000 rows e garantindo precisão:
+| Situação | Condição | Notificação |
+|----------|----------|-------------|
+| **Lembrete do dia** | `due_date = hoje` AND `status NOT IN ('done', 'cancelled')` | "⏰ Tarefa para hoje: {título}" |
+| **Atrasada** | `due_date < hoje` AND `status NOT IN ('done', 'cancelled')` | "⚠️ Tarefa atrasada: {título}" |
 
-```sql
-CREATE OR REPLACE FUNCTION get_contract_status_counts(p_account_id UUID)
-RETURNS TABLE(
-  active_count BIGINT,
-  cancelled_count BIGINT,
-  ended_count BIGINT,
-  suspended_count BIGINT,
-  paused_count BIGINT,
-  total_clients BIGINT
-)
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = ''
-AS $$
-  SELECT 
-    COUNT(*) FILTER (WHERE status = 'active') as active_count,
-    COUNT(*) FILTER (WHERE status = 'cancelled') as cancelled_count,
-    COUNT(*) FILTER (WHERE status = 'ended') as ended_count,
-    COUNT(*) FILTER (WHERE status = 'suspended') as suspended_count,
-    COUNT(*) FILTER (WHERE status = 'paused') as paused_count,
-    COUNT(DISTINCT client_id) as total_clients
-  FROM public.client_contracts
-  WHERE account_id = p_account_id;
-$$;
-```
+**Destinatário**: `assigned_to` (responsável pela tarefa)
+- Se não houver responsável atribuído, notifica `created_by`
 
-### Opção B: Modificar Hook para Buscar Todos os Status
+### 2. Eventos (`events` + `event_team`)
 
-Remover o filtro de status no hook e calcular contagens baseadas nos contratos:
+| Situação | Condição | Notificação |
+|----------|----------|-------------|
+| **Lembrete do dia** | `scheduled_at::date = hoje` | "📅 Evento hoje: {título}" |
+| **Atrasado/Não realizado** | `scheduled_at::date < hoje` AND `status != 'completed'` | "⚠️ Evento não realizado: {título}" |
 
-```typescript
-// Buscar TODOS os contratos, não apenas active/pending
-const { data: contractsData } = await supabase
-  .from("client_contracts")
-  .select("client_id, status"); // Sem filtro de status
-```
+**Destinatário**: Membros da equipe do evento (`event_team.user_id`)
+- Prioridade para `is_primary = true`
+- Se não houver equipe, não notifica (evento sem responsável)
 
 ---
 
 ## Implementação Detalhada
 
-### Arquivo 1: Criar RPC (Migração SQL)
-
-```sql
--- Função para obter contagens de status de contratos
-CREATE OR REPLACE FUNCTION get_dashboard_contract_counts(p_account_id UUID)
-RETURNS JSON
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = ''
-AS $$
-DECLARE
-  result JSON;
-BEGIN
-  SELECT json_build_object(
-    'active', COUNT(*) FILTER (WHERE status = 'active'),
-    'cancelled', COUNT(*) FILTER (WHERE status = 'cancelled'),
-    'ended', COUNT(*) FILTER (WHERE status = 'ended'),
-    'suspended', COUNT(*) FILTER (WHERE status = 'suspended'),
-    'paused', COUNT(*) FILTER (WHERE status = 'paused'),
-    'total_clients', COUNT(DISTINCT client_id)
-  ) INTO result
-  FROM public.client_contracts
-  WHERE account_id = p_account_id;
-  
-  RETURN result;
-END;
-$$;
-```
-
-### Arquivo 2: `src/hooks/useDashboardContractStats.ts` (Novo)
+### Arquivo 1: Edge Function `supabase/functions/check-agenda-reminders/index.ts`
 
 ```typescript
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+// Pseudocódigo da lógica principal:
 
-interface ContractStats {
-  active: number;
-  cancelled: number;
-  ended: number;
-  suspended: number;
-  paused: number;
-  total_clients: number;
-}
-
-export function useDashboardContractStats(accountId: string | undefined) {
-  return useQuery({
-    queryKey: ["dashboard-contract-stats", accountId],
-    queryFn: async () => {
-      if (!accountId) return null;
-      
-      const { data, error } = await supabase
-        .rpc("get_dashboard_contract_counts", { p_account_id: accountId });
-      
-      if (error) throw error;
-      return data as ContractStats;
-    },
-    enabled: !!accountId,
-    staleTime: 1000 * 60 * 5,
-  });
+async function checkAgendaReminders() {
+  const today = new Date().toISOString().split('T')[0];
+  
+  // 1. TAREFAS PARA HOJE
+  const { data: todayTasks } = await supabase
+    .from('internal_tasks')
+    .select('id, title, assigned_to, created_by, client_id, account_id, clients(full_name)')
+    .eq('due_date', today)
+    .not('status', 'in', '("done","cancelled")');
+  
+  for (const task of todayTasks) {
+    await createNotification({
+      type: 'task_due_today',
+      title: '⏰ Tarefa para hoje',
+      content: `${task.title}${task.clients?.full_name ? ` - ${task.clients.full_name}` : ''}`,
+      user_id: task.assigned_to || task.created_by,
+      link: task.client_id ? `/clients/${task.client_id}` : '/tasks',
+      source_type: 'internal_tasks',
+      source_id: task.id,
+    });
+  }
+  
+  // 2. TAREFAS ATRASADAS
+  const { data: overdueTasks } = await supabase
+    .from('internal_tasks')
+    .select('id, title, assigned_to, created_by, client_id, account_id, due_date, clients(full_name)')
+    .lt('due_date', today)
+    .not('status', 'in', '("done","cancelled")');
+  
+  for (const task of overdueTasks) {
+    await createNotification({
+      type: 'task_overdue',
+      title: '⚠️ Tarefa atrasada',
+      content: `${task.title} - Venceu em ${formatDate(task.due_date)}`,
+      user_id: task.assigned_to || task.created_by,
+      // ...
+    });
+  }
+  
+  // 3. EVENTOS PARA HOJE
+  const { data: todayEvents } = await supabase
+    .from('events')
+    .select('id, title, account_id, scheduled_at')
+    .gte('scheduled_at', `${today}T00:00:00`)
+    .lt('scheduled_at', `${today}T23:59:59`);
+  
+  for (const event of todayEvents) {
+    // Buscar membros da equipe
+    const { data: teamMembers } = await supabase
+      .from('event_team')
+      .select('user_id')
+      .eq('event_id', event.id);
+    
+    for (const member of teamMembers) {
+      await createNotification({
+        type: 'event_today',
+        title: '📅 Evento hoje',
+        content: `${event.title} às ${formatTime(event.scheduled_at)}`,
+        user_id: member.user_id,
+        link: `/events/${event.id}`,
+        source_type: 'events',
+        source_id: event.id,
+      });
+    }
+  }
+  
+  // 4. EVENTOS ATRASADOS (opcional - depende do workflow)
 }
 ```
 
-### Arquivo 3: `src/pages/Dashboard.tsx` (Modificar)
+### Arquivo 2: Configuração CRON
 
-Atualizar os cards para usar os dados corretos:
+A edge function será chamada por um cron externo ou via pg_cron. Sugestão: executar a cada 6 horas ou 1x por dia às 8h.
 
-```tsx
-// Importar novo hook
-import { useDashboardContractStats } from "@/hooks/useDashboardContractStats";
+### Arquivo 3: `supabase/config.toml` (atualizar)
 
-// Usar hook
-const { data: contractStats } = useDashboardContractStats(currentUser?.account_id);
-
-// Atualizar cards
-<p className="text-2xl font-bold">{contractStats?.cancelled ?? 0}</p> // Cancelamentos
-<p className="text-2xl font-bold">{contractStats?.ended ?? 0}</p>     // Encerramentos
-<p className="text-2xl font-bold">{contractStats?.suspended ?? 0}</p> // Congelamentos
+```toml
+[functions.check-agenda-reminders]
+verify_jwt = false
 ```
 
 ---
 
-## Resultado Esperado
+## Controle de Duplicatas
 
-| Card | Valor Atual | Valor Correto |
-|------|-------------|---------------|
-| Total Clientes | 271 | ~276+ (clientes únicos com contratos) |
-| Ativos | 271 | 276 (contratos ativos) |
-| Cancelamentos | 0 | 88 |
-| Encerramentos | 0 | 156 |
-| Congelamentos | 0 | 21 (suspended) + 7 (paused) = 28 |
+Para evitar notificações duplicadas no mesmo dia:
+
+```typescript
+// Antes de criar notificação, verificar se já existe
+const notificationKey = `${type}-${source_id}-${today}`;
+
+const { data: existing } = await supabase
+  .from('notifications')
+  .select('id')
+  .eq('user_id', userId)
+  .eq('source_type', sourceType)
+  .eq('source_id', sourceId)
+  .eq('type', type)
+  .gte('created_at', `${today}T00:00:00`)
+  .limit(1);
+
+if (existing?.length) {
+  console.log('Notification already sent today, skipping...');
+  continue;
+}
+```
 
 ---
 
-## Arquivos a Modificar
+## Tipos de Notificação a Adicionar
+
+| Tipo | Título | Contexto |
+|------|--------|----------|
+| `task_due_today` | ⏰ Tarefa para hoje | Tarefa com vencimento hoje |
+| `task_overdue` | ⚠️ Tarefa atrasada | Tarefa passou da data limite |
+| `event_today` | 📅 Evento hoje | Evento agendado para hoje |
+| `event_overdue` | ⚠️ Evento não realizado | Evento passou da data sem conclusão |
+
+---
+
+## Arquivos a Criar/Modificar
 
 | Arquivo | Ação |
 |---------|------|
-| Migração SQL | Criar função RPC `get_dashboard_contract_counts` |
-| `src/hooks/useDashboardContractStats.ts` | Criar novo hook para chamar RPC |
-| `src/pages/Dashboard.tsx` | Integrar novo hook e corrigir exibição dos cards |
+| `supabase/functions/check-agenda-reminders/index.ts` | **Criar** - Lógica principal |
+| `supabase/config.toml` | **Modificar** - Adicionar config da function |
+
+---
+
+## Fluxo do Usuário
+
+1. Usuário cria tarefa com data de vencimento
+2. CRON executa `check-agenda-reminders` diariamente
+3. Sistema verifica tarefas/eventos do dia e atrasados
+4. Cria notificações na tabela `notifications`
+5. Realtime dispara para o frontend
+6. Usuário recebe toast + push notification (se permitido)
+7. Ao clicar, navega para o cliente/tarefa/evento
+
+---
+
+## Considerações Técnicas
+
+1. **Performance**: A função deve processar por batches se houver muitos registros
+2. **Timezone**: Usar timezone do Brasil (America/Sao_Paulo) para determinar "hoje"
+3. **Deduplicação**: Verificar se notificação já foi enviada hoje antes de criar nova
+4. **Fallback de responsável**: Se tarefa não tem `assigned_to`, notificar `created_by`
+5. **Eventos sem equipe**: Não gera notificação se evento não tem membros em `event_team`
