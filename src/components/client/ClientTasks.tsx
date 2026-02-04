@@ -175,7 +175,7 @@ export function ClientTasks({ clientId }: ClientTasksProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
-          Tarefas do Cliente
+          Tarefas com o Cliente
         </h3>
         <Button 
           size="sm" 
