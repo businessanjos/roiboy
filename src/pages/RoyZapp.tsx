@@ -2950,12 +2950,13 @@ export default function RoyZapp() {
         .order("last_message_at", { ascending: false })
         .limit(10),
       
-      // 4. Search groups by name (cross-sector: no sector filter)
+      // 4. Search groups by name - FILTER BY INTEGRATION for private groups
       supabase
         .from("zapp_conversations")
-        .select("id, contact_name, avatar_url, group_jid, sector_id")
+        .select("id, contact_name, avatar_url, group_jid, sector_id, integration_id")
         .eq("account_id", currentUser.account_id)
         .eq("is_group", true)
+        .eq("integration_id", selectedIntegrationId)
         .ilike("contact_name", `%${textSearch}%`)
         .order("last_message_at", { ascending: false })
         .limit(25),
