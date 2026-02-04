@@ -10549,6 +10549,10 @@ export type Database = {
       }
       get_current_user_account_id: { Args: never; Returns: string }
       get_current_user_id: { Args: never; Returns: string }
+      get_dashboard_contract_counts: {
+        Args: { p_account_id: string }
+        Returns: Json
+      }
       get_dre_report: {
         Args: { p_account_id: string; p_end_date: string; p_start_date: string }
         Returns: {

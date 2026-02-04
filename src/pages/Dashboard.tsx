@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useDashboardContractStats } from "@/hooks/useDashboardContractStats";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -143,6 +144,9 @@ export default function Dashboard() {
     isLoading: loading, 
     refetchAll 
   } = useDashboardData();
+  
+  // Contract stats from RPC for accurate Gestão metrics
+  const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
   
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -863,7 +867,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Total Clientes</p>
-                    <p className="text-2xl font-bold text-foreground">{gestaoClientStats.total}</p>
+                    <p className="text-2xl font-bold text-foreground">{contractStats?.total_clients ?? gestaoClientStats.total}</p>
                   </div>
                   <Users className="h-5 w-5 text-primary" />
                 </div>
@@ -871,52 +875,51 @@ export default function Dashboard() {
             </Card>
 
             {/* Ativos */}
-            <Card className="shadow-card border-l-4 border-l-green-500">
+            <Card className="shadow-card border-l-4 border-l-success">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Ativos</p>
-                    <p className="text-2xl font-bold text-green-600">{gestaoClientStats.active}</p>
+                    <p className="text-2xl font-bold text-success">{contractStats?.active ?? gestaoClientStats.active}</p>
                   </div>
-                  <TrendingUp className="h-5 w-5 text-green-500" />
+                  <TrendingUp className="h-5 w-5 text-success" />
                 </div>
               </CardContent>
             </Card>
 
             {/* Cancelamentos */}
-            <Card className="shadow-card border-l-4 border-l-red-500">
+            <Card className="shadow-card border-l-4 border-l-danger">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Cancelamentos</p>
-                    <p className="text-2xl font-bold text-red-600">{gestaoClientStats.churned}</p>
+                    <p className="text-2xl font-bold text-danger">{contractStats?.cancelled ?? 0}</p>
                   </div>
-                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                  <AlertTriangle className="h-5 w-5 text-danger" />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Demissões (Encerramentos) */}
-            <Card className="shadow-card border-l-4 border-l-orange-500">
+            {/* Encerramentos */}
+            <Card className="shadow-card border-l-4 border-l-warning">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Encerramentos</p>
-                    <p className="text-2xl font-bold text-orange-600">{lostFinancialValue.demissoesCount}</p>
-                    <p className="text-xs text-muted-foreground">no mês atual</p>
+                    <p className="text-2xl font-bold text-warning">{contractStats?.ended ?? 0}</p>
                   </div>
-                  <TrendingDown className="h-5 w-5 text-orange-500" />
+                  <TrendingDown className="h-5 w-5 text-warning" />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Congelamentos */}
+            {/* Congelamentos (suspended + paused) */}
             <Card className="shadow-card border-l-4 border-l-amber-500">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Congelamentos</p>
-                    <p className="text-2xl font-bold text-amber-600">{gestaoClientStats.paused}</p>
+                    <p className="text-2xl font-bold text-amber-600">{(contractStats?.suspended ?? 0) + (contractStats?.paused ?? 0)}</p>
                   </div>
                   <Minus className="h-5 w-5 text-amber-500" />
                 </div>
