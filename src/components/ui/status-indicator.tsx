@@ -181,12 +181,12 @@ export function QuadrantIndicator({
         config.color,
         sizes.padding,
         sizes.gap,
-        sizes.text,
+        "text-[10px]",
         className
       )}
     >
       <Icon className={cn(sizes.icon, "flex-shrink-0")} />
-      {showLabel && <span className="truncate">{config.label}</span>}
+      {showLabel && <span className="whitespace-nowrap">{config.label}</span>}
     </div>
   );
 }
