@@ -303,7 +303,7 @@ async function uazapiInstanceRequest(endpoint: string, method: string, instanceT
                            errorMsg.toLowerCase().includes("not connected");
     
     if (isDisconnected) {
-      console.error(`[UAZAPI] WhatsApp disconnected detected: ${errorMsg}`);
+      console.error(`[UAZAPI ERROR] Endpoint: ${endpoint}, Status: 503, Token: ${instanceToken?.slice(0,8)}..., Error: WHATSAPP_DISCONNECTED`);
       throw new Error("WHATSAPP_DISCONNECTED: WhatsApp desconectado. Reconecte sua integração nas configurações.");
     }
   }
@@ -312,10 +312,62 @@ async function uazapiInstanceRequest(endpoint: string, method: string, instanceT
     const errorMsg = (data as { message?: string })?.message || 
                      (data as { error?: string })?.error || 
                      `UAZAPI error: ${response.status}`;
+    // Enhanced logging for debugging
+    console.error(`[UAZAPI ERROR] Endpoint: ${endpoint}, Status: ${response.status}, Token: ${instanceToken?.slice(0,8)}..., Error: ${errorMsg}`);
     throw new Error(errorMsg);
   }
   
   return data;
+}
+
+// Helper function with retry logic and exponential backoff for transient errors
+// Used for message sending operations to handle temporary API failures
+async function uazapiInstanceRequestWithRetry(
+  endpoint: string, 
+  method: string, 
+  instanceToken: string, 
+  body?: unknown,
+  maxRetries: number = 3,
+  baseDelayMs: number = 500
+): Promise<unknown> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await uazapiInstanceRequest(endpoint, method, instanceToken, body);
+    } catch (error) {
+      lastError = error as Error;
+      const errorMsg = lastError.message || "";
+      
+      // Don't retry for client errors (4xx) or known permanent failures
+      const isPermanentError = 
+        errorMsg.includes("WHATSAPP_DISCONNECTED") ||
+        errorMsg.includes("Invalid phone") ||
+        errorMsg.includes("formato inválido") ||
+        errorMsg.includes("não encontrado") ||
+        errorMsg.includes("not found") ||
+        errorMsg.includes("no LID found") ||
+        errorMsg.includes("Could not parse") ||
+        errorMsg.includes("not valid") ||
+        errorMsg.includes("número inválido");
+      
+      if (isPermanentError) {
+        console.log(`[RETRY] Permanent error on attempt ${attempt}, not retrying: ${errorMsg}`);
+        throw lastError;
+      }
+      
+      if (attempt < maxRetries) {
+        // Exponential backoff: 500ms, 1000ms, 2000ms
+        const delayMs = baseDelayMs * Math.pow(2, attempt - 1);
+        console.log(`[RETRY] Attempt ${attempt}/${maxRetries} failed, retrying in ${delayMs}ms: ${errorMsg}`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      } else {
+        console.log(`[RETRY] All ${maxRetries} attempts failed for ${endpoint}: ${errorMsg}`);
+      }
+    }
+  }
+  
+  throw lastError || new Error("Unknown error after retries");
 }
 
 serve(async (req) => {
@@ -1750,7 +1802,8 @@ serve(async (req) => {
         
         if (instanceToken) {
           // Use instance token with /send/text endpoint (documentação oficial UAZAPI)
-          result = await uazapiInstanceRequest(`/send/text`, "POST", instanceToken, messageBody);
+          // Using retry wrapper for resilience against transient errors
+          result = await uazapiInstanceRequestWithRetry(`/send/text`, "POST", instanceToken, messageBody);
         } else {
           // Fallback to admin endpoint with instance name in path
           result = await uazapiAdminRequest(`/send/text/${instanceName}`, "POST", messageBody);
@@ -2536,7 +2589,8 @@ serve(async (req) => {
           if (sendSuccess) break;
           try {
             console.log(`Trying: ${endpoint.method} ${endpoint.url} with body:`, JSON.stringify(endpoint.body));
-            sendResult = await uazapiInstanceRequest(
+            // Using retry wrapper for resilience against transient errors
+            sendResult = await uazapiInstanceRequestWithRetry(
               endpoint.url, 
               endpoint.method, 
               savedInstanceToken,
@@ -2640,7 +2694,8 @@ serve(async (req) => {
           if (mediaSuccess) break;
           try {
             console.log(`Trying media: ${endpoint.method} ${endpoint.url}`);
-            sendMediaResult = await uazapiInstanceRequest(
+            // Using retry wrapper for resilience against transient errors
+            sendMediaResult = await uazapiInstanceRequestWithRetry(
               endpoint.url, 
               endpoint.method, 
               savedInstanceToken,
@@ -2726,7 +2781,8 @@ serve(async (req) => {
           if (mediaSuccess) break;
           try {
             console.log(`Trying media to group: ${endpoint.method} ${endpoint.url}`);
-            sendMediaResult = await uazapiInstanceRequest(
+            // Using retry wrapper for resilience against transient errors
+            sendMediaResult = await uazapiInstanceRequestWithRetry(
               endpoint.url, 
               endpoint.method, 
               savedInstanceToken,
