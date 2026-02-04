@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Video, Mail, Clock, Loader2, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatLocalISOString } from "@/lib/dateUtils";
 
 const PLATFORMS = [
   { value: "google", label: "Google Meet", icon: "🟢" },
@@ -169,8 +170,8 @@ Até lá!`;
           platform,
           participant_email: participantEmail,
           participant_name: participantName || participantEmail.split("@")[0],
-          start_time: startDate.toISOString(),
-          end_time: endDate.toISOString(),
+          start_time: formatLocalISOString(startDate),
+          end_time: formatLocalISOString(endDate),
           title: taskTitle,
           email_send_at: sendAt.toISOString(),
           email_message: formattedMessage,
