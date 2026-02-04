@@ -225,41 +225,42 @@ export default function RoyZapp() {
     }
   }, [assignments]);
 
-  // Detect when selected INDIVIDUAL conversation doesn't belong to current sector
-  // INDIVIDUAL CONTACTS: clear selection (sector isolation)
+  // Detect when selected conversation is not in current assignments list
+  // For MULTI-INSTANCE architecture: each instance has its own conversation with the same contact
   // GROUPS: handled differently - they persist until user clicks "Dispensar"
   useEffect(() => {
-    if (!selectedConversation || !selectedSectorId || !currentUser?.account_id) return;
-    if (!currentSectorDepartmentId) return;
+    if (!selectedConversation || !currentUser?.account_id) return;
     
-    // Check if the selected conversation exists in current sector's assignments
-    const existsInCurrentSector = assignments.some(
+    // Check if conversation exists in current assignments list
+    const existsInCurrentList = assignments.some(
       a => a.id === selectedConversation.id
     );
     
-    if (existsInCurrentSector) return; // Already in this sector, nothing to do
+    if (existsInCurrentList) return; // Already in list, nothing to do
     
-    // Check if it's a group conversation
+    // For groups, don't auto-clear (multi-sector support)
     const isGroup = selectedConversation.zapp_conversation?.is_group;
+    if (isGroup) return;
     
-    if (isGroup) {
-      // GROUPS: Don't auto-clear - groups persist until "Dispensar" is clicked
-      // The assignment creation happens when user opens group via "Nova Conversa"
+    // For individual contacts, check if it belongs to the CURRENT INTEGRATION
+    // Each instance can have its own conversation with the same contact
+    const conversationIntegrationId = (selectedConversation.zapp_conversation as any)?.integration_id;
+    
+    if (conversationIntegrationId === selectedIntegrationId) {
+      // Same integration - this is our conversation, allow it
+      console.log("[RoyZapp] Individual conversation from current integration - allowing");
       return;
     }
     
-    // INDIVIDUAL CONTACTS: Clear selection (must be handled by original sector)
-    console.log("[RoyZapp] Individual conversation from another sector", {
+    // Different integration - this shouldn't happen normally since we filter by integration
+    // But if it does, just log it without blocking (createConversationWithContact will handle it)
+    console.log("[RoyZapp] Individual conversation from different integration - allowing creation", {
       selectedId: selectedConversation.id,
-      assignmentsCount: assignments.length,
-      existsInList: assignments.some(a => a.id === selectedConversation.id),
+      conversationIntegrationId,
       selectedIntegrationId,
-      departmentId: selectedConversation.department_id,
-      currentSectorDepartmentId,
     });
-    setSelectedConversation(null);
-    toast.info("Conversa individual pertence a outro setor");
-  }, [selectedConversation, assignments, selectedSectorId, currentSectorDepartmentId, currentUser?.account_id]);
+    // Don't clear selection - let createConversationWithContact create the correct one
+  }, [selectedConversation, assignments, selectedIntegrationId, currentUser?.account_id]);
   
   // Function to dismiss group conversation (close assignment)
   const dismissGroupConversation = async () => {
