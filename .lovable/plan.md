@@ -1,241 +1,138 @@
 
 
-# Diagnóstico Completo: Janela de Tarefa Fechando ao Adicionar Subtarefa
+# Correção: Redirecionamento do Calendário de Conteúdo para Redes Sociais
 
-## Resumo do Problema
+## Problema Identificado
 
-Alguns usuários do setor de Marketing relatam que a janela de detalhes da tarefa fecha automaticamente após adicionar uma subtarefa, forçando-os a reabrir a tarefa para adicionar mais subtarefas. O problema não é reproduzido em todos os ambientes.
+Ao clicar nos ícones de redes sociais no Calendário de Conteúdo, a navegação vai para `/social-media?platform=instagram&postId=xxx`, mas:
+
+1. **A página `SocialMedia.tsx` ignora os parâmetros da URL** - Usa `useState` local sem ler `platform` e `postId` dos query params
+2. **Os componentes não recebem o `postId`** - `SocialMediaTab` e `TikTokTab` não sabem qual post foi solicitado
+3. **Não há seleção automática de perfil** - O post pode pertencer a um perfil diferente do selecionado
 
 ---
 
-## Análise Técnica
-
-### Fluxo de Código Atual
+## Fluxo Atual (Quebrado)
 
 ```text
-MarketingTasksTab.tsx
-    └── MarketingTaskDialog.tsx (Dialog principal)
-            └── SubtaskList.tsx (Lista de subtarefas)
-                    └── handleAddSubtask() → createSubtask.mutateAsync()
-                            └── onSuccess: invalidateQueries(["marketing-subtasks"])
+Calendário → navigate("/social-media?platform=instagram&postId=xxx")
+                    ↓
+            SocialMedia.tsx
+            (ignora query params)
+                    ↓
+            platform = "instagram" (hardcoded)
+            postId = undefined
+                    ↓
+            SocialMediaTab (sem postId)
+                    ↓
+            Usuário não vê o post específico
 ```
-
-### Código Suspeito Identificado
-
-#### 1. Componente `SubtaskList.tsx`
-
-O código atual tem proteções contra propagação de eventos:
-
-```typescript
-const handleAddSubtask = async (e?: React.MouseEvent) => {
-  e?.stopPropagation();
-  e?.preventDefault();
-  // ...
-  await createSubtask.mutateAsync({ ... });
-  setNewSubtaskTitle("");
-};
-
-const handleKeyDown = (e: React.KeyboardEvent) => {
-  if (e.key === "Enter") {
-    e.preventDefault();
-    e.stopPropagation();
-    handleAddSubtask();
-  }
-  // ...
-};
-```
-
-**Problema potencial**: Quando o usuário pressiona Enter, a função `handleKeyDown` para a propagação do evento, mas o `handleAddSubtask()` é chamado **sem o evento**. Isso significa que qualquer efeito colateral que dependa do evento não está sendo tratado.
-
-#### 2. Botão de Adicionar no `SubtaskList.tsx`
-
-```typescript
-<Button type="button" size="sm" className="h-8" onClick={handleAddSubtask}>
-  <Check className="h-4 w-4" />
-</Button>
-```
-
-O `type="button"` está correto, mas o evento de clique não é passado diretamente para `handleAddSubtask` com a assinatura correta.
-
----
-
-## Causas Raiz Identificadas
-
-### Causa 1: Form Submit Bubbling (MAIS PROVÁVEL)
-
-O `SubtaskList` está dentro de um `<form>` no `MarketingTaskDialog`:
-
-```typescript
-<form onSubmit={handleSubmit} className="...">
-  {/* ... */}
-  <SubtaskList taskId={isEditing ? taskId : null} />
-  {/* ... */}
-</form>
-```
-
-Quando o usuário pressiona **Enter** no input de nova subtarefa, mesmo com `e.preventDefault()` e `e.stopPropagation()`, em alguns navegadores ou condições de rede lenta, o evento pode "vazar" e disparar o `handleSubmit` do formulário pai, que:
-
-1. Atualiza a tarefa principal
-2. Fecha o dialog após sucesso: `onOpenChange(false)`
-
-### Causa 2: Race Condition com Query Invalidation
-
-O `createSubtask` invalida a query de subtarefas:
-
-```typescript
-onSuccess: (_, variables) => {
-  queryClient.invalidateQueries({ queryKey: ["marketing-subtasks", variables.task_id] });
-}
-```
-
-Se houver outra mutation acontecendo simultaneamente (como atualização automática da tarefa), pode haver uma condição de corrida que afete o estado do dialog.
-
-### Causa 3: Re-render Forçado pelo Parent
-
-O `MarketingTasksTab` tem um estado que controla o dialog:
-
-```typescript
-const [isDialogOpen, setIsDialogOpen] = useState(false);
-```
-
-Se a invalidação de queries causar um re-render que afete este estado, o dialog pode fechar.
-
----
-
-## Por Que Funciona para Alguns Usuários?
-
-1. **Velocidade de conexão**: Em conexões mais rápidas, a mutation completa antes que o evento de teclado possa propagar
-2. **Método de adicionar**: Usuários que clicam no botão vs. pressionam Enter podem ter comportamentos diferentes
-3. **Versão do navegador**: Diferentes implementações de propagação de eventos
 
 ---
 
 ## Solução Proposta
 
-### Mudança 1: Isolar o Input de Subtarefa do Form Principal
+### Mudança 1: Ler Query Params em SocialMedia.tsx
 
-Garantir que eventos de teclado não possam propagar para o form pai de forma alguma:
-
-```typescript
-// SubtaskList.tsx - handleKeyDown
-const handleKeyDown = (e: React.KeyboardEvent) => {
-  // Parar TODOS os eventos para evitar qualquer bubbling
-  if (e.key === "Enter" || e.key === "Escape") {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (e.key === "Enter" && newSubtaskTitle.trim()) {
-      handleAddSubtask();
-    } else if (e.key === "Escape") {
-      setNewSubtaskTitle("");
-      setIsAdding(false);
-    }
-    return; // Retorno explícito
-  }
-};
-```
-
-### Mudança 2: Adicionar onKeyDown ao Container
-
-Adicionar um handler de eventos no container do input para capturar qualquer evento que escape:
+Usar `useSearchParams` para ler e aplicar os parâmetros da URL:
 
 ```typescript
-<div 
-  className="flex items-center gap-2"
-  onKeyDown={(e) => {
-    if (e.key === "Enter" || e.key === "Escape") {
-      e.stopPropagation();
-    }
-  }}
->
-  <Input ... onKeyDown={handleKeyDown} />
-  ...
-</div>
-```
+import { useSearchParams } from "react-router-dom";
 
-### Mudança 3: Usar Form Tag Local
-
-Envolver o input de subtarefa em seu próprio form isolado com `onSubmit` que previne propagação:
-
-```typescript
-<form 
-  onSubmit={(e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    handleAddSubtask();
-  }}
-  className="flex items-center gap-2"
->
-  <Input
-    value={newSubtaskTitle}
-    onChange={(e) => setNewSubtaskTitle(e.target.value)}
-    placeholder="Título da subtarefa..."
-    className="h-8 text-sm"
-    autoFocus
-  />
-  <Button type="submit" size="sm" className="h-8">
-    <Check className="h-4 w-4" />
-  </Button>
-  <Button type="button" ... onClick={...}>
-    <X className="h-4 w-4" />
-  </Button>
-</form>
-```
-
-### Mudança 4: Mover SubtaskList para Fora do Form
-
-Mover o `SubtaskList` e outros componentes não-formulário para fora do `<form>` tag no `MarketingTaskDialog`:
-
-```typescript
-// MarketingTaskDialog.tsx
-<DialogContent>
-  <form onSubmit={handleSubmit}>
-    {/* Campos do formulário principal */}
-    {/* ... Title, Description, Selects, etc ... */}
-    
-    {/* Botões de ação do form */}
-    <div className="flex items-center justify-between pt-4">
-      {/* Delete, Cancel, Submit buttons */}
-    </div>
-  </form>
+export default function SocialMedia() {
+  const [searchParams, setSearchParams] = useSearchParams();
   
-  {/* Subtarefas FORA do form */}
-  <Separator />
-  <SubtaskList taskId={isEditing ? taskId : null} />
+  // Ler parâmetros da URL
+  const urlPlatform = searchParams.get("platform") as "instagram" | "tiktok" | null;
+  const urlPostId = searchParams.get("postId");
   
-  {/* Media também FORA do form */}
-  <Separator />
-  <MarketingTaskMediaUpload ... />
-</DialogContent>
+  // Estados controlados pelos query params
+  const [platform, setPlatform] = useState<"instagram" | "tiktok">(
+    urlPlatform || "instagram"
+  );
+  
+  // Sincronizar mudanças na URL com o estado
+  useEffect(() => {
+    if (urlPlatform && urlPlatform !== platform) {
+      setPlatform(urlPlatform);
+    }
+  }, [urlPlatform]);
+  
+  // Passar postId para os componentes filhos
+  return (
+    // ...
+    <SocialMediaTab initialPostId={urlPostId} />
+    // ...
+    <TikTokTab initialPostId={urlPostId} />
+  );
+}
 ```
 
----
+### Mudança 2: Receber e Usar postId no SocialMediaTab
 
-## Plano de Implementação
+O componente deve:
+1. Receber `initialPostId` como prop
+2. Ao carregar, buscar o post para descobrir seu `profile_id`
+3. Selecionar automaticamente o perfil correto
+4. Abrir o dialog de edição ou scroll para o post
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/components/marketing/tasks/SubtaskList.tsx` | Envolver input em form próprio com isolamento de eventos |
-| `src/components/marketing/tasks/MarketingTaskDialog.tsx` | Reorganizar estrutura para separar SubtaskList do form principal |
+```typescript
+interface SocialMediaTabProps {
+  initialPostId?: string | null;
+}
+
+export function SocialMediaTab({ initialPostId }: SocialMediaTabProps) {
+  // ...
+  
+  useEffect(() => {
+    if (initialPostId && posts.length > 0) {
+      const targetPost = posts.find(p => p.id === initialPostId);
+      if (targetPost) {
+        // Selecionar o perfil correto se diferente
+        if (targetPost.profile_id !== currentProfile?.id) {
+          setSelectedProfileId(targetPost.profile_id);
+        }
+        // Abrir dialog de edição para o post
+        setSelectedPost(targetPost);
+        setEditPostDialogOpen(true);
+      }
+    }
+  }, [initialPostId, posts]);
+}
+```
+
+### Mudança 3: Aplicar a Mesma Lógica no TikTokTab
+
+Implementar a mesma funcionalidade para posts do TikTok.
+
+### Mudança 4: Limpar postId Após Uso
+
+Após abrir o post, limpar o parâmetro da URL para evitar reabrir ao navegar:
+
+```typescript
+// Após abrir o dialog
+searchParams.delete("postId");
+setSearchParams(searchParams, { replace: true });
+```
 
 ---
 
 ## Arquivos a Modificar
 
-### `SubtaskList.tsx`
-- Envolver área de input em `<form>` local
-- Adicionar handlers de evento no container
-- Garantir retorno explícito após stopPropagation
-
-### `MarketingTaskDialog.tsx`
-- Mover `<SubtaskList>` e `<MarketingTaskMediaUpload>` para fora do `<form>` principal
-- Manter apenas campos editáveis da tarefa dentro do form
+| Arquivo | Mudança |
+|---------|---------|
+| `src/pages/SocialMedia.tsx` | Ler query params (`platform`, `postId`) e passar para componentes filhos |
+| `src/components/marketing/SocialMediaTab.tsx` | Receber `initialPostId`, selecionar perfil correto e abrir dialog do post |
+| `src/components/marketing/TikTokTab.tsx` | Mesma implementação para TikTok |
 
 ---
 
 ## Resultado Esperado
 
-- Adicionar subtarefas não fechará mais o dialog
-- Usuários poderão adicionar múltiplas subtarefas consecutivamente
-- Funcionalidade consistente em todos os navegadores e velocidades de conexão
+Após as mudanças:
+1. Clicar em um post no Calendário de Conteúdo → navega para `/social-media?platform=instagram&postId=xxx`
+2. A página detecta a plataforma e muda para a aba correta (Instagram ou TikTok)
+3. O componente busca o post, seleciona o perfil dono do post automaticamente
+4. O dialog de edição abre mostrando os detalhes do post clicado
+5. O usuário pode analisar e editar o post sem precisar procurá-lo manualmente
 
