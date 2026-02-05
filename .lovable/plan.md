@@ -1,179 +1,132 @@
 
-# Automação de Checkpoint Recorrente (15 dias)
+
+# Tornar o Campo "Ganho em" Editável
 
 ## Objetivo
-Criar um sistema que automaticamente gera uma nova tarefa "Checkpoint" 15 dias após a conclusão da anterior, mantendo as mesmas propriedades (responsável, prioridade, vínculo, tipo e descrição).
+Permitir que vendedores editem a data de fechamento ("Ganho em" / `won_at`) diretamente na janela de detalhes do negócio, usando um date picker integrado.
 
 ---
 
-## Arquitetura da Solução
+## Mudança Visual
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│           Usuário conclui tarefa "Checkpoint"                │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│           Database Trigger: on_checkpoint_completed          │
-│                                                              │
-│  1. Verifica se activity_type_id = ID do tipo "Checkpoint"  │
-│  2. Verifica se OLD.completed_at IS NULL e NEW.completed_at │
-│     IS NOT NULL (transição para concluído)                   │
-│  3. Cria nova tarefa com:                                    │
-│     - Mesmo client_id, assigned_to, priority, description   │
-│     - due_date = completed_at + 15 dias                      │
-│     - status = 'pending', completed_at = NULL                │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│           Nova tarefa "Checkpoint" criada                    │
-│           (aparece automaticamente na Agenda do Cliente)    │
-└─────────────────────────────────────────────────────────────┘
+| Antes | Depois |
+|-------|--------|
+| Data exibida como texto estático | Data clicável que abre um calendário para seleção |
+| `03/02/26` (apenas visualização) | `03/02/26` com ícone de edição → ao clicar abre Popover com Calendar |
+
+---
+
+## Implementação Técnica
+
+### Arquivo a Modificar
+`src/components/sales/DealDetailSheet.tsx`
+
+### Mudanças Necessárias
+
+**1. Adicionar imports**
+- Importar `Popover`, `PopoverContent`, `PopoverTrigger` de `@/components/ui/popover`
+- Importar `Calendar` de `@/components/ui/calendar`
+- Importar ícone `Pencil` do lucide-react (já está importado)
+
+**2. Adicionar estado local**
+```typescript
+const [wonAtPopoverOpen, setWonAtPopoverOpen] = useState(false);
+const [updatingWonAt, setUpdatingWonAt] = useState(false);
 ```
 
----
+**3. Criar função para atualizar a data**
+```typescript
+const handleWonAtChange = async (newDate: Date | undefined) => {
+  if (!deal || !newDate) return;
+  
+  setUpdatingWonAt(true);
+  try {
+    const { error } = await supabase
+      .from("deals")
+      .update({ won_at: newDate.toISOString() })
+      .eq("id", deal.id);
+    
+    if (error) throw error;
+    
+    toast.success("Data de fechamento atualizada!");
+    setWonAtPopoverOpen(false);
+    onDealUpdated?.();
+  } catch (error) {
+    console.error("Error updating won_at:", error);
+    toast.error("Erro ao atualizar data");
+  } finally {
+    setUpdatingWonAt(false);
+  }
+};
+```
 
-## Implementação
+**4. Substituir renderização estática por Popover + Calendar**
 
-### Parte 1: Criar o Tipo de Atividade "Checkpoint"
+Trocar este trecho (linhas 710-719):
+```tsx
+{deal.status === 'won' && deal.won_at ? (
+  <>
+    <div className="flex items-center gap-1.5 mb-1">
+      <Trophy className="h-3.5 w-3.5 text-emerald-500" />
+      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Ganho em</span>
+    </div>
+    <p className="text-lg font-bold text-emerald-500">
+      {format(new Date(deal.won_at), "dd/MM/yy")}
+    </p>
+  </>
+)}
+```
 
-Inserir um novo registro na tabela `activity_types`:
-
-| Campo | Valor |
-|-------|-------|
-| name | Checkpoint |
-| icon | flag-triangle-right |
-| color | #f97316 (laranja) |
-| sector_id | operacoes |
-| display_order | 10 |
-| is_active | true |
-
-### Parte 2: Criar Database Trigger
-
-O trigger será executado após UPDATE na tabela `internal_tasks` e verificará:
-
-1. Se o `activity_type_id` corresponde a um tipo "Checkpoint"
-2. Se a tarefa foi recém-concluída (`OLD.completed_at IS NULL AND NEW.completed_at IS NOT NULL`)
-3. Se a tarefa tem um `client_id` válido (pois Checkpoints são específicos de clientes)
-
-#### Lógica do Trigger
-
-```sql
--- Função que cria a próxima tarefa Checkpoint
-CREATE OR REPLACE FUNCTION create_next_checkpoint_task()
-RETURNS TRIGGER AS $$
-DECLARE
-  checkpoint_type_id uuid;
-BEGIN
-  -- Busca o ID do tipo "Checkpoint" para a mesma account
-  SELECT id INTO checkpoint_type_id
-  FROM activity_types
-  WHERE name = 'Checkpoint' 
-    AND account_id = NEW.account_id
-    AND is_active = true
-  LIMIT 1;
-
-  -- Só processa se:
-  -- 1. A tarefa é do tipo Checkpoint
-  -- 2. Foi recém-concluída (transição NULL -> não NULL)
-  -- 3. Tem client_id (é tarefa de cliente)
-  IF NEW.activity_type_id = checkpoint_type_id 
-     AND OLD.completed_at IS NULL 
-     AND NEW.completed_at IS NOT NULL
-     AND NEW.client_id IS NOT NULL
-  THEN
-    INSERT INTO internal_tasks (
-      account_id,
-      title,
-      description,
-      status,
-      priority,
-      due_date,
-      client_id,
-      assigned_to,
-      created_by,
-      activity_type_id
-    ) VALUES (
-      NEW.account_id,
-      'Checkpoint',
-      NEW.description,
-      'pending',
-      NEW.priority,
-      (NEW.completed_at::date + INTERVAL '15 days')::date,
-      NEW.client_id,
-      NEW.assigned_to,
-      NEW.created_by,
-      NEW.activity_type_id
-    );
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Trigger que chama a função
-CREATE TRIGGER trigger_checkpoint_recurrence
-  AFTER UPDATE ON internal_tasks
-  FOR EACH ROW
-  EXECUTE FUNCTION create_next_checkpoint_task();
+Por:
+```tsx
+{deal.status === 'won' && deal.won_at ? (
+  <>
+    <div className="flex items-center gap-1.5 mb-1">
+      <Trophy className="h-3.5 w-3.5 text-emerald-500" />
+      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Ganho em</span>
+    </div>
+    <Popover open={wonAtPopoverOpen} onOpenChange={setWonAtPopoverOpen}>
+      <PopoverTrigger asChild>
+        <button 
+          className="flex items-center gap-1.5 text-lg font-bold text-emerald-500 hover:underline cursor-pointer group"
+          disabled={updatingWonAt}
+        >
+          {format(new Date(deal.won_at), "dd/MM/yy")}
+          <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={new Date(deal.won_at)}
+          onSelect={handleWonAtChange}
+          locale={ptBR}
+          disabled={updatingWonAt}
+        />
+      </PopoverContent>
+    </Popover>
+  </>
+)}
 ```
 
 ---
 
 ## Fluxo de Uso
 
-1. Usuário acessa a aba "Agenda" no perfil do cliente
-2. Clica em "+ Nova Tarefa"
-3. Seleciona o tipo "Checkpoint" (novo na lista)
-4. Preenche os dados: responsável, prioridade, data, descrição
-5. Cria a tarefa
-6. Quando marca a tarefa como "Feita":
-   - Sistema automaticamente cria uma nova tarefa Checkpoint
-   - Nova data = data de conclusão + 15 dias
-   - Mesmos: responsável, prioridade, descrição, tipo, cliente
+1. Vendedor abre detalhes de um negócio **ganho**
+2. Visualiza o card "GANHO EM" com a data atual
+3. Ao passar o mouse, aparece um ícone de lápis
+4. Clica na data → abre calendário
+5. Seleciona nova data → sistema salva automaticamente
+6. Toast de confirmação aparece
+7. O componente atualiza via `onDealUpdated()`
 
 ---
 
-## Campos Copiados para Nova Tarefa
+## Validações
 
-| Campo | Origem |
-|-------|--------|
-| account_id | Mantido da tarefa original |
-| title | "Checkpoint" (fixo) |
-| description | Copiado da tarefa concluída |
-| status | "pending" (padrão) |
-| priority | Copiado da tarefa concluída |
-| due_date | completed_at + 15 dias |
-| client_id | Copiado da tarefa concluída |
-| assigned_to | Copiado da tarefa concluída |
-| created_by | Copiado da tarefa concluída |
-| activity_type_id | ID do tipo "Checkpoint" |
+- Apenas negócios com status `won` mostram o campo editável
+- A seleção de data dispara salvamento imediato (sem botão de confirmar)
+- Indicador de loading enquanto salva
+- Toast de erro se falhar
 
----
-
-## Regras de Negócio
-
-1. **Apenas client_id**: O Checkpoint só dispara automação se estiver vinculado a um cliente (não para deals/leads avulsos)
-2. **Apenas na transição**: Só cria nova tarefa quando `completed_at` muda de NULL para um valor (evita duplicatas)
-3. **15 dias fixos**: O intervalo é sempre 15 dias a partir da data de conclusão
-4. **Sem limite de recorrência**: Cada conclusão gera uma nova tarefa infinitamente
-
----
-
-## Arquivos/Recursos a Modificar
-
-| Recurso | Ação |
-|---------|------|
-| Tabela `activity_types` | Inserir tipo "Checkpoint" para cada account |
-| Função `create_next_checkpoint_task()` | Criar no banco |
-| Trigger `trigger_checkpoint_recurrence` | Criar no banco |
-
----
-
-## Considerações
-
-- O trigger processa automaticamente no banco, garantindo que a automação funcione independente de qual interface criou/concluiu a tarefa
-- A UI não precisa de modificações - o tipo "Checkpoint" aparecerá automaticamente na lista de tipos de atividade
-- O realtime já está configurado em `ClientTasks.tsx`, então a nova tarefa aparecerá instantaneamente
