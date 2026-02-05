@@ -1,70 +1,102 @@
 
-
-# Correção: Atualização Imediata da Data "Ganho em"
+# Correção: Overflow de Mensagens no ROY zAPP
 
 ## Problema Identificado
-Quando o usuário altera a data "Ganho em":
-1. O banco de dados é atualizado corretamente ✅
-2. O toast de sucesso aparece ✅
-3. **Porém** a UI continua exibindo a data antiga porque está lendo de `deal.won_at` (prop do componente pai)
-4. A data só atualiza ao fechar/reabrir o modal porque o componente pai refaz o fetch
-
-## Solução
-Criar um estado local `localWonAt` que:
-1. É inicializado com `deal.won_at` quando o deal muda
-2. É atualizado **imediatamente** quando o usuário salva a nova data
-3. É usado para renderizar a data na UI
+Usuários estão relatando que mensagens no painel de chat do ROY zAPP estão sendo cortadas/ocultadas ao ultrapassar a margem direita da janela do navegador. Isso afeta a visualização de mensagens longas ou com formatação especial.
 
 ---
 
-## Implementação Técnica
+## Análise Técnica
 
-### Arquivo: `src/components/sales/DealDetailSheet.tsx`
+### Estrutura de Layout Atual
 
-**1. Adicionar estado local para won_at:**
-```typescript
-const [localWonAt, setLocalWonAt] = useState<string | null>(deal?.won_at || null);
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          ROY zAPP (flex-row)                             │
+├────────────────────────┬────────────────────────────────────────────────┤
+│   Painel Esquerdo      │              Painel de Chat                    │
+│   lg:w-[440px]         │              flex-1 min-w-0                    │
+│   (Conversas/CRM)      │                                                │
+│                        │   ┌────────────────────────────────────┐       │
+│                        │   │ ZappChatView (overflow-hidden)     │       │
+│                        │   │  ┌──────────────────────────────┐  │       │
+│                        │   │  │ ZappMessagesList (ScrollArea)│  │◄──CORTE
+│                        │   │  │  ┌────────────────────────┐  │  │       │
+│                        │   │  │  │ Bolhas max-w-[65%]     │  │  │       │
+│                        │   │  └──┴────────────────────────┴──┘  │       │
+│                        │   └────────────────────────────────────┘       │
+└────────────────────────┴────────────────────────────────────────────────┘
 ```
 
-**2. Sincronizar estado local com prop quando deal muda:**
-```typescript
-useEffect(() => {
-  setLocalWonAt(deal?.won_at || null);
-}, [deal?.won_at]);
-```
+### Pontos de Falha Identificados
 
-**3. Atualizar estado local imediatamente ao salvar:**
-No `onSelect` do Calendar, antes do toast de sucesso:
-```typescript
-setLocalWonAt(newDate.toISOString()); // Atualização imediata da UI
-```
-
-**4. Usar `localWonAt` em vez de `deal.won_at` para renderizar:**
-- Condição de exibição: `deal.status === 'won' && localWonAt`
-- Data selecionada no calendário: `new Date(localWonAt)`
-- Data formatada no botão: `format(new Date(localWonAt), "dd/MM/yy")`
+1. **ZappChatView.tsx:238**: O container principal usa `max-w-full` mas sem `overflow-x-hidden` explícito
+2. **ZappMessagesList.tsx:149-150**: O `ScrollArea` e seu container interno precisam garantir que o overflow horizontal seja controlado
+3. **ZappMessageBubble.tsx:319-325**: O container da bolha usa `max-w-[65%]` com `overflow-hidden`, mas precisa de `word-break: break-word` para textos longos sem espaços
 
 ---
 
-## Fluxo Corrigido
+## Solução Proposta
 
-1. Usuário clica na data "05/02/26"
-2. Seleciona nova data "04/02/26" no calendário
-3. **Imediatamente**: `setLocalWonAt(newDate.toISOString())` → UI mostra "04/02/26"
-4. Banco de dados é atualizado em background
-5. Toast de sucesso aparece
-6. `onDealUpdated?.()` faz o componente pai refazer fetch (para manter sincronia)
+### Parte 1: Reforçar Overflow no Container Principal do Chat
+**Arquivo**: `src/components/royzapp/ZappChatView.tsx`
 
----
+Adicionar controle explícito de overflow horizontal no container do chat:
 
-## Mudanças no Código
+| Antes | Depois |
+|-------|--------|
+| `flex flex-col flex-1 min-h-0 w-full bg-zapp-bg overflow-hidden max-w-full` | `flex flex-col flex-1 min-h-0 w-full bg-zapp-bg overflow-hidden overflow-x-hidden max-w-full` |
+
+### Parte 2: Garantir Overflow no Container de Mensagens
+**Arquivo**: `src/components/royzapp/ZappMessagesList.tsx`
+
+Adicionar classes de controle de overflow mais agressivas:
 
 | Local | Antes | Depois |
 |-------|-------|--------|
-| Estado | — | `const [localWonAt, setLocalWonAt] = useState(deal?.won_at)` |
-| useEffect | — | Sincroniza `localWonAt` quando `deal?.won_at` muda |
-| Condição de exibição | `deal.won_at` | `localWonAt` |
-| Calendário selected | `new Date(deal.won_at)` | `new Date(localWonAt)` |
-| Botão display | `format(new Date(deal.won_at), ...)` | `format(new Date(localWonAt), ...)` |
-| onSelect | — | Adiciona `setLocalWonAt(newDate.toISOString())` |
+| ScrollArea (linha 149) | `flex-1 px-2 sm:px-4 py-2 overflow-hidden` | `flex-1 px-2 sm:px-4 py-2 overflow-hidden overflow-x-hidden` |
+| Container div (linha 150) | `space-y-1 max-w-full overflow-hidden` | `space-y-1 max-w-full overflow-hidden overflow-x-hidden w-full` |
 
+### Parte 3: Corrigir Quebra de Texto nas Bolhas de Mensagem
+**Arquivo**: `src/components/royzapp/ZappMessageBubble.tsx`
+
+Garantir que textos longos sem espaços sejam quebrados corretamente:
+
+1. **Container da bolha (linha 325)**: Adicionar `w-full` para garantir que a bolha respeite os limites do container pai
+
+2. **Texto da mensagem (linha 606)**: Adicionar `overflow-wrap: anywhere` via Tailwind:
+
+| Antes | Depois |
+|-------|--------|
+| `text-sm whitespace-pre-wrap break-words overflow-hidden` | `text-sm whitespace-pre-wrap break-words break-all overflow-hidden` |
+
+---
+
+## Arquivos a Modificar
+
+| Arquivo | Mudança |
+|---------|---------|
+| `src/components/royzapp/ZappChatView.tsx` | Adicionar `overflow-x-hidden` no container principal |
+| `src/components/royzapp/ZappMessagesList.tsx` | Reforçar controle de overflow horizontal no ScrollArea e container |
+| `src/components/royzapp/ZappMessageBubble.tsx` | Adicionar `break-all` no texto e `w-full` na bolha |
+
+---
+
+## Comportamento Esperado
+
+1. ✅ Mensagens longas quebram corretamente dentro da bolha
+2. ✅ Nenhum conteúdo ultrapassa a margem direita da viewport
+3. ✅ Links longos e textos sem espaços são truncados adequadamente
+4. ✅ O scroll horizontal é completamente bloqueado no container de mensagens
+
+---
+
+## Detalhes Técnicos das Classes Tailwind
+
+| Classe | Função |
+|--------|--------|
+| `overflow-hidden` | Oculta qualquer overflow (vertical + horizontal) |
+| `overflow-x-hidden` | Específico para overflow horizontal (reforço) |
+| `break-words` | Quebra palavras longas se necessário |
+| `break-all` | Quebra agressiva em qualquer caractere (para URLs) |
+| `w-full` | Garante que o elemento use 100% da largura disponível |
