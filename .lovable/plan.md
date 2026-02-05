@@ -1,118 +1,125 @@
 
+# Plano: Persistência do Link de Reunião + Registro no Histórico
 
-# Correção: Redirecionamento do Calendário de Conteúdo para Redes Sociais
+## Resumo do Problema
 
-## Problema Identificado
-
-Ao clicar nos ícones de redes sociais no Calendário de Conteúdo, a navegação vai para `/social-media?platform=instagram&postId=xxx`, mas:
-
-1. **A página `SocialMedia.tsx` ignora os parâmetros da URL** - Usa `useState` local sem ler `platform` e `postId` dos query params
-2. **Os componentes não recebem o `postId`** - `SocialMediaTab` e `TikTokTab` não sabem qual post foi solicitado
-3. **Não há seleção automática de perfil** - O post pode pertencer a um perfil diferente do selecionado
+1. **Link desaparece ao reabrir tarefa**: As queries que buscam tarefas não incluem `meeting_url` e `meeting_platform`
+2. **Sem registro no histórico do deal**: Quando uma reunião é criada, não há anotação automática no histórico do negócio
 
 ---
 
-## Fluxo Atual (Quebrado)
+## Análise Técnica
 
-```text
-Calendário → navigate("/social-media?platform=instagram&postId=xxx")
-                    ↓
-            SocialMedia.tsx
-            (ignora query params)
-                    ↓
-            platform = "instagram" (hardcoded)
-            postId = undefined
-                    ↓
-            SocialMediaTab (sem postId)
-                    ↓
-            Usuário não vê o post específico
-```
+### Causa Raiz 1: Campos Ausentes nas Queries
+
+Os seguintes arquivos buscam tarefas sem incluir `meeting_url` e `meeting_platform`:
+
+| Arquivo | Problema |
+|---------|----------|
+| `src/components/sales/DealActivitiesTab.tsx` | Query não inclui `meeting_url`, `meeting_platform` |
+| `src/pages/Tasks.tsx` | Query usa `*` mas interface Task não inclui os campos |
+| `src/components/sales/DealDetailSheet.tsx` | Query para timeline não inclui os campos |
+
+### Causa Raiz 2: Falta de Registro no Histórico
+
+A edge function `create-meeting` apenas atualiza a tarefa com o link, mas não cria uma entrada em `deal_activities` para registrar o evento no histórico do negócio.
 
 ---
 
 ## Solução Proposta
 
-### Mudança 1: Ler Query Params em SocialMedia.tsx
+### Parte 1: Corrigir Persistência do Link
 
-Usar `useSearchParams` para ler e aplicar os parâmetros da URL:
+#### Mudança 1.1: DealActivitiesTab.tsx
+Adicionar `meeting_url` e `meeting_platform` na query e interface:
 
 ```typescript
-import { useSearchParams } from "react-router-dom";
+interface Task {
+  // ... campos existentes
+  meeting_url?: string | null;
+  meeting_platform?: string | null;
+}
 
-export default function SocialMedia() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  
-  // Ler parâmetros da URL
-  const urlPlatform = searchParams.get("platform") as "instagram" | "tiktok" | null;
-  const urlPostId = searchParams.get("postId");
-  
-  // Estados controlados pelos query params
-  const [platform, setPlatform] = useState<"instagram" | "tiktok">(
-    urlPlatform || "instagram"
-  );
-  
-  // Sincronizar mudanças na URL com o estado
-  useEffect(() => {
-    if (urlPlatform && urlPlatform !== platform) {
-      setPlatform(urlPlatform);
-    }
-  }, [urlPlatform]);
-  
-  // Passar postId para os componentes filhos
-  return (
-    // ...
-    <SocialMediaTab initialPostId={urlPostId} />
-    // ...
-    <TikTokTab initialPostId={urlPostId} />
-  );
+// Na query:
+.select(`
+  id,
+  title,
+  // ... outros campos
+  meeting_url,
+  meeting_platform,
+  // ... joins
+`)
+```
+
+#### Mudança 1.2: Tasks.tsx
+A query usa `*` então os campos já vêm, mas a interface precisa ser atualizada:
+
+```typescript
+interface Task {
+  // ... campos existentes
+  meeting_url?: string | null;
+  meeting_platform?: string | null;
+  completed_at?: string | null;
+  activity_type_id?: string | null;
 }
 ```
 
-### Mudança 2: Receber e Usar postId no SocialMediaTab
+#### Mudança 1.3: DealDetailSheet.tsx
+Adicionar os campos na query da timeline de tarefas (se necessário para exibição).
 
-O componente deve:
-1. Receber `initialPostId` como prop
-2. Ao carregar, buscar o post para descobrir seu `profile_id`
-3. Selecionar automaticamente o perfil correto
-4. Abrir o dialog de edição ou scroll para o post
+---
+
+### Parte 2: Registrar Link no Histórico do Negócio
+
+#### Mudança 2.1: Edge Function create-meeting
+Após criar a reunião com sucesso, inserir uma atividade no histórico do deal:
 
 ```typescript
-interface SocialMediaTabProps {
-  initialPostId?: string | null;
-}
+// Após atualizar a tarefa com o meeting_url...
 
-export function SocialMediaTab({ initialPostId }: SocialMediaTabProps) {
-  // ...
-  
-  useEffect(() => {
-    if (initialPostId && posts.length > 0) {
-      const targetPost = posts.find(p => p.id === initialPostId);
-      if (targetPost) {
-        // Selecionar o perfil correto se diferente
-        if (targetPost.profile_id !== currentProfile?.id) {
-          setSelectedProfileId(targetPost.profile_id);
-        }
-        // Abrir dialog de edição para o post
-        setSelectedPost(targetPost);
-        setEditPostDialogOpen(true);
-      }
-    }
-  }, [initialPostId, posts]);
+// Registrar no histórico do negócio (se deal_id existir)
+if (task.deal_id) {
+  // Buscar nome do vendedor responsável
+  const { data: assignedUser } = await supabase
+    .from("users")
+    .select("name")
+    .eq("id", task.assigned_to || task.created_by)
+    .single();
+
+  // Criar atividade no histórico
+  await supabase.from("deal_activities").insert({
+    account_id: task.account_id,
+    deal_id: task.deal_id,
+    type: "meeting",
+    title: `🔗 Reunião ${platform === 'zoom' ? 'Zoom' : 'Google Meet'} Agendada`,
+    content: `**Vendedor:** ${assignedUser?.name || 'Não identificado'}
+**Data:** ${format(startDate, "dd/MM/yyyy 'às' HH:mm")}
+**Link da Reunião:** [Clique para entrar](${meetingResult.meeting_url})`,
+    user_id: task.assigned_to || task.created_by,
+  });
 }
 ```
 
-### Mudança 3: Aplicar a Mesma Lógica no TikTokTab
+#### Mudança 2.2: Exibição do Link na Timeline
+O componente `DealDetailSheet` já exibe atividades do tipo "meeting" com ícone de vídeo. O conteúdo com markdown será renderizado corretamente.
 
-Implementar a mesma funcionalidade para posts do TikTok.
+---
 
-### Mudança 4: Limpar postId Após Uso
+### Parte 3: Feedback de Sucesso/Falha
 
-Após abrir o post, limpar o parâmetro da URL para evitar reabrir ao navegar:
+A edge function já retorna sucesso/erro, e o `MeetingConfigDialog` já exibe toasts apropriados:
+- ✅ `toast.success("Reunião criada com sucesso!")` já existe
+- ✅ `toast.error(error.message)` já existe para falhas
+
+Melhorar a mensagem de sucesso para ser mais informativa:
 
 ```typescript
-// Após abrir o dialog
-searchParams.delete("postId");
-setSearchParams(searchParams, { replace: true });
+// Em MeetingConfigDialog.tsx
+toast.success(
+  task.deal_id 
+    ? "Reunião criada e registrada no histórico do negócio!" 
+    : "Reunião criada com sucesso!"
+);
 ```
 
 ---
@@ -121,18 +128,20 @@ setSearchParams(searchParams, { replace: true });
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/pages/SocialMedia.tsx` | Ler query params (`platform`, `postId`) e passar para componentes filhos |
-| `src/components/marketing/SocialMediaTab.tsx` | Receber `initialPostId`, selecionar perfil correto e abrir dialog do post |
-| `src/components/marketing/TikTokTab.tsx` | Mesma implementação para TikTok |
+| `src/components/sales/DealActivitiesTab.tsx` | Adicionar `meeting_url`, `meeting_platform` na query e interface |
+| `src/pages/Tasks.tsx` | Adicionar campos na interface Task |
+| `src/components/tasks/TaskDialog.tsx` | Interface Task já tem os campos - verificar se props são passadas corretamente |
+| `supabase/functions/create-meeting/index.ts` | Adicionar insert em `deal_activities` com link da reunião |
+| `src/components/tasks/MeetingConfigDialog.tsx` | Melhorar mensagem de sucesso |
 
 ---
 
 ## Resultado Esperado
 
-Após as mudanças:
-1. Clicar em um post no Calendário de Conteúdo → navega para `/social-media?platform=instagram&postId=xxx`
-2. A página detecta a plataforma e muda para a aba correta (Instagram ou TikTok)
-3. O componente busca o post, seleciona o perfil dono do post automaticamente
-4. O dialog de edição abre mostrando os detalhes do post clicado
-5. O usuário pode analisar e editar o post sem precisar procurá-lo manualmente
-
+1. **Persistência**: Ao reabrir a tarefa, o link da reunião estará visível
+2. **Histórico**: Uma anotação automática aparece no histórico do negócio com:
+   - Nome do vendedor responsável
+   - Data e horário da reunião
+   - Link clicável para a reunião
+3. **Feedback**: Mensagem de sucesso confirma criação e registro no histórico
+4. **Consistência**: Link disponível tanto na tarefa quanto no histórico do deal
