@@ -1,116 +1,92 @@
 
-# Otimização do Layout do Modo Foco para TV
+# Correção: Timeout no Deploy da Edge Function uazapi-manager
 
 ## Problema Identificado
-Atualmente, o layout do Modo Foco/Tela Cheia possui:
-- Conteúdo alinhado ao topo com muito espaço em branco embaixo
-- Cards de KPI pequenos para uma tela de TV grande
-- Container limitado que não aproveita bem a tela
 
-## Solução Proposta
+A Edge Function `uazapi-manager` **não está deployada** (retorna 404) porque o processo de bundling está dando **timeout**. O arquivo `index.ts` tem **4.140 linhas** - muito grande para o processo de build do Deno.
 
-### 1. Centralização Vertical e Horizontal
-Usar Flexbox para centralizar todo o conteúdo na viewport, eliminando o espaço em branco excessivo.
-
-### 2. Zoom nos KPIs
-Aumentar o tamanho dos cards de KPI para melhor visualização em TV:
-- Ícones maiores (de `h-6 w-6` para `h-8 w-8`)
-- Padding ampliado nos cards
-- Fonte dos valores maior (de `text-3xl` para `text-4xl`)
-
-### 3. Layout Responsivo para Tela Cheia
-- Container com largura máxima maior (`max-w-[90vw]`)
-- Centralização vertical usando `min-h-full flex flex-col justify-center`
+### Evidências:
+- Requisições retornam `"Error: Failed to fetch"` no frontend
+- Chamada direta à função retorna `404 NOT_FOUND`
+- Deploy manual retorna `"Bundle generation timed out"`
 
 ---
 
-## Arquivos a Modificar
+## Solução: Modularização da Edge Function
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `SocialMediaDashboard.tsx` | Centralizar conteúdo, ampliar KPIs |
-| `TikTokDashboard.tsx` | Mesmas alterações |
+Dividir o arquivo monolítico em módulos menores para reduzir o tempo de bundling.
+
+### Estrutura Proposta
+
+```
+supabase/functions/uazapi-manager/
+├── index.ts           (~300 linhas - router principal)
+├── lib/
+│   ├── cors.ts        (~15 linhas)
+│   ├── auth.ts        (~60 linhas)
+│   ├── uazapi-client.ts (~200 linhas - helpers de request)
+│   ├── audit-logger.ts  (~80 linhas)
+│   └── webhook-config.ts (~100 linhas)
+└── handlers/
+    ├── instance.ts    (~400 linhas - create, connect, disconnect, status, qrcode)
+    ├── messaging.ts   (~500 linhas - send_text, send_media, etc)
+    ├── groups.ts      (~400 linhas - list_groups, sync_groups, etc)
+    ├── sector.ts      (~300 linhas - add_instance_to_sector, list_sector_instances)
+    └── sync.ts        (~400 linhas - sync-chat-history, import-conversations)
+```
+
+### Estratégia de Migração
+
+**Passo 1**: Extrair módulos utilitários para `/lib`
+- CORS headers
+- Funções de autenticação
+- Cliente UAZAPI (uazapiAdminRequest, uazapiInstanceRequest, etc)
+- Logger de auditoria
+- Configuração de webhook
+
+**Passo 2**: Extrair handlers por domínio para `/handlers`
+- Agrupar cases do switch por funcionalidade
+- Cada handler exporta uma função que recebe (supabase, userData, payload)
+
+**Passo 3**: Simplificar index.ts
+- Apenas validação inicial e roteamento
+- Import dinâmico dos handlers
 
 ---
-
-## Mudanças Específicas
-
-### Container Principal
-```tsx
-// Antes
-<div className="container mx-auto py-8 px-6 max-w-7xl">
-
-// Depois
-<div className="min-h-full flex flex-col justify-center px-8 py-6 mx-auto max-w-[95vw]">
-```
-
-### Cards de KPI
-```tsx
-// Antes
-<CardContent className="p-6">
-  <div className="flex items-center gap-4">
-    <div className="p-3 rounded-lg bg-primary/10">
-      <Users className="h-6 w-6 text-primary" />
-    </div>
-    <div>
-      <p className="text-sm text-muted-foreground">Total Seguidores</p>
-      <p className="text-3xl font-bold">{formatNumber(totals.totalFollowers)}</p>
-    </div>
-  </div>
-</CardContent>
-
-// Depois
-<CardContent className="p-8">
-  <div className="flex items-center gap-5">
-    <div className="p-4 rounded-xl bg-primary/10">
-      <Users className="h-8 w-8 text-primary" />
-    </div>
-    <div>
-      <p className="text-base text-muted-foreground">Total Seguidores</p>
-      <p className="text-4xl font-bold">{formatNumber(totals.totalFollowers)}</p>
-    </div>
-  </div>
-</CardContent>
-```
-
-### Grid dos KPIs
-```tsx
-// Antes
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-
-// Depois
-<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
-```
-
----
-
-## Resultado Visual Esperado
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                                              [Período ▾] [⛶] [X]       │
-│                                                                        │
-│  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐ ┌──────────┐│
-│  │ 👥              │ │ 📊              │ │ 📝              │ │ 📈        ││
-│  │ Total           │ │ Engaj.          │ │ Total           │ │ Perfis   ││
-│  │ Seguidores      │ │ Médio           │ │ Posts           │ │ Ativos   ││
-│  │ 286.7K          │ │ 5.6%            │ │ 4.9K            │ │ 6        ││
-│  └────────────────┘ └────────────────┘ └────────────────┘ └──────────┘│
-│                                                                        │
-│  ┌────────────────────────────────────────────────────────────────────┐│
-│  │ Métricas por Perfil                                                ││
-│  ├────────────────────────────────────────────────────────────────────┤│
-│  │ @evertonpieri_ │ 144.2K │ 215 │ 1.8K │ 7.7%  │ 2.5K │ 61 │ 1      ││
-│  │ @abrunapieri   │ 102.9K │ 161 │ 1.5K │ 25.1% │ 917  │ 43 │ 0      ││
-│  │ ...                                                                ││
-│  └────────────────────────────────────────────────────────────────────┘│
-│                                                                        │
-└────────────────────────────────────────────────────────────────────────┘
-```
 
 ## Benefícios
 
-1. **Centralização**: Conteúdo posicionado no centro da tela, eliminando espaço em branco desnecessário
-2. **Zoom Visual**: KPIs maiores e mais legíveis para visualização à distância
-3. **Aproveitamento de Tela**: Container usa 95% da viewport width
-4. **Hierarquia Visual**: Títulos e valores com fontes ampliadas
+1. **Build mais rápido**: Arquivos menores = bundling mais rápido
+2. **Manutenibilidade**: Código organizado por funcionalidade
+3. **Testabilidade**: Handlers isolados facilitam testes
+4. **Reusabilidade**: Módulos lib podem ser importados por outras funções
+
+---
+
+## Arquivos a Criar
+
+| Arquivo | Responsabilidade |
+|---------|------------------|
+| `lib/cors.ts` | Headers CORS |
+| `lib/auth.ts` | Validação de autenticação |
+| `lib/uazapi-client.ts` | Funções de request para UAZAPI |
+| `lib/audit-logger.ts` | Log de auditoria e notificações |
+| `lib/webhook-config.ts` | Configuração automática de webhook |
+| `handlers/instance.ts` | Actions: create, connect, disconnect, status, qrcode, paircode |
+| `handlers/messaging.ts` | Actions: send_text, send_media, send_to_group, delete_message, edit_message |
+| `handlers/groups.ts` | Actions: list_groups, sync_groups, save_selected_groups, create_group, group_participants |
+| `handlers/sector.ts` | Actions: add_instance_to_sector, update_instance_pin, verify_instance_pin, list_sector_instances, list_instances, link_instance |
+| `handlers/sync.ts` | Actions: sync-chat-history, import-conversations |
+
+---
+
+## Estimativa de Tamanho Final
+
+| Arquivo | Linhas |
+|---------|--------|
+| index.ts | ~250 |
+| lib/* (5 arquivos) | ~450 total |
+| handlers/* (5 arquivos) | ~2000 total |
+| **Total** | ~2700 (35% menor) |
+
+O mais importante é que o arquivo principal `index.ts` terá apenas ~250 linhas, reduzindo drasticamente o tempo de bundling.
