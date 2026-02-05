@@ -1,94 +1,155 @@
 
 
-# Correção: Aba "Fila" Mostrando Conversas Já Atribuídas
+# Correção Definitiva: Fila Mostrando Conversas Já Atribuídas
 
-## Problema Identificado
+## Análise Detalhada do Problema
 
-A lógica implementada anteriormente estava incorreta para a aba "Fila":
+Após análise profunda do código, identifiquei **DOIS PROBLEMAS DISTINTOS** que causam o bug:
+
+### Problema 1: Estatísticas (Stats) Incorretas
+
+**Localização**: `src/pages/RoyZapp.tsx`, linhas 3789-3791
 
 ```tsx
-// CÓDIGO COM BUG (linha 3737):
-: (hasFullVisibility ? true : a.agent_id === null)
+// CÓDIGO COM BUG:
+const totalQueueConversations = hasFullVisibility
+  ? assignments.filter((a) => a.status !== "closed" && !a.zapp_conversation?.is_archived).length  // ← BUG! Conta TODAS as conversas
+  : assignments.filter((a) => a.agent_id === null && a.status !== "closed" && !a.zapp_conversation?.is_archived).length;
 ```
 
-Esta lógica diz: "Se Admin/Gestor, mostrar TODAS as conversas na Fila". Isso causa o bug visível nas screenshots onde conversas já atribuídas (com nomes de agentes como "Michele Santos", "Dayara Grecco", etc.) aparecem na Fila.
+**Problema**: Para Admin/Gestor (`hasFullVisibility = true`), a contagem da Fila mostra TODAS as conversas ativas, não apenas as sem agente. Por isso o badge mostra "Fila (58)" quando deveria mostrar apenas conversas aguardando atribuição.
 
-## Comportamento Correto
+**Impacto**: O número exibido no badge está incorreto.
 
-| Aba | Atendente Comum | Admin/Gestor |
-|-----|-----------------|--------------|
-| **Minhas** | Somente conversas atribuídas a ele (`agent_id === currentAgent.id`) | TODAS as conversas atribuídas (para monitoramento) |
-| **Fila** | Conversas sem agente (`agent_id === null`) | Conversas sem agente (`agent_id === null`) - **IGUAL para todos** |
+### Problema 2: Dependência Faltando no useMemo
 
-**A Fila representa conversas aguardando atendimento - isso é universal, independente do tipo de usuário.**
+**Localização**: `src/pages/RoyZapp.tsx`, linha 3770
+
+```tsx
+// CÓDIGO COM BUG:
+}, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin]);
+// ← FALTA: currentUser?.team_role_name
+```
+
+**Problema**: A variável `hasFullVisibility` depende de `currentUser?.team_role_name` (linha 3731), mas essa dependência não está na lista do useMemo. Isso pode causar cache incorreto do filtro quando o role do usuário muda.
+
+**Impacto**: O filtro pode usar valor desatualizado de `hasFullVisibility`.
+
+### Problema 3: Potencial do matchesStatus
+
+**Localização**: `src/pages/RoyZapp.tsx`, linha 3743-3744
+
+```tsx
+const matchesStatus = filterStatus === "all" || filterStatus === "closed" ||
+  (filterStatus === "triage" ? a.agent_id === null : a.status === filterStatus);
+```
+
+Quando `filterStatus === "all"`, todos os status passam (`matchesStatus = true`). Isso está correto, desde que o `matchesTab` funcione corretamente para filtrar por `agent_id === null` na Fila.
 
 ---
 
-## Correção Proposta
+## Solução Definitiva
 
-**Arquivo**: `src/pages/RoyZapp.tsx`
-**Linha**: 3734-3738
+### Mudança 1: Corrigir as Estatísticas (Stats)
+
+A contagem da Fila deve SEMPRE mostrar apenas conversas sem agente, independente de quem está visualizando:
 
 ```tsx
 // ANTES (COM BUG):
-const matchesTab = (filterArchived || filterStatus === "closed" || skipTabFilterForGroups) ? true : (
-  inboxTab === "mine" 
-    ? (hasFullVisibility || a.agent_id === currentAgent?.id)
-    : (hasFullVisibility ? true : a.agent_id === null) // ⚠️ BUG AQUI
-);
+const totalQueueConversations = hasFullVisibility
+  ? assignments.filter((a) => a.status !== "closed" && !a.zapp_conversation?.is_archived).length
+  : assignments.filter((a) => a.agent_id === null && a.status !== "closed" && !a.zapp_conversation?.is_archived).length;
 
 // DEPOIS (CORRIGIDO):
-const matchesTab = (filterArchived || filterStatus === "closed" || skipTabFilterForGroups) ? true : (
-  inboxTab === "mine" 
-    ? (hasFullVisibility || a.agent_id === currentAgent?.id) // Admin/Gestor veem todas as conversas atribuídas
-    : a.agent_id === null // Fila SEMPRE mostra apenas conversas sem agente
-);
+const totalQueueConversations = assignments.filter((a) => 
+  a.agent_id === null && 
+  a.status !== "closed" && 
+  !a.zapp_conversation?.is_archived
+).length;
+// A Fila SEMPRE mostra apenas conversas sem agente, para TODOS os usuários
+```
+
+### Mudança 2: Corrigir o queueUnreadCount
+
+```tsx
+// ANTES (COM BUG):
+const queueUnreadCount = hasFullVisibility
+  ? assignments.filter((a) => 
+      a.status !== "closed" && 
+      !a.zapp_conversation?.is_archived &&
+      (a.zapp_conversation?.unread_count || 0) > 0
+    ).length
+  : assignments.filter((a) => 
+      a.agent_id === null &&
+      a.status !== "closed" && 
+      !a.zapp_conversation?.is_archived &&
+      (a.zapp_conversation?.unread_count || 0) > 0
+    ).length;
+
+// DEPOIS (CORRIGIDO):
+const queueUnreadCount = assignments.filter((a) => 
+  a.agent_id === null &&
+  a.status !== "closed" && 
+  !a.zapp_conversation?.is_archived &&
+  (a.zapp_conversation?.unread_count || 0) > 0
+).length;
+// Badge de não lidos na Fila sempre mostra apenas conversas SEM agente
+```
+
+### Mudança 3: Adicionar Dependência Faltando no useMemo de filteredAssignments
+
+```tsx
+// ANTES:
+}, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin]);
+
+// DEPOIS:
+}, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, currentUser?.team_role_name]);
 ```
 
 ---
 
-## Fluxo de Visibilidade Corrigido
+## Resumo de Mudanças
+
+| Linha | Arquivo | Mudança |
+|-------|---------|---------|
+| 3789-3791 | RoyZapp.tsx | Remover condição `hasFullVisibility` de `totalQueueConversations` |
+| 3818-3823 | RoyZapp.tsx | Remover condição `hasFullVisibility` de `queueUnreadCount` |
+| 3770 | RoyZapp.tsx | Adicionar `currentUser?.team_role_name` às dependências do useMemo |
+
+---
+
+## Fluxo Corrigido
 
 ```text
-┌────────────────────────────────────────────────────────────────┐
-│                    VISUALIZAÇÃO DO ROY zAPP                    │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│  ABA "MINHAS"                                                  │
-│  ├─ Atendente Comum: Só vê conversas onde agent_id = seu ID   │
-│  └─ Admin/Gestor: Vê TODAS as conversas atribuídas            │
-│                                                                │
-│  ABA "FILA"                                                    │
-│  ├─ Atendente Comum: Vê conversas onde agent_id = null        │
-│  └─ Admin/Gestor: Vê conversas onde agent_id = null           │
-│     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^       │
-│     IGUAL PARA TODOS - Fila é apenas conversas sem agente     │
-│                                                                │
-└────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                    FILA - COMPORTAMENTO CORRIGIDO                  │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  CONTAGEM (Badge):                                                 │
+│  └─ SEMPRE: count(agent_id === null)                              │
+│     Mostra apenas conversas sem responsável atribuído             │
+│                                                                    │
+│  LISTA VISUAL:                                                     │
+│  └─ SEMPRE: filter(agent_id === null)                             │
+│     Exibe apenas conversas aguardando atribuição                  │
+│                                                                    │
+│  IGUALDADE UNIVERSAL:                                              │
+│  └─ Admin vê a mesma Fila que atendentes                          │
+│  └─ O número do badge = quantidade de items na lista              │
+│                                                                    │
+│  MONITORAMENTO (Admin/Gestor):                                     │
+│  └─ Usa a aba "Minhas" para ver TODAS as conversas ativas         │
+│                                                                    │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Por Que a Fila Deve Ser Igual Para Todos?
+## Por Que Esta Solução é Definitiva
 
-1. **Semântica clara**: A "Fila" representa literalmente conversas aguardando um responsável
-2. **Evita confusão**: Se Admin visse conversas atribuídas na Fila, não saberia quais precisa distribuir
-3. **Monitoramento de atribuídas**: Admin/Gestor já pode ver todas na aba "Minhas"
-4. **UX consistente**: O contador "Fila (52)" deve refletir exatamente quantas precisam de atendimento
-
----
-
-## Arquivo a Modificar
-
-| Arquivo | Linha | Mudança |
-|---------|-------|---------|
-| `src/pages/RoyZapp.tsx` | 3737 | Remover a condição `hasFullVisibility` do filtro da Fila |
-
----
-
-## Resultado Esperado
-
-- **Antes**: Fila mostra 52 conversas (incluindo já atribuídas)
-- **Depois**: Fila mostra apenas conversas SEM agente atribuído
-- Admin/Gestor continua podendo ver todas as conversas atribuídas na aba "Minhas"
+1. **Semântica consistente**: A "Fila" sempre representa conversas aguardando atendimento
+2. **Badge correto**: O número exibido corresponde exatamente aos itens visíveis
+3. **Eliminação de ambiguidade**: Não há mais diferença entre o que Admin e atendentes veem na Fila
+4. **Cache correto**: A dependência adicionada garante que o useMemo recalcula quando necessário
+5. **Monitoramento preservado**: Admin/Gestor ainda podem ver todas as conversas na aba "Minhas"
 
