@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -60,7 +60,12 @@ import { EditTikTokPostDialog } from './EditTikTokPostDialog';
 import { DeleteTikTokPostDialog } from './DeleteTikTokPostDialog';
 import { cn } from '@/lib/utils';
 
-export function TikTokTab() {
+interface TikTokTabProps {
+  initialPostId?: string | null;
+  onPostOpened?: () => void;
+}
+
+export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [addPostDialogOpen, setAddPostDialogOpen] = useState(false);
   const [editPostDialogOpen, setEditPostDialogOpen] = useState(false);
@@ -89,6 +94,24 @@ export function TikTokTab() {
     refetchData,
     updateProfilePicture,
   } = useTikTokData();
+
+  // Auto-select post from URL parameter
+  useEffect(() => {
+    if (initialPostId && posts.length > 0 && !isLoading) {
+      const targetPost = posts.find(p => p.id === initialPostId);
+      if (targetPost) {
+        // Select the correct profile if different
+        if (targetPost.profile_id !== currentProfile?.id) {
+          setSelectedProfileId(targetPost.profile_id);
+        }
+        // Open edit dialog for the post
+        setSelectedPost(targetPost);
+        setEditPostDialogOpen(true);
+        // Clear the URL parameter
+        onPostOpened?.();
+      }
+    }
+  }, [initialPostId, posts, isLoading]);
 
   // Profile picture change handler (if needed in future)
   // const handleProfilePictureChange = (url: string | null) => {

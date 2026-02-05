@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, LayoutDashboard, Instagram, Music2 } from 'lucide-react';
 import { SocialMediaTab } from '@/components/marketing/SocialMediaTab';
@@ -7,8 +8,29 @@ import { TikTokTab } from '@/components/marketing/TikTokTab';
 import { TikTokDashboard } from '@/components/marketing/TikTokDashboard';
 
 export default function SocialMedia() {
-  const [platform, setPlatform] = useState<'instagram' | 'tiktok'>('instagram');
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  // Read URL parameters
+  const urlPlatform = searchParams.get('platform') as 'instagram' | 'tiktok' | null;
+  const urlPostId = searchParams.get('postId');
+  
+  const [platform, setPlatform] = useState<'instagram' | 'tiktok'>(urlPlatform || 'instagram');
   const [activeTab, setActiveTab] = useState('profiles');
+
+  // Sync platform from URL
+  useEffect(() => {
+    if (urlPlatform && urlPlatform !== platform) {
+      setPlatform(urlPlatform);
+    }
+  }, [urlPlatform]);
+
+  // Clear postId from URL after it's been used
+  const handlePostOpened = () => {
+    if (urlPostId) {
+      searchParams.delete('postId');
+      setSearchParams(searchParams, { replace: true });
+    }
+  };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -49,7 +71,10 @@ export default function SocialMedia() {
             </TabsList>
 
             <TabsContent value="profiles" className="mt-0">
-              <SocialMediaTab />
+              <SocialMediaTab 
+                initialPostId={platform === 'instagram' ? urlPostId : null} 
+                onPostOpened={handlePostOpened}
+              />
             </TabsContent>
 
             <TabsContent value="dashboard" className="mt-0">
@@ -73,7 +98,10 @@ export default function SocialMedia() {
             </TabsList>
 
             <TabsContent value="profiles" className="mt-0">
-              <TikTokTab />
+              <TikTokTab 
+                initialPostId={platform === 'tiktok' ? urlPostId : null}
+                onPostOpened={handlePostOpened}
+              />
             </TabsContent>
 
             <TabsContent value="dashboard" className="mt-0">
