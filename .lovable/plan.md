@@ -1,109 +1,86 @@
 
-# Correção do Modo Foco + Botão Tela Cheia
 
-## Problemas Identificados
+# Correção: Ocultar Barra de Trial no Modo Foco/Tela Cheia
 
-1. **Overlay não cobre tudo**: O `z-50` não é suficiente para cobrir a barra superior com o botão "Ver planos"
-2. **Falta opção de tela cheia real**: Usuário quer transmitir via Chromecast e precisa da Fullscreen API do navegador
+## Problema Identificado
 
----
+O `TrialBanner` está sendo renderizado no `AppLayout` (linha 56) como um elemento irmão do container onde os dashboards são exibidos. Mesmo com `z-[9999]`, o overlay do Modo Foco não consegue cobrir o banner porque:
 
-## Soluções
+1. **No Modo Foco**: O overlay é renderizado dentro do dashboard, que é um descendente profundo na árvore DOM. O z-index funciona relativamente ao contexto de empilhamento.
+2. **Na Tela Cheia**: O `requestFullscreen()` é aplicado ao `document.documentElement`, colocando TODA a página em fullscreen, incluindo o banner.
 
-### 1. Aumentar z-index do overlay
-Mudar de `z-50` para `z-[9999]` para garantir que o overlay fique acima de todos os elementos do aplicativo.
+## Solução
 
-### 2. Adicionar botão de Tela Cheia (Fullscreen API)
-Implementar um botão que ativa o modo fullscreen real do navegador, ideal para transmissão via Chromecast.
-
----
-
-## Implementação
-
-### Novo Ícone
-- Importar `Fullscreen` do lucide-react (ícone de 4 setas apontando para fora)
-
-### Novo Estado
-```typescript
-const [isFullscreen, setIsFullscreen] = useState(false);
-```
-
-### Funções de Fullscreen
-```typescript
-const toggleFullscreen = async () => {
-  if (!document.fullscreenElement) {
-    await document.documentElement.requestFullscreen();
-    setIsFullscreen(true);
-  } else {
-    await document.exitFullscreen();
-    setIsFullscreen(false);
-  }
-};
-
-// Listener para detectar saída do fullscreen
-useEffect(() => {
-  const handleFullscreenChange = () => {
-    setIsFullscreen(!!document.fullscreenElement);
-  };
-  document.addEventListener('fullscreenchange', handleFullscreenChange);
-  return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
-}, []);
-```
-
-### Novo Layout do Header no Modo Foco
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Visão Consolidada        [Período ▾] [⛶ Tela Cheia] [X Fechar] │
-```
+Utilizar **React Portal** para renderizar o overlay do Modo Foco diretamente no `body`, garantindo que ele fique acima de todos os elementos da aplicação.
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Alterações |
-|---------|------------|
-| `SocialMediaDashboard.tsx` | z-index, estado fullscreen, botão tela cheia |
-| `TikTokDashboard.tsx` | Mesmas alterações |
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/marketing/SocialMediaDashboard.tsx` | Envolver overlay com Portal |
+| `src/components/marketing/TikTokDashboard.tsx` | Envolver overlay com Portal |
 
 ---
 
-## Mudanças Específicas
+## Implementação Técnica
 
-### z-index do overlay
-```tsx
-// Antes
-<div className="fixed inset-0 z-50 bg-background overflow-auto">
-
-// Depois  
-<div className="fixed inset-0 z-[9999] bg-background overflow-auto">
+### Importar createPortal do React DOM
+```typescript
+import { createPortal } from "react-dom";
 ```
 
-### Novo header com botões
+### Envolver o overlay com Portal
 ```tsx
-<div className="flex justify-end mb-6 gap-2">
-  <Button
-    variant="outline"
-    size="icon"
-    onClick={toggleFullscreen}
-    title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
+// Antes
+{isFocusMode && (
+  <div className="fixed inset-0 z-[9999] bg-background overflow-auto">
+    ...
+  </div>
+)}
+
+// Depois
+{isFocusMode && createPortal(
+  <div className="fixed inset-0 z-[9999] bg-background overflow-auto">
+    ...
+  </div>,
+  document.body
+)}
+```
+
+### Aplicar Fullscreen no container do overlay (não no documento)
+```typescript
+// Criar ref para o container do modo foco
+const focusModeRef = useRef<HTMLDivElement>(null);
+
+const toggleFullscreen = async () => {
+  if (!document.fullscreenElement) {
+    // Aplicar fullscreen no container do modo foco, não no documento
+    await focusModeRef.current?.requestFullscreen();
+  } else if (document.exitFullscreen) {
+    await document.exitFullscreen();
+  }
+};
+
+// Na renderização
+{isFocusMode && createPortal(
+  <div 
+    ref={focusModeRef}
+    className="fixed inset-0 z-[9999] bg-background overflow-auto"
   >
-    <Fullscreen className="h-5 w-5" />
-  </Button>
-  <Button
-    variant="ghost"
-    size="icon"
-    onClick={() => setIsFocusMode(false)}
-  >
-    <X className="h-5 w-5" />
-  </Button>
-</div>
+    ...
+  </div>,
+  document.body
+)}
 ```
 
 ---
 
 ## Resultado Esperado
 
-1. **Overlay completo**: Nenhum elemento do app aparece por cima do modo foco
-2. **Tela cheia real**: Botão ativa fullscreen do navegador para transmissão perfeita via Chromecast
-3. **Controles visíveis**: Filtro de período, botão fullscreen e botão fechar disponíveis
-4. **Tecla ESC**: Funciona para sair tanto do modo foco quanto do fullscreen
+1. **Modo Foco**: O overlay será renderizado como filho direto do `body`, ficando acima do `TrialBanner`
+2. **Tela Cheia**: Apenas o conteúdo do overlay entrará em fullscreen, não a página inteira
+3. **Barra de Trial**: Completamente oculta em ambos os modos
+4. **Funcionalidade mantida**: ESC, botão fechar, filtro de período - tudo continua funcionando
+
