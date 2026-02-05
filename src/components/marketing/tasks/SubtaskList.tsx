@@ -34,8 +34,12 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
       handleAddSubtask();
     } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
       setNewSubtaskTitle("");
       setIsAdding(false);
     }
@@ -61,8 +65,12 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
 
   const handleEditKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
       handleSaveEdit();
     } else if (e.key === "Escape") {
+      e.preventDefault();
+      e.stopPropagation();
       setEditingId(null);
     }
   };
