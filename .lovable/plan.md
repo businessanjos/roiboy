@@ -1,148 +1,182 @@
 
 
-# Diagnóstico Definitivo: Overflow Horizontal no Grupo "Saulo & Winny"
+# Correção: Diálogo Fechando e Subtarefas Desaparecendo no Marketing
 
-## Causa Raiz Identificada
+## Problemas Identificados
 
-### O Bug do Radix ScrollArea: `display: table`
+### Problema 1: Diálogo fecha após adicionar subtarefa
+**Causa Raiz**: Os botões dentro do `SubtaskList.tsx` não têm `type="button"` explícito, e o componente está renderizado dentro de um `<form>` no `MarketingTaskDialog.tsx`. 
 
-O componente `ScrollArea` do Radix UI usa internamente uma estrutura com `display: table` no container de conteúdo do Viewport. Esta é uma escolha deliberada do Radix para calcular corretamente o tamanho do conteúdo para as scrollbars.
+Em HTML, um `<button>` sem atributo `type` dentro de um `<form>` tem por padrão `type="submit"`, o que causa o envio do formulário principal.
 
-**Porém, isso causa um problema crítico:**
-
-```text
-┌─ ScrollArea.Root (overflow: hidden) ✓
-│  └─ ScrollArea.Viewport (w-full h-full)
-│     └─ div [INTERNO DO RADIX - NÃO CONTROLAMOS]
-│        │  style="display: table; min-width: 100%"  ⚠️ PROBLEMA
-│        │
-│        └─ Nosso conteúdo (space-y-1 w-full min-w-0)
-│           └─ ZappMessageBubble (max-w-[65%])
-│              └─ <strong>😇 Anja...</strong> + emojis em sequência
-│                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-│                 Estes elementos INLINE não quebram entre si!
-│                 O "display: table" EXPANDE para acomodá-los.
+**Código Problemático (SubtaskList.tsx linhas 167-180)**:
+```tsx
+<Button size="sm" className="h-8" onClick={handleAddSubtask}>
+  <Check className="h-4 w-4" />
+</Button>
+<Button
+  size="sm"
+  variant="ghost"
+  className="h-8"
+  onClick={() => {
+    setNewSubtaskTitle("");
+    setIsAdding(false);
+  }}
+>
+  <X className="h-4 w-4" />
+</Button>
 ```
 
-### Por que só acontece neste grupo?
+Quando o usuário clica no botão "check" para adicionar a subtarefa:
+1. O `onClick` é executado (`handleAddSubtask`)
+2. Mas o evento também propaga e dispara `onSubmit` do formulário pai
+3. O `handleSubmit` do `MarketingTaskDialog` é executado
+4. Ao final do submit, `onOpenChange(false)` fecha o diálogo
 
-1. **Conteúdo específico**: As mensagens da "Anja Consultora Andréia" contêm:
-   - Formatação bold com asteriscos (`*texto*` → `<strong>texto</strong>`)
-   - Emojis em sequência como prefixos de lista (`👉`, `🧩`, `✨`)
-   - Textos longos (300-428 caracteres) com múltiplas quebras de linha
+### Problema 2: Subtarefas desaparecendo
 
-2. **Comportamento do `display: table`**: 
-   - Quando há elementos inline que não podem quebrar (como `<strong>` com emojis), o container "table" expande horizontalmente
-   - Ele ignora o `max-w-[65%]` do container pai porque calcula a largura "ideal" do conteúdo primeiro
+**Causa Raiz**: Após a inserção, o cache é invalidado com `invalidateQueries`, mas como o diálogo está fechando simultaneamente (devido ao problema 1), a query de subtarefas fica em um estado inconsistente. Quando o usuário reabre a tarefa, a query pode:
+- Usar dados obsoletos do cache
+- Não ter terminado de buscar os novos dados
+- Ter o `taskId` momentaneamente `null` durante a transição
 
-3. **A barra de rolagem horizontal**: Aparece porque o Viewport do Radix permite que seu conteúdo interno (o "table") seja mais largo que o próprio Viewport.
+Além disso, há um possível problema de propagação de eventos nos botões de edição e exclusão de subtarefas (linhas 144-151):
+```tsx
+<Button
+  variant="ghost"
+  size="sm"
+  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
+  onClick={() => deleteSubtask.mutate(subtask.id)}
+>
+```
 
 ---
 
-## Solução Definitiva
+## Solução Proposta
 
-### Estratégia: Forçar o Viewport do Radix a respeitar limites
+### Correção 1: Adicionar `type="button"` em todos os botões do SubtaskList
 
-Precisamos adicionar uma regra CSS que force o container interno do Radix (o `display: table`) a respeitar a largura do pai.
+Isso impede que qualquer botão dentro da lista de subtarefas dispare o submit do formulário principal.
 
-### Mudança 1: Modificar o componente ScrollArea
+**Alterações em SubtaskList.tsx**:
 
-**Arquivo**: `src/components/ui/scroll-area.tsx`
+| Linha | Antes | Depois |
+|-------|-------|--------|
+| 167 | `<Button size="sm" className="h-8" onClick={handleAddSubtask}>` | `<Button type="button" size="sm" className="h-8" onClick={handleAddSubtask}>` |
+| 170-175 | `<Button size="sm" variant="ghost" className="h-8" onClick={...}>` | `<Button type="button" size="sm" variant="ghost" className="h-8" onClick={...}>` |
+| 144-148 | `<Button variant="ghost" size="sm" ... onClick={...}>` | `<Button type="button" variant="ghost" size="sm" ... onClick={...}>` |
+| 183-191 | `<Button variant="ghost" size="sm" ... onClick={() => setIsAdding(true)}>` | `<Button type="button" variant="ghost" size="sm" ... onClick={() => setIsAdding(true)}>` |
 
-Adicionar estilos que forcem o container interno a não expandir além do pai:
+### Correção 2: Manter o input aberto para adicionar múltiplas subtarefas
 
-```tsx
-// ANTES (linha 15)
-<ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
+Atualmente, após adicionar uma subtarefa, o estado `isAdding` é setado para `false` (linha 30), escondendo o campo de input. Para melhorar a experiência:
 
-// DEPOIS
-<ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit] !overflow-x-hidden [&>div]:!table-fixed [&>div]:!w-full">
-```
-
-**Explicação:**
-- `!overflow-x-hidden`: Força o Viewport a ocultar overflow horizontal com !important
-- `[&>div]:!table-fixed`: Aplica `table-layout: fixed` ao div interno do Radix, forçando-o a respeitar a largura do container
-- `[&>div]:!w-full`: Força o div interno a usar 100% da largura do pai
-
-### Mudança 2: Garantir contenção na lista de mensagens
-
-**Arquivo**: `src/components/royzapp/ZappMessagesList.tsx`
-
-Remover `overflow-hidden` do ScrollArea (pois agora o ScrollArea já lida com isso):
-
-```tsx
-// ANTES (linha 149)
-<ScrollArea className="flex-1 px-2 sm:px-4 py-2 overflow-hidden">
-
-// DEPOIS
-<ScrollArea className="flex-1 px-2 sm:px-4 py-2">
-```
-
-### Mudança 3: Blindar o texto das bolhas de mensagem
-
-**Arquivo**: `src/components/royzapp/ZappMessageBubble.tsx`
-
-Manter as classes já aplicadas e adicionar `min-w-0` à bolha interna:
-
-Na linha 325 (container da bolha):
+**Alterar comportamento (linha 29-30)**:
 ```tsx
 // ANTES
-"px-3 py-2 rounded-lg relative shadow overflow-hidden flex-1 min-w-0 transition-all duration-300"
+setNewSubtaskTitle("");
+setIsAdding(false);
 
-// DEPOIS (manter como está - já tem min-w-0 e overflow-hidden)
-"px-3 py-2 rounded-lg relative shadow overflow-hidden flex-1 min-w-0 transition-all duration-300"
+// DEPOIS
+setNewSubtaskTitle("");
+// Manter isAdding = true para permitir adicionar mais subtarefas
+// Só fechar com ESC ou clicando no X
+```
+
+### Correção 3: Adicionar `e.stopPropagation()` nos handlers
+
+Para garantir que eventos de clique não propaguem para elementos pai, adicionar `stopPropagation` nos handlers críticos:
+
+```tsx
+const handleAddSubtask = async (e?: React.MouseEvent) => {
+  e?.stopPropagation();
+  e?.preventDefault();
+  if (!newSubtaskTitle.trim() || !taskId) return;
+  // ... resto do código
+};
 ```
 
 ---
 
-## Por que esta solução funciona?
+## Arquivos a Modificar
 
-```text
-ANTES (com display: table expandindo):
-┌──────────────── Viewport ────────────────┐
-│ ┌───────────── div (table) ─────────────────────────────────┐
-│ │ Conteúdo com emojis e formatação que EXPANDE →────────────│
-│ └───────────────────────────────────────────────────────────┘
-│                                          │ ← scrollbar aparece
-└──────────────────────────────────────────┘
-
-DEPOIS (com table-fixed + w-full):
-┌──────────────── Viewport ────────────────┐
-│ ┌──────────── div (table-fixed) ────────┐│
-│ │ Conteúdo agora QUEBRA corretamente    ││
-│ │ porque table-layout: fixed força      ││
-│ │ a largura a ser respeitada            ││
-│ └───────────────────────────────────────┘│
-└──────────────────────────────────────────┘ ← sem scrollbar!
-```
-
----
-
-## Blindagem para Prevenir Regressões Futuras
-
-### Padrão 1: ScrollArea sempre com contenção horizontal
-Sempre que usar `ScrollArea` para conteúdo vertical, o componente agora automaticamente previne overflow horizontal.
-
-### Padrão 2: Containers flexbox com conteúdo variável
-Continuar usando `min-w-0` em todos os flex children que contenham texto de usuário.
-
-### Padrão 3: Texto de usuário com quebra agressiva
-Manter `[overflow-wrap:anywhere]` em qualquer `<p>` que renderize conteúdo de usuário.
+1. **`src/components/marketing/tasks/SubtaskList.tsx`**
 
 ---
 
 ## Resumo das Mudanças
 
-| Arquivo | Linha | Mudança |
-|---------|-------|---------|
-| `src/components/ui/scroll-area.tsx` | 15 | Adicionar `!overflow-x-hidden [&>div]:!table-fixed [&>div]:!w-full` ao Viewport |
-| `src/components/royzapp/ZappMessagesList.tsx` | 149 | Remover `overflow-hidden` (agora redundante) |
+| Localização | Mudança | Motivo |
+|-------------|---------|--------|
+| Linha 22-31 | Adicionar `e?.stopPropagation()` e `e?.preventDefault()` | Previne propagação de eventos |
+| Linha 29-30 | Remover `setIsAdding(false)` | Permite adicionar múltiplas subtarefas sem fechar o input |
+| Linha 144 | Adicionar `type="button"` | Previne submit do form |
+| Linha 167 | Adicionar `type="button"` | Previne submit do form |
+| Linha 170 | Adicionar `type="button"` | Previne submit do form |
+| Linha 183 | Adicionar `type="button"` | Previne submit do form |
 
 ---
 
-## Referências Técnicas
+## Detalhes Técnicos
 
-- [Radix Issue #2722](https://github.com/radix-ui/primitives/issues/2722): Confirma que `display: table` causa expansão horizontal
-- [Radix Issue #3129](https://github.com/radix-ui/primitives/issues/3129): Discussão sobre persistência do problema
-- `table-layout: fixed`: Propriedade CSS que força tabelas a respeitar a largura definida em vez de calcular baseado no conteúdo
+### Por que isso acontece?
+
+O componente `SubtaskList` está sendo renderizado **dentro** do `<form>` do `MarketingTaskDialog`:
+
+```tsx
+// MarketingTaskDialog.tsx linha 172-296
+<form onSubmit={handleSubmit} className="px-6 pb-6 space-y-4">
+  {/* ... outros campos ... */}
+  <SubtaskList taskId={isEditing ? taskId : null} />
+  {/* ... */}
+</form>
+```
+
+Botões sem `type="button"` explícito são interpretados como `type="submit"` pelo navegador. Quando clicados, eles disparam o evento `submit` do formulário, mesmo que tenham um `onClick` handler.
+
+### Diagrama do Fluxo Atual (COM BUG)
+
+```text
+[Usuário clica no botão ✓]
+           │
+           ▼
+[onClick: handleAddSubtask()]
+           │
+           ├─────────────────────────────┐
+           ▼                             ▼
+[createSubtask.mutate]          [Evento submit propaga]
+           │                             │
+           ▼                             ▼
+[invalidateQueries]              [handleSubmit() executa]
+                                         │
+                                         ▼
+                                  [onOpenChange(false)]
+                                         │
+                                         ▼
+                                 [Diálogo FECHA] ← BUG!
+```
+
+### Diagrama do Fluxo Corrigido
+
+```text
+[Usuário clica no botão ✓ (type="button")]
+           │
+           ▼
+[onClick: handleAddSubtask()]
+           │
+           ▼
+[e.stopPropagation() + e.preventDefault()]
+           │
+           ▼
+[createSubtask.mutate]
+           │
+           ▼
+[invalidateQueries → subtasks recarregadas]
+           │
+           ▼
+[Input limpo, MANTÉM isAdding=true]
+           │
+           ▼
+[Usuário pode adicionar mais subtarefas!] ← CORRIGIDO
+```
 
