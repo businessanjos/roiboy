@@ -241,7 +241,6 @@ export function useMarketingTasks() {
 
   const reorderTasks = useMutation({
     mutationFn: async (updates: { id: string; display_order: number }[]) => {
-      // Batch update display_order for all affected tasks
       for (const update of updates) {
         const { error } = await supabase
           .from("marketing_tasks")
@@ -251,11 +250,28 @@ export function useMarketingTasks() {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["marketing-tasks"] });
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: ["marketing-tasks"] });
+      const previousTasks = queryClient.getQueryData<MarketingTask[]>(["marketing-tasks"]);
+
+      queryClient.setQueryData<MarketingTask[]>(["marketing-tasks"], (old) => {
+        if (!old) return old;
+        return old.map((task) => {
+          const update = updates.find((u) => u.id === task.id);
+          return update ? { ...task, display_order: update.display_order } : task;
+        }).sort((a, b) => a.display_order - b.display_order);
+      });
+
+      return { previousTasks };
     },
-    onError: (error: Error) => {
+    onError: (error, _, context) => {
+      if (context?.previousTasks) {
+        queryClient.setQueryData(["marketing-tasks"], context.previousTasks);
+      }
       toast.error("Erro ao reordenar tarefas: " + error.message);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["marketing-tasks"] });
     },
   });
 
