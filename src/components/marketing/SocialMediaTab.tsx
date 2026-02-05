@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { format, isAfter, isBefore, startOfDay, endOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -76,7 +76,12 @@ import { PostComparisonDialog } from './PostComparisonDialog';
 import { WeeklyAnalysisDashboard } from './WeeklyAnalysisDashboard';
 import { cn } from '@/lib/utils';
 
-export function SocialMediaTab() {
+interface SocialMediaTabProps {
+  initialPostId?: string | null;
+  onPostOpened?: () => void;
+}
+
+export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabProps) {
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [addPostDialogOpen, setAddPostDialogOpen] = useState(false);
   const [editPostDialogOpen, setEditPostDialogOpen] = useState(false);
@@ -109,7 +114,24 @@ export function SocialMediaTab() {
     updateProfilePicture,
   } = useSocialMediaData();
 
-  // Toggle post selection for comparison
+  // Auto-select post from URL parameter
+  useEffect(() => {
+    if (initialPostId && posts.length > 0 && !isLoading) {
+      const targetPost = posts.find(p => p.id === initialPostId);
+      if (targetPost) {
+        // Select the correct profile if different
+        if (targetPost.profile_id !== currentProfile?.id) {
+          setSelectedProfileId(targetPost.profile_id);
+        }
+        // Open edit dialog for the post
+        setSelectedPost(targetPost);
+        setEditPostDialogOpen(true);
+        // Clear the URL parameter
+        onPostOpened?.();
+      }
+    }
+  }, [initialPostId, posts, isLoading]);
+
   const togglePostSelection = (postId: string) => {
     setSelectedPostsForComparison(prev => {
       if (prev.includes(postId)) {
