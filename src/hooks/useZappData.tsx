@@ -998,16 +998,15 @@ export function useZappData(options: UseZappDataOptions = {}) {
         } | null;
         const convIntegrationId = zappConv?.integration_id;
         const convSectorId = zappConv?.sector_id;
-        const isGroup = zappConv?.is_group === true;
-        
         // Include conversation if:
         // 1. It belongs to this exact integration, OR
-        // 2. It has no integration_id (legacy) but belongs to the same sector, OR
-        // 3. It's a GROUP (groups are cross-integration by nature)
+        // 2. It has no integration_id (legacy) but belongs to the same sector
+        // NOTE: Groups are NOT exempt - they follow the same isolation rules as direct messages
+        //       If two instances are in the same group, each will have its own zapp_conversation
         const matchesIntegration = convIntegrationId === integrationId;
         const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
         
-        return matchesIntegration || isLegacySameSector || isGroup;
+        return matchesIntegration || isLegacySameSector;
       });
       
       if (filtered.length !== beforeCount) {
