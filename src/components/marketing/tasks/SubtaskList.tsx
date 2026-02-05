@@ -19,7 +19,9 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
   const { subtasks, isLoading, createSubtask, updateSubtask, deleteSubtask, toggleComplete } =
     useMarketingSubtasks(taskId);
 
-  const handleAddSubtask = async () => {
+  const handleAddSubtask = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    e?.preventDefault();
     if (!newSubtaskTitle.trim() || !taskId) return;
 
     await createSubtask.mutateAsync({
@@ -27,7 +29,7 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
       title: newSubtaskTitle.trim(),
     });
     setNewSubtaskTitle("");
-    setIsAdding(false);
+    // Keep isAdding=true to allow adding multiple subtasks
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -142,10 +144,14 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
             )}
 
             <Button
+              type="button"
               variant="ghost"
               size="sm"
               className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-              onClick={() => deleteSubtask.mutate(subtask.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteSubtask.mutate(subtask.id);
+              }}
             >
               <X className="h-3 w-3" />
             </Button>
@@ -164,14 +170,16 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
             className="h-8 text-sm"
             autoFocus
           />
-          <Button size="sm" className="h-8" onClick={handleAddSubtask}>
+          <Button type="button" size="sm" className="h-8" onClick={handleAddSubtask}>
             <Check className="h-4 w-4" />
           </Button>
           <Button
+            type="button"
             size="sm"
             variant="ghost"
             className="h-8"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setNewSubtaskTitle("");
               setIsAdding(false);
             }}
@@ -181,10 +189,14 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
         </div>
       ) : (
         <Button
+          type="button"
           variant="ghost"
           size="sm"
           className="w-full justify-start text-muted-foreground hover:text-foreground"
-          onClick={() => setIsAdding(true)}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsAdding(true);
+          }}
         >
           <Plus className="h-4 w-4 mr-2" />
           Adicionar subtarefa
