@@ -532,10 +532,10 @@ export function TikTokDashboard() {
       {/* Focus Mode Overlay */}
       {isFocusMode && createPortal(
         <div ref={focusModeRef} className="fixed inset-0 z-[9999] bg-background overflow-auto">
-          <div className="container mx-auto py-8 px-6 max-w-7xl">
+          <div className="min-h-full flex flex-col justify-center px-8 py-6 mx-auto max-w-[95vw]">
             {/* Header with buttons */}
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold">Visão Consolidada TikTok</h2>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold">Visão Consolidada TikTok</h2>
               <div className="flex items-center gap-2">
                 <Select value={monthFilter} onValueChange={setMonthFilter}>
                   <SelectTrigger className="w-[180px] bg-card">
@@ -571,73 +571,73 @@ export function TikTokDashboard() {
               </div>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+            {/* KPI Cards - Zoomed */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-10">
               <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-primary/10">
-                      <Users className="h-6 w-6 text-primary" />
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-5">
+                    <div className="p-4 rounded-xl bg-primary/10">
+                      <Users className="h-8 w-8 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Total Seguidores</p>
-                      <p className="text-3xl font-bold">{formatNumber(totals.totalFollowers)}</p>
+                      <p className="text-base text-muted-foreground">Total Seguidores</p>
+                      <p className="text-4xl font-bold">{formatNumber(totals.totalFollowers)}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-green-500/10">
-                      <Percent className="h-6 w-6 text-green-600" />
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-5">
+                    <div className="p-4 rounded-xl bg-green-500/10">
+                      <Percent className="h-8 w-8 text-green-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Engaj. Médio</p>
-                      <p className="text-3xl font-bold">{totals.avgEngagement}%</p>
+                      <p className="text-base text-muted-foreground">Engaj. Médio</p>
+                      <p className="text-4xl font-bold">{totals.avgEngagement}%</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-cyan-500/10">
-                      <Clock className="h-6 w-6 text-cyan-600" />
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-5">
+                    <div className="p-4 rounded-xl bg-cyan-500/10">
+                      <Clock className="h-8 w-8 text-cyan-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Taxa Conclusão</p>
-                      <p className="text-3xl font-bold">{totals.avgCompletionRate}%</p>
+                      <p className="text-base text-muted-foreground">Taxa Conclusão</p>
+                      <p className="text-4xl font-bold">{totals.avgCompletionRate}%</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-blue-500/10">
-                      <Eye className="h-6 w-6 text-blue-600" />
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-5">
+                    <div className="p-4 rounded-xl bg-blue-500/10">
+                      <Eye className="h-8 w-8 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Total Vídeos</p>
-                      <p className="text-3xl font-bold">{formatNumber(totals.totalVideos)}</p>
+                      <p className="text-base text-muted-foreground">Total Vídeos</p>
+                      <p className="text-4xl font-bold">{formatNumber(totals.totalVideos)}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-lg bg-purple-500/10">
-                      <BarChart3 className="h-6 w-6 text-purple-600" />
+                <CardContent className="p-8">
+                  <div className="flex items-center gap-5">
+                    <div className="p-4 rounded-xl bg-purple-500/10">
+                      <BarChart3 className="h-8 w-8 text-purple-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Perfis Ativos</p>
-                      <p className="text-3xl font-bold">{totals.profileCount}</p>
+                      <p className="text-base text-muted-foreground">Perfis Ativos</p>
+                      <p className="text-4xl font-bold">{totals.profileCount}</p>
                     </div>
                   </div>
                 </CardContent>
