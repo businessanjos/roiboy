@@ -2902,6 +2902,9 @@ export type Database = {
           content: string | null
           created_at: string
           deal_id: string
+          file_name: string | null
+          file_size: number | null
+          file_url: string | null
           id: string
           new_value: string | null
           old_value: string | null
@@ -2916,6 +2919,9 @@ export type Database = {
           content?: string | null
           created_at?: string
           deal_id: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
           id?: string
           new_value?: string | null
           old_value?: string | null
@@ -2930,6 +2936,9 @@ export type Database = {
           content?: string | null
           created_at?: string
           deal_id?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
           id?: string
           new_value?: string | null
           old_value?: string | null

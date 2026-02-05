@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
@@ -69,6 +69,10 @@ import {
   GitMerge,
   Package,
   Pencil,
+  Camera,
+  Paperclip,
+  Image,
+  Download,
   type LucideIcon,
 } from "lucide-react";
 import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
@@ -93,6 +97,9 @@ interface DealActivity {
   new_value: string | null;
   user_id: string | null;
   created_at: string;
+  file_url?: string | null;
+  file_name?: string | null;
+  file_size?: number | null;
   user?: {
     name: string;
     avatar_url: string | null;
@@ -166,6 +173,10 @@ const getEventConfig = (eventType: string, title?: string) => {
       return { icon: Video, bgColor: "bg-violet-500", textColor: "text-violet-500", label: "Reunião" };
     case "stage_change":
       return { icon: ArrowRightLeft, bgColor: "bg-indigo-500", textColor: "text-indigo-500", label: "Mudança de etapa" };
+    case "image":
+      return { icon: Image, bgColor: "bg-pink-500", textColor: "text-pink-500", label: "Imagem anexada" };
+    case "file":
+      return { icon: FileText, bgColor: "bg-orange-500", textColor: "text-orange-500", label: "Documento anexado" };
     case "status_change":
       if (title === 'Negócio perdido') {
         return { icon: XCircle, bgColor: "bg-red-500", textColor: "text-red-500", label: "Perdido" };
@@ -211,6 +222,10 @@ export function DealDetailSheet({
   const [lostReason, setLostReason] = useState("");
   const [wonAtPopoverOpen, setWonAtPopoverOpen] = useState(false);
   const [updatingWonAt, setUpdatingWonAt] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [localWonAt, setLocalWonAt] = useState<string | null>(deal?.won_at || null);
   
   // Sincronizar estado local com prop quando deal muda
@@ -500,6 +515,92 @@ export function DealDetailSheet({
       toast.error("Erro ao registrar atividade");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleFileSelect = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+    type: "image" | "file"
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file || !currentUser?.account_id || !deal?.id) return;
+
+    // Validate file size (50MB max)
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Arquivo muito grande. Máximo 50MB.");
+      return;
+    }
+
+    const setUploading = type === "image" ? setIsUploadingImage : setIsUploadingFile;
+    setUploading(true);
+
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+      const filePath = `${currentUser.account_id}/deals/${deal.id}/${fileName}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from("deal-activities")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("deal-activities")
+        .getPublicUrl(filePath);
+
+      // Create activity with file attached
+      const { error } = await supabase.from("deal_activities").insert({
+        account_id: currentUser.account_id,
+        deal_id: deal.id,
+        type: type === "image" ? "image" : "file",
+        title: type === "image" ? "Imagem anexada" : "Documento anexado",
+        user_id: currentUser.id,
+        file_url: urlData.publicUrl,
+        file_name: file.name,
+        file_size: file.size,
+      });
+
+      if (error) throw error;
+
+      fetchActivities();
+      toast.success(type === "image" ? "Imagem anexada!" : "Documento anexado!");
+    } catch (error: any) {
+      console.error("Error uploading file:", error);
+      toast.error("Erro ao fazer upload do arquivo");
+    } finally {
+      setUploading(false);
+      // Reset input
+      if (type === "image" && imageInputRef.current) {
+        imageInputRef.current.value = "";
+      } else if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
+  const handleDownloadFile = async (fileUrl: string, fileName: string) => {
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      toast.error("Erro ao baixar arquivo");
     }
   };
 
@@ -983,7 +1084,53 @@ export function DealDetailSheet({
                         rows={2}
                         className="resize-none text-sm bg-background"
                       />
-                      <div className="flex justify-end">
+                      <div className="flex items-center justify-end gap-2">
+                        {/* Hidden file inputs */}
+                        <input
+                          ref={imageInputRef}
+                          type="file"
+                          accept="image/*,video/*"
+                          className="hidden"
+                          onChange={(e) => handleFileSelect(e, "image")}
+                        />
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv"
+                          className="hidden"
+                          onChange={(e) => handleFileSelect(e, "file")}
+                        />
+                        
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => imageInputRef.current?.click()}
+                          disabled={isUploadingImage || isUploadingFile}
+                          title="Anexar imagem ou vídeo"
+                        >
+                          {isUploadingImage ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Camera className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploadingImage || isUploadingFile}
+                          title="Anexar documento"
+                        >
+                          {isUploadingFile ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Paperclip className="h-4 w-4" />
+                          )}
+                        </Button>
                         <Button
                           size="sm"
                           className="h-7 text-xs"
@@ -1066,6 +1213,57 @@ export function DealDetailSheet({
                                           </button>
                                         )}
                                       </>
+                                    )}
+                                    {/* File attachment display */}
+                                    {activity.file_url && (
+                                      <div className="mt-2">
+                                        {activity.type === 'image' ? (
+                                          <div className="relative group/img">
+                                            <img
+                                              src={activity.file_url}
+                                              alt={activity.file_name || "Imagem anexada"}
+                                              className="max-w-[200px] max-h-[150px] rounded-lg border cursor-pointer hover:opacity-90 transition-opacity object-cover"
+                                              onClick={() => window.open(activity.file_url!, "_blank")}
+                                            />
+                                            <div className="flex items-center gap-2 mt-1">
+                                              <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">
+                                                {activity.file_name}
+                                              </span>
+                                              {activity.file_size && (
+                                                <span className="text-[10px] text-muted-foreground">
+                                                  ({formatFileSize(activity.file_size)})
+                                                </span>
+                                              )}
+                                              <button
+                                                onClick={() => handleDownloadFile(activity.file_url!, activity.file_name || "download")}
+                                                className="text-primary hover:underline"
+                                                title="Baixar"
+                                              >
+                                                <Download className="h-3 w-3" />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="flex items-center gap-2 p-2 rounded-lg border bg-muted/50 max-w-[250px]">
+                                            <FileText className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                                            <div className="flex-1 min-w-0">
+                                              <p className="text-xs font-medium truncate">{activity.file_name}</p>
+                                              {activity.file_size && (
+                                                <p className="text-[10px] text-muted-foreground">
+                                                  {formatFileSize(activity.file_size)}
+                                                </p>
+                                              )}
+                                            </div>
+                                            <button
+                                              onClick={() => handleDownloadFile(activity.file_url!, activity.file_name || "download")}
+                                              className="p-1 hover:bg-muted rounded transition-colors"
+                                              title="Baixar"
+                                            >
+                                              <Download className="h-4 w-4 text-primary" />
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
                                     )}
                                     {(activity.type === 'stage_change' || activity.type === 'status_change') && activity.old_value && activity.new_value && (
                                       <p className="text-xs text-muted-foreground mt-0.5">
