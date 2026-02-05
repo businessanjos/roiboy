@@ -70,15 +70,22 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Capture Enter and Escape to prevent propagation to parent form
     if (e.key === "Enter") {
       e.preventDefault();
       e.stopPropagation();
-      handleAddSubtask();
-    } else if (e.key === "Escape") {
+      if (newSubtaskTitle.trim()) {
+        handleAddSubtask();
+      }
+      return; // Explicit return to ensure no further processing
+    }
+    
+    if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
       setNewSubtaskTitle("");
       setIsAdding(false);
+      return; // Explicit return
     }
   };
 
@@ -165,9 +172,22 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
         </SortableContext>
       </DndContext>
 
-      {/* Add new subtask */}
+      {/* Add new subtask - wrapped in its own form to prevent event bubbling */}
       {isAdding ? (
-        <div className="flex items-center gap-2">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleAddSubtask();
+          }}
+          onKeyDown={(e) => {
+            // Prevent any key events from reaching parent form
+            if (e.key === "Enter" || e.key === "Escape") {
+              e.stopPropagation();
+            }
+          }}
+          className="flex items-center gap-2"
+        >
           <Input
             value={newSubtaskTitle}
             onChange={(e) => setNewSubtaskTitle(e.target.value)}
@@ -176,7 +196,7 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
             className="h-8 text-sm"
             autoFocus
           />
-          <Button type="button" size="sm" className="h-8" onClick={handleAddSubtask}>
+          <Button type="submit" size="sm" className="h-8">
             <Check className="h-4 w-4" />
           </Button>
           <Button
@@ -192,7 +212,7 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
           >
             <X className="h-4 w-4" />
           </Button>
-        </div>
+        </form>
       ) : (
         <Button
           type="button"
