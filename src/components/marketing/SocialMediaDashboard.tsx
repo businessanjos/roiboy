@@ -12,6 +12,7 @@ import {
   ExternalLink,
   BarChart3,
   Maximize2,
+  Minimize2,
   X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -62,6 +63,7 @@ export function SocialMediaDashboard() {
   const [sortField, setSortField] = useState<SortField>('followers');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // ESC key listener for focus mode
   useEffect(() => {
@@ -73,6 +75,23 @@ export function SocialMediaDashboard() {
     document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
   }, [isFocusMode]);
+
+  // Fullscreen change listener
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    } else if (document.exitFullscreen) {
+      await document.exitFullscreen();
+    }
+  };
 
   // Calculate date range based on filter
   const dateRange = useMemo(() => {
@@ -479,34 +498,44 @@ export function SocialMediaDashboard() {
 
       {/* Focus Mode Overlay */}
       {isFocusMode && (
-        <div className="fixed inset-0 z-50 bg-background overflow-auto">
+        <div className="fixed inset-0 z-[9999] bg-background overflow-auto">
           <div className="container mx-auto py-8 px-6 max-w-7xl">
-            {/* Close button */}
-            <div className="flex justify-end mb-6">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsFocusMode(false)}
-                className="hover:bg-muted"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
-
-            {/* Period filter */}
-            <div className="flex items-center justify-between mb-8">
+            {/* Header with buttons */}
+            <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">Visão Consolidada Instagram</h2>
-              <Select value={monthFilter} onValueChange={setMonthFilter}>
-                <SelectTrigger className="w-[180px] bg-card">
-                  <SelectValue placeholder="Período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Último mês</SelectItem>
-                  <SelectItem value="3">Últimos 3 meses</SelectItem>
-                  <SelectItem value="6">Últimos 6 meses</SelectItem>
-                  <SelectItem value="12">Último ano</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-2">
+                <Select value={monthFilter} onValueChange={setMonthFilter}>
+                  <SelectTrigger className="w-[180px] bg-card">
+                    <SelectValue placeholder="Período" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Último mês</SelectItem>
+                    <SelectItem value="3">Últimos 3 meses</SelectItem>
+                    <SelectItem value="6">Últimos 6 meses</SelectItem>
+                    <SelectItem value="12">Último ano</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={toggleFullscreen}
+                  title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="h-5 w-5" />
+                  ) : (
+                    <Maximize2 className="h-5 w-5" />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsFocusMode(false)}
+                  className="hover:bg-muted"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
 
             {/* KPI Cards */}
