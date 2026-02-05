@@ -1,210 +1,267 @@
 
-# Calendário de Conteúdo - Nova Aba do Marketing
+# Correção: Drag-and-Drop de Tarefas e Subtarefas no Kanban de Marketing
 
-## Visão Geral
+## Diagnóstico Detalhado
 
-Criar uma nova aba no setor de Marketing chamada "Calendário de Conteúdo" que exibirá um calendário mensal com ícones das plataformas (Instagram e TikTok) indicando os posts publicados em cada data, com navegação direta para a análise do conteúdo na aba Social Media.
+Após análise completa do código, identifiquei **DOIS PROBLEMAS DISTINTOS** causando as falhas de reordenação:
 
 ---
 
-## Arquivos a Criar
+## Problema 1: Tarefas do Kanban Não Persistem Nova Posição
 
-### 1. Nova Página: `src/pages/ContentCalendar.tsx`
+### Causa Raiz
+O componente `MarketingTaskKanban.tsx` **não implementa lógica de reordenação** dentro da mesma coluna. O `handleDragEnd` apenas trata mudança de status (mover entre colunas), mas **ignora completamente** a reordenação de cards dentro da mesma coluna.
 
-Página principal do Calendário de Conteúdo contendo:
-- Cabeçalho com título e navegação de mês
-- Grid mensal similar ao calendário anual existente
-- Sem botão "Novo Evento" (foco em visualização)
-- Exibição de ícones de plataforma com contadores
+### Código Atual (Linhas 83-110 de MarketingTaskKanban.tsx)
+```tsx
+const handleDragEnd = (event: DragEndEvent) => {
+  const { active, over } = event;
+  setActiveTask(null);
 
-### 2. Componente de Visualização: `src/components/marketing/ContentCalendarView.tsx`
+  if (!over) return;
 
-Componente do calendário mensal adaptado que:
-- Busca posts do Instagram e TikTok por data
-- Agrupa posts por plataforma e data
-- Exibe ícones clicáveis com badge de contagem
-- Usa cores oficiais das plataformas (gradiente Instagram, preto TikTok)
+  const taskId = active.id as string;
+  const overId = over.id as string;
 
-### 3. Diálogo de Lista: `src/components/marketing/ContentCalendarPostsDialog.tsx`
+  // Check if dropped on a column
+  if (columns.some((col) => col.status === overId)) {
+    const newStatus = overId as MarketingTaskStatus;
+    const task = tasks.find((t) => t.id === taskId);
+    if (task && task.status !== newStatus) {
+      onStatusChange(taskId, newStatus);  // ← Só muda status
+    }
+    return;
+  }
 
-Modal que aparece ao clicar em uma plataforma com múltiplos posts:
-- Lista os títulos/legendas dos posts daquela data
-- Cada item é clicável e redireciona para `/social-media` com o post selecionado
+  // Check if dropped on another task
+  const overTask = tasks.find((t) => t.id === overId);
+  if (overTask) {
+    const task = tasks.find((t) => t.id === taskId);
+    if (task && task.status !== overTask.status) {
+      onStatusChange(taskId, overTask.status);  // ← Também só muda status
+    }
+    // ← FALTA: Reordenar cards na mesma coluna!
+  }
+};
+```
 
-### 4. Hook de Dados: `src/hooks/useContentCalendarData.tsx`
+### O Que Está Faltando
+1. Uso de `arrayMove` do `@dnd-kit/sortable` para reordenar localmente
+2. Chamada para persistir a nova ordem no banco de dados
+3. Callback `onReorder` para atualizar `display_order` das tarefas
 
-Hook que:
-- Busca posts do Instagram e TikTok para o mês selecionado
-- Agrupa por data e plataforma
-- Retorna estrutura otimizada para o calendário
+---
+
+## Problema 2: Subtarefas Não Têm Drag-and-Drop Implementado
+
+### Causa Raiz
+O componente `SubtaskList.tsx` **NÃO implementa drag-and-drop**. O ícone `GripVertical` aparece visualmente mas é apenas decorativo:
+
+```tsx
+// Linha 124 de SubtaskList.tsx - Apenas decorativo, sem funcionalidade
+<GripVertical className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 cursor-grab" />
+```
+
+Não há:
+- `DndContext` envolvendo a lista
+- `SortableContext` para os itens
+- `useSortable` hook em cada item de subtarefa
+- Handler `onDragEnd` para reordenar
+
+---
+
+## Solução Proposta
+
+### Mudança 1: Adicionar Reordenação de Tarefas no Kanban
+
+**Arquivo**: `src/components/marketing/tasks/MarketingTaskKanban.tsx`
+
+Adicionar:
+- Import de `arrayMove` do `@dnd-kit/sortable`
+- Nova prop `onReorderTasks` para persistir a ordem
+- Lógica em `handleDragEnd` para reordenar tasks na mesma coluna
+
+**Arquivo**: `src/hooks/useMarketingTasks.ts`
+
+Adicionar nova mutation `reorderTasks` para atualizar `display_order` de múltiplas tarefas em batch.
+
+**Arquivo**: `src/components/marketing/tasks/MarketingTasksTab.tsx`
+
+Passar callback `onReorderTasks` para o componente Kanban.
+
+### Mudança 2: Implementar Drag-and-Drop de Subtarefas
+
+**Arquivo**: `src/components/marketing/tasks/SubtaskList.tsx`
+
+Refatorar completamente para adicionar:
+- `DndContext` com sensors configurados
+- `SortableContext` com `verticalListSortingStrategy`
+- Novo componente `SortableSubtaskItem` com `useSortable`
+- Handler `handleDragEnd` usando `arrayMove`
+- Chamada ao hook para persistir nova ordem
+
+**Arquivo**: `src/hooks/useMarketingSubtasks.ts`
+
+Adicionar mutation `reorderSubtasks` para atualizar `display_order` em batch.
 
 ---
 
 ## Arquivos a Modificar
 
-### 1. `src/config/sectors.ts`
+| Arquivo | Tipo de Mudança |
+|---------|-----------------|
+| `src/components/marketing/tasks/MarketingTaskKanban.tsx` | Adicionar reordenação intra-coluna |
+| `src/components/marketing/tasks/MarketingTasksTab.tsx` | Passar callback de reorder |
+| `src/hooks/useMarketingTasks.ts` | Adicionar mutation `reorderTasks` |
+| `src/components/marketing/tasks/SubtaskList.tsx` | Implementar DnD completo |
+| `src/hooks/useMarketingSubtasks.ts` | Adicionar mutation `reorderSubtasks` |
 
-Adicionar nova entrada no navItems do Marketing:
+---
+
+## Detalhes Técnicos
+
+### Mutation de Reordenação (Exemplo para Tarefas)
 
 ```typescript
-navItems: [
-  { to: "/marketing", icon: CalendarDays, label: "Calendário Anual" },
-  { to: "/content-calendar", icon: LayoutGrid, label: "Conteúdo" }, // Nome curto para caber
-  { to: "/social-media", icon: Instagram, label: "Social Media" },
-  { to: "/marketing-tasks", icon: ClipboardList, label: "Tarefas" },
-  { to: "/notifications", icon: Bell, label: "Notificações" },
-]
+const reorderTasks = useMutation({
+  mutationFn: async (updates: { id: string; display_order: number }[]) => {
+    for (const update of updates) {
+      await supabase
+        .from("marketing_tasks")
+        .update({ display_order: update.display_order })
+        .eq("id", update.id);
+    }
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["marketing-tasks"] });
+  },
+});
 ```
 
-O label "Conteúdo" (ou "Cal. Conteúdo") garante que caiba no menu lateral sem modificar seu tamanho.
-
-### 2. `src/App.tsx`
-
-Adicionar nova rota:
+### Handler de DragEnd para Kanban (com reordenação)
 
 ```typescript
-const ContentCalendar = lazy(() => import("./pages/ContentCalendar"));
-// ...
-<Route path="/content-calendar" element={<ContentCalendar />} />
+const handleDragEnd = (event: DragEndEvent) => {
+  const { active, over } = event;
+  setActiveTask(null);
+
+  if (!over) return;
+
+  const taskId = active.id as string;
+  const overId = over.id as string;
+  const task = tasks.find((t) => t.id === taskId);
+  
+  if (!task) return;
+
+  // Dropped on a column
+  if (columns.some((col) => col.status === overId)) {
+    const newStatus = overId as MarketingTaskStatus;
+    if (task.status !== newStatus) {
+      onStatusChange(taskId, newStatus);
+    }
+    return;
+  }
+
+  // Dropped on another task
+  const overTask = tasks.find((t) => t.id === overId);
+  if (!overTask) return;
+
+  if (task.status === overTask.status) {
+    // REORDER within same column
+    const columnTasks = tasksByStatus[task.status];
+    const oldIndex = columnTasks.findIndex((t) => t.id === taskId);
+    const newIndex = columnTasks.findIndex((t) => t.id === overId);
+    
+    if (oldIndex !== newIndex) {
+      const reordered = arrayMove(columnTasks, oldIndex, newIndex);
+      const updates = reordered.map((t, index) => ({
+        id: t.id,
+        display_order: index,
+      }));
+      onReorderTasks(updates);
+    }
+  } else {
+    // Move to different column
+    onStatusChange(taskId, overTask.status);
+  }
+};
+```
+
+### Estrutura SortableSubtaskItem para Subtarefas
+
+```tsx
+function SortableSubtaskItem({ subtask, onToggle, onEdit, onDelete }: Props) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: subtask.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="...">
+      <div {...attributes} {...listeners}>
+        <GripVertical className="h-3 w-3 cursor-grab" />
+      </div>
+      {/* resto do conteúdo */}
+    </div>
+  );
+}
 ```
 
 ---
 
-## Design Visual dos Ícones no Calendário
-
-Cada célula do dia exibirá:
-
-```text
-┌─────────────────┐
-│  5              │  ← Número do dia
-│                 │
-│  📸 2  🎵 1    │  ← Ícones com badges (estilo notificação)
-│                 │
-└─────────────────┘
-```
-
-### Estilo dos Ícones
-
-**Instagram**:
-- Ícone com gradiente característico (rosa/laranja/roxo)
-- Badge pequeno vermelho com número no canto superior direito
-
-**TikTok**:
-- Ícone preto com detalhes em ciano/rosa (cores oficiais)
-- Badge pequeno vermelho com número no canto superior direito
-
-### Comportamento ao Clicar
-
-| Cenário | Ação |
-|---------|------|
-| 1 post na plataforma | Redireciona direto para `/social-media` com a plataforma e post selecionados |
-| 2+ posts na plataforma | Abre diálogo com lista de posts; ao clicar em um, redireciona |
-
----
-
-## Fluxo de Navegação
+## Fluxo de Reordenação Corrigido
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                   CALENDÁRIO DE CONTEÚDO                    │
+│                    TAREFAS DO KANBAN                        │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  Usuário clica no ícone Instagram (1 post)                 │
-│  └──▶ Navega para /social-media?platform=instagram          │
-│       └──▶ Abre aba Instagram com o post em destaque        │
+│  Usuário arrasta Card A sobre Card B (mesma coluna)        │
+│  └──▶ handleDragEnd detecta mesmo status                   │
+│       └──▶ arrayMove reordena array local                  │
+│            └──▶ onReorderTasks persiste no banco           │
+│                 └──▶ invalidateQueries atualiza UI         │
 │                                                             │
-│  Usuário clica no ícone TikTok (3 posts)                   │
-│  └──▶ Abre diálogo com lista dos 3 posts                   │
-│       └──▶ Usuário clica em um post específico             │
-│            └──▶ Navega para /social-media?platform=tiktok   │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│                    SUBTAREFAS                               │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  Usuário arrasta Subtarefa 1 sobre Subtarefa 3             │
+│  └──▶ DndContext detecta dragEnd                           │
+│       └──▶ arrayMove reordena array                        │
+│            └──▶ reorderSubtasks persiste ordem             │
+│                 └──▶ invalidateQueries atualiza UI         │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Estrutura de Dados
+## Resumo das Correções
 
-### Tipo para Posts Agrupados
-
-```typescript
-interface ContentByDate {
-  [dateKey: string]: {
-    instagram: {
-      count: number;
-      posts: Array<{
-        id: string;
-        caption: string | null;
-        thumbnail_url: string | null;
-        posted_at: string;
-      }>;
-    };
-    tiktok: {
-      count: number;
-      posts: Array<{
-        id: string;
-        caption: string | null;
-        thumbnail_url: string | null;
-        posted_at: string;
-      }>;
-    };
-  };
-}
-```
-
----
-
-## Detalhes Técnicos
-
-### Query para Buscar Posts
-
-O hook buscará posts de ambas as tabelas em paralelo:
-
-```typescript
-// Instagram
-const { data: igPosts } = await supabase
-  .from('instagram_posts')
-  .select('id, caption, thumbnail_url, posted_at, profile_id')
-  .gte('posted_at', startOfMonth)
-  .lte('posted_at', endOfMonth);
-
-// TikTok  
-const { data: tkPosts } = await supabase
-  .from('tiktok_posts')
-  .select('id, caption, thumbnail_url, posted_at, profile_id')
-  .gte('posted_at', startOfMonth)
-  .lte('posted_at', endOfMonth);
-```
-
-### Cores Oficiais das Plataformas
-
-**Instagram** (gradiente):
-- Background: `linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)`
-
-**TikTok**:
-- Preto principal: `#000000`
-- Ciano: `#00f2ea`
-- Rosa: `#ff0050`
-
----
-
-## Resumo dos Arquivos
-
-| Tipo | Arquivo | Descrição |
-|------|---------|-----------|
-| Criar | `src/pages/ContentCalendar.tsx` | Página principal |
-| Criar | `src/components/marketing/ContentCalendarView.tsx` | Grid do calendário |
-| Criar | `src/components/marketing/ContentCalendarPostsDialog.tsx` | Diálogo de lista |
-| Criar | `src/hooks/useContentCalendarData.tsx` | Hook de dados |
-| Modificar | `src/config/sectors.ts` | Adicionar item no menu |
-| Modificar | `src/App.tsx` | Adicionar rota |
+| Problema | Componente | Correção |
+|----------|------------|----------|
+| Tarefas voltam à posição original | `MarketingTaskKanban.tsx` | Adicionar lógica de reorder com `arrayMove` e persistência |
+| Subtarefas não se movem | `SubtaskList.tsx` | Implementar DnD completo com `DndContext`, `SortableContext`, `useSortable` |
 
 ---
 
 ## Resultado Esperado
 
-- Nova aba "Conteúdo" visível no menu lateral do Marketing
-- Calendário mensal mostrando ícones de Instagram/TikTok nos dias com publicações
-- Badges com contagem sutil (estilo notificação)
-- Navegação intuitiva para a análise de cada post
-- Visualização rápida da distribuição de conteúdo ao longo do mês
+Após implementação:
+1. Arrastar tarefa dentro da mesma coluna reordena permanentemente
+2. Arrastar tarefa para outra coluna muda status (já funciona)
+3. Arrastar subtarefa reordena permanentemente a lista
+4. Ícone GripVertical funciona como handle de drag real
