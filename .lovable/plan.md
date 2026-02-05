@@ -1,17 +1,26 @@
 
-
-# Correção: Ocultar Barra de Trial no Modo Foco/Tela Cheia
+# Otimização do Layout do Modo Foco para TV
 
 ## Problema Identificado
+Atualmente, o layout do Modo Foco/Tela Cheia possui:
+- Conteúdo alinhado ao topo com muito espaço em branco embaixo
+- Cards de KPI pequenos para uma tela de TV grande
+- Container limitado que não aproveita bem a tela
 
-O `TrialBanner` está sendo renderizado no `AppLayout` (linha 56) como um elemento irmão do container onde os dashboards são exibidos. Mesmo com `z-[9999]`, o overlay do Modo Foco não consegue cobrir o banner porque:
+## Solução Proposta
 
-1. **No Modo Foco**: O overlay é renderizado dentro do dashboard, que é um descendente profundo na árvore DOM. O z-index funciona relativamente ao contexto de empilhamento.
-2. **Na Tela Cheia**: O `requestFullscreen()` é aplicado ao `document.documentElement`, colocando TODA a página em fullscreen, incluindo o banner.
+### 1. Centralização Vertical e Horizontal
+Usar Flexbox para centralizar todo o conteúdo na viewport, eliminando o espaço em branco excessivo.
 
-## Solução
+### 2. Zoom nos KPIs
+Aumentar o tamanho dos cards de KPI para melhor visualização em TV:
+- Ícones maiores (de `h-6 w-6` para `h-8 w-8`)
+- Padding ampliado nos cards
+- Fonte dos valores maior (de `text-3xl` para `text-4xl`)
 
-Utilizar **React Portal** para renderizar o overlay do Modo Foco diretamente no `body`, garantindo que ele fique acima de todos os elementos da aplicação.
+### 3. Layout Responsivo para Tela Cheia
+- Container com largura máxima maior (`max-w-[90vw]`)
+- Centralização vertical usando `min-h-full flex flex-col justify-center`
 
 ---
 
@@ -19,68 +28,89 @@ Utilizar **React Portal** para renderizar o overlay do Modo Foco diretamente no 
 
 | Arquivo | Alteração |
 |---------|-----------|
-| `src/components/marketing/SocialMediaDashboard.tsx` | Envolver overlay com Portal |
-| `src/components/marketing/TikTokDashboard.tsx` | Envolver overlay com Portal |
+| `SocialMediaDashboard.tsx` | Centralizar conteúdo, ampliar KPIs |
+| `TikTokDashboard.tsx` | Mesmas alterações |
 
 ---
 
-## Implementação Técnica
+## Mudanças Específicas
 
-### Importar createPortal do React DOM
-```typescript
-import { createPortal } from "react-dom";
-```
-
-### Envolver o overlay com Portal
+### Container Principal
 ```tsx
 // Antes
-{isFocusMode && (
-  <div className="fixed inset-0 z-[9999] bg-background overflow-auto">
-    ...
-  </div>
-)}
+<div className="container mx-auto py-8 px-6 max-w-7xl">
 
 // Depois
-{isFocusMode && createPortal(
-  <div className="fixed inset-0 z-[9999] bg-background overflow-auto">
-    ...
-  </div>,
-  document.body
-)}
+<div className="min-h-full flex flex-col justify-center px-8 py-6 mx-auto max-w-[95vw]">
 ```
 
-### Aplicar Fullscreen no container do overlay (não no documento)
-```typescript
-// Criar ref para o container do modo foco
-const focusModeRef = useRef<HTMLDivElement>(null);
+### Cards de KPI
+```tsx
+// Antes
+<CardContent className="p-6">
+  <div className="flex items-center gap-4">
+    <div className="p-3 rounded-lg bg-primary/10">
+      <Users className="h-6 w-6 text-primary" />
+    </div>
+    <div>
+      <p className="text-sm text-muted-foreground">Total Seguidores</p>
+      <p className="text-3xl font-bold">{formatNumber(totals.totalFollowers)}</p>
+    </div>
+  </div>
+</CardContent>
 
-const toggleFullscreen = async () => {
-  if (!document.fullscreenElement) {
-    // Aplicar fullscreen no container do modo foco, não no documento
-    await focusModeRef.current?.requestFullscreen();
-  } else if (document.exitFullscreen) {
-    await document.exitFullscreen();
-  }
-};
+// Depois
+<CardContent className="p-8">
+  <div className="flex items-center gap-5">
+    <div className="p-4 rounded-xl bg-primary/10">
+      <Users className="h-8 w-8 text-primary" />
+    </div>
+    <div>
+      <p className="text-base text-muted-foreground">Total Seguidores</p>
+      <p className="text-4xl font-bold">{formatNumber(totals.totalFollowers)}</p>
+    </div>
+  </div>
+</CardContent>
+```
 
-// Na renderização
-{isFocusMode && createPortal(
-  <div 
-    ref={focusModeRef}
-    className="fixed inset-0 z-[9999] bg-background overflow-auto"
-  >
-    ...
-  </div>,
-  document.body
-)}
+### Grid dos KPIs
+```tsx
+// Antes
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+// Depois
+<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
 ```
 
 ---
 
-## Resultado Esperado
+## Resultado Visual Esperado
 
-1. **Modo Foco**: O overlay será renderizado como filho direto do `body`, ficando acima do `TrialBanner`
-2. **Tela Cheia**: Apenas o conteúdo do overlay entrará em fullscreen, não a página inteira
-3. **Barra de Trial**: Completamente oculta em ambos os modos
-4. **Funcionalidade mantida**: ESC, botão fechar, filtro de período - tudo continua funcionando
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                                              [Período ▾] [⛶] [X]       │
+│                                                                        │
+│  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐ ┌──────────┐│
+│  │ 👥              │ │ 📊              │ │ 📝              │ │ 📈        ││
+│  │ Total           │ │ Engaj.          │ │ Total           │ │ Perfis   ││
+│  │ Seguidores      │ │ Médio           │ │ Posts           │ │ Ativos   ││
+│  │ 286.7K          │ │ 5.6%            │ │ 4.9K            │ │ 6        ││
+│  └────────────────┘ └────────────────┘ └────────────────┘ └──────────┘│
+│                                                                        │
+│  ┌────────────────────────────────────────────────────────────────────┐│
+│  │ Métricas por Perfil                                                ││
+│  ├────────────────────────────────────────────────────────────────────┤│
+│  │ @evertonpieri_ │ 144.2K │ 215 │ 1.8K │ 7.7%  │ 2.5K │ 61 │ 1      ││
+│  │ @abrunapieri   │ 102.9K │ 161 │ 1.5K │ 25.1% │ 917  │ 43 │ 0      ││
+│  │ ...                                                                ││
+│  └────────────────────────────────────────────────────────────────────┘│
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+```
 
+## Benefícios
+
+1. **Centralização**: Conteúdo posicionado no centro da tela, eliminando espaço em branco desnecessário
+2. **Zoom Visual**: KPIs maiores e mais legíveis para visualização à distância
+3. **Aproveitamento de Tela**: Container usa 95% da viewport width
+4. **Hierarquia Visual**: Títulos e valores com fontes ampliadas
