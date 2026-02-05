@@ -1,182 +1,206 @@
 
+# Plano: Isolamento de Conversas por Usuário Responsável no ROY zAPP
 
-# Correção: Diálogo Fechando e Subtarefas Desaparecendo no Marketing
+## Resumo da Mudança
 
-## Problemas Identificados
+Implementar um sistema onde cada atendente só vê suas próprias conversas na aba "Minhas", enquanto Admins e Gestores mantêm visibilidade total para supervisão.
 
-### Problema 1: Diálogo fecha após adicionar subtarefa
-**Causa Raiz**: Os botões dentro do `SubtaskList.tsx` não têm `type="button"` explícito, e o componente está renderizado dentro de um `<form>` no `MarketingTaskDialog.tsx`. 
+## Comportamento Atual vs. Novo
 
-Em HTML, um `<button>` sem atributo `type` dentro de um `<form>` tem por padrão `type="submit"`, o que causa o envio do formulário principal.
-
-**Código Problemático (SubtaskList.tsx linhas 167-180)**:
-```tsx
-<Button size="sm" className="h-8" onClick={handleAddSubtask}>
-  <Check className="h-4 w-4" />
-</Button>
-<Button
-  size="sm"
-  variant="ghost"
-  className="h-8"
-  onClick={() => {
-    setNewSubtaskTitle("");
-    setIsAdding(false);
-  }}
->
-  <X className="h-4 w-4" />
-</Button>
-```
-
-Quando o usuário clica no botão "check" para adicionar a subtarefa:
-1. O `onClick` é executado (`handleAddSubtask`)
-2. Mas o evento também propaga e dispara `onSubmit` do formulário pai
-3. O `handleSubmit` do `MarketingTaskDialog` é executado
-4. Ao final do submit, `onOpenChange(false)` fecha o diálogo
-
-### Problema 2: Subtarefas desaparecendo
-
-**Causa Raiz**: Após a inserção, o cache é invalidado com `invalidateQueries`, mas como o diálogo está fechando simultaneamente (devido ao problema 1), a query de subtarefas fica em um estado inconsistente. Quando o usuário reabre a tarefa, a query pode:
-- Usar dados obsoletos do cache
-- Não ter terminado de buscar os novos dados
-- Ter o `taskId` momentaneamente `null` durante a transição
-
-Além disso, há um possível problema de propagação de eventos nos botões de edição e exclusão de subtarefas (linhas 144-151):
-```tsx
-<Button
-  variant="ghost"
-  size="sm"
-  className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-  onClick={() => deleteSubtask.mutate(subtask.id)}
->
-```
+| Aspecto | Comportamento Atual | Novo Comportamento |
+|---------|--------------------|--------------------|
+| Aba "Minhas" | Admin vê todas as conversas atribuídas; outros veem apenas as suas | **Todos** só veem as conversas onde são o `agent_id` atribuído |
+| Aba "Fila" | Mostra todas as conversas sem agente | Mantém igual (conversas aguardando atribuição) |
+| Admin/Gestor | Vê tudo na aba "Minhas" | Vê tudo em **ambas** as abas (pode monitorar todas) |
+| Puxar conversa já atribuída | Sem verificação | **Novo**: Exibe aviso: "Este contato já está em atendimento por {nome}" |
 
 ---
 
-## Solução Proposta
+## Mudanças Detalhadas
 
-### Correção 1: Adicionar `type="button"` em todos os botões do SubtaskList
+### 1. Filtro da Aba "Minhas" (RoyZapp.tsx)
 
-Isso impede que qualquer botão dentro da lista de subtarefas dispare o submit do formulário principal.
+**Arquivo**: `src/pages/RoyZapp.tsx`
+**Localização**: Linhas ~3688-3698 (filteredAssignments useMemo)
 
-**Alterações em SubtaskList.tsx**:
-
-| Linha | Antes | Depois |
-|-------|-------|--------|
-| 167 | `<Button size="sm" className="h-8" onClick={handleAddSubtask}>` | `<Button type="button" size="sm" className="h-8" onClick={handleAddSubtask}>` |
-| 170-175 | `<Button size="sm" variant="ghost" className="h-8" onClick={...}>` | `<Button type="button" size="sm" variant="ghost" className="h-8" onClick={...}>` |
-| 144-148 | `<Button variant="ghost" size="sm" ... onClick={...}>` | `<Button type="button" variant="ghost" size="sm" ... onClick={...}>` |
-| 183-191 | `<Button variant="ghost" size="sm" ... onClick={() => setIsAdding(true)}>` | `<Button type="button" variant="ghost" size="sm" ... onClick={() => setIsAdding(true)}>` |
-
-### Correção 2: Manter o input aberto para adicionar múltiplas subtarefas
-
-Atualmente, após adicionar uma subtarefa, o estado `isAdding` é setado para `false` (linha 30), escondendo o campo de input. Para melhorar a experiência:
-
-**Alterar comportamento (linha 29-30)**:
+Atualmente:
 ```tsx
-// ANTES
-setNewSubtaskTitle("");
-setIsAdding(false);
-
-// DEPOIS
-setNewSubtaskTitle("");
-// Manter isAdding = true para permitir adicionar mais subtarefas
-// Só fechar com ESC ou clicando no X
+const matchesTab = (filterArchived || filterStatus === "closed" || skipTabFilterForGroups) ? true : (
+  inboxTab === "mine" 
+    ? (isAdmin || a.agent_id === currentAgent?.id) // Admins see all assigned
+    : a.agent_id === null
+);
 ```
 
-### Correção 3: Adicionar `e.stopPropagation()` nos handlers
+Alteração proposta:
+```tsx
+// Verificar se é gestor (além de admin)
+const isManager = currentUser?.team_role_name === "Gestor";
+const hasFullVisibility = isAdmin || isManager;
 
-Para garantir que eventos de clique não propaguem para elementos pai, adicionar `stopPropagation` nos handlers críticos:
+const matchesTab = (filterArchived || filterStatus === "closed" || skipTabFilterForGroups) ? true : (
+  inboxTab === "mine" 
+    ? (hasFullVisibility ? true : a.agent_id === currentAgent?.id) // Apenas Admin/Gestor veem tudo
+    : hasFullVisibility ? true : a.agent_id === null // Admin/Gestor também veem fila completa
+);
+```
+
+**Resultado**: Atendentes comuns só veem conversas atribuídas a eles; Admin/Gestores veem todas.
+
+---
+
+### 2. Verificação ao Puxar Conversa Já Atribuída
+
+**Arquivo**: `src/pages/RoyZapp.tsx`
+**Funções afetadas**: `assignToMe` (~linha 1182), `pullFromQueue` (~linha 1219)
+
+Adicionar verificação antes de atribuir:
 
 ```tsx
-const handleAddSubtask = async (e?: React.MouseEvent) => {
-  e?.stopPropagation();
-  e?.preventDefault();
-  if (!newSubtaskTitle.trim() || !taskId) return;
-  // ... resto do código
+const assignToMe = async (assignmentId: string) => {
+  if (!currentAgent) {
+    toast.error("Você não está cadastrado como atendente");
+    return;
+  }
+
+  // NOVA VERIFICAÇÃO: Checar se já está atribuída a outro agente
+  const assignment = assignments.find(a => a.id === assignmentId);
+  if (assignment?.agent_id && assignment.agent_id !== currentAgent.id) {
+    const agentName = getAgentName(assignment.agent_id) || "outro atendente";
+    toast.warning(`Este contato já está em atendimento por ${agentName}`);
+    return;
+  }
+
+  // ... resto do código existente
 };
 ```
 
----
-
-## Arquivos a Modificar
-
-1. **`src/components/marketing/tasks/SubtaskList.tsx`**
+Para `pullFromQueue`, já filtra apenas conversas sem agente, mas podemos adicionar verificação de segurança similar.
 
 ---
 
-## Resumo das Mudanças
+### 3. Verificação ao Criar Nova Conversa com Contato
 
-| Localização | Mudança | Motivo |
-|-------------|---------|--------|
-| Linha 22-31 | Adicionar `e?.stopPropagation()` e `e?.preventDefault()` | Previne propagação de eventos |
-| Linha 29-30 | Remover `setIsAdding(false)` | Permite adicionar múltiplas subtarefas sem fechar o input |
-| Linha 144 | Adicionar `type="button"` | Previne submit do form |
-| Linha 167 | Adicionar `type="button"` | Previne submit do form |
-| Linha 170 | Adicionar `type="button"` | Previne submit do form |
-| Linha 183 | Adicionar `type="button"` | Previne submit do form |
+**Arquivo**: `src/pages/RoyZapp.tsx`
+**Função**: `createConversationWithContact` e `createConversationFromUrl`
 
----
-
-## Detalhes Técnicos
-
-### Por que isso acontece?
-
-O componente `SubtaskList` está sendo renderizado **dentro** do `<form>` do `MarketingTaskDialog`:
+Quando um usuário tenta iniciar conversa com um contato que já tem conversa ativa com outro agente:
 
 ```tsx
-// MarketingTaskDialog.tsx linha 172-296
-<form onSubmit={handleSubmit} className="px-6 pb-6 space-y-4">
-  {/* ... outros campos ... */}
-  <SubtaskList taskId={isEditing ? taskId : null} />
-  {/* ... */}
-</form>
+// Antes de criar ou abrir conversa:
+if (activeAssignment && activeAssignment.agent_id && activeAssignment.agent_id !== currentAgent?.id) {
+  const agentName = getAgentName(activeAssignment.agent_id) || "outro atendente";
+  toast.warning(`Este contato já está em atendimento por ${agentName}`);
+  // Não abre a conversa para atendentes comuns
+  // Admin/Gestor pode continuar (apenas visualizar)
+  if (!isAdmin && currentUser?.team_role_name !== "Gestor") {
+    setCreatingConversation(false);
+    return;
+  }
+}
 ```
 
-Botões sem `type="button"` explícito são interpretados como `type="submit"` pelo navegador. Quando clicados, eles disparam o evento `submit` do formulário, mesmo que tenham um `onClick` handler.
+---
 
-### Diagrama do Fluxo Atual (COM BUG)
+### 4. Atualizar Contagens (Stats)
+
+**Arquivo**: `src/pages/RoyZapp.tsx`
+**Localização**: Stats useMemo (~linha 3740)
+
+Manter as contagens corretas para cada tipo de usuário:
+
+```tsx
+const stats = useMemo(() => {
+  const hasFullVisibility = isAdmin || currentUser?.team_role_name === "Gestor";
+  
+  // Para admin/gestor: contar todas as conversas atribuídas
+  // Para atendente comum: contar apenas suas conversas
+  const myConversations = hasFullVisibility 
+    ? assignments.filter((a) => a.agent_id !== null && a.status !== "closed").length
+    : assignments.filter((a) => a.agent_id === currentAgent?.id && a.status !== "closed").length;
+  
+  // ... resto das contagens
+}, [agents, assignments, currentAgent?.id, isAdmin, currentUser?.team_role_name]);
+```
+
+---
+
+### 5. Atualizar ZappConversationList.tsx
+
+**Arquivo**: `src/components/royzapp/ZappConversationList.tsx`
+
+Adicionar prop para controlar visibilidade e ajustar o filtro:
+
+```tsx
+interface ZappConversationListProps {
+  // ... props existentes
+  hasFullVisibility?: boolean; // Novo
+}
+```
+
+Ajustar filteredAssignments:
+```tsx
+const matchesTab = isAdmin || hasFullVisibility
+  ? true // Admin/Gestor vê tudo
+  : (inboxTab === "mine" 
+    ? a.agent_id === currentAgent?.id
+    : a.agent_id === null);
+```
+
+---
+
+## Fluxo de Visibilidade Final
 
 ```text
-[Usuário clica no botão ✓]
-           │
-           ▼
-[onClick: handleAddSubtask()]
-           │
-           ├─────────────────────────────┐
-           ▼                             ▼
-[createSubtask.mutate]          [Evento submit propaga]
-           │                             │
-           ▼                             ▼
-[invalidateQueries]              [handleSubmit() executa]
-                                         │
-                                         ▼
-                                  [onOpenChange(false)]
-                                         │
-                                         ▼
-                                 [Diálogo FECHA] ← BUG!
+┌────────────────────────────────────────────────────────────────┐
+│                    USUÁRIO ACESSA ROY zAPP                     │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  ┌─ É Admin ou Gestor? ─┐                                     │
+│  │                      │                                      │
+│  │  SIM                 │  NÃO                                │
+│  │  ▼                   │  ▼                                   │
+│  │  Vê TODAS as         │  Vê APENAS suas                     │
+│  │  conversas em        │  conversas na                       │
+│  │  todas as abas       │  aba "Minhas"                       │
+│  │                      │                                      │
+│  │  Pode abrir          │  Aba "Fila" mostra                  │
+│  │  qualquer conversa   │  conversas SEM agente               │
+│  │  (modo leitura)      │                                      │
+│  │                      │  Ao tentar puxar                    │
+│  │                      │  conversa atribuída:                │
+│  │                      │  → Aviso: "Em atendimento           │
+│  │                      │     por {nome}"                     │
+│  └──────────────────────┴─────────────────────────────────────┘
 ```
 
-### Diagrama do Fluxo Corrigido
+---
 
-```text
-[Usuário clica no botão ✓ (type="button")]
-           │
-           ▼
-[onClick: handleAddSubtask()]
-           │
-           ▼
-[e.stopPropagation() + e.preventDefault()]
-           │
-           ▼
-[createSubtask.mutate]
-           │
-           ▼
-[invalidateQueries → subtasks recarregadas]
-           │
-           ▼
-[Input limpo, MANTÉM isAdding=true]
-           │
-           ▼
-[Usuário pode adicionar mais subtarefas!] ← CORRIGIDO
-```
+## Arquivos Modificados
 
+| Arquivo | Tipo de Mudança |
+|---------|-----------------|
+| `src/pages/RoyZapp.tsx` | Lógica de filtro, verificações de atribuição, stats |
+| `src/components/royzapp/ZappConversationList.tsx` | Prop hasFullVisibility e ajuste de filtro |
+
+---
+
+## Pontos de Atenção
+
+1. **Sem alteração no banco de dados**: A mudança é puramente frontend, usando o campo `agent_id` já existente.
+
+2. **Realtime continua funcionando**: Notificações de novas mensagens respeitarão a visibilidade (apenas o agente atribuído ou Admin/Gestor receberá).
+
+3. **Gestores identificados por `team_role_name === "Gestor"`**: Consistente com o padrão existente no sistema.
+
+4. **Grupos mantêm comportamento especial**: Grupos (is_group === true) continuam visíveis para todos no setor, pois são conversas coletivas.
+
+---
+
+## Testes Recomendados
+
+1. Como atendente comum: verificar que só vê suas conversas na aba "Minhas"
+2. Tentar puxar conversa já atribuída a outro atendente → deve aparecer aviso
+3. Como Admin/Gestor: verificar visibilidade total de todas as conversas
+4. Verificar que grupos continuam visíveis para todos
+5. Testar transferência de conversa entre agentes
