@@ -315,9 +315,9 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
         onMouseEnter={() => setShowActions(true)}
         onMouseLeave={() => setShowActions(false)}
       >
-        {/* Container with bubble + actions - uses flexbox for relative positioning */}
+          {/* Container with bubble + actions - uses flexbox for relative positioning */}
         <div className={cn(
-          "flex items-center gap-1 max-w-[65%]",
+          "flex items-center gap-1 max-w-[65%] w-full",
           message.is_from_client ? "flex-row" : "flex-row-reverse"
         )}>
           {/* Message bubble */}
@@ -603,7 +603,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
               </div>
             </div>
           ) : renderedContent && (
-            <p className="text-sm whitespace-pre-wrap break-words overflow-hidden">
+            <p className="text-sm whitespace-pre-wrap break-words break-all overflow-hidden">
               {renderedContent}
             </p>
           )}
