@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -11,7 +11,10 @@ import {
   Minus,
   ExternalLink,
   BarChart3,
+  Maximize2,
+  X,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -58,6 +61,18 @@ export function SocialMediaDashboard() {
   const [monthFilter, setMonthFilter] = useState<string>('3');
   const [sortField, setSortField] = useState<SortField>('followers');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [isFocusMode, setIsFocusMode] = useState(false);
+
+  // ESC key listener for focus mode
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFocusMode) {
+        setIsFocusMode(false);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isFocusMode]);
 
   // Calculate date range based on filter
   const dateRange = useMemo(() => {
@@ -287,17 +302,27 @@ export function SocialMediaDashboard() {
       {/* Filters */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Visão Consolidada</h2>
-        <Select value={monthFilter} onValueChange={setMonthFilter}>
-          <SelectTrigger className="w-[180px] bg-card">
-            <SelectValue placeholder="Período" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1">Último mês</SelectItem>
-            <SelectItem value="3">Últimos 3 meses</SelectItem>
-            <SelectItem value="6">Últimos 6 meses</SelectItem>
-            <SelectItem value="12">Último ano</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={monthFilter} onValueChange={setMonthFilter}>
+            <SelectTrigger className="w-[180px] bg-card">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Último mês</SelectItem>
+              <SelectItem value="3">Últimos 3 meses</SelectItem>
+              <SelectItem value="6">Últimos 6 meses</SelectItem>
+              <SelectItem value="12">Último ano</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setIsFocusMode(true)}
+            title="Modo Foco (ideal para TV)"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -451,6 +476,172 @@ export function SocialMediaDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Focus Mode Overlay */}
+      {isFocusMode && (
+        <div className="fixed inset-0 z-50 bg-background overflow-auto">
+          <div className="container mx-auto py-8 px-6 max-w-7xl">
+            {/* Close button */}
+            <div className="flex justify-end mb-6">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsFocusMode(false)}
+                className="hover:bg-muted"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
+
+            {/* Period filter */}
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold">Visão Consolidada Instagram</h2>
+              <Select value={monthFilter} onValueChange={setMonthFilter}>
+                <SelectTrigger className="w-[180px] bg-card">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Último mês</SelectItem>
+                  <SelectItem value="3">Últimos 3 meses</SelectItem>
+                  <SelectItem value="6">Últimos 6 meses</SelectItem>
+                  <SelectItem value="12">Último ano</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-primary/10">
+                      <Users className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Seguidores</p>
+                      <p className="text-3xl font-bold">{formatNumber(totals.totalFollowers)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-green-500/10">
+                      <Percent className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Engaj. Médio</p>
+                      <p className="text-3xl font-bold">{totals.avgEngagement}%</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-blue-500/10">
+                      <FileText className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Posts</p>
+                      <p className="text-3xl font-bold">{formatNumber(totals.totalPosts)}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-purple-500/10">
+                      <BarChart3 className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Perfis Ativos</p>
+                      <p className="text-3xl font-bold">{totals.profileCount}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Profiles Table */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xl">Métricas por Perfil</CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30">
+                        <TableHead className="w-[250px]">Perfil</TableHead>
+                        <TableHead className="text-right">Seguidores</TableHead>
+                        <TableHead className="text-right">Seguindo</TableHead>
+                        <TableHead className="text-right">Posts</TableHead>
+                        <TableHead className="text-right">Engaj. %</TableHead>
+                        <TableHead className="text-right">Méd. Curtidas</TableHead>
+                        <TableHead className="text-right">Méd. Comentários</TableHead>
+                        <TableHead className="text-right">Méd. Cliques Link</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortedProfiles.map((profile) => (
+                        <TableRow key={profile.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10 border-2 border-pink-200">
+                                <AvatarImage src={profile.profile_picture_url || undefined} />
+                                <AvatarFallback className="bg-gradient-to-br from-pink-400 to-purple-500 text-white text-sm">
+                                  {profile.username.slice(0, 2).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="font-medium">@{profile.username}</p>
+                                {profile.display_name && (
+                                  <p className="text-xs text-muted-foreground">{profile.display_name}</p>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex flex-col items-end gap-0.5">
+                              <span className="font-medium">{formatNumber(profile.followers_count)}</span>
+                              {getGrowthIndicator(profile.followers_count, profile.followers_previous_count)}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">{formatNumber(profile.following_count)}</TableCell>
+                          <TableCell className="text-right">{formatNumber(profile.posts_count)}</TableCell>
+                          <TableCell className="text-right">
+                            <span
+                              className={cn(
+                                'font-medium',
+                                profile.avg_engagement >= 5
+                                  ? 'text-green-600'
+                                  : profile.avg_engagement >= 2
+                                  ? 'text-amber-600'
+                                  : 'text-muted-foreground'
+                              )}
+                            >
+                              {profile.avg_engagement}%
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">{formatNumber(profile.avg_likes)}</TableCell>
+                          <TableCell className="text-right">{formatNumber(profile.avg_comments)}</TableCell>
+                          <TableCell className="text-right">{formatNumber(profile.avg_link_clicks)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
