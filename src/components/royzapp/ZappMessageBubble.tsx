@@ -603,13 +603,13 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
               </div>
             </div>
           ) : renderedContent && (
-            <p className="text-sm whitespace-pre-wrap break-words break-all overflow-hidden">
+            <p className="text-sm whitespace-pre-wrap break-words overflow-hidden [overflow-wrap:anywhere]">
               {renderedContent}
             </p>
           )}
           {/* Only show "unsupported" if there's no content, no media_url, AND no pending/failed media status */}
           {(!message.content && !message.media_url && !message.media_download_status && !message.media_type) && (
-            <p className="text-sm whitespace-pre-wrap break-words opacity-50">
+            <p className="text-sm whitespace-pre-wrap break-words overflow-hidden [overflow-wrap:anywhere] opacity-50">
               [Mensagem não suportada]
             </p>
           )}
