@@ -11,6 +11,12 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -62,6 +68,7 @@ import {
   Trash2,
   GitMerge,
   Package,
+  Pencil,
   type LucideIcon,
 } from "lucide-react";
 import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
@@ -202,6 +209,8 @@ export function DealDetailSheet({
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
   const [lostReason, setLostReason] = useState("");
+  const [wonAtPopoverOpen, setWonAtPopoverOpen] = useState(false);
+  const [updatingWonAt, setUpdatingWonAt] = useState(false);
   
   const { mergeDeals } = useDealMerge();
 
@@ -713,9 +722,45 @@ export function DealDetailSheet({
                           <Trophy className="h-3.5 w-3.5 text-emerald-500" />
                           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Ganho em</span>
                         </div>
-                        <p className="text-lg font-bold text-emerald-500">
-                          {format(new Date(deal.won_at), "dd/MM/yy")}
-                        </p>
+                        <Popover open={wonAtPopoverOpen} onOpenChange={setWonAtPopoverOpen}>
+                          <PopoverTrigger asChild>
+                            <button 
+                              className="flex items-center gap-1.5 text-lg font-bold text-emerald-500 hover:underline cursor-pointer group"
+                              disabled={updatingWonAt}
+                            >
+                              {format(new Date(deal.won_at), "dd/MM/yy")}
+                              <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={new Date(deal.won_at)}
+                              onSelect={async (newDate: Date | undefined) => {
+                                if (!deal || !newDate) return;
+                                setUpdatingWonAt(true);
+                                try {
+                                  const { error } = await supabase
+                                    .from("deals")
+                                    .update({ won_at: newDate.toISOString() })
+                                    .eq("id", deal.id);
+                                  if (error) throw error;
+                                  toast.success("Data de fechamento atualizada!");
+                                  setWonAtPopoverOpen(false);
+                                  onDealUpdated?.();
+                                } catch (error) {
+                                  console.error("Error updating won_at:", error);
+                                  toast.error("Erro ao atualizar data");
+                                } finally {
+                                  setUpdatingWonAt(false);
+                                }
+                              }}
+                              locale={ptBR}
+                              disabled={updatingWonAt}
+                              className="pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
                       </>
                     ) : (
                       <>
