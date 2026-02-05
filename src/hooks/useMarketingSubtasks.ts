@@ -159,11 +159,28 @@ export function useMarketingSubtasks(taskId: string | null) {
         if (error) throw error;
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["marketing-subtasks", taskId] });
+    onMutate: async (updates) => {
+      await queryClient.cancelQueries({ queryKey: ["marketing-subtasks", taskId] });
+      const previousSubtasks = queryClient.getQueryData<MarketingSubtask[]>(["marketing-subtasks", taskId]);
+
+      queryClient.setQueryData<MarketingSubtask[]>(["marketing-subtasks", taskId], (old) => {
+        if (!old) return old;
+        return old.map((subtask) => {
+          const update = updates.find((u) => u.id === subtask.id);
+          return update ? { ...subtask, display_order: update.display_order } : subtask;
+        }).sort((a, b) => a.display_order - b.display_order);
+      });
+
+      return { previousSubtasks };
     },
-    onError: (error: Error) => {
+    onError: (error, _, context) => {
+      if (context?.previousSubtasks) {
+        queryClient.setQueryData(["marketing-subtasks", taskId], context.previousSubtasks);
+      }
       toast.error("Erro ao reordenar subtarefas: " + error.message);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["marketing-subtasks", taskId] });
     },
   });
 
