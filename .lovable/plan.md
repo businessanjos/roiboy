@@ -1,93 +1,113 @@
 
+# Modo Foco para Dashboard Social Media
 
-# Diagnóstico: WhatsApp Desconectado do ROY
-
-## Problema Identificado
-
-Todas as instâncias WhatsApp aparecem como "Sem instâncias" na seção "WhatsApp por Setor", mas a seção "Status das Conexões" mostra 4 instâncias conectadas. O erro exibido é: **"Failed to send a request to the Edge Function"**.
+## Objetivo
+Adicionar um botão de **Modo Foco** ao dashboard de Social Media que exibe o conteúdo em tela cheia, ideal para transmissão via Chromecast em TVs.
 
 ---
 
-## Causa Raiz Confirmada
+## O que será implementado
 
-A **edge function `uazapi-manager` não está deployada** no ambiente de produção do Supabase.
+### Comportamento do Modo Foco
+1. **Botão de Ativação**: Ícone de expansão (Maximize2) ao lado do filtro de período
+2. **Tela Cheia Limpa**: Remove toda a interface do aplicativo (sidebar, header, tabs) e exibe apenas:
+   - Os 4 cards de KPI (Total Seguidores, Engaj. Médio, Total Posts, Perfis Ativos)
+   - A tabela de Métricas por Perfil
+3. **Controles de Saída**:
+   - Botão de fechar no canto superior direito
+   - Tecla `ESC` para sair
+4. **Visual Otimizado para TV**: 
+   - Fundo sólido escuro/claro (respeitando o tema)
+   - Conteúdo centralizado com espaçamento adequado
+   - Filtro de período visível para ajustes
 
-### Evidências:
+---
 
-| Teste | Resultado |
-|-------|-----------|
-| Chamada para `uazapi-manager` | **404 - Function not found** |
-| Chamada para `uazapi-webhook` | **200 - OK** (funcionando normalmente) |
-| Logs de erro recentes | Múltiplas chamadas 404 para `uazapi-manager` |
-| Banco de dados | As 4 integrações WhatsApp existem com `sector_id` correto |
-
-### Logs de Erro no Sistema:
+## Design Visual
 
 ```
-OPTIONS | 404 | /functions/v1/uazapi-manager   (múltiplas vezes)
-OPTIONS | 404 | /functions/v1/list-clients     (múltiplas vezes)
-OPTIONS | 404 | /functions/v1/process-ai-queue
+┌─────────────────────────────────────────────────────────────────┐
+│                                                          [X]    │
+│                                                                 │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌────────────┐│
+│  │ Total       │ │ Engaj.      │ │ Total       │ │ Perfis     ││
+│  │ Seguidores  │ │ Médio       │ │ Posts       │ │ Ativos     ││
+│  │ 286.7K      │ │ 5.6%        │ │ 4.9K        │ │ 6          ││
+│  └─────────────┘ └─────────────┘ └─────────────┘ └────────────┘│
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ Métricas por Perfil                    [Período: 3 meses ▾] ││
+│  ├─────────────────────────────────────────────────────────────┤│
+│  │ Perfil          │ Seguidores │ Posts │ Engaj. │ ...        ││
+│  │ @evertonpieri_  │ 144.2K     │ 1.8K  │ 7.7%   │            ││
+│  │ @abrunapieri    │ 102.9K     │ 1.5K  │ 25.1%  │            ││
+│  │ ...             │            │       │        │            ││
+│  └─────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Por Que as Instâncias Aparecem "Conectadas" na Segunda Seção?
+## Arquivos a Modificar
 
-A seção "Status das Conexões" (WhatsAppIntegrationCard) busca dados diretamente da tabela `integrations` no banco de dados, **não da edge function**. Por isso mostra as 4 instâncias como "Conectado".
-
-Já a seção "WhatsApp por Setor" (WhatsAppSectorManager) chama a edge function `uazapi-manager` com a ação `list_sector_instances`. Como a função retorna 404, a lista fica vazia.
-
----
-
-## Por Que Isso Aconteceu?
-
-As edge functions precisam ser **deployadas** para o ambiente de produção do Supabase. Possíveis causas:
-
-1. **Deploy não foi executado** após alguma alteração recente
-2. **Erro no deploy** que silenciosamente falhou
-3. **Limite de funções** atingido no plano do Supabase (pouco provável)
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/components/marketing/SocialMediaDashboard.tsx` | Adicionar estado e overlay do modo foco para Instagram |
+| `src/components/marketing/TikTokDashboard.tsx` | Adicionar estado e overlay do modo foco para TikTok |
 
 ---
 
-## Solução
+## Implementação Técnica
 
-### Ação Imediata: Redeploy das Edge Functions
+### Novo Estado
+```typescript
+const [isFocusMode, setIsFocusMode] = useState(false);
+```
 
-Executar o deploy das edge functions que estão faltando:
+### Botão de Ativação
+Adicionado ao lado do filtro de período:
+```tsx
+<Button
+  variant="outline"
+  size="icon"
+  onClick={() => setIsFocusMode(true)}
+  title="Modo Foco (ideal para TV)"
+>
+  <Maximize2 className="h-4 w-4" />
+</Button>
+```
 
-1. `uazapi-manager` - Gerenciamento de instâncias WhatsApp
-2. `list-clients` - Listagem de clientes
-3. `process-ai-queue` - Processamento de IA
+### Overlay Fullscreen
+```tsx
+{isFocusMode && (
+  <div className="fixed inset-0 z-50 bg-background overflow-auto">
+    <div className="container mx-auto py-8 px-6">
+      {/* Botão fechar */}
+      {/* KPI Cards */}
+      {/* Tabela de Perfis */}
+    </div>
+  </div>
+)}
+```
 
-**O deploy será feito automaticamente quando você aprovar este plano.**
-
----
-
-## Funções que Precisam Deploy
-
-| Função | Status Atual | Impacto |
-|--------|--------------|---------|
-| `uazapi-manager` | 404 - Não encontrada | Gerenciamento de instâncias quebrado |
-| `list-clients` | 404 - Não encontrada | Listagem de clientes não funciona |
-| `process-ai-queue` | 404 - Não encontrada | Processamento de IA parado |
-
----
-
-## Ação Técnica
-
-Ao aprovar este plano, as seguintes edge functions serão deployadas:
-
-- `uazapi-manager`
-- `list-clients`  
-- `process-ai-queue`
+### Listener de ESC
+```typescript
+useEffect(() => {
+  const handleEsc = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && isFocusMode) {
+      setIsFocusMode(false);
+    }
+  };
+  document.addEventListener('keydown', handleEsc);
+  return () => document.removeEventListener('keydown', handleEsc);
+}, [isFocusMode]);
+```
 
 ---
 
 ## Resultado Esperado
 
-Após o deploy:
-
-1. A seção "WhatsApp por Setor" mostrará as 4 instâncias corretamente distribuídas
-2. O botão "Verificar Status" funcionará sem erros
-3. Todas as operações de gerenciamento de WhatsApp voltarão a funcionar
-
+1. **Instagram Dashboard**: Botão de expansão visível, clique ativa modo foco
+2. **TikTok Dashboard**: Mesmo comportamento
+3. **Transmissão Chromecast**: Interface limpa sem distrações, apenas dados relevantes
+4. **Fácil saída**: ESC ou botão X retornam à visualização normal
