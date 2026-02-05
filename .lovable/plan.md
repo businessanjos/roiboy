@@ -1,108 +1,93 @@
 
-# Diagnóstico: Vazamento de Grupos Entre Instâncias WhatsApp
+
+# Diagnóstico: WhatsApp Desconectado do ROY
 
 ## Problema Identificado
 
-Grupos exclusivos da instância **Jonathan Marcato** estão aparecendo na instância **[COMERCIAL] Eternum Club**, mesmo que o número da Eternum não seja participante desses grupos.
+Todas as instâncias WhatsApp aparecem como "Sem instâncias" na seção "WhatsApp por Setor", mas a seção "Status das Conexões" mostra 4 instâncias conectadas. O erro exibido é: **"Failed to send a request to the Edge Function"**.
 
 ---
 
-## Análise Técnica
+## Causa Raiz Confirmada
 
-### Causa Raiz Confirmada
+A **edge function `uazapi-manager` não está deployada** no ambiente de produção do Supabase.
 
-No arquivo `src/hooks/useZappData.tsx`, linha 1010, existe uma regra de exceção que **ignora o isolamento de instâncias para todos os grupos**:
+### Evidências:
 
-```typescript
-// Linha 1006-1010
-// 3. It's a GROUP (groups are cross-integration by nature) ← COMENTÁRIO INCORRETO
-const matchesIntegration = convIntegrationId === integrationId;
-const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
+| Teste | Resultado |
+|-------|-----------|
+| Chamada para `uazapi-manager` | **404 - Function not found** |
+| Chamada para `uazapi-webhook` | **200 - OK** (funcionando normalmente) |
+| Logs de erro recentes | Múltiplas chamadas 404 para `uazapi-manager` |
+| Banco de dados | As 4 integrações WhatsApp existem com `sector_id` correto |
 
-return matchesIntegration || isLegacySameSector || isGroup;  // ← PROBLEMA
+### Logs de Erro no Sistema:
+
+```
+OPTIONS | 404 | /functions/v1/uazapi-manager   (múltiplas vezes)
+OPTIONS | 404 | /functions/v1/list-clients     (múltiplas vezes)
+OPTIONS | 404 | /functions/v1/process-ai-queue
 ```
 
-A condição `|| isGroup` faz com que **qualquer grupo do mesmo setor** seja exibido em **todas as instâncias** daquele setor, independentemente de qual instância realmente participa do grupo.
+---
 
-### Por Que Isso Foi Implementado Assim?
+## Por Que as Instâncias Aparecem "Conectadas" na Segunda Seção?
 
-O comentário sugere que a intenção era "grupos são cross-integration por natureza", mas isso está errado:
-- O webhook já cria conversas de grupo **separadas por instância** (cada `integration_id` tem sua própria `zapp_conversation`)
-- Se duas instâncias participam do mesmo grupo, cada uma terá seu próprio registro de conversa
+A seção "Status das Conexões" (WhatsAppIntegrationCard) busca dados diretamente da tabela `integrations` no banco de dados, **não da edge function**. Por isso mostra as 4 instâncias como "Conectado".
 
-### Dados do Banco Confirmam
+Já a seção "WhatsApp por Setor" (WhatsAppSectorManager) chama a edge function `uazapi-manager` com a ação `list_sector_instances`. Como a função retorna 404, a lista fica vazia.
 
-| Grupo | integration_id | Instância |
-|-------|---------------|-----------|
-| Rafael/Vendas FIAT AUTO ARAPONGAS | `ac869d1d...` | Jonathan Marcato ✓ |
-| Desafio Ano Novo, Pele Renovada | `ac869d1d...` | Jonathan Marcato ✓ |
-| #216 Conquer | `ac869d1d...` | Jonathan Marcato ✓ |
+---
 
-Todos esses grupos têm `integration_id` do Jonathan, mas aparecem na Eternum devido à regra `|| isGroup`.
+## Por Que Isso Aconteceu?
+
+As edge functions precisam ser **deployadas** para o ambiente de produção do Supabase. Possíveis causas:
+
+1. **Deploy não foi executado** após alguma alteração recente
+2. **Erro no deploy** que silenciosamente falhou
+3. **Limite de funções** atingido no plano do Supabase (pouco provável)
 
 ---
 
 ## Solução
 
-### Mudança Necessária
+### Ação Imediata: Redeploy das Edge Functions
 
-Remover a exceção `|| isGroup` do filtro de isolamento de instâncias:
+Executar o deploy das edge functions que estão faltando:
 
-```typescript
-// ANTES (linha 1010):
-return matchesIntegration || isLegacySameSector || isGroup;
+1. `uazapi-manager` - Gerenciamento de instâncias WhatsApp
+2. `list-clients` - Listagem de clientes
+3. `process-ai-queue` - Processamento de IA
 
-// DEPOIS:
-return matchesIntegration || isLegacySameSector;
-```
-
-### Comportamento Após a Correção
-
-| Cenário | Antes | Depois |
-|---------|-------|--------|
-| Grupo onde só Jonathan participa | Aparece em ambas ❌ | Aparece só no Jonathan ✓ |
-| Grupo onde só Eternum participa | Aparece em ambas ❌ | Aparece só na Eternum ✓ |
-| Grupo onde ambos participam | Aparece em ambas ✓ | Cada um vê sua própria conversa ✓ |
-| Grupo legado sem integration_id | Aparece em ambas ✓ | Aparece em ambas (via isLegacySameSector) ✓ |
-
-### Por Que Isso Não Quebra Grupos Compartilhados?
-
-Quando **ambas** as instâncias participam do mesmo grupo:
-1. O webhook cria **duas** `zapp_conversations` separadas (uma com cada `integration_id`)
-2. Cada instância verá sua própria versão da conversa
-3. A filtragem por `matchesIntegration` garantirá que cada uma veja a sua
+**O deploy será feito automaticamente quando você aprovar este plano.**
 
 ---
 
-## Arquivo a Modificar
+## Funções que Precisam Deploy
 
-| Arquivo | Mudança |
-|---------|---------|
-| `src/hooks/useZappData.tsx` | Remover `\|\| isGroup` da linha 1010 e atualizar comentário |
+| Função | Status Atual | Impacto |
+|--------|--------------|---------|
+| `uazapi-manager` | 404 - Não encontrada | Gerenciamento de instâncias quebrado |
+| `list-clients` | 404 - Não encontrada | Listagem de clientes não funciona |
+| `process-ai-queue` | 404 - Não encontrada | Processamento de IA parado |
 
 ---
 
-## Código da Correção
+## Ação Técnica
 
-```typescript
-// src/hooks/useZappData.tsx - Linhas 1003-1010
+Ao aprovar este plano, as seguintes edge functions serão deployadas:
 
-// Include conversation if:
-// 1. It belongs to this exact integration, OR
-// 2. It has no integration_id (legacy) but belongs to the same sector
-// NOTE: Groups are NOT exempt - they follow the same isolation rules as direct messages
-//       If two instances are in the same group, each will have its own zapp_conversation
-const matchesIntegration = convIntegrationId === integrationId;
-const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
-
-return matchesIntegration || isLegacySameSector;
-```
+- `uazapi-manager`
+- `list-clients`  
+- `process-ai-queue`
 
 ---
 
 ## Resultado Esperado
 
-1. **Grupos privados isolados**: Jonathan só verá grupos onde seu número participa
-2. **Grupos compartilhados funcionam**: Se ambos participam do mesmo grupo, cada um vê sua própria conversa
-3. **Legado preservado**: Grupos antigos sem `integration_id` continuam visíveis no setor
-4. **Sem impacto em conversas individuais**: A lógica de isolamento para DMs permanece igual
+Após o deploy:
+
+1. A seção "WhatsApp por Setor" mostrará as 4 instâncias corretamente distribuídas
+2. O botão "Verificar Status" funcionará sem erros
+3. Todas as operações de gerenciamento de WhatsApp voltarão a funcionar
+
