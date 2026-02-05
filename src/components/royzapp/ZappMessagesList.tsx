@@ -146,8 +146,8 @@ export function ZappMessagesList({
   }, [deduplicatedMessages]);
 
   return (
-    <ScrollArea className="flex-1 px-2 sm:px-4 py-2 overflow-hidden">
-      <div className="space-y-1 max-w-full overflow-hidden">
+    <ScrollArea className="flex-1 px-2 sm:px-4 py-2 overflow-hidden overflow-x-hidden w-full">
+      <div className="space-y-1 max-w-full overflow-hidden overflow-x-hidden w-full">
         {deduplicatedMessages.length === 0 ? (
           <div className="text-center py-8">
             <MessageSquare className="h-8 w-8 text-zapp-text-muted mx-auto mb-2" />
