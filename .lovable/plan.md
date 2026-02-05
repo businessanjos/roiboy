@@ -1,132 +1,70 @@
 
 
-# Tornar o Campo "Ganho em" Editável
+# Correção: Atualização Imediata da Data "Ganho em"
 
-## Objetivo
-Permitir que vendedores editem a data de fechamento ("Ganho em" / `won_at`) diretamente na janela de detalhes do negócio, usando um date picker integrado.
+## Problema Identificado
+Quando o usuário altera a data "Ganho em":
+1. O banco de dados é atualizado corretamente ✅
+2. O toast de sucesso aparece ✅
+3. **Porém** a UI continua exibindo a data antiga porque está lendo de `deal.won_at` (prop do componente pai)
+4. A data só atualiza ao fechar/reabrir o modal porque o componente pai refaz o fetch
 
----
-
-## Mudança Visual
-
-| Antes | Depois |
-|-------|--------|
-| Data exibida como texto estático | Data clicável que abre um calendário para seleção |
-| `03/02/26` (apenas visualização) | `03/02/26` com ícone de edição → ao clicar abre Popover com Calendar |
+## Solução
+Criar um estado local `localWonAt` que:
+1. É inicializado com `deal.won_at` quando o deal muda
+2. É atualizado **imediatamente** quando o usuário salva a nova data
+3. É usado para renderizar a data na UI
 
 ---
 
 ## Implementação Técnica
 
-### Arquivo a Modificar
-`src/components/sales/DealDetailSheet.tsx`
+### Arquivo: `src/components/sales/DealDetailSheet.tsx`
 
-### Mudanças Necessárias
-
-**1. Adicionar imports**
-- Importar `Popover`, `PopoverContent`, `PopoverTrigger` de `@/components/ui/popover`
-- Importar `Calendar` de `@/components/ui/calendar`
-- Importar ícone `Pencil` do lucide-react (já está importado)
-
-**2. Adicionar estado local**
+**1. Adicionar estado local para won_at:**
 ```typescript
-const [wonAtPopoverOpen, setWonAtPopoverOpen] = useState(false);
-const [updatingWonAt, setUpdatingWonAt] = useState(false);
+const [localWonAt, setLocalWonAt] = useState<string | null>(deal?.won_at || null);
 ```
 
-**3. Criar função para atualizar a data**
+**2. Sincronizar estado local com prop quando deal muda:**
 ```typescript
-const handleWonAtChange = async (newDate: Date | undefined) => {
-  if (!deal || !newDate) return;
-  
-  setUpdatingWonAt(true);
-  try {
-    const { error } = await supabase
-      .from("deals")
-      .update({ won_at: newDate.toISOString() })
-      .eq("id", deal.id);
-    
-    if (error) throw error;
-    
-    toast.success("Data de fechamento atualizada!");
-    setWonAtPopoverOpen(false);
-    onDealUpdated?.();
-  } catch (error) {
-    console.error("Error updating won_at:", error);
-    toast.error("Erro ao atualizar data");
-  } finally {
-    setUpdatingWonAt(false);
-  }
-};
+useEffect(() => {
+  setLocalWonAt(deal?.won_at || null);
+}, [deal?.won_at]);
 ```
 
-**4. Substituir renderização estática por Popover + Calendar**
-
-Trocar este trecho (linhas 710-719):
-```tsx
-{deal.status === 'won' && deal.won_at ? (
-  <>
-    <div className="flex items-center gap-1.5 mb-1">
-      <Trophy className="h-3.5 w-3.5 text-emerald-500" />
-      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Ganho em</span>
-    </div>
-    <p className="text-lg font-bold text-emerald-500">
-      {format(new Date(deal.won_at), "dd/MM/yy")}
-    </p>
-  </>
-)}
+**3. Atualizar estado local imediatamente ao salvar:**
+No `onSelect` do Calendar, antes do toast de sucesso:
+```typescript
+setLocalWonAt(newDate.toISOString()); // Atualização imediata da UI
 ```
 
-Por:
-```tsx
-{deal.status === 'won' && deal.won_at ? (
-  <>
-    <div className="flex items-center gap-1.5 mb-1">
-      <Trophy className="h-3.5 w-3.5 text-emerald-500" />
-      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Ganho em</span>
-    </div>
-    <Popover open={wonAtPopoverOpen} onOpenChange={setWonAtPopoverOpen}>
-      <PopoverTrigger asChild>
-        <button 
-          className="flex items-center gap-1.5 text-lg font-bold text-emerald-500 hover:underline cursor-pointer group"
-          disabled={updatingWonAt}
-        >
-          {format(new Date(deal.won_at), "dd/MM/yy")}
-          <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          selected={new Date(deal.won_at)}
-          onSelect={handleWonAtChange}
-          locale={ptBR}
-          disabled={updatingWonAt}
-        />
-      </PopoverContent>
-    </Popover>
-  </>
-)}
-```
+**4. Usar `localWonAt` em vez de `deal.won_at` para renderizar:**
+- Condição de exibição: `deal.status === 'won' && localWonAt`
+- Data selecionada no calendário: `new Date(localWonAt)`
+- Data formatada no botão: `format(new Date(localWonAt), "dd/MM/yy")`
 
 ---
 
-## Fluxo de Uso
+## Fluxo Corrigido
 
-1. Vendedor abre detalhes de um negócio **ganho**
-2. Visualiza o card "GANHO EM" com a data atual
-3. Ao passar o mouse, aparece um ícone de lápis
-4. Clica na data → abre calendário
-5. Seleciona nova data → sistema salva automaticamente
-6. Toast de confirmação aparece
-7. O componente atualiza via `onDealUpdated()`
+1. Usuário clica na data "05/02/26"
+2. Seleciona nova data "04/02/26" no calendário
+3. **Imediatamente**: `setLocalWonAt(newDate.toISOString())` → UI mostra "04/02/26"
+4. Banco de dados é atualizado em background
+5. Toast de sucesso aparece
+6. `onDealUpdated?.()` faz o componente pai refazer fetch (para manter sincronia)
 
 ---
 
-## Validações
+## Mudanças no Código
 
-- Apenas negócios com status `won` mostram o campo editável
-- A seleção de data dispara salvamento imediato (sem botão de confirmar)
-- Indicador de loading enquanto salva
-- Toast de erro se falhar
+| Local | Antes | Depois |
+|-------|-------|--------|
+| Estado | — | `const [localWonAt, setLocalWonAt] = useState(deal?.won_at)` |
+| useEffect | — | Sincroniza `localWonAt` quando `deal?.won_at` muda |
+| Condição de exibição | `deal.won_at` | `localWonAt` |
+| Calendário selected | `new Date(deal.won_at)` | `new Date(localWonAt)` |
+| Botão display | `format(new Date(deal.won_at), ...)` | `format(new Date(localWonAt), ...)` |
+| onSelect | — | Adiciona `setLocalWonAt(newDate.toISOString())` |
 
