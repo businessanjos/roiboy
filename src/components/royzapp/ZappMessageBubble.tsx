@@ -317,7 +317,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
       >
           {/* Container with bubble + actions - uses flexbox for relative positioning */}
         <div className={cn(
-          "flex items-center gap-1 max-w-[65%] w-full",
+          "flex items-center gap-1 max-w-[65%]",
           message.is_from_client ? "flex-row" : "flex-row-reverse"
         )}>
           {/* Message bubble */}
