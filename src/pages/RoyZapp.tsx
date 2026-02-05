@@ -3767,7 +3767,7 @@ export default function RoyZapp() {
       
       return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesConversationType && matchesProduct && matchesTag && matchesAgent;
     });
-  }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin]);
+  }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, currentUser?.team_role_name]);
 
   // Helper to get agent name by id
   const getAgentName = (agentId: string | null) => {
@@ -3784,11 +3784,12 @@ export default function RoyZapp() {
     
     const onlineAgents = agents.filter((a) => a.is_online && a.is_active).length;
     
-    // Para Admin/Gestor: mostrar contagem total de fila
-    // Para atendentes: mostrar apenas conversas não atribuídas
-    const totalQueueConversations = hasFullVisibility
-      ? assignments.filter((a) => a.status !== "closed" && !a.zapp_conversation?.is_archived).length
-      : assignments.filter((a) => a.agent_id === null && a.status !== "closed" && !a.zapp_conversation?.is_archived).length;
+    // Fila SEMPRE mostra apenas conversas sem agente atribuído (igual para todos os usuários)
+    const totalQueueConversations = assignments.filter((a) => 
+      a.agent_id === null && 
+      a.status !== "closed" && 
+      !a.zapp_conversation?.is_archived
+    ).length;
     
     // Para Admin/Gestor: mostrar todas as conversas atribuídas
     // Para atendentes: mostrar apenas suas próprias conversas
@@ -3814,19 +3815,13 @@ export default function RoyZapp() {
           (a.zapp_conversation?.unread_count || 0) > 0
         ).length;
     
-    // Queue unread: Admin/Gestor veem todos os não lidos; atendentes só não atribuídos
-    const queueUnreadCount = hasFullVisibility
-      ? assignments.filter((a) => 
-          a.status !== "closed" && 
-          !a.zapp_conversation?.is_archived &&
-          (a.zapp_conversation?.unread_count || 0) > 0
-        ).length
-      : assignments.filter((a) => 
-          a.agent_id === null &&
-          a.status !== "closed" && 
-          !a.zapp_conversation?.is_archived &&
-          (a.zapp_conversation?.unread_count || 0) > 0
-        ).length;
+    // Queue unread: sempre mostra apenas conversas SEM agente (igual para todos)
+    const queueUnreadCount = assignments.filter((a) => 
+      a.agent_id === null &&
+      a.status !== "closed" && 
+      !a.zapp_conversation?.is_archived &&
+      (a.zapp_conversation?.unread_count || 0) > 0
+    ).length;
     
     return { onlineAgents, totalQueueConversations, myConversations, activeConversations, assignedToOthers, myUnreadCount, queueUnreadCount };
   }, [agents, assignments, currentAgent?.id, isAdmin, currentUser?.team_role_name]);
