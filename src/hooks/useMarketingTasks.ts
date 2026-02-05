@@ -239,6 +239,26 @@ export function useMarketingTasks() {
     },
   });
 
+  const reorderTasks = useMutation({
+    mutationFn: async (updates: { id: string; display_order: number }[]) => {
+      // Batch update display_order for all affected tasks
+      for (const update of updates) {
+        const { error } = await supabase
+          .from("marketing_tasks")
+          .update({ display_order: update.display_order })
+          .eq("id", update.id);
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["marketing-tasks"] });
+    },
+    onError: (error: Error) => {
+      toast.error("Erro ao reordenar tarefas: " + error.message);
+    },
+  });
+
   return {
     tasks,
     isLoading,
@@ -247,5 +267,6 @@ export function useMarketingTasks() {
     updateTask,
     deleteTask,
     toggleComplete,
+    reorderTasks,
   };
 }

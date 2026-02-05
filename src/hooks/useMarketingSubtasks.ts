@@ -148,6 +148,25 @@ export function useMarketingSubtasks(taskId: string | null) {
     },
   });
 
+  const reorderSubtasks = useMutation({
+    mutationFn: async (updates: { id: string; display_order: number }[]) => {
+      for (const update of updates) {
+        const { error } = await supabase
+          .from("marketing_task_subtasks")
+          .update({ display_order: update.display_order })
+          .eq("id", update.id);
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["marketing-subtasks", taskId] });
+    },
+    onError: (error: Error) => {
+      toast.error("Erro ao reordenar subtarefas: " + error.message);
+    },
+  });
+
   return {
     subtasks,
     isLoading,
@@ -155,5 +174,6 @@ export function useMarketingSubtasks(taskId: string | null) {
     updateSubtask,
     deleteSubtask,
     toggleComplete,
+    reorderSubtasks,
   };
 }
