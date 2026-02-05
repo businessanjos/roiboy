@@ -1,147 +1,108 @@
 
-# Plano: Persistência do Link de Reunião + Registro no Histórico
+# Diagnóstico: Vazamento de Grupos Entre Instâncias WhatsApp
 
-## Resumo do Problema
+## Problema Identificado
 
-1. **Link desaparece ao reabrir tarefa**: As queries que buscam tarefas não incluem `meeting_url` e `meeting_platform`
-2. **Sem registro no histórico do deal**: Quando uma reunião é criada, não há anotação automática no histórico do negócio
+Grupos exclusivos da instância **Jonathan Marcato** estão aparecendo na instância **[COMERCIAL] Eternum Club**, mesmo que o número da Eternum não seja participante desses grupos.
 
 ---
 
 ## Análise Técnica
 
-### Causa Raiz 1: Campos Ausentes nas Queries
+### Causa Raiz Confirmada
 
-Os seguintes arquivos buscam tarefas sem incluir `meeting_url` e `meeting_platform`:
+No arquivo `src/hooks/useZappData.tsx`, linha 1010, existe uma regra de exceção que **ignora o isolamento de instâncias para todos os grupos**:
 
-| Arquivo | Problema |
-|---------|----------|
-| `src/components/sales/DealActivitiesTab.tsx` | Query não inclui `meeting_url`, `meeting_platform` |
-| `src/pages/Tasks.tsx` | Query usa `*` mas interface Task não inclui os campos |
-| `src/components/sales/DealDetailSheet.tsx` | Query para timeline não inclui os campos |
+```typescript
+// Linha 1006-1010
+// 3. It's a GROUP (groups are cross-integration by nature) ← COMENTÁRIO INCORRETO
+const matchesIntegration = convIntegrationId === integrationId;
+const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
 
-### Causa Raiz 2: Falta de Registro no Histórico
+return matchesIntegration || isLegacySameSector || isGroup;  // ← PROBLEMA
+```
 
-A edge function `create-meeting` apenas atualiza a tarefa com o link, mas não cria uma entrada em `deal_activities` para registrar o evento no histórico do negócio.
+A condição `|| isGroup` faz com que **qualquer grupo do mesmo setor** seja exibido em **todas as instâncias** daquele setor, independentemente de qual instância realmente participa do grupo.
+
+### Por Que Isso Foi Implementado Assim?
+
+O comentário sugere que a intenção era "grupos são cross-integration por natureza", mas isso está errado:
+- O webhook já cria conversas de grupo **separadas por instância** (cada `integration_id` tem sua própria `zapp_conversation`)
+- Se duas instâncias participam do mesmo grupo, cada uma terá seu próprio registro de conversa
+
+### Dados do Banco Confirmam
+
+| Grupo | integration_id | Instância |
+|-------|---------------|-----------|
+| Rafael/Vendas FIAT AUTO ARAPONGAS | `ac869d1d...` | Jonathan Marcato ✓ |
+| Desafio Ano Novo, Pele Renovada | `ac869d1d...` | Jonathan Marcato ✓ |
+| #216 Conquer | `ac869d1d...` | Jonathan Marcato ✓ |
+
+Todos esses grupos têm `integration_id` do Jonathan, mas aparecem na Eternum devido à regra `|| isGroup`.
 
 ---
 
-## Solução Proposta
+## Solução
 
-### Parte 1: Corrigir Persistência do Link
+### Mudança Necessária
 
-#### Mudança 1.1: DealActivitiesTab.tsx
-Adicionar `meeting_url` e `meeting_platform` na query e interface:
-
-```typescript
-interface Task {
-  // ... campos existentes
-  meeting_url?: string | null;
-  meeting_platform?: string | null;
-}
-
-// Na query:
-.select(`
-  id,
-  title,
-  // ... outros campos
-  meeting_url,
-  meeting_platform,
-  // ... joins
-`)
-```
-
-#### Mudança 1.2: Tasks.tsx
-A query usa `*` então os campos já vêm, mas a interface precisa ser atualizada:
+Remover a exceção `|| isGroup` do filtro de isolamento de instâncias:
 
 ```typescript
-interface Task {
-  // ... campos existentes
-  meeting_url?: string | null;
-  meeting_platform?: string | null;
-  completed_at?: string | null;
-  activity_type_id?: string | null;
-}
+// ANTES (linha 1010):
+return matchesIntegration || isLegacySameSector || isGroup;
+
+// DEPOIS:
+return matchesIntegration || isLegacySameSector;
 ```
 
-#### Mudança 1.3: DealDetailSheet.tsx
-Adicionar os campos na query da timeline de tarefas (se necessário para exibição).
+### Comportamento Após a Correção
+
+| Cenário | Antes | Depois |
+|---------|-------|--------|
+| Grupo onde só Jonathan participa | Aparece em ambas ❌ | Aparece só no Jonathan ✓ |
+| Grupo onde só Eternum participa | Aparece em ambas ❌ | Aparece só na Eternum ✓ |
+| Grupo onde ambos participam | Aparece em ambas ✓ | Cada um vê sua própria conversa ✓ |
+| Grupo legado sem integration_id | Aparece em ambas ✓ | Aparece em ambas (via isLegacySameSector) ✓ |
+
+### Por Que Isso Não Quebra Grupos Compartilhados?
+
+Quando **ambas** as instâncias participam do mesmo grupo:
+1. O webhook cria **duas** `zapp_conversations` separadas (uma com cada `integration_id`)
+2. Cada instância verá sua própria versão da conversa
+3. A filtragem por `matchesIntegration` garantirá que cada uma veja a sua
 
 ---
 
-### Parte 2: Registrar Link no Histórico do Negócio
-
-#### Mudança 2.1: Edge Function create-meeting
-Após criar a reunião com sucesso, inserir uma atividade no histórico do deal:
-
-```typescript
-// Após atualizar a tarefa com o meeting_url...
-
-// Registrar no histórico do negócio (se deal_id existir)
-if (task.deal_id) {
-  // Buscar nome do vendedor responsável
-  const { data: assignedUser } = await supabase
-    .from("users")
-    .select("name")
-    .eq("id", task.assigned_to || task.created_by)
-    .single();
-
-  // Criar atividade no histórico
-  await supabase.from("deal_activities").insert({
-    account_id: task.account_id,
-    deal_id: task.deal_id,
-    type: "meeting",
-    title: `🔗 Reunião ${platform === 'zoom' ? 'Zoom' : 'Google Meet'} Agendada`,
-    content: `**Vendedor:** ${assignedUser?.name || 'Não identificado'}
-**Data:** ${format(startDate, "dd/MM/yyyy 'às' HH:mm")}
-**Link da Reunião:** [Clique para entrar](${meetingResult.meeting_url})`,
-    user_id: task.assigned_to || task.created_by,
-  });
-}
-```
-
-#### Mudança 2.2: Exibição do Link na Timeline
-O componente `DealDetailSheet` já exibe atividades do tipo "meeting" com ícone de vídeo. O conteúdo com markdown será renderizado corretamente.
-
----
-
-### Parte 3: Feedback de Sucesso/Falha
-
-A edge function já retorna sucesso/erro, e o `MeetingConfigDialog` já exibe toasts apropriados:
-- ✅ `toast.success("Reunião criada com sucesso!")` já existe
-- ✅ `toast.error(error.message)` já existe para falhas
-
-Melhorar a mensagem de sucesso para ser mais informativa:
-
-```typescript
-// Em MeetingConfigDialog.tsx
-toast.success(
-  task.deal_id 
-    ? "Reunião criada e registrada no histórico do negócio!" 
-    : "Reunião criada com sucesso!"
-);
-```
-
----
-
-## Arquivos a Modificar
+## Arquivo a Modificar
 
 | Arquivo | Mudança |
 |---------|---------|
-| `src/components/sales/DealActivitiesTab.tsx` | Adicionar `meeting_url`, `meeting_platform` na query e interface |
-| `src/pages/Tasks.tsx` | Adicionar campos na interface Task |
-| `src/components/tasks/TaskDialog.tsx` | Interface Task já tem os campos - verificar se props são passadas corretamente |
-| `supabase/functions/create-meeting/index.ts` | Adicionar insert em `deal_activities` com link da reunião |
-| `src/components/tasks/MeetingConfigDialog.tsx` | Melhorar mensagem de sucesso |
+| `src/hooks/useZappData.tsx` | Remover `\|\| isGroup` da linha 1010 e atualizar comentário |
+
+---
+
+## Código da Correção
+
+```typescript
+// src/hooks/useZappData.tsx - Linhas 1003-1010
+
+// Include conversation if:
+// 1. It belongs to this exact integration, OR
+// 2. It has no integration_id (legacy) but belongs to the same sector
+// NOTE: Groups are NOT exempt - they follow the same isolation rules as direct messages
+//       If two instances are in the same group, each will have its own zapp_conversation
+const matchesIntegration = convIntegrationId === integrationId;
+const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
+
+return matchesIntegration || isLegacySameSector;
+```
 
 ---
 
 ## Resultado Esperado
 
-1. **Persistência**: Ao reabrir a tarefa, o link da reunião estará visível
-2. **Histórico**: Uma anotação automática aparece no histórico do negócio com:
-   - Nome do vendedor responsável
-   - Data e horário da reunião
-   - Link clicável para a reunião
-3. **Feedback**: Mensagem de sucesso confirma criação e registro no histórico
-4. **Consistência**: Link disponível tanto na tarefa quanto no histórico do deal
+1. **Grupos privados isolados**: Jonathan só verá grupos onde seu número participa
+2. **Grupos compartilhados funcionam**: Se ambos participam do mesmo grupo, cada um vê sua própria conversa
+3. **Legado preservado**: Grupos antigos sem `integration_id` continuam visíveis no setor
+4. **Sem impacto em conversas individuais**: A lógica de isolamento para DMs permanece igual
