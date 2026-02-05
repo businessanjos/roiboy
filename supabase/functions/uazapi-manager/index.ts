@@ -1,285 +1,94 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { corsHeaders } from "./lib/cors.ts";
-import type { UazapiRequest, UserData, ExistingWhatsapp, IntegrationConfig } from "./lib/types.ts";
-import { uazapiAdminRequest, uazapiInstanceRequest, uazapiInstanceRequestWithRetry } from "./lib/uazapi-client.ts";
-import { logWhatsAppChangeAndNotify, getSectorDisplayName } from "./lib/audit-logger.ts";
-import { configureWebhook } from "./lib/webhook-config.ts";
+
+const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
+const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
+const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
+
+async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
+  const r = await fetch(`${UAZAPI_URL}${endpoint}`, { method, headers: { "Content-Type": "application/json", "admintoken": UAZAPI_ADMIN_TOKEN }, body: body ? JSON.stringify(body) : undefined });
+  return r.json();
+}
+
+async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown) {
+  const r = await fetch(`${UAZAPI_URL}${endpoint}`, { method, headers: { "Content-Type": "application/json", "token": token }, body: body ? JSON.stringify(body) : undefined });
+  return r.json();
+}
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Validate auth
+    const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Authorization required" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    if (!authHeader) return new Response(JSON.stringify({ error: "Auth required" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace("Bearer ", "")
-    );
+    const { data: { user } } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+    if (!user) return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Invalid token" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const { data: userData } = await supabase.from("users").select("id, name, account_id, role, is_also_admin").eq("auth_user_id", user.id).single();
+    if (!userData) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    // Get user's account AND role for authorization
-    const { data: userData } = await supabase
-      .from("users")
-      .select("id, name, account_id, role, is_also_admin")
-      .eq("auth_user_id", user.id)
-      .single();
-
-    if (!userData) {
-      return new Response(
-        JSON.stringify({ error: "User not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
+    const payload = await req.json();
+    const { action, sector_id, phone, message, group_id } = payload;
     const accountId = userData.account_id;
-    const payload: UazapiRequest = await req.json();
-    
-    // SECURITY: Define admin-only actions for WhatsApp management
-    const adminOnlyActions = ["create", "connect", "disconnect", "qrcode", "paircode", "configure_webhook", "link_instance", "add_instance_to_sector", "update_instance_pin", "unlink_instance"];
-    const isAdminAction = adminOnlyActions.includes(payload.action);
-    const isAdmin = userData.role === "admin" || userData.role === "super_admin" || userData.is_also_admin === true;
-    
-    // Block non-admins from admin-only actions
-    if (isAdminAction && !isAdmin) {
-      console.log(`[SECURITY] Non-admin user ${user.id} (role: ${userData.role}) attempted action: ${payload.action}`);
-      return new Response(
-        JSON.stringify({ error: "Apenas administradores podem gerenciar conexões WhatsApp" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
 
-    const { action, sector_id, integration_id } = payload;
+    // Get integration
+    let q = supabase.from("integrations").select("id, config, status").eq("account_id", accountId).eq("type", "whatsapp");
+    q = sector_id ? q.eq("sector_id", sector_id) : q.is("sector_id", null);
+    const { data: intData } = await q.maybeSingle();
+    const token = intData?.config?.instance_token;
+    const instanceName = intData?.config?.instance_name || `roy-${accountId.slice(0,8)}`;
 
-    // Build query for existing integration
-    let existingWhatsapp: ExistingWhatsapp | null = null;
-    
-    if (integration_id) {
-      const { data } = await supabase
-        .from("integrations")
-        .select("config, status, sector_id, id")
-        .eq("id", integration_id)
-        .eq("account_id", accountId)
-        .single();
-      existingWhatsapp = data;
-      console.log(`[UAZAPI] Action: ${action}, Integration by ID: ${integration_id}, Found: ${existingWhatsapp ? 'yes' : 'no'}`);
-    } else {
-      let integrationQuery = supabase
-        .from("integrations")
-        .select("config, status, sector_id, id")
-        .eq("account_id", accountId)
-        .eq("type", "whatsapp");
+    let result: unknown = { success: true };
 
-      if (sector_id) {
-        integrationQuery = integrationQuery.eq("sector_id", sector_id);
-      } else {
-        integrationQuery = integrationQuery.is("sector_id", null);
-      }
-
-      const { data } = await integrationQuery.limit(1);
-      existingWhatsapp = data?.[0] || null;
-      console.log(`[UAZAPI] Action: ${action}, Sector: ${sector_id || 'default'}, Found: ${existingWhatsapp ? 'yes' : 'no'}`);
-    }
-
-    // Get saved instance info
-    const savedInstanceName = (existingWhatsapp?.config as IntegrationConfig)?.instance_name;
-    let savedInstanceToken = (existingWhatsapp?.config as IntegrationConfig)?.instance_token;
-    const actualInstanceName = savedInstanceName;
-    
-    // Check if we should reuse existing instance
-    const shouldReuseInstance = !!savedInstanceName && (action === "connect" || action === "qrcode" || action === "paircode" || action === "status" || action === "disconnect");
-    const uniqueSuffix = sector_id ? `-${sector_id.slice(0, 4)}` : "";
-
-    // Token recovery logic for missing tokens
-    if (!savedInstanceToken && savedInstanceName) {
-      console.log(`Token missing for instance ${savedInstanceName}. Fetching from /instance/all...`);
-      try {
-        const allInstances = await uazapiAdminRequest("/instance/all", "GET") as Array<{ 
-          name?: string; 
-          token?: string; 
-          status?: string;
-          owner?: string;
-        }>;
-        
-        console.log(`Found ${allInstances.length} instances`);
-        
-        const instance = allInstances.find(i => i.name === savedInstanceName);
-        
-        if (instance?.token) {
-          savedInstanceToken = instance.token;
-          console.log(`Token found: ${savedInstanceToken.slice(0, 8)}... for instance ${actualInstanceName}`);
-          
-          if (existingWhatsapp?.id) {
-            await supabase
-              .from("integrations")
-              .update({
-                config: {
-                  ...(existingWhatsapp?.config as object || {}),
-                  instance_name: actualInstanceName,
-                  instance_token: savedInstanceToken,
-                  token_recovered_at: new Date().toISOString(),
-                },
-              })
-              .eq("id", existingWhatsapp.id);
-            console.log(`Token saved to database for integration ${existingWhatsapp.id}`);
-          }
-        } else {
-          console.log(`Instance ${savedInstanceName} not found or has no token`);
-        }
-      } catch (err) {
-        console.log("Failed to fetch from /instance/all:", (err as Error).message);
+    if (action === "status") {
+      const all = await uazapiAdmin("/instance/all", "GET") as Array<{name?:string;status?:string;owner?:string}>;
+      const inst = all.find(i => i.name === instanceName);
+      result = { state: inst?.status || "unknown", connected: inst?.status === "connected", owner: inst?.owner };
+      if (intData?.id) await supabase.from("integrations").update({ status: inst?.status === "connected" ? "connected" : "disconnected" }).eq("id", intData.id);
+    } else if (action === "create") {
+      const r = await uazapiAdmin("/instance/init", "POST", { name: instanceName });
+      const newToken = r.token || r.instance?.token;
+      await supabase.from("integrations").upsert({ account_id: accountId, type: "whatsapp", sector_id: sector_id || null, status: "pending", config: { provider: "uazapi", instance_name: instanceName, instance_token: newToken } }, { onConflict: "account_id,type,sector_id" });
+      result = { ...r, token: newToken };
+    } else if (action === "connect" || action === "qrcode") {
+      result = await uazapiAdmin(`/instance/connect/${instanceName}`, "GET");
+    } else if (action === "disconnect") {
+      if (token) try { await uazapiInstance("/logout", "POST", token); } catch {}
+      if (intData?.id) await supabase.from("integrations").update({ status: "disconnected" }).eq("id", intData.id);
+      result = { disconnected: true };
+    } else if (action === "send_text" && token) {
+      result = await uazapiInstance("/message/sendText", "POST", token, { number: phone?.replace(/\D/g,""), text: message });
+    } else if (action === "send_to_group" && token) {
+      const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
+      result = await uazapiInstance("/message/sendText", "POST", token, { groupJid: jid, text: message });
+    } else if (action === "list_groups" && token) {
+      const r = await uazapiInstance("/group/fetchAllGroups", "GET", token);
+      result = { groups: (Array.isArray(r) ? r : r.groups || []).map((g:any) => ({ group_jid: g.JID||g.jid||g.id, name: g.Name||g.name||g.Subject })) };
+    } else if (action === "list_instances") {
+      const all = await uazapiAdmin("/instance/all", "GET") as Array<{name?:string;status?:string;owner?:string}>;
+      result = { instances: all.filter(i => i.name?.startsWith(`roy-${accountId.slice(0,8)}`)) };
+    } else if (action === "list_sector_instances") {
+      const { data: ints } = await supabase.from("integrations").select("id, sector_id, config, status, display_name, pin_hash").eq("account_id", accountId).eq("type", "whatsapp").not("sector_id", "is", null);
+      result = { instances: (ints||[]).map((i:any) => ({ id: i.id, sector_id: i.sector_id, instance_name: i.config?.instance_name, status: i.status, has_pin: !!i.pin_hash })) };
+    } else if (action === "add_instance_to_sector") {
+      const all = await uazapiAdmin("/instance/all", "GET") as Array<{name?:string;token?:string;status?:string;owner?:string}>;
+      const inst = all.find(i => i.name === payload.instance_name);
+      if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      await supabase.from("integrations").insert({ account_id: accountId, type: "whatsapp", sector_id, status: inst.status === "connected" ? "connected" : "disconnected", config: { provider: "uazapi", instance_name: payload.instance_name, instance_token: inst.token, owner: inst.owner } });
+      result = { success: true };
+    } else if (action === "verify_instance_pin") {
+      const { data: int } = await supabase.from("integrations").select("pin_hash").eq("id", payload.integration_id).single();
+      if (!int?.pin_hash) result = { valid: true };
+      else {
+        const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload.pin + accountId));
+        result = { valid: Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('') === int.pin_hash };
       }
     }
-    
-    const shouldGenerateNewName = action === "create" && !shouldReuseInstance;
-    const instanceName = shouldGenerateNewName
-      ? `roy-${accountId.slice(0, 8)}${uniqueSuffix}`
-      : (actualInstanceName || savedInstanceName || `roy-${accountId.slice(0, 8)}${uniqueSuffix}`);
 
-    console.log(`UAZAPI action: ${action} for account ${accountId}, sector: ${sector_id || 'default'}, instance: ${instanceName}, integrationId: ${existingWhatsapp?.id || 'none'}, reuse: ${shouldReuseInstance}, hasToken: ${!!savedInstanceToken}`);
-
-    // Route to appropriate handler
-    const handlerContext = {
-      supabase,
-      supabaseUrl,
-      user,
-      userData: userData as UserData,
-      accountId,
-      payload,
-      existingWhatsapp,
-      savedInstanceToken,
-      savedInstanceName,
-      instanceName,
-      sector_id,
-      integration_id,
-      corsHeaders,
-      // Pass helper functions
-      uazapiAdminRequest,
-      uazapiInstanceRequest,
-      uazapiInstanceRequestWithRetry,
-      logWhatsAppChangeAndNotify,
-      configureWebhook,
-      getSectorDisplayName,
-    };
-
-    let result: unknown;
-
-    // Import and call handlers dynamically based on action category
-    switch (action) {
-      // Instance management actions
-      case "create":
-      case "connect":
-      case "qrcode":
-      case "paircode":
-      case "status":
-      case "disconnect":
-      case "configure_webhook":
-      case "fetch_token":
-      case "list_instances":
-      case "link_instance":
-      case "unlink_instance": {
-        const { handleInstanceAction } = await import("./handlers/instance.ts");
-        result = await handleInstanceAction(handlerContext);
-        if (result instanceof Response) return result;
-        break;
-      }
-
-      // Sector management actions
-      case "add_instance_to_sector":
-      case "update_instance_pin":
-      case "verify_instance_pin":
-      case "list_sector_instances": {
-        const { handleSectorAction } = await import("./handlers/sector.ts");
-        result = await handleSectorAction(handlerContext);
-        if (result instanceof Response) return result;
-        break;
-      }
-
-      // Messaging actions
-      case "send_text":
-      case "send_media":
-      case "send_to_group":
-      case "send_media_to_group":
-      case "delete_message":
-      case "edit_message": {
-        const { handleMessagingAction } = await import("./handlers/messaging.ts");
-        result = await handleMessagingAction(handlerContext);
-        if (result instanceof Response) return result;
-        break;
-      }
-
-      // Group management actions
-      case "list_groups":
-      case "sync_groups":
-      case "save_selected_groups":
-      case "create_group":
-      case "group_participants":
-      case "add_participant":
-      case "remove_participant":
-      case "update_group_name":
-      case "update_group_description":
-      case "update_group_image": {
-        const { handleGroupAction } = await import("./handlers/groups.ts");
-        result = await handleGroupAction(handlerContext);
-        if (result instanceof Response) return result;
-        break;
-      }
-
-      // Sync and import actions
-      case "sync-chat-history":
-      case "import-conversations": {
-        const { handleSyncAction } = await import("./handlers/sync.ts");
-        result = await handleSyncAction(handlerContext);
-        if (result instanceof Response) return result;
-        break;
-      }
-
-      // Support WhatsApp actions
-      case "create_support_instance":
-      case "refresh_support_qr":
-      case "disconnect_support":
-      case "check_support_status": {
-        const { handleSupportAction } = await import("./handlers/support.ts");
-        result = await handleSupportAction(handlerContext);
-        if (result instanceof Response) return result;
-        break;
-      }
-
-      default:
-        return new Response(
-          JSON.stringify({ error: `Unknown action: ${action}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-    }
-
-    return new Response(
-      JSON.stringify({ data: result }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-
-  } catch (error) {
-    console.error("UAZAPI Manager Error:", error);
-    return new Response(
-      JSON.stringify({ error: (error as Error).message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ data: result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
