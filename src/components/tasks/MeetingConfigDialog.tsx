@@ -191,7 +191,7 @@ Até lá!`;
         setEmailMessage(updatedMessage);
         
         onMeetingCreated(data.meeting_url, platform);
-        toast.success("Reunião criada com sucesso!");
+        toast.success("Reunião criada e registrada no histórico!");
         
         if (sendEmail && participantEmail && emailAdvance !== "none") {
           if (emailAdvance === "immediate") {
@@ -200,11 +200,9 @@ Até lá!`;
             toast.info(`Convite será enviado ${EMAIL_ADVANCE_OPTIONS.find(o => o.value === emailAdvance)?.label.toLowerCase()}`);
           }
         } else if (emailAdvance === "none") {
-          toast.info("Reunião criada sem envio de convite por email");
+          toast.info("Compartilhe o link da reunião com o participante");
         } else if (!participantEmail) {
           toast.info("Compartilhe o link da reunião com o participante");
-        } else {
-          toast.info("Reunião criada sem envio de convite por email");
         }
         onOpenChange(false);
       } else {

@@ -370,10 +370,10 @@ serve(async (req) => {
       send_email,
     } = body;
 
-    // Get task to find account_id and assigned_to (responsável)
+    // Get task to find account_id, assigned_to (responsável) and deal_id for history
     const { data: task, error: taskError } = await supabase
       .from("internal_tasks")
-      .select("account_id, assigned_to, created_by")
+      .select("account_id, assigned_to, created_by, deal_id")
       .eq("id", task_id)
       .single();
 
@@ -423,6 +423,58 @@ serve(async (req) => {
 
     if (updateError) {
       console.error("Error updating task:", updateError);
+    }
+
+    // Register meeting in deal history if deal_id exists
+    if (task.deal_id) {
+      try {
+        // Get responsible user name
+        const userId = task.assigned_to || task.created_by;
+        let userName = "Vendedor";
+        if (userId) {
+          const { data: userData } = await supabase
+            .from("users")
+            .select("name")
+            .eq("id", userId)
+            .single();
+          if (userData?.name) {
+            userName = userData.name;
+          }
+        }
+
+        // Format meeting date
+        const meetingDate = new Date(start_time);
+        const formattedDate = meetingDate.toLocaleDateString("pt-BR", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        const platformLabel = platform === "zoom" ? "Zoom" : "Google Meet";
+
+        // Create deal activity with meeting link
+        const { error: activityError } = await supabase
+          .from("deal_activities")
+          .insert({
+            account_id: task.account_id,
+            deal_id: task.deal_id,
+            type: "meeting",
+            title: `🔗 Reunião ${platformLabel} Agendada`,
+            content: `**Vendedor:** ${userName}\n**Data:** ${formattedDate}\n**Link da Reunião:** [Clique para entrar](${meetingResult.meeting_url})`,
+            user_id: userId,
+          });
+
+        if (activityError) {
+          console.error("Error creating deal activity:", activityError);
+        } else {
+          console.log("Meeting registered in deal history");
+        }
+      } catch (historyError) {
+        console.error("Error registering meeting in history:", historyError);
+        // Don't throw - meeting was created successfully, history is secondary
+      }
     }
 
     // Only schedule email if send_email is not false AND participant has email

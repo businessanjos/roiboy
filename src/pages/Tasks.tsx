@@ -118,6 +118,9 @@ interface Task {
   lead_id: string | null;
   assigned_to: string | null;
   created_at: string;
+  completed_at: string | null;
+  meeting_url: string | null;
+  meeting_platform: string | null;
   clients: Client | null;
   deals: Deal | null;
   leads: Lead | null;
