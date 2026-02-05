@@ -1,267 +1,212 @@
 
-# Correção: Drag-and-Drop de Tarefas e Subtarefas no Kanban de Marketing
 
-## Diagnóstico Detalhado
+# Correção: Remover Delay no Reposicionamento de Cards
 
-Após análise completa do código, identifiquei **DOIS PROBLEMAS DISTINTOS** causando as falhas de reordenação:
+## Problema Identificado
 
----
+O delay de ~2 segundos ocorre porque as mutations `reorderTasks` e `reorderSubtasks` seguem este fluxo:
 
-## Problema 1: Tarefas do Kanban Não Persistem Nova Posição
-
-### Causa Raiz
-O componente `MarketingTaskKanban.tsx` **não implementa lógica de reordenação** dentro da mesma coluna. O `handleDragEnd` apenas trata mudança de status (mover entre colunas), mas **ignora completamente** a reordenação de cards dentro da mesma coluna.
-
-### Código Atual (Linhas 83-110 de MarketingTaskKanban.tsx)
-```tsx
-const handleDragEnd = (event: DragEndEvent) => {
-  const { active, over } = event;
-  setActiveTask(null);
-
-  if (!over) return;
-
-  const taskId = active.id as string;
-  const overId = over.id as string;
-
-  // Check if dropped on a column
-  if (columns.some((col) => col.status === overId)) {
-    const newStatus = overId as MarketingTaskStatus;
-    const task = tasks.find((t) => t.id === taskId);
-    if (task && task.status !== newStatus) {
-      onStatusChange(taskId, newStatus);  // ← Só muda status
-    }
-    return;
-  }
-
-  // Check if dropped on another task
-  const overTask = tasks.find((t) => t.id === overId);
-  if (overTask) {
-    const task = tasks.find((t) => t.id === taskId);
-    if (task && task.status !== overTask.status) {
-      onStatusChange(taskId, overTask.status);  // ← Também só muda status
-    }
-    // ← FALTA: Reordenar cards na mesma coluna!
-  }
-};
+```text
+Usuário arrasta card → Mutation envia para banco → Aguarda resposta → invalidateQueries → Refetch dados → UI atualiza
 ```
 
-### O Que Está Faltando
-1. Uso de `arrayMove` do `@dnd-kit/sortable` para reordenar localmente
-2. Chamada para persistir a nova ordem no banco de dados
-3. Callback `onReorder` para atualizar `display_order` das tarefas
+O card volta à posição original durante a espera porque a UI só é atualizada após o `invalidateQueries` completar.
 
 ---
 
-## Problema 2: Subtarefas Não Têm Drag-and-Drop Implementado
+## Solução: Optimistic Updates
 
-### Causa Raiz
-O componente `SubtaskList.tsx` **NÃO implementa drag-and-drop**. O ícone `GripVertical` aparece visualmente mas é apenas decorativo:
+Implementar **atualizações otimistas** que atualizam o cache local **imediatamente** antes da resposta do banco:
 
-```tsx
-// Linha 124 de SubtaskList.tsx - Apenas decorativo, sem funcionalidade
-<GripVertical className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 cursor-grab" />
+```text
+Usuário arrasta card → UI atualiza instantaneamente → Mutation envia para banco em background
 ```
-
-Não há:
-- `DndContext` envolvendo a lista
-- `SortableContext` para os itens
-- `useSortable` hook em cada item de subtarefa
-- Handler `onDragEnd` para reordenar
-
----
-
-## Solução Proposta
-
-### Mudança 1: Adicionar Reordenação de Tarefas no Kanban
-
-**Arquivo**: `src/components/marketing/tasks/MarketingTaskKanban.tsx`
-
-Adicionar:
-- Import de `arrayMove` do `@dnd-kit/sortable`
-- Nova prop `onReorderTasks` para persistir a ordem
-- Lógica em `handleDragEnd` para reordenar tasks na mesma coluna
-
-**Arquivo**: `src/hooks/useMarketingTasks.ts`
-
-Adicionar nova mutation `reorderTasks` para atualizar `display_order` de múltiplas tarefas em batch.
-
-**Arquivo**: `src/components/marketing/tasks/MarketingTasksTab.tsx`
-
-Passar callback `onReorderTasks` para o componente Kanban.
-
-### Mudança 2: Implementar Drag-and-Drop de Subtarefas
-
-**Arquivo**: `src/components/marketing/tasks/SubtaskList.tsx`
-
-Refatorar completamente para adicionar:
-- `DndContext` com sensors configurados
-- `SortableContext` com `verticalListSortingStrategy`
-- Novo componente `SortableSubtaskItem` com `useSortable`
-- Handler `handleDragEnd` usando `arrayMove`
-- Chamada ao hook para persistir nova ordem
-
-**Arquivo**: `src/hooks/useMarketingSubtasks.ts`
-
-Adicionar mutation `reorderSubtasks` para atualizar `display_order` em batch.
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Tipo de Mudança |
-|---------|-----------------|
-| `src/components/marketing/tasks/MarketingTaskKanban.tsx` | Adicionar reordenação intra-coluna |
-| `src/components/marketing/tasks/MarketingTasksTab.tsx` | Passar callback de reorder |
-| `src/hooks/useMarketingTasks.ts` | Adicionar mutation `reorderTasks` |
-| `src/components/marketing/tasks/SubtaskList.tsx` | Implementar DnD completo |
-| `src/hooks/useMarketingSubtasks.ts` | Adicionar mutation `reorderSubtasks` |
+| Arquivo | Mudança |
+|---------|---------|
+| `src/hooks/useMarketingTasks.ts` | Adicionar `onMutate` com optimistic update na mutation `reorderTasks` |
+| `src/hooks/useMarketingSubtasks.ts` | Adicionar `onMutate` com optimistic update na mutation `reorderSubtasks` |
 
 ---
 
 ## Detalhes Técnicos
 
-### Mutation de Reordenação (Exemplo para Tarefas)
+### Mudança 1: useMarketingTasks.ts (linhas 242-260)
 
+**Antes:**
 ```typescript
 const reorderTasks = useMutation({
   mutationFn: async (updates: { id: string; display_order: number }[]) => {
     for (const update of updates) {
-      await supabase
+      const { error } = await supabase
         .from("marketing_tasks")
         .update({ display_order: update.display_order })
         .eq("id", update.id);
+      if (error) throw error;
     }
   },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ["marketing-tasks"] });
   },
+  onError: (error: Error) => {
+    toast.error("Erro ao reordenar tarefas: " + error.message);
+  },
 });
 ```
 
-### Handler de DragEnd para Kanban (com reordenação)
-
+**Depois:**
 ```typescript
-const handleDragEnd = (event: DragEndEvent) => {
-  const { active, over } = event;
-  setActiveTask(null);
-
-  if (!over) return;
-
-  const taskId = active.id as string;
-  const overId = over.id as string;
-  const task = tasks.find((t) => t.id === taskId);
-  
-  if (!task) return;
-
-  // Dropped on a column
-  if (columns.some((col) => col.status === overId)) {
-    const newStatus = overId as MarketingTaskStatus;
-    if (task.status !== newStatus) {
-      onStatusChange(taskId, newStatus);
+const reorderTasks = useMutation({
+  mutationFn: async (updates: { id: string; display_order: number }[]) => {
+    for (const update of updates) {
+      const { error } = await supabase
+        .from("marketing_tasks")
+        .update({ display_order: update.display_order })
+        .eq("id", update.id);
+      if (error) throw error;
     }
-    return;
-  }
+  },
+  onMutate: async (updates) => {
+    // Cancelar queries em andamento para evitar sobrescrita
+    await queryClient.cancelQueries({ queryKey: ["marketing-tasks"] });
 
-  // Dropped on another task
-  const overTask = tasks.find((t) => t.id === overId);
-  if (!overTask) return;
+    // Snapshot do estado anterior para rollback
+    const previousTasks = queryClient.getQueryData<MarketingTask[]>(["marketing-tasks"]);
 
-  if (task.status === overTask.status) {
-    // REORDER within same column
-    const columnTasks = tasksByStatus[task.status];
-    const oldIndex = columnTasks.findIndex((t) => t.id === taskId);
-    const newIndex = columnTasks.findIndex((t) => t.id === overId);
-    
-    if (oldIndex !== newIndex) {
-      const reordered = arrayMove(columnTasks, oldIndex, newIndex);
-      const updates = reordered.map((t, index) => ({
-        id: t.id,
-        display_order: index,
-      }));
-      onReorderTasks(updates);
+    // Atualizar cache IMEDIATAMENTE (optimistic update)
+    queryClient.setQueryData<MarketingTask[]>(["marketing-tasks"], (old) => {
+      if (!old) return old;
+      return old.map((task) => {
+        const update = updates.find((u) => u.id === task.id);
+        return update ? { ...task, display_order: update.display_order } : task;
+      }).sort((a, b) => a.display_order - b.display_order);
+    });
+
+    return { previousTasks };
+  },
+  onError: (error, _, context) => {
+    // Rollback em caso de erro
+    if (context?.previousTasks) {
+      queryClient.setQueryData(["marketing-tasks"], context.previousTasks);
     }
-  } else {
-    // Move to different column
-    onStatusChange(taskId, overTask.status);
-  }
-};
+    toast.error("Erro ao reordenar tarefas: " + error.message);
+  },
+  onSettled: () => {
+    // Sincronizar com servidor após conclusão
+    queryClient.invalidateQueries({ queryKey: ["marketing-tasks"] });
+  },
+});
 ```
 
-### Estrutura SortableSubtaskItem para Subtarefas
+### Mudança 2: useMarketingSubtasks.ts (linhas 151-168)
 
-```tsx
-function SortableSubtaskItem({ subtask, onToggle, onEdit, onDelete }: Props) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: subtask.id });
+**Antes:**
+```typescript
+const reorderSubtasks = useMutation({
+  mutationFn: async (updates: { id: string; display_order: number }[]) => {
+    for (const update of updates) {
+      const { error } = await supabase
+        .from("marketing_task_subtasks")
+        .update({ display_order: update.display_order })
+        .eq("id", update.id);
+      if (error) throw error;
+    }
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["marketing-subtasks", taskId] });
+  },
+  onError: (error: Error) => {
+    toast.error("Erro ao reordenar subtarefas: " + error.message);
+  },
+});
+```
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
+**Depois:**
+```typescript
+const reorderSubtasks = useMutation({
+  mutationFn: async (updates: { id: string; display_order: number }[]) => {
+    for (const update of updates) {
+      const { error } = await supabase
+        .from("marketing_task_subtasks")
+        .update({ display_order: update.display_order })
+        .eq("id", update.id);
+      if (error) throw error;
+    }
+  },
+  onMutate: async (updates) => {
+    // Cancelar queries em andamento
+    await queryClient.cancelQueries({ queryKey: ["marketing-subtasks", taskId] });
 
-  return (
-    <div ref={setNodeRef} style={style} className="...">
-      <div {...attributes} {...listeners}>
-        <GripVertical className="h-3 w-3 cursor-grab" />
-      </div>
-      {/* resto do conteúdo */}
-    </div>
-  );
-}
+    // Snapshot para rollback
+    const previousSubtasks = queryClient.getQueryData<MarketingSubtask[]>(["marketing-subtasks", taskId]);
+
+    // Atualizar cache IMEDIATAMENTE
+    queryClient.setQueryData<MarketingSubtask[]>(["marketing-subtasks", taskId], (old) => {
+      if (!old) return old;
+      return old.map((subtask) => {
+        const update = updates.find((u) => u.id === subtask.id);
+        return update ? { ...subtask, display_order: update.display_order } : subtask;
+      }).sort((a, b) => a.display_order - b.display_order);
+    });
+
+    return { previousSubtasks };
+  },
+  onError: (error, _, context) => {
+    // Rollback em caso de erro
+    if (context?.previousSubtasks) {
+      queryClient.setQueryData(["marketing-subtasks", taskId], context.previousSubtasks);
+    }
+    toast.error("Erro ao reordenar subtarefas: " + error.message);
+  },
+  onSettled: () => {
+    // Sincronizar após conclusão
+    queryClient.invalidateQueries({ queryKey: ["marketing-subtasks", taskId] });
+  },
+});
 ```
 
 ---
 
-## Fluxo de Reordenação Corrigido
+## Como Funciona o Optimistic Update
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                    TAREFAS DO KANBAN                        │
+│                   FLUXO OTIMIZADO                           │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
-│  Usuário arrasta Card A sobre Card B (mesma coluna)        │
-│  └──▶ handleDragEnd detecta mesmo status                   │
-│       └──▶ arrayMove reordena array local                  │
-│            └──▶ onReorderTasks persiste no banco           │
-│                 └──▶ invalidateQueries atualiza UI         │
+│  1. Usuário solta o card                                   │
+│     └──▶ onMutate é chamado ANTES da request              │
 │                                                             │
-└─────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────┐
-│                    SUBTAREFAS                               │
-├─────────────────────────────────────────────────────────────┤
+│  2. onMutate:                                              │
+│     ├──▶ Cancela queries em andamento                      │
+│     ├──▶ Salva snapshot do estado atual                    │
+│     └──▶ Atualiza cache local IMEDIATAMENTE                │
+│          └──▶ UI reflete nova posição INSTANTANEAMENTE     │
 │                                                             │
-│  Usuário arrasta Subtarefa 1 sobre Subtarefa 3             │
-│  └──▶ DndContext detecta dragEnd                           │
-│       └──▶ arrayMove reordena array                        │
-│            └──▶ reorderSubtasks persiste ordem             │
-│                 └──▶ invalidateQueries atualiza UI         │
+│  3. mutationFn executa em background:                      │
+│     └──▶ Envia updates para Supabase                       │
+│                                                             │
+│  4. Se SUCESSO (onSettled):                                │
+│     └──▶ invalidateQueries sincroniza estado               │
+│                                                             │
+│  5. Se ERRO (onError):                                     │
+│     └──▶ Rollback para snapshot salvo                      │
+│          └──▶ UI reverte para posição anterior             │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
-
----
-
-## Resumo das Correções
-
-| Problema | Componente | Correção |
-|----------|------------|----------|
-| Tarefas voltam à posição original | `MarketingTaskKanban.tsx` | Adicionar lógica de reorder com `arrayMove` e persistência |
-| Subtarefas não se movem | `SubtaskList.tsx` | Implementar DnD completo com `DndContext`, `SortableContext`, `useSortable` |
 
 ---
 
 ## Resultado Esperado
 
-Após implementação:
-1. Arrastar tarefa dentro da mesma coluna reordena permanentemente
-2. Arrastar tarefa para outra coluna muda status (já funciona)
-3. Arrastar subtarefa reordena permanentemente a lista
-4. Ícone GripVertical funciona como handle de drag real
+| Antes | Depois |
+|-------|--------|
+| Card volta à posição original | Card permanece na nova posição |
+| Aguarda ~2s para atualizar | Atualização instantânea |
+| UX lenta e confusa | UX fluída e responsiva |
+
