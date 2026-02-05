@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -67,6 +68,7 @@ export function TikTokDashboard() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const focusModeRef = useRef<HTMLDivElement>(null);
 
   // ESC key listener for focus mode
   useEffect(() => {
@@ -89,8 +91,8 @@ export function TikTokDashboard() {
   }, []);
 
   const toggleFullscreen = async () => {
-    if (!document.fullscreenElement) {
-      await document.documentElement.requestFullscreen();
+    if (!document.fullscreenElement && focusModeRef.current) {
+      await focusModeRef.current.requestFullscreen();
     } else if (document.exitFullscreen) {
       await document.exitFullscreen();
     }
@@ -528,8 +530,8 @@ export function TikTokDashboard() {
       </Card>
 
       {/* Focus Mode Overlay */}
-      {isFocusMode && (
-        <div className="fixed inset-0 z-[9999] bg-background overflow-auto">
+      {isFocusMode && createPortal(
+        <div ref={focusModeRef} className="fixed inset-0 z-[9999] bg-background overflow-auto">
           <div className="container mx-auto py-8 px-6 max-w-7xl">
             {/* Header with buttons */}
             <div className="flex items-center justify-between mb-6">
@@ -727,7 +729,8 @@ export function TikTokDashboard() {
               </CardContent>
             </Card>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
