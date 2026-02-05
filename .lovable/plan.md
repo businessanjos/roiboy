@@ -1,113 +1,109 @@
 
-# Modo Foco para Dashboard Social Media
+# Correção do Modo Foco + Botão Tela Cheia
 
-## Objetivo
-Adicionar um botão de **Modo Foco** ao dashboard de Social Media que exibe o conteúdo em tela cheia, ideal para transmissão via Chromecast em TVs.
+## Problemas Identificados
 
----
-
-## O que será implementado
-
-### Comportamento do Modo Foco
-1. **Botão de Ativação**: Ícone de expansão (Maximize2) ao lado do filtro de período
-2. **Tela Cheia Limpa**: Remove toda a interface do aplicativo (sidebar, header, tabs) e exibe apenas:
-   - Os 4 cards de KPI (Total Seguidores, Engaj. Médio, Total Posts, Perfis Ativos)
-   - A tabela de Métricas por Perfil
-3. **Controles de Saída**:
-   - Botão de fechar no canto superior direito
-   - Tecla `ESC` para sair
-4. **Visual Otimizado para TV**: 
-   - Fundo sólido escuro/claro (respeitando o tema)
-   - Conteúdo centralizado com espaçamento adequado
-   - Filtro de período visível para ajustes
+1. **Overlay não cobre tudo**: O `z-50` não é suficiente para cobrir a barra superior com o botão "Ver planos"
+2. **Falta opção de tela cheia real**: Usuário quer transmitir via Chromecast e precisa da Fullscreen API do navegador
 
 ---
 
-## Design Visual
+## Soluções
 
+### 1. Aumentar z-index do overlay
+Mudar de `z-50` para `z-[9999]` para garantir que o overlay fique acima de todos os elementos do aplicativo.
+
+### 2. Adicionar botão de Tela Cheia (Fullscreen API)
+Implementar um botão que ativa o modo fullscreen real do navegador, ideal para transmissão via Chromecast.
+
+---
+
+## Implementação
+
+### Novo Ícone
+- Importar `Fullscreen` do lucide-react (ícone de 4 setas apontando para fora)
+
+### Novo Estado
+```typescript
+const [isFullscreen, setIsFullscreen] = useState(false);
+```
+
+### Funções de Fullscreen
+```typescript
+const toggleFullscreen = async () => {
+  if (!document.fullscreenElement) {
+    await document.documentElement.requestFullscreen();
+    setIsFullscreen(true);
+  } else {
+    await document.exitFullscreen();
+    setIsFullscreen(false);
+  }
+};
+
+// Listener para detectar saída do fullscreen
+useEffect(() => {
+  const handleFullscreenChange = () => {
+    setIsFullscreen(!!document.fullscreenElement);
+  };
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+}, []);
+```
+
+### Novo Layout do Header no Modo Foco
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                                                          [X]    │
-│                                                                 │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌────────────┐│
-│  │ Total       │ │ Engaj.      │ │ Total       │ │ Perfis     ││
-│  │ Seguidores  │ │ Médio       │ │ Posts       │ │ Ativos     ││
-│  │ 286.7K      │ │ 5.6%        │ │ 4.9K        │ │ 6          ││
-│  └─────────────┘ └─────────────┘ └─────────────┘ └────────────┘│
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────────┐│
-│  │ Métricas por Perfil                    [Período: 3 meses ▾] ││
-│  ├─────────────────────────────────────────────────────────────┤│
-│  │ Perfil          │ Seguidores │ Posts │ Engaj. │ ...        ││
-│  │ @evertonpieri_  │ 144.2K     │ 1.8K  │ 7.7%   │            ││
-│  │ @abrunapieri    │ 102.9K     │ 1.5K  │ 25.1%  │            ││
-│  │ ...             │            │       │        │            ││
-│  └─────────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────────┘
+│  Visão Consolidada        [Período ▾] [⛶ Tela Cheia] [X Fechar] │
 ```
 
 ---
 
 ## Arquivos a Modificar
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/components/marketing/SocialMediaDashboard.tsx` | Adicionar estado e overlay do modo foco para Instagram |
-| `src/components/marketing/TikTokDashboard.tsx` | Adicionar estado e overlay do modo foco para TikTok |
+| Arquivo | Alterações |
+|---------|------------|
+| `SocialMediaDashboard.tsx` | z-index, estado fullscreen, botão tela cheia |
+| `TikTokDashboard.tsx` | Mesmas alterações |
 
 ---
 
-## Implementação Técnica
+## Mudanças Específicas
 
-### Novo Estado
-```typescript
-const [isFocusMode, setIsFocusMode] = useState(false);
-```
-
-### Botão de Ativação
-Adicionado ao lado do filtro de período:
+### z-index do overlay
 ```tsx
-<Button
-  variant="outline"
-  size="icon"
-  onClick={() => setIsFocusMode(true)}
-  title="Modo Foco (ideal para TV)"
->
-  <Maximize2 className="h-4 w-4" />
-</Button>
+// Antes
+<div className="fixed inset-0 z-50 bg-background overflow-auto">
+
+// Depois  
+<div className="fixed inset-0 z-[9999] bg-background overflow-auto">
 ```
 
-### Overlay Fullscreen
+### Novo header com botões
 ```tsx
-{isFocusMode && (
-  <div className="fixed inset-0 z-50 bg-background overflow-auto">
-    <div className="container mx-auto py-8 px-6">
-      {/* Botão fechar */}
-      {/* KPI Cards */}
-      {/* Tabela de Perfis */}
-    </div>
-  </div>
-)}
-```
-
-### Listener de ESC
-```typescript
-useEffect(() => {
-  const handleEsc = (e: KeyboardEvent) => {
-    if (e.key === 'Escape' && isFocusMode) {
-      setIsFocusMode(false);
-    }
-  };
-  document.addEventListener('keydown', handleEsc);
-  return () => document.removeEventListener('keydown', handleEsc);
-}, [isFocusMode]);
+<div className="flex justify-end mb-6 gap-2">
+  <Button
+    variant="outline"
+    size="icon"
+    onClick={toggleFullscreen}
+    title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
+  >
+    <Fullscreen className="h-5 w-5" />
+  </Button>
+  <Button
+    variant="ghost"
+    size="icon"
+    onClick={() => setIsFocusMode(false)}
+  >
+    <X className="h-5 w-5" />
+  </Button>
+</div>
 ```
 
 ---
 
 ## Resultado Esperado
 
-1. **Instagram Dashboard**: Botão de expansão visível, clique ativa modo foco
-2. **TikTok Dashboard**: Mesmo comportamento
-3. **Transmissão Chromecast**: Interface limpa sem distrações, apenas dados relevantes
-4. **Fácil saída**: ESC ou botão X retornam à visualização normal
+1. **Overlay completo**: Nenhum elemento do app aparece por cima do modo foco
+2. **Tela cheia real**: Botão ativa fullscreen do navegador para transmissão perfeita via Chromecast
+3. **Controles visíveis**: Filtro de período, botão fullscreen e botão fechar disponíveis
+4. **Tecla ESC**: Funciona para sair tanto do modo foco quanto do fullscreen
