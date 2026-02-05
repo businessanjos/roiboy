@@ -424,6 +424,19 @@ export default function RoyZapp() {
         const closedAssignment = existingAssignments?.find(a => a.status === 'closed');
         
         if (activeAssignment) {
+          // VERIFICAÇÃO DE ISOLAMENTO: Checar se já está atribuída a outro agente
+          const isManager = currentUser?.team_role_name === "Gestor";
+          const hasFullVisibility = isAdmin || isManager;
+          
+          if (activeAssignment.agent_id && activeAssignment.agent_id !== currentAgent?.id && !hasFullVisibility) {
+            // Buscar nome do agente responsável
+            const responsibleAgent = agents.find(ag => ag.id === activeAssignment.agent_id);
+            const agentName = responsibleAgent?.user?.name || "outro atendente";
+            toast.warning(`Este contato já está em atendimento por ${agentName}`);
+            setCreatingConversation(false);
+            return;
+          }
+          
           // Apenas abrir a conversa existente (sem mudar o responsável)
           const { data: assignmentData } = await supabase
             .from("zapp_conversation_assignments")
@@ -1182,6 +1195,14 @@ export default function RoyZapp() {
   const assignToMe = async (assignmentId: string) => {
     if (!currentAgent) {
       toast.error("Você não está cadastrado como atendente");
+      return;
+    }
+
+    // VERIFICAÇÃO DE ISOLAMENTO: Checar se já está atribuída a outro agente
+    const assignment = assignments.find(a => a.id === assignmentId);
+    if (assignment?.agent_id && assignment.agent_id !== currentAgent.id) {
+      const agentName = getAgentName(assignment.agent_id) || "outro atendente";
+      toast.warning(`Este contato já está em atendimento por ${agentName}`);
       return;
     }
 
@@ -3482,6 +3503,20 @@ export default function RoyZapp() {
         const closedAssignment = existingAssignments?.find(a => a.status === 'closed');
         
         if (activeAssignment) {
+          // VERIFICAÇÃO DE ISOLAMENTO: Checar se já está atribuída a outro agente
+          const isManager = currentUser?.team_role_name === "Gestor";
+          const hasFullVisibility = isAdmin || isManager;
+          
+          if (activeAssignment.agent_id && activeAssignment.agent_id !== currentAgent?.id && !hasFullVisibility) {
+            // Buscar nome do agente responsável
+            const responsibleAgent = agents.find(ag => ag.id === activeAssignment.agent_id);
+            const agentName = responsibleAgent?.user?.name || "outro atendente";
+            toast.warning(`Este contato já está em atendimento por ${agentName}`);
+            setCreatingConversation(false);
+            setNewConversationDialogOpen(false);
+            return;
+          }
+          
           // Apenas abrir a conversa existente (sem mudar o responsável)
           const { data: assignmentData } = await supabase
             .from("zapp_conversation_assignments")
@@ -3686,15 +3721,20 @@ export default function RoyZapp() {
       }
       
       // Tab filter: "mine" = assigned to current agent, "queue" = unassigned conversations only
-      // Admins can see ALL conversations in "mine" tab (to monitor team)
+      // Admins e Gestores podem ver TODAS as conversas em ambas as abas (para monitoramento)
+      // Atendentes comuns só veem suas próprias conversas na aba "mine" e apenas não atribuídas na "queue"
       // Skip tab filter when viewing archived or closed (show all regardless of assignment)
       // EXCEPTION: Groups skip tab filter when viewing groups tab (they're permanent, not tickets)
       const skipTabFilterForGroups = filterConversationType === "group" && isGroup;
       
+      // Checar se o usuário tem visibilidade total (Admin ou Gestor)
+      const isManager = currentUser?.team_role_name === "Gestor";
+      const hasFullVisibility = isAdmin || isManager;
+      
       const matchesTab = (filterArchived || filterStatus === "closed" || skipTabFilterForGroups) ? true : (
         inboxTab === "mine" 
-          ? (isAdmin || a.agent_id === currentAgent?.id) // Admins see all assigned, others see only their own
-          : a.agent_id === null // Queue always shows only unassigned
+          ? (hasFullVisibility || a.agent_id === currentAgent?.id) // Admin/Gestor veem tudo; outros só suas próprias
+          : (hasFullVisibility ? true : a.agent_id === null) // Admin/Gestor veem toda a fila; outros só não atribuídas
       );
       
       const matchesSearch = matchesSearchQuery(contact, searchQuery);
@@ -3737,30 +3777,59 @@ export default function RoyZapp() {
   };
 
   // Memoized stats to avoid recalculating on every render
+  // Admin/Gestor veem todas as conversas; atendentes comuns só veem as suas
   const stats = useMemo(() => {
+    const isManager = currentUser?.team_role_name === "Gestor";
+    const hasFullVisibility = isAdmin || isManager;
+    
     const onlineAgents = agents.filter((a) => a.is_online && a.is_active).length;
-    // Queue shows only unassigned conversations (agent_id === null)
-    const totalQueueConversations = assignments.filter((a) => a.agent_id === null && a.status !== "closed").length;
-    const myConversations = assignments.filter((a) => a.agent_id === currentAgent?.id && a.status !== "closed").length;
+    
+    // Para Admin/Gestor: mostrar contagem total de fila
+    // Para atendentes: mostrar apenas conversas não atribuídas
+    const totalQueueConversations = hasFullVisibility
+      ? assignments.filter((a) => a.status !== "closed" && !a.zapp_conversation?.is_archived).length
+      : assignments.filter((a) => a.agent_id === null && a.status !== "closed" && !a.zapp_conversation?.is_archived).length;
+    
+    // Para Admin/Gestor: mostrar todas as conversas atribuídas
+    // Para atendentes: mostrar apenas suas próprias conversas
+    const myConversations = hasFullVisibility
+      ? assignments.filter((a) => a.agent_id !== null && a.status !== "closed" && !a.zapp_conversation?.is_archived).length
+      : assignments.filter((a) => a.agent_id === currentAgent?.id && a.status !== "closed" && !a.zapp_conversation?.is_archived).length;
+    
     const activeConversations = assignments.filter((a) => a.status === "active").length;
     const assignedToOthers = assignments.filter((a) => a.agent_id && a.agent_id !== currentAgent?.id && a.status !== "closed").length;
     
-    const myUnreadCount = assignments.filter((a) => 
-      a.agent_id === currentAgent?.id && 
-      a.status !== "closed" && 
-      !a.zapp_conversation?.is_archived &&
-      (a.zapp_conversation?.unread_count || 0) > 0
-    ).length;
-    // Queue unread shows only unassigned conversations with unread messages
-    const queueUnreadCount = assignments.filter((a) => 
-      a.agent_id === null &&
-      a.status !== "closed" && 
-      !a.zapp_conversation?.is_archived &&
-      (a.zapp_conversation?.unread_count || 0) > 0
-    ).length;
+    // Unread counts também respeitam visibilidade
+    const myUnreadCount = hasFullVisibility
+      ? assignments.filter((a) => 
+          a.agent_id !== null &&
+          a.status !== "closed" && 
+          !a.zapp_conversation?.is_archived &&
+          (a.zapp_conversation?.unread_count || 0) > 0
+        ).length
+      : assignments.filter((a) => 
+          a.agent_id === currentAgent?.id && 
+          a.status !== "closed" && 
+          !a.zapp_conversation?.is_archived &&
+          (a.zapp_conversation?.unread_count || 0) > 0
+        ).length;
+    
+    // Queue unread: Admin/Gestor veem todos os não lidos; atendentes só não atribuídos
+    const queueUnreadCount = hasFullVisibility
+      ? assignments.filter((a) => 
+          a.status !== "closed" && 
+          !a.zapp_conversation?.is_archived &&
+          (a.zapp_conversation?.unread_count || 0) > 0
+        ).length
+      : assignments.filter((a) => 
+          a.agent_id === null &&
+          a.status !== "closed" && 
+          !a.zapp_conversation?.is_archived &&
+          (a.zapp_conversation?.unread_count || 0) > 0
+        ).length;
     
     return { onlineAgents, totalQueueConversations, myConversations, activeConversations, assignedToOthers, myUnreadCount, queueUnreadCount };
-  }, [agents, assignments, currentAgent?.id]);
+  }, [agents, assignments, currentAgent?.id, isAdmin, currentUser?.team_role_name]);
   
   const { onlineAgents, totalQueueConversations, myConversations, activeConversations, assignedToOthers, myUnreadCount, queueUnreadCount } = stats;
 
