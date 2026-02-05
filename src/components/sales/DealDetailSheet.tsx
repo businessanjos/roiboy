@@ -211,6 +211,12 @@ export function DealDetailSheet({
   const [lostReason, setLostReason] = useState("");
   const [wonAtPopoverOpen, setWonAtPopoverOpen] = useState(false);
   const [updatingWonAt, setUpdatingWonAt] = useState(false);
+  const [localWonAt, setLocalWonAt] = useState<string | null>(deal?.won_at || null);
+  
+  // Sincronizar estado local com prop quando deal muda
+  useEffect(() => {
+    setLocalWonAt(deal?.won_at || null);
+  }, [deal?.won_at]);
   
   const { mergeDeals } = useDealMerge();
 
@@ -716,7 +722,7 @@ export function DealDetailSheet({
                     <p className="text-lg font-bold text-foreground">{daysSinceCreation} dias</p>
                   </div>
                   <div className="rounded-lg border p-3 bg-muted/30">
-                    {deal.status === 'won' && deal.won_at ? (
+                    {deal.status === 'won' && localWonAt ? (
                       <>
                         <div className="flex items-center gap-1.5 mb-1">
                           <Trophy className="h-3.5 w-3.5 text-emerald-500" />
@@ -728,14 +734,14 @@ export function DealDetailSheet({
                               className="flex items-center gap-1.5 text-lg font-bold text-emerald-500 hover:underline cursor-pointer group"
                               disabled={updatingWonAt}
                             >
-                              {format(new Date(deal.won_at), "dd/MM/yy")}
+                              {format(new Date(localWonAt), "dd/MM/yy")}
                               <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" align="start">
                             <CalendarComponent
                               mode="single"
-                              selected={new Date(deal.won_at)}
+                              selected={new Date(localWonAt)}
                               onSelect={async (newDate: Date | undefined) => {
                                 if (!deal || !newDate) return;
                                 setUpdatingWonAt(true);
@@ -745,6 +751,7 @@ export function DealDetailSheet({
                                     .update({ won_at: newDate.toISOString() })
                                     .eq("id", deal.id);
                                   if (error) throw error;
+                                  setLocalWonAt(newDate.toISOString()); // Atualização imediata da UI
                                   toast.success("Data de fechamento atualizada!");
                                   setWonAtPopoverOpen(false);
                                   onDealUpdated?.();
