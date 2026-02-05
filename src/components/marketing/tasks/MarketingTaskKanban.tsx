@@ -10,6 +10,7 @@ import {
   DragEndEvent,
   DragOverEvent,
 } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import { MarketingKanbanColumn } from "./MarketingKanbanColumn";
 import { MarketingKanbanCard } from "./MarketingKanbanCard";
 import { MarketingTask, MarketingTaskStatus } from "@/hooks/useMarketingTasks";
@@ -21,6 +22,7 @@ interface MarketingTaskKanbanProps {
   onStatusChange: (taskId: string, newStatus: MarketingTaskStatus) => void;
   onAddTask: (status?: MarketingTaskStatus) => void;
   subtaskCounts: Record<string, { total: number; completed: number }>;
+  onReorderTasks?: (updates: { id: string; display_order: number }[]) => void;
 }
 
 const columns: { status: MarketingTaskStatus; title: string }[] = [
@@ -36,6 +38,7 @@ export function MarketingTaskKanban({
   onStatusChange,
   onAddTask,
   subtaskCounts,
+  onReorderTasks,
 }: MarketingTaskKanbanProps) {
   const [activeTask, setActiveTask] = useState<MarketingTask | null>(null);
 
@@ -88,12 +91,14 @@ export function MarketingTaskKanban({
 
     const taskId = active.id as string;
     const overId = over.id as string;
+    const task = tasks.find((t) => t.id === taskId);
+
+    if (!task) return;
 
     // Check if dropped on a column
     if (columns.some((col) => col.status === overId)) {
       const newStatus = overId as MarketingTaskStatus;
-      const task = tasks.find((t) => t.id === taskId);
-      if (task && task.status !== newStatus) {
+      if (task.status !== newStatus) {
         onStatusChange(taskId, newStatus);
       }
       return;
@@ -101,11 +106,25 @@ export function MarketingTaskKanban({
 
     // Check if dropped on another task
     const overTask = tasks.find((t) => t.id === overId);
-    if (overTask) {
-      const task = tasks.find((t) => t.id === taskId);
-      if (task && task.status !== overTask.status) {
-        onStatusChange(taskId, overTask.status);
+    if (!overTask) return;
+
+    if (task.status === overTask.status) {
+      // REORDER within same column
+      const columnTasks = tasksByStatus[task.status];
+      const oldIndex = columnTasks.findIndex((t) => t.id === taskId);
+      const newIndex = columnTasks.findIndex((t) => t.id === overId);
+
+      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+        const reordered = arrayMove(columnTasks, oldIndex, newIndex);
+        const updates = reordered.map((t, index) => ({
+          id: t.id,
+          display_order: index,
+        }));
+        onReorderTasks?.(updates);
       }
+    } else {
+      // Move to different column
+      onStatusChange(taskId, overTask.status);
     }
   };
 

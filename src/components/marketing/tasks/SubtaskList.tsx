@@ -1,10 +1,22 @@
 import { useState } from "react";
-import { Plus, X, Check, GripVertical } from "lucide-react";
+import { Plus, X, Check } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
-import { useMarketingSubtasks, MarketingSubtask } from "@/hooks/useMarketingSubtasks";
+import { useMarketingSubtasks } from "@/hooks/useMarketingSubtasks";
+import { SortableSubtaskItem } from "./SortableSubtaskItem";
 
 interface SubtaskListProps {
   taskId: string | null;
@@ -16,8 +28,34 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
 
-  const { subtasks, isLoading, createSubtask, updateSubtask, deleteSubtask, toggleComplete } =
+  const { subtasks, isLoading, createSubtask, updateSubtask, deleteSubtask, toggleComplete, reorderSubtasks } =
     useMarketingSubtasks(taskId);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = subtasks.findIndex((s) => s.id === active.id);
+    const newIndex = subtasks.findIndex((s) => s.id === over.id);
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const reordered = arrayMove(subtasks, oldIndex, newIndex);
+      const updates = reordered.map((s, index) => ({
+        id: s.id,
+        display_order: index,
+      }));
+      reorderSubtasks.mutate(updates);
+    }
+  };
 
   const handleAddSubtask = async (e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -29,7 +67,6 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
       title: newSubtaskTitle.trim(),
     });
     setNewSubtaskTitle("");
-    // Keep isAdding=true to allow adding multiple subtasks
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -45,11 +82,6 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
     }
   };
 
-  const handleStartEditing = (subtask: MarketingSubtask) => {
-    setEditingId(subtask.id);
-    setEditingTitle(subtask.title);
-  };
-
   const handleSaveEdit = async () => {
     if (!editingId || !editingTitle.trim()) {
       setEditingId(null);
@@ -61,18 +93,6 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
       title: editingTitle.trim(),
     });
     setEditingId(null);
-  };
-
-  const handleEditKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      e.stopPropagation();
-      handleSaveEdit();
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      e.stopPropagation();
-      setEditingId(null);
-    }
   };
 
   const completedCount = subtasks.filter((s) => s.is_completed).length;
@@ -111,61 +131,39 @@ export function SubtaskList({ taskId }: SubtaskListProps) {
         </div>
       )}
 
-      {/* Subtask list */}
-      <div className="space-y-1">
-        {subtasks.map((subtask) => (
-          <div
-            key={subtask.id}
-            className={cn(
-              "flex items-center gap-2 py-1.5 px-2 rounded group hover:bg-muted/50 transition-colors",
-              subtask.is_completed && "opacity-60"
-            )}
-          >
-            <GripVertical className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 cursor-grab" />
-            
-            <Checkbox
-              checked={subtask.is_completed}
-              onCheckedChange={(checked) =>
-                toggleComplete.mutate({ id: subtask.id, isCompleted: !!checked })
-              }
-            />
-
-            {editingId === subtask.id ? (
-              <Input
-                value={editingTitle}
-                onChange={(e) => setEditingTitle(e.target.value)}
-                onBlur={handleSaveEdit}
-                onKeyDown={handleEditKeyDown}
-                className="h-7 text-sm flex-1"
-                autoFocus
+      {/* Subtask list with DnD */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={subtasks.map((s) => s.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          <div className="space-y-1">
+            {subtasks.map((subtask) => (
+              <SortableSubtaskItem
+                key={subtask.id}
+                subtask={subtask}
+                isEditing={editingId === subtask.id}
+                editingTitle={editingTitle}
+                onStartEditing={() => {
+                  setEditingId(subtask.id);
+                  setEditingTitle(subtask.title);
+                }}
+                onEditingTitleChange={setEditingTitle}
+                onSaveEdit={handleSaveEdit}
+                onCancelEdit={() => setEditingId(null)}
+                onToggleComplete={(checked) =>
+                  toggleComplete.mutate({ id: subtask.id, isCompleted: checked })
+                }
+                onDelete={() => deleteSubtask.mutate(subtask.id)}
               />
-            ) : (
-              <span
-                className={cn(
-                  "text-sm flex-1 cursor-pointer",
-                  subtask.is_completed && "line-through"
-                )}
-                onClick={() => handleStartEditing(subtask)}
-              >
-                {subtask.title}
-              </span>
-            )}
-
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100"
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteSubtask.mutate(subtask.id);
-              }}
-            >
-              <X className="h-3 w-3" />
-            </Button>
+            ))}
           </div>
-        ))}
-      </div>
+        </SortableContext>
+      </DndContext>
 
       {/* Add new subtask */}
       {isAdding ? (

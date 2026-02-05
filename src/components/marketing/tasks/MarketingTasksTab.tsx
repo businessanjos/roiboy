@@ -22,7 +22,7 @@ export function MarketingTasksTab() {
   const [addingToSection, setAddingToSection] = useState<string | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<MarketingTaskStatus | undefined>(undefined);
 
-  const { tasks, isLoading: tasksLoading, createTask, updateTask, toggleComplete } = useMarketingTasks();
+  const { tasks, isLoading: tasksLoading, createTask, updateTask, toggleComplete, reorderTasks } = useMarketingTasks();
   const { sections, isLoading: sectionsLoading, createSection } = useMarketingTaskSections();
 
   // Fetch subtask counts for all tasks
@@ -162,6 +162,7 @@ export function MarketingTasksTab() {
           onStatusChange={handleStatusChange}
           onAddTask={(status) => handleAddTask(undefined, status)}
           subtaskCounts={subtaskCounts}
+          onReorderTasks={(updates) => reorderTasks.mutate(updates)}
         />
       )}
 
