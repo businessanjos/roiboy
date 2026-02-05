@@ -63,6 +63,7 @@ const SalesTeam = lazy(() => import("./pages/SalesTeam"));
 const Leads = lazy(() => import("./pages/Leads"));
 const TeamChat = lazy(() => import("./pages/TeamChat"));
 const Marketing = lazy(() => import("./pages/Marketing"));
+const ContentCalendar = lazy(() => import("./pages/ContentCalendar"));
 const SocialMedia = lazy(() => import("./pages/SocialMedia"));
 const MarketingTasks = lazy(() => import("./pages/MarketingTasks"));
 const Insights = lazy(() => import("./pages/Insights"));
@@ -188,6 +189,7 @@ const App = () => (
                             <Route path="/billing" element={<BillingPortal />} />
                             <Route path="/team-chat" element={<TeamChat />} />
                             <Route path="/marketing" element={<Marketing />} />
+                            <Route path="/content-calendar" element={<ContentCalendar />} />
                             <Route path="/social-media" element={<SocialMedia />} />
                             <Route path="/marketing-tasks" element={<MarketingTasks />} />
                             <Route path="/insights" element={<Insights />} />

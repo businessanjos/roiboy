@@ -22,6 +22,7 @@ import {
   Crown,
   UserCheck,
   Instagram,
+  LayoutGrid,
   type LucideIcon,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
@@ -141,6 +142,7 @@ export const sectors: Sector[] = [
     defaultRoute: "/marketing",
     navItems: [
       { to: "/marketing", icon: CalendarDays, label: "Calendário Anual" },
+      { to: "/content-calendar", icon: LayoutGrid, label: "Conteúdo" },
       { to: "/social-media", icon: Instagram, label: "Social Media" },
       { to: "/marketing-tasks", icon: ClipboardList, label: "Tarefas" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
