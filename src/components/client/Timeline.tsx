@@ -31,7 +31,7 @@ import {
   Check,
   Download,
 } from "lucide-react";
-import { extractMentions } from "@/components/ui/mention-input";
+// extractMentions removed - now using onMentionSelect callback for accurate mention tracking
 import { MentionTextarea } from "@/components/ui/mention-textarea";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -765,6 +765,8 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   // Image paste/drop preview state
   const [pastedImagePreview, setPastedImagePreview] = useState<{ file: File; url: string } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  // Track mentioned users from MentionTextarea callback (IDs are reliable, not regex-based)
+  const [mentionedUsers, setMentionedUsers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
   const location = useLocation();
   
   // Refs for hidden file inputs
@@ -831,36 +833,30 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     if (data) setClientName(data.full_name);
   };
 
-  const createNotificationsWithAnchor = async (mentionedUserNames: string[], commentContent: string, followupId: string) => {
-    if (!currentUser?.account_id || mentionedUserNames.length === 0) return;
+  const createNotificationsWithAnchor = async (mentionedUserIds: string[], commentContent: string, followupId: string) => {
+    if (!currentUser?.account_id || mentionedUserIds.length === 0) return;
 
     try {
-      // Find user IDs by name
-      const { data: users } = await supabase
-        .from("users")
-        .select("id, name")
-        .in("name", mentionedUserNames);
+      // Filter out self from mentioned users
+      const userIdsToNotify = mentionedUserIds.filter((id) => id !== currentUser.id);
+      
+      if (userIdsToNotify.length === 0) return;
 
-      if (!users || users.length === 0) return;
+      // Create notifications directly using IDs (no name lookup needed)
+      const notificationsToCreate = userIdsToNotify.map((userId) => ({
+        account_id: currentUser.account_id!,
+        user_id: userId,
+        type: "mention",
+        title: `${currentUser.name} mencionou você`,
+        content: `Em ${clientName}: "${commentContent.slice(0, 100)}${commentContent.length > 100 ? "..." : ""}"`,
+        link: `/clients/${clientId}#comment-${followupId}`,
+        triggered_by_user_id: currentUser.id,
+        source_type: "client_followup",
+        source_id: followupId,
+      }));
 
-      // Create notifications for each mentioned user (except self) with anchor link
-      const notificationsToCreate = users
-        .filter((u) => u.id !== currentUser.id)
-        .map((user) => ({
-          account_id: currentUser.account_id!,
-          user_id: user.id,
-          type: "mention",
-          title: `${currentUser.name} mencionou você`,
-          content: `Em ${clientName}: "${commentContent.slice(0, 100)}${commentContent.length > 100 ? "..." : ""}"`,
-          link: `/clients/${clientId}#comment-${followupId}`,
-          triggered_by_user_id: currentUser.id,
-          source_type: "client_followup",
-          source_id: followupId,
-        }));
-
-      if (notificationsToCreate.length > 0) {
-        await supabase.from("notifications").insert(notificationsToCreate);
-      }
+      const { error } = await supabase.from("notifications").insert(notificationsToCreate);
+      if (error) throw error;
     } catch (error) {
       console.error("Error creating notifications:", error);
     }
@@ -886,12 +882,12 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
       if (error) throw error;
 
       // Create notifications for mentioned users with link to specific comment
-      const mentionedNames = extractMentions(comment);
-      if (mentionedNames.length > 0 && newFollowup) {
-        await createNotificationsWithAnchor(mentionedNames, comment.trim(), newFollowup.id);
+      if (mentionedUsers.length > 0 && newFollowup) {
+        await createNotificationsWithAnchor(mentionedUsers.map((u) => u.id), comment.trim(), newFollowup.id);
       }
       
       setComment("");
+      setMentionedUsers([]); // Clear mentioned users after submit
       onCommentAdded?.();
       toast.success("Comentário adicionado!");
     } catch (error: any) {
@@ -1224,14 +1220,15 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
                 </div>
               )}
               
-              <MentionTextarea
-                placeholder="Escreva um comentário... Use @ para mencionar"
-                value={comment}
-                onChange={setComment}
-                onKeyDown={handleKeyDown}
-                onPaste={handlePaste}
-                className="pr-24"
-              />
+            <MentionTextarea
+              placeholder="Escreva um comentário... Use @ para mencionar"
+              value={comment}
+              onChange={setComment}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              onMentionSelect={setMentionedUsers}
+              className="pr-24"
+            />
               {/* Hidden file inputs */}
               <input
                 ref={imageInputRef}
@@ -1407,6 +1404,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
               onChange={setComment}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
+              onMentionSelect={setMentionedUsers}
               className="pr-24"
             />
             {/* Hidden file inputs */}
