@@ -1,145 +1,117 @@
 
-# Diagnóstico e Correção: Áudios Carregando Infinitamente no ROY zAPP
+# Plano: Campo para Nomear Telefones Adicionais
 
-## Resumo do Problema
+## Visão Geral
 
-Os usuários do ROY zAPP veem **"Carregando mídia..."** indefinidamente para mensagens de áudio recebidas. O áudio nunca é reproduzível.
+Adicionar um campo de "rótulo" ao lado de cada telefone adicional na janela de edição do cliente, permitindo que o time de operações identifique facilmente a quem pertence ou qual é a finalidade de cada número (ex: "Esposa", "Trabalho", "Secretária").
 
----
+## Layout Proposto
 
-## Causa Raiz Identificada
-
-### A Edge Function `download-media` NÃO ESTÁ DEPLOYADA
-
-Ao testar a função:
 ```
-POST /download-media → 404 NOT_FOUND
-"Requested function was not found"
-```
-
-O código da função existe em `supabase/functions/download-media/index.ts`, mas ela não foi implantada no ambiente de produção.
-
-### Fluxo do Problema
-
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 1. Webhook recebe mensagem de áudio                                         │
-│    ↓                                                                         │
-│ 2. Salva no banco com media_download_status = "pending"                     │
-│    ↓                                                                         │
-│ 3. Frontend abre conversa, vê "pending", tenta chamar download-media        │
-│    ↓                                                                         │
-│ 4. ❌ Edge Function retorna 404 (não deployada)                             │
-│    ↓                                                                         │
-│ 5. Status permanece "pending" eternamente                                   │
-│    ↓                                                                         │
-│ 6. UI mostra "Carregando mídia..." para sempre                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│ TELEFONES ADICIONAIS                                                 │
+│                                                                      │
+│ ┌─────────────────────────────────────────────────────────────────┐  │
+│ │ [Secretária: +55 11 99999-9999] ×  [Esposa: +55 31 98888-8888] ×│  │
+│ └─────────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│ ┌──────────────────────┐ ┌─────────────────────────────────┐  ┌───┐ │
+│ │ Rótulo (opcional)    │ │ +55 11 99999-9999               │  │ + │ │
+│ └──────────────────────┘ └─────────────────────────────────┘  └───┘ │
+│                                                                      │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-### Evidência dos Dados
+## Mudanças Técnicas
 
-Consulta no banco mostra dezenas de mensagens de áudio pendentes:
-- Todas têm `media_download_status: pending`
-- Todas têm `media_key` corretamente salva (ex: `LLf4lZ4s9w2E+qRg0l...`)
-- Todas têm `media_encrypted_url` presente
-- Nenhuma tem `media_url` (URL final acessível)
+### 1. Alteração de Tipos (ClientInfoForm.tsx)
 
----
-
-## Solução
-
-### Ação 1: Deploy da Edge Function `download-media`
-
-A função já existe e está correta. Apenas precisa ser deployada:
-
-```bash
-supabase functions deploy download-media
-```
-
-### Ação 2: Melhorar Resiliência do Frontend (Preventivo)
-
-Atualmente, se o download falha, o frontend não tenta novamente automaticamente. Vou adicionar:
-
-1. **Detecção de mídia travada**: Se status é "pending" ou "downloading" há mais de 60 segundos na mesma sessão, oferecer botão "Tentar novamente"
-
-2. **Tratamento de erro 404**: Se a função retorna 404, logar erro claro no console
-
-**Arquivo**: `src/hooks/useZappData.tsx`
-
-Modificar a chamada de auto-download (linhas 665-667) para:
+**De:**
 ```typescript
-supabase.functions.invoke("download-media", {
-  body: { message_ids: idsToDownload }
-}).then((res) => {
-  if (res.error) {
-    console.error("[ZappData] Download-media error:", res.error);
-  } else {
-    console.log(`[ZappData] Download triggered for ${idsToDownload.length} items`);
-  }
-}).catch((err) => {
-  console.error("[ZappData] Auto-download network error:", err);
-});
+additional_phones: string[];
 ```
 
-### Ação 3: Reprocessar Mídias Pendentes (Pós-Deploy)
+**Para:**
+```typescript
+additional_phones: Array<{ number: string; label?: string }> | string[];
+```
 
-Após o deploy, testar manualmente para verificar que as mídias pendentes serão baixadas quando o usuário abrir a conversa.
+A interface aceita ambos os formatos para compatibilidade com dados existentes.
 
----
+### 2. Migração Automática de Dados Legados
+
+Quando o usuário abrir o diálogo de edição, os telefones em formato antigo (`string[]`) serão convertidos automaticamente para o novo formato (`{ number, label }[]`):
+
+```typescript
+// Converter ["phone1", "phone2"] para [{ number: "phone1" }, { number: "phone2" }]
+const normalizePhones = (phones: any[]): Array<{ number: string; label?: string }> => {
+  return phones.map(p => typeof p === "string" ? { number: p } : p);
+};
+```
+
+### 3. Atualização da UI (ClientInfoForm.tsx)
+
+- Adicionar estado `newPhoneLabel` para o rótulo do novo telefone
+- Inserir campo de input para rótulo antes do campo de telefone
+- Atualizar renderização dos badges para exibir "Rótulo: Número"
+- Ajustar funções `handleAddPhone` e `handleRemovePhone`
+
+### 4. Atualização da Busca no Webhook (uazapi-webhook)
+
+A consulta JSONB precisa ser atualizada para suportar o novo formato:
+
+**De:**
+```sql
+additional_phones.cs.["${phone}"]
+```
+
+**Para (usando OR para suportar ambos formatos):**
+```sql
+additional_phones.cs.["${phone}"],additional_phones.cs.[{"number":"${phone}"}]
+```
+
+Isso garante que tanto telefones no formato antigo quanto no novo sejam encontrados.
+
+### 5. Compatibilidade na Visualização
+
+Todos os componentes que exibem telefones adicionais precisam de lógica defensiva:
+
+```typescript
+const displayPhone = (phone: string | { number: string; label?: string }) => {
+  if (typeof phone === "string") return phone;
+  return phone.label ? `${phone.label}: ${phone.number}` : phone.number;
+};
+```
 
 ## Arquivos a Modificar
 
-| Arquivo | Modificação |
-|---------|-------------|
-| `supabase/functions/download-media/index.ts` | **DEPLOY** (sem alterações no código) |
-| `src/hooks/useZappData.tsx` | Melhorar log de erros no auto-download |
+| Arquivo | Mudanças |
+|---------|----------|
+| `src/components/client/ClientInfoForm.tsx` | Interface, estados, funções de add/remove, UI com campo de rótulo |
+| `src/pages/ClientDetail.tsx` | Normalização dos dados ao abrir diálogo |
+| `supabase/functions/uazapi-webhook/index.ts` | Consulta JSONB para suportar novo formato |
+| `src/components/sales/DealLeadInfo.tsx` | Exibição compatível com ambos formatos |
+| `src/hooks/useDuplicateDetection.tsx` | Busca compatível com ambos formatos |
 
----
+## Comportamento do Usuário
 
-## Por Que o Deploy Foi Perdido?
+1. **Ao abrir o diálogo de edição**: Telefones existentes aparecem como badges (com rótulo se houver)
+2. **Ao adicionar novo telefone**: 
+   - Usuário pode opcionalmente preencher o campo "Rótulo" (ex: "Trabalho")
+   - Preenche o telefone
+   - Clica no "+" ou pressiona Enter
+3. **Exibição**: Telefones com rótulo aparecem como "Trabalho: +55 11 99999-9999"
 
-Possíveis causas:
-1. Durante um deploy anterior de outras funções (ex: `uazapi-manager`), esta função não foi incluída
-2. Algum processo de limpeza removeu funções não utilizadas recentemente
-3. Erro silencioso durante um deploy batch
+## Compatibilidade Retroativa
 
-### Prevenção Futura
-
-As seguintes Edge Functions são **CRÍTICAS** para o funcionamento do sistema e devem ser verificadas periodicamente:
-
-| Função | Propósito |
-|--------|-----------|
-| `uazapi-manager` | Envio de mensagens WhatsApp |
-| `uazapi-webhook` | Recebimento de mensagens WhatsApp |
-| `download-media` | Download de mídias (áudio, imagem, vídeo) |
-| `list-clients` | Listagem de clientes |
-| `create-client` | Criação de clientes |
-| `transcribe-audio` | Transcrição de áudios |
-
----
+- Dados existentes no formato `["phone1", "phone2"]` continuam funcionando
+- Ao salvar, todos os telefones são convertidos para o novo formato
+- Busca no webhook funciona com ambos os formatos
+- Não é necessária migração de dados no banco (conversão é feita no frontend)
 
 ## Resultado Esperado
 
-Após o deploy:
-
-1. Usuário abre conversa com áudio pendente
-2. Frontend detecta `media_download_status: pending`
-3. Chama `download-media` Edge Function
-4. Função baixa, descriptografa e salva no Storage
-5. Atualiza `media_url` e `media_download_status: completed`
-6. Realtime notifica frontend
-7. UI atualiza e exibe player de áudio funcional
-
----
-
-## Notas Técnicas
-
-### A função `download-media` é robusta
-
-Ela já possui:
-- Timeout de 30s por download individual
-- Processamento em lotes de 8 mensagens
-- Descriptografia com AES-CBC usando HKDF
-- Detecção de downloads "travados" (>5min no status "downloading")
-- Suporte a retry de falhas
+O time de operações poderá:
+1. Identificar rapidamente a quem pertence cada número adicional
+2. Filtrar visualmente quais números são de familiares, trabalho, assistentes, etc.
+3. Tomar decisões mais rápidas sobre para qual número ligar/enviar mensagens
