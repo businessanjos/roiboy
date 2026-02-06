@@ -55,6 +55,7 @@ const WhatsAppGroups = lazy(() => import("./pages/WhatsAppGroups"));
 const PublicMembersBook = lazy(() => import("./pages/PublicMembersBook"));
 const AIAgent = lazy(() => import("./pages/AIAgent"));
 const RoyZapp = lazy(() => import("./pages/RoyZapp"));
+const MentorAgenda = lazy(() => import("./pages/MentorAgenda"));
 const BillingPortal = lazy(() => import("./pages/BillingPortal"));
 const Sectors = lazy(() => import("./pages/Sectors"));
 const Contracts = lazy(() => import("./pages/Contracts"));
@@ -185,6 +186,7 @@ const App = () => (
                             <Route path="/reminders" element={<Reminders />} />
                             <Route path="/whatsapp-groups" element={<WhatsAppGroups />} />
                             <Route path="/roy-zapp" element={<RoyZapp />} />
+                            <Route path="/mentor-agenda" element={<MentorAgenda />} />
                             <Route path="/ai-agent" element={<AIAgent />} />
                             <Route path="/billing" element={<BillingPortal />} />
                             <Route path="/team-chat" element={<TeamChat />} />

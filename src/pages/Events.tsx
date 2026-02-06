@@ -164,6 +164,10 @@ export default function Events() {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [visibleSectors, setVisibleSectors] = useState<string[]>([]);
   const [visibilityOpen, setVisibilityOpen] = useState(false);
+  const [mentorUserId, setMentorUserId] = useState<string>("");
+  
+  // Everton Pieri's user ID
+  const EVERTON_PIERI_ID = 'de43a643-0109-4afb-ac35-be768dbf4090';
   
   // Multi-day schedule state: { 'YYYY-MM-DD': { startTime: 'HH:mm', endTime: 'HH:mm' } }
   const [daySchedules, setDaySchedules] = useState<Record<string, { startTime: string; endTime: string }>>({});
@@ -324,6 +328,7 @@ export default function Events() {
     setDaySchedules({});
     setVisibleSectors([]);
     setVisibilityOpen(false);
+    setMentorUserId("");
     setEditingEvent(null);
   };
 
@@ -377,6 +382,7 @@ export default function Events() {
     setAllowExternalGuests((event as any).allow_external_guests || false);
     setSelectedProducts(event.event_products.map(ep => ep.product_id));
     setVisibleSectors((event as any).visible_sectors || []);
+    setMentorUserId((event as any).mentor_user_id || "");
     setDaySchedules({});
     setDialogOpen(true);
   };
@@ -424,6 +430,7 @@ export default function Events() {
       is_recurring: isRecurring,
       allow_external_guests: allowExternalGuests,
       visible_sectors: visibleSectors.length > 0 ? visibleSectors : null,
+      mentor_user_id: mentorUserId || null,
       account_id: accountId,
     };
 
@@ -1029,6 +1036,31 @@ export default function Events() {
                   />
                 </div>
               )}
+
+              {/* Mentor Linking Section */}
+              <div className="space-y-2">
+                <Label>Vincular Mentor</Label>
+                <Select
+                  value={mentorUserId || "none"}
+                  onValueChange={(v) => setMentorUserId(v === "none" ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um mentor" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    <SelectItem value={EVERTON_PIERI_ID}>
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Everton Pieri
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Ao vincular, o mentor receberá notificações 1 dia antes e no dia do evento
+                </p>
+              </div>
 
               <div className="space-y-2">
                 <Label>Produtos que incluem este evento</Label>

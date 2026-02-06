@@ -25,6 +25,14 @@ function getTodayInBrazil(): string {
   return brazilTime.toISOString().split("T")[0];
 }
 
+// Get tomorrow's date in Brazil timezone
+function getTomorrowInBrazil(): string {
+  const now = new Date();
+  const brazilTime = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  brazilTime.setDate(brazilTime.getDate() + 1);
+  return brazilTime.toISOString().split("T")[0];
+}
+
 // Check if notification already exists for today
 async function notificationExistsToday(
   supabase: any,
@@ -90,10 +98,12 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const today = getTodayInBrazil();
-    console.log(`Checking agenda reminders for: ${today}`);
+    const tomorrow = getTomorrowInBrazil();
+    console.log(`Checking agenda reminders for today: ${today}, tomorrow: ${tomorrow}`);
 
     let tasksNotified = 0;
     let eventsNotified = 0;
+    let mentorNotified = 0;
 
     // ==========================================
     // 1. TASKS DUE TODAY
@@ -325,7 +335,97 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Agenda reminders check completed. Tasks: ${tasksNotified}, Events: ${eventsNotified}`);
+    // ==========================================
+    // 5. MENTOR EVENTS - TOMORROW (1 day before)
+    // ==========================================
+    const { data: mentorEventsTomorrow, error: mentorTomorrowError } = await supabase
+      .from("events")
+      .select("id, title, account_id, scheduled_at, mentor_user_id")
+      .gte("scheduled_at", `${tomorrow}T00:00:00`)
+      .lt("scheduled_at", `${tomorrow}T23:59:59`)
+      .not("mentor_user_id", "is", null);
+
+    if (mentorTomorrowError) {
+      console.error("Error fetching mentor events for tomorrow:", mentorTomorrowError);
+    } else if (mentorEventsTomorrow) {
+      console.log(`Found ${mentorEventsTomorrow.length} mentor events for tomorrow`);
+      
+      for (const event of mentorEventsTomorrow) {
+        const exists = await notificationExistsToday(
+          supabase,
+          event.mentor_user_id,
+          "events",
+          event.id,
+          "mentor_event_tomorrow",
+          today
+        );
+
+        if (exists) {
+          console.log(`Mentor tomorrow notification already sent for event ${event.id}`);
+          continue;
+        }
+
+        const created = await createNotification(supabase, {
+          accountId: event.account_id,
+          userId: event.mentor_user_id,
+          type: "mentor_event_tomorrow",
+          title: "🔔 Evento amanhã",
+          content: `${event.title} está agendado para amanhã às ${formatTime(event.scheduled_at)}`,
+          link: `/events/${event.id}`,
+          sourceType: "events",
+          sourceId: event.id,
+        });
+
+        if (created) mentorNotified++;
+      }
+    }
+
+    // ==========================================
+    // 6. MENTOR EVENTS - TODAY
+    // ==========================================
+    const { data: mentorEventsToday, error: mentorTodayError } = await supabase
+      .from("events")
+      .select("id, title, account_id, scheduled_at, mentor_user_id")
+      .gte("scheduled_at", `${today}T00:00:00`)
+      .lt("scheduled_at", `${today}T23:59:59`)
+      .not("mentor_user_id", "is", null);
+
+    if (mentorTodayError) {
+      console.error("Error fetching mentor events for today:", mentorTodayError);
+    } else if (mentorEventsToday) {
+      console.log(`Found ${mentorEventsToday.length} mentor events for today`);
+      
+      for (const event of mentorEventsToday) {
+        const exists = await notificationExistsToday(
+          supabase,
+          event.mentor_user_id,
+          "events",
+          event.id,
+          "mentor_event_today",
+          today
+        );
+
+        if (exists) {
+          console.log(`Mentor today notification already sent for event ${event.id}`);
+          continue;
+        }
+
+        const created = await createNotification(supabase, {
+          accountId: event.account_id,
+          userId: event.mentor_user_id,
+          type: "mentor_event_today",
+          title: "📅 Evento hoje!",
+          content: `${event.title} às ${formatTime(event.scheduled_at)}`,
+          link: `/events/${event.id}`,
+          sourceType: "events",
+          sourceId: event.id,
+        });
+
+        if (created) mentorNotified++;
+      }
+    }
+
+    console.log(`Agenda reminders check completed. Tasks: ${tasksNotified}, Events: ${eventsNotified}, Mentor: ${mentorNotified}`);
 
     return new Response(
       JSON.stringify({
@@ -333,6 +433,7 @@ serve(async (req) => {
         date: today,
         tasksNotified,
         eventsNotified,
+        mentorNotified,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

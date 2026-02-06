@@ -4229,6 +4229,7 @@ export type Database = {
           material_url: string | null
           max_capacity: number | null
           meeting_url: string | null
+          mentor_user_id: string | null
           modality: Database["public"]["Enums"]["event_modality"]
           notes: string | null
           public_registration_code: string | null
@@ -4270,6 +4271,7 @@ export type Database = {
           material_url?: string | null
           max_capacity?: number | null
           meeting_url?: string | null
+          mentor_user_id?: string | null
           modality?: Database["public"]["Enums"]["event_modality"]
           notes?: string | null
           public_registration_code?: string | null
@@ -4311,6 +4313,7 @@ export type Database = {
           material_url?: string | null
           max_capacity?: number | null
           meeting_url?: string | null
+          mentor_user_id?: string | null
           modality?: Database["public"]["Enums"]["event_modality"]
           notes?: string | null
           public_registration_code?: string | null
@@ -4332,6 +4335,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_mentor_user_id_fkey"
+            columns: ["mentor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
