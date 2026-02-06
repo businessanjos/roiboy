@@ -407,7 +407,7 @@ export default function Tasks() {
       task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesUser = filterUser === "all" || 
-      filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser;
+      (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
 
     const matchesActivityType = filterActivityType === "all" || 
       task.activity_type?.id === filterActivityType;
@@ -1009,7 +1009,7 @@ export default function Tasks() {
               task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
             
             const matchesUser = filterUser === "all" || 
-              filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser;
+              (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
 
             const matchesActivityType = filterActivityType === "all" || 
               task.activity_type?.id === filterActivityType;
