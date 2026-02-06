@@ -1,51 +1,116 @@
 
+# Plano: Corrigir Filtros de Tarefas Quebrados
 
-# Plano: Corrigir Exibição de "Sem status" em Tarefas Concluídas
+## Diagnóstico do Problema
 
-## Diagnóstico
+A última alteração que fizemos adicionou o fallback de status apenas na **renderização visual** (linhas 534-538), mas **não corrigiu a lógica de filtragem**. Isso causa uma discrepância:
 
-Algumas tarefas aparecem como "Sem status" mesmo estando claramente concluídas (com texto riscado). Isso ocorre porque:
+### Comportamento Atual
 
-1. O sistema possui dois mecanismos de conclusão:
-   - **Antigo**: campo `completed_at` (timestamp de conclusão)
-   - **Novo**: campo `custom_status_id` (referência ao status "Concluído")
+| Local | Considera `completed_at`? | Resultado |
+|-------|--------------------------|-----------|
+| **Contadores (cards)** | ✅ Sim (linha 477) | Mostra 817 concluídas |
+| **Contagem das abas** | ❌ Não (linha 459) | Aba mostra contagem errada |
+| **Filtragem por aba** | ❌ Não (linha 420-423) | Tarefas legadas não aparecem |
+| **Exibição na tabela** | ✅ Sim (linha 535-538) | Mostra status correto |
 
-2. Tarefas concluídas antes da implementação do sistema de status personalizado têm apenas `completed_at` preenchido, mas `custom_status_id` permanece NULL.
+### Fluxo do Bug
 
-3. A lógica visual está inconsistente:
-   - **Riscado (linha 565-567)**: verifica `completed_at` → funciona corretamente
-   - **Label de status (linha 592)**: depende apenas de `custom_status_id` → mostra "Sem status"
+1. Usuário clica na aba "Concluído"
+2. `activeTab` = ID do status concluído
+3. `filteredTasks` verifica: `task.custom_status_id === activeTab`
+4. Tarefas legadas têm `custom_status_id = NULL` → **não correspondem**
+5. Resultado: 0 tarefas exibidas, mesmo com 817 no contador
+
+---
 
 ## Solução
 
-Adicionar fallback inteligente: quando `custom_status_id` é NULL mas `completed_at` existe, automaticamente usar o status de conclusão configurado.
+Aplicar a mesma lógica de fallback em **três lugares**:
 
-### Alteração em `src/pages/Tasks.tsx`
+### 1. Contagem por Status (linha 456-462)
 
-**Linha 534 - Antes:**
+**Antes:**
 ```tsx
-const taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
+const statusCounts = useMemo(() => {
+  const counts: Record<string, number> = {};
+  customStatuses.forEach(status => {
+    counts[status.id] = tasks.filter(t => t.custom_status_id === status.id).length;
+  });
+  return counts;
+}, [tasks, customStatuses]);
 ```
 
 **Depois:**
 ```tsx
-// Find the custom status, or fallback to completed status if task has completed_at
-let taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
-if (!taskStatus && task.completed_at) {
-  // Task was completed via legacy method, find the first completed status
-  taskStatus = customStatuses.find(s => s.is_completed_status);
+const statusCounts = useMemo(() => {
+  const counts: Record<string, number> = {};
+  customStatuses.forEach(status => {
+    counts[status.id] = tasks.filter(t => {
+      // Direct match
+      if (t.custom_status_id === status.id) return true;
+      // Legacy fallback: tasks with completed_at but no custom_status_id
+      if (!t.custom_status_id && t.completed_at && status.is_completed_status) return true;
+      return false;
+    }).length;
+  });
+  return counts;
+}, [tasks, customStatuses]);
+```
+
+### 2. Filtro por Aba (linha 418-423)
+
+**Antes:**
+```tsx
+const defaultStatus = customStatuses.find(s => s.is_default);
+const matchesTab = activeTab 
+  ? task.custom_status_id === activeTab || 
+    (!task.custom_status_id && activeTab === defaultStatus?.id)
+  : true;
+```
+
+**Depois:**
+```tsx
+// Find relevant statuses for filtering
+const defaultStatus = customStatuses.find(s => s.is_default);
+const targetStatus = activeTab ? customStatuses.find(s => s.id === activeTab) : null;
+
+// Match tab with fallback for legacy completed tasks
+let matchesTab = true;
+if (activeTab) {
+  if (task.custom_status_id === activeTab) {
+    matchesTab = true;
+  } else if (!task.custom_status_id && activeTab === defaultStatus?.id) {
+    // Tasks without status go to default
+    matchesTab = true;
+  } else if (!task.custom_status_id && task.completed_at && targetStatus?.is_completed_status) {
+    // Legacy completed tasks go to completed status tab
+    matchesTab = true;
+  } else {
+    matchesTab = false;
+  }
 }
 ```
 
-## Arquivos a Modificar
+---
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/Tasks.tsx` | Linha 534: adicionar fallback para status de conclusão |
+## Arquivo a Modificar
+
+| Arquivo | Linhas | Alteração |
+|---------|--------|-----------|
+| `src/pages/Tasks.tsx` | 456-462 | Adicionar fallback no `statusCounts` |
+| `src/pages/Tasks.tsx` | 418-423 | Adicionar fallback no `matchesTab` |
+
+---
 
 ## Resultado Esperado
 
-- Tarefas com `completed_at` mas sem `custom_status_id` exibirão "Concluído" ao invés de "Sem status"
-- O ícone verde e a cor do status serão exibidos corretamente
-- Consistência visual entre o texto riscado e o badge de status
+1. **Aba "Concluído"** mostrará corretamente todas as tarefas:
+   - Com `custom_status_id` do status concluído
+   - Com `completed_at` preenchido (legadas)
 
+2. **Contadores das abas** refletirão a mesma contagem dos cards
+
+3. **Todas as tarefas** voltarão a aparecer ao aplicar filtros
+
+4. **Experiência consistente** entre a contagem e a visualização real
