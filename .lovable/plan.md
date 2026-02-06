@@ -1,262 +1,51 @@
 
 
-# Plano: Adicionar Validação de Campos Obrigatórios no ROY zAPP
+# Plano: Corrigir Exibição de "Sem status" em Tarefas Concluídas
 
-## Problema Identificado
+## Diagnóstico
 
-Atualmente, dentro do ROY zAPP, é possível mover negócios entre etapas e marcá-los como Ganho/Perdido **sem validar os campos obrigatórios** configurados no sistema. Esta é uma inconsistência com o Pipeline principal, que já possui essa validação.
+Algumas tarefas aparecem como "Sem status" mesmo estando claramente concluídas (com texto riscado). Isso ocorre porque:
 
-### Código Atual (sem validação)
+1. O sistema possui dois mecanismos de conclusão:
+   - **Antigo**: campo `completed_at` (timestamp de conclusão)
+   - **Novo**: campo `custom_status_id` (referência ao status "Concluído")
 
-**ZappCRMPanel.tsx (linha 624-628)**:
+2. Tarefas concluídas antes da implementação do sistema de status personalizado têm apenas `completed_at` preenchido, mas `custom_status_id` permanece NULL.
+
+3. A lógica visual está inconsistente:
+   - **Riscado (linha 565-567)**: verifica `completed_at` → funciona corretamente
+   - **Label de status (linha 592)**: depende apenas de `custom_status_id` → mostra "Sem status"
+
+## Solução
+
+Adicionar fallback inteligente: quando `custom_status_id` é NULL mas `completed_at` existe, automaticamente usar o status de conclusão configurado.
+
+### Alteração em `src/pages/Tasks.tsx`
+
+**Linha 534 - Antes:**
 ```tsx
-onClick={() => {
-  if (!isActive) {
-    moveDeal.mutate({ dealId: activeDeal.id, stageId: stage.id });
-  }
-}}
+const taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
 ```
 
-**ZappDealDetailSheet.tsx (linha 516)**:
+**Depois:**
 ```tsx
-onClick={() => !isActive && moveDeal.mutate(stage.id)}
+// Find the custom status, or fallback to completed status if task has completed_at
+let taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
+if (!taskStatus && task.completed_at) {
+  // Task was completed via legacy method, find the first completed status
+  taskStatus = customStatuses.find(s => s.is_completed_status);
+}
 ```
 
-**ZappDealDetailSheet.tsx (linhas 420, 430)**:
-```tsx
-onClick={() => updateDealStatus.mutate("won")}
-onClick={() => updateDealStatus.mutate("lost")}
-```
+## Arquivos a Modificar
 
----
-
-## Solução Proposta
-
-Integrar o hook `useRequiredFieldsValidation` e o componente `RequiredFieldsModal` em ambos os componentes do ROY zAPP, seguindo o mesmo padrão já implementado no Pipeline.
-
-### Fluxo de Validação
-
-1. Usuário clica em uma etapa ou botão (Ganho/Perdido)
-2. Sistema executa `validateDealMove` ou `validateDealOutcome`
-3. Se houver campos faltando → Abre `RequiredFieldsModal`
-4. Após preenchimento → Executa a ação (mover etapa ou mudar status)
-5. Se não houver campos faltando → Executa a ação diretamente
-
----
-
-## Alterações Técnicas
-
-### 1. ZappCRMPanel.tsx
-
-**Novos imports:**
-```tsx
-import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
-import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
-```
-
-**Novos estados:**
-```tsx
-const [requiredFieldsModal, setRequiredFieldsModal] = useState<{
-  open: boolean;
-  dealId: string;
-  dealTitle: string;
-  targetStageId: string;
-  targetStageName: string;
-  missingFields: CustomField[];
-} | null>(null);
-```
-
-**Novo handler com validação:**
-```tsx
-const handleStageClick = async (stageId: string, stageName: string) => {
-  if (!activeDeal || !currentUser?.account_id) return;
-  
-  const { validateDealMove } = useRequiredFieldsValidation();
-  const result = await validateDealMove(activeDeal.id, stageId, currentUser.account_id);
-  
-  if (!result.canMoveToStage) {
-    setRequiredFieldsModal({
-      open: true,
-      dealId: activeDeal.id,
-      dealTitle: activeDeal.title,
-      targetStageId: stageId,
-      targetStageName: stageName,
-      missingFields: result.missingFields,
-    });
-  } else {
-    moveDeal.mutate({ dealId: activeDeal.id, stageId });
-  }
-};
-```
-
-**Substituir onClick direto (linha 624-628):**
-```tsx
-// Antes:
-onClick={() => {
-  if (!isActive) {
-    moveDeal.mutate({ dealId: activeDeal.id, stageId: stage.id });
-  }
-}}
-
-// Depois:
-onClick={() => !isActive && handleStageClick(stage.id, stage.name)}
-```
-
-**Adicionar modal ao final do componente:**
-```tsx
-{requiredFieldsModal && (
-  <RequiredFieldsModal
-    open={requiredFieldsModal.open}
-    onOpenChange={(open) => !open && setRequiredFieldsModal(null)}
-    dealId={requiredFieldsModal.dealId}
-    dealTitle={requiredFieldsModal.dealTitle}
-    targetStageName={requiredFieldsModal.targetStageName}
-    missingFields={requiredFieldsModal.missingFields}
-    accountId={currentUser?.account_id || ""}
-    onComplete={() => {
-      moveDeal.mutate({ 
-        dealId: requiredFieldsModal.dealId, 
-        stageId: requiredFieldsModal.targetStageId 
-      });
-      setRequiredFieldsModal(null);
-    }}
-  />
-)}
-```
-
----
-
-### 2. ZappDealDetailSheet.tsx
-
-**Novos imports:**
-```tsx
-import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
-import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
-import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
-```
-
-**Novos estados:**
-```tsx
-const [requiredFieldsModal, setRequiredFieldsModal] = useState<{
-  open: boolean;
-  dealId: string;
-  dealTitle: string;
-  targetStageId?: string;
-  targetStageName: string;
-  missingFields: CustomField[];
-  outcomeType?: "won" | "lost";
-} | null>(null);
-```
-
-**Instanciar hook:**
-```tsx
-const { validateDealMove, validateDealOutcome } = useRequiredFieldsValidation();
-```
-
-**Novo handler para mudança de etapa (linha 516):**
-```tsx
-const handleStageClick = async (stageId: string, stageName: string) => {
-  if (!deal || !currentUser?.account_id) return;
-  
-  const result = await validateDealMove(dealId, stageId, currentUser.account_id);
-  
-  if (!result.canMoveToStage) {
-    setRequiredFieldsModal({
-      open: true,
-      dealId: dealId,
-      dealTitle: deal.title,
-      targetStageId: stageId,
-      targetStageName: stageName,
-      missingFields: result.missingFields,
-    });
-  } else {
-    moveDeal.mutate(stageId);
-  }
-};
-```
-
-**Novo handler para Ganho/Perdido (linhas 420, 430):**
-```tsx
-const handleOutcomeClick = async (outcome: "won" | "lost") => {
-  if (!deal || !currentUser?.account_id) return;
-  
-  const result = await validateDealOutcome(dealId, outcome, currentUser.account_id);
-  
-  if (!result.canMoveToStage) {
-    setRequiredFieldsModal({
-      open: true,
-      dealId: dealId,
-      dealTitle: deal.title,
-      targetStageName: outcome === "won" ? "Ganho" : "Perdido",
-      missingFields: result.missingFields,
-      outcomeType: outcome,
-    });
-  } else {
-    updateDealStatus.mutate(outcome);
-  }
-};
-```
-
-**Substituir onClick dos botões Ganho/Perdido:**
-```tsx
-// Antes (linha 420):
-onClick={() => updateDealStatus.mutate("won")}
-
-// Depois:
-onClick={() => handleOutcomeClick("won")}
-
-// Antes (linha 430):
-onClick={() => updateDealStatus.mutate("lost")}
-
-// Depois:
-onClick={() => handleOutcomeClick("lost")}
-```
-
-**Adicionar modal dentro do SheetContent:**
-```tsx
-{requiredFieldsModal && (
-  <RequiredFieldsModal
-    open={requiredFieldsModal.open}
-    onOpenChange={(open) => !open && setRequiredFieldsModal(null)}
-    dealId={requiredFieldsModal.dealId}
-    dealTitle={requiredFieldsModal.dealTitle}
-    targetStageName={requiredFieldsModal.targetStageName}
-    missingFields={requiredFieldsModal.missingFields}
-    accountId={currentUser?.account_id || ""}
-    outcomeType={requiredFieldsModal.outcomeType}
-    onComplete={() => {
-      if (requiredFieldsModal.outcomeType) {
-        updateDealStatus.mutate(requiredFieldsModal.outcomeType);
-      } else if (requiredFieldsModal.targetStageId) {
-        moveDeal.mutate(requiredFieldsModal.targetStageId);
-      }
-      setRequiredFieldsModal(null);
-    }}
-  />
-)}
-```
-
----
-
-## Arquivos a Serem Modificados
-
-| Arquivo | Modificação |
-|---------|-------------|
-| `src/components/royzapp/ZappCRMPanel.tsx` | Adicionar validação na movimentação de etapas |
-| `src/components/royzapp/ZappDealDetailSheet.tsx` | Adicionar validação em etapas e botões Ganho/Perdido |
-
----
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/Tasks.tsx` | Linha 534: adicionar fallback para status de conclusão |
 
 ## Resultado Esperado
 
-1. **Ao clicar em uma etapa** no ROY zAPP:
-   - Se houver campos obrigatórios não preenchidos → Abre modal
-   - Se todos os campos estiverem preenchidos → Move normalmente
-
-2. **Ao clicar em "Ganho" ou "Perdido"**:
-   - Valida campos obrigatórios configurados para esse desfecho
-   - Se faltar campos → Abre modal com mensagem contextual
-   - Após preenchimento → Executa a ação
-
-3. **Experiência consistente** entre Pipeline e ROY zAPP
+- Tarefas com `completed_at` mas sem `custom_status_id` exibirão "Concluído" ao invés de "Sem status"
+- O ícone verde e a cor do status serão exibidos corretamente
+- Consistência visual entre o texto riscado e o badge de status
 
