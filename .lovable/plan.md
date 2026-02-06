@@ -1,127 +1,114 @@
 
-# Diagnóstico e Plano de Correção: Conversas Aparecendo Incorretamente na Aba "Minhas"
+# Plano: Corrigir Notificações de Menções na Timeline do Cliente
 
-## Diagnóstico do Problema
+## Problema Identificado
 
-### Evidências Encontradas
+Os usuários mencionados com `@` na timeline do cliente **não estão recebendo notificações** porque:
 
-1. **Perfil da Dayara Grecco:**
-   - `team_role_name: Consultor` (NÃO é Admin nem Gestor)
-   - `is_also_admin: false`
-   - Portanto, ela NÃO tem a "visibilidade total" de gestores
-
-2. **Conversas Atribuídas à Dayara:**
-   Encontrei 11 conversas com status ≠ `closed` atribuídas a ela, porém VÁRIAS já tinham sido fechadas (`closed_at` preenchido):
-
-   | Contato | Status Atual | closed_at |
-   |---------|--------------|-----------|
-   | Anini & Diego | active | 2026-02-04 16:37 |
-   | Lucas Zeoti & Luma | waiting | 2026-02-04 20:09 |
-   | JOSIANE F. FERREIRA | active | 2026-02-05 14:44 |
-   | Maria Tainá | active | 2026-01-28 18:59 |
-   | Mila Azevedo | active | 2026-02-04 16:36 |
-
-   **Conclusão:** Essas conversas foram FINALIZADAS pela Dayara, mas reabertas automaticamente quando o cliente enviou nova mensagem.
-
-### Causa Raiz Identificada
-
-No arquivo `supabase/functions/uazapi-webhook/index.ts`, quando um cliente envia mensagem para uma conversa já **fechada (`closed`)**, o sistema:
-
-```typescript
-// Linha 1490-1492
-if (existingAssignment.status === "closed") {
-  newStatus = direction === "inbound" ? "triage" : "closed";
-}
-// ...
-.update({
-  updated_at: timestamp,
-  status: newStatus,
-  // ❌ O agent_id NÃO é limpo!
-})
-```
-
-O status muda para `triage` (depois para `active` ou `pending` dependendo do fluxo), MAS o `agent_id` **permanece vinculado à Dayara**. Resultado: a conversa reaparece na aba "Minhas" dela.
-
----
+1. A extração de nomes do texto (regex) **falha com nomes compostos** como "José da Paixão" - extrai apenas "José"
+2. A busca no banco por nome exato não encontra "José", então zero notificações são criadas
+3. O componente `MentionTextarea` já fornece os IDs dos usuários mencionados via callback `onMentionSelect`, mas a Timeline **não está usando esse callback**
 
 ## Solução Proposta
 
-### Correção 1: Limpar Atendente ao Reabrir Conversa Fechada (Webhook)
+### Mudança 1: Capturar IDs diretamente do MentionTextarea
 
-**Arquivo:** `supabase/functions/uazapi-webhook/index.ts`
+**Arquivo:** `src/components/client/Timeline.tsx`
 
-**Lógica:** Quando uma conversa com status `closed` recebe uma mensagem inbound, devemos:
-1. Mudar status para `triage`
-2. **Limpar o `agent_id`** e `assigned_at`
-3. Assim a conversa volta para a **Fila Geral** em vez de aparecer na aba do último atendente
-
-**Mudanças necessárias em 2 locais:**
-
-**Local 1 (linhas 1509-1518):**
+Adicionar estado para armazenar os usuários mencionados:
 ```typescript
-.update({
-  updated_at: timestamp,
-  status: newStatus,
-  // CORREÇÃO: Se reabrindo de closed, limpar atendente para voltar à fila
-  ...(existingAssignment.status === "closed" && newStatus === "triage" 
-    ? { agent_id: null, assigned_at: null } 
-    : {}),
-  ...(sectorDepartmentId && !existingAssignment.department_id 
-    ? { department_id: sectorDepartmentId } 
-    : {}),
-})
+const [mentionedUsers, setMentionedUsers] = useState<{ id: string; name: string }[]>([]);
 ```
 
-**Local 2 (linhas 1880-1890):**
+Conectar o callback `onMentionSelect` ao `MentionTextarea`:
+```tsx
+<MentionTextarea
+  ...
+  onMentionSelect={(users) => setMentionedUsers(users)}
+/>
+```
+
+### Mudança 2: Refatorar a função de criar notificações
+
+**Arquivo:** `src/components/client/Timeline.tsx`
+
+Alterar `createNotificationsWithAnchor` para receber IDs em vez de nomes:
 ```typescript
-.update({
-  updated_at: timestamp,
-  status: existingAssignment.status === "closed" ? "triage" : existingAssignment.status,
-  // CORREÇÃO: Se reabrindo de closed, limpar atendente para voltar à fila
-  ...(existingAssignment.status === "closed" 
-    ? { agent_id: null, assigned_at: null } 
-    : {}),
-  ...(sectorDepartmentId && !existingAssignment.department_id 
-    ? { department_id: sectorDepartmentId } 
-    : {}),
-})
+const createNotificationsWithAnchor = async (
+  mentionedUserIds: string[], // Agora recebe IDs!
+  commentContent: string, 
+  followupId: string
+) => {
+  // Remove self
+  const userIdsToNotify = mentionedUserIds.filter(id => id !== currentUser.id);
+  
+  // Create notifications directly (sem buscar por nome)
+  const notificationsToCreate = userIdsToNotify.map((userId) => ({
+    account_id: currentUser.account_id!,
+    user_id: userId,
+    type: "mention",
+    title: `${currentUser.name} mencionou você`,
+    content: `Em ${clientName}: "${commentContent.slice(0, 100)}..."`,
+    link: `/clients/${clientId}#comment-${followupId}`,
+    triggered_by_user_id: currentUser.id,
+    source_type: "client_followup",
+    source_id: followupId,
+  }));
+
+  if (notificationsToCreate.length > 0) {
+    await supabase.from("notifications").insert(notificationsToCreate);
+  }
+};
 ```
 
-### Correção 2: Script de Limpeza para Conversas Já Afetadas
+### Mudança 3: Atualizar handleSubmitComment para usar IDs
 
-As conversas que já reapareceram incorretamente precisam ser corrigidas manualmente ou via script:
-
-```sql
--- Identificar conversas reabertas que ainda têm agent_id
-UPDATE zapp_conversation_assignments
-SET agent_id = NULL, assigned_at = NULL
-WHERE status = 'triage' 
-  AND agent_id IS NOT NULL 
-  AND closed_at IS NOT NULL;
+```typescript
+const handleSubmitComment = async () => {
+  // ... código existente ...
+  
+  // Usar mentionedUsers.map(u => u.id) em vez de extractMentions(comment)
+  if (mentionedUsers.length > 0 && newFollowup) {
+    await createNotificationsWithAnchor(
+      mentionedUsers.map(u => u.id),
+      comment.trim(), 
+      newFollowup.id
+    );
+  }
+  
+  // Limpar menções após enviar
+  setMentionedUsers([]);
+  setComment("");
+  // ...
+};
 ```
 
-Isso enviará as conversas reabertas de volta para a Fila.
+### Mudança 4: Limpar menções ao limpar o campo
 
----
+Quando o comentário for enviado ou o campo limpo, resetar `mentionedUsers`:
+```typescript
+setComment("");
+setMentionedUsers([]); // Limpar lista de mencionados
+```
 
-## Benefícios da Correção
+## Benefícios
 
-1. **Fim das conversas "fantasma":** Quando Dayara encerrar um atendimento, ele não voltará para ela automaticamente no dia seguinte
-2. **Distribuição justa:** Conversas reabertas voltam para a Fila Geral, permitindo que qualquer atendente disponível assuma
-3. **Aba "Minhas" limpa:** A aba "Minhas" mostrará apenas o que realmente está sob responsabilidade do usuário
+1. **100% de precisão**: Os IDs são capturados diretamente quando o usuário seleciona da lista, não há possibilidade de erro de regex
+2. **Nomes compostos funcionam**: "José da Paixão", "Jessica Campos" - qualquer nome funciona
+3. **Menos consultas ao banco**: Não precisa buscar IDs pelos nomes
+4. **Notificações em tempo real**: O sistema já tem realtime configurado - assim que a notificação for inserida, o toast/popup aparecerá na tela do mencionado
 
----
-
-## Arquivos a Modificar
+## Arquivos Modificados
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `supabase/functions/uazapi-webhook/index.ts` | Adicionar lógica para limpar `agent_id` ao reabrir conversas fechadas (2 locais) |
+| `src/components/client/Timeline.tsx` | Usar `onMentionSelect`, refatorar criação de notificações |
 
----
+## Resultado Esperado
 
-## Observação Adicional
-
-Verifiquei que a Dayara **não é Gestora nem Admin**, então o problema de "visibilidade ampla" (onde gestores veem todas as conversas) NÃO se aplica a ela. O problema é puramente o **agent_id não sendo limpo na reabertura**.
-
-Se no futuro quiserem que gestores também tenham a aba "Minhas" estritamente pessoal (mostrando apenas o que é deles), posso ajustar o frontend também. Mas para resolver o problema URGENTE da Dayara, a correção do webhook é suficiente.
+Após a implementação:
+- Quando um usuário mencionar "@José da Paixão" na timeline
+- José receberá instantaneamente:
+  1. Um **toast** na parte inferior da tela
+  2. Uma **notificação push do navegador** (se permitido)
+  3. Um registro no **sino de notificações** do header
