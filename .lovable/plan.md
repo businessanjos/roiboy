@@ -1,115 +1,221 @@
 
-# Correção: PIN Incorreto na Instância Jonathan Marcato
 
-## Diagnóstico
+# Plano: Nova Aba Webhooks nas Integrações
 
-A instância do Jonathan Marcato (ID: `ac869d1d-6564-4b4f-b2a4-753689b029aa`) possui um `pin_hash` armazenado no banco, mas a **ação de atualização de PIN não está implementada** na Edge Function `uazapi-manager`.
+## Visão Geral
 
-### Fluxo do Problema
+Criar uma nova aba "Webhooks" na página de Integrações que permita criar, editar e excluir webhooks customizados com suporte a diversos métodos HTTP.
+
+---
+
+## Arquitetura
+
+### 1. Tabela no Banco de Dados
+
+Criar nova tabela `webhooks` para armazenar as configurações:
+
+```sql
+CREATE TABLE public.webhooks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  url TEXT NOT NULL,
+  method TEXT NOT NULL DEFAULT 'POST', -- GET, POST, PUT, PATCH, DELETE
+  headers JSONB DEFAULT '{}',
+  payload_template JSONB,
+  is_active BOOLEAN DEFAULT true,
+  trigger_event TEXT, -- Ex: 'client.created', 'event.updated', etc.
+  secret_key TEXT, -- Para validação HMAC
+  last_triggered_at TIMESTAMPTZ,
+  last_status_code INTEGER,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- RLS
+ALTER TABLE webhooks ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage webhooks of their account"
+ON webhooks FOR ALL USING (
+  account_id IN (SELECT account_id FROM users WHERE auth_user_id = auth.uid())
+);
+```
+
+### 2. Estrutura de Componentes
 
 ```text
-1. Jonathan tenta alterar PIN → Frontend chama "update_instance_pin"
-2. Edge Function NÃO reconhece a ação → Retorna { success: true } sem fazer nada
-3. Toast exibe "PIN atualizado" → Falsa confirmação
-4. PIN antigo permanece no banco → Verificação sempre falha
+src/components/integrations/
+├── IntegrationsContent.tsx    (modificar - adicionar aba)
+├── webhooks/
+│   ├── WebhooksTab.tsx        (novo - conteúdo da aba)
+│   ├── WebhookCard.tsx        (novo - card individual)
+│   ├── WebhookFormDialog.tsx  (novo - dialog criar/editar)
+│   └── useWebhooks.tsx        (novo - hook para CRUD)
 ```
 
 ---
 
-## Solução
+## Alterações nos Arquivos
 
-Implementar a ação `update_instance_pin` na Edge Function `uazapi-manager`.
+### Arquivo 1: `src/components/integrations/IntegrationsContent.tsx`
 
-### Arquivo a Modificar
-
-| Arquivo | Modificação |
-|---------|-------------|
-| `supabase/functions/uazapi-manager/index.ts` | Adicionar bloco `update_instance_pin` após `verify_instance_pin` |
-
-### Código a Adicionar (após linha 202)
+**Modificações:**
+1. Adicionar import do novo componente `WebhooksTab`
+2. Adicionar aba "Webhooks" no `TabsList` (com ícone `Webhook` do lucide)
+3. Adicionar `TabsContent` para webhooks
 
 ```typescript
-} else if (action === "update_instance_pin") {
-  // Validar integration_id
-  if (!integration_id) {
-    return new Response(
-      JSON.stringify({ error: "integration_id é obrigatório" }), 
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-  
-  // Verificar se integração existe e pertence à conta
-  const { data: int } = await supabase
-    .from("integrations")
-    .select("id")
-    .eq("id", integration_id)
-    .eq("account_id", accountId)
-    .single();
-    
-  if (!int) {
-    return new Response(
-      JSON.stringify({ error: "Instância não encontrada" }), 
-      { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-  
-  // Gerar hash do novo PIN ou null para remover
-  let pinHash: string | null = null;
-  if (payload.pin && payload.pin !== "null") {
-    const h = await crypto.subtle.digest(
-      'SHA-256', 
-      new TextEncoder().encode(payload.pin + accountId)
-    );
-    pinHash = Array.from(new Uint8Array(h))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-  }
-  
-  // Atualizar no banco
-  const { error: updateError } = await supabase
-    .from("integrations")
-    .update({ pin_hash: pinHash })
-    .eq("id", integration_id)
-    .eq("account_id", accountId);
-    
-  if (updateError) throw updateError;
-  
-  result = { success: true };
-}
+// Novo import
+import { WebhooksTab } from "./webhooks/WebhooksTab";
+
+// No TabsList (após Meet)
+<TabsTrigger value="webhooks" className="gap-2 px-3 py-2">
+  <Webhook className="h-4 w-4" />
+  <span>Webhooks</span>
+</TabsTrigger>
+
+// Novo TabsContent
+<TabsContent value="webhooks" className="space-y-4">
+  <WebhooksTab accountId={accountId} />
+</TabsContent>
+```
+
+### Arquivo 2: `src/components/integrations/webhooks/WebhooksTab.tsx` (novo)
+
+Componente principal da aba com:
+- Header com título, descrição e botão "Novo Webhook"
+- Lista de webhooks existentes em cards
+- Estado vazio quando não há webhooks
+
+### Arquivo 3: `src/components/integrations/webhooks/WebhookCard.tsx` (novo)
+
+Card individual do webhook com:
+- Nome e descrição
+- URL (truncado) com botão copiar
+- Badge do método HTTP (GET=azul, POST=verde, PUT=amarelo, PATCH=laranja, DELETE=vermelho)
+- Badge de status (Ativo/Inativo)
+- Último trigger e status code
+- Botões: Testar, Editar, Excluir
+
+### Arquivo 4: `src/components/integrations/webhooks/WebhookFormDialog.tsx` (novo)
+
+Dialog para criar/editar webhook:
+- Campo: Nome *
+- Campo: Descrição
+- Campo: URL *
+- Select: Método HTTP (GET, POST, PUT, PATCH, DELETE)
+- Campo: Headers (JSON editor ou key-value pairs)
+- Campo: Payload Template (JSON editor - apenas para métodos com body)
+- Campo: Secret Key (para HMAC)
+- Select: Evento Gatilho (lista de eventos disponíveis)
+- Switch: Ativo
+
+### Arquivo 5: `src/components/integrations/webhooks/useWebhooks.tsx` (novo)
+
+Hook com React Query para:
+- `useWebhooks(accountId)` - listar todos
+- `useCreateWebhook` - mutation criar
+- `useUpdateWebhook` - mutation atualizar
+- `useDeleteWebhook` - mutation deletar
+- `useTestWebhook` - mutation testar (chama edge function)
+
+---
+
+## Componentes Visuais
+
+### Métodos HTTP com Cores
+
+| Método | Cor | Badge Variant |
+|--------|-----|---------------|
+| GET | Azul | `bg-blue-100 text-blue-700` |
+| POST | Verde | `bg-green-100 text-green-700` |
+| PUT | Amarelo | `bg-yellow-100 text-yellow-700` |
+| PATCH | Laranja | `bg-orange-100 text-orange-700` |
+| DELETE | Vermelho | `bg-red-100 text-red-700` |
+
+### Eventos Disponíveis (Gatilhos)
+
+```typescript
+const WEBHOOK_EVENTS = [
+  { value: "client.created", label: "Cliente criado" },
+  { value: "client.updated", label: "Cliente atualizado" },
+  { value: "client.deleted", label: "Cliente excluído" },
+  { value: "event.created", label: "Evento criado" },
+  { value: "event.updated", label: "Evento atualizado" },
+  { value: "task.completed", label: "Tarefa concluída" },
+  { value: "form.submitted", label: "Formulário enviado" },
+  { value: "contract.signed", label: "Contrato assinado" },
+  { value: "payment.received", label: "Pagamento recebido" },
+  { value: "manual", label: "Manual (API)" },
+];
 ```
 
 ---
 
-## Detalhes Técnicos
-
-### Lógica de Hash
-
-O PIN é armazenado como hash SHA-256 usando `pin + accountId` como entrada:
-
-```typescript
-SHA256(pin + accountId) → pin_hash
-```
-
-Isso garante que:
-- PINs iguais em contas diferentes geram hashes diferentes
-- O PIN nunca é armazenado em texto plano
-
-### Fluxo Corrigido
+## Layout do Dialog de Criação/Edição
 
 ```text
-1. Jonathan altera PIN para "1234"
-2. Frontend chama update_instance_pin com { pin: "1234" }
-3. Edge Function gera hash: SHA256("1234" + accountId)
-4. Atualiza integrations.pin_hash no banco
-5. Próxima verificação usa o novo hash → Acesso liberado
+┌──────────────────────────────────────────────────────────────┐
+│ ✕                                                            │
+│  Criar Webhook / Editar Webhook                              │
+│  Configure as opções do seu webhook                          │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  Nome *                          Método HTTP                 │
+│  [________________________]      [▼ POST]                    │
+│                                                              │
+│  URL *                                                       │
+│  [https://api.exemplo.com/webhook_______________________]    │
+│                                                              │
+│  Descrição                                                   │
+│  [Webhook para notificar sistema externo________________]    │
+│                                                              │
+│  Evento Gatilho                  Secret Key                  │
+│  [▼ Cliente criado]              [abc123...] (opcional)      │
+│                                                              │
+│  Headers (JSON)                                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ {                                                      │  │
+│  │   "X-Custom-Header": "value"                           │  │
+│  │ }                                                      │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  Payload Template (JSON) - apenas POST/PUT/PATCH             │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │ {                                                      │  │
+│  │   "event": "{{event}}",                                │  │
+│  │   "data": "{{data}}"                                   │  │
+│  │ }                                                      │  │
+│  └────────────────────────────────────────────────────────┘  │
+│                                                              │
+│  [x] Webhook ativo                                           │
+│                                                              │
+├──────────────────────────────────────────────────────────────┤
+│                              [Cancelar]  [Salvar Webhook]    │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Resultado Esperado
+## Resumo das Modificações
 
-Após a correção:
-1. Jonathan poderá definir um novo PIN de 4 dígitos
-2. O PIN será efetivamente salvo no banco de dados
-3. A verificação funcionará com o novo PIN
-4. Opção de remover PIN também funcionará (envia `pin: null`)
+| Arquivo | Ação |
+|---------|------|
+| Migração SQL | Criar tabela `webhooks` com RLS |
+| `IntegrationsContent.tsx` | Adicionar aba Webhooks |
+| `webhooks/WebhooksTab.tsx` | Novo - componente da aba |
+| `webhooks/WebhookCard.tsx` | Novo - card individual |
+| `webhooks/WebhookFormDialog.tsx` | Novo - dialog criar/editar |
+| `webhooks/useWebhooks.tsx` | Novo - hook CRUD com React Query |
+
+---
+
+## Próximas Etapas (Futuro)
+
+Após implementação inicial, pode-se adicionar:
+1. Edge Function `webhook-trigger` para disparar webhooks automaticamente
+2. Logs de execução de webhooks
+3. Retry automático com backoff exponencial
+4. Validação de assinatura HMAC
+
