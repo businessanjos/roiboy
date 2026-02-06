@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { WhatsAppIntegrationCard } from "@/components/integrations/WhatsAppIntegrationCard";
 import { WhatsAppSectorManager } from "@/components/integrations/WhatsAppSectorManager";
+import { WebhooksTab } from "./webhooks/WebhooksTab";
 
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -406,6 +407,10 @@ export function IntegrationsContent() {
               <Calendar className="h-4 w-4" />
               <span>Meet</span>
             </TabsTrigger>
+            <TabsTrigger value="webhooks" className="gap-2 px-3 py-2">
+              <Webhook className="h-4 w-4" />
+              <span>Webhooks</span>
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -704,6 +709,11 @@ export function IntegrationsContent() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Webhooks Tab */}
+        <TabsContent value="webhooks" className="space-y-4">
+          <WebhooksTab accountId={accountId} />
         </TabsContent>
       </Tabs>
     </div>
