@@ -23,7 +23,7 @@ import { ConversationView } from "@/components/client/ConversationView";
 import { ClientFinancial } from "@/components/client/ClientFinancial";
 import { SalesPerformance } from "@/components/client/SalesPerformance";
 import { ClientAgenda } from "@/components/client/ClientAgenda";
-import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
+import { ClientInfoForm, ClientFormData, getEmptyClientFormData, normalizeAdditionalPhones } from "@/components/client/ClientInfoForm";
 import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
 import { ClientFieldsSummary } from "@/components/client/ClientFieldsSummary";
 import { ClientAvatarUpload } from "@/components/client/ClientAvatarUpload";
@@ -424,7 +424,7 @@ export default function ClientDetail() {
       full_name: client.full_name,
       phone_e164: client.phone_e164,
       emails: ensureArray<string>(client.emails),
-      additional_phones: ensureArray<string>(client.additional_phones),
+      additional_phones: normalizeAdditionalPhones(client.additional_phones || []),
       cpf: client.cpf || "",
       rg: (client as any).rg || "",
       cnpj: client.cnpj || "",
@@ -497,7 +497,7 @@ export default function ClientDetail() {
         .update({
           full_name: editFormData.full_name.trim(),
           emails: editFormData.emails,
-          additional_phones: editFormData.additional_phones,
+          additional_phones: editFormData.additional_phones as unknown as import("@/integrations/supabase/types").Json,
           cpf: editFormData.cpf.replace(/\D/g, '') || null,
           cnpj: editFormData.cnpj.replace(/\D/g, '') || null,
           birth_date: editFormData.birth_date || null,

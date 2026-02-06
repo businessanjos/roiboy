@@ -23,7 +23,7 @@ interface Lead {
   phone_e164: string | null;
   email: string | null;
   emails: string[] | null;
-  additional_phones: string[] | null;
+  additional_phones: Array<string | { number: string; label?: string }> | null;
   instagram: string | null;
   instagrams: string[] | null;
   cpf: string | null;
@@ -199,7 +199,10 @@ export function DealLeadInfo({ leadId }: DealLeadInfoProps) {
         <CollapsibleContent className="pl-4 space-y-0.5 pb-2">
           <InfoRow label="Telefone" value={formatPhone(lead.phone_e164 || "")} />
           {lead.additional_phones && lead.additional_phones.length > 0 && (
-            <InfoRow label="Outros" value={lead.additional_phones.map(formatPhone).join(", ")} />
+            <InfoRow label="Outros" value={lead.additional_phones.map(p => {
+              if (typeof p === "string") return formatPhone(p);
+              return p.label ? `${p.label}: ${formatPhone(p.number)}` : formatPhone(p.number);
+            }).join(", ")} />
           )}
           <InfoRow label="Email" value={lead.email} />
           {lead.emails && lead.emails.length > 0 && (

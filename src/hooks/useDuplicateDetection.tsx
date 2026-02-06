@@ -44,12 +44,12 @@ export function useDuplicateDetection() {
     const matches: DuplicateMatch[] = [];
 
     try {
-      // Check phone
+      // Check phone - search both legacy format (string array) and new format (object array)
       if (cleanPhone.length >= 10) {
         const { data: phoneMatches } = await supabase
           .from("clients")
           .select("id, full_name, phone_e164, emails, cpf, cnpj, avatar_url")
-          .or(`phone_e164.ilike.%${cleanPhone}%,additional_phones.cs.["${phone}"]`)
+          .or(`phone_e164.ilike.%${cleanPhone}%,additional_phones.cs.["${phone}"],additional_phones.cs.[{"number":"${phone}"}]`)
           .limit(5);
 
         phoneMatches?.forEach(client => {

@@ -704,7 +704,7 @@ export default function Clients() {
         full_name: newClientData.full_name.trim(),
         phone_e164: newClientData.phone_e164.trim(),
         emails: newClientData.emails,
-        additional_phones: newClientData.additional_phones,
+        additional_phones: newClientData.additional_phones as unknown as import("@/integrations/supabase/types").Json,
         cpf: newClientData.cpf?.replace(/\D/g, '') || null,
         cnpj: newClientData.cnpj?.replace(/\D/g, '') || null,
         birth_date: newClientData.birth_date || null,
