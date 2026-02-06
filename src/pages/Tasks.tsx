@@ -530,8 +530,12 @@ export default function Tasks() {
                 </TableRow>
               ) : (
                 tasks.map((task) => {
-                  // Find the custom status for this task
-                  const taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
+                  // Find the custom status for this task, with fallback for legacy completed tasks
+                  let taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
+                  if (!taskStatus && task.completed_at) {
+                    // Task was completed via legacy method, find the first completed status
+                    taskStatus = customStatuses.find(s => s.is_completed_status);
+                  }
                   const isCompleted = taskStatus?.is_completed_status || task.completed_at !== null;
                   const priorityConfig = PRIORITY_CONFIG[task.priority];
                   const dueDateInfo = getDueDateInfo(task);
