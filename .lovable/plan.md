@@ -1,116 +1,145 @@
 
-# Plano: Corrigir Filtros de Tarefas Quebrados
 
-## Diagnóstico do Problema
+# Plano: Cards de Estatísticas Dinâmicos com Filtros Aplicados
 
-A última alteração que fizemos adicionou o fallback de status apenas na **renderização visual** (linhas 534-538), mas **não corrigiu a lógica de filtragem**. Isso causa uma discrepância:
+## Problema
 
-### Comportamento Atual
+Os cards de estatísticas (Pendentes, Em Andamento, Atrasadas, Concluídas) usam `tasks` diretamente, ignorando os filtros aplicados pelo usuário:
 
-| Local | Considera `completed_at`? | Resultado |
-|-------|--------------------------|-----------|
-| **Contadores (cards)** | ✅ Sim (linha 477) | Mostra 817 concluídas |
-| **Contagem das abas** | ❌ Não (linha 459) | Aba mostra contagem errada |
-| **Filtragem por aba** | ❌ Não (linha 420-423) | Tarefas legadas não aparecem |
-| **Exibição na tabela** | ✅ Sim (linha 535-538) | Mostra status correto |
-
-### Fluxo do Bug
-
-1. Usuário clica na aba "Concluído"
-2. `activeTab` = ID do status concluído
-3. `filteredTasks` verifica: `task.custom_status_id === activeTab`
-4. Tarefas legadas têm `custom_status_id = NULL` → **não correspondem**
-5. Resultado: 0 tarefas exibidas, mesmo com 817 no contador
-
----
+```tsx
+// Linha 490-496 - Usa `tasks` (todas as tarefas)
+const pendingCount = tasks.filter(t => ...
+const inProgressCount = tasks.filter(t => ...
+const doneCount = tasks.filter(t => ...
+const overdueCount = tasks.filter(t => ...
+```
 
 ## Solução
 
-Aplicar a mesma lógica de fallback em **três lugares**:
+### 1. Criar `baseFilteredTasks` - Tarefas com Filtros (sem aba)
 
-### 1. Contagem por Status (linha 456-462)
+Antes da linha 407, criar um novo `useMemo` que aplica apenas os filtros de contexto (busca, usuário, tipo de atividade, setor), **sem** filtrar pela aba ativa:
 
-**Antes:**
 ```tsx
-const statusCounts = useMemo(() => {
-  const counts: Record<string, number> = {};
-  customStatuses.forEach(status => {
-    counts[status.id] = tasks.filter(t => t.custom_status_id === status.id).length;
-  });
-  return counts;
-}, [tasks, customStatuses]);
+// Base filtered tasks - applies all filters EXCEPT tab (for dynamic stats cards)
+const baseFilteredTasks = useMemo(() => tasks.filter((task) => {
+  // Search filter
+  const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+  
+  // User filter
+  const matchesUser = filterUser === "all" || 
+    (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
+
+  // Activity type filter
+  const matchesActivityType = filterActivityType === "all" || 
+    task.activity_type?.id === filterActivityType;
+
+  // Sector filter (always applies in sector context)
+  const matchesSector = !currentSector?.id || 
+    (currentSector.id === "vendas" && (
+      task.activity_type?.sector_id === "vendas" || 
+      (task.deal_id && !task.activity_type?.sector_id)
+    )) ||
+    (currentSector.id === "operacoes" && (
+      task.activity_type?.sector_id === "operacoes" ||
+      (task.client_id && !task.deal_id && !task.activity_type?.sector_id)
+    ));
+
+  return matchesSearch && matchesUser && matchesActivityType && matchesSector;
+}), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id]);
 ```
 
-**Depois:**
+### 2. Atualizar `statusCounts` para usar `baseFilteredTasks`
+
 ```tsx
 const statusCounts = useMemo(() => {
   const counts: Record<string, number> = {};
   customStatuses.forEach(status => {
-    counts[status.id] = tasks.filter(t => {
-      // Direct match
+    counts[status.id] = baseFilteredTasks.filter(t => {
       if (t.custom_status_id === status.id) return true;
-      // Legacy fallback: tasks with completed_at but no custom_status_id
       if (!t.custom_status_id && t.completed_at && status.is_completed_status) return true;
       return false;
     }).length;
   });
   return counts;
-}, [tasks, customStatuses]);
+}, [baseFilteredTasks, customStatuses]);
 ```
 
-### 2. Filtro por Aba (linha 418-423)
+### 3. Atualizar Contadores dos Cards para usar `baseFilteredTasks`
 
-**Antes:**
 ```tsx
-const defaultStatus = customStatuses.find(s => s.is_default);
-const matchesTab = activeTab 
-  ? task.custom_status_id === activeTab || 
-    (!task.custom_status_id && activeTab === defaultStatus?.id)
-  : true;
+const { pendingCount, overdueCount, inProgressCount, doneCount } = useMemo(() => {
+  const pendingStatus = customStatuses.find(s => s.name.toLowerCase().includes('pendente'));
+  const inProgressStatus = customStatuses.find(s => s.name.toLowerCase().includes('andamento'));
+  const doneStatus = customStatuses.find(s => s.is_completed_status);
+  
+  const pendingCount = baseFilteredTasks.filter(t => 
+    t.custom_status_id === pendingStatus?.id || 
+    (!t.custom_status_id && pendingStatus?.is_default)
+  ).length;
+  
+  const inProgressCount = baseFilteredTasks.filter(t => 
+    t.custom_status_id === inProgressStatus?.id
+  ).length;
+  
+  const doneCount = baseFilteredTasks.filter(t => 
+    t.custom_status_id === doneStatus?.id || t.completed_at !== null
+  ).length;
+  
+  const completedStatusIds = customStatuses.filter(s => s.is_completed_status).map(s => s.id);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const overdueCount = baseFilteredTasks.filter(t => {
+    const isTaskCompleted = t.completed_at !== null || completedStatusIds.includes(t.custom_status_id || '');
+    if (!t.due_date || isTaskCompleted) return false;
+    const dueDate = new Date(t.due_date);
+    dueDate.setHours(0, 0, 0, 0);
+    return dueDate < today;
+  }).length;
+
+  return { pendingCount, overdueCount, inProgressCount, doneCount };
+}, [baseFilteredTasks, customStatuses]);
 ```
 
-**Depois:**
-```tsx
-// Find relevant statuses for filtering
-const defaultStatus = customStatuses.find(s => s.is_default);
-const targetStatus = activeTab ? customStatuses.find(s => s.id === activeTab) : null;
+### 4. Simplificar `filteredTasks` (reutiliza `baseFilteredTasks`)
 
-// Match tab with fallback for legacy completed tasks
-let matchesTab = true;
-if (activeTab) {
-  if (task.custom_status_id === activeTab) {
-    matchesTab = true;
-  } else if (!task.custom_status_id && activeTab === defaultStatus?.id) {
-    // Tasks without status go to default
-    matchesTab = true;
-  } else if (!task.custom_status_id && task.completed_at && targetStatus?.is_completed_status) {
-    // Legacy completed tasks go to completed status tab
-    matchesTab = true;
-  } else {
-    matchesTab = false;
-  }
-}
+```tsx
+// Final filtered tasks - applies tab filter on top of base filters
+const filteredTasks = useMemo(() => baseFilteredTasks.filter((task) => {
+  const defaultStatus = customStatuses.find(s => s.is_default);
+  const targetStatus = activeTab ? customStatuses.find(s => s.id === activeTab) : null;
+  
+  if (!activeTab) return true;
+  
+  if (task.custom_status_id === activeTab) return true;
+  if (!task.custom_status_id && activeTab === defaultStatus?.id) return true;
+  if (!task.custom_status_id && task.completed_at && targetStatus?.is_completed_status) return true;
+  
+  return false;
+}), [baseFilteredTasks, activeTab, customStatuses]);
 ```
 
 ---
 
 ## Arquivo a Modificar
 
-| Arquivo | Linhas | Alteração |
-|---------|--------|-----------|
-| `src/pages/Tasks.tsx` | 456-462 | Adicionar fallback no `statusCounts` |
-| `src/pages/Tasks.tsx` | 418-423 | Adicionar fallback no `matchesTab` |
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/Tasks.tsx` | Adicionar `baseFilteredTasks` e atualizar dependências |
 
 ---
 
 ## Resultado Esperado
 
-1. **Aba "Concluído"** mostrará corretamente todas as tarefas:
-   - Com `custom_status_id` do status concluído
-   - Com `completed_at` preenchido (legadas)
+| Filtro Aplicado | Cards Mostram |
+|-----------------|---------------|
+| Nenhum | Total do setor atual |
+| Buscar "Follow Up" | Apenas tarefas que correspondem à busca |
+| Filtro "Meus" | Apenas tarefas atribuídas ao usuário |
+| Tipo "Ligação" | Apenas tarefas do tipo Ligação |
+| Combinação | Interseção de todos os filtros |
 
-2. **Contadores das abas** refletirão a mesma contagem dos cards
+Os cards serão **totalmente dinâmicos**, refletindo exatamente o contexto de filtros aplicados no momento.
 
-3. **Todas as tarefas** voltarão a aparecer ao aplicar filtros
-
-4. **Experiência consistente** entre a contagem e a visualização real
