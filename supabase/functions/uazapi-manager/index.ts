@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*", 
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" 
 };
-const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
+const UAZAPI_URL = (Deno.env.get("UAZAPI_URL") || "").replace(/\/$/, '');
 const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
 async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
@@ -20,16 +20,33 @@ async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
 }
 
 async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown) {
+  console.log(`[uazapi] Calling: ${method} ${UAZAPI_URL}${endpoint}`);
   const r = await fetch(`${UAZAPI_URL}${endpoint}`, { 
     method, 
     headers: { "Content-Type": "application/json", "token": token }, 
     body: body ? JSON.stringify(body) : undefined 
   });
-  const json = await r.json();
-  // Verificar erros do UAZAPI
-  if (!r.ok || json.error) {
-    throw new Error(json.error || json.message || `UAZAPI responded with ${r.status}`);
+  
+  const responseText = await r.text();
+  console.log(`[uazapi] Response: ${r.status} - ${responseText.substring(0, 300)}`);
+  
+  let json: any;
+  try {
+    json = JSON.parse(responseText);
+  } catch {
+    throw new Error(`Resposta inválida do WhatsApp: ${responseText.substring(0, 100)}`);
   }
+  
+  // UAZAPI retorna { error: false } em sucesso, { error: true } em falha
+  if (json.error === true || json.error === "true") {
+    throw new Error(json.message || json.error_message || "Erro ao enviar mensagem");
+  }
+  
+  // "Method Not Allowed" = endpoint errado
+  if (json.message === "Method Not Allowed" || r.status === 405) {
+    throw new Error(`Endpoint inválido: ${endpoint}`);
+  }
+  
   return json;
 }
 
@@ -57,33 +74,13 @@ serve(async (req) => {
     let intData: { id: string; config: { instance_token?: string; instance_name?: string }; status: string } | null = null;
     
     if (integration_id) {
-      // Busca direta por ID específico
-      const { data } = await supabase
-        .from("integrations")
-        .select("id, config, status")
-        .eq("id", integration_id)
-        .eq("account_id", accountId)
-        .single();
+      const { data } = await supabase.from("integrations").select("id, config, status").eq("id", integration_id).eq("account_id", accountId).single();
       intData = data;
     } else if (sector_id) {
-      // Fallback: primeira integração do setor
-      const { data } = await supabase
-        .from("integrations")
-        .select("id, config, status")
-        .eq("account_id", accountId)
-        .eq("type", "whatsapp")
-        .eq("sector_id", sector_id)
-        .limit(1);
+      const { data } = await supabase.from("integrations").select("id, config, status").eq("account_id", accountId).eq("type", "whatsapp").eq("sector_id", sector_id).limit(1);
       intData = data?.[0] || null;
     } else {
-      // Fallback: integração global
-      const { data } = await supabase
-        .from("integrations")
-        .select("id, config, status")
-        .eq("account_id", accountId)
-        .eq("type", "whatsapp")
-        .is("sector_id", null)
-        .limit(1);
+      const { data } = await supabase.from("integrations").select("id, config, status").eq("account_id", accountId).eq("type", "whatsapp").is("sector_id", null).limit(1);
       intData = data?.[0] || null;
     }
 
@@ -92,16 +89,11 @@ serve(async (req) => {
 
     console.log(`[uazapi-manager] Found integration: ${intData?.id || "NONE"}, token: ${token ? "present" : "MISSING"}`);
 
-    // Ações que requerem token - validar antes de prosseguir
-    const tokenRequiredActions = ["send_text", "send_to_group", "list_groups", "disconnect"];
+    // Ações que requerem token
+    const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect"];
     if (tokenRequiredActions.includes(action) && !token) {
       console.error(`[uazapi-manager] Token required but missing for action: ${action}`);
-      return new Response(JSON.stringify({ 
-        error: "WhatsApp não configurado para este setor. Verifique as integrações." 
-      }), { 
-        status: 400, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
+      return new Response(JSON.stringify({ error: "WhatsApp não configurado para este setor." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     let result: unknown = { success: true };
@@ -111,43 +103,96 @@ serve(async (req) => {
       const inst = all.find(i => i.name === instanceName);
       result = { state: inst?.status || "unknown", connected: inst?.status === "connected", owner: inst?.owner };
       if (intData?.id) await supabase.from("integrations").update({ status: inst?.status === "connected" ? "connected" : "disconnected" }).eq("id", intData.id);
+    
     } else if (action === "create") {
       const r = await uazapiAdmin("/instance/init", "POST", { name: instanceName });
       const newToken = r.token || r.instance?.token;
       await supabase.from("integrations").upsert({ account_id: accountId, type: "whatsapp", sector_id: sector_id || null, status: "pending", config: { provider: "uazapi", instance_name: instanceName, instance_token: newToken } }, { onConflict: "account_id,type,sector_id" });
       result = { ...r, token: newToken };
+    
     } else if (action === "connect" || action === "qrcode") {
       result = await uazapiAdmin(`/instance/connect/${instanceName}`, "GET");
+    
     } else if (action === "disconnect") {
       try { await uazapiInstance("/logout", "POST", token!); } catch {}
       if (intData?.id) await supabase.from("integrations").update({ status: "disconnected" }).eq("id", intData.id);
       result = { disconnected: true };
+    
     } else if (action === "send_text") {
+      // ✅ CORRIGIDO: Usar /send/text em vez de /message/sendText
       const cleanPhone = phone?.replace(/\D/g, "");
       if (!cleanPhone || cleanPhone.length < 10) {
-        return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { 
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        });
+        return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      result = await uazapiInstance("/message/sendText", "POST", token!, { number: cleanPhone, text: message });
+      
+      const textBody: Record<string, unknown> = { number: cleanPhone, text: message };
+      if (payload.quoted_message_id) textBody.quotedMsgId = payload.quoted_message_id;
+      if (payload.mentions) textBody.mentions = payload.mentions;
+      
+      result = await uazapiInstance("/send/text", "POST", token!, textBody);
+    
+    } else if (action === "send_media") {
+      // ✅ NOVO: Suporte a envio de mídia
+      const cleanPhone = phone?.replace(/\D/g, "");
+      if (!cleanPhone || cleanPhone.length < 10) {
+        return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      
+      const mediaBody: Record<string, unknown> = { 
+        number: cleanPhone, 
+        type: payload.media_type || "image",
+        file: payload.media_url,
+        text: payload.caption || ""
+      };
+      if (payload.quoted_message_id) mediaBody.quotedMsgId = payload.quoted_message_id;
+      if (payload.file_name) mediaBody.fileName = payload.file_name;
+      
+      result = await uazapiInstance("/send/media", "POST", token!, mediaBody);
+    
     } else if (action === "send_to_group") {
+      // ✅ CORRIGIDO: Usar /send/text para grupos
       const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
-      result = await uazapiInstance("/message/sendText", "POST", token!, { groupJid: jid, text: message });
+      
+      const groupBody: Record<string, unknown> = { groupJid: jid, text: message };
+      if (payload.quoted_message_id) groupBody.quotedMsgId = payload.quoted_message_id;
+      if (payload.mentions) groupBody.mentions = payload.mentions;
+      
+      result = await uazapiInstance("/send/text", "POST", token!, groupBody);
+    
+    } else if (action === "send_media_to_group") {
+      // ✅ NOVO: Mídia em grupos
+      const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
+      
+      const mediaBody: Record<string, unknown> = { 
+        groupJid: jid, 
+        type: payload.media_type || "image",
+        file: payload.media_url,
+        text: payload.caption || ""
+      };
+      if (payload.quoted_message_id) mediaBody.quotedMsgId = payload.quoted_message_id;
+      if (payload.file_name) mediaBody.fileName = payload.file_name;
+      
+      result = await uazapiInstance("/send/media", "POST", token!, mediaBody);
+    
     } else if (action === "list_groups") {
       const r = await uazapiInstance("/group/fetchAllGroups", "GET", token!);
       result = { groups: (Array.isArray(r) ? r : r.groups || []).map((g:any) => ({ group_jid: g.JID||g.jid||g.id, name: g.Name||g.name||g.Subject })) };
+    
     } else if (action === "list_instances") {
       const all = await uazapiAdmin("/instance/all", "GET") as Array<{name?:string;status?:string;owner?:string}>;
       result = { instances: all.filter(i => i.name?.startsWith(`roy-${accountId.slice(0,8)}`)) };
+    
     } else if (action === "list_sector_instances") {
       const { data: ints } = await supabase.from("integrations").select("id, sector_id, config, status, display_name, pin_hash").eq("account_id", accountId).eq("type", "whatsapp").not("sector_id", "is", null);
       result = { instances: (ints||[]).map((i:any) => ({ id: i.id, sector_id: i.sector_id, instance_name: i.config?.instance_name, status: i.status, has_pin: !!i.pin_hash })) };
+    
     } else if (action === "add_instance_to_sector") {
       const all = await uazapiAdmin("/instance/all", "GET") as Array<{name?:string;token?:string;status?:string;owner?:string}>;
       const inst = all.find(i => i.name === payload.instance_name);
       if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       await supabase.from("integrations").insert({ account_id: accountId, type: "whatsapp", sector_id, status: inst.status === "connected" ? "connected" : "disconnected", config: { provider: "uazapi", instance_name: payload.instance_name, instance_token: inst.token, owner: inst.owner } });
       result = { success: true };
+    
     } else if (action === "verify_instance_pin") {
       const { data: int } = await supabase.from("integrations").select("pin_hash").eq("id", payload.integration_id).single();
       if (!int?.pin_hash) result = { valid: true };
