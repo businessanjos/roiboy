@@ -1506,11 +1506,16 @@ serve(async (req) => {
             console.warn(`[SECURITY] Blocked department change attempt: ${existingAssignment.department_id} -> ${sectorDepartmentId} for assignment ${existingAssignment.id}`);
           }
           
+          // CORREÇÃO: Se reabrindo conversa fechada, limpar atendente para voltar à fila
+          const isReopeningFromClosed = existingAssignment.status === "closed" && newStatus === "triage";
+          
           await supabase
               .from("zapp_conversation_assignments")
               .update({
                 updated_at: timestamp,
                 status: newStatus,
+                // Limpar agent_id quando reabrindo de closed para que volte à Fila
+                ...(isReopeningFromClosed ? { agent_id: null, assigned_at: null } : {}),
                 // BLINDAGEM: Só define department_id se o assignment NÃO tiver um
                 // NUNCA sobrescrever um department_id existente para evitar migração entre setores
                 ...(sectorDepartmentId && !existingAssignment.department_id ? { department_id: sectorDepartmentId } : {}),
@@ -1877,12 +1882,17 @@ serve(async (req) => {
                 console.warn(`[SECURITY] Blocked department change attempt: ${existingAssignment.department_id} -> ${sectorDepartmentId} for assignment ${existingAssignment.id}`);
               }
               
+              // CORREÇÃO: Se reabrindo conversa fechada, limpar atendente para voltar à fila
+              const isReopeningFromClosed = existingAssignment.status === "closed";
+              
               await supabase
                 .from("zapp_conversation_assignments")
                 .update({
                   updated_at: timestamp,
                   // If conversation was closed and client sends new message, reopen to triage
-                  status: existingAssignment.status === "closed" ? "triage" : existingAssignment.status,
+                  status: isReopeningFromClosed ? "triage" : existingAssignment.status,
+                  // Limpar agent_id quando reabrindo de closed para que volte à Fila
+                  ...(isReopeningFromClosed ? { agent_id: null, assigned_at: null } : {}),
                   // BLINDAGEM: Só define department_id se o assignment NÃO tiver um
                   // NUNCA sobrescrever um department_id existente para evitar migração entre setores
                   ...(sectorDepartmentId && !existingAssignment.department_id ? { department_id: sectorDepartmentId } : {}),
