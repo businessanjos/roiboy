@@ -1,138 +1,115 @@
 
-# Plano: Ordenação de Eventos por Data na Aba Eventos (Operações)
+# Correção: PIN Incorreto na Instância Jonathan Marcato
 
-## Visão Geral
+## Diagnóstico
 
-Adicionar funcionalidade de ordenação por data na aba Eventos do setor Operações, permitindo alternar entre ordem cronológica (mais antigo → mais recente) e ordem inversa (mais recente → mais antigo).
+A instância do Jonathan Marcato (ID: `ac869d1d-6564-4b4f-b2a4-753689b029aa`) possui um `pin_hash` armazenado no banco, mas a **ação de atualização de PIN não está implementada** na Edge Function `uazapi-manager`.
 
----
-
-## Arquitetura da Solução
-
-### Estado de Ordenação
-
-Adicionar novo estado para controlar a direção da ordenação:
-
-```typescript
-const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-```
-
-**Padrão:** `"asc"` (mais antigo → mais recente, conforme solicitado)
-
----
-
-## Alterações no Arquivo
-
-### `src/pages/Events.tsx`
-
-#### 1. Adicionar Import do Ícone
-
-Adicionar `ArrowUp` e `ArrowDown` aos imports de lucide-react (linha 49-70):
-
-```typescript
-import { 
-  // ... existentes
-  ArrowUp,
-  ArrowDown
-} from "lucide-react";
-```
-
-#### 2. Adicionar Estado de Ordenação
-
-Próximo aos outros estados de filtro (após linha 148):
-
-```typescript
-const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-```
-
-#### 3. Atualizar Query para Incluir sortOrder no Cache Key
-
-A query atual (linhas 210-238) já ordena pelo banco. Precisamos incluir `sortOrder` na query key para invalidar corretamente:
-
-```typescript
-const { data: events = [], isLoading: loading } = useQuery({
-  queryKey: ["events-with-products", sortOrder],  // ← Adicionar sortOrder
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from("events")
-      .select(`...`)
-      .order("scheduled_at", { ascending: sortOrder === "asc", nullsFirst: false });
-    // ...
-  },
-});
-```
-
-#### 4. Atualizar Cabeçalho da Tabela "Data/Hora"
-
-Transformar o cabeçalho "Data/Hora" (linha 1166) em um botão clicável:
-
-```typescript
-<TableHead 
-  className="min-w-[140px] cursor-pointer hover:bg-muted/80 transition-colors select-none"
-  onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
->
-  <div className="flex items-center gap-1.5">
-    Data/Hora
-    {sortOrder === "asc" ? (
-      <ArrowUp className="h-3.5 w-3.5 text-primary" />
-    ) : (
-      <ArrowDown className="h-3.5 w-3.5 text-primary" />
-    )}
-  </div>
-</TableHead>
-```
-
----
-
-## Comportamento Esperado
-
-| Estado | Ordem | Ícone |
-|--------|-------|-------|
-| `"asc"` (padrão) | Mais antigo → Mais recente | ↑ ArrowUp |
-| `"desc"` | Mais recente → Mais antigo | ↓ ArrowDown |
-
----
-
-## Diagrama de Interação
+### Fluxo do Problema
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ 1. Usuário acessa a aba Eventos                             │
-│    ↓                                                        │
-│ 2. Lista carrega com ordenação padrão (asc - antigo→novo)   │
-│    ↓                                                        │
-│ 3. Usuário clica no cabeçalho "Data/Hora"                   │
-│    ↓                                                        │
-│ 4. setSortOrder alterna para "desc" (novo→antigo)           │
-│    ↓                                                        │
-│ 5. React Query refaz a requisição com nova ordenação        │
-│    ↓                                                        │
-│ 6. Lista atualiza mostrando eventos mais recentes primeiro  │
-│    ↓                                                        │
-│ 7. Ícone muda de ↑ para ↓                                   │
-└─────────────────────────────────────────────────────────────┘
+1. Jonathan tenta alterar PIN → Frontend chama "update_instance_pin"
+2. Edge Function NÃO reconhece a ação → Retorna { success: true } sem fazer nada
+3. Toast exibe "PIN atualizado" → Falsa confirmação
+4. PIN antigo permanece no banco → Verificação sempre falha
 ```
 
 ---
 
-## Resumo das Modificações
+## Solução
+
+Implementar a ação `update_instance_pin` na Edge Function `uazapi-manager`.
+
+### Arquivo a Modificar
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/pages/Events.tsx` | Adicionar imports ArrowUp/ArrowDown, estado sortOrder, incluir na queryKey, atualizar TableHead para ser clicável |
+| `supabase/functions/uazapi-manager/index.ts` | Adicionar bloco `update_instance_pin` após `verify_instance_pin` |
+
+### Código a Adicionar (após linha 202)
+
+```typescript
+} else if (action === "update_instance_pin") {
+  // Validar integration_id
+  if (!integration_id) {
+    return new Response(
+      JSON.stringify({ error: "integration_id é obrigatório" }), 
+      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+  
+  // Verificar se integração existe e pertence à conta
+  const { data: int } = await supabase
+    .from("integrations")
+    .select("id")
+    .eq("id", integration_id)
+    .eq("account_id", accountId)
+    .single();
+    
+  if (!int) {
+    return new Response(
+      JSON.stringify({ error: "Instância não encontrada" }), 
+      { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+  
+  // Gerar hash do novo PIN ou null para remover
+  let pinHash: string | null = null;
+  if (payload.pin && payload.pin !== "null") {
+    const h = await crypto.subtle.digest(
+      'SHA-256', 
+      new TextEncoder().encode(payload.pin + accountId)
+    );
+    pinHash = Array.from(new Uint8Array(h))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+  
+  // Atualizar no banco
+  const { error: updateError } = await supabase
+    .from("integrations")
+    .update({ pin_hash: pinHash })
+    .eq("id", integration_id)
+    .eq("account_id", accountId);
+    
+  if (updateError) throw updateError;
+  
+  result = { success: true };
+}
+```
 
 ---
 
-## Notas Técnicas
+## Detalhes Técnicos
 
-### Ordenação no Banco vs Frontend
+### Lógica de Hash
 
-A ordenação é feita **no banco de dados** (não no frontend), garantindo performance mesmo com muitos eventos. O Supabase já indexa `scheduled_at`, então a ordenação é eficiente.
+O PIN é armazenado como hash SHA-256 usando `pin + accountId` como entrada:
 
-### Eventos sem Data
+```typescript
+SHA256(pin + accountId) → pin_hash
+```
 
-Eventos do tipo "Material" podem não ter `scheduled_at`. O parâmetro `nullsFirst: false` garante que esses eventos fiquem no final da lista, independente da direção da ordenação.
+Isso garante que:
+- PINs iguais em contas diferentes geram hashes diferentes
+- O PIN nunca é armazenado em texto plano
 
-### Persistência do Estado
+### Fluxo Corrigido
 
-O estado de ordenação não é persistido no localStorage ou URL - ele reseta para "asc" ao recarregar a página, conforme comportamento padrão solicitado.
+```text
+1. Jonathan altera PIN para "1234"
+2. Frontend chama update_instance_pin com { pin: "1234" }
+3. Edge Function gera hash: SHA256("1234" + accountId)
+4. Atualiza integrations.pin_hash no banco
+5. Próxima verificação usa o novo hash → Acesso liberado
+```
+
+---
+
+## Resultado Esperado
+
+Após a correção:
+1. Jonathan poderá definir um novo PIN de 4 dígitos
+2. O PIN será efetivamente salvo no banco de dados
+3. A verificação funcionará com o novo PIN
+4. Opção de remover PIN também funcionará (envia `pin: null`)
