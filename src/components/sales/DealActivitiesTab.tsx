@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
@@ -88,6 +89,7 @@ const getComputedStatus = (task: Task): "pending" | "overdue" | "done" => {
 };
 
 export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
+  const queryClient = useQueryClient();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
@@ -183,6 +185,8 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
       console.error("Error updating task:", error);
     } else {
       fetchTasks();
+      // Invalidate global cache to sync with Tasks page
+      queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
     }
   };
 

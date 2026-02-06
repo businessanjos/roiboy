@@ -73,6 +73,7 @@ import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useTaskStatuses } from "@/hooks/useTaskStatuses";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
 import { useZappNavigation } from "@/hooks/useZappNavigation";
+import { useSector } from "@/contexts/SectorContext";
 import { cn } from "@/lib/utils";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { format, differenceInDays } from "date-fns";
@@ -130,6 +131,7 @@ interface Task {
     id: string;
     name: string;
     color: string | null;
+    sector_id: string | null;
   } | null;
 }
 
@@ -162,6 +164,7 @@ type ViewMode = "list" | "kanban";
 export default function Tasks() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
+  const { currentSector } = useSector();
   const { hasVendasAccess } = useSectorAccess();
   const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
   const queryClient = useQueryClient();
@@ -207,7 +210,7 @@ export default function Tasks() {
           ),
           leads:lead_id (id, full_name),
           assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url),
-          activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color)
+          activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color, sector_id)
         `)
         .order("created_at", { ascending: false });
 
@@ -419,8 +422,21 @@ export default function Tasks() {
         (!task.custom_status_id && activeTab === defaultStatus?.id)
       : true;
 
-    return matchesSearch && matchesUser && matchesTab && matchesActivityType;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, activeTab, customStatuses]);
+    // Filter by sector
+    const matchesSector = !currentSector?.id || 
+      // Vendas: tasks with sales activity_type OR tasks with deal_id
+      (currentSector.id === "vendas" && (
+        task.activity_type?.sector_id === "vendas" || 
+        (task.deal_id && !task.activity_type?.sector_id)
+      )) ||
+      // Operações: tasks with operations activity_type OR tasks with client_id without deal_id
+      (currentSector.id === "operacoes" && (
+        task.activity_type?.sector_id === "operacoes" ||
+        (task.client_id && !task.deal_id && !task.activity_type?.sector_id)
+      ));
+
+    return matchesSearch && matchesUser && matchesTab && matchesActivityType && matchesSector;
+  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, activeTab, customStatuses, currentSector?.id]);
 
   // Sort tasks
   const sortedTasks = useMemo(() => [...filteredTasks].sort((a, b) => {
