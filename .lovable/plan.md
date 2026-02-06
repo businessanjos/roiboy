@@ -1,79 +1,70 @@
 
-# Plano: Correção do Filtro de Tarefas no Setor de Vendas
+
+# Plano: Correção da Automação de Onboarding para Conversão de Leads
 
 ## Diagnóstico do Problema
 
-A página de Tarefas está vazia apesar de mostrar contadores com valores (377 Pendentes, 282 Atrasadas, 623 Concluídas). O problema está na lógica do filtro de responsável.
+A automação de criação de eventos e tarefas de onboarding para novos clientes convertidos de leads **está falhando silenciosamente** desde ~21 de janeiro de 2026.
 
-### Causa Raiz: Precedência de Operadores JavaScript
+### Causa Raiz: Coluna Inexistente
 
-O código atual em **duas** localizações está com um bug de precedência de operadores:
+O arquivo `src/utils/clientOnboardingAutomation.ts` tenta inserir na coluna `created_by` da tabela `events`, porém essa coluna **não existe** no schema atual:
 
-```javascript
-// ❌ Código atual (linhas 409-410 e 1011-1012)
-const matchesUser = filterUser === "all" || 
-  filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser;
-```
-
-**Como o JavaScript interpreta:**
-```javascript
-const matchesUser = (filterUser === "all" || filterUser === "mine") 
-  ? task.assigned_to === currentUser?.id 
-  : task.assigned_to === filterUser;
+```typescript
+// ❌ Código atual (linha 32)
+const { data: event, error: eventError } = await supabase
+  .from("events")
+  .insert({
+    account_id: accountId,
+    title: "Onboarding",
+    ...
+    created_by: userId,  // <-- COLUNA NÃO EXISTE!
+  })
 ```
 
 **Resultado:**
-- Quando `filterUser === "all"` (opção "Todos" selecionada):
-  - A condição `(filterUser === "all" || filterUser === "mine")` é verdadeira
-  - Então `matchesUser = task.assigned_to === currentUser?.id`
-  - Isso filtra APENAS tarefas do usuário atual, **ignorando a opção "Todos"**
+- O Supabase retorna erro ao tentar inserir
+- O código lança `throw eventError` (linha 39)
+- O fluxo é interrompido, impedindo a criação de tarefas
+- Como o catch no `SalesPipeline.tsx` (linha 438-441) apenas loga o erro e continua, o usuário nunca percebe
 
-### Por que os contadores mostram valores corretos?
+### Evidências
 
-Os contadores (pendingCount, overdueCount, etc.) são calculados diretamente sobre o array `tasks` sem aplicar o filtro de usuário, por isso mostram os valores corretos.
+| Dado | Valor |
+|------|-------|
+| Eventos "Onboarding" na conta | 1 (criado em 21/01/2026) |
+| Clientes com `onboarding_tasks_count = 0` após 01/02 | 90%+ |
+| Tarefas de onboarding existentes | Criadas manualmente por usuários (Maria, Dayara, etc.) |
 
 ---
 
 ## Solução
 
-Adicionar parênteses para garantir a precedência correta:
+### Opção Escolhida: Remover o campo inexistente
 
-```javascript
-// ✅ Código corrigido
-const matchesUser = filterUser === "all" || 
-  (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
-```
+Remover a referência a `created_by` da inserção, já que:
+1. O campo não existe na tabela `events`
+2. Não há necessidade crítica de rastrear quem criou o evento automaticamente (é sempre o sistema via conversão de deal)
 
----
+### Modificação: `src/utils/clientOnboardingAutomation.ts`
 
-## Arquivos a Modificar
-
-### `src/pages/Tasks.tsx`
-
-**Modificação 1 - Linha 409-410** (filteredTasks para lista):
 ```diff
--    const matchesUser = filterUser === "all" || 
--      filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser;
-+    const matchesUser = filterUser === "all" || 
-+      (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
+   // STEP 1: Create "Onboarding" event
+   const { data: event, error: eventError } = await supabase
+     .from("events")
+     .insert({
+       account_id: accountId,
+       title: "Onboarding",
+       description: "Onboarding Inicial",
+       event_type: "live",
+       modality: "online",
+       scheduled_at: null,
+       category: "operation",
+-      created_by: userId,
+     })
+     .select("id")
+     .single();
 ```
-
-**Modificação 2 - Linha 1011-1012** (filtro do TaskKanban):
-```diff
--            const matchesUser = filterUser === "all" || 
--              filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser;
-+            const matchesUser = filterUser === "all" || 
-+              (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
-```
-
----
-
-## Impacto Esperado
-
-Após a correção:
-1. **"Todos" selecionado:** Exibe todas as tarefas (sem filtro de responsável)
-2. **"Minhas tarefas" selecionado:** Exibe apenas tarefas onde `assigned_to === currentUser?.id`
-3. **Usuário específico selecionado:** Exibe apenas tarefas daquele usuário
 
 ---
 
@@ -81,8 +72,23 @@ Após a correção:
 
 | Local | Linha | Ação |
 |-------|-------|------|
-| `src/pages/Tasks.tsx` | 409-410 | Adicionar parênteses no operador ternário |
-| `src/pages/Tasks.tsx` | 1011-1012 | Adicionar parênteses no operador ternário |
+| `src/utils/clientOnboardingAutomation.ts` | 32 | Remover campo `created_by` |
 
-**Risco:** Baixo - alteração pontual de sintaxe sem impacto em outras funcionalidades
-**Tempo estimado:** 2 minutos
+---
+
+## Impacto
+
+Após a correção:
+1. Novos negócios marcados como "Ganhados" criarão automaticamente:
+   - 1 evento "Onboarding" com o cliente como participante
+   - 2 tarefas: "Implementação da Clínica Ryka" e "Apresentação do Plano de Ação"
+
+2. Clientes que não receberam o onboarding (Ariella Duarte, Thais Flora, etc.) precisarão ter os itens criados manualmente ou por um script de correção posterior.
+
+---
+
+## Considerações Adicionais
+
+**Opção futura (não implementada agora):** 
+Se for necessário rastrear quem criou eventos automaticamente, uma migração pode adicionar a coluna `created_by` à tabela `events` com referência a `users.id`. Isso é uma melhoria opcional e não bloqueia a correção atual.
+
