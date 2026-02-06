@@ -168,8 +168,9 @@ export const sectors: Sector[] = [
     icon: Crown,
     color: "text-rose-600",
     bgColor: "bg-rose-500/10",
-    defaultRoute: "/roy-zapp",
+    defaultRoute: "/mentor-agenda",
     navItems: [
+      { to: "/mentor-agenda", icon: CalendarDays, label: "Agenda" },
       { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],

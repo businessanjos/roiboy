@@ -105,6 +105,10 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
   const [rsvpClosed, setRsvpClosed] = useState(false);
   const [rsvpDeadline, setRsvpDeadline] = useState("");
   const [rsvpClosureMessage, setRsvpClosureMessage] = useState("");
+  const [mentorUserId, setMentorUserId] = useState("");
+  
+  // Everton Pieri's user ID
+  const EVERTON_PIERI_ID = 'de43a643-0109-4afb-ac35-be768dbf4090';
 
   // Fetch account ID
   const { data: accountId } = useQuery({
@@ -154,6 +158,7 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
       setRsvpClosed(event.rsvp_closed ?? false);
       setRsvpDeadline(utcToLocalDateTime(event.rsvp_deadline));
       setRsvpClosureMessage(event.rsvp_closure_message || "");
+      setMentorUserId((event as any).mentor_user_id || "");
     }
   }, [event, open]);
 
@@ -177,6 +182,7 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
         rsvp_closed: rsvpClosed,
         rsvp_deadline: rsvpDeadline ? localDateTimeToUTC(rsvpDeadline) : null,
         rsvp_closure_message: rsvpClosureMessage.trim() || null,
+        mentor_user_id: mentorUserId || null,
       };
 
       const { error } = await supabase
@@ -504,7 +510,30 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
               </div>
             </div>
 
-            {/* RSVP Closure Section */}
+            {/* Mentor Linking Section */}
+            <div className="space-y-2">
+              <Label>Vincular Mentor</Label>
+              <Select
+                value={mentorUserId || "none"}
+                onValueChange={(v) => setMentorUserId(v === "none" ? "" : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um mentor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  <SelectItem value={EVERTON_PIERI_ID}>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Everton Pieri
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Ao vincular, o mentor receberá notificações 1 dia antes e no dia do evento
+              </p>
+            </div>
             <div className="space-y-3 pt-4 border-t">
               <div className="flex items-center gap-2">
                 <CalendarOff className="h-4 w-4 text-muted-foreground" />
