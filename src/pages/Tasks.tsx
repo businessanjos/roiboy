@@ -416,11 +416,24 @@ export default function Tasks() {
       task.activity_type?.id === filterActivityType;
 
     // Filter by custom_status_id - also include tasks without status in first tab
+    // And legacy fallback: tasks with completed_at but no custom_status_id go to completed status tab
     const defaultStatus = customStatuses.find(s => s.is_default);
-    const matchesTab = activeTab 
-      ? task.custom_status_id === activeTab || 
-        (!task.custom_status_id && activeTab === defaultStatus?.id)
-      : true;
+    const targetStatus = activeTab ? customStatuses.find(s => s.id === activeTab) : null;
+    
+    let matchesTab = true;
+    if (activeTab) {
+      if (task.custom_status_id === activeTab) {
+        matchesTab = true;
+      } else if (!task.custom_status_id && activeTab === defaultStatus?.id) {
+        // Tasks without status go to default
+        matchesTab = true;
+      } else if (!task.custom_status_id && task.completed_at && targetStatus?.is_completed_status) {
+        // Legacy completed tasks go to completed status tab
+        matchesTab = true;
+      } else {
+        matchesTab = false;
+      }
+    }
 
     // Filter by sector
     const matchesSector = !currentSector?.id || 
@@ -452,11 +465,17 @@ export default function Tasks() {
     }
   }), [filteredTasks, sortBy]);
 
-  // Count tasks per status
+  // Count tasks per status (with legacy fallback for completed_at)
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     customStatuses.forEach(status => {
-      counts[status.id] = tasks.filter(t => t.custom_status_id === status.id).length;
+      counts[status.id] = tasks.filter(t => {
+        // Direct match
+        if (t.custom_status_id === status.id) return true;
+        // Legacy fallback: tasks with completed_at but no custom_status_id
+        if (!t.custom_status_id && t.completed_at && status.is_completed_status) return true;
+        return false;
+      }).length;
     });
     return counts;
   }, [tasks, customStatuses]);
