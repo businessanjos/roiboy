@@ -375,16 +375,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     );
   }
 
-  if (clientProductIds.length === 0) {
-    return (
-      <div className="text-center py-8 text-muted-foreground">
-        <Package className="h-12 w-12 mx-auto mb-3 opacity-30" />
-        <p>Este cliente não possui produtos vinculados.</p>
-        <p className="text-sm mt-1">Vincule produtos para ver os eventos programados.</p>
-      </div>
-    );
-  }
-
   // Helper to get event type label and icon
   const getEventTypeInfo = (eventType: EventType) => {
     const typeMap: Record<EventType, { label: string; icon: React.ReactNode }> = {
