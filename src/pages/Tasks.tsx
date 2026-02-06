@@ -10,12 +10,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -61,7 +55,7 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
-  Calendar as CalendarIcon,
+  Calendar,
   ArrowRight,
   XCircle,
   User2,
@@ -69,7 +63,6 @@ import {
   LayoutGrid,
   Settings,
   MessageCircle,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
@@ -83,7 +76,7 @@ import { useZappNavigation } from "@/hooks/useZappNavigation";
 import { useSector } from "@/contexts/SectorContext";
 import { cn } from "@/lib/utils";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
-import { format, differenceInDays, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface User {
@@ -179,8 +172,6 @@ export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterUser, setFilterUser] = useState<string>("all");
   const [filterActivityType, setFilterActivityType] = useState<string>("all");
-  const [filterDateFrom, setFilterDateFrom] = useState<Date | undefined>(undefined);
-  const [filterDateTo, setFilterDateTo] = useState<Date | undefined>(undefined);
   const [sortBy, setSortBy] = useState<SortOption>("priority");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [activeTab, setActiveTab] = useState<string | null>(null);
@@ -469,28 +460,8 @@ export default function Tasks() {
       matchesSector = activitySectorId === currentSector.id;
     }
 
-    // Date range filter (by due_date)
-    let matchesDateRange = true;
-    if (filterDateFrom || filterDateTo) {
-      if (!task.due_date) {
-        matchesDateRange = false; // Tasks without due_date are excluded when date filter is active
-      } else {
-        const taskDueDate = startOfDay(parseISO(task.due_date));
-        if (filterDateFrom && filterDateTo) {
-          matchesDateRange = isWithinInterval(taskDueDate, {
-            start: startOfDay(filterDateFrom),
-            end: endOfDay(filterDateTo),
-          });
-        } else if (filterDateFrom) {
-          matchesDateRange = taskDueDate >= startOfDay(filterDateFrom);
-        } else if (filterDateTo) {
-          matchesDateRange = taskDueDate <= endOfDay(filterDateTo);
-        }
-      }
-    }
-
-    return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateFrom, filterDateTo]);
+    return matchesSearch && matchesUser && matchesActivityType && matchesSector;
+  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id]);
 
   // Final filtered tasks - applies tab filter on top of base filters
   const filteredTasks = useMemo(() => baseFilteredTasks.filter((task) => {
@@ -1084,12 +1055,10 @@ export default function Tasks() {
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder="Buscar por título, descrição ou cliente..."
-        filtersActive={filterUser !== "all" || filterActivityType !== "all" || !!filterDateFrom || !!filterDateTo}
+        filtersActive={filterUser !== "all" || filterActivityType !== "all"}
         onClearFilters={() => {
           setFilterUser("all");
           setFilterActivityType("all");
-          setFilterDateFrom(undefined);
-          setFilterDateTo(undefined);
         }}
       >
         <FilterItem>
@@ -1163,86 +1132,6 @@ export default function Tasks() {
             </SelectContent>
           </Select>
         </FilterItem>
-        
-        {/* Date Range Filter */}
-        <FilterItem>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn(
-                  "w-full sm:w-[240px] h-10 justify-start text-left font-normal",
-                  (!filterDateFrom && !filterDateTo) && "text-muted-foreground"
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {filterDateFrom && filterDateTo ? (
-                  <span>
-                    {format(filterDateFrom, "dd/MM/yy", { locale: ptBR })} - {format(filterDateTo, "dd/MM/yy", { locale: ptBR })}
-                  </span>
-                ) : filterDateFrom ? (
-                  <span>A partir de {format(filterDateFrom, "dd/MM/yy", { locale: ptBR })}</span>
-                ) : filterDateTo ? (
-                  <span>Até {format(filterDateTo, "dd/MM/yy", { locale: ptBR })}</span>
-                ) : (
-                  <span>Filtrar por período</span>
-                )}
-                {(filterDateFrom || filterDateTo) && (
-                  <X 
-                    className="ml-auto h-4 w-4 hover:text-destructive transition-colors" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setFilterDateFrom(undefined);
-                      setFilterDateTo(undefined);
-                    }}
-                  />
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <div className="p-3 space-y-3">
-                <div className="text-sm font-medium text-center">Selecione o período</div>
-                <div className="flex gap-4">
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground text-center">Data inicial</p>
-                    <Calendar
-                      mode="single"
-                      selected={filterDateFrom}
-                      onSelect={setFilterDateFrom}
-                      locale={ptBR}
-                      className="pointer-events-auto"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground text-center">Data final</p>
-                    <Calendar
-                      mode="single"
-                      selected={filterDateTo}
-                      onSelect={setFilterDateTo}
-                      locale={ptBR}
-                      disabled={(date) => filterDateFrom ? date < filterDateFrom : false}
-                      className="pointer-events-auto"
-                    />
-                  </div>
-                </div>
-                {(filterDateFrom || filterDateTo) && (
-                  <div className="flex justify-center pt-2 border-t">
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => {
-                        setFilterDateFrom(undefined);
-                        setFilterDateTo(undefined);
-                      }}
-                    >
-                      Limpar filtro
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-        </FilterItem>
       </FilterBar>
 
       {/* Content based on view mode */}
@@ -1259,27 +1148,7 @@ export default function Tasks() {
             const matchesActivityType = filterActivityType === "all" || 
               task.activity_type?.id === filterActivityType;
 
-            // Date range filter for kanban too
-            let matchesDateRange = true;
-            if (filterDateFrom || filterDateTo) {
-              if (!task.due_date) {
-                matchesDateRange = false;
-              } else {
-                const taskDueDate = startOfDay(parseISO(task.due_date));
-                if (filterDateFrom && filterDateTo) {
-                  matchesDateRange = isWithinInterval(taskDueDate, {
-                    start: startOfDay(filterDateFrom),
-                    end: endOfDay(filterDateTo),
-                  });
-                } else if (filterDateFrom) {
-                  matchesDateRange = taskDueDate >= startOfDay(filterDateFrom);
-                } else if (filterDateTo) {
-                  matchesDateRange = taskDueDate <= endOfDay(filterDateTo);
-                }
-              }
-            }
-
-            return matchesSearch && matchesUser && matchesActivityType && matchesDateRange;
+            return matchesSearch && matchesUser && matchesActivityType;
           })}
           onEditTask={openEditDialog}
           onDeleteTask={openDeleteDialog}
