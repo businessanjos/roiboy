@@ -419,16 +419,32 @@ export default function Tasks() {
     const matchesActivityType = filterActivityType === "all" || 
       task.activity_type?.id === filterActivityType;
 
-    // Sector filter (always applies in sector context)
-    const matchesSector = !currentSector?.id || 
-      (currentSector.id === "vendas" && (
-        task.activity_type?.sector_id === "vendas" || 
-        (task.deal_id && !task.activity_type?.sector_id)
-      )) ||
-      (currentSector.id === "operacoes" && (
-        task.activity_type?.sector_id === "operacoes" ||
-        (task.client_id && !task.deal_id && !task.activity_type?.sector_id)
-      ));
+    // Sector filter - STRICT isolation, never show tasks from other sectors
+    const activitySectorId = task.activity_type?.sector_id;
+    
+    let matchesSector = true;
+    if (currentSector?.id === "vendas") {
+      // For Sales: include if activity belongs to vendas, or has deal_id with no sector specified
+      // EXCLUDE if activity explicitly belongs to another sector
+      if (activitySectorId && activitySectorId !== "vendas") {
+        matchesSector = false;
+      } else {
+        matchesSector = activitySectorId === "vendas" || 
+          (!!task.deal_id && !activitySectorId);
+      }
+    } else if (currentSector?.id === "operacoes") {
+      // For Operations: include if activity belongs to operacoes, or has client without deal and no sector
+      // EXCLUDE if activity explicitly belongs to another sector
+      if (activitySectorId && activitySectorId !== "operacoes") {
+        matchesSector = false;
+      } else {
+        matchesSector = activitySectorId === "operacoes" ||
+          (!!task.client_id && !task.deal_id && !activitySectorId);
+      }
+    } else if (currentSector?.id) {
+      // For other sectors: only match exact sector_id
+      matchesSector = activitySectorId === currentSector.id;
+    }
 
     return matchesSearch && matchesUser && matchesActivityType && matchesSector;
   }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id]);
