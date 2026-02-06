@@ -1,114 +1,138 @@
 
+# Plano: Ordenação de Eventos por Data na Aba Eventos (Operações)
 
-# Plano de Correção: Agenda do Mentor Não Exibe Eventos
+## Visão Geral
 
-## Diagnóstico
+Adicionar funcionalidade de ordenação por data na aba Eventos do setor Operações, permitindo alternar entre ordem cronológica (mais antigo → mais recente) e ordem inversa (mais recente → mais antigo).
 
-Identifiquei **2 falhas críticas** que impedem o funcionamento da Agenda do Mentor:
+---
 
-### Falha 1: Data Inválida na Query (CRÍTICO)
+## Arquitetura da Solução
 
-O hook `useMentorEvents.tsx` está gerando uma data inválida `2026-02-31` (31 de fevereiro não existe). Isso causa erro **400 Bad Request** em todas as requisições:
+### Estado de Ordenação
 
-```
-scheduled_at=lte.2026-02-31
-Response: {"code":"22008","message":"date/time field value out of range: \"2026-02-31\""}
-```
+Adicionar novo estado para controlar a direção da ordenação:
 
-**Código problemático (linha 45):**
 ```typescript
-.lte('scheduled_at', `${year}-${monthStr}-31`);  // ❌ Assume 31 dias para todos os meses
+const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 ```
 
-### Falha 2: Cache Não Invalidado
+**Padrão:** `"asc"` (mais antigo → mais recente, conforme solicitado)
 
-Após salvar um evento com mentor vinculado, a query `mentor-events` não é invalidada, então mesmo que a consulta funcionasse, o calendário não seria atualizado.
+---
 
-**Código problemático (EventEditDialog.tsx linhas 209-210):**
+## Alterações no Arquivo
+
+### `src/pages/Events.tsx`
+
+#### 1. Adicionar Import do Ícone
+
+Adicionar `ArrowUp` e `ArrowDown` aos imports de lucide-react (linha 49-70):
+
 ```typescript
-queryClient.invalidateQueries({ queryKey: ["events-with-products"] });
-queryClient.invalidateQueries({ queryKey: ["events"] });
-// ❌ Falta: queryClient.invalidateQueries({ queryKey: ["mentor-events"] });
+import { 
+  // ... existentes
+  ArrowUp,
+  ArrowDown
+} from "lucide-react";
+```
+
+#### 2. Adicionar Estado de Ordenação
+
+Próximo aos outros estados de filtro (após linha 148):
+
+```typescript
+const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+```
+
+#### 3. Atualizar Query para Incluir sortOrder no Cache Key
+
+A query atual (linhas 210-238) já ordena pelo banco. Precisamos incluir `sortOrder` na query key para invalidar corretamente:
+
+```typescript
+const { data: events = [], isLoading: loading } = useQuery({
+  queryKey: ["events-with-products", sortOrder],  // ← Adicionar sortOrder
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("events")
+      .select(`...`)
+      .order("scheduled_at", { ascending: sortOrder === "asc", nullsFirst: false });
+    // ...
+  },
+});
+```
+
+#### 4. Atualizar Cabeçalho da Tabela "Data/Hora"
+
+Transformar o cabeçalho "Data/Hora" (linha 1166) em um botão clicável:
+
+```typescript
+<TableHead 
+  className="min-w-[140px] cursor-pointer hover:bg-muted/80 transition-colors select-none"
+  onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+>
+  <div className="flex items-center gap-1.5">
+    Data/Hora
+    {sortOrder === "asc" ? (
+      <ArrowUp className="h-3.5 w-3.5 text-primary" />
+    ) : (
+      <ArrowDown className="h-3.5 w-3.5 text-primary" />
+    )}
+  </div>
+</TableHead>
 ```
 
 ---
 
-## Correções Necessárias
+## Comportamento Esperado
 
-### 1. Corrigir Cálculo de Último Dia do Mês
-
-**Arquivo:** `src/hooks/useMentorEvents.tsx`
-
-Usar função JavaScript para obter o último dia correto do mês:
-
-```typescript
-// Antes
-.lte('scheduled_at', `${year}-${monthStr}-31`)
-
-// Depois
-const lastDay = new Date(year, month + 1, 0).getDate(); // Ex: 28 para fev, 31 para jan
-.lte('scheduled_at', `${year}-${monthStr}-${String(lastDay).padStart(2, '0')}`)
-```
-
-### 2. Invalidar Cache do Mentor ao Salvar Evento
-
-**Arquivo:** `src/components/events/EventEditDialog.tsx`
-
-Adicionar invalidação da query `mentor-events`:
-
-```typescript
-onSuccess: () => {
-  toast({ title: "Evento atualizado com sucesso" });
-  queryClient.invalidateQueries({ queryKey: ["events-with-products"] });
-  queryClient.invalidateQueries({ queryKey: ["events"] });
-  queryClient.invalidateQueries({ queryKey: ["mentor-events"] });  // ✅ ADICIONAR
-  onOpenChange(false);
-  onSuccess?.();
-},
-```
-
-### 3. Mesmo Ajuste no Events.tsx (Dialog de Criação)
-
-**Arquivo:** `src/pages/Events.tsx`
-
-Adicionar invalidação no handler de sucesso da criação de eventos.
+| Estado | Ordem | Ícone |
+|--------|-------|-------|
+| `"asc"` (padrão) | Mais antigo → Mais recente | ↑ ArrowUp |
+| `"desc"` | Mais recente → Mais antigo | ↓ ArrowDown |
 
 ---
 
-## Arquivos a Modificar
+## Diagrama de Interação
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Usuário acessa a aba Eventos                             │
+│    ↓                                                        │
+│ 2. Lista carrega com ordenação padrão (asc - antigo→novo)   │
+│    ↓                                                        │
+│ 3. Usuário clica no cabeçalho "Data/Hora"                   │
+│    ↓                                                        │
+│ 4. setSortOrder alterna para "desc" (novo→antigo)           │
+│    ↓                                                        │
+│ 5. React Query refaz a requisição com nova ordenação        │
+│    ↓                                                        │
+│ 6. Lista atualiza mostrando eventos mais recentes primeiro  │
+│    ↓                                                        │
+│ 7. Ícone muda de ↑ para ↓                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Resumo das Modificações
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `src/hooks/useMentorEvents.tsx` | Corrigir cálculo do último dia do mês |
-| `src/components/events/EventEditDialog.tsx` | Invalidar cache `mentor-events` |
-| `src/pages/Events.tsx` | Invalidar cache `mentor-events` na criação |
+| `src/pages/Events.tsx` | Adicionar imports ArrowUp/ArrowDown, estado sortOrder, incluir na queryKey, atualizar TableHead para ser clicável |
 
 ---
 
-## Resultado Esperado
+## Notas Técnicas
 
-Após as correções:
-1. A query para eventos de fevereiro usará a data correta `2026-02-28`
-2. Ao vincular mentor a um evento, o calendário da Agenda será atualizado automaticamente
-3. O evento aparecerá no calendário, na aba Eventos e nos Lembretes
+### Ordenação no Banco vs Frontend
 
----
+A ordenação é feita **no banco de dados** (não no frontend), garantindo performance mesmo com muitos eventos. O Supabase já indexa `scheduled_at`, então a ordenação é eficiente.
 
-## Detalhes Técnicos
+### Eventos sem Data
 
-### Lógica do Último Dia do Mês
+Eventos do tipo "Material" podem não ter `scheduled_at`. O parâmetro `nullsFirst: false` garante que esses eventos fiquem no final da lista, independente da direção da ordenação.
 
-```typescript
-// new Date(year, month + 1, 0) retorna o último dia do mês
-// Exemplos:
-new Date(2026, 2, 0).getDate() // → 28 (último dia de fevereiro)
-new Date(2026, 1, 0).getDate() // → 31 (último dia de janeiro)
-new Date(2024, 2, 0).getDate() // → 29 (ano bissexto)
-```
+### Persistência do Estado
 
-### Query Correta Esperada
-
-```
-GET /events?mentor_user_id=eq.de43a643...&scheduled_at=gte.2026-02-01&scheduled_at=lte.2026-02-28
-```
-
+O estado de ordenação não é persistido no localStorage ou URL - ele reseta para "asc" ao recarregar a página, conforme comportamento padrão solicitado.
