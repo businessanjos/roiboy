@@ -404,52 +404,48 @@ export default function Tasks() {
     return { text: formattedDate, className: "text-muted-foreground" };
   }, [customStatuses]);
 
-  const filteredTasks = useMemo(() => tasks.filter((task) => {
+  // Base filtered tasks - applies all filters EXCEPT tab (for dynamic stats cards)
+  const baseFilteredTasks = useMemo(() => tasks.filter((task) => {
+    // Search filter
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
     
+    // User filter
     const matchesUser = filterUser === "all" || 
       (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
 
+    // Activity type filter
     const matchesActivityType = filterActivityType === "all" || 
       task.activity_type?.id === filterActivityType;
 
-    // Filter by custom_status_id - also include tasks without status in first tab
-    // And legacy fallback: tasks with completed_at but no custom_status_id go to completed status tab
-    const defaultStatus = customStatuses.find(s => s.is_default);
-    const targetStatus = activeTab ? customStatuses.find(s => s.id === activeTab) : null;
-    
-    let matchesTab = true;
-    if (activeTab) {
-      if (task.custom_status_id === activeTab) {
-        matchesTab = true;
-      } else if (!task.custom_status_id && activeTab === defaultStatus?.id) {
-        // Tasks without status go to default
-        matchesTab = true;
-      } else if (!task.custom_status_id && task.completed_at && targetStatus?.is_completed_status) {
-        // Legacy completed tasks go to completed status tab
-        matchesTab = true;
-      } else {
-        matchesTab = false;
-      }
-    }
-
-    // Filter by sector
+    // Sector filter (always applies in sector context)
     const matchesSector = !currentSector?.id || 
-      // Vendas: tasks with sales activity_type OR tasks with deal_id
       (currentSector.id === "vendas" && (
         task.activity_type?.sector_id === "vendas" || 
         (task.deal_id && !task.activity_type?.sector_id)
       )) ||
-      // Operações: tasks with operations activity_type OR tasks with client_id without deal_id
       (currentSector.id === "operacoes" && (
         task.activity_type?.sector_id === "operacoes" ||
         (task.client_id && !task.deal_id && !task.activity_type?.sector_id)
       ));
 
-    return matchesSearch && matchesUser && matchesTab && matchesActivityType && matchesSector;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, activeTab, customStatuses, currentSector?.id]);
+    return matchesSearch && matchesUser && matchesActivityType && matchesSector;
+  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id]);
+
+  // Final filtered tasks - applies tab filter on top of base filters
+  const filteredTasks = useMemo(() => baseFilteredTasks.filter((task) => {
+    const defaultStatus = customStatuses.find(s => s.is_default);
+    const targetStatus = activeTab ? customStatuses.find(s => s.id === activeTab) : null;
+    
+    if (!activeTab) return true;
+    
+    if (task.custom_status_id === activeTab) return true;
+    if (!task.custom_status_id && activeTab === defaultStatus?.id) return true;
+    if (!task.custom_status_id && task.completed_at && targetStatus?.is_completed_status) return true;
+    
+    return false;
+  }), [baseFilteredTasks, activeTab, customStatuses]);
 
   // Sort tasks
   const sortedTasks = useMemo(() => [...filteredTasks].sort((a, b) => {
@@ -465,42 +461,38 @@ export default function Tasks() {
     }
   }), [filteredTasks, sortBy]);
 
-  // Count tasks per status (with legacy fallback for completed_at)
+  // Count tasks per status - uses baseFilteredTasks for dynamic filtering
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     customStatuses.forEach(status => {
-      counts[status.id] = tasks.filter(t => {
-        // Direct match
+      counts[status.id] = baseFilteredTasks.filter(t => {
         if (t.custom_status_id === status.id) return true;
-        // Legacy fallback: tasks with completed_at but no custom_status_id
         if (!t.custom_status_id && t.completed_at && status.is_completed_status) return true;
         return false;
       }).length;
     });
     return counts;
-  }, [tasks, customStatuses]);
+  }, [baseFilteredTasks, customStatuses]);
 
-  // For stats cards, get counts from custom statuses by name
+  // For stats cards - uses baseFilteredTasks for dynamic filtering with applied filters
   const { pendingCount, overdueCount, inProgressCount, doneCount } = useMemo(() => {
-    // Find status IDs by name patterns
     const pendingStatus = customStatuses.find(s => s.name.toLowerCase().includes('pendente'));
     const inProgressStatus = customStatuses.find(s => s.name.toLowerCase().includes('andamento'));
     const doneStatus = customStatuses.find(s => s.is_completed_status || s.name.toLowerCase().includes('conclu'));
     
-    const pendingCount = tasks.filter(t => 
+    const pendingCount = baseFilteredTasks.filter(t => 
       t.custom_status_id === pendingStatus?.id || 
       (!t.custom_status_id && pendingStatus?.is_default)
     ).length;
     
-    const inProgressCount = tasks.filter(t => t.custom_status_id === inProgressStatus?.id).length;
-    const doneCount = tasks.filter(t => t.custom_status_id === doneStatus?.id || t.completed_at !== null).length;
+    const inProgressCount = baseFilteredTasks.filter(t => t.custom_status_id === inProgressStatus?.id).length;
+    const doneCount = baseFilteredTasks.filter(t => t.custom_status_id === doneStatus?.id || t.completed_at !== null).length;
     
-    // Count overdue from non-completed tasks
+    // Overdue: tasks past due_date that are not completed
     const completedStatusIds = customStatuses.filter(s => s.is_completed_status).map(s => s.id);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const overdueCount = tasks.filter(t => {
-      // Consider task completed if it has completed_at OR a completed status
+    const overdueCount = baseFilteredTasks.filter(t => {
       const isTaskCompleted = t.completed_at !== null || completedStatusIds.includes(t.custom_status_id || '');
       if (!t.due_date || isTaskCompleted) return false;
       const dueDate = new Date(t.due_date);
@@ -509,7 +501,7 @@ export default function Tasks() {
     }).length;
 
     return { pendingCount, overdueCount, inProgressCount, doneCount };
-  }, [tasks, customStatuses]);
+  }, [baseFilteredTasks, customStatuses]);
 
   if (loading) {
     return <LoadingScreen message="Carregando tarefas..." fullScreen={false} />;
