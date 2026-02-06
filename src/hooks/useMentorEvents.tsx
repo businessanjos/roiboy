@@ -40,9 +40,12 @@ export function useMentorEvents(mentorUserId?: string, year?: number, month?: nu
       // Apply date filter if year is provided
       if (year && month !== undefined) {
         const monthStr = String(month + 1).padStart(2, '0');
+        // Get the actual last day of the month (handles Feb, 30-day months, etc.)
+        const lastDay = new Date(year, month + 1, 0).getDate();
+        const lastDayStr = String(lastDay).padStart(2, '0');
         query = query
           .gte('scheduled_at', `${year}-${monthStr}-01`)
-          .lte('scheduled_at', `${year}-${monthStr}-31`);
+          .lte('scheduled_at', `${year}-${monthStr}-${lastDayStr}`);
       } else if (year) {
         query = query
           .gte('scheduled_at', `${year}-01-01`)

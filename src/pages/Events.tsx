@@ -308,6 +308,7 @@ export default function Events() {
 
   const invalidateEvents = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["events-with-products"] });
+    queryClient.invalidateQueries({ queryKey: ["mentor-events"] });
   }, [queryClient]);
 
   const resetForm = () => {
