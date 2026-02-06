@@ -382,7 +382,7 @@ export default function Tasks() {
     
     const daysDiff = differenceInDays(dueDate, today);
     const taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
-    const isCompleted = taskStatus?.is_completed_status || false;
+    const isCompleted = taskStatus?.is_completed_status || task.completed_at !== null;
     const formattedDate = format(dueDate, "dd/MM", { locale: ptBR });
     
     if (isCompleted) {
@@ -474,14 +474,16 @@ export default function Tasks() {
     ).length;
     
     const inProgressCount = tasks.filter(t => t.custom_status_id === inProgressStatus?.id).length;
-    const doneCount = tasks.filter(t => t.custom_status_id === doneStatus?.id).length;
+    const doneCount = tasks.filter(t => t.custom_status_id === doneStatus?.id || t.completed_at !== null).length;
     
     // Count overdue from non-completed tasks
     const completedStatusIds = customStatuses.filter(s => s.is_completed_status).map(s => s.id);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const overdueCount = tasks.filter(t => {
-      if (!t.due_date || completedStatusIds.includes(t.custom_status_id || '')) return false;
+      // Consider task completed if it has completed_at OR a completed status
+      const isTaskCompleted = t.completed_at !== null || completedStatusIds.includes(t.custom_status_id || '');
+      if (!t.due_date || isTaskCompleted) return false;
       const dueDate = new Date(t.due_date);
       dueDate.setHours(0, 0, 0, 0);
       return dueDate < today;
@@ -530,7 +532,7 @@ export default function Tasks() {
                 tasks.map((task) => {
                   // Find the custom status for this task
                   const taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
-                  const isCompleted = taskStatus?.is_completed_status || false;
+                  const isCompleted = taskStatus?.is_completed_status || task.completed_at !== null;
                   const priorityConfig = PRIORITY_CONFIG[task.priority];
                   const dueDateInfo = getDueDateInfo(task);
 
