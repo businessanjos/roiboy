@@ -1,18 +1,36 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
+const corsHeaders = { 
+  "Access-Control-Allow-Origin": "*", 
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" 
+};
 const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
 const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
 async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
-  const r = await fetch(`${UAZAPI_URL}${endpoint}`, { method, headers: { "Content-Type": "application/json", "admintoken": UAZAPI_ADMIN_TOKEN }, body: body ? JSON.stringify(body) : undefined });
-  return r.json();
+  const r = await fetch(`${UAZAPI_URL}${endpoint}`, { 
+    method, 
+    headers: { "Content-Type": "application/json", "admintoken": UAZAPI_ADMIN_TOKEN }, 
+    body: body ? JSON.stringify(body) : undefined 
+  });
+  const json = await r.json();
+  if (!r.ok && json.error) throw new Error(json.error);
+  return json;
 }
 
 async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown) {
-  const r = await fetch(`${UAZAPI_URL}${endpoint}`, { method, headers: { "Content-Type": "application/json", "token": token }, body: body ? JSON.stringify(body) : undefined });
-  return r.json();
+  const r = await fetch(`${UAZAPI_URL}${endpoint}`, { 
+    method, 
+    headers: { "Content-Type": "application/json", "token": token }, 
+    body: body ? JSON.stringify(body) : undefined 
+  });
+  const json = await r.json();
+  // Verificar erros do UAZAPI
+  if (!r.ok || json.error) {
+    throw new Error(json.error || json.message || `UAZAPI responded with ${r.status}`);
+  }
+  return json;
 }
 
 serve(async (req) => {
@@ -30,15 +48,61 @@ serve(async (req) => {
     if (!userData) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
     const payload = await req.json();
-    const { action, sector_id, phone, message, group_id } = payload;
+    const { action, sector_id, phone, message, group_id, integration_id } = payload;
     const accountId = userData.account_id;
 
-    // Get integration
-    let q = supabase.from("integrations").select("id, config, status").eq("account_id", accountId).eq("type", "whatsapp");
-    q = sector_id ? q.eq("sector_id", sector_id) : q.is("sector_id", null);
-    const { data: intData } = await q.maybeSingle();
+    console.log(`[uazapi-manager] Action: ${action}, integration_id: ${integration_id}, sector_id: ${sector_id}`);
+
+    // Buscar integração - PRIORIZAR integration_id
+    let intData: { id: string; config: { instance_token?: string; instance_name?: string }; status: string } | null = null;
+    
+    if (integration_id) {
+      // Busca direta por ID específico
+      const { data } = await supabase
+        .from("integrations")
+        .select("id, config, status")
+        .eq("id", integration_id)
+        .eq("account_id", accountId)
+        .single();
+      intData = data;
+    } else if (sector_id) {
+      // Fallback: primeira integração do setor
+      const { data } = await supabase
+        .from("integrations")
+        .select("id, config, status")
+        .eq("account_id", accountId)
+        .eq("type", "whatsapp")
+        .eq("sector_id", sector_id)
+        .limit(1);
+      intData = data?.[0] || null;
+    } else {
+      // Fallback: integração global
+      const { data } = await supabase
+        .from("integrations")
+        .select("id, config, status")
+        .eq("account_id", accountId)
+        .eq("type", "whatsapp")
+        .is("sector_id", null)
+        .limit(1);
+      intData = data?.[0] || null;
+    }
+
     const token = intData?.config?.instance_token;
     const instanceName = intData?.config?.instance_name || `roy-${accountId.slice(0,8)}`;
+
+    console.log(`[uazapi-manager] Found integration: ${intData?.id || "NONE"}, token: ${token ? "present" : "MISSING"}`);
+
+    // Ações que requerem token - validar antes de prosseguir
+    const tokenRequiredActions = ["send_text", "send_to_group", "list_groups", "disconnect"];
+    if (tokenRequiredActions.includes(action) && !token) {
+      console.error(`[uazapi-manager] Token required but missing for action: ${action}`);
+      return new Response(JSON.stringify({ 
+        error: "WhatsApp não configurado para este setor. Verifique as integrações." 
+      }), { 
+        status: 400, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
 
     let result: unknown = { success: true };
 
@@ -55,16 +119,22 @@ serve(async (req) => {
     } else if (action === "connect" || action === "qrcode") {
       result = await uazapiAdmin(`/instance/connect/${instanceName}`, "GET");
     } else if (action === "disconnect") {
-      if (token) try { await uazapiInstance("/logout", "POST", token); } catch {}
+      try { await uazapiInstance("/logout", "POST", token!); } catch {}
       if (intData?.id) await supabase.from("integrations").update({ status: "disconnected" }).eq("id", intData.id);
       result = { disconnected: true };
-    } else if (action === "send_text" && token) {
-      result = await uazapiInstance("/message/sendText", "POST", token, { number: phone?.replace(/\D/g,""), text: message });
-    } else if (action === "send_to_group" && token) {
+    } else if (action === "send_text") {
+      const cleanPhone = phone?.replace(/\D/g, "");
+      if (!cleanPhone || cleanPhone.length < 10) {
+        return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { 
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+      result = await uazapiInstance("/message/sendText", "POST", token!, { number: cleanPhone, text: message });
+    } else if (action === "send_to_group") {
       const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
-      result = await uazapiInstance("/message/sendText", "POST", token, { groupJid: jid, text: message });
-    } else if (action === "list_groups" && token) {
-      const r = await uazapiInstance("/group/fetchAllGroups", "GET", token);
+      result = await uazapiInstance("/message/sendText", "POST", token!, { groupJid: jid, text: message });
+    } else if (action === "list_groups") {
+      const r = await uazapiInstance("/group/fetchAllGroups", "GET", token!);
       result = { groups: (Array.isArray(r) ? r : r.groups || []).map((g:any) => ({ group_jid: g.JID||g.jid||g.id, name: g.Name||g.name||g.Subject })) };
     } else if (action === "list_instances") {
       const all = await uazapiAdmin("/instance/all", "GET") as Array<{name?:string;status?:string;owner?:string}>;
@@ -89,6 +159,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ data: result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
+    console.error("[uazapi-manager] Error:", (e as Error).message);
     return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
