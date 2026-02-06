@@ -1,86 +1,66 @@
 
-# Plano: Sincronização de Status de Conclusão entre Tarefas e Atividades
 
-## Diagnóstico do Problema
+# Plano: Criar Itens de Onboarding para Ariella Duarte
 
-### O que está acontecendo
+## Dados Identificados
 
-1. **No DealActivitiesTab**: A função `getComputedStatus()` (linha 76-89) determina se uma tarefa está concluída verificando `task.completed_at`:
-   ```typescript
-   if (task.completed_at) return "done";
-   ```
-
-2. **Na página de Tarefas**: A determinação de conclusão usa apenas `custom_status_id`:
-   ```typescript
-   const taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
-   const isCompleted = taskStatus?.is_completed_status || false;
-   ```
-
-3. **Problema de sincronização**: Quando uma tarefa é marcada como concluída no DealActivitiesTab:
-   - `completed_at` é preenchido ✅
-   - `custom_status_id` é atualizado para um status de conclusão ✅
-   - O cache `["internal-tasks"]` é invalidado ✅
-   
-   **Porém**, verificando os dados no banco, vejo que muitas tarefas possuem `completed_at` preenchido mas `custom_status_id = null`. Isso sugere que algo está falhando na atualização do `custom_status_id`.
-
-### Causa Raiz
-
-A função `handleToggleComplete` no DealActivitiesTab (linhas 163-166) busca estatuses sem filtrar por `account_id`:
-```typescript
-const { data: statuses } = await supabase
-  .from("task_statuses")
-  .select("id, is_completed_status")
-  .order("display_order"); // Depende do RLS
-```
-
-Embora o RLS esteja habilitado, se a query retornar estatuses em ordem diferente ou se encontrar um status de outra conta primeiro, o `targetStatus` pode não ser válido para a tarefa.
+| Campo | Valor |
+|-------|-------|
+| **Cliente** | Ariella Duarte |
+| **Client ID** | `45ebabf0-ed84-44d2-be23-18f8a9b8f979` |
+| **Account ID** | `796e7970-fd93-4574-a871-6090624cace6` |
+| **Activity Type (Onboarding)** | `a2fd7380-58ab-42ac-8de1-66805e3004d0` |
 
 ---
 
-## Solução
+## Itens a Criar
 
-### Modificação 1: Página de Tarefas deve considerar `completed_at`
+### 1. Evento "Onboarding"
+- **Tipo**: Live
+- **Modalidade**: Online  
+- **Categoria**: operation
+- **Cliente vinculado**: Ariella Duarte
 
-Atualizar a lógica de `isCompleted` para também verificar `completed_at`:
+### 2. Tarefas
+1. **Implementação da Clínica Ryka**
+   - Tipo de atividade: Onboarding
+   - Prioridade: Medium
+   - Status: Pendente
 
-**Arquivo:** `src/pages/Tasks.tsx`
-
-```typescript
-// Linha ~533 (e em outros lugares onde isCompleted é calculado)
-// ❌ Código atual
-const isCompleted = taskStatus?.is_completed_status || false;
-
-// ✅ Código corrigido
-const isCompleted = taskStatus?.is_completed_status || task.completed_at !== null;
-```
-
-Essa mesma lógica deve ser aplicada em todos os lugares onde `isCompleted` é calculado na página de Tarefas.
-
-### Modificação 2: Garantir consistência no filtro de abas
-
-O filtro de abas atualmente só considera `custom_status_id`. Tarefas com `completed_at` preenchido mas sem `custom_status_id` não aparecem na aba correta.
-
-**Locais a modificar em `src/pages/Tasks.tsx`:**
-
-1. **Linha ~533 (lista de tarefas)** - Adicionar verificação de `completed_at`
-2. **Linha ~830 (Kanban)** - Mesma correção no contexto do Kanban
-3. **Contadores de tarefas** - Garantir que contadores considerem `completed_at`
+2. **Apresentação do Plano de Ação**
+   - Tipo de atividade: Onboarding
+   - Prioridade: Medium
+   - Status: Pendente
 
 ---
 
-## Resumo de Modificações
+## Implementação Técnica
 
-| Arquivo | Local | Ação |
-|---------|-------|------|
-| `src/pages/Tasks.tsx` | ~533 | Modificar cálculo de `isCompleted` para incluir `completed_at` |
-| `src/pages/Tasks.tsx` | Outros locais com mesma lógica | Aplicar mesma correção |
+Executarei 3 operações SQL via ferramenta de inserção:
+
+```sql
+-- 1. Criar evento de Onboarding
+INSERT INTO events (account_id, title, description, event_type, modality, category)
+VALUES ('796e7970-fd93-4574-a871-6090624cace6', 'Onboarding', 'Onboarding Inicial', 'live', 'online', 'operation')
+RETURNING id;
+
+-- 2. Vincular cliente ao evento
+INSERT INTO event_participants (event_id, client_id)
+VALUES (<event_id>, '45ebabf0-ed84-44d2-be23-18f8a9b8f979');
+
+-- 3. Criar tarefas de onboarding
+INSERT INTO internal_tasks (account_id, title, priority, client_id, activity_type_id)
+VALUES 
+  ('796e7970-fd93-4574-a871-6090624cace6', 'Implementação da Clínica Ryka', 'medium', '45ebabf0-ed84-44d2-be23-18f8a9b8f979', 'a2fd7380-58ab-42ac-8de1-66805e3004d0'),
+  ('796e7970-fd93-4574-a871-6090624cace6', 'Apresentação do Plano de Ação', 'medium', '45ebabf0-ed84-44d2-be23-18f8a9b8f979', 'a2fd7380-58ab-42ac-8de1-66805e3004d0');
+```
 
 ---
 
 ## Resultado Esperado
 
-Após esta correção:
-1. Tarefas marcadas como concluídas no DealActivitiesTab aparecerão como concluídas na página de Tarefas
-2. O checkbox de conclusão na página de Tarefas mostrará o estado correto
-3. O texto da tarefa terá o estilo "riscado" para indicar conclusão
-4. A sincronização será consistente entre ambas as visualizações
+Após a execução:
+1. ✅ Cliente Ariella Duarte terá um evento "Onboarding" na aba Agenda
+2. ✅ Duas tarefas pendentes aparecerão na aba Tarefas (setor Operações)
+3. ✅ Os itens seguirão o mesmo padrão da automação corrigida anteriormente
+
