@@ -19,15 +19,18 @@ import {
   Camera, 
   Phone, 
   MapPin,
-  CreditCard
+  CreditCard,
+  Key
 } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePermissions } from "@/hooks/usePermissions";
 import { SubscriptionManager } from "@/components/settings/SubscriptionManager";
 import { MeetingPreferencesCard } from "@/components/settings/MeetingPreferencesCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlanUsageCard } from "@/components/plan";
 import { BillingContent } from "@/components/billing/BillingContent";
+import { ApiKeyTab } from "@/components/profile/ApiKeyTab";
 import { Receipt, Video } from "lucide-react";
 
 interface UserProfile {
@@ -75,6 +78,7 @@ export default function Profile() {
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get("tab") || "profile";
   const { updateUser } = useCurrentUser();
+  const { isAdmin } = usePermissions();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -409,6 +413,12 @@ export default function Profile() {
             <Video className="h-4 w-4" />
             Reuniões
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger value="api-key" className="gap-2">
+              <Key className="h-4 w-4" />
+              API Key
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Profile Tab */}
@@ -733,6 +743,13 @@ export default function Profile() {
         <TabsContent value="meetings" className="space-y-6">
           <MeetingPreferencesCard />
         </TabsContent>
+
+        {/* API Key Tab - Admin Only */}
+        {isAdmin && profile && (
+          <TabsContent value="api-key" className="space-y-6">
+            <ApiKeyTab userId={profile.id} accountId={profile.account_id} />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
