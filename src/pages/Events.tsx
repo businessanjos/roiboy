@@ -66,7 +66,9 @@ import {
   BarChart3,
   Lock,
   Eye,
-  ChevronDown
+  ChevronDown,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { sectors, type SectorId } from "@/config/sectors";
@@ -146,6 +148,7 @@ export default function Events() {
   const [filterEventType, setFilterEventType] = useState<string>("all");
   const [filterModality, setFilterModality] = useState<string>("all");
   const [modalityTab, setModalityTab] = useState<"all" | "presencial" | "online">("all");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   // Form state
   const [title, setTitle] = useState("");
@@ -208,7 +211,7 @@ export default function Events() {
 
   // Fetch events with React Query
   const { data: events = [], isLoading: loading } = useQuery({
-    queryKey: ["events-with-products"],
+    queryKey: ["events-with-products", sortOrder],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("events")
@@ -223,7 +226,7 @@ export default function Events() {
             rsvp_status
           )
         `)
-        .order("scheduled_at", { ascending: true, nullsFirst: false });
+        .order("scheduled_at", { ascending: sortOrder === "asc", nullsFirst: false });
       if (error) throw error;
       
       // Add confirmed_count to each event
@@ -1163,7 +1166,19 @@ export default function Events() {
                     <TableHead className="min-w-[180px]">Evento</TableHead>
                     <TableHead className="min-w-[100px]">Tipo</TableHead>
                     <TableHead className="min-w-[120px]">Modalidade</TableHead>
-                    <TableHead className="min-w-[140px]">Data/Hora</TableHead>
+                    <TableHead 
+                      className="min-w-[140px] cursor-pointer hover:bg-muted/80 transition-colors select-none"
+                      onClick={() => setSortOrder(prev => prev === "asc" ? "desc" : "asc")}
+                    >
+                      <div className="flex items-center gap-1.5">
+                        Data/Hora
+                        {sortOrder === "asc" ? (
+                          <ArrowUp className="h-3.5 w-3.5 text-primary" />
+                        ) : (
+                          <ArrowDown className="h-3.5 w-3.5 text-primary" />
+                        )}
+                      </div>
+                    </TableHead>
                     <TableHead className="min-w-[80px]">Vagas</TableHead>
                     <TableHead className="min-w-[120px]">Produtos</TableHead>
                     <TableHead className="text-right min-w-[100px]">Ações</TableHead>
