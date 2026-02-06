@@ -184,8 +184,8 @@ export default function Tasks() {
   // Custom task statuses
   const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
   
-  // Activity types for filtering
-  const { activityTypes } = useActivityTypes();
+  // Activity types for filtering - filtered by current sector
+  const { activityTypes } = useActivityTypes(currentSector?.id);
 
   // No need to set default tab - "all" is the default
 
