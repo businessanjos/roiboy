@@ -664,7 +664,15 @@ export function useZappData(options: UseZappDataOptions = {}) {
         // Fire-and-forget to avoid blocking UI - realtime will update when completed
         supabase.functions.invoke("download-media", {
           body: { message_ids: idsToDownload }
-        }).catch((err) => console.error("[ZappData] Auto-download error:", err));
+        }).then((res) => {
+          if (res.error) {
+            console.error("[ZappData] Download-media function error:", res.error);
+          } else {
+            console.log(`[ZappData] Download triggered successfully for ${idsToDownload.length} media items`);
+          }
+        }).catch((err) => {
+          console.error("[ZappData] Auto-download network error:", err);
+        });
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
