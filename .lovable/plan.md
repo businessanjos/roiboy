@@ -1,240 +1,354 @@
 
 
-# Plano: API Key para Admins no Perfil
+# Plano: Validação de API Key nas Edge Functions
 
 ## Visão Geral
 
-Adicionar uma nova aba "API Key" na página de Perfil, visível apenas para usuários com cargo de Admin, permitindo:
-- Gerar uma chave de API com permissões de Admin
-- Visualização protegida (chave visível apenas uma vez)
-- Histórico de execuções
-- Excluir ou regenerar a chave
+Implementar um sistema de autenticação via API Key (`roy_sk_...`) nas Edge Functions existentes, permitindo que automações externas utilizem a chave gerada pelos administradores para acessar os endpoints com todas as permissões do cargo Admin.
 
 ---
 
 ## Arquitetura
 
-### 1. Tabela no Banco de Dados
-
-Criar duas tabelas para gerenciar API Keys e seus logs:
-
-```sql
--- Tabela de API Keys
-CREATE TABLE public.api_keys (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-  name TEXT NOT NULL DEFAULT 'API Key Principal',
-  key_hash TEXT NOT NULL,         -- SHA-256 hash da chave
-  key_preview TEXT NOT NULL,      -- Ex: "roy_...a1b2" para exibição
-  created_at TIMESTAMPTZ DEFAULT now(),
-  last_used_at TIMESTAMPTZ,
-  is_active BOOLEAN DEFAULT true,
-  UNIQUE(user_id)                 -- Apenas 1 chave por usuário
-);
-
--- Tabela de logs de execução
-CREATE TABLE public.api_key_logs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  api_key_id UUID NOT NULL REFERENCES api_keys(id) ON DELETE CASCADE,
-  method TEXT,                    -- GET, POST, PUT, DELETE
-  path TEXT,                      -- /api/clients, etc.
-  status_code INTEGER,            -- 200, 401, 500, etc.
-  ip_address TEXT,
-  user_agent TEXT,
-  executed_at TIMESTAMPTZ DEFAULT now()
-);
-
--- RLS
-ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
-ALTER TABLE api_key_logs ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Users can manage their own API keys"
-ON api_keys FOR ALL USING (user_id IN (
-  SELECT id FROM users WHERE auth_user_id = auth.uid()
-));
-
-CREATE POLICY "Users can view logs of their own keys"
-ON api_key_logs FOR SELECT USING (
-  api_key_id IN (
-    SELECT id FROM api_keys WHERE user_id IN (
-      SELECT id FROM users WHERE auth_user_id = auth.uid()
-    )
-  )
-);
-
--- Índices para performance
-CREATE INDEX idx_api_key_logs_key_id ON api_key_logs(api_key_id);
-CREATE INDEX idx_api_key_logs_executed_at ON api_key_logs(executed_at DESC);
-```
-
-### 2. Estrutura de Componentes
+### Fluxo de Autenticação
 
 ```text
-src/
-├── pages/Profile.tsx              (modificar - adicionar aba)
-├── components/profile/
-│   ├── ApiKeyTab.tsx              (novo - conteúdo da aba)
-│   └── ApiKeyHistoryTable.tsx     (novo - tabela de histórico)
-```
-
----
-
-## Fluxo de Segurança
-
-### Geração da Chave
-
-```text
-1. Usuário Admin clica "Gerar Nova Chave"
+1. Request chega com header: Authorization: Bearer roy_sk_a1b2c3...
    ↓
-2. Frontend gera chave aleatória: "roy_" + 32 caracteres
-   Ex: "roy_sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6"
+2. Edge Function extrai o token e calcula SHA-256 hash
    ↓
-3. Calcula SHA-256 hash da chave
+3. Busca na tabela api_keys por key_hash + is_active = true
    ↓
-4. Salva no banco:
-   - key_hash: hash SHA-256
-   - key_preview: "roy_sk_...n4o5" (primeiros 6 + últimos 4)
-   ↓
-5. Exibe chave COMPLETA uma única vez com aviso:
-   "Copie agora! Esta chave não será exibida novamente."
-   ↓
-6. Se existir chave anterior, ela é automaticamente revogada
-```
-
-### Validação da Chave (Edge Functions)
-
-```text
-1. Request chega com header: Authorization: Bearer roy_sk_...
-   ↓
-2. Edge Function calcula SHA-256 do token
-   ↓
-3. Busca na tabela api_keys por key_hash
-   ↓
-4. Se encontrado e is_active = true:
-   - Atualiza last_used_at
-   - Insere log em api_key_logs
-   - Retorna user_id e account_id para a função
+4. Se encontrado:
+   - Atualiza last_used_at na api_keys
+   - Insere log em api_key_logs (método, path, status, IP)
+   - Retorna { userId, accountId } para a função usar
    ↓
 5. Se não encontrado: retorna 401 Unauthorized
 ```
 
+### Dual Auth Support
+
+As Edge Functions suportarão dois métodos de autenticação:
+1. **JWT do Supabase** (usuários logados no frontend)
+2. **API Key Admin** (automações externas)
+
 ---
 
-## Alterações nos Arquivos
+## Estrutura de Arquivos
 
-### Arquivo 1: `src/pages/Profile.tsx`
+```text
+supabase/functions/
+├── _shared/
+│   └── api-key-auth.ts         (novo - helper de autenticação)
+├── create-client/index.ts       (modificar - adicionar auth)
+├── list-clients/index.ts        (modificar - adicionar auth)
+├── get-client-by-phone/index.ts (modificar - refatorar auth)
+└── ... (outras funções que precisarem)
+```
 
-**Modificações:**
-1. Adicionar import do componente `ApiKeyTab`
-2. Adicionar import do hook `usePermissions`
-3. Adicionar import do ícone `Key`
-4. Adicionar aba condicional para Admins
+---
+
+## Arquivo 1: `supabase/functions/_shared/api-key-auth.ts` (novo)
+
+Helper compartilhado para validar API Keys em qualquer Edge Function:
 
 ```typescript
-// Novos imports
-import { usePermissions } from "@/hooks/usePermissions";
-import { ApiKeyTab } from "@/components/profile/ApiKeyTab";
-import { Key } from "lucide-react";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Dentro do componente, após outros hooks
-const { isAdmin } = usePermissions();
+export interface AuthResult {
+  authenticated: boolean;
+  userId?: string;
+  accountId?: string;
+  method?: "api_key" | "jwt";
+  error?: string;
+}
 
-// No TabsList, após "Reuniões" (condicional)
-{isAdmin && (
-  <TabsTrigger value="api-key" className="gap-2">
-    <Key className="h-4 w-4" />
-    API Key
-  </TabsTrigger>
-)}
+// Hash SHA-256 da chave
+async function hashKey(key: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(key);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
-// Novo TabsContent antes do fechamento de </Tabs>
-{isAdmin && (
-  <TabsContent value="api-key">
-    <ApiKeyTab userId={profile.id} accountId={profile.account_id} />
-  </TabsContent>
-)}
+// Registrar log de uso da API Key
+async function logApiKeyUsage(
+  supabase: any,
+  apiKeyId: string,
+  req: Request,
+  statusCode: number
+): Promise<void> {
+  const url = new URL(req.url);
+  const ipAddress = req.headers.get("x-forwarded-for")?.split(",")[0] || 
+                    req.headers.get("cf-connecting-ip") || 
+                    "unknown";
+
+  await supabase.from("api_key_logs").insert({
+    api_key_id: apiKeyId,
+    method: req.method,
+    path: url.pathname,
+    status_code: statusCode,
+    ip_address: ipAddress,
+    user_agent: req.headers.get("user-agent")?.slice(0, 500) || null,
+  });
+
+  // Atualizar last_used_at
+  await supabase
+    .from("api_keys")
+    .update({ last_used_at: new Date().toISOString() })
+    .eq("id", apiKeyId);
+}
+
+// Validar API Key (roy_sk_...)
+export async function validateApiKey(
+  supabase: any,
+  authHeader: string,
+  req: Request
+): Promise<AuthResult> {
+  // Verificar formato Bearer
+  if (!authHeader.startsWith("Bearer ")) {
+    return { authenticated: false, error: "Invalid authorization format" };
+  }
+
+  const token = authHeader.replace("Bearer ", "");
+
+  // Verificar se é uma API Key do ROY (prefixo roy_sk_)
+  if (!token.startsWith("roy_sk_")) {
+    return { authenticated: false, error: "Not an API key" };
+  }
+
+  // Calcular hash da chave
+  const keyHash = await hashKey(token);
+
+  // Buscar chave no banco
+  const { data: apiKey, error } = await supabase
+    .from("api_keys")
+    .select("id, user_id, account_id")
+    .eq("key_hash", keyHash)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error || !apiKey) {
+    return { authenticated: false, error: "Invalid or revoked API key" };
+  }
+
+  // Log de uso (status será atualizado depois)
+  // Nota: O log real será feito após a resposta
+  
+  return {
+    authenticated: true,
+    userId: apiKey.user_id,
+    accountId: apiKey.account_id,
+    method: "api_key",
+  };
+}
+
+// Autenticação dual: tenta JWT primeiro, depois API Key
+export async function authenticateRequest(
+  req: Request,
+  supabase: any
+): Promise<AuthResult> {
+  const authHeader = req.headers.get("Authorization") || "";
+
+  // Se não tem header de auth
+  if (!authHeader) {
+    return { authenticated: false, error: "No authorization header" };
+  }
+
+  // Se é uma API Key do ROY
+  if (authHeader.includes("roy_sk_")) {
+    return validateApiKey(supabase, authHeader, req);
+  }
+
+  // Tentar validar como JWT do Supabase
+  const token = authHeader.replace("Bearer ", "");
+  const { data, error } = await supabase.auth.getUser(token);
+
+  if (error || !data?.user) {
+    return { authenticated: false, error: "Invalid JWT token" };
+  }
+
+  // Buscar user_id e account_id da tabela users
+  const { data: user } = await supabase
+    .from("users")
+    .select("id, account_id")
+    .eq("auth_user_id", data.user.id)
+    .single();
+
+  if (!user) {
+    return { authenticated: false, error: "User not found" };
+  }
+
+  return {
+    authenticated: true,
+    userId: user.id,
+    accountId: user.account_id,
+    method: "jwt",
+  };
+}
+
+// Helper para criar resposta de erro 401
+export function unauthorizedResponse(
+  corsHeaders: Record<string, string>,
+  message = "Unauthorized"
+): Response {
+  return new Response(
+    JSON.stringify({ error: message }),
+    { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+export { logApiKeyUsage };
 ```
-
-### Arquivo 2: `src/components/profile/ApiKeyTab.tsx` (novo)
-
-Componente principal com:
-
-```text
-┌────────────────────────────────────────────────────────────────────────┐
-│ 🔐 Chave de API                                                        │
-│ Use esta chave para autenticar integrações externas                    │
-├────────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│ ┌────────────────────────────────────────────────────────────────────┐ │
-│ │ 🔑 Sua Chave Atual                                                 │ │
-│ ├────────────────────────────────────────────────────────────────────┤ │
-│ │                                                                    │ │
-│ │ Preview:  roy_sk_...n4o5         Criada em: 06/02/2026 14:30       │ │
-│ │                                  Último uso: 06/02/2026 15:45     │ │
-│ │                                                                    │ │
-│ │ ⚠️ A chave completa foi exibida apenas no momento da criação.      │ │
-│ │                                                                    │ │
-│ │     [🔄 Gerar Nova Chave]      [🗑️ Revogar Chave]                   │ │
-│ └────────────────────────────────────────────────────────────────────┘ │
-│                                                                        │
-│ ┌────────────────────────────────────────────────────────────────────┐ │
-│ │ 📋 Histórico de Execuções                                          │ │
-│ ├────────────────────────────────────────────────────────────────────┤ │
-│ │ Data/Hora      │ Método │ Endpoint        │ Status │ IP           │ │
-│ ├────────────────────────────────────────────────────────────────────┤ │
-│ │ 06/02 15:45    │ POST   │ /api/clients    │ 201    │ 189.x.x.x    │ │
-│ │ 06/02 15:30    │ GET    │ /api/events     │ 200    │ 189.x.x.x    │ │
-│ │ 06/02 14:15    │ PUT    │ /api/clients/x  │ 200    │ 189.x.x.x    │ │
-│ └────────────────────────────────────────────────────────────────────┘ │
-│                                                                        │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
-**Funcionalidades:**
-- Verifica se existe chave ativa
-- Exibe preview da chave (nunca a chave completa)
-- Botão "Gerar Nova Chave" com diálogo de confirmação
-- Botão "Revogar Chave" com confirmação
-- Quando gera nova chave: dialog modal com chave completa + botão copiar
-- Lista histórico de execuções paginado
-
-### Arquivo 3: `src/components/profile/ApiKeyHistoryTable.tsx` (novo)
-
-Tabela de histórico com:
-- Data/Hora formatada
-- Badge colorido por método (GET=azul, POST=verde, DELETE=vermelho)
-- Endpoint truncado
-- Status code com cor (2xx=verde, 4xx=amarelo, 5xx=vermelho)
-- IP address
-- Paginação (20 por página)
 
 ---
 
-## Layout do Dialog de Chave Gerada
+## Arquivo 2: Modificar `create-client/index.ts`
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│ ✅ Chave Gerada com Sucesso!                                │
-├──────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ⚠️  ATENÇÃO: Copie sua chave agora!                         │
-│                                                              │
-│  Esta chave só será exibida UMA VEZ. Após fechar este       │
-│  dialog, você não poderá visualizá-la novamente.            │
-│                                                              │
-│  ┌────────────────────────────────────────────────────────┐  │
-│  │ roy_sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9        │  │
-│  │                                          [📋 Copiar]  │  │
-│  └────────────────────────────────────────────────────────┘  │
-│                                                              │
-│  Como usar:                                                  │
-│  Authorization: Bearer <sua-chave>                           │
-│                                                              │
-├──────────────────────────────────────────────────────────────┤
-│                                        [Entendi e Copiei]    │
-└──────────────────────────────────────────────────────────────┘
+Adicionar autenticação dual (JWT + API Key):
+
+```typescript
+// Adicionar import no topo
+import { authenticateRequest, unauthorizedResponse, logApiKeyUsage } from "../_shared/api-key-auth.ts";
+
+// Após criar o cliente Supabase, adicionar:
+const auth = await authenticateRequest(req, supabase);
+if (!auth.authenticated) {
+  return unauthorizedResponse(corsHeaders, auth.error);
+}
+
+// Usar auth.accountId em vez de payload.account_id (opcional, pode validar se coincidem)
+const accountId = auth.accountId;
+
+// Após a resposta de sucesso, logar uso se foi API Key:
+if (auth.method === "api_key") {
+  // Buscar apiKeyId para logging
+  const { data: apiKey } = await supabase
+    .from("api_keys")
+    .select("id")
+    .eq("user_id", auth.userId)
+    .eq("is_active", true)
+    .single();
+  
+  if (apiKey) {
+    await logApiKeyUsage(supabase, apiKey.id, req, 201);
+  }
+}
 ```
+
+---
+
+## Arquivo 3: Modificar `list-clients/index.ts`
+
+Substituir a autenticação atual por sessão (`x-session-token`) pela autenticação dual:
+
+```typescript
+// Remover validação por x-session-token
+// Adicionar import do helper
+import { authenticateRequest, unauthorizedResponse, logApiKeyUsage } from "../_shared/api-key-auth.ts";
+
+// Substituir o bloco de autenticação atual por:
+const auth = await authenticateRequest(req, supabase);
+if (!auth.authenticated) {
+  return unauthorizedResponse(corsHeaders, auth.error);
+}
+
+const accountId = auth.accountId!;
+const userId = auth.userId!;
+
+// Buscar role do usuário para filtros de permissão
+const { data: userRole } = await supabase
+  .from("users")
+  .select("role")
+  .eq("id", userId)
+  .single();
+
+const role = userRole?.role || "viewer";
+```
+
+---
+
+## Arquivo 4: Refatorar `get-client-by-phone/index.ts`
+
+Unificar para usar o helper de autenticação:
+
+```typescript
+// Remover a função validateApiKey interna
+// Importar do helper compartilhado
+import { authenticateRequest, unauthorizedResponse, logApiKeyUsage } from "../_shared/api-key-auth.ts";
+
+// Substituir lógica de validação por:
+const auth = await authenticateRequest(req, supabase);
+if (!auth.authenticated) {
+  // Fallback para x-api-key legacy (integrations table)
+  const legacyApiKey = req.headers.get("x-api-key") || url.searchParams.get("api_key");
+  if (legacyApiKey) {
+    // Manter lógica legacy temporariamente
+  } else {
+    return unauthorizedResponse(corsHeaders, auth.error);
+  }
+}
+```
+
+---
+
+## Endpoints Prioritários para Atualização
+
+| Endpoint | Uso Principal | Prioridade |
+|----------|---------------|------------|
+| `create-client` | Criar clientes via automação | Alta |
+| `list-clients` | Listar clientes | Alta |
+| `get-client-by-phone` | Buscar cliente por telefone | Alta |
+| `sync-omie` | Sincronização ERP | Média |
+| `bulk-ingest-messages` | Importação em massa | Média |
+
+---
+
+## Documentação da API
+
+### Autenticação
+
+Todas as requisições devem incluir o header de autorização:
+
+```
+Authorization: Bearer roy_sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+```
+
+### Exemplo de Uso
+
+```bash
+# Criar cliente
+curl -X POST https://mtzoavtbtqflufyccern.supabase.co/functions/v1/create-client \
+  -H "Authorization: Bearer roy_sk_sua_chave_aqui" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "phone_e164": "+5511999999999",
+    "full_name": "João Silva",
+    "emails": ["joao@email.com"]
+  }'
+
+# Listar clientes
+curl -X GET "https://mtzoavtbtqflufyccern.supabase.co/functions/v1/list-clients?limit=10" \
+  -H "Authorization: Bearer roy_sk_sua_chave_aqui"
+
+# Buscar cliente por telefone
+curl -X GET "https://mtzoavtbtqflufyccern.supabase.co/functions/v1/get-client-by-phone?phone_e164=+5511999999999" \
+  -H "Authorization: Bearer roy_sk_sua_chave_aqui"
+```
+
+---
+
+## Resposta de Erros
+
+| Status | Descrição |
+|--------|-----------|
+| 401 | Chave inválida ou revogada |
+| 403 | Sem permissão para o recurso |
+| 400 | Payload inválido |
+| 500 | Erro interno |
 
 ---
 
@@ -242,50 +356,19 @@ Tabela de histórico com:
 
 | Arquivo | Ação |
 |---------|------|
-| Migração SQL | Criar tabelas `api_keys` e `api_key_logs` com RLS |
-| `src/pages/Profile.tsx` | Adicionar aba "API Key" condicional para Admins |
-| `src/components/profile/ApiKeyTab.tsx` | Novo - gerenciamento da API Key |
-| `src/components/profile/ApiKeyHistoryTable.tsx` | Novo - tabela de histórico |
+| `_shared/api-key-auth.ts` | Novo - Helper de autenticação |
+| `create-client/index.ts` | Adicionar autenticação dual |
+| `list-clients/index.ts` | Substituir auth por sessão |
+| `get-client-by-phone/index.ts` | Refatorar para usar helper |
+| Documentação API | Atualizar com exemplos |
 
 ---
 
-## Notas Técnicas
+## Segurança
 
-### Formato da Chave
-
-```
-roy_sk_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
-└──┘└─┘└─────────────────────────────┘
- │   │            │
- │   │            └── 32 caracteres aleatórios (a-z, 0-9)
- │   └── Prefixo "sk_" (secret key)
- └── Prefixo "roy_" (identificação do sistema)
-```
-
-### Geração Segura
-
-```typescript
-// Gerar chave no frontend
-const generateApiKey = (): string => {
-  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-  const randomPart = Array.from(
-    crypto.getRandomValues(new Uint8Array(32))
-  ).map(n => chars[n % chars.length]).join('');
-  return `roy_sk_${randomPart}`;
-};
-
-// Hash SHA-256
-const hashKey = async (key: string): Promise<string> => {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(key);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-};
-```
-
-### Constraint de Unicidade
-
-A constraint `UNIQUE(user_id)` garante que cada usuário tenha apenas uma chave ativa. Ao gerar uma nova, a anterior é automaticamente substituída.
+1. **Hash SHA-256**: Chaves nunca são armazenadas em texto puro
+2. **Logs de Auditoria**: Cada uso é registrado com IP, método e endpoint
+3. **Revogação Imediata**: Ao revogar uma chave, todas as requisições subsequentes falham
+4. **Rate Limiting**: (Futuro) Adicionar limitação de requisições por chave
+5. **Escopo por Account**: Cada chave só acessa dados da conta do admin que a gerou
 
