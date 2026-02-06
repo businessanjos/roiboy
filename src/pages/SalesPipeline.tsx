@@ -425,18 +425,18 @@ export default function SalesPipeline() {
         }
       }
 
-      // STEP 4.1: Create automatic onboarding items for new client
+      // STEP 4.1: Create automatic onboarding tasks for new client
       if (clientId && currentUser?.account_id) {
         try {
-          const { createClientOnboardingItems } = await import("@/utils/clientOnboardingAutomation");
-          await createClientOnboardingItems({
+          const { createClientOnboardingTasks } = await import("@/utils/clientOnboardingAutomation");
+          await createClientOnboardingTasks({
             clientId,
             accountId: currentUser.account_id,
             userId: currentUser.id,
           });
-          console.log("[MarkAsWon] Onboarding items created for new client");
+          console.log("[MarkAsWon] Onboarding tasks created for new client");
         } catch (onboardingError) {
-          console.error("[MarkAsWon] Error creating onboarding items:", onboardingError);
+          console.error("[MarkAsWon] Error creating onboarding tasks:", onboardingError);
           // Non-blocking - continue the flow
         }
       }

@@ -7,56 +7,18 @@ interface OnboardingAutomationParams {
 }
 
 /**
- * Creates automatic onboarding items for a new client after lead conversion:
- * - 1 "Onboarding" event with client as participant
- * - 2 tasks: "Implementação da Clínica Ryka" and "Apresentação do Plano de Ação"
+ * Creates automatic onboarding tasks for a new client after lead conversion:
+ * - "Implementação da Clínica Ryka"
+ * - "Apresentação do Plano de Ação"
  */
-export async function createClientOnboardingItems({
+export async function createClientOnboardingTasks({
   clientId,
   accountId,
   userId,
 }: OnboardingAutomationParams): Promise<void> {
   console.log("[OnboardingAutomation] Starting for client:", clientId);
 
-  // STEP 1: Create "Onboarding" event
-  const { data: event, error: eventError } = await supabase
-    .from("events")
-    .insert({
-      account_id: accountId,
-      title: "Onboarding",
-      description: "Onboarding Inicial",
-      event_type: "live",
-      modality: "online",
-      scheduled_at: null, // Empty - to be filled manually
-      category: "operation",
-    })
-    .select("id")
-    .single();
-
-  if (eventError) {
-    console.error("[OnboardingAutomation] Error creating event:", eventError);
-    throw eventError;
-  }
-
-  console.log("[OnboardingAutomation] Event created:", event.id);
-
-  // STEP 2: Link client to event as participant (rsvp_status: 'pending' = "Não participou")
-  const { error: participantError } = await supabase
-    .from("event_participants")
-    .insert({
-      account_id: accountId,
-      event_id: event.id,
-      client_id: clientId,
-      rsvp_status: "pending",
-      invited_by: userId,
-    });
-
-  if (participantError) {
-    console.error("[OnboardingAutomation] Error adding participant:", participantError);
-    // Continue - don't block for participant error
-  }
-
-  // STEP 3: Fetch activity_types for tasks
+  // STEP 1: Fetch activity_types for tasks
   const { data: activityTypes } = await supabase
     .from("activity_types")
     .select("id, name")
@@ -75,7 +37,7 @@ export async function createClientOnboardingItems({
     apresentacao: apresentacaoType?.id,
   });
 
-  // STEP 4: Create tasks
+  // STEP 2: Create tasks
   const tasksToInsert = [
     {
       account_id: accountId,
@@ -112,6 +74,5 @@ export async function createClientOnboardingItems({
     throw tasksError;
   }
 
-  console.log("[OnboardingAutomation] Tasks created successfully");
-  console.log("[OnboardingAutomation] Completed for client:", clientId);
+  console.log("[OnboardingAutomation] Tasks created successfully for client:", clientId);
 }
