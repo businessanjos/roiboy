@@ -45,11 +45,32 @@ export interface BankAccountData {
   account: string;
 }
 
+export interface AdditionalPhoneData {
+  number: string;
+  label?: string;
+}
+
+// Helper to normalize phones from legacy format to new format
+export const normalizeAdditionalPhones = (phones: any[]): AdditionalPhoneData[] => {
+  if (!Array.isArray(phones)) return [];
+  return phones.map(p => {
+    if (typeof p === "string") return { number: p };
+    if (typeof p === "object" && p !== null && p.number) return p as AdditionalPhoneData;
+    return null;
+  }).filter((p): p is AdditionalPhoneData => p !== null);
+};
+
+// Helper to display phone with label
+export const formatPhoneWithLabel = (phone: string | AdditionalPhoneData): string => {
+  if (typeof phone === "string") return phone;
+  return phone.label ? `${phone.label}: ${phone.number}` : phone.number;
+};
+
 export interface ClientFormData {
   full_name: string;
   phone_e164: string;
   emails: string[];
-  additional_phones: string[];
+  additional_phones: AdditionalPhoneData[];
   cpf: string;
   rg: string;
   cnpj: string;
@@ -308,6 +329,7 @@ function BirthDateField({ value, onChange }: { value: string; onChange: (value: 
 export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = true, teamUsers = [], compact = false }: ClientInfoFormProps) {
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
+  const [newPhoneLabel, setNewPhoneLabel] = useState("");
   const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [cepLoading, setCepLoading] = useState(false);
@@ -414,17 +436,24 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
       return;
     }
     const e164 = formatPhoneToE164(newPhone);
-    if (data.additional_phones.includes(e164) || e164 === formatPhoneToE164(data.phone_e164)) {
+    // Check if phone already exists (comparing numbers)
+    const phoneExists = data.additional_phones.some(p => p.number === e164) || e164 === formatPhoneToE164(data.phone_e164);
+    if (phoneExists) {
       setPhoneError("Telefone já adicionado");
       return;
     }
-    updateField("additional_phones", [...data.additional_phones, e164]);
+    const newPhoneData: AdditionalPhoneData = {
+      number: e164,
+      label: newPhoneLabel.trim() || undefined
+    };
+    updateField("additional_phones", [...data.additional_phones, newPhoneData]);
     setNewPhone("");
+    setNewPhoneLabel("");
     setPhoneError("");
   };
 
-  const handleRemovePhone = (phone: string) => {
-    updateField("additional_phones", data.additional_phones.filter(p => p !== phone));
+  const handleRemovePhone = (phoneToRemove: AdditionalPhoneData) => {
+    updateField("additional_phones", data.additional_phones.filter(p => p.number !== phoneToRemove.number));
   };
 
   const handlePhoneChange = (value: string) => {
@@ -659,9 +688,13 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
             </div>
             {data.additional_phones.length > 0 && (
               <div className="flex flex-wrap gap-1.5">
-                {data.additional_phones.map((phone) => (
-                  <Badge key={phone} variant="secondary" className="gap-1 pr-1 text-xs h-6">
-                    {phone}
+                {data.additional_phones.map((phone, idx) => (
+                  <Badge key={phone.number + idx} variant="secondary" className="gap-1 pr-1 text-xs h-6">
+                    {phone.label ? (
+                      <span><span className="text-muted-foreground">{phone.label}:</span> {phone.number}</span>
+                    ) : (
+                      phone.number
+                    )}
                     <button
                       type="button"
                       onClick={() => handleRemovePhone(phone)}
@@ -674,6 +707,13 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
               </div>
             )}
             <div className="flex gap-2">
+              <Input
+                value={newPhoneLabel}
+                onChange={(e) => setNewPhoneLabel(e.target.value)}
+                placeholder="Rótulo (ex: Esposa)"
+                className="w-32 h-9"
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddPhone())}
+              />
               <Input
                 value={newPhone}
                 onChange={(e) => {

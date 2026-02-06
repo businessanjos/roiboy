@@ -33,7 +33,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
+import { ClientInfoForm, ClientFormData, getEmptyClientFormData, normalizeAdditionalPhones } from "@/components/client/ClientInfoForm";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -289,7 +289,7 @@ export default function Contracts() {
           full_name: data.full_name || "",
           phone_e164: data.phone_e164 || "",
           emails: Array.isArray(data.emails) ? (data.emails as string[]) : [],
-          additional_phones: Array.isArray(data.additional_phones) ? (data.additional_phones as string[]) : [],
+          additional_phones: normalizeAdditionalPhones(Array.isArray(data.additional_phones) ? data.additional_phones : []),
           cpf: data.cpf || "",
           rg: data.rg || "",
           cnpj: data.cnpj || "",
