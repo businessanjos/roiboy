@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
+import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
 import { format, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
@@ -37,6 +38,8 @@ import { cn } from "@/lib/utils";
 import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { ZappDealDetailSheet } from "./ZappDealDetailSheet";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
+import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
+import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 
 interface ZappCRMPanelProps {
   conversationPhone?: string | null;
@@ -93,15 +96,24 @@ export function ZappCRMPanel({
 }: ZappCRMPanelProps) {
   const { currentUser } = useCurrentUser();
   const { activityTypes } = useActivityTypes();
+  const { validateDealMove } = useRequiredFieldsValidation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-const [showCreateDeal, setShowCreateDeal] = useState(false);
+  const [showCreateDeal, setShowCreateDeal] = useState(false);
   const [newDealTitle, setNewDealTitle] = useState("");
   const [newDealValue, setNewDealValue] = useState("");
   const [dealDetailOpen, setDealDetailOpen] = useState(false);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<PendingTask | null>(null);
   const [selectedActivityType, setSelectedActivityType] = useState<ActivityType | null>(null);
+  const [requiredFieldsModal, setRequiredFieldsModal] = useState<{
+    open: boolean;
+    dealId: string;
+    dealTitle: string;
+    targetStageId: string;
+    targetStageName: string;
+    missingFields: CustomField[];
+  } | null>(null);
   
   // Products for "Item da Venda"
   const [products, setProducts] = useState<{ id: string; name: string; price: number }[]>([]);
@@ -621,9 +633,21 @@ const [showCreateDeal, setShowCreateDeal] = useState(false);
                             isActive && "pointer-events-none"
                           )}
                           style={isActive ? { backgroundColor: stage.color } : { borderColor: stage.color, color: stage.color }}
-                          onClick={() => {
-                            if (!isActive) {
-                              moveDeal.mutate({ dealId: activeDeal.id, stageId: stage.id });
+                          onClick={async () => {
+                            if (!isActive && currentUser?.account_id) {
+                              const result = await validateDealMove(activeDeal.id, stage.id, currentUser.account_id);
+                              if (!result.canMoveToStage) {
+                                setRequiredFieldsModal({
+                                  open: true,
+                                  dealId: activeDeal.id,
+                                  dealTitle: activeDeal.title,
+                                  targetStageId: stage.id,
+                                  targetStageName: stage.name,
+                                  missingFields: result.missingFields,
+                                });
+                              } else {
+                                moveDeal.mutate({ dealId: activeDeal.id, stageId: stage.id });
+                              }
                             }
                           }}
                           disabled={moveDeal.isPending}
@@ -890,6 +914,26 @@ const [showCreateDeal, setShowCreateDeal] = useState(false);
           setEditingTask(null);
         }}
       />
+
+      {/* Required Fields Modal */}
+      {requiredFieldsModal && (
+        <RequiredFieldsModal
+          open={requiredFieldsModal.open}
+          onOpenChange={(open) => !open && setRequiredFieldsModal(null)}
+          dealId={requiredFieldsModal.dealId}
+          dealTitle={requiredFieldsModal.dealTitle}
+          targetStageName={requiredFieldsModal.targetStageName}
+          missingFields={requiredFieldsModal.missingFields}
+          accountId={currentUser?.account_id || ""}
+          onComplete={() => {
+            moveDeal.mutate({ 
+              dealId: requiredFieldsModal.dealId, 
+              stageId: requiredFieldsModal.targetStageId 
+            });
+            setRequiredFieldsModal(null);
+          }}
+        />
+      )}
     </div>
   );
 }

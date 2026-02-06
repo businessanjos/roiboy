@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
+import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -25,6 +26,8 @@ import {
 import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { ZappLeadDataEditor } from "./ZappLeadDataEditor";
 import { LeadFieldValueEditor } from "@/components/custom-fields/LeadFieldValueEditor";
+import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
+import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 
 interface ZappDealDetailSheetProps {
   open: boolean;
@@ -77,7 +80,9 @@ interface InternalTask {
   assigned_user?: { name: string; avatar_url: string | null } | null;
 }
 
-interface CustomField {
+// CustomField is imported from @/components/custom-fields/CustomFieldsManager
+
+interface LocalCustomField {
   id: string;
   name: string;
   field_type: string;
@@ -113,11 +118,21 @@ export function ZappDealDetailSheet({
 }: ZappDealDetailSheetProps) {
   const { currentUser } = useCurrentUser();
   const { activityTypes } = useActivityTypes();
+  const { validateDealMove, validateDealOutcome } = useRequiredFieldsValidation();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("resumo");
   const [newActivityType, setNewActivityType] = useState("note");
   const [newActivityDescription, setNewActivityDescription] = useState("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [requiredFieldsModal, setRequiredFieldsModal] = useState<{
+    open: boolean;
+    dealId: string;
+    dealTitle: string;
+    targetStageId?: string;
+    targetStageName: string;
+    missingFields: CustomField[];
+    outcomeType?: "won" | "lost";
+  } | null>(null);
 
   const toggleItemExpanded = (itemId: string) => {
     setExpandedItems(prev => {
@@ -163,7 +178,7 @@ export function ZappDealDetailSheet({
         .eq("is_active", true)
         .order("display_order");
       if (error) throw error;
-      return data as CustomField[];
+      return data as LocalCustomField[];
     },
     enabled: open && !!currentUser?.account_id && !!leadId,
   });
@@ -417,7 +432,23 @@ export function ZappDealDetailSheet({
                       size="sm"
                       variant="outline"
                       className="flex-1 h-8 text-xs border-green-500 text-green-500 hover:bg-green-500/10"
-                      onClick={() => updateDealStatus.mutate("won")}
+                      onClick={async () => {
+                        if (currentUser?.account_id && deal) {
+                          const result = await validateDealOutcome(dealId, "won", currentUser.account_id);
+                          if (!result.canMoveToStage) {
+                            setRequiredFieldsModal({
+                              open: true,
+                              dealId: dealId,
+                              dealTitle: deal.title,
+                              targetStageName: "Ganho",
+                              missingFields: result.missingFields,
+                              outcomeType: "won",
+                            });
+                          } else {
+                            updateDealStatus.mutate("won");
+                          }
+                        }
+                      }}
                       disabled={updateDealStatus.isPending}
                     >
                       <CheckCircle className="h-3 w-3 mr-1" />
@@ -427,7 +458,23 @@ export function ZappDealDetailSheet({
                       size="sm"
                       variant="outline"
                       className="flex-1 h-8 text-xs border-red-500 text-red-500 hover:bg-red-500/10"
-                      onClick={() => updateDealStatus.mutate("lost")}
+                      onClick={async () => {
+                        if (currentUser?.account_id && deal) {
+                          const result = await validateDealOutcome(dealId, "lost", currentUser.account_id);
+                          if (!result.canMoveToStage) {
+                            setRequiredFieldsModal({
+                              open: true,
+                              dealId: dealId,
+                              dealTitle: deal.title,
+                              targetStageName: "Perdido",
+                              missingFields: result.missingFields,
+                              outcomeType: "lost",
+                            });
+                          } else {
+                            updateDealStatus.mutate("lost");
+                          }
+                        }
+                      }}
                       disabled={updateDealStatus.isPending}
                     >
                       <XCircle className="h-3 w-3 mr-1" />
@@ -513,7 +560,23 @@ export function ZappDealDetailSheet({
                               ? { backgroundColor: stage.color } 
                               : { borderColor: stage.color, color: stage.color }
                             }
-                            onClick={() => !isActive && moveDeal.mutate(stage.id)}
+                            onClick={async () => {
+                              if (!isActive && currentUser?.account_id && deal) {
+                                const result = await validateDealMove(dealId, stage.id, currentUser.account_id);
+                                if (!result.canMoveToStage) {
+                                  setRequiredFieldsModal({
+                                    open: true,
+                                    dealId: dealId,
+                                    dealTitle: deal.title,
+                                    targetStageId: stage.id,
+                                    targetStageName: stage.name,
+                                    missingFields: result.missingFields,
+                                  });
+                                } else {
+                                  moveDeal.mutate(stage.id);
+                                }
+                              }
+                            }}
                             disabled={moveDeal.isPending}
                           >
                             {stage.name}
@@ -782,6 +845,28 @@ export function ZappDealDetailSheet({
           </div>
         )}
       </SheetContent>
+
+      {/* Required Fields Modal */}
+      {requiredFieldsModal && (
+        <RequiredFieldsModal
+          open={requiredFieldsModal.open}
+          onOpenChange={(open) => !open && setRequiredFieldsModal(null)}
+          dealId={requiredFieldsModal.dealId}
+          dealTitle={requiredFieldsModal.dealTitle}
+          targetStageName={requiredFieldsModal.targetStageName}
+          missingFields={requiredFieldsModal.missingFields}
+          accountId={currentUser?.account_id || ""}
+          outcomeType={requiredFieldsModal.outcomeType}
+          onComplete={() => {
+            if (requiredFieldsModal.outcomeType) {
+              updateDealStatus.mutate(requiredFieldsModal.outcomeType);
+            } else if (requiredFieldsModal.targetStageId) {
+              moveDeal.mutate(requiredFieldsModal.targetStageId);
+            }
+            setRequiredFieldsModal(null);
+          }}
+        />
+      )}
     </Sheet>
   );
 }
