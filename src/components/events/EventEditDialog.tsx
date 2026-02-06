@@ -208,6 +208,7 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
       toast({ title: "Evento atualizado com sucesso" });
       queryClient.invalidateQueries({ queryKey: ["events-with-products"] });
       queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["mentor-events"] });
       onOpenChange(false);
       onSuccess?.();
     },
@@ -229,6 +230,7 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
       toast({ title: "Evento excluído com sucesso" });
       queryClient.invalidateQueries({ queryKey: ["events-with-products"] });
       queryClient.invalidateQueries({ queryKey: ["events"] });
+      queryClient.invalidateQueries({ queryKey: ["mentor-events"] });
       setDeleteDialogOpen(false);
       onOpenChange(false);
       onSuccess?.();
