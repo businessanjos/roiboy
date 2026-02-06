@@ -1,143 +1,86 @@
 
-# Plano: Isolamento de Tarefas por Setor e Sincronização em Tempo Real
+# Plano: Sincronização de Status de Conclusão entre Tarefas e Atividades
 
-## Diagnóstico
+## Diagnóstico do Problema
 
-### Problema 1: Tarefas de Operações aparecendo em Vendas
-A página de Tarefas (`/tasks`) não está filtrando por setor ativo. Ela busca **todas** as tarefas e exibe indiscriminadamente:
-- "Onboarding" (setor Operações) aparece junto com "Follow Up" (setor Vendas)
-- Não há uso do contexto de setor (`useSector`)
+### O que está acontecendo
 
-### Problema 2: Status não sincroniza em tempo real
-Quando uma atividade é marcada como concluída no detalhe do negócio (`DealActivitiesTab`), a página de Tarefas não reflete a mudança porque:
-- `DealActivitiesTab` usa estado local (`useState`) em vez do React Query
-- A função `handleToggleComplete` apenas chama `fetchTasks()` localmente, sem invalidar o cache global `["internal-tasks"]`
-- Resultado: a aba Atividades mostra "Concluída" mas a aba Tarefas mostra "Atrasada"
+1. **No DealActivitiesTab**: A função `getComputedStatus()` (linha 76-89) determina se uma tarefa está concluída verificando `task.completed_at`:
+   ```typescript
+   if (task.completed_at) return "done";
+   ```
+
+2. **Na página de Tarefas**: A determinação de conclusão usa apenas `custom_status_id`:
+   ```typescript
+   const taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
+   const isCompleted = taskStatus?.is_completed_status || false;
+   ```
+
+3. **Problema de sincronização**: Quando uma tarefa é marcada como concluída no DealActivitiesTab:
+   - `completed_at` é preenchido ✅
+   - `custom_status_id` é atualizado para um status de conclusão ✅
+   - O cache `["internal-tasks"]` é invalidado ✅
+   
+   **Porém**, verificando os dados no banco, vejo que muitas tarefas possuem `completed_at` preenchido mas `custom_status_id = null`. Isso sugere que algo está falhando na atualização do `custom_status_id`.
+
+### Causa Raiz
+
+A função `handleToggleComplete` no DealActivitiesTab (linhas 163-166) busca estatuses sem filtrar por `account_id`:
+```typescript
+const { data: statuses } = await supabase
+  .from("task_statuses")
+  .select("id, is_completed_status")
+  .order("display_order"); // Depende do RLS
+```
+
+Embora o RLS esteja habilitado, se a query retornar estatuses em ordem diferente ou se encontrar um status de outra conta primeiro, o `targetStatus` pode não ser válido para a tarefa.
 
 ---
 
 ## Solução
 
-### Arquivo 1: `src/pages/Tasks.tsx`
+### Modificação 1: Página de Tarefas deve considerar `completed_at`
 
-**Mudanças:**
-1. Importar o hook `useSector` do contexto
-2. Incluir `sector_id` na query de `activity_types`
-3. Adicionar filtro de setor no `filteredTasks`
-4. Atualizar a interface `Task` para incluir `sector_id` do `activity_type`
+Atualizar a lógica de `isCompleted` para também verificar `completed_at`:
+
+**Arquivo:** `src/pages/Tasks.tsx`
 
 ```typescript
-// Adicionar import
-import { useSector } from "@/contexts/SectorContext";
+// Linha ~533 (e em outros lugares onde isCompleted é calculado)
+// ❌ Código atual
+const isCompleted = taskStatus?.is_completed_status || false;
 
-// No componente Tasks():
-const { currentSector } = useSector();
-
-// Modificar a query para incluir sector_id:
-activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color, sector_id)
-
-// Atualizar interface Task:
-activity_type?: {
-  id: string;
-  name: string;
-  color: string | null;
-  sector_id: string | null;  // <-- Adicionar
-} | null;
-
-// Adicionar filtro de setor no filteredTasks:
-const filteredTasks = useMemo(() => tasks.filter((task) => {
-  // ... filtros existentes ...
-
-  // Filtro por setor
-  const matchesSector = !currentSector?.id || 
-    // Vendas: tarefas com activity_type de vendas OU deal_id não-nulo
-    (currentSector.id === "vendas" && (
-      task.activity_type?.sector_id === "vendas" || 
-      (task.deal_id && !task.activity_type?.sector_id)
-    )) ||
-    // Operações: tarefas com activity_type de operações OU client_id sem deal_id
-    (currentSector.id === "operacoes" && (
-      task.activity_type?.sector_id === "operacoes" ||
-      (task.client_id && !task.deal_id && !task.activity_type?.sector_id)
-    ));
-
-  return matchesSearch && matchesUser && matchesTab && matchesActivityType && matchesSector;
-}), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, activeTab, customStatuses, currentSector?.id]);
+// ✅ Código corrigido
+const isCompleted = taskStatus?.is_completed_status || task.completed_at !== null;
 ```
 
-### Arquivo 2: `src/components/sales/DealActivitiesTab.tsx`
+Essa mesma lógica deve ser aplicada em todos os lugares onde `isCompleted` é calculado na página de Tarefas.
 
-**Mudanças:**
-1. Importar `useQueryClient` do React Query
-2. Invalidar o cache global após atualizar uma tarefa
+### Modificação 2: Garantir consistência no filtro de abas
 
-```typescript
-// Adicionar import
-import { useQueryClient } from "@tanstack/react-query";
+O filtro de abas atualmente só considera `custom_status_id`. Tarefas com `completed_at` preenchido mas sem `custom_status_id` não aparecem na aba correta.
 
-// No componente:
-const queryClient = useQueryClient();
+**Locais a modificar em `src/pages/Tasks.tsx`:**
 
-// Modificar handleToggleComplete:
-const handleToggleComplete = async (task: Task) => {
-  // ... lógica existente ...
-
-  const { error } = await supabase
-    .from("internal_tasks")
-    .update({
-      custom_status_id: targetStatus.id,
-      completed_at: targetStatus.is_completed_status ? new Date().toISOString() : null,
-    })
-    .eq("id", task.id);
-
-  if (error) {
-    console.error("Error updating task:", error);
-  } else {
-    fetchTasks();
-    // ADICIONAR: Invalidar cache global para sincronizar com a aba Tarefas
-    queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
-  }
-};
-```
-
----
-
-## Detalhes Técnicos
-
-### Lógica de Isolamento por Setor
-
-| Setor | Critério de Inclusão |
-|-------|---------------------|
-| Vendas | `activity_type.sector_id = 'vendas'` OU (`deal_id` existe E `sector_id` é null) |
-| Operações | `activity_type.sector_id = 'operacoes'` OU (`client_id` existe E `deal_id` é null E `sector_id` é null) |
-
-Esta lógica cobre:
-1. Tarefas com tipo de atividade explicitamente atribuído a um setor
-2. Tarefas legadas sem tipo de atividade mas com contexto (deal ou client)
-
-### Por que a sincronização não funcionava?
-
-O realtime do Supabase **está funcionando corretamente** - a subscrição na página de Tarefas escuta alterações na tabela `internal_tasks`. O problema é que o `DealActivitiesTab` não estava disparando a invalidação do cache do React Query ao marcar tarefas como concluídas, fazendo com que a UI da página de Tarefas não fosse re-renderizada com os dados atualizados.
+1. **Linha ~533 (lista de tarefas)** - Adicionar verificação de `completed_at`
+2. **Linha ~830 (Kanban)** - Mesma correção no contexto do Kanban
+3. **Contadores de tarefas** - Garantir que contadores considerem `completed_at`
 
 ---
 
 ## Resumo de Modificações
 
-| Arquivo | Linha | Ação |
+| Arquivo | Local | Ação |
 |---------|-------|------|
-| `src/pages/Tasks.tsx` | ~3 | Importar `useSector` |
-| `src/pages/Tasks.tsx` | ~129-133 | Adicionar `sector_id` na interface Task |
-| `src/pages/Tasks.tsx` | ~165 | Obter `currentSector` do hook |
-| `src/pages/Tasks.tsx` | ~210 | Incluir `sector_id` na query de activity_types |
-| `src/pages/Tasks.tsx` | ~404-423 | Adicionar filtro `matchesSector` no filteredTasks |
-| `src/components/sales/DealActivitiesTab.tsx` | ~2 | Importar `useQueryClient` |
-| `src/components/sales/DealActivitiesTab.tsx` | ~92 | Declarar `queryClient` |
-| `src/components/sales/DealActivitiesTab.tsx` | ~185 | Invalidar cache após atualização |
+| `src/pages/Tasks.tsx` | ~533 | Modificar cálculo de `isCompleted` para incluir `completed_at` |
+| `src/pages/Tasks.tsx` | Outros locais com mesma lógica | Aplicar mesma correção |
 
 ---
 
-## Impacto Esperado
+## Resultado Esperado
 
-1. **Setor Vendas:** Exibirá apenas tarefas de vendas (Call Comercial, Follow Up, Proposta de Fechamento, etc.)
-2. **Setor Operações:** Exibirá apenas tarefas operacionais (Onboarding, Implementação, Alinhamento, etc.)
-3. **Sincronização:** Ao marcar uma atividade como concluída no detalhe do negócio, a aba Tarefas refletirá a mudança instantaneamente
+Após esta correção:
+1. Tarefas marcadas como concluídas no DealActivitiesTab aparecerão como concluídas na página de Tarefas
+2. O checkbox de conclusão na página de Tarefas mostrará o estado correto
+3. O texto da tarefa terá o estilo "riscado" para indicar conclusão
+4. A sincronização será consistente entre ambas as visualizações
