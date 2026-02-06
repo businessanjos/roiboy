@@ -29,7 +29,6 @@ export async function createClientOnboardingItems({
       modality: "online",
       scheduled_at: null, // Empty - to be filled manually
       category: "operation",
-      created_by: userId,
     })
     .select("id")
     .single();
