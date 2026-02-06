@@ -9345,6 +9345,68 @@ export type Database = {
           },
         ]
       }
+      webhooks: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          description: string | null
+          headers: Json | null
+          id: string
+          is_active: boolean | null
+          last_status_code: number | null
+          last_triggered_at: string | null
+          method: string
+          name: string
+          payload_template: Json | null
+          secret_key: string | null
+          trigger_event: string | null
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          description?: string | null
+          headers?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_status_code?: number | null
+          last_triggered_at?: string | null
+          method?: string
+          name: string
+          payload_template?: Json | null
+          secret_key?: string | null
+          trigger_event?: string | null
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          description?: string | null
+          headers?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_status_code?: number | null
+          last_triggered_at?: string | null
+          method?: string
+          name?: string
+          payload_template?: Json | null
+          secret_key?: string | null
+          trigger_event?: string | null
+          updated_at?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhooks_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_group_participants: {
         Row: {
           account_id: string
