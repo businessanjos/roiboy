@@ -200,6 +200,54 @@ serve(async (req) => {
         const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(payload.pin + accountId));
         result = { valid: Array.from(new Uint8Array(h)).map(b=>b.toString(16).padStart(2,'0')).join('') === int.pin_hash };
       }
+    
+    } else if (action === "update_instance_pin") {
+      // Validar integration_id
+      if (!integration_id) {
+        return new Response(
+          JSON.stringify({ error: "integration_id é obrigatório" }), 
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Verificar se integração existe e pertence à conta
+      const { data: int } = await supabase
+        .from("integrations")
+        .select("id")
+        .eq("id", integration_id)
+        .eq("account_id", accountId)
+        .single();
+        
+      if (!int) {
+        return new Response(
+          JSON.stringify({ error: "Instância não encontrada" }), 
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // Gerar hash do novo PIN ou null para remover
+      let pinHash: string | null = null;
+      if (payload.pin && payload.pin !== "null" && payload.pin !== "") {
+        const h = await crypto.subtle.digest(
+          'SHA-256', 
+          new TextEncoder().encode(payload.pin + accountId)
+        );
+        pinHash = Array.from(new Uint8Array(h))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('');
+      }
+      
+      // Atualizar no banco
+      const { error: updateError } = await supabase
+        .from("integrations")
+        .update({ pin_hash: pinHash })
+        .eq("id", integration_id)
+        .eq("account_id", accountId);
+        
+      if (updateError) throw updateError;
+      
+      console.log(`[uazapi-manager] PIN ${pinHash ? 'updated' : 'removed'} for integration ${integration_id}`);
+      result = { success: true };
     }
 
     return new Response(JSON.stringify({ data: result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
