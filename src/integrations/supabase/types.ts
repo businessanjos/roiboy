@@ -713,6 +713,98 @@ export type Database = {
           },
         ]
       }
+      api_key_logs: {
+        Row: {
+          api_key_id: string
+          executed_at: string | null
+          id: string
+          ip_address: string | null
+          method: string | null
+          path: string | null
+          status_code: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          api_key_id: string
+          executed_at?: string | null
+          id?: string
+          ip_address?: string | null
+          method?: string | null
+          path?: string | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          api_key_id?: string
+          executed_at?: string | null
+          id?: string
+          ip_address?: string | null
+          method?: string | null
+          path?: string | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_key_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_keys: {
+        Row: {
+          account_id: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          key_hash: string
+          key_preview: string
+          last_used_at: string | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_hash: string
+          key_preview: string
+          last_used_at?: string | null
+          name?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_hash?: string
+          key_preview?: string
+          last_used_at?: string | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_keys_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attendance: {
         Row: {
           account_id: string
