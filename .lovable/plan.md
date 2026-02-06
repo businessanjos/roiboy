@@ -1,93 +1,122 @@
 
-# Plano de Correção: Mensagens Não Sendo Enviadas no ROY zAPP
+# Diagnóstico: Mensagens Não Sendo Enviadas no ROY zAPP
 
-## Diagnóstico Completo
+## Resumo do Problema
 
-### Problema Relatado
-O vendedor **Jonathan Marcato** enviou uma mensagem pelo ROY zAPP, mas ela **não apareceu no WhatsApp** do celular dele. O sistema mostrou como "enviada" no ROY, porém não foi efetivamente transmitida.
+O usuário está vendo o erro **"Edge Function returned a non-2xx status code"** ao tentar enviar mensagens no ROY zAPP. A mensagem aparece como "enviada" visualmente no chat mas retorna erro 500.
 
-### Causa Raiz Identificada
-A Edge Function `uazapi-manager` foi simplificada excessivamente e contém **4 falhas críticas**:
+---
+
+## Causa Raiz Identificada
+
+### Erro nos Logs:
+```
+[uazapi-manager] Error: Method Not Allowed.
+```
+
+### O que acontece:
+
+1. A Edge Function `uazapi-manager` foi recentemente simplificada
+2. O endpoint usado está **INCORRETO**: `/message/sendText` 
+3. O endpoint correto do UAZAPI GO v2 é: `/send/text`
+4. O UAZAPI retorna "Method Not Allowed" porque esse endpoint não existe
+
+### Evidência Técnica:
+
+**Código atual (INCORRETO):**
+```typescript
+// Linha 132 - supabase/functions/uazapi-manager/index.ts
+result = await uazapiInstance("/message/sendText", "POST", token!, { number: cleanPhone, text: message });
+```
+
+**Código que FUNCIONA (referência send-reminder e test-cx-moment-send):**
+```typescript
+// supabase/functions/send-reminder/index.ts
+const apiUrl = `${UAZAPI_URL}/send/text`;  // ✅ Endpoint correto
+const response = await fetch(apiUrl, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "token": whatsappConfig.instance_token,  // ✅ lowercase "token"
+  },
+  body: JSON.stringify({ number: cleanPhone, text: personalizedMessage }),
+});
+```
+
+---
+
+## Lista de Problemas Encontrados
 
 | # | Problema | Impacto |
 |---|----------|---------|
-| 1 | **`integration_id` ignorado** | Frontend envia qual instância usar, mas função ignora |
-| 2 | **Busca com `.maybeSingle()` falha** | Setor "vendas" tem 2 instâncias → erro PGRST116 → token = null |
-| 3 | **Falha silenciosa** | Sem token, a ação não executa mas retorna `{success: true}` |
-| 4 | **Sem validação de resposta HTTP** | Erros do UAZAPI não são detectados |
-
-### Evidência Técnica
-O setor "vendas" possui 2 integrações conectadas:
-- `Jonathan Marcato` (ID: ac869d1d-...)
-- `[COMERCIAL] Eternum Club` (ID: c3baa312-...)
-
-Quando Jonathan envia mensagem, o frontend envia `integration_id: "ac869d1d-..."`, mas a função ignora e busca por `sector_id: "vendas"`, resultando em erro de múltiplos resultados.
+| 1 | **Endpoint errado para texto** | `/message/sendText` → deve ser `/send/text` |
+| 2 | **Falta suporte a mídia** | `send_media` não implementado → imagens/arquivos não enviam |
+| 3 | **Falta suporte a grupos** | Endpoint de grupo também está errado |
+| 4 | **Falta respostas com citação** | `quoted_message_id` ignorado |
+| 5 | **Verificação de sucesso incorreta** | UAZAPI retorna `{ error: false }` em sucesso, não status HTTP |
 
 ---
 
 ## Solução Proposta
 
-### Mudança 1: Priorizar `integration_id` na Busca
-Modificar a lógica de busca para usar `integration_id` quando fornecido:
+### Mudanças Necessárias:
 
+**1. Corrigir endpoint de envio de texto:**
 ```typescript
-const { action, sector_id, phone, message, group_id, integration_id } = payload;
+// DE:
+result = await uazapiInstance("/message/sendText", "POST", token!, { number: cleanPhone, text: message });
 
-// Buscar integração - PRIORIZAR integration_id
-let intData = null;
-if (integration_id) {
-  // Busca direta por ID específico
-  const { data } = await supabase
-    .from("integrations")
-    .select("id, config, status")
-    .eq("id", integration_id)
-    .eq("account_id", accountId)
-    .single();
-  intData = data;
-} else if (sector_id) {
-  // Fallback: primeira integração do setor
-  const { data } = await supabase
-    .from("integrations")
-    .select("id, config, status")
-    .eq("account_id", accountId)
-    .eq("type", "whatsapp")
-    .eq("sector_id", sector_id)
-    .limit(1);
-  intData = data?.[0];
-} else {
-  // Fallback: integração global
-  const { data } = await supabase
-    .from("integrations")
-    .select("id, config, status")
-    .eq("account_id", accountId)
-    .eq("type", "whatsapp")
-    .is("sector_id", null)
-    .limit(1);
-  intData = data?.[0];
-}
+// PARA:
+result = await uazapiInstance("/send/text", "POST", token!, { 
+  number: cleanPhone, 
+  text: message,
+  ...(payload.quoted_message_id ? { quotedMsgId: payload.quoted_message_id } : {})
+});
 ```
 
-### Mudança 2: Validar Token Antes de Prosseguir
-Retornar erro explícito se não encontrar integração:
-
+**2. Adicionar suporte a envio de mídia:**
 ```typescript
-const token = intData?.config?.instance_token;
-
-// Ações que requerem token - validar antes
-const tokenRequiredActions = ["send_text", "send_to_group", "list_groups", "disconnect"];
-if (tokenRequiredActions.includes(action) && !token) {
-  return new Response(JSON.stringify({ 
-    error: "WhatsApp não configurado para este setor" 
-  }), { 
-    status: 400, 
-    headers: { ...corsHeaders, "Content-Type": "application/json" } 
+} else if (action === "send_media") {
+  const cleanPhone = phone?.replace(/\D/g, "");
+  if (!cleanPhone || cleanPhone.length < 10) {
+    return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { 
+      status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+    });
+  }
+  result = await uazapiInstance("/send/media", "POST", token!, { 
+    number: cleanPhone, 
+    type: payload.media_type || "image",
+    file: payload.media_url,
+    text: payload.caption || "",
+    ...(payload.quoted_message_id ? { quotedMsgId: payload.quoted_message_id } : {})
   });
-}
 ```
 
-### Mudança 3: Validar Resposta HTTP do UAZAPI
-Modificar funções auxiliares para verificar erros:
+**3. Corrigir endpoint de envio para grupos:**
+```typescript
+// DE:
+result = await uazapiInstance("/message/sendText", "POST", token!, { groupJid: jid, text: message });
 
+// PARA:
+result = await uazapiInstance("/send/text", "POST", token!, { 
+  groupJid: jid, 
+  text: message 
+});
+```
+
+**4. Adicionar suporte a mídia em grupos:**
+```typescript
+} else if (action === "send_media_to_group") {
+  const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
+  result = await uazapiInstance("/send/media", "POST", token!, { 
+    groupJid: jid, 
+    type: payload.media_type || "image",
+    file: payload.media_url,
+    text: payload.caption || ""
+  });
+```
+
+**5. Melhorar verificação de sucesso do UAZAPI:**
 ```typescript
 async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown) {
   const r = await fetch(`${UAZAPI_URL}${endpoint}`, { 
@@ -95,24 +124,20 @@ async function uazapiInstance(endpoint: string, method: string, token: string, b
     headers: { "Content-Type": "application/json", "token": token }, 
     body: body ? JSON.stringify(body) : undefined 
   });
-  
   const json = await r.json();
   
-  // Verificar erro na resposta
-  if (!r.ok || json.error) {
-    throw new Error(json.error || json.message || `UAZAPI error: ${r.status}`);
+  // UAZAPI retorna { error: false } quando sucesso, não usa HTTP status
+  if (json.error === true || json.error === "true") {
+    throw new Error(json.message || json.error_message || `UAZAPI error: ${r.status}`);
+  }
+  
+  // "Method Not Allowed" significa endpoint errado
+  if (json.message === "Method Not Allowed" || r.status === 405) {
+    throw new Error(`Endpoint inválido ou método incorreto: ${endpoint}`);
   }
   
   return json;
 }
-```
-
-### Mudança 4: Adicionar Logs para Diagnóstico
-Incluir console.log em pontos críticos:
-
-```typescript
-console.log(`[uazapi-manager] Action: ${action}, integration_id: ${integration_id}, sector_id: ${sector_id}`);
-console.log(`[uazapi-manager] Found integration: ${intData?.id}, token: ${token ? "present" : "missing"}`);
 ```
 
 ---
@@ -121,27 +146,22 @@ console.log(`[uazapi-manager] Found integration: ${intData?.id}, token: ${token 
 
 | Arquivo | Modificação |
 |---------|-------------|
-| `supabase/functions/uazapi-manager/index.ts` | Refatorar busca de integração, validar token, verificar respostas HTTP |
+| `supabase/functions/uazapi-manager/index.ts` | Corrigir endpoints, adicionar suporte a mídia, melhorar validação |
 
 ---
 
 ## Resultado Esperado
 
 Após a correção:
-1. Jonathan seleciona sua instância "Jonathan Marcato" no ROY zAPP
-2. Frontend envia `integration_id: "ac869d1d-..."`
-3. Edge Function busca diretamente por esse ID
-4. Token correto é usado para enviar via UAZAPI
-5. Mensagem aparece no WhatsApp do celular dele
-
-Se algo der errado:
-- Erro claro é retornado ao frontend
-- Toast vermelho aparece para o usuário
-- Mensagem fica marcada como "falha" no ROY
+1. Mensagens de texto serão enviadas corretamente via `/send/text`
+2. Imagens, documentos e áudios funcionarão via `/send/media`
+3. Mensagens em grupos funcionarão corretamente
+4. Respostas com citação (`quotedMsgId`) serão enviadas
+5. Erros claros serão retornados ao frontend em caso de falha
 
 ---
 
-## Código Completo da Correção
+## Código Completo Atualizado
 
 ```typescript
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
@@ -151,7 +171,7 @@ const corsHeaders = {
   "Access-Control-Allow-Origin": "*", 
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" 
 };
-const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
+const UAZAPI_URL = (Deno.env.get("UAZAPI_URL") || "").replace(/\/$/, ''); // Remove trailing slash
 const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
 async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
@@ -166,16 +186,33 @@ async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
 }
 
 async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown) {
+  console.log(`[uazapi] Calling: ${method} ${UAZAPI_URL}${endpoint}`);
   const r = await fetch(`${UAZAPI_URL}${endpoint}`, { 
     method, 
     headers: { "Content-Type": "application/json", "token": token }, 
     body: body ? JSON.stringify(body) : undefined 
   });
-  const json = await r.json();
-  // Verificar erros do UAZAPI
-  if (!r.ok || json.error) {
-    throw new Error(json.error || json.message || `UAZAPI responded with ${r.status}`);
+  
+  const responseText = await r.text();
+  console.log(`[uazapi] Response: ${r.status} - ${responseText.substring(0, 300)}`);
+  
+  let json: any;
+  try {
+    json = JSON.parse(responseText);
+  } catch {
+    throw new Error(`Resposta inválida do WhatsApp: ${responseText.substring(0, 100)}`);
   }
+  
+  // UAZAPI retorna { error: false } em sucesso, { error: true } em falha
+  if (json.error === true || json.error === "true") {
+    throw new Error(json.message || json.error_message || "Erro ao enviar mensagem");
+  }
+  
+  // "Method Not Allowed" = endpoint errado
+  if (json.message === "Method Not Allowed" || r.status === 405) {
+    throw new Error(`Endpoint inválido: ${endpoint}`);
+  }
+  
   return json;
 }
 
@@ -203,30 +240,13 @@ serve(async (req) => {
     let intData: { id: string; config: { instance_token?: string; instance_name?: string }; status: string } | null = null;
     
     if (integration_id) {
-      const { data } = await supabase
-        .from("integrations")
-        .select("id, config, status")
-        .eq("id", integration_id)
-        .eq("account_id", accountId)
-        .single();
+      const { data } = await supabase.from("integrations").select("id, config, status").eq("id", integration_id).eq("account_id", accountId).single();
       intData = data;
     } else if (sector_id) {
-      const { data } = await supabase
-        .from("integrations")
-        .select("id, config, status")
-        .eq("account_id", accountId)
-        .eq("type", "whatsapp")
-        .eq("sector_id", sector_id)
-        .limit(1);
+      const { data } = await supabase.from("integrations").select("id, config, status").eq("account_id", accountId).eq("type", "whatsapp").eq("sector_id", sector_id).limit(1);
       intData = data?.[0] || null;
     } else {
-      const { data } = await supabase
-        .from("integrations")
-        .select("id, config, status")
-        .eq("account_id", accountId)
-        .eq("type", "whatsapp")
-        .is("sector_id", null)
-        .limit(1);
+      const { data } = await supabase.from("integrations").select("id, config, status").eq("account_id", accountId).eq("type", "whatsapp").is("sector_id", null).limit(1);
       intData = data?.[0] || null;
     }
 
@@ -236,15 +256,10 @@ serve(async (req) => {
     console.log(`[uazapi-manager] Found integration: ${intData?.id || "NONE"}, token: ${token ? "present" : "MISSING"}`);
 
     // Ações que requerem token
-    const tokenRequiredActions = ["send_text", "send_to_group", "list_groups", "disconnect"];
+    const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect"];
     if (tokenRequiredActions.includes(action) && !token) {
       console.error(`[uazapi-manager] Token required but missing for action: ${action}`);
-      return new Response(JSON.stringify({ 
-        error: "WhatsApp não configurado para este setor. Verifique as integrações." 
-      }), { 
-        status: 400, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" } 
-      });
+      return new Response(JSON.stringify({ error: "WhatsApp não configurado para este setor." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     let result: unknown = { success: true };
@@ -254,43 +269,96 @@ serve(async (req) => {
       const inst = all.find(i => i.name === instanceName);
       result = { state: inst?.status || "unknown", connected: inst?.status === "connected", owner: inst?.owner };
       if (intData?.id) await supabase.from("integrations").update({ status: inst?.status === "connected" ? "connected" : "disconnected" }).eq("id", intData.id);
+    
     } else if (action === "create") {
       const r = await uazapiAdmin("/instance/init", "POST", { name: instanceName });
       const newToken = r.token || r.instance?.token;
       await supabase.from("integrations").upsert({ account_id: accountId, type: "whatsapp", sector_id: sector_id || null, status: "pending", config: { provider: "uazapi", instance_name: instanceName, instance_token: newToken } }, { onConflict: "account_id,type,sector_id" });
       result = { ...r, token: newToken };
+    
     } else if (action === "connect" || action === "qrcode") {
       result = await uazapiAdmin(`/instance/connect/${instanceName}`, "GET");
+    
     } else if (action === "disconnect") {
       try { await uazapiInstance("/logout", "POST", token!); } catch {}
       if (intData?.id) await supabase.from("integrations").update({ status: "disconnected" }).eq("id", intData.id);
       result = { disconnected: true };
+    
     } else if (action === "send_text") {
+      // ✅ CORRIGIDO: Usar /send/text em vez de /message/sendText
       const cleanPhone = phone?.replace(/\D/g, "");
       if (!cleanPhone || cleanPhone.length < 10) {
-        return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { 
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        });
+        return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      result = await uazapiInstance("/message/sendText", "POST", token!, { number: cleanPhone, text: message });
+      
+      const textBody: Record<string, unknown> = { number: cleanPhone, text: message };
+      if (payload.quoted_message_id) textBody.quotedMsgId = payload.quoted_message_id;
+      if (payload.mentions) textBody.mentions = payload.mentions;
+      
+      result = await uazapiInstance("/send/text", "POST", token!, textBody);
+    
+    } else if (action === "send_media") {
+      // ✅ NOVO: Suporte a envio de mídia
+      const cleanPhone = phone?.replace(/\D/g, "");
+      if (!cleanPhone || cleanPhone.length < 10) {
+        return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      
+      const mediaBody: Record<string, unknown> = { 
+        number: cleanPhone, 
+        type: payload.media_type || "image",
+        file: payload.media_url,
+        text: payload.caption || ""
+      };
+      if (payload.quoted_message_id) mediaBody.quotedMsgId = payload.quoted_message_id;
+      if (payload.file_name) mediaBody.fileName = payload.file_name;
+      
+      result = await uazapiInstance("/send/media", "POST", token!, mediaBody);
+    
     } else if (action === "send_to_group") {
+      // ✅ CORRIGIDO: Usar /send/text para grupos
       const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
-      result = await uazapiInstance("/message/sendText", "POST", token!, { groupJid: jid, text: message });
+      
+      const groupBody: Record<string, unknown> = { groupJid: jid, text: message };
+      if (payload.quoted_message_id) groupBody.quotedMsgId = payload.quoted_message_id;
+      if (payload.mentions) groupBody.mentions = payload.mentions;
+      
+      result = await uazapiInstance("/send/text", "POST", token!, groupBody);
+    
+    } else if (action === "send_media_to_group") {
+      // ✅ NOVO: Mídia em grupos
+      const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
+      
+      const mediaBody: Record<string, unknown> = { 
+        groupJid: jid, 
+        type: payload.media_type || "image",
+        file: payload.media_url,
+        text: payload.caption || ""
+      };
+      if (payload.quoted_message_id) mediaBody.quotedMsgId = payload.quoted_message_id;
+      if (payload.file_name) mediaBody.fileName = payload.file_name;
+      
+      result = await uazapiInstance("/send/media", "POST", token!, mediaBody);
+    
     } else if (action === "list_groups") {
       const r = await uazapiInstance("/group/fetchAllGroups", "GET", token!);
       result = { groups: (Array.isArray(r) ? r : r.groups || []).map((g:any) => ({ group_jid: g.JID||g.jid||g.id, name: g.Name||g.name||g.Subject })) };
+    
     } else if (action === "list_instances") {
       const all = await uazapiAdmin("/instance/all", "GET") as Array<{name?:string;status?:string;owner?:string}>;
       result = { instances: all.filter(i => i.name?.startsWith(`roy-${accountId.slice(0,8)}`)) };
+    
     } else if (action === "list_sector_instances") {
       const { data: ints } = await supabase.from("integrations").select("id, sector_id, config, status, display_name, pin_hash").eq("account_id", accountId).eq("type", "whatsapp").not("sector_id", "is", null);
       result = { instances: (ints||[]).map((i:any) => ({ id: i.id, sector_id: i.sector_id, instance_name: i.config?.instance_name, status: i.status, has_pin: !!i.pin_hash })) };
+    
     } else if (action === "add_instance_to_sector") {
       const all = await uazapiAdmin("/instance/all", "GET") as Array<{name?:string;token?:string;status?:string;owner?:string}>;
       const inst = all.find(i => i.name === payload.instance_name);
       if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       await supabase.from("integrations").insert({ account_id: accountId, type: "whatsapp", sector_id, status: inst.status === "connected" ? "connected" : "disconnected", config: { provider: "uazapi", instance_name: payload.instance_name, instance_token: inst.token, owner: inst.owner } });
       result = { success: true };
+    
     } else if (action === "verify_instance_pin") {
       const { data: int } = await supabase.from("integrations").select("pin_hash").eq("id", payload.integration_id).single();
       if (!int?.pin_hash) result = { valid: true };
@@ -310,11 +378,14 @@ serve(async (req) => {
 
 ---
 
-## Nota Técnica
+## Resumo das Correções
 
-Esta é uma correção urgente focada em **restaurar o envio de mensagens**. Funcionalidades adicionais como:
-- Envio de mídia (`send_media`)
-- Respostas com citação (`quoted_message_id`)
-- Edição/exclusão de mensagens
-
-Podem ser adicionadas em uma atualização posterior se necessário.
+| Problema | Antes | Depois |
+|----------|-------|--------|
+| Endpoint texto | `/message/sendText` | `/send/text` |
+| Endpoint mídia | Não existia | `/send/media` |
+| Grupos texto | `/message/sendText` | `/send/text` |
+| Grupos mídia | Não existia | `/send/media` |
+| Citações | Ignorado | `quotedMsgId` |
+| Menções | Ignorado | `mentions` |
+| Validação resposta | Só HTTP status | Verifica `json.error` |
