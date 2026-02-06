@@ -135,7 +135,8 @@ interface Task {
   } | null;
 }
 
-type SortOption = "priority" | "due_date" | "created_at";
+type SortOption = "priority" | "due_date" | "created_at" | "responsible";
+type SortDirection = "asc" | "desc";
 
 const PRIORITY_ORDER: Record<string, number> = {
   urgent: 0,
@@ -172,6 +173,7 @@ export default function Tasks() {
   const [filterUser, setFilterUser] = useState<string>("all");
   const [filterActivityType, setFilterActivityType] = useState<string>("all");
   const [sortBy, setSortBy] = useState<SortOption>("priority");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -355,6 +357,18 @@ export default function Tasks() {
     setDeleteDialogOpen(true);
   }, []);
 
+  // Handle column sort toggle
+  const handleColumnSort = useCallback((column: SortOption) => {
+    if (sortBy === column) {
+      // Toggle direction if same column
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      // New column - reset to ascending
+      setSortBy(column);
+      setSortDirection("asc");
+    }
+  }, [sortBy]);
+
   const getContactInfoFromTask = useCallback((task: Task) => {
     if (!task.deals) return null;
     
@@ -464,18 +478,45 @@ export default function Tasks() {
   }), [baseFilteredTasks, activeTab, customStatuses]);
 
   // Sort tasks
-  const sortedTasks = useMemo(() => [...filteredTasks].sort((a, b) => {
-    if (sortBy === "priority") {
-      return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
-    } else if (sortBy === "due_date") {
-      if (!a.due_date && !b.due_date) return 0;
-      if (!a.due_date) return 1;
-      if (!b.due_date) return -1;
-      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
-    } else {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    }
-  }), [filteredTasks, sortBy]);
+  const sortedTasks = useMemo(() => {
+    const sorted = [...filteredTasks].sort((a, b) => {
+      let comparison = 0;
+      
+      if (sortBy === "priority") {
+        // Alta (high=1) -> Média (medium=2) -> Baixa (low=3)
+        comparison = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+      } 
+      else if (sortBy === "due_date") {
+        // Atrasado (mais negativo) -> Hoje (0) -> Futuro (positivo)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const getDuePriority = (task: Task) => {
+          if (!task.due_date) return Infinity; // Sem prazo vai pro final
+          const dueDate = new Date(task.due_date);
+          dueDate.setHours(0, 0, 0, 0);
+          return differenceInDays(dueDate, today);
+        };
+        
+        comparison = getDuePriority(a) - getDuePriority(b);
+      }
+      else if (sortBy === "responsible") {
+        // Ordem alfabética pelo nome do responsável
+        const nameA = a.assigned_user?.name?.toLowerCase() || "zzz"; // Sem responsável vai pro final
+        const nameB = b.assigned_user?.name?.toLowerCase() || "zzz";
+        comparison = nameA.localeCompare(nameB, "pt-BR");
+      }
+      else {
+        // created_at - mais recente primeiro
+        comparison = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      }
+      
+      // Inverter se direção for descendente
+      return sortDirection === "desc" ? -comparison : comparison;
+    });
+    
+    return sorted;
+  }, [filteredTasks, sortBy, sortDirection]);
 
   // Count tasks per status - uses baseFilteredTasks for dynamic filtering
   const statusCounts = useMemo(() => {
@@ -533,12 +574,56 @@ export default function Tasks() {
                 <TableHead className="w-[40px]"></TableHead>
                 <TableHead className="font-medium min-w-[250px]">Tarefa</TableHead>
                 <TableHead className="font-medium text-center min-w-[100px]">Status</TableHead>
-                <TableHead className="font-medium text-center min-w-[100px]">Prioridade</TableHead>
-                <TableHead className="font-medium text-center min-w-[100px]">Prazo</TableHead>
+                
+                {/* Prioridade - Clicável */}
+                <TableHead 
+                  className="font-medium text-center min-w-[100px] cursor-pointer hover:bg-muted/80 select-none transition-colors"
+                  onClick={() => handleColumnSort("priority")}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Prioridade
+                    <ArrowUpDown className={cn(
+                      "h-3 w-3 transition-transform",
+                      sortBy === "priority" ? "text-primary" : "text-muted-foreground/50",
+                      sortBy === "priority" && sortDirection === "desc" && "rotate-180"
+                    )} />
+                  </div>
+                </TableHead>
+                
+                {/* Prazo - Clicável */}
+                <TableHead 
+                  className="font-medium text-center min-w-[100px] cursor-pointer hover:bg-muted/80 select-none transition-colors"
+                  onClick={() => handleColumnSort("due_date")}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Prazo
+                    <ArrowUpDown className={cn(
+                      "h-3 w-3 transition-transform",
+                      sortBy === "due_date" ? "text-primary" : "text-muted-foreground/50",
+                      sortBy === "due_date" && sortDirection === "desc" && "rotate-180"
+                    )} />
+                  </div>
+                </TableHead>
+                
                 <TableHead className="font-medium min-w-[120px]">
                   {hasVendasAccess ? "Contexto" : "Cliente"}
                 </TableHead>
-                <TableHead className="font-medium text-center min-w-[80px]">Responsável</TableHead>
+                
+                {/* Responsável - Clicável */}
+                <TableHead 
+                  className="font-medium text-center min-w-[80px] cursor-pointer hover:bg-muted/80 select-none transition-colors"
+                  onClick={() => handleColumnSort("responsible")}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Responsável
+                    <ArrowUpDown className={cn(
+                      "h-3 w-3 transition-transform",
+                      sortBy === "responsible" ? "text-primary" : "text-muted-foreground/50",
+                      sortBy === "responsible" && sortDirection === "desc" && "rotate-180"
+                    )} />
+                  </div>
+                </TableHead>
+                
                 <TableHead className="font-medium text-right min-w-[60px]">Ação</TableHead>
               </TableRow>
             </TableHeader>
