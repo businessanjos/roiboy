@@ -639,6 +639,91 @@ export type Database = {
           },
         ]
       }
+      ai_usage_alerts: {
+        Row: {
+          account_id: string
+          alert_sent_at: string
+          alert_type: string
+          current_value: number
+          email_sent_to: string
+          id: string
+          threshold_value: number
+        }
+        Insert: {
+          account_id: string
+          alert_sent_at?: string
+          alert_type: string
+          current_value: number
+          email_sent_to: string
+          id?: string
+          threshold_value: number
+        }
+        Update: {
+          account_id?: string
+          alert_sent_at?: string
+          alert_type?: string
+          current_value?: number
+          email_sent_to?: string
+          id?: string
+          threshold_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_alerts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_usage_limits: {
+        Row: {
+          account_id: string
+          alert_email: string
+          created_at: string
+          id: string
+          is_enabled: boolean | null
+          last_alert_sent_at: string | null
+          max_analyses_per_day: number | null
+          max_cost_per_day: number | null
+          max_tokens_per_day: number | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          alert_email: string
+          created_at?: string
+          id?: string
+          is_enabled?: boolean | null
+          last_alert_sent_at?: string | null
+          max_analyses_per_day?: number | null
+          max_cost_per_day?: number | null
+          max_tokens_per_day?: number | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          alert_email?: string
+          created_at?: string
+          id?: string
+          is_enabled?: boolean | null
+          last_alert_sent_at?: string | null
+          max_analyses_per_day?: number | null
+          max_cost_per_day?: number | null
+          max_tokens_per_day?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_limits_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_usage_logs: {
         Row: {
           account_id: string

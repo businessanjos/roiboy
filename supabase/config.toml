@@ -152,3 +152,6 @@ verify_jwt = false
 
 [functions.check-agenda-reminders]
 verify_jwt = false
+
+[functions.check-ai-usage-limits]
+verify_jwt = false
