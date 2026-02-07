@@ -41,7 +41,8 @@ export function useSectorAccess() {
       return (data || []) as SectorAccess[];
     },
     enabled: !!userId,
-    staleTime: 60000,
+    staleTime: 300000, // OPTIMIZED: 5 minutes (up from 60 seconds) - sector access rarely changes
+    refetchOnWindowFocus: false,
   });
 
   const { data: sectorSettings = [] } = useQuery({
@@ -58,7 +59,8 @@ export function useSectorAccess() {
       return (data || []) as SectorSettings[];
     },
     enabled: !!accountId,
-    staleTime: 60000,
+    staleTime: 300000, // OPTIMIZED: 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   // Check if user is super_admin
@@ -70,7 +72,8 @@ export function useSectorAccess() {
       return data === true;
     },
     enabled: !!authUserId,
-    staleTime: 60000,
+    staleTime: 300000, // OPTIMIZED: 5 minutes
+    refetchOnWindowFocus: false,
   });
 
   const hasSectorAccess = (sectorId: SectorId): boolean => {

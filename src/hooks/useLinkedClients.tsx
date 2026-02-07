@@ -68,7 +68,8 @@ export function useLinkedClients(clientId: string | undefined): UseLinkedClients
       return { ids: Array.from(ids), clients };
     },
     enabled: !!clientId,
-    staleTime: 30000, // 30 seconds
+    staleTime: 120000, // OPTIMIZED: 2 minutes (up from 30 seconds)
+    refetchOnWindowFocus: false, // OPTIMIZED: Disable refetch on focus
   });
 
   return {

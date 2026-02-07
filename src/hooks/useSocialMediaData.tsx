@@ -118,7 +118,8 @@ export function useSocialMediaData() {
       return data as InstagramPost[];
     },
     enabled: !!currentProfile,
-    staleTime: 30000, // 30 seconds - more responsive for post updates
+    staleTime: 120000, // OPTIMIZED: 2 minutes (up from 30 seconds)
+    refetchOnWindowFocus: false,
   });
 
   // Calculate KPIs

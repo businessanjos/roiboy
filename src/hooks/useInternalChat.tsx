@@ -139,7 +139,8 @@ export function useInternalChat() {
       })) as InternalChat[];
     },
     enabled: !!currentUser?.account_id,
-    staleTime: 30000, // 30 seconds - reduce refetches
+    staleTime: 120000, // OPTIMIZED: 2 minutes (up from 30 seconds)
+    refetchOnWindowFocus: false, // OPTIMIZED: Disable refetch on focus
   });
 
   // Fetch messages for selected chat
