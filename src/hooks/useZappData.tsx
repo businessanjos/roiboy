@@ -647,8 +647,8 @@ export function useZappData(options: UseZappDataOptions = {}) {
       
       setMessages(msgs);
       
-      // REACTIVATED: Auto-download pending media when conversation is opened
-      // This triggers lazy download for media that webhook couldn't process immediately
+      // OPTIMIZATION V2: Reduced auto-download from 10 to 3 media items
+      // Remaining media will be downloaded on-demand when user clicks
       const pendingMediaMsgs = msgs.filter(
         (m) => m.media_download_status === "pending" 
           && m.media_type 
@@ -657,9 +657,9 @@ export function useZappData(options: UseZappDataOptions = {}) {
       );
 
       if (pendingMediaMsgs.length > 0) {
-        // Limit to 10 to avoid timeout (edge function processes in batches of 8)
-        const idsToDownload = pendingMediaMsgs.slice(0, 10).map((m) => m.id);
-        console.log(`[ZappData] Triggering auto-download for ${idsToDownload.length} pending media`);
+        // OPTIMIZED: Limit to 3 to reduce cloud costs (down from 10)
+        const idsToDownload = pendingMediaMsgs.slice(0, 3).map((m) => m.id);
+        console.log(`[ZappData] Auto-downloading ${idsToDownload.length} of ${pendingMediaMsgs.length} pending media (optimized)`);
         
         // Fire-and-forget to avoid blocking UI - realtime will update when completed
         supabase.functions.invoke("download-media", {
@@ -667,8 +667,6 @@ export function useZappData(options: UseZappDataOptions = {}) {
         }).then((res) => {
           if (res.error) {
             console.error("[ZappData] Download-media function error:", res.error);
-          } else {
-            console.log(`[ZappData] Download triggered successfully for ${idsToDownload.length} media items`);
           }
         }).catch((err) => {
           console.error("[ZappData] Auto-download network error:", err);

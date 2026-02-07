@@ -228,10 +228,11 @@ function selectModelForMessage(baseModel: string, content: string, contextMessag
   const textLength = content.length;
   const wordCount = content.split(/\s+/).filter(w => w.length > 2).length;
   
-  // CRITÉRIOS DE ESCALAÇÃO PARA PRO:
+  // CRITÉRIOS DE ESCALAÇÃO PARA PRO - OPTIMIZED: More restrictive thresholds
   
-  // 1. Mensagens muito longas (>500 chars ou >80 palavras) - análise mais complexa
-  if (textLength > 500 || wordCount > 80) {
+  // 1. OPTIMIZED: Increased thresholds for PRO escalation (>800 chars ou >120 palavras)
+  // Previously: >500 chars ou >80 words - too aggressive, causing high costs
+  if (textLength > 800 || wordCount > 120) {
     return { 
       model: "google/gemini-2.5-pro", 
       reason: "long_message", 
@@ -284,10 +285,11 @@ function selectModelForMessage(baseModel: string, content: string, contextMessag
     };
   }
   
-  // 4. Contexto rico (múltiplas mensagens anteriores relevantes)
-  if (contextMessages && contextMessages.length >= 3) {
+  // 4. OPTIMIZED: Require more context messages before escalating (4+ instead of 3+)
+  if (contextMessages && contextMessages.length >= 4) {
     const totalContextLength = contextMessages.join(" ").length;
-    if (totalContextLength > 800) {
+    // OPTIMIZED: Increased threshold from 800 to 1200 chars
+    if (totalContextLength > 1200) {
       return { 
         model: "google/gemini-2.5-pro", 
         reason: "rich_context", 
@@ -296,7 +298,7 @@ function selectModelForMessage(baseModel: string, content: string, contextMessag
     }
   }
   
-  // 5. Mensagens ambíguas que podem ser ROI ou Risco (requer nuance)
+  // 5. OPTIMIZED: Ambiguous patterns now require longer text (200 instead of 150)
   const ambiguousPatterns = [
     /não (sei|tenho certeza) se/i,
     /pensan(do|do em)/i,
@@ -305,7 +307,7 @@ function selectModelForMessage(baseModel: string, content: string, contextMessag
     /talvez|pode ser que/i,
   ];
   
-  if (ambiguousPatterns.some(p => p.test(text)) && textLength > 150) {
+  if (ambiguousPatterns.some(p => p.test(text)) && textLength > 200) {
     return { 
       model: "google/gemini-2.5-pro", 
       reason: "ambiguous_content", 
@@ -314,9 +316,10 @@ function selectModelForMessage(baseModel: string, content: string, contextMessag
   }
   
   // Caso padrão: usar Flash (mais rápido e econômico)
+  // OPTIMIZED: Flash-lite for most messages to reduce costs
   return { 
-    model: "google/gemini-2.5-flash", 
-    reason: "standard", 
+    model: "google/gemini-2.5-flash-lite", 
+    reason: "standard_optimized", 
     escalated: false 
   };
 }
@@ -344,14 +347,14 @@ MOMENTOS CX: ${settings.life_events_prompt}`;
 function shouldSkipMessage(text: string): { skip: boolean; reason: string } {
   const normalized = text.toLowerCase().trim();
   
-  // 1. Muito curto
-  if (text.length < 80) {
+  // 1. OPTIMIZED: Increased minimum from 80 to 120 chars for cloud cost reduction
+  if (text.length < 120) {
     return { skip: true, reason: "too_short" };
   }
   
-  // 2. Poucas palavras significativas
+  // 2. OPTIMIZED: Increased minimum words from 8 to 12
   const words = normalized.split(/\s+/).filter((w: string) => w.length > 3);
-  if (words.length < 8) {
+  if (words.length < 12) {
     return { skip: true, reason: "too_few_words" };
   }
   

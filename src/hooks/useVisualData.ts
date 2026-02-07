@@ -64,7 +64,8 @@ export function useVisualData({ config, enabled = true }: UseVisualDataParams) {
       return result;
     },
     enabled: enabled && !!config && !!currentUser?.account_id,
-    staleTime: 30000,
+    staleTime: 120000, // OPTIMIZED: 2 minutes (up from 30 seconds)
+    refetchOnWindowFocus: false,
   });
 }
 

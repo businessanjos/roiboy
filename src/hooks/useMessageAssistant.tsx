@@ -127,10 +127,10 @@ export function useMessageAssistant({
   const suggestionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastMessagesRef = useRef<string>("");
 
-  // Check spelling with debounce - increased to 1500ms for cloud optimization
+  // Check spelling with debounce - OPTIMIZED: 3000ms debounce, 50 char minimum
   useEffect(() => {
-    // Increased minimum text length from 15 to 20 for cloud optimization
-    if (!spellingEnabled || !messageInput || messageInput.length < 20) {
+    // OPTIMIZATION: Increased minimum text length from 20 to 50 chars
+    if (!spellingEnabled || !messageInput || messageInput.length < 50) {
       setCorrection(null);
       return;
     }
@@ -149,6 +149,7 @@ export function useMessageAssistant({
       clearTimeout(correctionTimeoutRef.current);
     }
 
+    // OPTIMIZATION: Increased debounce from 1500ms to 3000ms
     correctionTimeoutRef.current = setTimeout(async () => {
       setIsCheckingSpelling(true);
       lastCheckedTextRef.current = messageInput;
@@ -177,7 +178,7 @@ export function useMessageAssistant({
       } finally {
         setIsCheckingSpelling(false);
       }
-    }, 1500); // Increased from 800ms to 1500ms for cloud optimization
+    }, 3000); // OPTIMIZED: 3s debounce for cloud cost reduction
 
     return () => {
       if (correctionTimeoutRef.current) {
@@ -186,123 +187,24 @@ export function useMessageAssistant({
     };
   }, [messageInput, spellingEnabled, sectorId]);
 
-  // Load suggestions when messages change - ONLY when last message is from client
-  // Uses local cache to avoid duplicate API calls
-  // OPTIMIZATION: Disabled auto-refresh when suggestions are already loaded
+  // OPTIMIZATION V2: Suggestions are now ON-DEMAND ONLY
+  // Auto-suggestions were consuming too much AI credits
+  // Users must click "Sugerir respostas" button to get suggestions
+  // This dramatically reduces cloud costs while keeping functionality available
+  
+  // Clear suggestions when conversation changes
   useEffect(() => {
     if (!suggestionsEnabled || lastMessages.length === 0) {
       setSuggestions([]);
       return;
     }
-
-    // Skip if rate limited due to 402 error
-    if (isRateLimited()) {
-      return;
-    }
-
-    // OPTIMIZATION: Skip auto-refresh if suggestions are already loaded
-    // User can manually refresh using the refresh button if needed
-    if (suggestions.length > 0) {
-      return;
-    }
-
-    // Wait for account_id to be available
-    if (!currentUser?.account_id) {
-      return;
-    }
-
-    // CRITICAL: Only suggest replies when the LAST message is from the client
-    // If the last message is from the agent (seller), there's nothing to reply to
+    
+    // Clear suggestions when messages change (user will request new ones if needed)
     const lastMessage = lastMessages[lastMessages.length - 1];
     if (!lastMessage?.is_from_client) {
       setSuggestions([]);
-      return;
     }
-
-    // Create a signature of messages to avoid duplicate requests
-    const messagesSignature = lastMessages.map(m => m.id).join(",");
-    if (messagesSignature === lastMessagesRef.current) {
-      return;
-    }
-
-    // Check local cache first
-    if (conversationId) {
-      const cached = getCachedSuggestions(conversationId, messagesSignature);
-      if (cached) {
-        setSuggestions(cached.suggestions);
-        setCurrentSpinPhase(cached.currentSpinPhase);
-        lastMessagesRef.current = messagesSignature;
-        return;
-      }
-    }
-
-    if (suggestionsTimeoutRef.current) {
-      clearTimeout(suggestionsTimeoutRef.current);
-    }
-
-    suggestionsTimeoutRef.current = setTimeout(async () => {
-      setIsLoadingSuggestions(true);
-      lastMessagesRef.current = messagesSignature;
-
-      try {
-        const { data, error } = await supabase.functions.invoke("suggest-replies", {
-          body: {
-            messages: lastMessages.slice(-5).map(m => ({
-              content: m.content,
-              is_from_client: m.is_from_client,
-            })),
-            clientName,
-            sectorId,
-            accountId: currentUser.account_id,
-          },
-        });
-
-        if (error) {
-          // Check for 402 Payment Required
-          if (error.message?.includes('402') || error.message?.includes('Payment')) {
-            setRateLimited();
-          }
-          console.error("[AI Suggestions] Error:", error);
-          setSuggestions([]);
-          return;
-        }
-
-        // Handle payment/quota errors gracefully
-        if (data?.error) {
-          if (data.error.includes('402') || data.error.includes('Payment')) {
-            setRateLimited();
-          }
-          console.warn("[AI Suggestions] Service error:", data.error);
-          setSuggestions([]);
-          return;
-        }
-
-        if (data?.suggestions) {
-          setSuggestions(data.suggestions);
-          
-          // Cache the response
-          if (conversationId) {
-            setCachedSuggestions(conversationId, messagesSignature, data.suggestions, data.currentSpinPhase || null);
-          }
-        }
-        if (data?.currentSpinPhase) {
-          setCurrentSpinPhase(data.currentSpinPhase);
-        } else {
-          setCurrentSpinPhase(null);
-        }
-      } catch (err) {
-        console.error("[AI Suggestions] Error in suggestions:", err);
-      } finally {
-        setIsLoadingSuggestions(false);
-      }
-    }, 1500); // Increased from 300ms to 1500ms for cloud optimization
-
-    return () => {
-      if (suggestionsTimeoutRef.current) {
-        clearTimeout(suggestionsTimeoutRef.current);
-      }
-    };
-  }, [lastMessages, suggestionsEnabled, clientName, sectorId, currentUser?.account_id, conversationId]);
+  }, [lastMessages, suggestionsEnabled]);
 
   const applyCorrection = useCallback(() => {
     // The parent component should handle applying the correction to the input
@@ -317,8 +219,34 @@ export function useMessageAssistant({
     setCorrection(null);
   }, []);
 
+  // ON-DEMAND suggestion fetching - this is now the primary way to get suggestions
   const refreshSuggestions = useCallback(async () => {
-    if (!suggestionsEnabled || lastMessages.length === 0) return;
+    if (!suggestionsEnabled || lastMessages.length === 0 || !currentUser?.account_id) return;
+
+    // Skip if rate limited
+    if (isRateLimited()) {
+      console.warn("[AI Suggestions] Skipped - rate limited");
+      return;
+    }
+
+    // CRITICAL: Only suggest when last message is from client
+    const lastMessage = lastMessages[lastMessages.length - 1];
+    if (!lastMessage?.is_from_client) {
+      console.log("[AI Suggestions] Skipped - last message is from agent");
+      return;
+    }
+
+    // Check cache first
+    const messagesSignature = lastMessages.map(m => m.id).join(",");
+    if (conversationId) {
+      const cached = getCachedSuggestions(conversationId, messagesSignature);
+      if (cached) {
+        console.log("[AI Suggestions] Using cached suggestions");
+        setSuggestions(cached.suggestions);
+        setCurrentSpinPhase(cached.currentSpinPhase);
+        return;
+      }
+    }
 
     setIsLoadingSuggestions(true);
     try {
@@ -330,21 +258,33 @@ export function useMessageAssistant({
           })),
           clientName,
           sectorId,
-          accountId: currentUser?.account_id,
+          accountId: currentUser.account_id,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        if (error.message?.includes('402') || error.message?.includes('Payment')) {
+          setRateLimited();
+        }
+        throw error;
+      }
       
       // Handle payment/quota errors gracefully
       if (data?.error) {
-        console.warn("[AI Suggestions] Service error on refresh:", data.error);
+        if (data.error.includes('402') || data.error.includes('Payment')) {
+          setRateLimited();
+        }
+        console.warn("[AI Suggestions] Service error:", data.error);
         setSuggestions([]);
         return;
       }
       
       if (data?.suggestions) {
         setSuggestions(data.suggestions);
+        // Cache the response
+        if (conversationId) {
+          setCachedSuggestions(conversationId, messagesSignature, data.suggestions, data.currentSpinPhase || null);
+        }
       }
       if (data?.currentSpinPhase) {
         setCurrentSpinPhase(data.currentSpinPhase);
@@ -352,11 +292,11 @@ export function useMessageAssistant({
         setCurrentSpinPhase(null);
       }
     } catch (err) {
-      console.error("Error refreshing suggestions:", err);
+      console.error("Error fetching suggestions:", err);
     } finally {
       setIsLoadingSuggestions(false);
     }
-  }, [lastMessages, clientName, sectorId, suggestionsEnabled, currentUser?.account_id]);
+  }, [lastMessages, clientName, sectorId, suggestionsEnabled, currentUser?.account_id, conversationId]);
 
   const selectSuggestion = useCallback((suggestion: Suggestion) => {
     // Mark as used in feedback
