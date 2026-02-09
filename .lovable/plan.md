@@ -1,38 +1,42 @@
 
-# Modo Foco no Dashboard de Operacoes (Gestao)
+# Melhoria na Busca de Clientes - Ranking por Relevancia
 
-## Objetivo
-Adicionar o botao "Modo Foco" na aba Gestao do Dashboard de Operacoes, replicando o mesmo padrao ja implementado nos dashboards de Social Media (Instagram e TikTok) do Marketing. O modo foco usa React Portals para overlay em tela cheia, ideal para exibicao em TVs via Chromecast.
+## Problema Identificado
+Ao buscar "Ana Carolina", a logica atual usa OR entre os termos: retorna qualquer cliente que contenha "Ana" **ou** "Carolina" no nome. Isso gera 148 resultados, e a cliente "Ana Carolina Gomes Oliveira da Silva" fica perdida no meio por estar ordenada alfabeticamente (e nao por relevancia).
 
-## O que sera feito
+## Solucao
 
-### 1. Adicionar estados e logica de Focus Mode ao `Dashboard.tsx`
-- Adicionar estados `isFocusMode` e `isFullscreen` (ja existem imports de `useRef`, `useState`, `createPortal`)
-- Adicionar ref `focusModeRef` para o container fullscreen
-- Adicionar listener de tecla ESC para sair do modo foco
-- Adicionar listener de `fullscreenchange` para sincronizar estado
-- Adicionar funcao `toggleFullscreen` usando a Fullscreen API nativa
+Alterar a Edge Function `list-clients` para implementar um sistema de ranking por similaridade quando ha busca com multiplos termos.
 
-### 2. Adicionar botao "Modo Foco" no header do Dashboard
-- Inserir um botao com icone `Maximize2` ao lado dos botoes "Atualizar" e "Novo Cliente"
-- Tooltip: "Modo Foco (ideal para TV)"
+### Estrategia de Ordenacao (server-side)
 
-### 3. Criar overlay do Modo Foco via React Portal
-- Renderizar com `createPortal` direto no `document.body` (z-[9999])
-- Conteudo do overlay:
-  - Header com titulo "Dashboard Operacional", botao fullscreen e botao fechar (X)
-  - Cards de KPI ampliados (Clientes por Produto em grid)
-  - Cards de status (Total, Ativos, Cancelamentos, Encerramentos, Congelamentos) com tipografia aumentada (text-4xl) e icones maiores (h-8 w-8)
-  - Grafico de Evolucao Mensal
-  - Cards de Retencao e Valor Perdido
-- Estilo: padding ampliado (p-8), cards com espacamento generoso, fontes maiores para leitura a distancia
+1. **Prioridade 1 - Match exato da frase completa**: Clientes cujo nome contenha a string exata "Ana Carolina" aparecem primeiro
+2. **Prioridade 2 - Todos os termos presentes**: Clientes que contenham TODOS os termos buscados (Ana E Carolina)
+3. **Prioridade 3 - Ao menos um termo**: Clientes que contenham pelo menos um dos termos
 
-## Detalhes Tecnicos
+### Mudancas Tecnicas
 
-**Arquivo modificado:** `src/pages/Dashboard.tsx`
+**Arquivo:** `supabase/functions/list-clients/index.ts`
 
-**Padrao seguido:** Identico ao `SocialMediaDashboard.tsx` (linhas 66-96 para logica, 500-679 para overlay)
+A busca continuara usando OR no filtro do Supabase (para nao perder resultados), mas apos receber os dados, os clientes serao reordenados por relevancia:
 
-**Imports adicionados:** `Maximize2`, `Minimize2`, `X` do lucide-react (alguns ja estao importados)
+```text
+Fluxo atual:
+  Busca OR -> Ordenacao alfabetica -> Retorno
 
-**Nenhuma nova dependencia** necessaria - usa `createPortal` do React e Fullscreen API nativa do navegador.
+Fluxo novo:
+  Busca OR -> Reordenacao por relevancia -> Retorno
+```
+
+Logica de scoring pos-query:
+- **+100 pontos**: nome contem a frase exata digitada (ex: "ana carolina")
+- **+10 pontos por termo**: para cada termo encontrado no nome
+- Desempate: ordem alfabetica
+
+Isso garante que "ANA CAROLINA GOMES OLIVEIRA DA SILVA" apareca no topo ao buscar "Ana Carolina", enquanto clientes como "Ana Paula Cardoso" aparecem depois.
+
+### Impacto
+- Nenhuma mudanca no frontend (o hook `useOptimizedClients` e os componentes continuam iguais)
+- Apenas a Edge Function e modificada
+- A paginacao e contagem total continuam funcionando normalmente
+- Performance: o scoring e feito em memoria apenas nos registros ja retornados pela pagina (max 200), sem custo adicional
