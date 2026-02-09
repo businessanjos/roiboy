@@ -1,47 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Background task to process AI queue
-async function processAIQueue(supabaseUrl: string, supabaseKey: string) {
-  try {
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    // Check if there are pending jobs
-    const { count } = await supabase
-      .from("ai_analysis_queue")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending");
-    
-    if (!count || count === 0) {
-      console.log("[BG] No pending jobs in AI queue");
-      return;
-    }
-    
-    console.log(`[BG] Found ${count} pending jobs, triggering queue processor`);
-    
-    // Call the process-ai-queue function
-    const response = await fetch(`${supabaseUrl}/functions/v1/process-ai-queue`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${supabaseKey}`,
-      },
-    });
-    
-    if (response.ok) {
-      const result = await response.json();
-      console.log(`[BG] Queue processing result:`, result);
-    } else {
-      console.error(`[BG] Queue processing failed:`, response.status);
-    }
-  } catch (err) {
-    console.error("[BG] Error in background queue processing:", err);
-  }
-}
-
-// Declare EdgeRuntime for background tasks
-declare const EdgeRuntime: { waitUntil: (promise: Promise<unknown>) => void };
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -185,54 +144,77 @@ function normalizePhone(phone: string | undefined): string {
 }
 
 serve(async (req) => {
-  // ============ LATENCY MONITORING ============
-  const latencyMarks: { step: string; timestamp: number; elapsed: number }[] = [];
-  const startTime = Date.now();
-  
-  const markLatency = (step: string) => {
-    const now = Date.now();
-    latencyMarks.push({
-      step,
-      timestamp: now,
-      elapsed: now - startTime
-    });
-  };
-  
-  markLatency("webhook_received");
-  
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-    
-    markLatency("supabase_client_created");
-
     const payload: UazapiWebhookPayload = await req.json();
-    
-    markLatency("payload_parsed");
-    
-    // Extract message timestamp from payload for end-to-end latency calculation
-    const msgTimestamp = payload.message?.timestamp;
-    let messageOriginTime: number | null = null;
-    if (msgTimestamp) {
-      // UAZAPI sends timestamp in seconds
-      messageOriginTime = Number(msgTimestamp) * 1000;
-      const webhookDelay = startTime - messageOriginTime;
-      console.log(`[LATENCY] Message origin → Webhook received: ${webhookDelay}ms (UAZAPI provider delay)`);
-    }
-    
-    // Log the raw payload for debugging
-    console.log("UAZAPI Webhook raw payload:", JSON.stringify(payload).substring(0, 1000));
 
     // Determine event type (UAZAPI uses EventType, some versions use event)
     const eventType = payload.EventType || payload.event;
-    console.log(`Event type: ${eventType}`);
 
-    // Extract instance from BaseUrl (e.g., https://cxroycom.uazapi.com -> find integration by account)
+    // ============================================
+    // EARLY-RETURN: Skip low-value events BEFORE creating Supabase client
+    // This saves ~5 DB queries per ignored event
+    // ============================================
+    
+    // 1. Skip "chats" events - they almost always sync 0 chats and waste resources
+    if (eventType === "chats" || eventType === "CHATS_UPDATE" || eventType === "chats.upsert") {
+      return new Response(JSON.stringify({ ignored: true, reason: "chats_event_skipped" }), { 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+    
+    // 2. Skip "history" events - they just acknowledge
+    if (eventType === "history" || eventType === "HISTORY_SYNC" || eventType === "history.sync") {
+      return new Response(JSON.stringify({ ignored: true, reason: "history_event_skipped" }), { 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+    
+    // 3. Skip reactions BEFORE any DB queries
+    if (payload.message) {
+      const msg = payload.message as Record<string, unknown>;
+      const msgReaction = msg.reaction;
+      if (msgReaction && typeof msgReaction === "object" && msgReaction !== null) {
+        return new Response(JSON.stringify({ ignored: true, reason: "reaction_message" }), { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+      const msgTypeCheck = msg.messageType as string;
+      const typeCheck = msg.type as string;
+      if ((msgTypeCheck && String(msgTypeCheck).toLowerCase().includes("reaction")) || 
+          (typeCheck && String(typeCheck).toLowerCase().includes("reaction"))) {
+        return new Response(JSON.stringify({ ignored: true, reason: "reaction_message" }), { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+    }
+    
+    // 4. Skip unknown/unhandled event types early
+    const handledEvents = [
+      "messages", "messages.upsert", 
+      "messages.ack", "message.ack", "ack", "messages.update",
+      "groups", "GROUPS_UPDATE", "groups.upsert",
+      "connection", "CONNECTION_UPDATE", "connection.update",
+      "QRCODE_UPDATED", "qrcode", "qrcode.updated",
+      "status", "STATUS_UPDATE",
+    ];
+    if (eventType && !handledEvents.includes(eventType)) {
+      return new Response(JSON.stringify({ ignored: true, reason: "unhandled_event", event: eventType }), { 
+        headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
+    }
+
+    // ============================================
+    // Past early-return: create Supabase client for actual processing
+    // ============================================
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Extract instance from BaseUrl
     const baseUrl = payload.BaseUrl || "";
     const rawInstance = payload.instance;
     
@@ -240,8 +222,6 @@ serve(async (req) => {
     const instanceName = typeof rawInstance === 'string' 
       ? rawInstance 
       : (rawInstance?.name || payload.instanceName || "");
-    
-    console.log(`BaseUrl: ${baseUrl}, instanceName: ${instanceName}`);
 
     // Find account - try different methods
     let integration = null;
@@ -268,7 +248,7 @@ serve(async (req) => {
         
         if (results && results.length > 0) {
           integration = results[0];
-          console.log(`Found integration by instance_name: ${tryName}, sector: ${integration.sector_id}`);
+          break;
           break;
         }
       }
@@ -288,7 +268,7 @@ serve(async (req) => {
       
       if (results && results.length > 0) {
         integration = results[0];
-        console.log(`Found integration by instance_token: ${payloadToken?.slice(0, 8)}..., sector: ${integration.sector_id}`);
+        
       }
     }
     
@@ -306,7 +286,7 @@ serve(async (req) => {
       
       if (results && results.length > 0) {
         integration = results[0];
-        console.log(`Found integration by phone_number: ${phoneClean}, sector: ${integration.sector_id}`);
+        
       }
     }
     
@@ -334,12 +314,12 @@ serve(async (req) => {
       });
     }
     
-    markLatency("integration_found");
+    
 
     const accountId = integration.account_id;
     const sectorId = integration.sector_id;
     const integrationId = integration.id;
-    console.log(`Processing for account: ${accountId}, sector: ${sectorId}, integration: ${integrationId}`);
+    
     
     // Find the department for this sector to properly associate conversations
     // Using order by created_at to be deterministic when multiple departments exist
@@ -356,9 +336,7 @@ serve(async (req) => {
       
       if (dept) {
         sectorDepartmentId = dept.id;
-        console.log(`Found department for sector ${sectorId}: ${sectorDepartmentId}`);
-      } else {
-        console.log(`No department found for sector ${sectorId}`);
+      }
       }
     }
 
@@ -369,44 +347,14 @@ serve(async (req) => {
         const chat = payload.chat;
         const msg = payload.message;
         
-        // DETAILED LOG: Start of message processing
-        console.log(`[WEBHOOK] Processing message - chat.phone: ${chat.phone || 'N/A'}, chat.name: ${chat.name || 'N/A'}, msg.fromMe: ${msg.fromMe}, msg.type: ${msg.type || 'N/A'}, msg.id: ${msg.id || 'N/A'}`);
-        
-        // Check if this is a reaction (not a real message)
-        // UAZAPI includes 'reaction' field for message reactions
-        const msgReaction = (msg as Record<string, unknown>).reaction;
-        if (msgReaction && typeof msgReaction === "object" && msgReaction !== null) {
-          console.log(`Ignoring reaction message:`, JSON.stringify(msgReaction));
-          return new Response(JSON.stringify({ ignored: true, reason: "reaction_message" }), { 
-            headers: { ...corsHeaders, "Content-Type": "application/json" } 
-          });
-        }
-        
-        // Also check messageType and type for reactions (case-insensitive)
-        const msgTypeCheck = (msg as Record<string, unknown>).messageType as string;
-        const typeCheck = (msg as Record<string, unknown>).type as string;
-        const isReaction = (msgTypeCheck && msgTypeCheck.toLowerCase().includes("reaction")) || 
-                           (typeCheck && typeCheck.toLowerCase().includes("reaction"));
-        if (isReaction) {
-          console.log(`Ignoring reaction by messageType: ${msgTypeCheck}, type: ${typeCheck}`);
-          return new Response(JSON.stringify({ ignored: true, reason: "reaction_message" }), { 
-            headers: { ...corsHeaders, "Content-Type": "application/json" } 
-          });
-        }
+        // Reactions already filtered by early-return above
         
         // Check if this is a group message
         const isGroupMessage = msg.isGroup || chat.wa_isGroup || (chat.wa_chatid?.includes("@g.us"));
         
-        // Log structure for debugging
-        console.log("Chat object keys:", Object.keys(chat));
-        console.log("Message object keys:", Object.keys(msg));
-        console.log("Is group message:", isGroupMessage);
-        console.log("Chat phone:", chat.phone, "Sender:", msg.sender, "Sender PN:", msg.sender_pn);
-        console.log("Message body type:", typeof msg.body, "Message content type:", typeof msg.content);
         
         // Determine message direction (fromMe = sent by us)
         const direction = msg.fromMe ? "outbound" : "inbound";
-        console.log(`Message direction: ${direction}`);
         
         // For outbound messages, we still need to process them to show in conversation
         
@@ -430,7 +378,7 @@ serve(async (req) => {
                 phone = `+${senderMatch[1]}`;
               }
             }
-            console.log(`Group message - extracted sender phone: ${phone}`);
+            
           }
         } else {
           // For direct messages, use chat.phone
@@ -475,29 +423,7 @@ serve(async (req) => {
         mediaFilename = msg.fileName || String(msgAny.fileName || msgAny.filename || "") ||
           (contentObj ? String(contentObj.fileName || contentObj.filename || "") : "");
         
-        // FIRST: Log ALL type-related fields for debugging
-        console.log(`Type fields - msg.type: "${msg.type}", msgAny.mediaType: "${msgAny.mediaType}", msgAny.messageType: "${msgAny.messageType}"`);
-        
-        // FIRST: Detect media type from message type field (UAZAPI uses 'type' or 'mediaType')
-        // Priority: mediaType > messageType > type (since 'type' is often just 'text' even for media)
-        const msgTypeField = msgAny.mediaType || msgAny.messageType || msg.type;
-        if (msgTypeField && typeof msgTypeField === "string") {
-          const msgType = msgTypeField.toLowerCase();
-          if (msgType.includes("image")) mediaType = "image";
-          else if (msgType.includes("audio") || msgType.includes("ptt")) mediaType = "audio";
-          else if (msgType.includes("video")) mediaType = "video";
-          else if (msgType.includes("document")) mediaType = "document";
-          else if (msgType.includes("sticker")) mediaType = "sticker";
-        }
-        
-        // Log for debugging media messages
-        console.log(`Media detection - msgTypeField: "${msgTypeField}", detected mediaType: "${mediaType}", mediaUrl present: ${!!mediaUrl}, mediaUrl: "${String(mediaUrl).substring(0, 100)}"`);
-        
-        // Log the content structure for debugging
-        console.log(`Content analysis - msg.content type: ${typeof msg.content}, msg.type: ${msg.type}, mediaType detected: ${mediaType}`);
-        if (typeof msg.content === "object" && msg.content !== null) {
-          console.log(`Content object keys: ${Object.keys(msg.content as Record<string, unknown>).join(", ")}`);
-        }
+        // Detect media type from message type field (UAZAPI uses 'type' or 'mediaType')
         
         // Extract content based on message type
         // Note: For media messages, UAZAPI may send the caption in text/content/body fields
@@ -601,7 +527,7 @@ serve(async (req) => {
         // Media content: don't add labels, just use caption if available
         // The UI will show emojis for media types in previews
         
-        console.log(`Media info - type: ${mediaType}, url: ${mediaUrl?.substring(0, 50)}..., mimetype: ${mediaMimetype}`);
+        
         
         // ============================================
         // LAZY MEDIA: Save metadata only, download on-demand
@@ -627,10 +553,8 @@ serve(async (req) => {
         let initialMediaDownloadStatus: string | null = null;
         if (isValidWhatsAppMediaUrl) {
           initialMediaDownloadStatus = "pending";
-          console.log(`Saving media metadata for lazy download (mediaKey: ${mediaKey ? 'yes' : 'no'})`);
         } else if (isInvalidMediaUrl) {
           initialMediaDownloadStatus = "failed";
-          console.log(`Invalid media URL (${mediaUrl?.substring(0, 50)}...), marking as failed`);
         }
         
         const messageId = msg.id || `${Date.now()}`;
@@ -650,7 +574,7 @@ serve(async (req) => {
                                 (typeof msgAnyEdit.type === "string" && msgAnyEdit.type.toLowerCase().includes("edited"));
         
         if (isEditedMessage) {
-          console.log(`[EDIT] Detected edited message webhook, will check for existing record to update`);
+          
         }
 
         // ============================================
@@ -736,11 +660,8 @@ serve(async (req) => {
           quotedSenderName = "Você";
         }
         
-        if (quotedMsgId || quotedContent) {
-          console.log(`Quoted message detected - ID: ${quotedMsgId}, content: ${quotedContent?.substring(0, 50)}..., sender: ${quotedSenderName}`);
-        }
 
-        console.log(`Extracted - phone: ${phone}, content: ${content.substring(0, 50)}...`);
+
 
         // For outbound messages in groups, we don't need a phone, just the group identifier
         // For direct outbound messages, we need phone
@@ -775,7 +696,7 @@ serve(async (req) => {
         }
         
         if (direction === "outbound" && !hasContent && !hasMedia) {
-          console.log(`Skipping outbound message: no content and no media`);
+          
           return new Response(JSON.stringify({ ignored: true, reason: "missing_content_and_media" }), { 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
           });
@@ -783,13 +704,13 @@ serve(async (req) => {
         
         // For direct outbound messages, we need the destination phone
         if (direction === "outbound" && !isGroupMessage && !phone) {
-          console.log(`Skipping outbound direct message: no destination phone`);
+          
           return new Response(JSON.stringify({ ignored: true, reason: "missing_phone" }), { 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
           });
         }
 
-        console.log(`Processing ${direction} message ${isGroupMessage ? 'in group' : 'from/to ' + phone} (${contactName}): ${content.substring(0, 50)}...`);
+        
 
         // ============================================
         // ZAPP: Save ALL conversations (client or not)
@@ -801,7 +722,7 @@ serve(async (req) => {
         const groupJid = isGroupMessage ? (msg.chatid || chat.wa_chatid || chat.id) : null;
         const groupName = isGroupMessage ? (msg.groupName || chat.name || chat.wa_name) : null;
         
-        console.log(`Group info - isGroup: ${isGroupMessage}, groupJid: ${groupJid}, groupName: ${groupName}, chat.id: ${chat.id}, msg.chatid: ${msg.chatid}`);
+        
         
         // Find or create zapp_conversation (for ALL contacts)
         let zappConversationId: string | null = null;
@@ -868,7 +789,7 @@ serve(async (req) => {
             
             if (legacyData) {
               existingZappConvo = legacyData;
-              console.log(`[LEGACY] Found legacy conversation ${legacyData.id}, updating integration_id to ${integrationId}`);
+              
               
               // Migrate legacy conversation to new format with integration_id
               await supabase
@@ -1111,14 +1032,14 @@ serve(async (req) => {
 
           if (newZappConvo) {
             zappConversationId = newZappConvo.id;
-            console.log(`Created new zapp_conversation (group: ${isGroupMessage}): ${zappConversationId}`);
+            
             
             // ============================================
             // AUTO-SUGGEST CLIENT LINKS (for direct messages without client)
             // ============================================
             if (!clientId && !isGroupMessage && contactName && contactName !== "Desconhecido") {
               try {
-                console.log(`[SUGGESTION] Searching for client suggestions for "${contactName}" / ${phone}`);
+                
                 
                 const suggestions: { clientId: string; matchType: string; score: number; details: Record<string, unknown> }[] = [];
                 
@@ -1213,7 +1134,7 @@ serve(async (req) => {
                   .slice(0, 3);
                 
                 if (topSuggestions.length > 0) {
-                  console.log(`[SUGGESTION] Found ${topSuggestions.length} suggestions for conversation ${zappConversationId}`);
+                  
                   
                   for (const suggestion of topSuggestions) {
                     await supabase.from("zapp_client_suggestions").insert({
@@ -1226,7 +1147,7 @@ serve(async (req) => {
                     }).maybeSingle(); // Ignore conflicts
                   }
                 } else {
-                  console.log(`[SUGGESTION] No client suggestions found for "${contactName}"`);
+                  
                 }
               } catch (suggestionError) {
                 // Don't fail the webhook for suggestion errors
@@ -1559,7 +1480,7 @@ serve(async (req) => {
 
           if (existingClient) {
             const clientId = existingClient.id;
-            console.log(`Found existing client: ${clientId} - saving to message_events for AI analysis`);
+            
             
             // Auto-update client avatar from WhatsApp profile picture if available
             const profilePicUrl = chat.image || chat.imagePreview;
@@ -1572,7 +1493,7 @@ serve(async (req) => {
               if (avatarError) {
                 console.log("Error updating client avatar:", avatarError.message);
               } else {
-                console.log(`Updated client ${clientId} avatar from WhatsApp profile picture`);
+                
               }
             }
 
@@ -1650,8 +1571,6 @@ serve(async (req) => {
                     console.log("Queue insert error (non-blocking):", queueError.message);
                   } else {
                     console.log("AI analysis queued for message:", insertedMsg.id);
-                    // Trigger background queue processing
-                    EdgeRuntime.waitUntil(processAIQueue(supabaseUrl, supabaseKey));
                   }
                 }
               } catch (err) {
@@ -1669,7 +1588,7 @@ serve(async (req) => {
               .maybeSingle();
 
             if (existingLead) {
-              console.log(`Found existing lead: ${existingLead.id}`);
+              
               
               // Auto-update lead avatar from WhatsApp profile picture if available
               const profilePicUrl = chat.image || chat.imagePreview;
@@ -1682,7 +1601,7 @@ serve(async (req) => {
                 if (avatarError) {
                   console.log("Error updating lead avatar:", avatarError.message);
                 } else {
-                  console.log(`Updated lead ${existingLead.id} avatar from WhatsApp profile picture`);
+                  
                 }
               }
               
@@ -2150,7 +2069,7 @@ serve(async (req) => {
 
     // Handle message status updates (ack events)
     if (eventType === "messages.ack" || eventType === "message.ack" || eventType === "ack" || eventType === "messages.update") {
-      console.log("Message status update received:", JSON.stringify(payload).substring(0, 500));
+      
       
       // UAZAPI sends status updates in various formats
       // Try to extract message ID and status
@@ -2181,7 +2100,7 @@ serve(async (req) => {
       }
       
       if (messageId && status) {
-        console.log(`Updating message ${messageId} status to: ${status}`);
+        
         
         const { error: updateError } = await supabase
           .from("zapp_messages")
@@ -2192,10 +2111,10 @@ serve(async (req) => {
         if (updateError) {
           console.error("Error updating message status:", updateError);
         } else {
-          console.log(`Message ${messageId} status updated to ${status}`);
+          
         }
       } else {
-        console.log("Could not extract message ID or status from payload");
+        
       }
       
       return new Response(
