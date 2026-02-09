@@ -1,56 +1,78 @@
 
+# Adicionar Modo Foco e Tela Cheia nos Insights de Vendas
 
-# Criar Edge Function "create-task" para o n8n
+## O que sera feito
 
-## Objetivo
+Adicionar os botoes "Modo Foco" e "Tela Cheia" nas abas de visuais do Insights (setor de Vendas), seguindo o mesmo padrao ja implementado no Dashboard de Gestao. Os botoes aparecerao tanto no dashboard de visuais customizaveis quanto no dashboard especial de WhatsApp/Conversas.
 
-Criar uma nova Edge Function que o n8n chamara logo apos o node "Cria Negocio", usando os dados retornados (deal.id, lead_id) para criar a tarefa "Primeiro Contato Realizado" atribuida ao Jonathan Marcato.
+## Como vai funcionar
 
-## Nova Edge Function
+- Um botao "Modo Foco" aparecera no header de cada dashboard de Insights, ao lado do botao "Adicionar Visual"
+- Ao clicar, um overlay de tela cheia (portal z-9999) exibe todos os visuais com tipografia ampliada, ideal para TVs/Chromecast
+- Dentro do modo foco, um botao de "Tela Cheia" ativa a Fullscreen API nativa do navegador
+- Fechar com ESC ou botao X
 
-**Arquivo:** `supabase/functions/create-task/index.ts`
+## Arquivos alterados
 
-A funcao recebera um POST com os seguintes campos:
-- `deal_id` (obrigatorio) - vindo do output do node anterior (`{{ $json.deal.id }}`)
-- `lead_id` (opcional) - vindo do output (`{{ $json.deal.lead_id }}`)
-- `title` - titulo da tarefa (ex: "Primeiro Contato Realizado")
-- `activity_type_id` - ID do tipo de atividade
-- `assigned_to` - ID do usuario responsavel
-- `priority` - prioridade (default: "medium")
-- `due_date` / `due_time` - agendamento (default: data/hora atual)
+### 1. `src/components/insights/InsightsMainContent.tsx`
+- Adicionar estados `isFocusMode`, `isFullscreen` e ref `focusModeRef`
+- Adicionar listeners de ESC e fullscreen change
+- Adicionar funcao `toggleFullscreen`
+- Inserir botao "Modo Foco" ao lado do botao "Adicionar Visual" no header
+- Renderizar overlay de modo foco via `createPortal` com:
+  - Header com titulo do dashboard ativo, botao fullscreen e botao fechar (X)
+  - Barra de filtros (InsightsFilterBar)
+  - Grid de visuais (InsightsGrid) sem funcionalidade de drag/resize
+- Imports adicionais: `useRef, useEffect` do React, `createPortal` do react-dom, `Maximize2, Minimize2, X` do lucide-react
 
-Usara a mesma autenticacao por API Key ja existente (`_shared/api-key-auth.ts`).
-
-## Configuracao do node no n8n
-
-O node "Cria Tarefa" devera ser configurado assim:
-
-- **Method:** POST
-- **URL:** `https://mtzoavnbtqflufyccern.supabase.co/functions/v1/create-task`
-- **Authentication:** Header com `x-api-key` (mesma chave usada no create-deal)
-- **Body (JSON):**
-
-```text
-{
-  "deal_id": "{{ $json.deal.id }}",
-  "lead_id": "{{ $json.deal.lead_id }}",
-  "title": "Primeiro Contato Realizado",
-  "activity_type_id": "ce57b13b-a359-46e5-b2b5-5160b2cd7dc1",
-  "assigned_to": "1232ec15-5f66-4b5f-9e74-f40d436f9d0f",
-  "priority": "medium"
-}
-```
-
-O `due_date` e `due_time` serao preenchidos automaticamente com a data/hora atual se nao forem enviados.
+### 2. `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`
+- Mesma logica de modo foco: estados, listeners, toggleFullscreen
+- Botao "Modo Foco" no header ao lado do titulo
+- Overlay com todo o conteudo do dashboard WhatsApp (Pipeline, Funil, Conversao, etc.) em layout ampliado
+- Imports: `useState, useRef, useEffect` do React, `createPortal` do react-dom, `Maximize2, Minimize2, X` do lucide-react, `Button` do ui
 
 ## Detalhes tecnicos
 
-A funcao:
-1. Valida autenticacao via API Key
-2. Valida campo obrigatorio `deal_id`
-3. Insere na tabela `internal_tasks` com os campos: account_id, deal_id, lead_id, title, activity_type_id, assigned_to, created_by (mesmo que assigned_to), priority, status ("pending"), due_date, due_time
-4. Retorna o ID da tarefa criada
-5. Erros sao tratados sem bloquear o fluxo
+O padrao de implementacao segue exatamente o existente em `src/pages/Dashboard.tsx`:
 
-Tambem sera necessario adicionar a configuracao `verify_jwt = false` no `supabase/config.toml` para a nova funcao.
+```text
+// Estados
+const [isFocusMode, setIsFocusMode] = useState(false);
+const [isFullscreen, setIsFullscreen] = useState(false);
+const focusModeRef = useRef<HTMLDivElement>(null);
 
+// Listener ESC
+useEffect(() => {
+  const handleEsc = (e: KeyboardEvent) => {
+    if (e.key === 'Escape' && isFocusMode) setIsFocusMode(false);
+  };
+  document.addEventListener('keydown', handleEsc);
+  return () => document.removeEventListener('keydown', handleEsc);
+}, [isFocusMode]);
+
+// Listener fullscreen change
+useEffect(() => {
+  const handler = () => setIsFullscreen(!!document.fullscreenElement);
+  document.addEventListener('fullscreenchange', handler);
+  return () => document.removeEventListener('fullscreenchange', handler);
+}, []);
+
+// Toggle fullscreen
+const toggleFullscreen = async () => {
+  if (!document.fullscreenElement && focusModeRef.current) {
+    await focusModeRef.current.requestFullscreen();
+  } else if (document.exitFullscreen) {
+    await document.exitFullscreen();
+  }
+};
+
+// Overlay via createPortal
+{isFocusMode && createPortal(
+  <div ref={focusModeRef} className="fixed inset-0 z-[9999] bg-background overflow-auto">
+    ...conteudo ampliado...
+  </div>,
+  document.body
+)}
+```
+
+No overlay do InsightsMainContent, os visuais serao renderizados usando o mesmo componente `ConfigurableVisualCard` em um grid CSS simples (sem drag), para exibicao limpa em modo apresentacao.
