@@ -1,43 +1,53 @@
 
-# Adicionar responsavel fixo (Jonathan Marcato) ao create-deal
+# Corrigir campos personalizados: converter labels para values
 
-## O que sera feito
+## Problema identificado
 
-Adicionar o parametro `responsible_user_id` na Edge Function `create-deal` para que o negocio seja criado ja com um responsavel atribuido. No JSON do n8n, esse campo sera preenchido com o ID fixo do Jonathan Marcato.
+Os campos do tipo `select` e `multi_select` armazenam um **value interno** (ex: `trafego_pago`), mas o n8n esta enviando o **label legivel** (ex: `Trafego Pago`). Por isso os campos aparecem vazios ou nao reconhecidos no sistema.
 
-## Dados identificados
+**Exemplos do problema:**
 
-- **Jonathan Marcato**: `1232ec15-5f66-4b5f-9e74-f40d436f9d0f`
-- A tabela `deals` ja possui a coluna `responsible_user_id`
+| Campo | Enviado pelo n8n | Value esperado |
+|---|---|---|
+| Canal de Venda | `Trafego Pago` | `trafego_pago` |
+| MQL | `NAO-Abaixo de 30k` | `nao_abaixo_30k` |
+| Faturamento | `Abaixo de 20 mil reais` | `abaixo_20k` |
+| Origem da Venda | `[TRAF-IMP-EC]` | `opt_1767723846709` |
 
-## Alteracoes no codigo
+## Solucao
+
+Atualizar a Edge Function `create-deal` para:
+
+1. **Buscar os campos personalizados** do banco (`custom_fields`) com suas opcoes
+2. **Para cada campo select/multi_select**, fazer match do texto enviado contra o `label` das opcoes e converter para o `value` correto
+3. Se nao encontrar match exato, tentar match case-insensitive e parcial
+4. Se ainda nao encontrar, salvar o texto original como fallback
+
+## Alteracao tecnica
 
 **Arquivo:** `supabase/functions/create-deal/index.ts`
 
-1. Adicionar `responsible_user_id?: string` na interface `CreateDealPayload`
-2. Incluir `responsible_user_id: payload.responsible_user_id || null` no insert do deal (junto dos outros campos ja existentes)
+Antes do bloco de insercao dos campos personalizados, adicionar uma consulta ao banco para buscar as opcoes dos campos select/multi_select envolvidos. Depois, no `.map()` que monta os inserts, converter o valor enviado para o `value` interno correto usando uma funcao auxiliar de matching.
 
-## JSON atualizado para o n8n
+### Funcao auxiliar de matching
 
 ```text
-{
-  "title": "{{ $json.finalDealTitle }} {{ $json.leadName }}",
-  "lead_id": "{{ $json.finalPersonId }}",
-  "contact_name": "{{ $json.leadName }}",
-  "contact_phone": "{{ $json.LeadPhone }}",
-  "contact_email": "{{ $json.leadEmail }}",
-  "source": "{{ $json.CanalDeVenda }}",
-  "tags": {{ JSON.stringify([$json.FormTitle, $json.MQL].filter(Boolean)) }},
-  "notes": {{ JSON.stringify("Item da Venda: " + ($json.ItemDaVenda || "").trim() + "\nMaior Dificuldade: " + $json.MaiorDificuldade) }},
-  "product_id": "{{ ($json.ItemDaVenda || '').trim() }}",
-  "canal_de_venda": "{{ $json.CanalDeVenda }}",
-  "mql": "{{ $json.MQL }}",
-  "faturamento": "{{ $json.FaturamentoTexto }}",
-  "origem_da_venda": "{{ $json.OrigemDaVenda }}",
-  "instagram": "{{ $json.LeadInstagram }}",
-  "data_primeiro_contato": "{{ $json.DataPrimeiroContato }}",
-  "responsible_user_id": "1232ec15-5f66-4b5f-9e74-f40d436f9d0f"
-}
+function matchOptionValue(options, inputText):
+  1. Tentar match exato por label (case-insensitive)
+  2. Tentar match exato por value
+  3. Tentar match parcial (label contem input ou input contem label)
+  4. Se nada, retornar o texto original
 ```
 
-O `responsible_user_id` sera fixo no JSON, garantindo que todo negocio criado por esse fluxo seja automaticamente atribuido ao Jonathan Marcato.
+### Fluxo atualizado
+
+```text
+1. Buscar custom_fields com IDs dos campos select/multi_select
+2. Para cada campo no payload:
+   - Se e select: converter label -> value usando opcoes
+   - Se e multi_select: converter cada item do array label -> value
+   - Se e text/date: manter comportamento atual
+3. Inserir em batch como ja e feito
+```
+
+Isso garantira que os valores cheguem corretamente ao banco sem precisar alterar nada no JSON do n8n.
