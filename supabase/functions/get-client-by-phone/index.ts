@@ -22,7 +22,15 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const phone = url.searchParams.get("phone_e164");
+    let phone = url.searchParams.get("phone_e164");
+
+    // Normalizar: URL decode transforma + em espaço
+    if (phone) {
+      phone = phone.trim();
+      if (!phone.startsWith("+")) {
+        phone = "+" + phone;
+      }
+    }
 
     if (!phone) {
       return new Response(
