@@ -249,7 +249,6 @@ serve(async (req) => {
         if (results && results.length > 0) {
           integration = results[0];
           break;
-          break;
         }
       }
     }
@@ -336,7 +335,6 @@ serve(async (req) => {
       
       if (dept) {
         sectorDepartmentId = dept.id;
-      }
       }
     }
 
@@ -573,9 +571,7 @@ serve(async (req) => {
                                 msgAnyEdit.messageType === "EditedMessage" ||
                                 (typeof msgAnyEdit.type === "string" && msgAnyEdit.type.toLowerCase().includes("edited"));
         
-        if (isEditedMessage) {
-          
-        }
+        // isEditedMessage flag used later for upsert logic
 
         // ============================================
         // EXTRACT QUOTED MESSAGE DATA (for replies)
@@ -960,7 +956,7 @@ serve(async (req) => {
             .update(updateData)
             .eq("id", zappConversationId);
           
-          markLatency("conversation_updated");
+          
         } else {
         // Find client if exists (to link) - only for direct messages
           // Search by primary phone OR additional_phones
@@ -1385,7 +1381,7 @@ serve(async (req) => {
               if (zappMsgError) {
                 console.error("Error saving zapp_message:", zappMsgError);
               } else {
-                markLatency("message_saved");
+                
                 console.log(`Zapp message saved! Media: ${mediaType || 'none'}, LazyDownload: ${encryptedMediaUrl ? 'pending' : 'no'}`);
               }
             }
@@ -1445,7 +1441,7 @@ serve(async (req) => {
                 ...(sectorDepartmentId && !existingAssignment.department_id ? { department_id: sectorDepartmentId } : {}),
               })
               .eq("id", existingAssignment.id);
-            markLatency("assignment_updated");
+            
             console.log(`Updated zapp assignment - direction: ${direction}, newStatus: ${newStatus}`);
           } else {
             const { error: assignmentError } = await supabase
@@ -1620,18 +1616,12 @@ serve(async (req) => {
           console.log(`Outbound message saved to Zapp`);
         }
         
-        // Log final latency summary
-        markLatency("processing_complete");
-        console.log(`[LATENCY SUMMARY] Total processing: ${Date.now() - startTime}ms`);
-        console.log(`[LATENCY DETAILS]`, JSON.stringify(latencyMarks));
 
         return new Response(
           JSON.stringify({ 
             success: true, 
             zapp_conversation_id: zappConversationId, 
             phone,
-            latency_ms: Date.now() - startTime,
-            latency_breakdown: latencyMarks
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
