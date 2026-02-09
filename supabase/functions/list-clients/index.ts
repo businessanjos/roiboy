@@ -365,8 +365,37 @@ Deno.serve(async (req) => {
       };
     }) || [];
 
+    // Apply relevance-based sorting when search is active
+    let sortedClients = enrichedClients;
+    if (search && search.trim().length > 0) {
+      const searchLower = search.trim().toLowerCase();
+      const searchTerms = searchLower.split(/\s+/).filter((s: string) => s.length > 0);
+
+      sortedClients = enrichedClients.map((client) => {
+        const nameLower = (client.full_name || "").toLowerCase();
+        let score = 0;
+
+        // +100 points: exact phrase match
+        if (searchTerms.length > 1 && nameLower.includes(searchLower)) {
+          score += 100;
+        }
+
+        // +10 points per matching term
+        for (const term of searchTerms) {
+          if (nameLower.includes(term)) {
+            score += 10;
+          }
+        }
+
+        return { ...client, _relevance: score };
+      }).sort((a, b) => {
+        if (b._relevance !== a._relevance) return b._relevance - a._relevance;
+        return (a.full_name || "").localeCompare(b.full_name || "");
+      }).map(({ _relevance, ...client }) => client);
+    }
+
     // Apply server-side V-NPS filter
-    let filteredClients = enrichedClients;
+    let filteredClients = sortedClients;
     if (vnpsClass && vnpsClass !== "all") {
       if (vnpsClass === "none") {
         filteredClients = filteredClients.filter((c) => !c.vnps);
