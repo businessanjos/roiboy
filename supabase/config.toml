@@ -158,3 +158,6 @@ verify_jwt = false
 
 [functions.get-lead-tasks]
 verify_jwt = false
+
+[functions.get-lead-won-deals]
+verify_jwt = false
