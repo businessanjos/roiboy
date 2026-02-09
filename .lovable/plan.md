@@ -1,81 +1,105 @@
 
-# Criar Edge Function get-lead-won-deals
+
+# Criar Edge Function create-lead para cadastrar novos Leads
 
 ## Objetivo
-Criar uma nova Edge Function que receba o `lead_id` e retorne todos os negocios com status "won" vinculados a esse lead.
+Criar uma nova Edge Function que receba os dados do formulario (vindos do node "Edit Fields" no n8n) e cadastre um novo lead na tabela `leads` do ROY.
 
-## Estrutura do Banco
-A tabela `deals` possui a coluna `lead_id` (UUID) que vincula negocios a leads, e a coluna `status` que indica o estado (won/lost/open).
+## Mapeamento de Campos
+
+Os campos do node "Edit Fields" serao mapeados para a tabela `leads` da seguinte forma:
+
+| Campo n8n (Edit Fields) | Coluna leads | Tipo |
+|---|---|---|
+| leadName | full_name | text (obrigatorio) |
+| leadPhoneNumber | phone | text |
+| leadEmail | email | text |
+| leadInstagram | instagram | text |
+| CanalDeVenda | source | text |
+| FaturamentoTexto | revenue_range | text |
+| FormTitle | tags (como tag) | jsonb |
+| OrigemDaVenda | tags (como tag) | jsonb |
+| ItemDaVenda | notes (ou campo custom) | text |
+| MQL | tags (como tag) | jsonb |
+| MaiorDificuldade | notes | text |
+| DataPrimeiroContato | created_at (override) | timestamp |
 
 ## Nova Edge Function
 
-**Arquivo:** `supabase/functions/get-lead-won-deals/index.ts`
+**Arquivo:** `supabase/functions/create-lead/index.ts`
 
 ### Endpoint
-- **Method:** GET
-- **URL:** `https://mtzoavtbtqflufyccern.supabase.co/functions/v1/get-lead-won-deals?lead_id={LEAD_ID}`
-- **Autenticacao:** mesma logica de API Key/JWT (reutiliza `_shared/api-key-auth.ts`)
+- **Method:** POST
+- **URL:** `.../functions/v1/create-lead`
+- **Autenticacao:** mesma logica de API Key (reutiliza `_shared/api-key-auth.ts`)
 
-### Parametro
-- `lead_id` (obrigatorio) - UUID do lead
-
-### Query no banco
-```sql
-SELECT id, title, value, currency, status, won_at, source, contact_name, 
-       contact_phone, responsible_user_id, created_at, tags
-FROM deals
-WHERE lead_id = :lead_id 
-  AND account_id = :account_id 
-  AND status = 'won'
-ORDER BY won_at DESC
-```
-- Faz join com `users` para trazer o nome do responsavel
-
-### Resposta
-
-Negocios ganhos encontrados:
+### Payload esperado (JSON body)
 ```json
 {
-  "found": true,
-  "count": 1,
-  "deals": [
-    {
-      "id": "uuid",
-      "title": "Mentoria Premium",
-      "value": 5000,
-      "currency": "BRL",
-      "status": "won",
-      "won_at": "2026-01-15T10:00:00Z",
-      "source": "indicacao",
-      "contact_name": "Tatiane Ferreira",
-      "contact_phone": "+5561998662638",
-      "responsible_user_name": "Joao Ferrari",
-      "created_at": "...",
-      "tags": []
-    }
-  ]
+  "full_name": "Flavia Bianchi",
+  "phone": "+5511988214221",
+  "email": "flaviabianchinni@icloud.com",
+  "instagram": "@mdcclinnic",
+  "source": "Trafego Pago",
+  "revenue_range": "Abaixo de 20 mil reais",
+  "tags": ["TRAF-IMP-EC", "NÃO - Abaixo de 30k"],
+  "notes": "Item da Venda: Rykas Pass"
 }
 ```
 
-Nenhum negocio ganho:
+### Logica
+1. Autentica via API Key
+2. Valida campo obrigatorio (`full_name`)
+3. Verifica duplicata por telefone (se fornecido) na tabela `leads` do mesmo account
+4. Insere na tabela `leads` com `status = 'new'`
+5. Retorna o lead criado
+
+### Resposta de sucesso (201)
 ```json
 {
-  "found": false,
-  "count": 0,
-  "deals": []
+  "success": true,
+  "lead": {
+    "id": "uuid",
+    "full_name": "Flavia Bianchi",
+    "phone": "+5511988214221",
+    "status": "new"
+  }
 }
 ```
 
-## Mudancas
+### Resposta de duplicata (409)
+```json
+{
+  "error": "Lead already exists",
+  "existing_lead": {
+    "id": "uuid",
+    "full_name": "Flavia Bianchi"
+  }
+}
+```
 
-1. **Criar** `supabase/functions/get-lead-won-deals/index.ts` - Edge Function completa com autenticacao, validacao de UUID e query
-2. **Atualizar** `supabase/config.toml` - Adicionar `[functions.get-lead-won-deals]` com `verify_jwt = false`
+## Mudancas Tecnicas
+
+1. **Criar** `supabase/functions/create-lead/index.ts` - Edge Function completa
+2. **Atualizar** `supabase/config.toml` - Adicionar `[functions.create-lead]` com `verify_jwt = false`
 
 ## Como usar no n8n
 
-No node "Search Won Deals" (HTTP Request):
-- **Method:** GET
-- **URL:** `https://mtzoavtbtqflufyccern.supabase.co/functions/v1/get-lead-won-deals?lead_id={{ $json.lead.id }}`
+No node HTTP Request para cadastrar lead:
+- **Method:** POST
+- **URL:** `https://mtzoavtbtqflufyccern.supabase.co/functions/v1/create-lead`
 - **Headers:** `Authorization: Bearer roy_sk_...`
+- **Body (JSON):**
+```json
+{
+  "full_name": "{{ $json.leadName }}",
+  "phone": "{{ $json.leadPhoneNumber }}",
+  "email": "{{ $json.leadEmail }}",
+  "instagram": "{{ $json.leadInstagram }}",
+  "source": "{{ $json.CanalDeVenda }}",
+  "revenue_range": "{{ $json.FaturamentoTexto }}",
+  "tags": ["{{ $json.FormTitle }}", "{{ $json.MQL }}"],
+  "notes": "Item da Venda: {{ $json.ItemDaVenda }}\nMaior Dificuldade: {{ $json.MaiorDificuldade }}"
+}
+```
 
-Substitui a URL atual do Pipedrive pela nossa Edge Function, buscando diretamente no banco de dados do ROY.
