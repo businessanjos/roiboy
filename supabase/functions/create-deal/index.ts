@@ -30,6 +30,7 @@ interface CreateDealPayload {
   instagram?: string;
   observacoes?: string;
   data_primeiro_contato?: string;
+  responsible_user_id?: string;
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -106,6 +107,7 @@ serve(async (req) => {
         stage_id: firstStage?.id || null,
         value: payload.value || 0,
         status: "open",
+        responsible_user_id: payload.responsible_user_id || null,
       })
       .select("id, title, lead_id, status, stage_id")
       .single();
