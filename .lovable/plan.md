@@ -1,99 +1,50 @@
 
 
-# Criar Edge Function create-deal para cadastrar negocios via n8n
+# Registrar reunião Zoom no Google Calendar automaticamente
 
-## Objetivo
-Criar uma nova Edge Function que receba os dados do formulario (vindos do "Edit Fields5" no n8n) e cadastre um novo negocio (Deal) vinculado ao Lead recem-criado.
+## Problema
+Quando um usuário agenda uma reunião via Zoom, ela é criada corretamente no Zoom, mas não aparece no Google Agenda dele. Isso acontece porque o fluxo atual só chama `createZoomMeeting` (API do Zoom) sem criar um evento correspondente no Google Calendar.
 
-## Mapeamento de Campos
+Quando a plataforma é "google", o evento já é criado via Google Calendar API (e o Meet link vem de lá), então aparece automaticamente na agenda.
 
-Com base nos dados visiveis no "Edit Fields5":
+## Solução
 
-| Campo n8n (Edit Fields5) | Coluna deals | Observacao |
-|---|---|---|
-| finalDealTitle | title | Ex: "[TRAF-IMP-EC]" |
-| finalPersonId | lead_id | UUID do lead criado no node anterior |
-| leadName | contact_name | Nome do contato |
-| leadPhoneNumber | contact_phone | Telefone |
-| leadEmail | contact_email | Email |
-| CanalDeVenda | source | Ex: "Trafego Pago" |
-| ItemDaVenda | notes / product_id | Salvo em deal_field_values como "Item da Venda" |
-| MaiorDificuldade | notes | Concatenado nas notas |
-| FormTitle | tags | Como tag |
-| MQL | tags | Como tag |
+Após criar a reunião no Zoom com sucesso, criar também um evento no Google Calendar do usuário contendo:
+- Título da reunião
+- Data/hora de início e fim
+- Link do Zoom como local e na descrição do evento
+- Email do participante como convidado (se fornecido)
 
-## Nova Edge Function
+Se o usuário não tiver o Google conectado, o fluxo continua normalmente sem erro.
 
-**Arquivo:** `supabase/functions/create-deal/index.ts`
+## Detalhes Técnicos
 
-### Endpoint
-- **Method:** POST
-- **URL:** `.../functions/v1/create-deal`
-- **Autenticacao:** API Key (reutiliza `_shared/api-key-auth.ts`)
+**Arquivo modificado:** `supabase/functions/create-meeting/index.ts`
 
-### Payload esperado
-```json
-{
-  "title": "[TRAF-IMP-EC]",
-  "lead_id": "07f1fd24-e260-4482-bcac-7999166a10d6",
-  "contact_name": "Flavia Bianchi",
-  "contact_phone": "+5511991689572",
-  "contact_email": "flaviabianchinni@icloud.com",
-  "source": "Trafego Pago",
-  "tags": ["TRAF-IMP-EC", "NÃO - Abaixo de 30k"],
-  "notes": "Item da Venda: Rykas Pass\nMaior Dificuldade: null",
-  "product_id": "Rykas Pass"
-}
+### O que muda
+
+No bloco onde `platform === "zoom"`, após a criação bem-sucedida da reunião no Zoom, será adicionada uma nova etapa:
+
+1. Buscar o token Google OAuth do usuário na tabela `user_integrations` (mesma lógica que `createGoogleMeetMeeting` já usa)
+2. Se necessário, fazer refresh do token (reutilizando `refreshGoogleToken` que já existe)
+3. Se o usuário tiver Google conectado, criar evento no Calendar com:
+   - `summary`: título da reunião
+   - `start/end`: horários da reunião
+   - `location`: link do Zoom
+   - `description`: "Reunião via Zoom" com o link
+   - `attendees`: email do participante (se fornecido)
+4. Se o usuário NÃO tiver Google conectado, apenas logar um aviso e continuar normalmente
+
+### Fluxo atualizado
+
+```text
+Zoom selecionado:
+  1. Cria reunião no Zoom (API Zoom) --> obtém link
+  2. Tenta criar evento no Google Calendar com o link do Zoom
+     - Google conectado: cria evento na agenda
+     - Google não conectado: loga aviso, segue normalmente
+  3. Atualiza task, registra histórico, envia email (fluxo existente)
 ```
 
-### Logica
-1. Autentica via API Key
-2. Valida campo obrigatorio (`title`)
-3. Valida UUID do `lead_id` (se fornecido)
-4. Busca o primeiro stage (menor `display_order`) para atribuir automaticamente
-5. Insere na tabela `deals` com `status = 'open'`
-6. Se `product_id` fornecido, faz fuzzy match na tabela `products` e salva em `deal_field_values` (campo "Item da Venda")
-7. Registra atividade em `deal_activities`
-8. Retorna o deal criado
-
-### Resposta de sucesso (201)
-```json
-{
-  "success": true,
-  "deal": {
-    "id": "uuid",
-    "title": "[TRAF-IMP-EC]",
-    "lead_id": "uuid",
-    "status": "open",
-    "stage_id": "uuid"
-  }
-}
-```
-
-## Mudancas Tecnicas
-
-1. **Criar** `supabase/functions/create-deal/index.ts` - Edge Function completa com autenticacao, fuzzy match de produto e auto-assign de stage
-2. **Atualizar** `supabase/config.toml` - Adicionar `[functions.create-deal]` com `verify_jwt = false`
-
-## Como usar no n8n
-
-No node "Cria Negocio" (HTTP Request):
-- **Method:** POST
-- **URL:** `https://mtzoavtbtqflufyccern.supabase.co/functions/v1/create-deal`
-- **Send Headers:** ON, com `Authorization: Bearer roy_sk_...`
-- **Send Body:** ON, tipo JSON:
-
-```json
-{
-  "title": "{{ $json.finalDealTitle }}",
-  "lead_id": "{{ $json.finalPersonId }}",
-  "contact_name": "{{ $json.leadName }}",
-  "contact_phone": "{{ $json.leadPhoneNumber }}",
-  "contact_email": "{{ $json.leadEmail }}",
-  "source": "{{ $json.CanalDeVenda }}",
-  "tags": ["{{ $json.FormTitle }}", "{{ $json.MQL }}"],
-  "notes": "Item da Venda: {{ $json.ItemDaVenda }}\nMaior Dificuldade: {{ $json.MaiorDificuldade }}",
-  "product_id": "{{ $json.ItemDaVenda }}"
-}
-```
+Nenhuma tabela, migração ou configuração nova será necessária. Apenas uma alteração na Edge Function existente.
 
