@@ -1,5 +1,6 @@
-import { useState, useCallback, useMemo } from "react";
-import { BarChart3, Plus } from "lucide-react";
+import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { BarChart3, Plus, Monitor, Maximize2, Minimize2, X } from "lucide-react";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { InsightsFilterBar } from "./InsightsFilterBar";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AddVisualModal } from "./AddVisualModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
+import { ConfigurableVisualCard } from "./visuals/ConfigurableVisualCard";
+
 export function InsightsMainContent() {
   const { 
     activeDashboard, 
@@ -21,6 +24,33 @@ export function InsightsMainContent() {
   } = useInsightsDashboards();
 
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const focusModeRef = useRef<HTMLDivElement>(null);
+
+  // ESC listener
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isFocusMode) setIsFocusMode(false);
+    };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
+  }, [isFocusMode]);
+
+  // Fullscreen change listener
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    if (!document.fullscreenElement && focusModeRef.current) {
+      await focusModeRef.current.requestFullscreen();
+    } else if (document.exitFullscreen) {
+      await document.exitFullscreen();
+    }
+  };
 
   const handleLayoutChange = useCallback(
     async (layouts: Array<{ id: string; layout: any }>) => {
@@ -31,7 +61,7 @@ export function InsightsMainContent() {
     [updateVisual]
   );
 
-  // Check if this is a WhatsApp/Conversas dashboard - MUST be before any conditional returns
+  // Check if this is a WhatsApp/Conversas dashboard
   const isWhatsAppDashboard = useMemo(() => {
     const name = activeDashboard?.name?.toLowerCase() || '';
     return name.includes('conversas') || name.includes('whatsapp');
@@ -95,8 +125,56 @@ export function InsightsMainContent() {
     return <WhatsAppDashboardPanel />;
   }
 
+  // Focus mode overlay
+  const focusModeOverlay = isFocusMode
+    ? createPortal(
+        <div
+          ref={focusModeRef}
+          className="fixed inset-0 z-[9999] bg-background overflow-auto"
+        >
+          <div className="p-6 space-y-6">
+            {/* Focus Mode Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-6 w-6 text-primary" />
+                <h1 className="text-3xl font-bold">{activeDashboard.name}</h1>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="icon" onClick={toggleFullscreen}>
+                  {isFullscreen ? (
+                    <Minimize2 className="h-4 w-4" />
+                  ) : (
+                    <Maximize2 className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button variant="outline" size="icon" onClick={() => setIsFocusMode(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Filters */}
+            <InsightsFilterBar />
+
+            {/* Visuals in simple grid (no drag) */}
+            {hasVisuals && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {visuals.map((visual) => (
+                  <div key={visual.id} className="min-h-[400px]">
+                    <ConfigurableVisualCard visual={visual} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>,
+        document.body
+      )
+    : null;
+
   return (
     <div className="flex-1 overflow-auto">
+      {focusModeOverlay}
       <AddVisualModal open={isBuilderOpen} onOpenChange={setIsBuilderOpen} />
       <div className="p-4 md:p-6 space-y-6">
         {/* Header */}
@@ -105,12 +183,18 @@ export function InsightsMainContent() {
             <BarChart3 className="h-5 w-5 text-primary" />
             <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
           </div>
-          {hasVisuals && (
-            <Button onClick={() => setIsBuilderOpen(true)} disabled={isLoadingVisuals}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar Visual
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
+              <Monitor className="h-4 w-4 mr-2" />
+              Modo Foco
             </Button>
-          )}
+            {hasVisuals && (
+              <Button onClick={() => setIsBuilderOpen(true)} disabled={isLoadingVisuals}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Visual
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Filters */}
