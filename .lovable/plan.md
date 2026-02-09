@@ -1,40 +1,54 @@
 
+## Corrigir Exibicao de Nome de Arquivo no ROY zAPP
 
-# Adicionar Modo Foco e Tela Cheia nos Insights de Vendas
+### Problema Identificado
 
-## O que sera feito
+Ao enviar um documento pelo ROY zAPP, o arquivo eh armazenado no storage com um nome baseado em timestamp (ex: `1770666965443.xlsx`). Quando o WhatsApp ecoa a mensagem de volta via webhook, ele retorna esse nome numerico como `fileName` do documento. Se a deduplicacao falhar (nao encontrar o registro original do frontend), o webhook cria um NOVO registro na tabela `zapp_messages` com `media_filename = "1770666965443.xlsx"` em vez do nome original do arquivo.
 
-Os botoes "Modo Foco" e "Tela Cheia" serao adicionados nas abas de visuais do Insights (setor de Vendas), seguindo o mesmo padrao ja implementado no Dashboard de Gestao e nos dashboards de Marketing. Os botoes aparecerao tanto no dashboard de visuais customizaveis quanto no dashboard especial de WhatsApp/Conversas.
+**Evidencia do banco de dados:**
+- `media_filename: 1770666965443.xlsx` (ERRADO - nome do storage)
+- `media_filename: RM - Plano de acao - Jessica Quaquarini - 1 fase.pdf` (CORRETO - nome original)
 
-## Como vai funcionar
+### Solucao (2 pontos de correcao)
 
-- Um botao "Modo Foco" (icone de tela) aparecera no header ao lado do botao "Adicionar Visual"
-- Ao clicar, um overlay de tela cheia exibe todos os visuais com tipografia ampliada, ideal para TVs e Chromecast
-- Dentro do modo foco, um botao de "Tela Cheia" ativa a Fullscreen API nativa do navegador
-- Fechar com ESC ou botao X
+#### 1. Preservar nome original no upload ao storage
 
-## Arquivos alterados
+**Arquivo:** `src/pages/RoyZapp.tsx` (linha ~1990)
 
-### 1. `src/components/insights/InsightsMainContent.tsx`
-- Adicionar estados `isFocusMode`, `isFullscreen` e ref `focusModeRef`
-- Adicionar listeners de ESC e fullscreen change
-- Inserir botao "Modo Foco" ao lado do botao "Adicionar Visual" no header
-- Renderizar overlay de modo foco via `createPortal` com header, filtros e grid de visuais (sem drag)
+Atualmente:
+```typescript
+const fileName = `${currentUser!.account_id}/${Date.now()}.${fileExt}`;
+```
 
-### 2. `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`
-- Mesma logica: estados, listeners, toggleFullscreen
-- Botao "Modo Foco" no header ao lado do titulo
-- Overlay com todo o conteudo do dashboard WhatsApp (Pipeline, Funil, Conversao, Engajamento, etc.)
+Correcao - incluir o nome original sanitizado no path do storage:
+```typescript
+const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+const fileName = `${currentUser!.account_id}/${Date.now()}_${safeName}`;
+```
 
-## Detalhes tecnicos
+Isso faz com que o WhatsApp receba e retorne um nome reconhecivel (ex: `1770666965443_Relatorio.xlsx`) em vez de apenas numeros.
 
-O padrao de implementacao replica exatamente o existente em `src/pages/Dashboard.tsx`:
+#### 2. Proteger filename na deduplicacao do webhook
 
-- Portal com `z-[9999]` e `bg-background`
-- Header do overlay com titulo, botao fullscreen (Maximize2/Minimize2) e botao fechar (X)
-- Listener de ESC para fechar o modo foco
-- Listener de `fullscreenchange` para sincronizar estado
-- No InsightsMainContent, os visuais serao renderizados em um grid CSS simples (sem drag/resize) para exibicao limpa
-- No WhatsAppDashboardPanel, todo o conteudo (PipelineCards, SalesFunnelChart, ConversionScoreCards, etc.) sera duplicado dentro do overlay
+**Arquivo:** `supabase/functions/uazapi-webhook/index.ts` (linha ~1327-1342)
 
-Imports adicionais em ambos os arquivos: `useRef, useEffect` do React, `createPortal` do react-dom, `Maximize2, Minimize2, X` do lucide-react.
+Quando o webhook encontra um registro pendente (dedupe) para documentos, nao sobrescrever o `media_filename` existente. Se nao encontrar dedupe e inserir novo registro, dar preferencia ao nome original se disponivel.
+
+Adicionar na logica de dedupe para documentos: ao atualizar o registro existente, preservar o `media_filename` que ja foi salvo pelo frontend.
+
+Tambem, caso nao haja dedupe e o webhook insira um registro novo, derivar um nome melhor a partir da URL se `mediaFilename` for apenas numeros.
+
+### Detalhes Tecnicos
+
+**Alteracoes em `src/pages/RoyZapp.tsx`:**
+- Sanitizar `file.name` e concatenar com o timestamp no path de upload
+- Mesmo ajuste para o segundo bloco de envio de midia (~linha 2240 se existente)
+
+**Alteracoes em `supabase/functions/uazapi-webhook/index.ts`:**
+- No bloco de dedupe de documentos (linha 1327+), ao fazer update, nao incluir `media_filename` no `updateData` (ja esta correto, mas confirmar)
+- Na insercao de mensagem nova (linha 1369), adicionar fallback: se `mediaFilename` parece ser apenas numeros (regex `/^\d+\.\w+$/`), tentar extrair nome melhor da URL ou manter o conteudo existente
+
+### Impacto
+- Arquivos enviados passarao a exibir o nome original tanto para o remetente quanto para o destinatario
+- Nenhuma quebra de funcionalidade existente
+- Retrocompativel com mensagens ja salvas
