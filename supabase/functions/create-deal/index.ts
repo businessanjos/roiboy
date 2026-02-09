@@ -23,6 +23,13 @@ interface CreateDealPayload {
   notes?: string;
   product_id?: string; // fuzzy name match
   value?: number;
+  canal_de_venda?: string;
+  mql?: string;
+  faturamento?: string;
+  origem_da_venda?: string;
+  instagram?: string;
+  observacoes?: string;
+  data_primeiro_contato?: string;
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -154,6 +161,48 @@ serve(async (req) => {
         console.error("Error matching product:", err);
         // Non-blocking: deal is already created
       }
+    }
+
+    // Save custom field values in batch
+    try {
+      const fieldMappings: Array<{ param: string; fieldId: string; column: "value_text" | "value_json" | "value_date" }> = [
+        { param: "canal_de_venda", fieldId: "16ebda9f-cd3b-412c-bb06-0950001963c5", column: "value_text" },
+        { param: "mql", fieldId: "448404cd-0344-4892-a574-2387b1c17578", column: "value_text" },
+        { param: "faturamento", fieldId: "ed5c7c0e-0740-4945-b982-70a593ffae0c", column: "value_text" },
+        { param: "origem_da_venda", fieldId: "43d7d9a1-9370-45f3-803a-93717d2a6d1d", column: "value_json" },
+        { param: "instagram", fieldId: "47df969b-735e-414f-a25e-2a56e589551d", column: "value_json" },
+        { param: "observacoes", fieldId: "f906c26d-7dc7-43bb-902e-f3878e7535d2", column: "value_text" },
+        { param: "data_primeiro_contato", fieldId: "166fe351-b29b-4f08-b330-88f82c65f625", column: "value_date" },
+      ];
+
+      const fieldInserts = fieldMappings
+        .filter(({ param }) => {
+          const val = payload[param as keyof CreateDealPayload];
+          return val !== undefined && val !== null && String(val).trim() !== "";
+        })
+        .map(({ param, fieldId, column }) => {
+          const raw = payload[param as keyof CreateDealPayload] as string;
+          const row: Record<string, unknown> = {
+            account_id: accountId,
+            deal_id: newDeal.id,
+            field_id: fieldId,
+          };
+          if (column === "value_json") {
+            row.value_json = Array.isArray(raw) ? raw : [raw.trim()];
+          } else if (column === "value_date") {
+            row.value_date = raw.trim();
+          } else {
+            row.value_text = raw.trim();
+          }
+          return row;
+        });
+
+      if (fieldInserts.length > 0) {
+        const { error: fieldErr } = await supabase.from("deal_field_values").insert(fieldInserts);
+        if (fieldErr) console.error("Error inserting custom fields:", fieldErr);
+      }
+    } catch (err) {
+      console.error("Error saving custom fields:", err);
     }
 
     // Register activity
