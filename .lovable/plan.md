@@ -1,50 +1,54 @@
 
+# Adicionar campos personalizados ao create-deal e atualizar JSON do n8n
 
-# Registrar reunião Zoom no Google Calendar automaticamente
+## O que sera feito
 
-## Problema
-Quando um usuário agenda uma reunião via Zoom, ela é criada corretamente no Zoom, mas não aparece no Google Agenda dele. Isso acontece porque o fluxo atual só chama `createZoomMeeting` (API do Zoom) sem criar um evento correspondente no Google Calendar.
+Atualizar a Edge Function `create-deal` para aceitar 7 novos parametros e salva-los automaticamente nos campos personalizados correspondentes. Alem disso, fornecer o JSON completo atualizado para usar no n8n.
 
-Quando a plataforma é "google", o evento já é criado via Google Calendar API (e o Meet link vem de lá), então aparece automaticamente na agenda.
+## Novos parametros e mapeamento
 
-## Solução
+| Parametro | Campo | Field ID | Coluna |
+|---|---|---|---|
+| `canal_de_venda` | Canal de Venda | `16ebda9f-cd3b-412c-bb06-0950001963c5` | `value_text` |
+| `mql` | MQL | `448404cd-0344-4892-a574-2387b1c17578` | `value_text` |
+| `faturamento` | Faturamento Atual | `ed5c7c0e-0740-4945-b982-70a593ffae0c` | `value_text` |
+| `origem_da_venda` | Origem da Venda | `43d7d9a1-9370-45f3-803a-93717d2a6d1d` | `value_json` |
+| `instagram` | Instagram | `47df969b-735e-414f-a25e-2a56e589551d` | `value_json` |
+| `observacoes` | Observacoes do Cliente | `f906c26d-7dc7-43bb-902e-f3878e7535d2` | `value_text` |
+| `data_primeiro_contato` | Data do primeiro contato | `166fe351-b29b-4f08-b330-88f82c65f625` | `value_date` |
 
-Após criar a reunião no Zoom com sucesso, criar também um evento no Google Calendar do usuário contendo:
-- Título da reunião
-- Data/hora de início e fim
-- Link do Zoom como local e na descrição do evento
-- Email do participante como convidado (se fornecido)
+## Alteracoes no codigo
 
-Se o usuário não tiver o Google conectado, o fluxo continua normalmente sem erro.
+**Arquivo:** `supabase/functions/create-deal/index.ts`
 
-## Detalhes Técnicos
+1. Adicionar os 7 novos campos opcionais na interface `CreateDealPayload`
+2. Apos a criacao do deal (apos o bloco existente do `product_id`), montar um array de inserts para `deal_field_values` com todos os campos fornecidos
+3. Fazer um unico `insert` em batch na tabela `deal_field_values`
+4. Tratamento non-blocking (try/catch) para nao impedir a criacao do deal
 
-**Arquivo modificado:** `supabase/functions/create-meeting/index.ts`
+## JSON completo para o n8n
 
-### O que muda
-
-No bloco onde `platform === "zoom"`, após a criação bem-sucedida da reunião no Zoom, será adicionada uma nova etapa:
-
-1. Buscar o token Google OAuth do usuário na tabela `user_integrations` (mesma lógica que `createGoogleMeetMeeting` já usa)
-2. Se necessário, fazer refresh do token (reutilizando `refreshGoogleToken` que já existe)
-3. Se o usuário tiver Google conectado, criar evento no Calendar com:
-   - `summary`: título da reunião
-   - `start/end`: horários da reunião
-   - `location`: link do Zoom
-   - `description`: "Reunião via Zoom" com o link
-   - `attendees`: email do participante (se fornecido)
-4. Se o usuário NÃO tiver Google conectado, apenas logar um aviso e continuar normalmente
-
-### Fluxo atualizado
+Apos a implementacao, o JSON do HTTP Request no n8n ficara assim:
 
 ```text
-Zoom selecionado:
-  1. Cria reunião no Zoom (API Zoom) --> obtém link
-  2. Tenta criar evento no Google Calendar com o link do Zoom
-     - Google conectado: cria evento na agenda
-     - Google não conectado: loga aviso, segue normalmente
-  3. Atualiza task, registra histórico, envia email (fluxo existente)
+{
+  "title": "{{ $json.finalDealTitle }}",
+  "lead_id": "{{ $json.finalPersonId }}",
+  "contact_name": "{{ $json.leadName }}",
+  "contact_phone": "{{ $json.LeadPhone }}",
+  "contact_email": "{{ $json.leadEmail }}",
+  "source": "{{ $json.CanalDeVenda }}",
+  "tags": {{ JSON.stringify([$json.FormTitle, $json.MQL].filter(Boolean)) }},
+  "notes": {{ JSON.stringify("Item da Venda: " + ($json.ItemDaVenda || "").trim() + "\nMaior Dificuldade: " + $json.MaiorDificuldade) }},
+  "product_id": "{{ ($json.ItemDaVenda || '').trim() }}",
+  "canal_de_venda": "{{ $json.CanalDeVenda }}",
+  "mql": "{{ $json.MQL }}",
+  "faturamento": "{{ $json.FaturamentoAtual }}",
+  "origem_da_venda": "{{ $json.OrigemDaVenda }}",
+  "instagram": "{{ $json.Instagram }}",
+  "observacoes": "{{ $json.Observacoes }}",
+  "data_primeiro_contato": "{{ $json.DataPrimeiroContato }}"
+}
 ```
 
-Nenhuma tabela, migração ou configuração nova será necessária. Apenas uma alteração na Edge Function existente.
-
+Os nomes das variaveis n8n (`$json.CanalDeVenda`, `$json.FaturamentoAtual`, etc.) deverao ser ajustados conforme os nomes reais dos campos no seu workflow.
