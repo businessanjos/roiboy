@@ -132,10 +132,9 @@ Deno.serve(async (req) => {
           `full_name.ilike.%${searchTerms[0]}%,phone_e164.ilike.%${searchTerms[0]}%,company_name.ilike.%${searchTerms[0]}%`
         );
       } else {
-        const conditions = searchTerms.map(
-          (term: string) => `full_name.ilike.%${term}%`
-        );
-        query = query.or(conditions.join(","));
+        for (const term of searchTerms) {
+          query = query.ilike("full_name", `%${term}%`);
+        }
       }
     }
 
