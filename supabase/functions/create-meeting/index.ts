@@ -398,6 +398,78 @@ serve(async (req) => {
         supabase,
         internalUserId
       );
+
+      // After Zoom meeting created, try to register it in Google Calendar
+      try {
+        let googleAccessToken: string | null = null;
+        let googleRefreshToken: string | null = null;
+        let googleExpiresAt: number | null = null;
+
+        if (internalUserId) {
+          const { data: googleIntegration } = await supabase
+            .from("user_integrations")
+            .select("access_token, refresh_token, expires_at")
+            .eq("user_id", internalUserId)
+            .eq("provider", "google")
+            .maybeSingle();
+
+          if (googleIntegration?.access_token) {
+            googleAccessToken = googleIntegration.access_token;
+            googleRefreshToken = googleIntegration.refresh_token;
+            googleExpiresAt = googleIntegration.expires_at;
+          }
+        }
+
+        // Refresh token if needed
+        if (googleAccessToken && googleExpiresAt && googleRefreshToken) {
+          const now = Math.floor(Date.now() / 1000);
+          if (googleExpiresAt < now + 300) {
+            const newTokens = await refreshGoogleToken(googleRefreshToken);
+            if (newTokens) {
+              googleAccessToken = newTokens.access_token;
+              const newExpiresAt = Math.floor(Date.now() / 1000) + newTokens.expires_in;
+              if (internalUserId) {
+                await supabase
+                  .from("user_integrations")
+                  .update({ access_token: googleAccessToken, expires_at: newExpiresAt, updated_at: new Date().toISOString() })
+                  .eq("user_id", internalUserId)
+                  .eq("provider", "google");
+              }
+            }
+          }
+        }
+
+        if (googleAccessToken) {
+          const calResp = await fetch(
+            "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+            {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${googleAccessToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                summary: title,
+                location: meetingResult.meeting_url,
+                description: `Reunião via Zoom\nLink: ${meetingResult.meeting_url}${meetingResult.meeting_password ? `\nSenha: ${meetingResult.meeting_password}` : ""}`,
+                start: { dateTime: start_time, timeZone: "America/Sao_Paulo" },
+                end: { dateTime: end_time, timeZone: "America/Sao_Paulo" },
+                ...(participant_email && { attendees: [{ email: participant_email }] }),
+              }),
+            }
+          );
+
+          if (calResp.ok) {
+            console.log("Zoom meeting registered in Google Calendar successfully");
+          } else {
+            console.error("Failed to create Google Calendar event for Zoom meeting:", await calResp.text());
+          }
+        } else {
+          console.log("User has no Google integration connected, skipping Google Calendar sync");
+        }
+      } catch (gcalError) {
+        console.error("Error syncing Zoom meeting to Google Calendar (non-blocking):", gcalError);
+      }
     } else {
       meetingResult = await createGoogleMeetMeeting(
         start_time,
