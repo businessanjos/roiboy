@@ -1366,7 +1366,7 @@ serve(async (req) => {
                   media_url: permanentMediaUrl || null,
                   media_type: mediaType || null,
                   media_mimetype: mediaMimetype || null,
-                  media_filename: mediaFilename || null,
+                  media_filename: (mediaFilename && /^\d+\.\w+$/.test(mediaFilename)) ? null : (mediaFilename || null),
                   audio_duration_sec: audioDurationSec,
                   // Lazy download fields - for WhatsApp media that needs processing
                   media_encrypted_url: encryptedMediaUrl || (isInvalidMediaUrl ? mediaUrl : null),

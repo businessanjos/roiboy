@@ -1986,8 +1986,8 @@ export default function RoyZapp() {
     
     try {
       // Upload file to public bucket (UAZAPI needs to access the URL)
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${currentUser!.account_id}/${Date.now()}.${fileExt}`;
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const fileName = `${currentUser!.account_id}/${Date.now()}_${safeName}`;
       const bucket = "zapp-media";
       
       const { data: uploadData, error: uploadError } = await supabase.storage
