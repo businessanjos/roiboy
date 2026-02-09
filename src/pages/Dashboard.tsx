@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -45,6 +46,9 @@ import {
   DollarSign,
   Filter,
   Video,
+  Maximize2,
+  Minimize2,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth, subMonths, subDays, parseISO } from "date-fns";
@@ -156,6 +160,39 @@ export default function Dashboard() {
   const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("6");
   const [gestaoCustomDateRange, setGestaoCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [gestaoDatePickerOpen, setGestaoDatePickerOpen] = useState(false);
+
+  // Focus mode states
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const focusModeRef = useRef<HTMLDivElement>(null);
+
+  // ESC key listener for focus mode
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFocusMode) {
+        setIsFocusMode(false);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isFocusMode]);
+
+  // Fullscreen change listener
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const toggleFullscreen = async () => {
+    if (!document.fullscreenElement && focusModeRef.current) {
+      await focusModeRef.current.requestFullscreen();
+    } else if (document.exitFullscreen) {
+      await document.exitFullscreen();
+    }
+  };
 
   // Check onboarding status
   useEffect(() => {
@@ -491,6 +528,15 @@ export default function Dashboard() {
           <p className="text-sm sm:text-base text-muted-foreground">Visão geral do seu negócio</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsFocusMode(true)}
+            title="Modo Foco (ideal para TV)"
+          >
+            <Maximize2 className="h-4 w-4" />
+            <span className="hidden sm:inline ml-2">Modo Foco</span>
+          </Button>
           <Button variant="outline" size="sm" onClick={refetchAll} disabled={loading}>
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             <span className="hidden sm:inline ml-2">Atualizar</span>
@@ -1093,6 +1139,219 @@ export default function Dashboard() {
 
         </TabsContent>
       </Tabs>
+
+      {/* Focus Mode Overlay */}
+      {isFocusMode && createPortal(
+        <div ref={focusModeRef} className="fixed inset-0 z-[9999] bg-background overflow-auto">
+          <div className="min-h-full flex flex-col justify-center px-8 py-6 mx-auto max-w-[95vw]">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-3xl font-bold">Dashboard Operacional</h2>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={toggleFullscreen}
+                  title={isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia"}
+                >
+                  {isFullscreen ? (
+                    <Minimize2 className="h-5 w-5" />
+                  ) : (
+                    <Maximize2 className="h-5 w-5" />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsFocusMode(false)}
+                  className="hover:bg-muted"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Clientes por Produto */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              {products.map((product) => {
+                const clientCount = clients.filter(c => c.product_ids?.includes(product.id)).length;
+                return (
+                  <Card key={product.id}>
+                    <CardContent className="p-8">
+                      <div className="flex items-center gap-5">
+                        <div className="p-4 rounded-xl bg-primary/10">
+                          <Target className="h-8 w-8 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-base text-muted-foreground">{product.name}</p>
+                          <p className="text-4xl font-bold">{clientCount}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {/* Status Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6 mb-8">
+              <Card className="border-l-4 border-l-primary">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Total Clientes</p>
+                      <p className="text-4xl font-bold">{contractStats?.total_clients ?? gestaoClientStats.total}</p>
+                    </div>
+                    <Users className="h-8 w-8 text-primary" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-success">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Ativos</p>
+                      <p className="text-4xl font-bold text-success">{contractStats?.active ?? gestaoClientStats.active}</p>
+                    </div>
+                    <TrendingUp className="h-8 w-8 text-success" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-destructive">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Cancelamentos</p>
+                      <p className="text-4xl font-bold text-destructive">{contractStats?.cancelled ?? 0}</p>
+                    </div>
+                    <AlertTriangle className="h-8 w-8 text-destructive" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-warning">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Encerramentos</p>
+                      <p className="text-4xl font-bold text-warning">{contractStats?.ended ?? 0}</p>
+                    </div>
+                    <TrendingDown className="h-8 w-8 text-warning" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-amber-500">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Congelamentos</p>
+                      <p className="text-4xl font-bold text-amber-600">{(contractStats?.suspended ?? 0) + (contractStats?.paused ?? 0)}</p>
+                    </div>
+                    <Minus className="h-8 w-8 text-amber-500" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Evolução Mensal Chart */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <BarChart3 className="h-6 w-6 text-primary" />
+                  Evolução Mensal
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chartConfig} className="h-[350px] w-full">
+                  <BarChart data={monthlyChartData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }} barCategoryGap="20%">
+                    <defs>
+                      <linearGradient id="focusNovosGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(142 76% 46%)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(142 76% 36%)" stopOpacity={0.8} />
+                      </linearGradient>
+                      <linearGradient id="focusCancelamentosGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(0 84% 60%)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(0 84% 50%)" stopOpacity={0.8} />
+                      </linearGradient>
+                      <linearGradient id="focusEncerramentosGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(25 95% 53%)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(25 95% 43%)" stopOpacity={0.8} />
+                      </linearGradient>
+                      <linearGradient id="focusCongelamentosGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(38 92% 50%)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(38 92% 40%)" stopOpacity={0.8} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 14, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
+                    <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 14, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} />
+                    <ChartTooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }} />
+                    <Bar dataKey="novos" fill="url(#focusNovosGradient)" radius={[6, 6, 0, 0]} name="Novos" />
+                    <Bar dataKey="cancelamentos" fill="url(#focusCancelamentosGradient)" radius={[6, 6, 0, 0]} name="Cancelamentos" />
+                    <Bar dataKey="encerramentos" fill="url(#focusEncerramentosGradient)" radius={[6, 6, 0, 0]} name="Encerramentos" />
+                    <Bar dataKey="congelamentos" fill="url(#focusCongelamentosGradient)" radius={[6, 6, 0, 0]} name="Congelamentos" />
+                    <Legend wrapperStyle={{ paddingTop: 20 }} iconType="circle" iconSize={10} formatter={(value) => <span className="text-base text-muted-foreground ml-1">{value}</span>} />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            {/* Retention & Financial Loss */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <Card className={`border-l-4 ${retentionMetrics.rate >= 100 ? 'border-l-green-500' : retentionMetrics.rate >= 50 ? 'border-l-amber-500' : 'border-l-red-500'}`}>
+                <CardContent className="p-8">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-base font-medium text-muted-foreground">Taxa de Retenção</p>
+                      <div className="flex items-center gap-3">
+                        <p className={`text-4xl font-bold ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                          {retentionMetrics.rate}%
+                        </p>
+                        {retentionMetrics.trend === 'up' && <TrendingUp className="h-6 w-6 text-green-500" />}
+                        {retentionMetrics.trend === 'down' && <TrendingDown className="h-6 w-6 text-red-500" />}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        {retentionMetrics.novos} novos vs {retentionMetrics.saidas} saídas (mês atual)
+                      </p>
+                    </div>
+                    <div className={`h-14 w-14 rounded-full flex items-center justify-center ${retentionMetrics.rate >= 100 ? 'bg-green-100 dark:bg-green-900/30' : retentionMetrics.rate >= 50 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                      <Target className={`h-7 w-7 ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`} />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-red-500">
+                <CardContent className="p-8">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-base font-medium text-muted-foreground">Valor Perdido (Mês Atual)</p>
+                      <div className="flex items-center gap-3">
+                        <p className="text-4xl font-bold text-red-600">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.totalLost)}
+                        </p>
+                        {lostFinancialValue.trend === 'down' && <TrendingDown className="h-6 w-6 text-green-500" />}
+                        {lostFinancialValue.trend === 'up' && <TrendingUp className="h-6 w-6 text-red-500" />}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Cancelamentos: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.cancelamentosValue)} | 
+                        Demissões: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.demissoesValue)}
+                      </p>
+                    </div>
+                    <div className="h-14 w-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                      <DollarSign className="h-7 w-7 text-red-600" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }
