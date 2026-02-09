@@ -85,6 +85,67 @@ serve(async (req) => {
     }
 
     if (!client) {
+      // Buscar na tabela leads por phone principal
+      const { data: lead, error: leadError } = await supabase
+        .from("leads")
+        .select("id, full_name, phone, status, tags, email, instagram, source")
+        .eq("phone", phone)
+        .eq("account_id", auth.accountId)
+        .maybeSingle();
+
+      if (leadError) {
+        console.error("Lead search error:", leadError.code);
+      }
+
+      // Se não encontrou por phone principal, buscar em additional_phones
+      let foundLead = lead;
+      if (!foundLead) {
+        const { data: leadByAdditional } = await supabase
+          .from("leads")
+          .select("id, full_name, phone, status, tags, email, instagram, source")
+          .eq("account_id", auth.accountId)
+          .contains("additional_phones", JSON.stringify([{ number: phone }]));
+
+        if (leadByAdditional && leadByAdditional.length > 0) {
+          foundLead = leadByAdditional[0];
+        } else {
+          // Tentar formato legado (array de strings)
+          const { data: leadByLegacy } = await supabase
+            .from("leads")
+            .select("id, full_name, phone, status, tags, email, instagram, source")
+            .eq("account_id", auth.accountId)
+            .contains("additional_phones", JSON.stringify([phone]));
+
+          if (leadByLegacy && leadByLegacy.length > 0) {
+            foundLead = leadByLegacy[0];
+          }
+        }
+      }
+
+      if (foundLead) {
+        if (auth.method === "api_key" && auth.apiKeyId) {
+          await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
+        }
+        return new Response(
+          JSON.stringify({
+            found: true,
+            type: "lead",
+            lead: {
+              id: foundLead.id,
+              full_name: foundLead.full_name,
+              phone: foundLead.phone,
+              status: foundLead.status,
+              tags: foundLead.tags,
+              email: foundLead.email,
+              instagram: foundLead.instagram,
+              source: foundLead.source,
+            },
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Nenhum encontrado
       if (auth.method === "api_key" && auth.apiKeyId) {
         await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
       }
@@ -135,6 +196,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         found: true,
+        type: "client",
         client: {
           id: client.id,
           full_name: client.full_name,
