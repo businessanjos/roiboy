@@ -1987,7 +1987,7 @@ export default function RoyZapp() {
     try {
       // Upload file to public bucket (UAZAPI needs to access the URL)
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const fileName = `${currentUser!.account_id}/${Date.now()}_${safeName}`;
+      const fileName = `${currentUser!.account_id}/${Date.now()}/${safeName}`;
       const bucket = "zapp-media";
       
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -2027,8 +2027,8 @@ export default function RoyZapp() {
       
       if (error) throw error;
       
-      if (data && !data.success) {
-        throw new Error(data.message || "Falha ao enviar mídia");
+      if (data?.error) {
+        throw new Error(data.error || "Falha ao enviar mídia");
       }
       
       // Save message to zapp_messages
