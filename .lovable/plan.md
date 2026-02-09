@@ -1,42 +1,45 @@
 
-# Melhoria na Busca de Clientes - Ranking por Relevancia
+# Corrigir Busca de Clientes - Termos com AND em vez de OR
 
-## Problema Identificado
-Ao buscar "Ana Carolina", a logica atual usa OR entre os termos: retorna qualquer cliente que contenha "Ana" **ou** "Carolina" no nome. Isso gera 148 resultados, e a cliente "Ana Carolina Gomes Oliveira da Silva" fica perdida no meio por estar ordenada alfabeticamente (e nao por relevancia).
+## Problema
+Ao buscar "Ana Carolina", o filtro atual usa OR: retorna qualquer cliente cujo nome contenha "ana" **ou** "carolina". Como "ana" e uma substring de Juliana, Suzana, Mariana, Poliana, Hosana, Janaína, etc., muitos clientes irrelevantes aparecem nos resultados.
 
 ## Solucao
 
-Alterar a Edge Function `list-clients` para implementar um sistema de ranking por similaridade quando ha busca com multiplos termos.
+Alterar a logica de busca multi-termo de **OR** para **AND** na Edge Function `list-clients`.
 
-### Estrategia de Ordenacao (server-side)
-
-1. **Prioridade 1 - Match exato da frase completa**: Clientes cujo nome contenha a string exata "Ana Carolina" aparecem primeiro
-2. **Prioridade 2 - Todos os termos presentes**: Clientes que contenham TODOS os termos buscados (Ana E Carolina)
-3. **Prioridade 3 - Ao menos um termo**: Clientes que contenham pelo menos um dos termos
-
-### Mudancas Tecnicas
+### Mudanca
 
 **Arquivo:** `supabase/functions/list-clients/index.ts`
 
-A busca continuara usando OR no filtro do Supabase (para nao perder resultados), mas apos receber os dados, os clientes serao reordenados por relevancia:
-
+**Antes (OR - qualquer termo basta):**
 ```text
-Fluxo atual:
-  Busca OR -> Ordenacao alfabetica -> Retorno
-
-Fluxo novo:
-  Busca OR -> Reordenacao por relevancia -> Retorno
+"Ana Carolina" -> full_name.ilike.%ana% OR full_name.ilike.%carolina%
+Resultado: 148 clientes (incluindo Juliana, Suzana, Mariana...)
 ```
 
-Logica de scoring pos-query:
-- **+100 pontos**: nome contem a frase exata digitada (ex: "ana carolina")
-- **+10 pontos por termo**: para cada termo encontrado no nome
-- Desempate: ordem alfabetica
+**Depois (AND - todos os termos obrigatorios):**
+```text
+"Ana Carolina" -> full_name.ilike.%ana% AND full_name.ilike.%carolina%
+Resultado: apenas clientes com ambos "ana" E "carolina" no nome
+```
 
-Isso garante que "ANA CAROLINA GOMES OLIVEIRA DA SILVA" apareca no topo ao buscar "Ana Carolina", enquanto clientes como "Ana Paula Cardoso" aparecem depois.
+### Detalhes Tecnicos
 
-### Impacto
-- Nenhuma mudanca no frontend (o hook `useOptimizedClients` e os componentes continuam iguais)
-- Apenas a Edge Function e modificada
-- A paginacao e contagem total continuam funcionando normalmente
-- Performance: o scoring e feito em memoria apenas nos registros ja retornados pela pagina (max 200), sem custo adicional
+Na secao de busca multi-termo (ao redor da linha 120), trocar de `.or()` para encadear multiplos `.ilike()`:
+
+```text
+// Antes:
+query = query.or(conditions.join(","));
+
+// Depois:
+for (const term of searchTerms) {
+  query = query.ilike("full_name", `%${term}%`);
+}
+```
+
+Isso encadeia filtros AND no Supabase, exigindo que todos os termos estejam presentes no nome.
+
+- Busca de termo unico continua igual (busca em nome, telefone e empresa)
+- Ranking por relevancia ja implementado continua funcionando
+- Nenhuma mudanca no frontend
