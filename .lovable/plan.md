@@ -1,106 +1,68 @@
 
-# Expandir get-client-by-phone para buscar tambem na tabela Leads
+# Criar Edge Function get-lead-tasks para buscar tarefas de um Lead
 
-## Causa Raiz
-A Edge Function `get-client-by-phone` consulta apenas a tabela `clients` (coluna `phone_e164`). O registro da Tatiane Ferreira esta na tabela `leads` (coluna `phone`), que nao e consultada. Por isso retorna `found: false`.
+## Objetivo
+Criar uma nova Edge Function que receba o `lead_id` (retornado pelo node anterior) e retorne todas as tarefas (`internal_tasks`) vinculadas a esse lead.
 
-## Solucao
+## Nova Edge Function
 
-Modificar a Edge Function `get-client-by-phone` para buscar em **ambas** as tabelas: primeiro em `clients`, depois em `leads`.
+**Arquivo:** `supabase/functions/get-lead-tasks/index.ts`
 
-## Logica Proposta
+### Endpoint
+- **Method:** GET
+- **URL:** `https://mtzoavtbtqflufyccern.supabase.co/functions/v1/get-lead-tasks?lead_id={LEAD_ID}`
+- **Autenticacao:** mesma logica de API Key/JWT usada em `get-client-by-phone`
 
-```text
-1. Recebe phone_e164 (normalizado)
-2. Busca na tabela clients (por phone_e164) -> se encontrar, retorna found: true, type: "client"
-3. Se nao encontrar, busca na tabela leads (por phone) -> se encontrar, retorna found: true, type: "lead"
-4. Se nao encontrar em nenhuma, retorna found: false
-```
+### Parametro
+- `lead_id` (obrigatorio) - UUID do lead retornado pelo node anterior (ex: `ee3334d4-75ae-4635-83c5-ca5f3fbc988f`)
 
-## Mudancas Tecnicas
+### Resposta
 
-**Arquivo:** `supabase/functions/get-client-by-phone/index.ts`
-
-### 1. Adicionar busca na tabela leads (apos a busca em clients)
-
-Se o cliente nao for encontrado, buscar na tabela `leads`:
-
-```typescript
-// Se nao encontrou em clients, buscar em leads
-if (!client) {
-  const { data: lead, error: leadError } = await supabase
-    .from("leads")
-    .select("id, full_name, phone, status, tags, email, instagram, source")
-    .eq("phone", phone)
-    .eq("account_id", auth.accountId)
-    .maybeSingle();
-
-  if (lead) {
-    // Retornar lead encontrado
-    return new Response(JSON.stringify({
-      found: true,
-      type: "lead",
-      lead: {
-        id: lead.id,
-        full_name: lead.full_name,
-        phone: lead.phone,
-        status: lead.status,
-        tags: lead.tags,
-        email: lead.email,
-        instagram: lead.instagram,
-        source: lead.source,
-      },
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-  }
-}
-```
-
-### 2. Adicionar campo `type` na resposta de clients
-
-Quando encontrar um client, incluir `type: "client"` na resposta para diferenciar.
-
-### 3. Buscar tambem em additional_phones dos leads
-
-Alem do campo `phone`, verificar se o numero aparece no array `additional_phones` da tabela leads.
-
-## Formato da Resposta
-
-**Lead encontrado:**
 ```json
 {
   "found": true,
-  "type": "lead",
-  "lead": {
-    "id": "...",
-    "full_name": "Tatiane Ferreira",
-    "phone": "+5561998662638",
-    "status": "novo",
-    "email": "...",
-    "instagram": "...",
-    "source": "..."
-  }
+  "count": 2,
+  "tasks": [
+    {
+      "id": "uuid",
+      "title": "Follow Up",
+      "description": "...",
+      "status": "pending",
+      "priority": "medium",
+      "due_date": "2026-01-20",
+      "due_time": "14:00",
+      "assigned_to": "uuid",
+      "assigned_user_name": "Joao Ferrari",
+      "created_at": "...",
+      "completed_at": null,
+      "meeting_url": null,
+      "meeting_platform": null
+    }
+  ]
 }
 ```
 
-**Cliente encontrado (como ja funciona, com type adicionado):**
+Quando nao houver tarefas:
 ```json
 {
-  "found": true,
-  "type": "client",
-  "client": { ... },
-  "scores": { ... },
-  "risk_events": [],
-  "recent_events": [],
-  "recommendations": []
+  "found": false,
+  "count": 0,
+  "tasks": []
 }
 ```
 
-**Nenhum encontrado:**
-```json
-{ "found": false }
-```
+### Implementacao
+- Reutiliza o modulo `_shared/api-key-auth.ts` para autenticacao
+- Valida que `lead_id` e um UUID valido
+- Busca em `internal_tasks` WHERE `lead_id = :lead_id` AND `account_id = :account_id`
+- Faz join com `users` para trazer o nome do responsavel (`assigned_to`)
+- Ordena por `due_date` ascendente (tarefas mais proximas primeiro)
 
-## Impacto
-- Retrocompativel: respostas de client continuam iguais, apenas com campo `type` adicionado
-- No n8n, voce podera usar o campo `type` para diferenciar se e lead ou cliente
-- Nenhuma mudanca no frontend
+## Como usar no n8n
+
+No node HTTP Request:
+- **Method:** GET  
+- **URL:** `https://mtzoavtbtqflufyccern.supabase.co/functions/v1/get-lead-tasks?lead_id={{ $json.lead.id }}`
+- **Headers:** `Authorization: Bearer roy_sk_...`
+
+O `$json.lead.id` vem do output do node "Verifica se ja esta cadastrado" (que retorna o lead com seu `id`).
