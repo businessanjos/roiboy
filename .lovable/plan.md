@@ -1,30 +1,56 @@
 
 
-# Investigacao: Grupo "Financeiro Anjos" nao aparece para o Darlan
+# Criar Edge Function "create-task" para o n8n
 
-## Causa raiz identificada
+## Objetivo
 
-O grupo **"Financeiro Anjos"** esta cadastrado no banco com `sector_id: diretoria` e `integration_id: 97a0aa1b-...`. Quando o Darlan busca na "Nova Conversa", ele esta logado em outro setor (ex: vendas ou operacoes). A busca de grupos no codigo aplica um filtro por `integration_id` ou `sector_id` do setor ativo:
+Criar uma nova Edge Function que o n8n chamara logo apos o node "Cria Negocio", usando os dados retornados (deal.id, lead_id) para criar a tarefa "Primeiro Contato Realizado" atribuida ao Jonathan Marcato.
+
+## Nova Edge Function
+
+**Arquivo:** `supabase/functions/create-task/index.ts`
+
+A funcao recebera um POST com os seguintes campos:
+- `deal_id` (obrigatorio) - vindo do output do node anterior (`{{ $json.deal.id }}`)
+- `lead_id` (opcional) - vindo do output (`{{ $json.deal.lead_id }}`)
+- `title` - titulo da tarefa (ex: "Primeiro Contato Realizado")
+- `activity_type_id` - ID do tipo de atividade
+- `assigned_to` - ID do usuario responsavel
+- `priority` - prioridade (default: "medium")
+- `due_date` / `due_time` - agendamento (default: data/hora atual)
+
+Usara a mesma autenticacao por API Key ja existente (`_shared/api-key-auth.ts`).
+
+## Configuracao do node no n8n
+
+O node "Cria Tarefa" devera ser configurado assim:
+
+- **Method:** POST
+- **URL:** `https://mtzoavnbtqflufyccern.supabase.co/functions/v1/create-task`
+- **Authentication:** Header com `x-api-key` (mesma chave usada no create-deal)
+- **Body (JSON):**
 
 ```text
-if (selectedIntegrationId) {
-  query = query.eq("integration_id", selectedIntegrationId);   // filtra pela instancia
-} else if (selectedSectorId) {
-  query = query.eq("sector_id", selectedSectorId);             // filtra pelo setor
+{
+  "deal_id": "{{ $json.deal.id }}",
+  "lead_id": "{{ $json.deal.lead_id }}",
+  "title": "Primeiro Contato Realizado",
+  "activity_type_id": "ce57b13b-a359-46e5-b2b5-5160b2cd7dc1",
+  "assigned_to": "1232ec15-5f66-4b5f-9e74-f40d436f9d0f",
+  "priority": "medium"
 }
 ```
 
-Como o Darlan nao esta no setor "diretoria", o grupo e excluido dos resultados. Para voce aparece normalmente porque voce esta acessando pelo setor/instancia correto.
+O `due_date` e `due_time` serao preenchidos automaticamente com a data/hora atual se nao forem enviados.
 
-## Solucao proposta
+## Detalhes tecnicos
 
-Remover o filtro de `integration_id`/`sector_id` **apenas na busca de grupos** dentro do dialog "Nova Conversa". Isso esta alinhado com a logica multi-setor de grupos ja implementada no sistema (conforme documentado: grupos suportam atendimento multi-setor e qualquer setor pode "puxar" um grupo via Nova Conversa).
+A funcao:
+1. Valida autenticacao via API Key
+2. Valida campo obrigatorio `deal_id`
+3. Insere na tabela `internal_tasks` com os campos: account_id, deal_id, lead_id, title, activity_type_id, assigned_to, created_by (mesmo que assigned_to), priority, status ("pending"), due_date, due_time
+4. Retorna o ID da tarefa criada
+5. Erros sao tratados sem bloquear o fluxo
 
-## Alteracao tecnica
-
-**Arquivo:** `src/pages/RoyZapp.tsx` (linhas ~3078-3097)
-
-Remover as linhas que aplicam `.eq("integration_id", ...)` e `.eq("sector_id", ...)` na query de busca de grupos dentro do `searchContacts`. A query ficara apenas com os filtros de `account_id`, `is_group: true` e `ilike` no nome.
-
-Isso permitira que qualquer usuario encontre qualquer grupo da conta ao pesquisar, independente do setor ativo. O isolamento de setor continuara sendo garantido no momento de **abrir/criar o assignment** do grupo (que ja associa ao setor correto do usuario), nao na etapa de busca.
+Tambem sera necessario adicionar a configuracao `verify_jwt = false` no `supabase/config.toml` para a nova funcao.
 
