@@ -39,6 +39,9 @@ verify_jwt = false
 [functions.create-lead]
 verify_jwt = false
 
+[functions.create-deal]
+verify_jwt = false
+
 [functions.bulk-ingest-messages]
 verify_jwt = false
 
