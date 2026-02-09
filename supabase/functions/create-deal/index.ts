@@ -1,4 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   authenticateRequestWithLegacy,
@@ -177,6 +177,44 @@ serve(async (req) => {
         { param: "data_primeiro_contato", fieldId: "166fe351-b29b-4f08-b330-88f82c65f625", column: "value_date" },
       ];
 
+      // Fetch custom field definitions to resolve label -> value for select/multi_select
+      const selectFieldIds = fieldMappings.map((f) => f.fieldId);
+      const { data: customFields } = await supabase
+        .from("custom_fields")
+        .select("id, field_type, options")
+        .in("id", selectFieldIds);
+
+      const fieldOptionsMap: Record<string, { field_type: string; options: Array<{ label: string; value: string }> }> = {};
+      if (customFields) {
+        for (const cf of customFields) {
+          if ((cf.field_type === "select" || cf.field_type === "multi_select") && cf.options) {
+            fieldOptionsMap[cf.id] = {
+              field_type: cf.field_type,
+              options: cf.options as Array<{ label: string; value: string }>,
+            };
+          }
+        }
+      }
+
+      // Helper: match input text to option value
+      function matchOptionValue(options: Array<{ label: string; value: string }>, input: string): string {
+        const trimmed = input.trim();
+        const lower = trimmed.toLowerCase();
+        // 1. Exact label match (case-insensitive)
+        const exactLabel = options.find((o) => o.label.toLowerCase() === lower);
+        if (exactLabel) return exactLabel.value;
+        // 2. Exact value match
+        const exactValue = options.find((o) => o.value.toLowerCase() === lower);
+        if (exactValue) return exactValue.value;
+        // 3. Partial match (label contains input or input contains label)
+        const partial = options.find(
+          (o) => o.label.toLowerCase().includes(lower) || lower.includes(o.label.toLowerCase())
+        );
+        if (partial) return partial.value;
+        // 4. Fallback: return original
+        return trimmed;
+      }
+
       const fieldInserts = fieldMappings
         .filter(({ param }) => {
           const val = payload[param as keyof CreateDealPayload];
@@ -189,12 +227,25 @@ serve(async (req) => {
             deal_id: newDeal.id,
             field_id: fieldId,
           };
+
+          const fieldDef = fieldOptionsMap[fieldId];
+
           if (column === "value_json") {
-            row.value_json = Array.isArray(raw) ? raw : [raw.trim()];
+            const items = Array.isArray(raw) ? raw : [raw.trim()];
+            if (fieldDef && fieldDef.field_type === "multi_select") {
+              row.value_json = items.map((item) => matchOptionValue(fieldDef.options, String(item)));
+            } else {
+              row.value_json = items;
+            }
           } else if (column === "value_date") {
             row.value_date = raw.trim();
           } else {
-            row.value_text = raw.trim();
+            // value_text - check if it's a select field needing conversion
+            if (fieldDef && fieldDef.field_type === "select") {
+              row.value_text = matchOptionValue(fieldDef.options, raw.trim());
+            } else {
+              row.value_text = raw.trim();
+            }
           }
           return row;
         });
