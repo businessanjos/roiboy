@@ -56,10 +56,10 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Fetch existing deal
+  // Verify deal exists and belongs to account
   const { data: deal, error: fetchError } = await supabase
     .from("deals")
-    .select("id, notes")
+    .select("id")
     .eq("id", deal_id)
     .eq("account_id", auth.accountId)
     .maybeSingle();
@@ -79,26 +79,23 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Build updated notes
-  let updatedNotes: string;
-  const timestamp = new Date().toISOString().replace("T", " ").slice(0, 19);
+  // Insert activity into deal history
+  const { data: activity, error: insertError } = await supabase
+    .from("deal_activities")
+    .insert({
+      account_id: auth.accountId,
+      deal_id,
+      type: "note",
+      title: "Typeform",
+      content: notes.trim(),
+      user_id: null,
+    })
+    .select("id")
+    .single();
 
-  if (append && deal.notes && deal.notes.trim().length > 0) {
-    updatedNotes = `${deal.notes}\n\n--- Typeform (${timestamp}) ---\n${notes.trim()}`;
-  } else {
-    updatedNotes = notes.trim();
-  }
-
-  // Update deal
-  const { error: updateError } = await supabase
-    .from("deals")
-    .update({ notes: updatedNotes })
-    .eq("id", deal_id)
-    .eq("account_id", auth.accountId);
-
-  if (updateError) {
-    console.error("Error updating deal notes:", updateError);
-    return new Response(JSON.stringify({ error: "Failed to update deal notes" }), {
+  if (insertError) {
+    console.error("Error inserting deal activity:", insertError);
+    return new Response(JSON.stringify({ error: "Failed to insert deal activity" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -108,7 +105,7 @@ Deno.serve(async (req) => {
     await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
   }
 
-  return new Response(JSON.stringify({ success: true, deal_id, notes: updatedNotes }), {
+  return new Response(JSON.stringify({ success: true, deal_id, activity_id: activity.id }), {
     status: 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
