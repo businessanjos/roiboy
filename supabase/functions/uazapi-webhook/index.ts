@@ -354,7 +354,31 @@ serve(async (req) => {
         // Determine message direction (fromMe = sent by us)
         const direction = msg.fromMe ? "outbound" : "inbound";
         
-        // For outbound messages, we still need to process them to show in conversation
+        // ============================================
+        // OUTBOUND ECHO DEDUP: Skip echoed messages already saved by frontend
+        // The frontend saves outbound messages to zapp_messages BEFORE sending via uazapi-manager.
+        // When UAZAPI echoes the message back, we check if it already exists by external_id.
+        // This saves 4-6 DB queries (client/lead lookup, conversation upsert, assignment updates)
+        // per echoed message (~50% of all message events).
+        // Messages sent directly from WhatsApp (not via our app) won't have a pre-existing record,
+        // so they will still be processed normally.
+        // ============================================
+        if (direction === "outbound" && msg.id) {
+          const { data: existingOutbound } = await supabase
+            .from("zapp_messages")
+            .select("id")
+            .eq("account_id", accountId)
+            .eq("external_id", msg.id)
+            .limit(1);
+          
+          if (existingOutbound && existingOutbound.length > 0) {
+            return new Response(JSON.stringify({ ignored: true, reason: "outbound_echo_dedup", msgId: msg.id }), { 
+              headers: { ...corsHeaders, "Content-Type": "application/json" } 
+            });
+          }
+        }
+        
+        // For outbound messages not yet in DB (sent directly from WhatsApp), continue processing
         
         // Extract phone - for group messages, use sender; for direct messages, use chat.phone
         // For outbound messages, we use the destination (chat.phone/wa_chatid)
