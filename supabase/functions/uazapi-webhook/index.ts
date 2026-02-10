@@ -1276,185 +1276,97 @@ serve(async (req) => {
         }
 
         // Save message to zapp_messages (check for duplicates first)
+        // ============================================
+        // CONSOLIDATED DEDUPLICATION (Optimization: 1 query instead of up to 4)
+        // For outbound: single query fetches all candidate messages for dedup
+        // For inbound: single query by external_message_id
+        // ============================================
         if (zappConversationId) {
-          // Check if message already exists (by external_message_id or by content+timestamp for messages sent from UI)
-          const { data: existingMsg } = await supabase
-            .from("zapp_messages")
-            .select("id")
-            .eq("zapp_conversation_id", zappConversationId)
-            .eq("external_message_id", messageId)
-            .maybeSingle();
-
-          // CRITICAL FIX: Flag to skip insert when message already exists
           let skipInsert = false;
-          
-          if (existingMsg) {
-            console.log(`Message already exists with external_message_id ${messageId}, checking if deleted`);
-            
-            // Check if the message is deleted - don't update if so
-            const { data: msgDetails } = await supabase
-              .from("zapp_messages")
-              .select("is_deleted, is_edited")
-              .eq("id", existingMsg.id)
-              .maybeSingle();
-            
-            if (msgDetails?.is_deleted) {
-              console.log(`Message ${messageId} is deleted, ignoring webhook update`);
-              return new Response(
-                JSON.stringify({ ignored: true, reason: "message_deleted" }),
-                { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-              );
-            }
-            
-            // CRITICAL FIX: If message exists and is NOT deleted, skip insert
-            // This prevents duplication when UAZAPI sends confirmation webhooks for edited messages
-            console.log(`[DEDUPE] Message ${messageId} already exists (is_edited: ${msgDetails?.is_edited}), skipping insert`);
-            skipInsert = true;
-          }
-          
-          // ============================================
-          // EDITED MESSAGE DEDUPLICATION
-          // When UAZAPI sends confirmation of an edited message, it comes with a NEW external_message_id
-          // The original message was already updated in the DB by the frontend with is_edited=true
-          // We need to find that original message and skip inserting a duplicate
-          // ============================================
-          if (!skipInsert && isEditedMessage && direction === "outbound") {
+          let isDuplicate = false;
+
+          if (direction === "outbound") {
+            // SINGLE QUERY: Fetch all recent outbound messages that could be duplicates
+            // Covers: exact external_message_id match, edited message echo, content-based dedup, UI echo
             const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
             
-            // Strategy 1: Find message with same content that was recently marked as edited
-            const { data: editedOriginal } = await supabase
+            const { data: candidates } = await supabase
               .from("zapp_messages")
-              .select("id, content, external_message_id")
+              .select("id, external_message_id, content, is_deleted, is_edited, message_type, media_url, media_filename")
               .eq("zapp_conversation_id", zappConversationId)
               .eq("direction", "outbound")
-              .eq("content", content)
-              .eq("is_edited", true)
               .gte("created_at", fifteenMinutesAgo)
-              .order("updated_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            
-            if (editedOriginal) {
-              console.log(`[EDIT] Found original edited message ${editedOriginal.id}, skipping duplicate insert`);
-              
-              // Update the external_message_id to the new one from UAZAPI
-              if (editedOriginal.external_message_id !== messageId) {
-                await supabase
-                  .from("zapp_messages")
-                  .update({ 
-                    external_message_id: messageId,
-                    updated_at: new Date().toISOString()
-                  })
-                  .eq("id", editedOriginal.id);
-                console.log(`[EDIT] Updated external_message_id from ${editedOriginal.external_message_id} to ${messageId}`);
-              }
-              
-              skipInsert = true;
-            } else {
-              console.log(`[EDIT] No matching edited message found for content, will proceed with insert check`);
-            }
-          }
-          
-          // ============================================
-          // FALLBACK: Content-based deduplication for recent outbound messages
-          // This catches cases where edited message wasn't detected by the above check
-          // ============================================
-          if (!skipInsert && direction === "outbound" && !isEditedMessage) {
-            const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-            
-            const { data: recentSameContent } = await supabase
-              .from("zapp_messages")
-              .select("id, external_message_id, is_edited")
-              .eq("zapp_conversation_id", zappConversationId)
-              .eq("direction", "outbound")
-              .eq("content", content)
-              .gte("created_at", twoMinutesAgo)
-              .neq("external_message_id", messageId)
               .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
+              .limit(20);
             
-            if (recentSameContent) {
-              console.log(`[DEDUPE] Found recent message with same content: ${recentSameContent.id}, ` +
-                          `is_edited: ${recentSameContent.is_edited}, skipping insert`);
+            const msgs = candidates || [];
+
+            // Layer 1: Exact external_message_id match
+            const exactMatch = msgs.find(m => m.external_message_id === messageId);
+            if (exactMatch) {
+              if (exactMatch.is_deleted) {
+                console.log(`[DEDUPE] Message ${messageId} is deleted, ignoring`);
+                return new Response(
+                  JSON.stringify({ ignored: true, reason: "message_deleted" }),
+                  { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+              }
+              console.log(`[DEDUPE] Message ${messageId} already exists (is_edited: ${exactMatch.is_edited}), skipping`);
               skipInsert = true;
             }
-          }
-          
-          if (!skipInsert) {
-            // For outbound messages, check for recent duplicates without external_message_id
-            // This handles messages sent from the UI that are then echoed back by the webhook
-            // CRITICAL FIX: Use 5-minute window (increased from 2) to handle race conditions
-            let isDuplicate = false;
-            if (direction === "outbound") {
+
+            // Layer 2: Edited message echo (new external_message_id for edited content)
+            if (!skipInsert && isEditedMessage) {
+              const editedOriginal = msgs.find(m => 
+                m.content === content && m.is_edited === true && m.external_message_id !== messageId
+              );
+              if (editedOriginal) {
+                console.log(`[EDIT] Found original edited message ${editedOriginal.id}, skipping duplicate`);
+                if (editedOriginal.external_message_id !== messageId) {
+                  await supabase
+                    .from("zapp_messages")
+                    .update({ external_message_id: messageId, updated_at: new Date().toISOString() })
+                    .eq("id", editedOriginal.id);
+                }
+                skipInsert = true;
+              }
+            }
+
+            // Layer 3: Content-based dedup (same content, different external_message_id, within 2 min)
+            if (!skipInsert && !isEditedMessage) {
+              const contentMatch = msgs.find(m =>
+                m.content === content && m.external_message_id && m.external_message_id !== messageId
+              );
+              if (contentMatch) {
+                console.log(`[DEDUPE] Found recent message with same content: ${contentMatch.id}, skipping`);
+                skipInsert = true;
+              }
+            }
+
+            // Layer 4: UI echo dedup (frontend-inserted msg with null external_message_id)
+            if (!skipInsert) {
               const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-              
-              // For audio messages, search by message_type (content differs between frontend/webhook)
-              let recentDupe = null;
-              
+              let recentDupe: typeof msgs[0] | null = null;
+
               if (mediaType === "audio") {
-                // Search for audio messages without external_message_id (frontend-inserted, awaiting webhook)
-                const { data } = await supabase
-                  .from("zapp_messages")
-                  .select("id, media_url")
-                  .eq("zapp_conversation_id", zappConversationId)
-                  .eq("direction", "outbound")
-                  .eq("message_type", "audio")
-                  .is("external_message_id", null)
-                  .gte("created_at", fiveMinutesAgo)
-                  .order("created_at", { ascending: false })
-                  .limit(1)
-                  .maybeSingle();
-                recentDupe = data;
-                
-                if (recentDupe) {
-                  console.log(`[DEDUPE] Found pending audio message ${recentDupe.id} to update with external_message_id ${messageId}`);
-                }
+                recentDupe = msgs.find(m => 
+                  m.message_type === "audio" && !m.external_message_id
+                ) || null;
               } else if (mediaType === "document") {
-                // DOCUMENT DEDUPLICATION: Search by message_type since content/filename differs between frontend and webhook
-                // Frontend saves filename in content, webhook receives empty caption with different filename (WhatsApp code)
-                const { data } = await supabase
-                  .from("zapp_messages")
-                  .select("id, media_url, media_filename")
-                  .eq("zapp_conversation_id", zappConversationId)
-                  .eq("direction", "outbound")
-                  .eq("message_type", "document")
-                  .is("external_message_id", null)
-                  .gte("created_at", fiveMinutesAgo)
-                  .order("created_at", { ascending: false })
-                  .limit(1)
-                  .maybeSingle();
-                recentDupe = data;
-                
-                if (recentDupe) {
-                  console.log(`[DEDUPE] Found pending document message ${recentDupe.id} (filename: ${recentDupe.media_filename}) to update with external_message_id ${messageId}`);
-                }
+                recentDupe = msgs.find(m => 
+                  m.message_type === "document" && !m.external_message_id
+                ) || null;
               } else {
-                // For text and image messages, use content-based matching
-                const { data } = await supabase
-                  .from("zapp_messages")
-                  .select("id")
-                  .eq("zapp_conversation_id", zappConversationId)
-                  .eq("direction", "outbound")
-                  .eq("content", content)
-                  .is("external_message_id", null)
-                  .gte("created_at", fiveMinutesAgo)
-                  .limit(1)
-                  .maybeSingle();
-                recentDupe = data;
+                recentDupe = msgs.find(m => 
+                  m.content === content && !m.external_message_id
+                ) || null;
               }
 
               if (recentDupe) {
-                // Update the existing message with the external_message_id and audio duration
                 const updateData: Record<string, unknown> = { external_message_id: messageId };
                 if (mediaType === "audio") {
-                  if (audioDurationSec) {
-                    updateData.audio_duration_sec = audioDurationSec;
-                  }
-                  // Also update media_url if webhook has a permanent URL
-                  if (permanentMediaUrl) {
-                    updateData.media_url = permanentMediaUrl;
-                  }
+                  if (audioDurationSec) updateData.audio_duration_sec = audioDurationSec;
+                  if (permanentMediaUrl) updateData.media_url = permanentMediaUrl;
                 }
                 await supabase
                   .from("zapp_messages")
@@ -1462,12 +1374,29 @@ serve(async (req) => {
                   .eq("id", recentDupe.id);
                 console.log(`[DEDUPE] Updated existing ${mediaType || 'text'} message ${recentDupe.id} with external_message_id ${messageId}`);
                 isDuplicate = true;
-              } else if (mediaType === "audio") {
-                console.log(`[DEDUPE] No pending audio message found for conversation ${zappConversationId} in last 5 minutes`);
               }
             }
+          } else {
+            // INBOUND: Single query for external_message_id match
+            const { data: existingMsg } = await supabase
+              .from("zapp_messages")
+              .select("id, is_deleted, is_edited")
+              .eq("zapp_conversation_id", zappConversationId)
+              .eq("external_message_id", messageId)
+              .maybeSingle();
 
-            // CRITICAL FIX: Also check skipInsert flag to prevent duplication from edit webhooks
+            if (existingMsg) {
+              if (existingMsg.is_deleted) {
+                return new Response(
+                  JSON.stringify({ ignored: true, reason: "message_deleted" }),
+                  { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                );
+              }
+              console.log(`[DEDUPE] Inbound message ${messageId} already exists, skipping`);
+              skipInsert = true;
+            }
+          }
+
             if (!isDuplicate && !skipInsert) {
               const { error: zappMsgError } = await supabase
                 .from("zapp_messages")
@@ -1505,7 +1434,6 @@ serve(async (req) => {
                 console.log(`Zapp message saved! Media: ${mediaType || 'none'}, LazyDownload: ${encryptedMediaUrl ? 'pending' : 'no'}`);
               }
             }
-          }
 
           // Create or update zapp_conversation_assignment for the queue
           // CRITICAL: Prioritize assignment with department_id to avoid duplicates
