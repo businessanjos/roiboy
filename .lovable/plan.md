@@ -1,32 +1,34 @@
 
 
-## Criar Edge Function `update-deal-notes`
+## Alterar `update-deal-notes` para inserir no historico do negocio
 
-Uma nova backend function para **inserir/atualizar as observações (notes)** de um negócio existente, permitindo que o n8n envie as anotações formatadas do Typeform diretamente para o deal encontrado no node anterior.
+Em vez de atualizar o campo `notes` do deal, a function vai inserir uma entrada do tipo `note` na tabela `deal_activities`, que e o historico exibido no painel lateral direito do negocio (conforme a imagem de referencia).
 
-### URL para o n8n
+### O que muda
 
-```
-PATCH https://mtzoavtbtqflufyccern.supabase.co/functions/v1/update-deal-notes
-```
+A Edge Function `update-deal-notes` sera reescrita para:
 
-### Configuracao no n8n
+1. **Inserir** na tabela `deal_activities` em vez de fazer UPDATE na tabela `deals`
+2. Criar um registro com:
+   - `type`: `"note"`
+   - `title`: `"Typeform"`
+   - `content`: as anotacoes formatadas vindas do n8n
+   - `deal_id`: o ID do negocio
+   - `account_id`: da autenticacao
+   - `user_id`: null (pois e uma insercao via API/integracao)
+
+### Configuracao no n8n (sem alteracao)
+
+A URL, metodo e body permanecem os mesmos:
 
 | Campo | Valor |
 |-------|-------|
-| **Method** | `PATCH` |
-| **URL** | `https://mtzoavtbtqflufyccern.supabase.co/functions/v1/update-deal-notes` |
-| **Authentication** | Predefined Credential (Header Auth com `Authorization: Bearer roy_sk_...`) |
-| **Send Body** | ON (JSON) |
-| **Body** | `{ "deal_id": "{{ $('Procura negocio mais recente do lead').item.json.deal.id }}", "notes": "{{ $('Formata a anotacao').item.json.anotações }}" }` |
+| Method | PATCH |
+| URL | `https://mtzoavtbtqflufyccern.supabase.co/functions/v1/update-deal-notes` |
+| Body | `{ "deal_id": "...", "notes": "..." }` |
+| Header | `Authorization: Bearer roy_sk_...` |
 
-O campo `notes` recebera o texto formatado vindo do node "Formata a anotacao" (pergunta: resposta, linha a linha).
-
-### Comportamento
-
-- Se o deal ja possui observacoes, as anotacoes do Typeform serao **concatenadas** ao conteudo existente (com separador e timestamp).
-- Se o deal nao tem observacoes, o campo sera preenchido com as anotacoes do formulario.
-- Retorna o deal atualizado com confirmacao.
+O parametro `append` deixa de ser necessario (sera ignorado se enviado).
 
 ### Resposta esperada
 
@@ -34,23 +36,27 @@ O campo `notes` recebera o texto formatado vindo do node "Formata a anotacao" (p
 {
   "success": true,
   "deal_id": "uuid",
-  "notes": "conteudo atualizado..."
+  "activity_id": "uuid"
 }
 ```
 
 ### Detalhes tecnicos
 
-**Novo arquivo:** `supabase/functions/update-deal-notes/index.ts`
+**Arquivo:** `supabase/functions/update-deal-notes/index.ts`
 
-- **Metodo:** PATCH
-- **Autenticacao:** `authenticateRequestWithLegacy` (mesma das demais functions)
-- **Payload:** `{ deal_id: string, notes: string, append?: boolean }`
-  - `append` default `true` -- concatena ao existente
-- **Logica:**
-  1. Valida UUID do `deal_id`
-  2. Busca deal existente (`notes` atuais) filtrando por `account_id`
-  3. Se `append=true`, concatena: `notas_existentes + separador + novas_notas`
-  4. Atualiza o campo `notes` do deal
-  5. Registra uso da API key
-- **Config:** Adicionar `[functions.update-deal-notes]` com `verify_jwt = false` no `supabase/config.toml`
+Alteracoes no codigo:
+
+- Remover a logica de fetch + concatenacao de `deals.notes`
+- Substituir por um `INSERT` na tabela `deal_activities` com os campos:
+  - `account_id`: `auth.accountId`
+  - `deal_id`: do body
+  - `type`: `"note"`
+  - `title`: `"Typeform"`
+  - `content`: `notes` do body
+  - `user_id`: `null`
+- Manter validacao de UUID e autenticacao existentes
+- Manter verificacao de que o deal existe e pertence a conta
+- Retornar o `activity_id` criado na resposta
+
+Nenhuma alteracao de schema ou config.toml necessaria -- a tabela `deal_activities` ja existe com todas as colunas necessarias e o tipo `note` ja e permitido.
 
