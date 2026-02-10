@@ -858,6 +858,7 @@ serve(async (req) => {
         
         // Find or create zapp_conversation (for ALL contacts)
         let zappConversationId: string | null = null;
+        let linkedClientId: string | null = null; // Track client from conversation for reuse in analysis
         
         let existingZappConvo;
         
@@ -1034,6 +1035,7 @@ serve(async (req) => {
 
         if (existingZappConvo) {
           zappConversationId = existingZappConvo.id;
+          linkedClientId = (existingZappConvo as Record<string, unknown>).client_id as string | null;
           
           // Update last message info
           // Only increment unread count for inbound messages
@@ -1123,6 +1125,7 @@ serve(async (req) => {
             
             if (existingClient) {
               clientId = existingClient.id;
+              linkedClientId = clientId;
               
               // Update client's phone to normalized format if it was in old format
               if (existingClient.phone_e164 && existingClient.phone_e164.length === 13 && phone.length === 14) {
@@ -1590,20 +1593,28 @@ serve(async (req) => {
         
         // Only process client analysis for inbound messages with a phone (skip bursts)
         if (direction === "inbound" && phone && !isBurstMessage) {
-          const { data: existingClient } = await supabase
-            .from("clients")
-            .select("id, avatar_url")
-            .eq("account_id", accountId)
-            .eq("phone_e164", phone)
-            .maybeSingle();
+          // OPTIMIZATION: Reuse linkedClientId from conversation creation/lookup
+          // instead of querying clients table again (saves 1 query per inbound message)
+          let analysisClientId = linkedClientId;
+          let clientAvatarUrl: string | null = null;
+          
+          // Only query if we have a linkedClientId (to get avatar_url for update check)
+          if (analysisClientId) {
+            const { data: clientData } = await supabase
+              .from("clients")
+              .select("avatar_url")
+              .eq("id", analysisClientId)
+              .maybeSingle();
+            clientAvatarUrl = clientData?.avatar_url || null;
+          }
 
-          if (existingClient) {
-            const clientId = existingClient.id;
+          if (analysisClientId) {
+            const clientId = analysisClientId;
             
             
             // Auto-update client avatar from WhatsApp profile picture if available
             const profilePicUrl = chat.image || chat.imagePreview;
-            if (profilePicUrl && !existingClient.avatar_url) {
+            if (profilePicUrl && !clientAvatarUrl) {
               const { error: avatarError } = await supabase
                 .from("clients")
                 .update({ avatar_url: profilePicUrl })
