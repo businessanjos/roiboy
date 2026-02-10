@@ -657,8 +657,8 @@ export function useZappData(options: UseZappDataOptions = {}) {
       );
 
       if (pendingMediaMsgs.length > 0) {
-        // OPTIMIZED: Limit to 3 to reduce cloud costs (down from 10)
-        const idsToDownload = pendingMediaMsgs.slice(0, 3).map((m) => m.id);
+        // Limit to 5 per conversation open to balance cost and UX
+        const idsToDownload = pendingMediaMsgs.slice(0, 5).map((m) => m.id);
         console.log(`[ZappData] Auto-downloading ${idsToDownload.length} of ${pendingMediaMsgs.length} pending media (optimized)`);
         
         // Fire-and-forget to avoid blocking UI - realtime will update when completed

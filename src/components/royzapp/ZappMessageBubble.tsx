@@ -363,12 +363,25 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             </div>
           )}
           
-          {/* Media content - show loading state ONLY for pending downloads without a URL */}
+          {/* Media content - show loading state for pending/null downloads without a URL */}
           {/* Media loading states */}
-          {message.media_download_status === "pending" && message.media_type && !message.media_url && message.media_type !== "sticker" && (
-            <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex items-center justify-center p-4 gap-2">
-              <Loader2 className="h-5 w-5 animate-spin text-zapp-text-muted" />
-              <span className="text-xs text-zapp-text-muted">Carregando mídia...</span>
+          {(message.media_download_status === "pending" || !message.media_download_status) && message.media_type && !message.media_url && message.media_type !== "sticker" && (
+            <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex flex-col items-center justify-center p-4 gap-2">
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin text-zapp-text-muted" />
+                <span className="text-xs text-zapp-text-muted">Carregando mídia...</span>
+              </div>
+              {onRetryMediaDownload && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRetryMediaDownload(message.id)}
+                  className="text-xs text-zapp-accent hover:text-zapp-accent/80"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Tentar novamente
+                </Button>
+              )}
             </div>
           )}
           {message.media_download_status === "downloading" && message.media_type && !message.media_url && message.media_type !== "sticker" && (
