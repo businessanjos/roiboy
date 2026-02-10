@@ -182,6 +182,8 @@ export default function Tasks() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [statusManagerOpen, setStatusManagerOpen] = useState(false);
+  const [filterDateStart, setFilterDateStart] = useState("");
+  const [filterDateEnd, setFilterDateEnd] = useState("");
 
   // Custom task statuses
   const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
@@ -460,8 +462,20 @@ export default function Tasks() {
       matchesSector = activitySectorId === currentSector.id;
     }
 
-    return matchesSearch && matchesUser && matchesActivityType && matchesSector;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id]);
+    // Date range filter on due_date
+    const hasDateFilter = filterDateStart !== "" || filterDateEnd !== "";
+    let matchesDateRange = true;
+    if (hasDateFilter) {
+      if (!task.due_date) {
+        matchesDateRange = false;
+      } else {
+        if (filterDateStart && task.due_date < filterDateStart) matchesDateRange = false;
+        if (filterDateEnd && task.due_date > filterDateEnd) matchesDateRange = false;
+      }
+    }
+
+    return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange;
+  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd]);
 
   // Final filtered tasks - applies tab filter on top of base filters
   const filteredTasks = useMemo(() => baseFilteredTasks.filter((task) => {
@@ -935,7 +949,35 @@ export default function Tasks() {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Date Range Filter */}
+            <div className="flex items-center gap-1.5">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">De</label>
+              <input
+                type="date"
+                value={filterDateStart}
+                onChange={(e) => setFilterDateStart(e.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Até</label>
+              <input
+                type="date"
+                value={filterDateEnd}
+                onChange={(e) => setFilterDateEnd(e.target.value)}
+                className="h-9 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+              {(filterDateStart || filterDateEnd) && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => { setFilterDateStart(""); setFilterDateEnd(""); }}
+                >
+                  <XCircle className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              )}
+            </div>
+
             {/* View Mode Toggle */}
             <div className="flex items-center border rounded-lg p-1 bg-muted/50">
               <Button
@@ -1055,10 +1097,12 @@ export default function Tasks() {
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder="Buscar por título, descrição ou cliente..."
-        filtersActive={filterUser !== "all" || filterActivityType !== "all"}
+        filtersActive={filterUser !== "all" || filterActivityType !== "all" || filterDateStart !== "" || filterDateEnd !== ""}
         onClearFilters={() => {
           setFilterUser("all");
           setFilterActivityType("all");
+          setFilterDateStart("");
+          setFilterDateEnd("");
         }}
       >
         <FilterItem>
