@@ -272,7 +272,9 @@ export default function RoyZapp() {
         .from("zapp_conversation_assignments")
         .update({ 
           status: "closed", 
-          closed_at: new Date().toISOString() 
+          closed_at: new Date().toISOString(),
+          agent_id: null,
+          assigned_at: null,
         })
         .eq("id", selectedConversation.id);
       
@@ -1340,9 +1342,11 @@ export default function RoyZapp() {
         updated_at: new Date().toISOString()
       };
       
-      // If closing, set closed_at timestamp
+      // If closing, set closed_at timestamp and clear agent to prevent ghost reappearance
       if (newStatus === "closed") {
         updateData.closed_at = new Date().toISOString();
+        updateData.agent_id = null;
+        updateData.assigned_at = null;
       }
       
       const { error } = await supabase
@@ -1567,7 +1571,7 @@ export default function RoyZapp() {
       // Close the assignment (soft delete)
       const { error } = await supabase
         .from("zapp_conversation_assignments")
-        .update({ status: "closed", closed_at: new Date().toISOString() })
+        .update({ status: "closed", closed_at: new Date().toISOString(), agent_id: null, assigned_at: null })
         .eq("id", assignmentId);
 
       if (error) throw error;

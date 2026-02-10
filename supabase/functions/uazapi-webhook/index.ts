@@ -1439,7 +1439,7 @@ serve(async (req) => {
           // CRITICAL: Prioritize assignment with department_id to avoid duplicates
           const { data: existingAssignments } = await supabase
             .from("zapp_conversation_assignments")
-            .select("id, status, agent_id, department_id, assigned_at")
+            .select("id, status, agent_id, department_id, assigned_at, closed_at")
             .eq("account_id", accountId)
             .eq("zapp_conversation_id", zappConversationId)
             .order("department_id", { nullsFirst: false }) // Prioritize with department
@@ -1451,11 +1451,31 @@ serve(async (req) => {
             || null;
 
           if (existingAssignment) {
+            // RACE CONDITION GUARD: If closed_at is very recent (< 10s), skip update
+            // This prevents the webhook from overwriting a manual close that just happened
+            if (existingAssignment.closed_at) {
+              const closedAgo = Date.now() - new Date(existingAssignment.closed_at).getTime();
+              if (closedAgo < 10000 && existingAssignment.status === "closed") {
+                console.log(`[RACE GUARD] Skipping assignment update - closed ${closedAgo}ms ago (< 10s). Assignment: ${existingAssignment.id}`);
+                // Still save the message but don't touch the assignment status
+              } else {
+                // Normal flow - proceed with status update below
+              }
+            }
+            
             // Update existing assignment - also set department if not set
             // CRITICAL: Update status based on message direction
             let newStatus = existingAssignment.status;
             
-            if (existingAssignment.status === "closed") {
+            // Skip status recalculation if recently closed (race condition guard)
+            const isRecentlyClosed = existingAssignment.closed_at && 
+              existingAssignment.status === "closed" &&
+              (Date.now() - new Date(existingAssignment.closed_at).getTime()) < 10000;
+            
+            if (isRecentlyClosed) {
+              // Don't change anything - keep closed
+              console.log(`[RACE GUARD] Keeping assignment ${existingAssignment.id} as closed`);
+            } else if (existingAssignment.status === "closed") {
               // Reopen closed conversations only for inbound messages
               newStatus = direction === "inbound" ? "triage" : "closed";
             } else if (direction === "outbound" && existingAssignment.status !== "closed") {
@@ -1468,29 +1488,31 @@ serve(async (req) => {
               newStatus = wasOfficiallyAssigned ? "active" : "pending";
             }
             
-          // BLINDAGEM DE SETOR: Log security alert if trying to change department
-          if (sectorDepartmentId && existingAssignment.department_id && 
-              sectorDepartmentId !== existingAssignment.department_id) {
-            console.warn(`[SECURITY] Blocked department change attempt: ${existingAssignment.department_id} -> ${sectorDepartmentId} for assignment ${existingAssignment.id}`);
-          }
-          
-          // CORREÇÃO: Se reabrindo conversa fechada, limpar atendente para voltar à fila
-          const isReopeningFromClosed = existingAssignment.status === "closed" && newStatus === "triage";
-          
-          await supabase
-              .from("zapp_conversation_assignments")
-              .update({
-                updated_at: timestamp,
-                status: newStatus,
-                // Limpar agent_id quando reabrindo de closed para que volte à Fila
-                ...(isReopeningFromClosed ? { agent_id: null, assigned_at: null } : {}),
-                // BLINDAGEM: Só define department_id se o assignment NÃO tiver um
-                // NUNCA sobrescrever um department_id existente para evitar migração entre setores
-                ...(sectorDepartmentId && !existingAssignment.department_id ? { department_id: sectorDepartmentId } : {}),
-              })
-              .eq("id", existingAssignment.id);
+          if (!isRecentlyClosed) {
+            // BLINDAGEM DE SETOR: Log security alert if trying to change department
+            if (sectorDepartmentId && existingAssignment.department_id && 
+                sectorDepartmentId !== existingAssignment.department_id) {
+              console.warn(`[SECURITY] Blocked department change attempt: ${existingAssignment.department_id} -> ${sectorDepartmentId} for assignment ${existingAssignment.id}`);
+            }
             
-            console.log(`Updated zapp assignment - direction: ${direction}, newStatus: ${newStatus}`);
+            // CORREÇÃO: Se reabrindo conversa fechada, limpar atendente para voltar à fila
+            const isReopeningFromClosed = existingAssignment.status === "closed" && newStatus === "triage";
+            
+            await supabase
+                .from("zapp_conversation_assignments")
+                .update({
+                  updated_at: timestamp,
+                  status: newStatus,
+                  // Limpar agent_id quando reabrindo de closed para que volte à Fila
+                  ...(isReopeningFromClosed ? { agent_id: null, assigned_at: null } : {}),
+                  // BLINDAGEM: Só define department_id se o assignment NÃO tiver um
+                  // NUNCA sobrescrever um department_id existente para evitar migração entre setores
+                  ...(sectorDepartmentId && !existingAssignment.department_id ? { department_id: sectorDepartmentId } : {}),
+                })
+                .eq("id", existingAssignment.id);
+              
+              console.log(`Updated zapp assignment - direction: ${direction}, newStatus: ${newStatus}`);
+          }
           } else {
             const { error: assignmentError } = await supabase
               .from("zapp_conversation_assignments")
