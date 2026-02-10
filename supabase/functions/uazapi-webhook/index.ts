@@ -7,6 +7,45 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// ============================================
+// IN-MEMORY CACHES (persist between invocations on Deno Deploy)
+// ============================================
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 200;
+
+interface CacheEntry<T> {
+  data: T;
+  ts: number;
+}
+
+// Cache: instance_name / token / phone → integration record
+const integrationCache = new Map<string, CacheEntry<{ id: string; account_id: string; config: unknown; sector_id: string | null }>>();
+
+// Cache: sector_id → department_id
+const departmentCache = new Map<string, CacheEntry<string | null>>();
+
+// Cache: phone+account → client_id
+const clientPhoneCache = new Map<string, CacheEntry<string | null>>();
+
+function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | undefined {
+  const entry = cache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) {
+    cache.delete(key);
+    return undefined;
+  }
+  return entry.data;
+}
+
+function setCache<T>(cache: Map<string, CacheEntry<T>>, key: string, data: T): void {
+  // Evict oldest entries if cache is full
+  if (cache.size >= MAX_CACHE_SIZE) {
+    const oldest = cache.keys().next().value;
+    if (oldest) cache.delete(oldest);
+  }
+  cache.set(key, { data, ts: Date.now() });
+}
+
 // UAZAPI sends messages in this format (from actual webhook payload)
 interface UazapiInstance {
   name?: string;
@@ -223,11 +262,10 @@ serve(async (req) => {
       ? rawInstance 
       : (rawInstance?.name || payload.instanceName || "");
 
-    // Find account - try different methods
+    // Find account - try different methods (with in-memory cache)
     let integration = null;
     
     // Method 1: Find by instance name if provided
-    // Using .limit(1) instead of .maybeSingle() to handle multiple integrations sharing same instance
     if (instanceName) {
       const possibleNames = [
         instanceName,
@@ -237,37 +275,54 @@ serve(async (req) => {
         instanceName.split("_").slice(0, 2).join("_"),
       ];
       
+      // Check cache first
       for (const tryName of possibleNames) {
-      const { data: results } = await supabase
-          .from("integrations")
-          .select("id, account_id, config, sector_id")
-          .eq("type", "whatsapp")
-          .filter("config->>instance_name", "eq", tryName)
-          .order("created_at", { ascending: true })
-          .limit(1);
-        
-        if (results && results.length > 0) {
-          integration = results[0];
+        const cached = getCached(integrationCache, `name:${tryName}`);
+        if (cached) {
+          integration = cached;
           break;
+        }
+      }
+      
+      // If not in cache, query DB
+      if (!integration) {
+        for (const tryName of possibleNames) {
+          const { data: results } = await supabase
+            .from("integrations")
+            .select("id, account_id, config, sector_id")
+            .eq("type", "whatsapp")
+            .filter("config->>instance_name", "eq", tryName)
+            .order("created_at", { ascending: true })
+            .limit(1);
+          
+          if (results && results.length > 0) {
+            integration = results[0];
+            setCache(integrationCache, `name:${tryName}`, integration);
+            break;
+          }
         }
       }
     }
     
     // Method 2: Find by instance_token from payload (more reliable)
-    // Using .limit(1) to handle multiple integrations sharing same token
     const payloadToken = (payload as Record<string, unknown>).token as string | undefined;
     if (!integration && payloadToken) {
-      const { data: results } = await supabase
-        .from("integrations")
-        .select("id, account_id, config, sector_id")
-        .eq("type", "whatsapp")
-        .filter("config->>instance_token", "eq", payloadToken)
-        .order("created_at", { ascending: true })
-        .limit(1);
-      
-      if (results && results.length > 0) {
-        integration = results[0];
+      const cached = getCached(integrationCache, `token:${payloadToken}`);
+      if (cached) {
+        integration = cached;
+      } else {
+        const { data: results } = await supabase
+          .from("integrations")
+          .select("id, account_id, config, sector_id")
+          .eq("type", "whatsapp")
+          .filter("config->>instance_token", "eq", payloadToken)
+          .order("created_at", { ascending: true })
+          .limit(1);
         
+        if (results && results.length > 0) {
+          integration = results[0];
+          setCache(integrationCache, `token:${payloadToken}`, integration);
+        }
       }
     }
     
@@ -275,22 +330,26 @@ serve(async (req) => {
     const instanceOwner = (payload as Record<string, unknown>).instanceOwner as string | undefined;
     if (!integration && instanceOwner) {
       const phoneClean = String(instanceOwner).replace(/\D/g, "");
-      const { data: results } = await supabase
-        .from("integrations")
-        .select("id, account_id, config, sector_id")
-        .eq("type", "whatsapp")
-        .filter("config->>phone_number", "eq", phoneClean)
-        .order("created_at", { ascending: true })
-        .limit(1);
-      
-      if (results && results.length > 0) {
-        integration = results[0];
+      const cached = getCached(integrationCache, `owner:${phoneClean}`);
+      if (cached) {
+        integration = cached;
+      } else {
+        const { data: results } = await supabase
+          .from("integrations")
+          .select("id, account_id, config, sector_id")
+          .eq("type", "whatsapp")
+          .filter("config->>phone_number", "eq", phoneClean)
+          .order("created_at", { ascending: true })
+          .limit(1);
         
+        if (results && results.length > 0) {
+          integration = results[0];
+          setCache(integrationCache, `owner:${phoneClean}`, integration);
+        }
       }
     }
     
     // CRITICAL SECURITY: NO FALLBACK - Reject if integration cannot be precisely identified
-    // This prevents messages from being routed to the wrong account in multi-tenant environment
     if (!integration) {
       console.error("SECURITY REJECTION: Could not identify specific integration for webhook payload");
       console.error(JSON.stringify({
@@ -320,21 +379,24 @@ serve(async (req) => {
     const integrationId = integration.id;
     
     
-    // Find the department for this sector to properly associate conversations
-    // Using order by created_at to be deterministic when multiple departments exist
+    // Find the department for this sector (with cache)
     let sectorDepartmentId: string | null = null;
     if (sectorId) {
-      const { data: dept } = await supabase
-        .from("zapp_departments")
-        .select("id")
-        .eq("account_id", accountId)
-        .eq("sector_id", sectorId)
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      
-      if (dept) {
-        sectorDepartmentId = dept.id;
+      const cachedDept = getCached(departmentCache, `${accountId}:${sectorId}`);
+      if (cachedDept !== undefined) {
+        sectorDepartmentId = cachedDept;
+      } else {
+        const { data: dept } = await supabase
+          .from("zapp_departments")
+          .select("id")
+          .eq("account_id", accountId)
+          .eq("sector_id", sectorId)
+          .order("created_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        
+        sectorDepartmentId = dept?.id || null;
+        setCache(departmentCache, `${accountId}:${sectorId}`, sectorDepartmentId);
       }
     }
 
