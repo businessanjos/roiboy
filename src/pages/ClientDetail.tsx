@@ -496,6 +496,7 @@ export default function ClientDetail() {
         .from("clients")
         .update({
           full_name: editFormData.full_name.trim(),
+          phone_e164: editFormData.phone_e164,
           emails: editFormData.emails,
           additional_phones: editFormData.additional_phones as unknown as import("@/integrations/supabase/types").Json,
           cpf: editFormData.cpf.replace(/\D/g, '') || null,
@@ -535,6 +536,7 @@ export default function ClientDetail() {
       setClient({
         ...client,
         full_name: editFormData.full_name.trim(),
+        phone_e164: editFormData.phone_e164,
         emails: editFormData.emails,
         additional_phones: editFormData.additional_phones,
         cpf: editFormData.cpf,
