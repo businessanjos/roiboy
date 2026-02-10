@@ -173,3 +173,6 @@ verify_jwt = false
 
 [functions.get-lead-latest-deal]
 verify_jwt = false
+
+[functions.update-deal-notes]
+verify_jwt = false
