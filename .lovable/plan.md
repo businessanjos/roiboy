@@ -1,62 +1,53 @@
 
 
-## Alterar `update-deal-notes` para inserir no historico do negocio
+## Diagnostico: Imagens nao exibidas no ROY
 
-Em vez de atualizar o campo `notes` do deal, a function vai inserir uma entrada do tipo `note` na tabela `deal_activities`, que e o historico exibido no painel lateral direito do negocio (conforme a imagem de referencia).
+### Causa Raiz
 
-### O que muda
+Foram identificados **dois problemas distintos**:
 
-A Edge Function `update-deal-notes` sera reescrita para:
+**Problema 1 - Bolhas completamente vazias (33 mensagens):**
+Existem 33 mensagens de imagem no banco onde `media_download_status` e `NULL` (nao "pending") e `media_url` tambem e NULL. O componente `ZappMessageBubble` so mostra o indicador "Carregando midia..." quando o status e exatamente `"pending"`. Quando o status e `null`, nenhum indicador visual aparece, resultando em bolhas vazias sem conteudo visivel.
 
-1. **Inserir** na tabela `deal_activities` em vez de fazer UPDATE na tabela `deals`
-2. Criar um registro com:
-   - `type`: `"note"`
-   - `title`: `"Typeform"`
-   - `content`: as anotacoes formatadas vindas do n8n
-   - `deal_id`: o ID do negocio
-   - `account_id`: da autenticacao
-   - `user_id`: null (pois e uma insercao via API/integracao)
+**Problema 2 - Imagens permanentemente pendentes (3.343 mensagens):**
+Ha 3.343 mensagens de imagem com status "pending" que nunca foram baixadas. O sistema atual so baixa automaticamente **3 imagens** por vez quando uma conversa e aberta. As URLs encriptadas do WhatsApp (`mmg.whatsapp.net/...*.enc`) expiram apos algumas horas/dias, tornando essas midias **irrecuperaveis** apos esse prazo.
 
-### Configuracao no n8n (sem alteracao)
+### Numeros atuais no banco
 
-A URL, metodo e body permanecem os mesmos:
+| Status | Quantidade |
+|--------|-----------|
+| completed | 1.828 |
+| pending | 3.343 |
+| NULL (sem status) | 33 |
+| failed | 2 |
 
-| Campo | Valor |
-|-------|-------|
-| Method | PATCH |
-| URL | `https://mtzoavtbtqflufyccern.supabase.co/functions/v1/update-deal-notes` |
-| Body | `{ "deal_id": "...", "notes": "..." }` |
-| Header | `Authorization: Bearer roy_sk_...` |
+### Plano de Solucao
 
-O parametro `append` deixa de ser necessario (sera ignorado se enviado).
+#### 1. Corrigir bolhas vazias no componente (ZappMessageBubble)
 
-### Resposta esperada
+Alterar a condicao de exibicao do indicador de "carregando midia" para incluir mensagens onde `media_download_status` e `null` mas `media_type` existe e `media_url` esta ausente. Isso garante que mesmo mensagens com status nulo mostrem o placeholder visual correto com botao "Tentar novamente".
 
-```json
-{
-  "success": true,
-  "deal_id": "uuid",
-  "activity_id": "uuid"
-}
-```
+**Arquivo:** `src/components/royzapp/ZappMessageBubble.tsx`
 
-### Detalhes tecnicos
+- Na secao de "Media loading states" (linhas 367-398), adicionar a condicao `!message.media_download_status` como fallback para exibir o placeholder de midia pendente com o botao "Tentar novamente", em vez de mostrar uma bolha vazia.
 
-**Arquivo:** `supabase/functions/update-deal-notes/index.ts`
+#### 2. Corrigir dados inconsistentes no banco
 
-Alteracoes no codigo:
+Executar uma migracao SQL para normalizar as 33 mensagens com `media_download_status = NULL` que possuem `media_type` mas nao tem `media_url`, definindo o status como `"pending"` para que o sistema de auto-download possa processa-las.
 
-- Remover a logica de fetch + concatenacao de `deals.notes`
-- Substituir por um `INSERT` na tabela `deal_activities` com os campos:
-  - `account_id`: `auth.accountId`
-  - `deal_id`: do body
-  - `type`: `"note"`
-  - `title`: `"Typeform"`
-  - `content`: `notes` do body
-  - `user_id`: `null`
-- Manter validacao de UUID e autenticacao existentes
-- Manter verificacao de que o deal existe e pertence a conta
-- Retornar o `activity_id` criado na resposta
+#### 3. Aumentar o limite de auto-download
 
-Nenhuma alteracao de schema ou config.toml necessaria -- a tabela `deal_activities` ja existe com todas as colunas necessarias e o tipo `note` ja e permitido.
+Alterar o limite de auto-download de 3 para **5** imagens por conversa aberta (em `src/hooks/useZappData.tsx`), equilibrando custo e experiencia do usuario. Isso reduz a chance de imagens ficarem em fila por muito tempo antes que as URLs expirem.
+
+#### 4. Melhorar auto-download no webhook (preventivo)
+
+No webhook (`supabase/functions/uazapi-webhook/index.ts`), verificar se ja existe logica para tentar baixar a midia imediatamente durante a ingestao quando a URL direta (nao-encriptada) esta disponivel. Se o UAZAPI fornece uma URL publica direta (`permanentMediaUrl`), ela ja e usada. O problema e que muitas midias so vem com URL encriptada, que precisa de processamento posterior.
+
+### Resumo das alteracoes
+
+| Arquivo | Alteracao |
+|---------|----------|
+| `src/components/royzapp/ZappMessageBubble.tsx` | Tratar `media_download_status = null` como pendente para exibir placeholder visual |
+| `src/hooks/useZappData.tsx` | Aumentar auto-download de 3 para 5 por conversa |
+| Migracao SQL | Normalizar 33 registros com status NULL para "pending" |
 
