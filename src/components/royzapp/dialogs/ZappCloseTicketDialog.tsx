@@ -187,13 +187,15 @@ export function ZappCloseTicketDialog({
       const now = new Date().toISOString();
       const durationMinutes = stats?.durationMinutes || 0;
 
-      // 1. Update assignment with close info
+      // 1. Update assignment with close info (clear agent to prevent ghost reappearance)
       const { error: updateError } = await supabase
         .from("zapp_conversation_assignments")
         .update({
           status: "closed",
           closed_at: now,
           closed_by: userProfile.id,
+          agent_id: null,
+          assigned_at: null,
           close_outcome: outcome,
           close_summary: summary || null,
           close_ai_summary: aiSummary || null,
