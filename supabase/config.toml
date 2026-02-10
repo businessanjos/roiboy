@@ -170,3 +170,6 @@ verify_jwt = false
 
 [functions.create-task]
 verify_jwt = false
+
+[functions.get-lead-latest-deal]
+verify_jwt = false
