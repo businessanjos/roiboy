@@ -1,53 +1,74 @@
 
-
-## Diagnostico: Imagens nao exibidas no ROY
+## Diagnostico: Conversas Reabertas na Aba "Minhas"
 
 ### Causa Raiz
 
-Foram identificados **dois problemas distintos**:
+O problema e uma **condicao de corrida (race condition)** entre o frontend e o webhook, combinada com uma falha no encerramento de conversas.
 
-**Problema 1 - Bolhas completamente vazias (33 mensagens):**
-Existem 33 mensagens de imagem no banco onde `media_download_status` e `NULL` (nao "pending") e `media_url` tambem e NULL. O componente `ZappMessageBubble` so mostra o indicador "Carregando midia..." quando o status e exatamente `"pending"`. Quando o status e `null`, nenhum indicador visual aparece, resultando em bolhas vazias sem conteudo visivel.
+### O que acontece passo a passo
 
-**Problema 2 - Imagens permanentemente pendentes (3.343 mensagens):**
-Ha 3.343 mensagens de imagem com status "pending" que nunca foram baixadas. O sistema atual so baixa automaticamente **3 imagens** por vez quando uma conversa e aberta. As URLs encriptadas do WhatsApp (`mmg.whatsapp.net/...*.enc`) expiram apos algumas horas/dias, tornando essas midias **irrecuperaveis** apos esse prazo.
+```text
+1. Dayara esta atendendo "Maria" (status: active, agent_id: dayara, assigned_at: 10:00)
+2. Dayara clica "Encerrar atendimento"
+3. Frontend atualiza: status="closed", closed_at="10:05"
+   >>> MAS agent_id e assigned_at NAO sao limpos! <<<
+   Resultado no banco: status=closed, agent_id=dayara, assigned_at=10:00
+4. Maria envia nova mensagem (inbound)
+5. Webhook processa a mensagem e le o assignment:
+   - Se le ANTES do close: ve status=active, agent_id=dayara
+     -> Define newStatus="active" (wasOfficiallyAssigned=true)
+     -> Resultado: conversa volta para "Minhas" de Dayara como ATIVA!
+   - Se le DEPOIS do close: ve status=closed
+     -> Define newStatus="triage", limpa agent_id
+     -> Resultado correto: vai para Fila
+```
 
-### Numeros atuais no banco
+A corrida acontece quando uma mensagem chega quase simultaneamente ao encerramento. O webhook le o assignment ANTES do close ser gravado, calcula `newStatus = "active"` (porque `agent_id` e `assigned_at` existem), e sobrescreve o status. O `agent_id` nunca e limpo, entao a conversa reaparece em "Minhas".
 
-| Status | Quantidade |
-|--------|-----------|
-| completed | 1.828 |
-| pending | 3.343 |
-| NULL (sem status) | 33 |
-| failed | 2 |
+### Evidencia no banco
 
-### Plano de Solucao
+A consulta mostra **20 conversas** com `status != "closed"`, `agent_id` preenchido, mas `closed_at` tambem preenchido -- prova de que foram encerradas e depois reabertas com o mesmo agente ainda atribuido.
 
-#### 1. Corrigir bolhas vazias no componente (ZappMessageBubble)
+### Locais afetados (3 funcoes de close que NAO limpam agent_id)
 
-Alterar a condicao de exibicao do indicador de "carregando midia" para incluir mensagens onde `media_download_status` e `null` mas `media_type` existe e `media_url` esta ausente. Isso garante que mesmo mensagens com status nulo mostrem o placeholder visual correto com botao "Tentar novamente".
+| Funcao | Linha | Descricao |
+|--------|-------|-----------|
+| `updateConversationStatus` | ~1338-1346 | Encerrar via menu de status |
+| `dismissGroupConversation` | ~271-276 | Dispensar grupo |
+| `deleteConversation` | ~1568-1571 | Apagar conversa (soft delete) |
 
-**Arquivo:** `src/components/royzapp/ZappMessageBubble.tsx`
+### Solucao
 
-- Na secao de "Media loading states" (linhas 367-398), adicionar a condicao `!message.media_download_status` como fallback para exibir o placeholder de midia pendente com o botao "Tentar novamente", em vez de mostrar uma bolha vazia.
+**Passo 1 -- Frontend: Limpar `agent_id` ao encerrar**
 
-#### 2. Corrigir dados inconsistentes no banco
+Em todas as 3 funcoes de encerramento no `src/pages/RoyZapp.tsx`, adicionar `agent_id: null` e `assigned_at: null` ao `updateData` quando o status for "closed".
 
-Executar uma migracao SQL para normalizar as 33 mensagens com `media_download_status = NULL` que possuem `media_type` mas nao tem `media_url`, definindo o status como `"pending"` para que o sistema de auto-download possa processa-las.
+Isso garante que, mesmo em caso de race condition, o webhook NAO encontrara `agent_id` preenchido e a conversa NAO voltara para "Minhas".
 
-#### 3. Aumentar o limite de auto-download
+Alteracao em `updateConversationStatus` (linha ~1338):
+- Quando `newStatus === "closed"`, incluir `agent_id: null, assigned_at: null` no update
 
-Alterar o limite de auto-download de 3 para **5** imagens por conversa aberta (em `src/hooks/useZappData.tsx`), equilibrando custo e experiencia do usuario. Isso reduz a chance de imagens ficarem em fila por muito tempo antes que as URLs expirem.
+Alteracao em `dismissGroupConversation` (linha ~271):
+- Incluir `agent_id: null, assigned_at: null` no update
 
-#### 4. Melhorar auto-download no webhook (preventivo)
+Alteracao em `deleteConversation` (linha ~1568):
+- Incluir `agent_id: null, assigned_at: null` no update
 
-No webhook (`supabase/functions/uazapi-webhook/index.ts`), verificar se ja existe logica para tentar baixar a midia imediatamente durante a ingestao quando a URL direta (nao-encriptada) esta disponivel. Se o UAZAPI fornece uma URL publica direta (`permanentMediaUrl`), ela ja e usada. O problema e que muitas midias so vem com URL encriptada, que precisa de processamento posterior.
+**Passo 2 -- Backend: Protecao adicional no webhook**
+
+No `supabase/functions/uazapi-webhook/index.ts`, adicionar verificacao para que, quando o webhook processar uma mensagem e o assignment tiver `closed_at` recente (menos de 10 segundos), ele NAO altere o status. Isso previne a race condition mesmo que o close e o webhook ocorram quase simultaneamente.
+
+Alteracao no webhook (linha ~1453):
+- Apos encontrar o `existingAssignment`, verificar se `closed_at` e recente (< 10s). Se sim, pular a atualizacao do assignment para evitar sobrescrever o close.
+
+**Passo 3 -- Correcao de dados existentes (migracao SQL)**
+
+Executar uma migracao para limpar as conversas atualmente em estado inconsistente (status nao-closed mas com closed_at preenchido e sem atividade recente), forçando-as de volta para "closed" com agent_id nulo.
 
 ### Resumo das alteracoes
 
 | Arquivo | Alteracao |
 |---------|----------|
-| `src/components/royzapp/ZappMessageBubble.tsx` | Tratar `media_download_status = null` como pendente para exibir placeholder visual |
-| `src/hooks/useZappData.tsx` | Aumentar auto-download de 3 para 5 por conversa |
-| Migracao SQL | Normalizar 33 registros com status NULL para "pending" |
-
+| `src/pages/RoyZapp.tsx` | Limpar `agent_id` e `assigned_at` nas 3 funcoes de close |
+| `supabase/functions/uazapi-webhook/index.ts` | Protecao contra race condition: ignorar update se `closed_at` e recente |
+| Migracao SQL | Corrigir dados inconsistentes existentes |
