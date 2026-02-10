@@ -1,35 +1,34 @@
 
-## Filtro de Periodo por Data na Pagina de Tarefas
 
-### O que sera feito
+## Correção: Telefone principal não salva ao editar cliente
 
-Adicionar um filtro de periodo (data inicio e data fim) proximo aos botoes "Personalizar" e "Nova Tarefa" no canto superior direito da pagina de Tarefas. O filtro usara o campo `due_date` (prazo) das tarefas para mostrar somente as que se enquadram no periodo selecionado.
+### Diagnóstico
 
-### Como vai funcionar
+O campo "Telefone principal" é editável no formulário `ClientInfoForm` e está presente no `editFormData.phone_e164`, porém a função `handleSaveClientInfo` em `src/pages/ClientDetail.tsx` **não inclui `phone_e164`** no objeto enviado ao banco de dados. Ou seja, o usuário altera o número, clica "Salvar", mas o campo simplesmente não é enviado na query de UPDATE.
 
-- Dois inputs de data (inicio e fim) aparecerao no header, antes do botao "Personalizar"
-- O usuario pode preencher apenas o inicio, apenas o fim, ou ambos
-- Um botao de limpar aparece quando alguma data esta selecionada
-- O filtro se aplica sobre o campo `due_date` das tarefas
-- Tarefas sem prazo definido serao ocultadas quando o filtro de data estiver ativo
-- Os cards de estatisticas (Pendentes, Atrasadas, etc.) refletirao o filtro de periodo aplicado
+### Causa raiz
 
-### Detalhes tecnicos
+Na linha 497 de `ClientDetail.tsx`, o objeto passado para `.update()` lista dezenas de campos, mas `phone_e164` foi omitido. O mesmo ocorre na atualização do estado local (linha 535).
 
-**Arquivo:** `src/pages/Tasks.tsx`
+### Solução
 
-1. **Novos estados:**
-   - `filterDateStart: string` (formato YYYY-MM-DD, vazio por padrao)
-   - `filterDateEnd: string` (formato YYYY-MM-DD, vazio por padrao)
+Adicionar `phone_e164` em dois pontos da função `handleSaveClientInfo`:
 
-2. **UI no header (linha ~938-976):**
-   - Inserir antes do botao "Personalizar" dois inputs nativos `type="date"` com labels compactos "De" e "Ate", estilizados com as classes existentes do projeto
-   - Um botao pequeno com icone X para limpar as datas quando alguma estiver preenchida
+1. **No `.update()` do Supabase** (linha ~497-529): incluir `phone_e164: editFormData.phone_e164`
+2. **No `setClient()` local** (linha ~535-568): incluir `phone_e164: editFormData.phone_e164`
 
-3. **Logica de filtragem (linha ~422-464 no `baseFilteredTasks`):**
-   - Adicionar condicao: se `filterDateStart` ou `filterDateEnd` estiverem preenchidos, verificar se `task.due_date` esta dentro do intervalo
-   - Tarefas sem `due_date` serao excluidas quando o filtro de data estiver ativo
+### Detalhes técnicos
 
-4. **Indicador de filtros ativos:**
-   - Atualizar a prop `filtersActive` do `FilterBar` para incluir a verificacao das datas
-   - Atualizar `onClearFilters` para tambem limpar as datas
+**Arquivo:** `src/pages/ClientDetail.tsx`
+
+Alteração 1 -- Adicionar ao objeto de update do Supabase (depois de `full_name`):
+```
+phone_e164: editFormData.phone_e164,
+```
+
+Alteração 2 -- Adicionar ao `setClient()` local (depois de `full_name`):
+```
+phone_e164: editFormData.phone_e164,
+```
+
+Isso é uma correção simples de duas linhas. Nenhuma outra alteração é necessária pois o formulário já coleta e valida o telefone corretamente.
