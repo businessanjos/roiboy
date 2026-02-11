@@ -189,8 +189,12 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
       queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
       
       if (!isCurrentlyCompleted) {
+        // Use setTimeout to ensure editingTask is null before dialog opens,
+        // preventing the "completed" checkbox from being pre-checked
         setEditingTask(null);
-        setTaskDialogOpen(true);
+        setTimeout(() => {
+          setTaskDialogOpen(true);
+        }, 50);
       }
     }
   };
