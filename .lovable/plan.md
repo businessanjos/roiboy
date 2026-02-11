@@ -1,82 +1,49 @@
 
-## Filtros Persistentes por Usuario
+## Correção: Ana Maria não consegue salvar sua senha
 
-### O que sera feito
+### Diagnóstico
 
-Criar um hook utilitario `usePersistedFilter` que substitui o `useState` nos filtros de todas as paginas, salvando e restaurando automaticamente os valores no `localStorage` com chave unica por usuario e por pagina. Quando o usuario aplicar qualquer filtro, ele permanecera ativo mesmo ao trocar de aba, fechar o navegador ou reabrir o ROY. Cada usuario tera seus proprios filtros independentes.
+Ana Maria é consultora (`role: "mentor"`, `is_also_admin: false`). Quando ela edita seu próprio perfil na aba Equipe e tenta salvar uma nova senha, o sistema chama a edge function `update-team-user-password`. Essa função na linha 64 exige que o usuário solicitante tenha `role === "admin"`, caso contrário retorna erro 403 "Apenas administradores podem alterar senhas".
 
-### Como vai funcionar
+O problema: a função **não permite que um usuário altere sua própria senha**, mesmo sendo o dono da conta que está sendo editada.
 
-- Ao carregar uma pagina, os filtros serao restaurados do `localStorage` com o valor salvo pelo usuario
-- Ao alterar qualquer filtro, o valor e salvo imediatamente no `localStorage`
-- Ao limpar filtros manualmente (botao "Limpar filtros"), os valores voltam ao padrao e o `localStorage` e atualizado
-- Chave de armazenamento: `roy_filters_{userId}_{pagina}_{campo}` -- isso garante isolamento por usuario
+### Causa raiz
 
-### Paginas afetadas
+A edge function `update-team-user-password` (linha 64) rejeita qualquer usuário que não seja admin, sem verificar se o usuário está alterando sua própria senha.
 
-1. **Clientes** - filterClientStatus, filterProduct, filterVNPS, filterContract, filterResponsible, sortOrder
-2. **Tarefas** - filterUser, filterActivityType, sortBy, sortDirection, filterDateStart, filterDateEnd
-3. **Contratos** - searchTerm, statusFilter, typeFilter, productFilter, sortOrder
-4. **Pipeline de Vendas** - wonMonthFilter, lostMonthFilter
-5. **Financeiro** - statusFilter, categoryFilter
-6. **Dashboard** - statusFilter, quadrantFilter, productFilter
+### Solução
 
-Nota: campos de busca textual (searchQuery/searchTerm) NAO serao persistidos nas paginas de Clientes e Dashboard, pois a busca e mais contextual e transitoria. Nos Contratos sera persistida pois o usuario ja espera esse comportamento.
+Modificar a edge function para permitir dois cenários:
 
-### Detalhes tecnicos
+1. **Admin ou is_also_admin** pode alterar a senha de qualquer membro da mesma conta (comportamento atual ampliado)
+2. **Qualquer usuário** pode alterar **sua própria** senha
 
-**Novo arquivo:** `src/hooks/usePersistedFilter.ts`
+### Detalhes técnicos
 
-Um hook simples que encapsula `useState` + `localStorage`:
+**Arquivo:** `supabase/functions/update-team-user-password/index.ts`
 
+**Alteração 1** -- Query do perfil (linha ~55): incluir `is_also_admin` e `id` na seleção:
 ```typescript
-import { useState, useCallback } from "react";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
+.select("id, account_id, role, is_also_admin")
+```
 
-export function usePersistedFilter<T>(
-  page: string,
-  field: string,
-  defaultValue: T
-): [T, (value: T) => void] {
-  const { currentUser } = useCurrentUser();
-  const storageKey = `roy_filters_${currentUser?.id}_${page}_${field}`;
+**Alteração 2** -- Lógica de permissão (linhas 64-69): mover a verificação de admin para depois de sabermos quem é o usuário-alvo, e permitir auto-edição:
+```typescript
+// Ler o body ANTES da verificação de admin
+const body: UpdatePasswordRequest = await req.json();
+const { user_id, new_password } = body;
 
-  const [value, setValue] = useState<T>(() => {
-    if (!currentUser?.id) return defaultValue;
-    try {
-      const saved = localStorage.getItem(storageKey);
-      return saved !== null ? JSON.parse(saved) : defaultValue;
-    } catch {
-      return defaultValue;
-    }
-  });
+// Verificar se é auto-edição (usuário alterando própria senha)
+const isSelfEdit = requestingProfile.id === user_id;
+const isAdmin = requestingProfile.role === "admin" || requestingProfile.is_also_admin === true;
 
-  const setPersistedValue = useCallback((newValue: T) => {
-    setValue(newValue);
-    if (currentUser?.id) {
-      const key = `roy_filters_${currentUser.id}_${page}_${field}`;
-      if (newValue === defaultValue) {
-        localStorage.removeItem(key);
-      } else {
-        localStorage.setItem(key, JSON.stringify(newValue));
-      }
-    }
-  }, [currentUser?.id, page, field, defaultValue]);
-
-  return [value, setPersistedValue];
+// Permitir se for admin OU se for auto-edição
+if (!isAdmin && !isSelfEdit) {
+  return new Response(
+    JSON.stringify({ error: "Apenas administradores podem alterar senhas de outros membros" }),
+    { status: 403, ... }
+  );
 }
 ```
 
-**Alteracoes nas paginas:**
-
-Em cada pagina listada acima, substituir os `useState` dos filtros por `usePersistedFilter`. Exemplo para Clientes:
-
-```typescript
-// Antes:
-const [filterClientStatus, setFilterClientStatus] = useState<string>("all");
-
-// Depois:
-const [filterClientStatus, setFilterClientStatus] = usePersistedFilter("clients", "clientStatus", "all");
-```
-
-A mesma substituicao sera aplicada em todos os filtros de todas as 6 paginas. Nenhuma outra alteracao de logica e necessaria, pois a interface do hook e identica a do `useState`.
+Isso reorganiza a ordem das verificações: primeiro faz o parse do body, depois verifica se o usuário tem permissão (admin, is_also_admin, ou editando a si mesmo), e só então prossegue com a validação e atualização da senha.
