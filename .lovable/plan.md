@@ -1,78 +1,73 @@
 
+## Sincronizar alteracoes de data/hora da tarefa com o Google Calendar
 
-## Ranking de Vendedores por Faturamento
+### Diagnostico
 
-Construir um novo tipo de visual "Ranking" no sistema de Insights que exibe uma tabela estilizada com os vendedores ordenados por faturamento, inspirado no layout do Power BI compartilhado.
+Atualmente, quando uma reuniao e criada (via Zoom ou Google Meet), o sistema:
 
-### O que sera construido
+1. Cria a reuniao na plataforma escolhida
+2. Registra o evento no Google Calendar do vendedor
+3. Salva apenas `meeting_url` e `meeting_platform` na tarefa (`internal_tasks`)
 
-Um novo tipo de grafico **"ranking"** disponivel no modal de criacao de visuais, que renderiza uma tabela com:
+O problema: **nao e armazenado o ID do evento do Google Calendar** na tarefa. Sem esse ID, e impossivel atualizar o evento posteriormente. Alem disso, **nao existe nenhuma funcao que atualize o calendario quando a tarefa e editada** -- simplesmente nao ha essa logica hoje.
 
-- **Posicao** (1o, 2o, 3o com destaque visual dourado/prata/bronze)
-- **Avatar** do vendedor (foto ou iniciais)
-- **Nome** do vendedor
-- **Faturamento** com barra de progresso visual
-- **Meta** (valor configuravel por vendedor, se disponivel)
-- **% Atingido** e **% Faltante** (calculados automaticamente quando meta existir)
+### Solucao
 
-A versao inicial funcionara com os dados ja disponiveis (deals ganhos por vendedor), sem necessidade de tabela de metas (que pode ser adicionada futuramente).
+A correcao envolve 3 etapas:
 
-### Arquivos a criar
+**1. Armazenar o ID do evento do Google Calendar na tarefa**
 
-1. **`src/components/insights/visuals/ConfigurableRanking.tsx`**
-   - Componente de tabela estilizada com ranking
-   - Medalhas visuais para top 3 (ouro, prata, bronze)
-   - Avatars dos vendedores (buscados da tabela `users`)
-   - Barra de progresso proporcional ao maior valor
-   - Formatacao de moeda em R$
+- Adicionar coluna `google_calendar_event_id` na tabela `internal_tasks`
+- Modificar a Edge Function `create-meeting` para salvar o ID do evento do calendario retornado pela API do Google
 
-### Arquivos a modificar
+**2. Criar Edge Function `update-meeting`**
 
-2. **`src/components/insights/visual-builder/types.ts`**
-   - Adicionar `'ranking'` ao tipo `ChartType`
-   - Adicionar opcao no array `CHART_TYPE_OPTIONS`
+- Nova funcao que recebe `task_id`, `start_time`, `end_time` e `title`
+- Busca o `google_calendar_event_id` e `assigned_to` da tarefa
+- Obtem os tokens Google do usuario via `user_integrations`
+- Chama a Google Calendar API (PATCH) para atualizar data/hora do evento
+- Se a reuniao for Zoom, tambem atualiza a reuniao via Zoom API
 
-3. **`src/components/insights/AddVisualModal.tsx`**
-   - Adicionar "Ranking" como opcao de formato (passo 1)
-   - Para ranking, pre-selecionar metrica "revenue" e agrupamento "user"
-   - Ranking tera apenas 2 passos (formato + titulo), pois metrica e agrupamento sao fixos
+**3. Chamar a funcao ao editar data/hora da tarefa**
 
-4. **`src/components/insights/visuals/ConfigurableChart.tsx`**
-   - Adicionar case `'ranking'` no switch para renderizar o `ConfigurableRanking`
+- No `TaskDialog.tsx`, ao salvar uma tarefa que possui `meeting_url`, detectar se `due_date` ou `due_time` mudaram
+- Se mudaram, chamar a funcao `update-meeting` para sincronizar
 
-5. **`src/hooks/useVisualData.ts`**
-   - Enriquecer os dados quando agrupados por vendedor para incluir `avatar_url` e `user_id` nos pontos retornados
+### Alteracoes detalhadas
 
-### Detalhes tecnicos
+**Migracao de banco de dados:**
+- Adicionar coluna `google_calendar_event_id TEXT` na tabela `internal_tasks`
+- Adicionar coluna `zoom_meeting_id TEXT` na tabela `internal_tasks`
 
-**Dados**: O ranking reutiliza a infraestrutura existente do `useVisualData` com `statusFilter: 'won'`, `dimension.field: 'responsible_name'`, `measure.aggregation: 'sum'`, `measure.field: 'value'`. Os dados ja retornam agrupados por vendedor com o valor total.
+**Edge Function `create-meeting/index.ts`:**
+- Salvar o `eventData.id` (Google Calendar) e `meetingData.id` (Zoom) na tarefa ao lado do `meeting_url`
 
-**Avatars**: Para exibir as fotos, o `fetchDealsData` sera modificado para, quando o agrupamento for `responsible_name`, incluir o `avatar_url` do usuario nos dados retornados (campo extra no `AggregatedDataPoint`).
+**Nova Edge Function `update-meeting/index.ts`:**
+- Recebe: `task_id`, `start_time`, `end_time`, `title` (opcional)
+- Busca tarefa para obter `google_calendar_event_id`, `zoom_meeting_id`, `meeting_platform`, `assigned_to`
+- Se tiver `google_calendar_event_id`: atualiza via Google Calendar API (PATCH `/calendars/primary/events/{eventId}`)
+- Se tiver `zoom_meeting_id`: atualiza via Zoom API (PATCH `/meetings/{meetingId}`)
+- Retorna sucesso/erro
 
-**Barra de progresso**: Calculada proporcionalmente ao maior valor do ranking (o primeiro lugar = 100%).
+**`src/components/tasks/TaskDialog.tsx`:**
+- Ao salvar uma tarefa com `meeting_url`, comparar `due_date` e `due_time` com os valores originais
+- Se houver mudanca, chamar `update-meeting` com os novos horarios
+- Exibir toast de confirmacao ("Calendario atualizado") ou erro
 
-**Layout padrao**: O ranking sera criado com `w: 6, h: 5` no grid para acomodar a tabela.
+### Fluxo apos a correcao
 
-**Visual**: 
 ```text
-+----+--------+-----------------+-------------+
-| #  | Foto   | Vendedor        | Faturamento |
-+----+--------+-----------------+-------------+
-| 1  | [img]  | Jonathan M.     | R$ 382.800  |
-|    |        |  ████████████░  |             |
-+----+--------+-----------------+-------------+
-| 2  | [img]  | Darlan F.       | R$ 283.200  |
-|    |        |  █████████░░░░  |             |
-+----+--------+-----------------+-------------+
-| 3  | [img]  | Everton P.      | R$ 0        |
-|    |        |  ░░░░░░░░░░░░░  |             |
-+----+--------+-----------------+-------------+
+Usuario edita data/hora da tarefa de reuniao
+  -> TaskDialog detecta mudanca de horario + meeting_url presente
+  -> Chama Edge Function update-meeting
+  -> update-meeting busca IDs do calendario/zoom na tarefa
+  -> Atualiza Google Calendar via API (PATCH)
+  -> Atualiza Zoom via API (PATCH), se aplicavel
+  -> Usuario ve toast de confirmacao
 ```
-
-Medalhas: posicao 1 = dourado, 2 = prateado, 3 = bronze, demais = numeral simples.
 
 ### Observacoes
 
-- A funcionalidade de **Meta** (valor alvo por vendedor) nao sera implementada nesta versao, pois requer uma tabela de metas no banco. Pode ser adicionada como evolucao futura.
-- O ranking respeita os filtros globais do painel de Insights (periodo, vendedor, etapa).
-- A ordenacao e sempre decrescente por valor (maior faturamento primeiro).
+- A sincronizacao e bidirecional apenas do ROY para o Google/Zoom (nao o contrario)
+- Se o usuario nao tiver Google conectado, a atualizacao do calendario e ignorada silenciosamente
+- Reunioes criadas antes desta implementacao nao terao os IDs armazenados, portanto nao serao sincronizaveis (comportamento gracioso sem erro)
