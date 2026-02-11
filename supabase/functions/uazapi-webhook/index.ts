@@ -658,6 +658,33 @@ serve(async (req) => {
           }
         }
         
+        // FALLBACK: Infer mediaType from mimetype or msg.type when specific message fields are absent
+        if (mediaUrl && !mediaType) {
+          if (mediaMimetype) {
+            const mimePrefix = mediaMimetype.split("/")[0].toLowerCase();
+            if (mimePrefix === "audio") mediaType = "audio";
+            else if (mimePrefix === "image") mediaType = "image";
+            else if (mimePrefix === "video") mediaType = "video";
+            else mediaType = "document";
+          } else {
+            const rawType = String(msg.type || msg.messageType || msgAny.messageType || "").toLowerCase();
+            if (rawType.includes("ptt") || rawType.includes("audio")) {
+              mediaType = "audio";
+            } else if (rawType.includes("image")) {
+              mediaType = "image";
+            } else if (rawType.includes("video")) {
+              mediaType = "video";
+            } else if (rawType.includes("sticker")) {
+              mediaType = "sticker";
+            } else if (rawType === "media" || mediaUrl.includes("mmg.whatsapp.net")) {
+              mediaType = "document";
+            }
+          }
+          if (mediaType) {
+            console.log(`[WEBHOOK] Inferred mediaType="${mediaType}" from mimetype="${mediaMimetype}" / msgType="${msg.type}"`);
+          }
+        }
+        
         // Media content: don't add labels, just use caption if available
         // The UI will show emojis for media types in previews
         
