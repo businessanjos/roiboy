@@ -46,6 +46,9 @@ export function useVisualData({ config, enabled = true }: UseVisualDataParams) {
         case 'products':
           result = await fetchProductsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
           break;
+        case 'tasks':
+          result = await fetchTasksCallCommercialData(currentUser.account_id);
+          break;
         default:
           result = [];
       }
@@ -695,4 +698,76 @@ function fillMissingDates(
     value: 0,
     count: 0,
   });
+}
+
+// Fetch tasks data for Call Comercial visual
+async function fetchTasksCallCommercialData(
+  accountId: string
+): Promise<AggregatedDataPoint[]> {
+  // Fetch activity types for "Call Comercial Agendada" and "Call Comercial Concluida"
+  const { data: activityTypes, error: atError } = await supabase
+    .from('activity_types')
+    .select('id, name')
+    .eq('account_id', accountId)
+    .in('name', ['Call Comercial Agendada', 'Call Comercial Concluída']);
+
+  if (atError || !activityTypes || activityTypes.length === 0) {
+    console.error('Error fetching activity types:', atError);
+    return [];
+  }
+
+  const agendadaType = activityTypes.find(at => at.name === 'Call Comercial Agendada');
+  const concluidaType = activityTypes.find(at => at.name === 'Call Comercial Concluída');
+
+  if (!agendadaType && !concluidaType) return [];
+
+  // Fetch tasks for both types with user info
+  const typeIds = [agendadaType?.id, concluidaType?.id].filter(Boolean) as string[];
+
+  const { data: tasks, error: tasksError } = await supabase
+    .from('internal_tasks')
+    .select('id, activity_type_id, completed_at, assigned_to, users!internal_tasks_assigned_to_fkey(name)')
+    .eq('account_id', accountId)
+    .in('activity_type_id', typeIds)
+    .not('assigned_to', 'is', null);
+
+  if (tasksError || !tasks) {
+    console.error('Error fetching tasks:', tasksError);
+    return [];
+  }
+
+  // Group by user
+  const userMap = new Map<string, { scheduled: number; completed: number }>();
+
+  for (const task of tasks) {
+    const userName = (task.users as any)?.name;
+    if (!userName) continue;
+
+    if (!userMap.has(userName)) {
+      userMap.set(userName, { scheduled: 0, completed: 0 });
+    }
+
+    const entry = userMap.get(userName)!;
+
+    if (task.activity_type_id === agendadaType?.id && !task.completed_at) {
+      entry.scheduled++;
+    } else if (task.activity_type_id === concluidaType?.id && task.completed_at) {
+      entry.completed++;
+    }
+  }
+
+  // Convert to AggregatedDataPoint format
+  const result: AggregatedDataPoint[] = [];
+  for (const [name, { scheduled, completed }] of userMap) {
+    result.push({
+      name,
+      value: scheduled,  // agendadas em aberto
+      count: completed,   // concluídas
+    });
+  }
+
+  // Sort by total (completed) descending
+  result.sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+
+  return result;
 }

@@ -17,6 +17,7 @@ import { ChartType, FormatType, AppearanceConfig, COLOR_PALETTES, DEFAULT_APPEAR
 import { ChartTooltip } from "./ChartTooltip";
 import { ConfigurableScorecard } from "./ConfigurableScorecard";
 import { ConfigurableRanking } from "./ConfigurableRanking";
+import { ConfigurableCallCommercial } from "./ConfigurableCallCommercial";
 import { formatValueCompact } from "@/lib/formula-evaluator";
 
 interface AggregatedDataPoint {
@@ -58,6 +59,8 @@ export function ConfigurableChart({ type, data, formatting, appearance, onDrilld
       return <ConfigurableScorecard data={data} formatting={formatting} />;
     case 'ranking':
       return <ConfigurableRanking data={data} formatting={formatting} />;
+    case 'call_commercial':
+      return <ConfigurableCallCommercial data={data} formatting={formatting} />;
     case 'bar':
       return <BarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'line':

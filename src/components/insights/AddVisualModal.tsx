@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight, Trophy } from "lucide-react";
+import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight, Trophy, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { VisualConfig, DEFAULT_APPEARANCE } from "./visual-builder/types";
@@ -20,7 +20,7 @@ interface AddVisualModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type ChartType = "bar" | "line" | "pie" | "scorecard" | "ranking";
+type ChartType = "bar" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial";
 type Metric = "revenue" | "deals_count" | "avg_ticket" | "conversion" | "lost_reasons";
 type GroupBy = "month" | "user" | "stage" | "product";
 
@@ -30,6 +30,7 @@ const CHART_TYPES = [
   { value: "pie" as const, label: "Gráfico de Pizza", description: "Mostrar proporções de um todo", icon: PieChart },
   { value: "scorecard" as const, label: "Scorecard", description: "Exibir um número ou KPI destacado", icon: Hash },
   { value: "ranking" as const, label: "Ranking", description: "Tabela ordenada com medalhas e barras de progresso", icon: Trophy },
+  { value: "call_commercial" as const, label: "Calls Comerciais", description: "Agendadas vs Concluídas por vendedor", icon: Phone },
 ];
 
 const METRICS = [
@@ -108,7 +109,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   const [isCreating, setIsCreating] = useState(false);
 
   // Scorecards and rankings have only 2 steps, other charts have 3
-  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking') ? 2 : 3;
+  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial') ? 2 : 3;
 
   // Reset form when modal closes
   useEffect(() => {
@@ -125,6 +126,8 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   useEffect(() => {
     if (chartType === 'ranking') {
       setTitle("Ranking de Vendedores");
+    } else if (chartType === 'call_commercial') {
+      setTitle("Calls Comerciais");
     } else if (chartType === 'scorecard' && metric) {
       setTitle(METRIC_LABELS[metric]);
     } else if (metric && groupBy) {
@@ -139,7 +142,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   // Validation for creating the visual
   const canCreate = chartType === 'scorecard'
     ? metric !== null && title.trim() !== "" && activeDashboardId !== null
-    : chartType === 'ranking'
+    : (chartType === 'ranking' || chartType === 'call_commercial')
     ? title.trim() !== "" && activeDashboardId !== null
     : groupBy !== null && title.trim() !== "" && activeDashboardId !== null;
 
@@ -154,7 +157,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   const handleCreate = async () => {
     if (!chartType || !activeDashboardId) return;
     
-    // For ranking, metric and groupBy are fixed
+    // For ranking and call_commercial, metric and groupBy are fixed
     if (chartType === 'ranking') {
       if (!canCreate) return;
       setIsCreating(true);
@@ -173,6 +176,33 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           chart_type: chartType,
           config,
           layout: { x: 0, y: 0, w: 6, h: 5 },
+        });
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Error creating visual:", error);
+      } finally {
+        setIsCreating(false);
+      }
+      return;
+    }
+
+    if (chartType === 'call_commercial') {
+      if (!canCreate) return;
+      setIsCreating(true);
+      try {
+        const config: VisualConfig = {
+          dataSource: 'tasks',
+          measure: { field: '', aggregation: 'count' },
+          dimension: { field: 'assigned_to', type: 'text' },
+          formatting: { type: 'decimal', decimals: 0 },
+          appearance: DEFAULT_APPEARANCE,
+        };
+        await addVisual({
+          dashboard_id: activeDashboardId,
+          title: title.trim(),
+          chart_type: 'call_commercial',
+          config,
+          layout: { x: 0, y: 0, w: 6, h: 4 },
         });
         onOpenChange(false);
       } catch (error) {
@@ -311,24 +341,26 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           )}
 
           {/* Step 2: What to Measure (+ Title for Scorecards) OR Title for Rankings */}
-          {step === 2 && chartType === 'ranking' && (
+          {step === 2 && (chartType === 'ranking' || chartType === 'call_commercial') && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                O ranking exibirá os vendedores ordenados pelo faturamento total (negócios ganhos).
+                {chartType === 'ranking'
+                  ? 'O ranking exibirá os vendedores ordenados pelo faturamento total (negócios ganhos).'
+                  : 'Exibirá para cada vendedor a contagem de Calls Comerciais Agendadas (em aberto) e Concluídas.'}
               </p>
               <div className="space-y-2">
-                <Label htmlFor="visual-title-ranking">Título do Ranking</Label>
+                <Label htmlFor="visual-title-simple">Título</Label>
                 <Input
-                  id="visual-title-ranking"
+                  id="visual-title-simple"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ex: Ranking de Vendedores"
+                  placeholder={chartType === 'ranking' ? 'Ex: Ranking de Vendedores' : 'Ex: Calls Comerciais'}
                 />
               </div>
             </div>
           )}
 
-          {step === 2 && chartType !== 'ranking' && (
+          {step === 2 && chartType !== 'ranking' && chartType !== 'call_commercial' && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">O que você quer medir?</p>
               <RadioGroup
