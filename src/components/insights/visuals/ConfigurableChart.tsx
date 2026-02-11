@@ -16,6 +16,7 @@ import {
 import { ChartType, FormatType, AppearanceConfig, COLOR_PALETTES, DEFAULT_APPEARANCE } from "../visual-builder/types";
 import { ChartTooltip } from "./ChartTooltip";
 import { ConfigurableScorecard } from "./ConfigurableScorecard";
+import { ConfigurableRanking } from "./ConfigurableRanking";
 import { formatValueCompact } from "@/lib/formula-evaluator";
 
 interface AggregatedDataPoint {
@@ -55,6 +56,8 @@ export function ConfigurableChart({ type, data, formatting, appearance, onDrilld
     case 'number':
     case 'scorecard':
       return <ConfigurableScorecard data={data} formatting={formatting} />;
+    case 'ranking':
+      return <ConfigurableRanking data={data} formatting={formatting} />;
     case 'bar':
       return <BarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'line':
