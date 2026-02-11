@@ -1,8 +1,8 @@
-export type DataSource = 'deals' | 'leads' | 'products';
+export type DataSource = 'deals' | 'leads' | 'products' | 'tasks';
 export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
-export type ChartType = 'bar' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking';
+export type ChartType = 'bar' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
 export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature';
 export type DisplayScale = 'full' | 'auto' | 'thousands' | 'millions' | 'billions';
@@ -49,6 +49,7 @@ export const DATA_SOURCE_OPTIONS: { value: DataSource; label: string }[] = [
   { value: 'deals', label: 'Negócios' },
   { value: 'leads', label: 'Leads' },
   { value: 'products', label: 'Produtos' },
+  { value: 'tasks', label: 'Tarefas' },
 ];
 
 // Aggregation options
@@ -80,6 +81,7 @@ export const CHART_TYPE_OPTIONS: { value: ChartType; label: string }[] = [
   { value: 'pie', label: 'Pizza' },
   { value: 'number', label: 'Scorecard' },
   { value: 'ranking', label: 'Ranking' },
+  { value: 'call_commercial', label: 'Calls Comerciais' },
 ];
 
 // Date display format options
@@ -168,6 +170,12 @@ export const DATA_SOURCE_FIELDS: Record<DataSource, {
       { value: 'created_at', label: 'Data de Criação', type: 'date' },
     ],
   },
+  tasks: {
+    numeric: [],
+    dimension: [
+      { value: 'assigned_to', label: 'Vendedor', type: 'text' },
+    ],
+  },
 };
 
 // Generate default title based on selections
@@ -181,6 +189,7 @@ export function generateVisualTitle(
     deals: 'Negócios',
     leads: 'Leads',
     products: 'Produtos',
+    tasks: 'Tarefas',
   };
 
   const aggLabels: Record<Aggregation, string> = {
