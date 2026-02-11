@@ -1,44 +1,38 @@
 
 
-## Corrigir regex que limpa menções com caracteres acentuados
+## Relatório: Por que as notificações de menção ainda não funcionam
 
-### Problema encontrado
+### Causa raiz encontrada
 
-A causa raiz do problema **não está na lógica de notificação** (que está correta), mas sim nos componentes `MentionInput` e `MentionTextarea`.
+O componente **Timeline.tsx** (onde você está testando) **não usa** a função compartilhada `createMentionNotifications` que já foi corrigida. Ele possui sua **própria função interna** chamada `createNotificationsWithAnchor` (linha 836) que **ainda filtra auto-menções**:
 
-Ambos possuem um `useEffect` que monitora mudanças no `value` e usa uma regex para detectar menções:
-
-```
-const mentions = value.match(/@(\w+(?:\s\w+)*)/g) || [];
-```
-
-O problema: `\w` em JavaScript **não reconhece caracteres acentuados** como `ã`, `é`, `ç`, etc. Então, quando o usuário menciona "@João Ferrari", a regex não encontra nenhuma menção, o `useEffect` interpreta que não há menções no texto e **limpa o array `mentionedUsers`** — zerando tudo antes do envio.
-
-**Sequência do bug:**
-1. Usuário seleciona "@João Ferrari" no dropdown -> `mentionedUsers` é preenchido corretamente
-2. O `value` muda -> o `useEffect` dispara -> regex falha em reconhecer "João" -> `mentionedUsers` é resetado para `[]`
-3. Usuário envia -> `mentionedUsers.length === 0` -> nenhuma notificação é criada
-
-### Correção
-
-**Arquivos a modificar:**
-1. `src/components/ui/mention-input.tsx` (linha 130)
-2. `src/components/ui/mention-textarea.tsx` (linha 165)
-
-**Mudança em ambos:** Trocar a regex de:
-```
-/@(\w+(?:\s\w+)*)/g
+```text
+// Timeline.tsx, linha 841 - ESTE é o problema:
+const userIdsToNotify = mentionedUserIds.filter((id) => id !== currentUser.id);
+if (userIdsToNotify.length === 0) return;  // <- retorna sem criar nada
 ```
 
-Para uma que suporte caracteres Unicode/acentuados:
+Ou seja: quando você menciona a si mesmo na Timeline, os IDs são filtrados, o array fica vazio, e a função retorna sem criar nenhuma notificação.
+
+A correção anterior foi aplicada apenas em `src/lib/mention-notifications.ts`, mas o Timeline.tsx nunca importa nem usa esse arquivo.
+
+### Plano de correção
+
+**Arquivo: `src/components/client/Timeline.tsx`**
+
+1. Remover o filtro de auto-menção na função `createNotificationsWithAnchor` (linha 841)
+2. Remover a checagem `if (userIdsToNotify.length === 0) return;` (linha 843) que se torna redundante, pois a checagem já existe na linha 837
+
+A mudança é de:
+```text
+const userIdsToNotify = mentionedUserIds.filter((id) => id !== currentUser.id);
+if (userIdsToNotify.length === 0) return;
 ```
-/@([\p{L}\p{N}_]+(?:\s[\p{L}\p{N}_]+)*)/gu
+
+Para:
+```text
+const userIdsToNotify = mentionedUserIds;
 ```
 
-- `\p{L}` reconhece qualquer letra Unicode (incluindo acentuadas: ã, é, ç, ñ, etc.)
-- `\p{N}` reconhece qualquer dígito Unicode
-- Flag `u` habilita suporte a Unicode
+Isso alinha o comportamento da Timeline com os outros componentes que já foram corrigidos, garantindo que todos os mencionados (incluindo o próprio autor) recebam a notificação.
 
-### Resultado esperado
-
-Após a correção, menções a nomes com acentos (como "João", "André", "José") serão reconhecidas pela regex. O `useEffect` não limpará mais o array indevidamente, e as notificações serão criadas normalmente ao enviar o comentário.
