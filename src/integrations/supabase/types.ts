@@ -364,8 +364,10 @@ export type Database = {
           created_at: string
           error_message: string | null
           id: string
+          job_type: string
           max_attempts: number
           message_id: string
+          payload: Json | null
           priority: number
           started_at: string | null
           status: string
@@ -378,8 +380,10 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          job_type?: string
           max_attempts?: number
           message_id: string
+          payload?: Json | null
           priority?: number
           started_at?: string | null
           status?: string
@@ -392,8 +396,10 @@ export type Database = {
           created_at?: string
           error_message?: string | null
           id?: string
+          job_type?: string
           max_attempts?: number
           message_id?: string
+          payload?: Json | null
           priority?: number
           started_at?: string | null
           status?: string
