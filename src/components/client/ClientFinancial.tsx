@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { MentionInput, extractMentions } from "@/components/ui/mention-input";
+import { createMentionNotifications } from "@/lib/mention-notifications";
 import { ClientFinancialStatusBadge } from "./ClientFinancialStatusBadge";
 import { ReceivableMethodSelector, ReceivableMethod } from "@/components/financial/ReceivableMethodSelector";
 import { ManualReceivableDialog, ReceivableFormData } from "@/components/financial/ManualReceivableDialog";
@@ -150,6 +151,8 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
   const [quickComment, setQuickComment] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [mentionedUsers, setMentionedUsers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
+  const [clientName, setClientName] = useState("");
   
   // File input refs
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -309,6 +312,12 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
 
   useEffect(() => {
     fetchAllData();
+    // Fetch client name for mention notifications
+    const fetchName = async () => {
+      const { data } = await supabase.from("clients").select("full_name").eq("id", clientId).single();
+      if (data) setClientName(data.full_name);
+    };
+    fetchName();
 
     const channel = supabase
       .channel(`subscriptions-${clientId}`)
@@ -415,18 +424,32 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
     
     setSaving(true);
     try {
-      const { error } = await supabase.from("client_followups").insert({
+      const { data: newFollowup, error } = await supabase.from("client_followups").insert({
         account_id: currentUser.account_id,
         client_id: clientId,
         user_id: currentUser.id,
         type: "financial_note",
         title: null,
         content: quickComment.trim(),
-      });
+      }).select("id").single();
 
       if (error) throw error;
+
+      if (mentionedUsers.length > 0 && newFollowup) {
+        await createMentionNotifications({
+          mentionedUsers,
+          currentUser,
+          commentContent: quickComment.trim(),
+          followupId: newFollowup.id,
+          clientId,
+          clientName,
+          linkPath: `/clients/${clientId}?tab=financeiro#comment-${newFollowup.id}`,
+        });
+      }
+
       toast.success("Nota financeira adicionada!");
       setQuickComment("");
+      setMentionedUsers([]);
     } catch (error: any) {
       console.error("Error adding note:", error);
       toast.error(error.message || "Erro ao adicionar nota");
