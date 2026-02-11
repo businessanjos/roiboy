@@ -111,11 +111,18 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
 
     const fetchUsers = async () => {
       const { data } = await supabase
-        .from('users')
-        .select('name')
+        .from('user_sector_access')
+        .select('user:users!user_sector_access_user_id_fkey(name)')
         .eq('account_id', currentUser.account_id)
-        .order('name');
-      if (data) setAccountUsers(data);
+        .eq('sector_id', 'vendas')
+        .eq('is_active', true);
+      if (data) {
+        const users = data
+          .map((item: any) => ({ name: item.user?.name }))
+          .filter((u: any) => u.name)
+          .sort((a: any, b: any) => a.name.localeCompare(b.name));
+        setAccountUsers(users);
+      }
     };
     fetchUsers();
   }, [open, isCallCommercial, currentUser?.account_id]);
