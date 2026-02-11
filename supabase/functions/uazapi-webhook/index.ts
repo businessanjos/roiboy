@@ -1183,99 +1183,18 @@ serve(async (req) => {
             // Runs asynchronously to avoid 3-5 queries on the critical path
             // ============================================
             if (!clientId && !isGroupMessage && contactName && contactName !== "Desconhecido") {
-              const _suggestionConvoId = zappConversationId;
-              const _suggestionAccountId = accountId;
-              const _suggestionContactName = contactName;
-              const _suggestionPhone = phone;
-              const _suggestionSupabase = supabase;
-              
-              setTimeout(async () => {
-                try {
-                  const suggestions: { clientId: string; matchType: string; score: number; details: Record<string, unknown> }[] = [];
-                  
-                  const nameParts = _suggestionContactName
-                    .split(/[\s\-\/\(\)]+/)
-                    .filter((p: string) => p.length > 2)
-                    .slice(0, 3);
-                  
-                  for (const part of nameParts) {
-                    const { data: nameMatches } = await _suggestionSupabase
-                      .from("clients")
-                      .select("id, full_name, phone_e164")
-                      .eq("account_id", _suggestionAccountId)
-                      .eq("status", "active")
-                      .ilike("full_name", `%${part}%`)
-                      .limit(5);
-                    
-                    if (nameMatches) {
-                      for (const client of nameMatches) {
-                        const clientNameLower = (client.full_name || "").toLowerCase();
-                        const matchingParts = nameParts.filter((np: string) => 
-                          clientNameLower.includes(np.toLowerCase())
-                        ).length;
-                        const score = Math.min(0.95, 0.5 + (matchingParts * 0.15));
-                        
-                        if (!suggestions.find(s => s.clientId === client.id)) {
-                          suggestions.push({
-                            clientId: client.id,
-                            matchType: matchingParts > 1 ? "name" : "similar_name",
-                            score,
-                            details: { matchedPart: part, matchingParts, contactName: _suggestionContactName, clientName: client.full_name },
-                          });
-                        }
-                      }
-                    }
-                  }
-                  
-                  if (_suggestionPhone) {
-                    const phoneDigits = _suggestionPhone.replace(/\D/g, "");
-                    const partialPhone = phoneDigits.slice(-9);
-                    
-                    if (partialPhone.length >= 9) {
-                      const { data: phoneMatches } = await _suggestionSupabase
-                        .from("clients")
-                        .select("id, full_name, phone_e164")
-                        .eq("account_id", _suggestionAccountId)
-                        .eq("status", "active")
-                        .ilike("phone_e164", `%${partialPhone}`)
-                        .limit(5);
-                      
-                      if (phoneMatches) {
-                        for (const client of phoneMatches) {
-                          const existing = suggestions.find(s => s.clientId === client.id);
-                          if (existing) {
-                            existing.score = Math.min(0.98, existing.score + 0.2);
-                            existing.matchType = "name";
-                            (existing.details as Record<string, unknown>).phoneMatch = true;
-                          } else {
-                            suggestions.push({
-                              clientId: client.id,
-                              matchType: "partial_phone",
-                              score: 0.7,
-                              details: { partialPhone, contactName: _suggestionContactName, clientName: client.full_name },
-                            });
-                          }
-                        }
-                      }
-                    }
-                  }
-                  
-                  const topSuggestions = suggestions.sort((a, b) => b.score - a.score).slice(0, 3);
-                  
-                  for (const suggestion of topSuggestions) {
-                    await _suggestionSupabase.from("zapp_client_suggestions").insert({
-                      account_id: _suggestionAccountId,
-                      zapp_conversation_id: _suggestionConvoId,
-                      suggested_client_id: suggestion.clientId,
-                      match_type: suggestion.matchType,
-                      match_score: suggestion.score,
-                      match_details: suggestion.details,
-                    }).maybeSingle();
-                  }
-                } catch (err) {
-                  console.error("[SUGGESTION] Async error:", err);
-                }
-              }, 0);
+              await supabase.from("ai_analysis_queue").insert({
+                account_id: accountId,
+                job_type: "client_suggest",
+                message_id: null,
+                payload: {
+                  contact_name: contactName,
+                  phone: phone,
+                  zapp_conversation_id: zappConversationId,
+                },
+                status: "pending",
+                priority: 0,
+              });
             }
           } else if (zappConvoError) {
             console.error("Error creating zapp_conversation:", zappConvoError);
@@ -1553,122 +1472,24 @@ serve(async (req) => {
         const isBurstMessage = lastMsgAt > 0 && (Date.now() - lastMsgAt) < 5000;
         
         if (direction === "inbound" && phone && !isBurstMessage) {
-          // Capture variables for async closure
-          const _bgAccountId = accountId;
-          const _bgLinkedClientId = linkedClientId;
-          const _bgZappConvoId = zappConversationId;
-          const _bgContent = content;
-          const _bgTimestamp = timestamp;
-          const _bgChatId = chat.id;
-          const _bgProfilePicUrl = chat.image || chat.imagePreview;
-          const _bgPhone = phone;
-          const _bgInsertedMsgId = insertedMessageDbId;
-          const _bgSupabase = supabase;
-          
-          setTimeout(async () => {
-            try {
-              // --- CLIENT PATH ---
-              if (_bgLinkedClientId) {
-                const clientId = _bgLinkedClientId;
-                
-                // Avatar update (only if client has no avatar)
-                if (_bgProfilePicUrl) {
-                  const { data: clientData } = await _bgSupabase
-                    .from("clients")
-                    .select("avatar_url")
-                    .eq("id", clientId)
-                    .maybeSingle();
-                  
-                  if (clientData && !clientData.avatar_url) {
-                    await _bgSupabase
-                      .from("clients")
-                      .update({ avatar_url: _bgProfilePicUrl })
-                      .eq("id", clientId);
-                  }
-                }
-
-                // Find or create conversation (for client analysis)
-                let conversationId: string | null = null;
-                const { data: existingConvo } = await _bgSupabase
-                  .from("conversations")
-                  .select("id")
-                  .eq("account_id", _bgAccountId)
-                  .eq("client_id", clientId)
-                  .eq("channel", "whatsapp")
-                  .maybeSingle();
-
-                if (existingConvo) {
-                  conversationId = existingConvo.id;
-                } else {
-                  const { data: newConvo } = await _bgSupabase
-                    .from("conversations")
-                    .insert({
-                      account_id: _bgAccountId,
-                      client_id: clientId,
-                      channel: "whatsapp",
-                      external_thread_id: _bgChatId,
-                    })
-                    .select("id")
-                    .single();
-                  if (newConvo) conversationId = newConvo.id;
-                }
-
-                // Insert message event
-                await _bgSupabase
-                  .from("message_events")
-                  .insert({
-                    account_id: _bgAccountId,
-                    client_id: clientId,
-                    conversation_id: conversationId,
-                    source: "whatsapp_text",
-                    direction: "client_to_team",
-                    content_text: _bgContent,
-                    sent_at: _bgTimestamp,
-                  });
-
-                // Queue AI analysis (use insertedMessageDbId directly - no re-fetch!)
-                if (_bgContent.length > 10 && !_bgContent.startsWith("[") && _bgInsertedMsgId) {
-                  await _bgSupabase
-                    .from("ai_analysis_queue")
-                    .insert({
-                      account_id: _bgAccountId,
-                      message_id: _bgInsertedMsgId,
-                      client_id: clientId,
-                      status: "pending",
-                      priority: 0,
-                    });
-                }
-              } else {
-                // --- LEAD PATH ---
-                const normalizedPhoneForLead = _bgPhone.replace(/^\+/, '');
-                const { data: existingLead } = await _bgSupabase
-                  .from("leads")
-                  .select("id, avatar_url")
-                  .eq("account_id", _bgAccountId)
-                  .or(`phone.eq.${normalizedPhoneForLead},phone.eq.${_bgPhone}`)
-                  .maybeSingle();
-
-                if (existingLead) {
-                  // Avatar update
-                  if (_bgProfilePicUrl && !existingLead.avatar_url) {
-                    await _bgSupabase
-                      .from("leads")
-                      .update({ avatar_url: _bgProfilePicUrl })
-                      .eq("id", existingLead.id);
-                  }
-                  // Link lead to conversation
-                  if (_bgZappConvoId) {
-                    await _bgSupabase
-                      .from("zapp_conversations")
-                      .update({ lead_id: existingLead.id })
-                      .eq("id", _bgZappConvoId);
-                  }
-                }
-              }
-            } catch (err) {
-              console.error("[BG-ANALYSIS] Async error:", err);
-            }
-          }, 0);
+          await supabase.from("ai_analysis_queue").insert({
+            account_id: accountId,
+            job_type: "client_analysis",
+            message_id: insertedMessageDbId || null,
+            client_id: linkedClientId || null,
+            payload: {
+              linked_client_id: linkedClientId || null,
+              phone: phone,
+              profile_pic_url: chat.image || chat.imagePreview || null,
+              chat_id: chat.id || null,
+              content: content,
+              timestamp: timestamp,
+              zapp_conversation_id: zappConversationId,
+              inserted_message_id: insertedMessageDbId || null,
+            },
+            status: "pending",
+            priority: 1,
+          });
         }
         
 

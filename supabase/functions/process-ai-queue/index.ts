@@ -7,9 +7,280 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Configuration
-const BATCH_SIZE = 10; // Process 10 jobs at a time
-const MAX_PROCESSING_TIME_MS = 25000; // Leave buffer before timeout (30s edge function limit)
+const BATCH_SIZE = 10;
+const MAX_PROCESSING_TIME_MS = 25000;
+
+// ============================================
+// JOB HANDLERS
+// ============================================
+
+async function handleAiAnalysis(
+  supabase: ReturnType<typeof createClient>,
+  job: { id: string; account_id: string; message_id: string | null; client_id: string | null },
+  supabaseUrl: string,
+  supabaseKey: string,
+) {
+  if (!job.message_id) {
+    return "skipped";
+  }
+
+  const { data: message, error: msgError } = await supabase
+    .from("zapp_messages")
+    .select("content")
+    .eq("id", job.message_id)
+    .single();
+
+  if (msgError || !message) {
+    throw new Error(`Message not found: ${job.message_id}`);
+  }
+
+  const content = message.content || "";
+
+  if (content.length <= 10 || content.startsWith("[")) {
+    return "skipped";
+  }
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/analyze-message`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${supabaseKey}`,
+    },
+    body: JSON.stringify({
+      account_id: job.account_id,
+      client_id: job.client_id,
+      message_content: content,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`analyze-message failed: ${response.status} - ${errorText}`);
+  }
+
+  return "completed";
+}
+
+async function handleClientAnalysis(
+  supabase: ReturnType<typeof createClient>,
+  job: { id: string; account_id: string; client_id: string | null; payload: Record<string, unknown> | null },
+) {
+  const p = job.payload || {};
+  const linkedClientId = p.linked_client_id as string | null;
+  const phone = p.phone as string;
+  const profilePicUrl = p.profile_pic_url as string | null;
+  const chatId = p.chat_id as string | null;
+  const content = p.content as string;
+  const timestamp = p.timestamp as string;
+  const zappConversationId = p.zapp_conversation_id as string | null;
+  const insertedMsgId = p.inserted_message_id as string | null;
+  const accountId = job.account_id;
+
+  if (linkedClientId) {
+    // --- CLIENT PATH ---
+    // Avatar update (only if client has no avatar)
+    if (profilePicUrl) {
+      const { data: clientData } = await supabase
+        .from("clients")
+        .select("avatar_url")
+        .eq("id", linkedClientId)
+        .maybeSingle();
+
+      if (clientData && !clientData.avatar_url) {
+        await supabase
+          .from("clients")
+          .update({ avatar_url: profilePicUrl })
+          .eq("id", linkedClientId);
+      }
+    }
+
+    // Find or create conversation (for client analysis)
+    let conversationId: string | null = null;
+    const { data: existingConvo } = await supabase
+      .from("conversations")
+      .select("id")
+      .eq("account_id", accountId)
+      .eq("client_id", linkedClientId)
+      .eq("channel", "whatsapp")
+      .maybeSingle();
+
+    if (existingConvo) {
+      conversationId = existingConvo.id;
+    } else {
+      const { data: newConvo } = await supabase
+        .from("conversations")
+        .insert({
+          account_id: accountId,
+          client_id: linkedClientId,
+          channel: "whatsapp",
+          external_thread_id: chatId,
+        })
+        .select("id")
+        .single();
+      if (newConvo) conversationId = newConvo.id;
+    }
+
+    // Insert message event
+    await supabase
+      .from("message_events")
+      .insert({
+        account_id: accountId,
+        client_id: linkedClientId,
+        conversation_id: conversationId,
+        source: "whatsapp_text",
+        direction: "client_to_team",
+        content_text: content,
+        sent_at: timestamp,
+      });
+
+    // Queue AI analysis as sub-job
+    if (content.length > 10 && !content.startsWith("[") && insertedMsgId) {
+      await supabase
+        .from("ai_analysis_queue")
+        .insert({
+          account_id: accountId,
+          message_id: insertedMsgId,
+          client_id: linkedClientId,
+          job_type: "ai_analysis",
+          status: "pending",
+          priority: 0,
+        });
+    }
+  } else {
+    // --- LEAD PATH ---
+    const normalizedPhone = phone.replace(/^\+/, "");
+    const { data: existingLead } = await supabase
+      .from("leads")
+      .select("id, avatar_url")
+      .eq("account_id", accountId)
+      .or(`phone.eq.${normalizedPhone},phone.eq.${phone}`)
+      .maybeSingle();
+
+    if (existingLead) {
+      if (profilePicUrl && !existingLead.avatar_url) {
+        await supabase
+          .from("leads")
+          .update({ avatar_url: profilePicUrl })
+          .eq("id", existingLead.id);
+      }
+      if (zappConversationId) {
+        await supabase
+          .from("zapp_conversations")
+          .update({ lead_id: existingLead.id })
+          .eq("id", zappConversationId);
+      }
+    }
+  }
+
+  return "completed";
+}
+
+async function handleClientSuggest(
+  supabase: ReturnType<typeof createClient>,
+  job: { id: string; account_id: string; payload: Record<string, unknown> | null },
+) {
+  const p = job.payload || {};
+  const contactName = p.contact_name as string;
+  const phone = p.phone as string | null;
+  const zappConversationId = p.zapp_conversation_id as string;
+  const accountId = job.account_id;
+
+  const suggestions: { clientId: string; matchType: string; score: number; details: Record<string, unknown> }[] = [];
+
+  // Name-based matching
+  const nameParts = contactName
+    .split(/[\s\-\/\(\)]+/)
+    .filter((part: string) => part.length > 2)
+    .slice(0, 3);
+
+  for (const part of nameParts) {
+    const { data: nameMatches } = await supabase
+      .from("clients")
+      .select("id, full_name, phone_e164")
+      .eq("account_id", accountId)
+      .eq("status", "active")
+      .ilike("full_name", `%${part}%`)
+      .limit(5);
+
+    if (nameMatches) {
+      for (const client of nameMatches) {
+        const clientNameLower = (client.full_name || "").toLowerCase();
+        const matchingParts = nameParts.filter((np: string) =>
+          clientNameLower.includes(np.toLowerCase())
+        ).length;
+        const score = Math.min(0.95, 0.5 + matchingParts * 0.15);
+
+        if (!suggestions.find((s) => s.clientId === client.id)) {
+          suggestions.push({
+            clientId: client.id,
+            matchType: matchingParts > 1 ? "name" : "similar_name",
+            score,
+            details: {
+              matchedPart: part,
+              matchingParts,
+              contactName,
+              clientName: client.full_name,
+            },
+          });
+        }
+      }
+    }
+  }
+
+  // Phone-based matching
+  if (phone) {
+    const phoneDigits = phone.replace(/\D/g, "");
+    const partialPhone = phoneDigits.slice(-9);
+
+    if (partialPhone.length >= 9) {
+      const { data: phoneMatches } = await supabase
+        .from("clients")
+        .select("id, full_name, phone_e164")
+        .eq("account_id", accountId)
+        .eq("status", "active")
+        .ilike("phone_e164", `%${partialPhone}`)
+        .limit(5);
+
+      if (phoneMatches) {
+        for (const client of phoneMatches) {
+          const existing = suggestions.find((s) => s.clientId === client.id);
+          if (existing) {
+            existing.score = Math.min(0.98, existing.score + 0.2);
+            existing.matchType = "name";
+            (existing.details as Record<string, unknown>).phoneMatch = true;
+          } else {
+            suggestions.push({
+              clientId: client.id,
+              matchType: "partial_phone",
+              score: 0.7,
+              details: { partialPhone, contactName, clientName: client.full_name },
+            });
+          }
+        }
+      }
+    }
+  }
+
+  // Insert top 3 suggestions
+  const topSuggestions = suggestions.sort((a, b) => b.score - a.score).slice(0, 3);
+
+  for (const suggestion of topSuggestions) {
+    await supabase.from("zapp_client_suggestions").insert({
+      account_id: accountId,
+      zapp_conversation_id: zappConversationId,
+      suggested_client_id: suggestion.clientId,
+      match_type: suggestion.matchType,
+      match_score: suggestion.score,
+      match_details: suggestion.details,
+    }).maybeSingle();
+  }
+
+  return "completed";
+}
+
+// ============================================
+// MAIN QUEUE PROCESSOR
+// ============================================
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -17,7 +288,7 @@ serve(async (req) => {
   }
 
   const startTime = Date.now();
-  
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -25,8 +296,7 @@ serve(async (req) => {
 
     console.log("Starting AI queue processing...");
 
-    // OPTIMIZATION: First, clean up stale jobs that have been processing for too long (>5 min)
-    // This prevents jobs from getting stuck indefinitely
+    // Clean up stale jobs (processing > 5 min)
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
     const { data: staleJobs } = await supabase
       .from("ai_analysis_queue")
@@ -38,13 +308,12 @@ serve(async (req) => {
       .eq("status", "processing")
       .lt("started_at", fiveMinutesAgo)
       .select("id");
-    
+
     if (staleJobs && staleJobs.length > 0) {
       console.log(`Cleaned up ${staleJobs.length} stale processing jobs`);
     }
 
-    // OPTIMIZATION: Also clean up jobs that have exceeded max_attempts
-    // These would just keep failing and consuming resources
+    // Clean up exhausted jobs (max attempts exceeded)
     const { data: exhaustedJobs } = await supabase
       .from("ai_analysis_queue")
       .update({
@@ -55,23 +324,17 @@ serve(async (req) => {
       .eq("status", "pending")
       .gte("attempts", 3)
       .select("id");
-    
+
     if (exhaustedJobs && exhaustedJobs.length > 0) {
-      console.log(`Cleaned up ${exhaustedJobs.length} exhausted jobs (max attempts exceeded)`);
+      console.log(`Cleaned up ${exhaustedJobs.length} exhausted jobs`);
     }
 
-    // Fetch pending jobs ordered by priority (higher first) and creation time
+    // Fetch pending jobs
     const { data: jobs, error: fetchError } = await supabase
       .from("ai_analysis_queue")
-      .select(`
-        id,
-        account_id,
-        message_id,
-        client_id,
-        attempts
-      `)
+      .select("id, account_id, message_id, client_id, attempts, job_type, payload")
       .eq("status", "pending")
-      .lt("attempts", 3) // Only get jobs that haven't exceeded attempts
+      .lt("attempts", 3)
       .order("priority", { ascending: false })
       .order("created_at", { ascending: true })
       .limit(BATCH_SIZE);
@@ -96,15 +359,15 @@ serve(async (req) => {
     const results: Array<{ id: string; status: string; error?: string }> = [];
 
     for (const job of jobs) {
-      // Check if we're running out of time
       if (Date.now() - startTime > MAX_PROCESSING_TIME_MS) {
         console.log("Approaching timeout, stopping batch processing");
         break;
       }
 
-      console.log(`Processing job ${job.id} for message ${job.message_id}`);
+      const jobType = job.job_type || "ai_analysis";
+      console.log(`Processing job ${job.id} (type: ${jobType})`);
 
-      // Mark job as processing
+      // Mark as processing
       await supabase
         .from("ai_analysis_queue")
         .update({
@@ -115,52 +378,21 @@ serve(async (req) => {
         .eq("id", job.id);
 
       try {
-        // Get the message content
-        const { data: message, error: msgError } = await supabase
-          .from("zapp_messages")
-          .select("content")
-          .eq("id", job.message_id)
-          .single();
+        let result: string;
 
-        if (msgError || !message) {
-          throw new Error(`Message not found: ${job.message_id}`);
-        }
-
-        const content = message.content || "";
-        
-        // Skip if content is too short or is a media placeholder
-        if (content.length <= 10 || content.startsWith("[")) {
-          console.log(`Skipping job ${job.id} - content too short or media placeholder`);
-          await supabase
-            .from("ai_analysis_queue")
-            .update({
-              status: "completed",
-              completed_at: new Date().toISOString(),
-              error_message: "Skipped: content too short or media",
-            })
-            .eq("id", job.id);
-          processedCount++;
-          results.push({ id: job.id, status: "skipped" });
-          continue;
-        }
-
-        // Call analyze-message function
-        const response = await fetch(`${supabaseUrl}/functions/v1/analyze-message`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabaseKey}`,
-          },
-          body: JSON.stringify({
-            account_id: job.account_id,
-            client_id: job.client_id,
-            message_content: content,
-          }),
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`analyze-message failed: ${response.status} - ${errorText}`);
+        switch (jobType) {
+          case "ai_analysis":
+            result = await handleAiAnalysis(supabase, job, supabaseUrl, supabaseKey);
+            break;
+          case "client_analysis":
+            result = await handleClientAnalysis(supabase, job as { id: string; account_id: string; client_id: string | null; payload: Record<string, unknown> | null });
+            break;
+          case "client_suggest":
+            result = await handleClientSuggest(supabase, job as { id: string; account_id: string; payload: Record<string, unknown> | null });
+            break;
+          default:
+            console.warn(`Unknown job_type: ${jobType}, skipping`);
+            result = "skipped";
         }
 
         // Mark as completed
@@ -169,22 +401,19 @@ serve(async (req) => {
           .update({
             status: "completed",
             completed_at: new Date().toISOString(),
+            ...(result === "skipped" ? { error_message: "Skipped: content too short or media" } : {}),
           })
           .eq("id", job.id);
 
         processedCount++;
-        results.push({ id: job.id, status: "completed" });
-        console.log(`Job ${job.id} completed successfully`);
-
+        results.push({ id: job.id, status: result });
+        console.log(`Job ${job.id} (${jobType}) ${result}`);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err);
         console.error(`Job ${job.id} failed:`, errorMessage);
 
-        // Check if we should retry or mark as failed
         const newAttempts = job.attempts + 1;
-        const maxAttempts = 3;
-
-        if (newAttempts >= maxAttempts) {
+        if (newAttempts >= 3) {
           await supabase
             .from("ai_analysis_queue")
             .update({
@@ -196,7 +425,6 @@ serve(async (req) => {
           failedCount++;
           results.push({ id: job.id, status: "failed", error: errorMessage });
         } else {
-          // Reset to pending for retry
           await supabase
             .from("ai_analysis_queue")
             .update({
@@ -210,7 +438,7 @@ serve(async (req) => {
     }
 
     const totalTime = Date.now() - startTime;
-    console.log(`Queue processing complete. Processed: ${processedCount}, Failed: ${failedCount}, Time: ${totalTime}ms`);
+    console.log(`Queue complete. Processed: ${processedCount}, Failed: ${failedCount}, Time: ${totalTime}ms`);
 
     return new Response(
       JSON.stringify({
@@ -222,11 +450,10 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error("Queue processing error:", errorMessage);
-    
+
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
