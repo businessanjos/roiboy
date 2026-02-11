@@ -837,10 +837,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     if (!currentUser?.account_id || mentionedUserIds.length === 0) return;
 
     try {
-      // Filter out self from mentioned users
-      const userIdsToNotify = mentionedUserIds.filter((id) => id !== currentUser.id);
-      
-      if (userIdsToNotify.length === 0) return;
+      const userIdsToNotify = mentionedUserIds;
 
       // Create notifications directly using IDs (no name lookup needed)
       const notificationsToCreate = userIdsToNotify.map((userId) => ({
