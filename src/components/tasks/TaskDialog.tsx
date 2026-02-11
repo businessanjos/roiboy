@@ -319,6 +319,22 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
       const dueTime = formData.due_time || null;
 
       if (task) {
+        // Sync custom_status_id with isCompleted to ensure reopening works
+        let targetStatusId: string | null = task.custom_status_id || null;
+        const { data: statuses } = await supabase
+          .from("task_statuses")
+          .select("id, is_completed_status")
+          .order("display_order");
+        
+        if (statuses && statuses.length > 0) {
+          const targetStatus = isCompleted
+            ? statuses.find(s => s.is_completed_status)
+            : statuses.find(s => !s.is_completed_status);
+          if (targetStatus) {
+            targetStatusId = targetStatus.id;
+          }
+        }
+
         const updateData = {
           title: taskTitle,
           description: formData.description.trim() || null,
@@ -331,6 +347,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           assigned_to: formData.assigned_to,
           activity_type_id: formData.activity_type_id || null,
           completed_at: isCompleted ? (task.completed_at || new Date().toISOString()) : null,
+          custom_status_id: targetStatusId,
         };
         const { error } = await supabase
           .from("internal_tasks")
