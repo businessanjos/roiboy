@@ -366,7 +366,7 @@ export type Database = {
           id: string
           job_type: string
           max_attempts: number
-          message_id: string
+          message_id: string | null
           payload: Json | null
           priority: number
           started_at: string | null
@@ -382,7 +382,7 @@ export type Database = {
           id?: string
           job_type?: string
           max_attempts?: number
-          message_id: string
+          message_id?: string | null
           payload?: Json | null
           priority?: number
           started_at?: string | null
@@ -398,7 +398,7 @@ export type Database = {
           id?: string
           job_type?: string
           max_attempts?: number
-          message_id?: string
+          message_id?: string | null
           payload?: Json | null
           priority?: number
           started_at?: string | null
@@ -429,7 +429,7 @@ export type Database = {
           {
             foreignKeyName: "ai_analysis_queue_message_id_fkey"
             columns: ["message_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "zapp_messages"
             referencedColumns: ["id"]
           },
