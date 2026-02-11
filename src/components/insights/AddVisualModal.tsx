@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { VisualConfig, DEFAULT_APPEARANCE } from "./visual-builder/types";
@@ -20,7 +20,7 @@ interface AddVisualModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type ChartType = "bar" | "line" | "pie" | "scorecard";
+type ChartType = "bar" | "line" | "pie" | "scorecard" | "ranking";
 type Metric = "revenue" | "deals_count" | "avg_ticket" | "conversion" | "lost_reasons";
 type GroupBy = "month" | "user" | "stage" | "product";
 
@@ -29,6 +29,7 @@ const CHART_TYPES = [
   { value: "line" as const, label: "Gráfico de Linhas", description: "Visualizar tendências ao longo do tempo", icon: LineChart },
   { value: "pie" as const, label: "Gráfico de Pizza", description: "Mostrar proporções de um todo", icon: PieChart },
   { value: "scorecard" as const, label: "Scorecard", description: "Exibir um número ou KPI destacado", icon: Hash },
+  { value: "ranking" as const, label: "Ranking", description: "Tabela ordenada com medalhas e barras de progresso", icon: Trophy },
 ];
 
 const METRICS = [
@@ -106,8 +107,8 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   const [title, setTitle] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
-  // Scorecards have only 2 steps, other charts have 3
-  const totalSteps = chartType === 'scorecard' ? 2 : 3;
+  // Scorecards and rankings have only 2 steps, other charts have 3
+  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking') ? 2 : 3;
 
   // Reset form when modal closes
   useEffect(() => {
@@ -122,8 +123,9 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
 
   // Auto-generate title when selections change
   useEffect(() => {
-    if (chartType === 'scorecard' && metric) {
-      // For scorecards, just use the metric label (no grouping)
+    if (chartType === 'ranking') {
+      setTitle("Ranking de Vendedores");
+    } else if (chartType === 'scorecard' && metric) {
       setTitle(METRIC_LABELS[metric]);
     } else if (metric && groupBy) {
       const generatedTitle = `${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}`;
@@ -137,6 +139,8 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   // Validation for creating the visual
   const canCreate = chartType === 'scorecard'
     ? metric !== null && title.trim() !== "" && activeDashboardId !== null
+    : chartType === 'ranking'
+    ? title.trim() !== "" && activeDashboardId !== null
     : groupBy !== null && title.trim() !== "" && activeDashboardId !== null;
 
   const handleNext = () => {
@@ -148,11 +152,40 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   };
 
   const handleCreate = async () => {
-    if (!chartType || !metric || !activeDashboardId) return;
+    if (!chartType || !activeDashboardId) return;
     
+    // For ranking, metric and groupBy are fixed
+    if (chartType === 'ranking') {
+      if (!canCreate) return;
+      setIsCreating(true);
+      try {
+        const config: VisualConfig = {
+          dataSource: 'deals',
+          measure: { field: 'value', aggregation: 'sum' },
+          dimension: { field: 'responsible_name', type: 'text' },
+          formatting: { type: 'currency', decimals: 2 },
+          appearance: DEFAULT_APPEARANCE,
+          statusFilter: 'won',
+        };
+        await addVisual({
+          dashboard_id: activeDashboardId,
+          title: title.trim(),
+          chart_type: chartType,
+          config,
+          layout: { x: 0, y: 0, w: 6, h: 5 },
+        });
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Error creating visual:", error);
+      } finally {
+        setIsCreating(false);
+      }
+      return;
+    }
+
+    if (!metric) return;
     // For non-scorecards, groupBy is required
     if (chartType !== 'scorecard' && !groupBy) return;
-    
     if (!canCreate) return;
 
     setIsCreating(true);
@@ -162,7 +195,6 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       let config: VisualConfig;
       
       if (chartType === 'scorecard') {
-        // Scorecard: no grouping, global aggregation
         config = {
           dataSource: metricConfig.dataSource,
           measure: {
@@ -170,26 +202,22 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             aggregation: metricConfig.aggregation,
           },
           dimension: {
-            field: '_total', // Special marker for global aggregation
+            field: '_total',
             type: 'text',
           },
           formatting: {
             type: metricConfig.formatType,
             decimals: metricConfig.formatType === 'currency' ? 1 : (metricConfig.formatType === 'percentage' ? 1 : 0),
-            displayScale: 'auto', // Default to auto for scorecards
+            displayScale: 'auto',
           },
           appearance: DEFAULT_APPEARANCE,
-          statusFilter: metricConfig.statusFilter, // Filter by deal status (won/lost)
+          statusFilter: metricConfig.statusFilter,
         };
       } else {
-        // Charts: use groupBy for dimension
         const baseDimensionConfig = GROUP_BY_TO_DIMENSION[groupBy!];
-        
-        // Use intelligent date field selection for temporal groupings
         const dimensionField = baseDimensionConfig.type === 'date' 
           ? getDateFieldForMetric(metric) 
           : baseDimensionConfig.field;
-
         const isTemporalGrouping = baseDimensionConfig.type === 'date';
 
         config = {
@@ -212,7 +240,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             fillEmptyDates: isTemporalGrouping,
             showDataLabels: isTemporalGrouping,
           },
-          statusFilter: metricConfig.statusFilter, // Apply status filter (won/lost) for revenue, avg_ticket, lost_reasons
+          statusFilter: metricConfig.statusFilter,
         };
       }
 
@@ -282,8 +310,25 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             </div>
           )}
 
-          {/* Step 2: What to Measure (+ Title for Scorecards) */}
-          {step === 2 && (
+          {/* Step 2: What to Measure (+ Title for Scorecards) OR Title for Rankings */}
+          {step === 2 && chartType === 'ranking' && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                O ranking exibirá os vendedores ordenados pelo faturamento total (negócios ganhos).
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="visual-title-ranking">Título do Ranking</Label>
+                <Input
+                  id="visual-title-ranking"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Ex: Ranking de Vendedores"
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 2 && chartType !== 'ranking' && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">O que você quer medir?</p>
               <RadioGroup

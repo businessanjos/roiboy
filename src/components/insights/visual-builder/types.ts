@@ -2,7 +2,7 @@ export type DataSource = 'deals' | 'leads' | 'products';
 export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
-export type ChartType = 'bar' | 'line' | 'pie' | 'number' | 'scorecard';
+export type ChartType = 'bar' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
 export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature';
 export type DisplayScale = 'full' | 'auto' | 'thousands' | 'millions' | 'billions';
@@ -79,6 +79,7 @@ export const CHART_TYPE_OPTIONS: { value: ChartType; label: string }[] = [
   { value: 'line', label: 'Linhas' },
   { value: 'pie', label: 'Pizza' },
   { value: 'number', label: 'Scorecard' },
+  { value: 'ranking', label: 'Ranking' },
 ];
 
 // Date display format options
