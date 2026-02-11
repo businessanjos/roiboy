@@ -17,6 +17,7 @@ interface ConfigurableCallCommercialProps {
     type: FormatType;
     decimals: number;
   };
+  hiddenUsers?: string[];
 }
 
 interface UserAvatar {
@@ -34,7 +35,7 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-export function ConfigurableCallCommercial({ data }: ConfigurableCallCommercialProps) {
+export function ConfigurableCallCommercial({ data, hiddenUsers }: ConfigurableCallCommercialProps) {
   const { currentUser } = useCurrentUser();
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
 
@@ -62,7 +63,11 @@ export function ConfigurableCallCommercial({ data }: ConfigurableCallCommercialP
     fetchAvatars();
   }, [currentUser?.account_id, data]);
 
-  if (!data || data.length === 0) {
+  const filteredData = hiddenUsers?.length
+    ? data.filter(d => !hiddenUsers.includes(d.name))
+    : data;
+
+  if (!filteredData || filteredData.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
         Sem dados para exibir
@@ -73,7 +78,7 @@ export function ConfigurableCallCommercial({ data }: ConfigurableCallCommercialP
   return (
     <div className="h-full overflow-auto px-2 py-3">
       <div className="flex flex-wrap gap-4 justify-center">
-        {data.map((item) => {
+        {filteredData.map((item) => {
           const userAvatar = avatars[item.name];
           const scheduled = item.value; // agendadas em aberto
           const completed = item.count ?? 0; // concluídas
