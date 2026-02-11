@@ -356,6 +356,12 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
         dealId={dealId}
         leadId={leadId || undefined}
         onSuccess={fetchTasks}
+        onTaskCompleted={async () => {
+          await fetchTasks();
+          queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
+          setEditingTask(null);
+          setTaskDialogOpen(true);
+        }}
       />
     </div>
   );
