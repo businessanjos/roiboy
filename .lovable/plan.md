@@ -1,20 +1,32 @@
 
-## Correção: Datas dos Momentos CX adiantadas em 1 dia no Dashboard
 
-### Diagnóstico
+## Adicionar card "Vencidos" no Dashboard de Gestão
 
-No arquivo `src/hooks/useDashboardData.tsx`, linha 238, a data do evento é parseada com `new Date(event.event_date)`. Como `event_date` é uma string no formato `YYYY-MM-DD`, o JavaScript interpreta isso como **UTC meia-noite**. No fuso horário do Brasil (UTC-3), isso vira o dia anterior às 21h, fazendo com que o cálculo de `daysUntil` fique adiantado em 1 dia.
+### O que sera feito
 
-O componente do perfil do cliente (`ClientLifeEvents.tsx`) já usa `parseLocalDate` corretamente (linha 531), mas o Dashboard não segue o mesmo padrão.
+Adicionar um novo card "Vencidos" na linha de status do Dashboard de Gestão (Operações), mostrando a contagem de contratos que estão com status "active" mas cuja data de término (`end_date`) já passou. Atualmente existem 5 contratos nessa situação.
 
-### Causa raiz
+### Alterações necessárias
 
-`new Date("2026-02-12")` cria `2026-02-12T00:00:00Z` (UTC), que no Brasil é `2026-02-11T21:00:00` -- ou seja, dia 11 em vez de dia 12. Isso faz eventos de amanhã aparecerem como "Hoje!".
+**1. Banco de dados -- Atualizar a função RPC `get_dashboard_contract_counts`**
 
-### Solução
+Adicionar o campo `expired` na resposta da função, contando contratos onde `status = 'active' AND end_date < CURRENT_DATE`:
 
-**Arquivo:** `src/hooks/useDashboardData.tsx`
+```sql
+'expired', COUNT(*) FILTER (WHERE status = 'active' AND end_date IS NOT NULL AND end_date < CURRENT_DATE)
+```
 
-Substituir `new Date(event.event_date)` por `parseLocalDate(event.event_date)` na linha 238, usando o utilitário que já existe no projeto (`src/lib/dateUtils.ts`). Adicionar o import de `parseLocalDate` no topo do arquivo.
+**2. Hook `src/hooks/useDashboardContractStats.ts`**
 
-Alteração de 2 linhas: um import e a substituição da chamada de parse.
+Adicionar `expired: number` na interface `ContractStats`.
+
+**3. Dashboard `src/pages/Dashboard.tsx`**
+
+- Alterar o grid de `md:grid-cols-5` para `md:grid-cols-6` para acomodar o novo card
+- Adicionar o card "Vencidos" após "Congelamentos", com borda vermelha-alaranjada e ícone `Clock` (ou `Timer`), exibindo `contractStats?.expired ?? 0`
+
+### Detalhes técnicos
+
+- "Vencidos" não é um status explícito na tabela; é derivado de `status = 'active'` + `end_date < hoje`
+- Esses contratos continuam contando como "Ativos" no card de Ativos (comportamento atual mantido). O card "Vencidos" é uma métrica adicional de alerta
+- A contagem vem direto da RPC, sem carga extra no frontend
