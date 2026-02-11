@@ -112,6 +112,7 @@ interface Event {
   is_recurring: boolean;
   checkin_code: string | null;
   created_at: string;
+  client_id: string | null;
 }
 
 interface Product {
@@ -224,6 +225,10 @@ export default function Events() {
           event_participants!event_participants_event_id_fkey (
             id,
             rsvp_status
+          ),
+          clients!events_client_id_fkey (
+            id,
+            full_name
           )
         `)
         .order("scheduled_at", { ascending: sortOrder === "asc", nullsFirst: false });
@@ -1192,7 +1197,15 @@ export default function Events() {
                       onClick={() => navigate(`/events/${event.id}`)}
                     >
                       <TableCell>
-                        <div className="font-medium">{event.title}</div>
+                        <div className="font-medium flex items-center gap-2">
+                          {event.title}
+                          {(event as any).client_id && (
+                            <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">
+                              <Users className="h-3 w-3 mr-1" />
+                              {(event as any).clients?.full_name || "Individual"}
+                            </Badge>
+                          )}
+                        </div>
                         {event.description && (
                           <div className="text-sm text-muted-foreground line-clamp-1">
                             {event.description}
