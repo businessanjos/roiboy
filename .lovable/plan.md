@@ -1,60 +1,102 @@
 
 
-## Adicionar Podium Visual ao Ranking de Vendedores
+## Novo Visual: Call Comercial Agendada x Concluida
 
-### Visao geral
+### O que sera criado
 
-O componente `ConfigurableRanking` sera expandido para exibir um layout dividido: um **podium visual** a esquerda mostrando os 3 primeiros colocados, e a **tabela de ranking** (ja existente) a direita.
+Um novo tipo de visual para o sistema de Insights que exibe, para cada vendedor, dois contadores lado a lado:
+- **Esquerda**: quantidade de tarefas do tipo "Call Comercial Agendada" **em aberto** (sem `completed_at`)
+- **Direita**: quantidade de tarefas do tipo "Call Comercial Concluida" **concluidas** (com `completed_at`)
 
-### Layout
+Cada vendedor sera representado com seu avatar circular acima dos contadores, seguindo o layout da imagem de referencia.
+
+### Layout visual
 
 ```text
-+---------------------------+-------------------------------+
-|                           |                               |
-|        PODIUM             |        TABELA RANKING         |
-|                           |                               |
-|    [Avatar]               |  # | Vendedor | Faturamento   |
-|      2o                   |  ...                          |
-|  [Avatar]    [Avatar]     |                               |
-|    1o          3o         |                               |
-|  _____|______|______      |                               |
-|  | 2  |  1   |  3  |     |                               |
-+---------------------------+-------------------------------+
+   [Avatar1]        [Avatar2]        [Avatar3]
+   Nome 1           Nome 2           Nome 3
+  +------+------+  +------+------+  +------+------+
+  |  3   |  10  |  |  0   |  13  |  |  1   |   2  |
+  | Agend| Conc |  | Agend| Conc |  | Agend| Conc |
+  +------+------+  +------+------+  +------+------+
 ```
 
-### Detalhes do Podium
+Cada card de vendedor tera:
+- Avatar circular com foto (ou iniciais como fallback)
+- Nome do vendedor abaixo do avatar
+- Dois "pills" lado a lado: esquerdo com icone de calendario (agendadas em aberto) e direito com icone de check (concluidas)
 
-- 3 colunas dispostas na ordem: **2o lugar (esquerda)**, **1o lugar (centro, mais alto)**, **3o lugar (direita)**
-- Cada coluna do podium tera:
-  - Avatar circular do vendedor (com foto real se disponivel)
-  - Nome abaixo do avatar
-  - Valor do faturamento formatado
-  - Uma "base" colorida com altura proporcional a posicao (1o = mais alto, 3o = mais baixo)
-- Cores das bases: dourado para 1o, prata para 2o, bronze para 3o
-- Se houver menos de 3 vendedores, o podium exibe apenas os disponiveis
+### Detalhes tecnicos
 
-### Mudancas tecnicas
+**1. Novo tipo de chart: `'call_commercial'`**
 
-**Arquivo: `src/components/insights/visuals/ConfigurableRanking.tsx`**
+- **Arquivo**: `src/components/insights/visual-builder/types.ts`
+  - Adicionar `'call_commercial'` ao tipo `ChartType`
+  - Adicionar `'tasks'` ao tipo `DataSource` e ao `DATA_SOURCE_OPTIONS`
+  - Adicionar entrada em `CHART_TYPE_OPTIONS` com label "Calls Comerciais" e icone Phone
 
-1. Extrair os top 3 do array `data` para renderizar no podium
-2. Adicionar um componente interno `Podium` que renderiza os 3 primeiros com:
-   - Layout flex com `items-end` para alinhar as bases pela parte inferior
-   - Alturas das bases: 1o = 160px, 2o = 120px, 3o = 90px
-   - Avatar com borda colorida (dourado/prata/bronze)
-   - Numero da posicao na base
-3. Alterar o layout principal de single-column para `flex` com duas areas:
-   - Esquerda (~40%): Podium visual
-   - Direita (~60%): Tabela existente (sem alteracoes)
-4. Em telas/widgets muito pequenos (menos de 400px de largura), o podium sera ocultado e apenas a tabela sera exibida
+**2. Novo componente visual: `ConfigurableCallCommercial.tsx`**
 
-### Estilo visual
+- **Arquivo**: `src/components/insights/visuals/ConfigurableCallCommercial.tsx`
+  - Componente que recebe dados ja agregados por vendedor
+  - Cada vendedor exibido como um card horizontal com avatar + 2 contadores
+  - Layout em grid responsivo (flex-wrap) para acomodar multiplos vendedores
+  - Busca avatares dos usuarios no banco (mesmo padrao do `ConfigurableRanking`)
+  - Estilo visual: pills arredondadas em cinza com numeros grandes, icones pequenos para diferenciar agendada vs concluida
 
-- Bases do podium com gradientes suaves:
-  - 1o: gradiente dourado (`from-amber-400 to-amber-500`)
-  - 2o: gradiente prata (`from-slate-300 to-slate-400`)
-  - 3o: gradiente bronze (`from-orange-400 to-orange-500`)
-- Avatares maiores no podium (48-56px) com borda de 3px na cor da medalha
-- Nome truncado com `max-w` para nao estourar o layout
-- Faturamento em texto menor abaixo do nome
+**3. Busca de dados dedicada para tasks**
+
+- **Arquivo**: `src/hooks/useVisualData.ts`
+  - Adicionar novo case `'tasks'` no switch do `dataSource`
+  - Nova funcao `fetchTasksCallCommercialData` que:
+    - Consulta `internal_tasks` com JOIN em `activity_types` (filtro por nome "Call Comercial Agendada" e "Call Comercial Concluida")
+    - JOIN em `users` para obter o nome do vendedor
+    - Agrupa por vendedor
+    - Retorna um formato especial com dois valores por vendedor (agendadas em aberto + concluidas)
+
+**4. Roteamento no ConfigurableChart**
+
+- **Arquivo**: `src/components/insights/visuals/ConfigurableChart.tsx`
+  - Adicionar case `'call_commercial'` que renderiza o novo `ConfigurableCallCommercial`
+
+**5. Fluxo de criacao no AddVisualModal**
+
+- **Arquivo**: `src/components/insights/AddVisualModal.tsx`
+  - Adicionar "Calls Comerciais" como opcao de tipo de visual (com icone Phone)
+  - Fluxo simplificado em 2 passos (tipo + titulo), similar ao ranking
+  - Config pre-definida: dataSource = 'tasks', sem necessidade de escolher metrica ou agrupamento
+
+**6. Seletor de tipo de chart**
+
+- **Arquivo**: `src/components/insights/visual-builder/ChartTypeSelector.tsx`
+  - Adicionar icone para o novo tipo `call_commercial`
+
+### Formato dos dados
+
+O componente recebera dados no formato:
+
+```text
+[
+  { name: "Darlan Ferreira", value: 6, count: 36 },
+  { name: "Jonathan Marcato", value: 6, count: 46 },
+  ...
+]
+```
+
+Onde:
+- `value` = quantidade de "Call Comercial Agendada" em aberto
+- `count` = quantidade de "Call Comercial Concluida" concluidas
+
+Isso reutiliza a interface `AggregatedDataPoint` ja existente sem precisar alterar a estrutura de dados.
+
+### Arquivos a criar/modificar
+
+| Arquivo | Acao |
+|---------|------|
+| `src/components/insights/visual-builder/types.ts` | Adicionar tipo `call_commercial` e data source `tasks` |
+| `src/components/insights/visuals/ConfigurableCallCommercial.tsx` | **Criar** - novo componente visual |
+| `src/components/insights/visuals/ConfigurableChart.tsx` | Adicionar case para `call_commercial` |
+| `src/hooks/useVisualData.ts` | Adicionar fetch de dados de tasks |
+| `src/components/insights/AddVisualModal.tsx` | Adicionar opcao de criacao |
+| `src/components/insights/visual-builder/ChartTypeSelector.tsx` | Adicionar icone |
 
