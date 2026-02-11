@@ -50,7 +50,7 @@ serve(async (req: Request) => {
     // Get requesting user's account and check if admin
     const { data: requestingProfile, error: profileError } = await supabaseAdmin
       .from("users")
-      .select("account_id, role")
+      .select("id, account_id, role, is_also_admin")
       .eq("auth_user_id", requestingUser.id)
       .single();
 
@@ -61,15 +61,19 @@ serve(async (req: Request) => {
       );
     }
 
-    if (requestingProfile.role !== "admin") {
+    const body: UpdatePasswordRequest = await req.json();
+    const { user_id, new_password } = body;
+
+    // Verificar se é auto-edição ou admin
+    const isSelfEdit = requestingProfile.id === user_id;
+    const isAdmin = requestingProfile.role === "admin" || requestingProfile.is_also_admin === true;
+
+    if (!isAdmin && !isSelfEdit) {
       return new Response(
-        JSON.stringify({ error: "Apenas administradores podem alterar senhas" }),
+        JSON.stringify({ error: "Apenas administradores podem alterar senhas de outros membros" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const body: UpdatePasswordRequest = await req.json();
-    const { user_id, new_password } = body;
 
     if (!user_id || !new_password) {
       return new Response(
