@@ -333,7 +333,23 @@ export function TeamManager() {
         });
 
         if (response.error) {
-          throw new Error(response.error.message || "Erro ao atualizar senha");
+          let errorMessage = "Erro ao atualizar senha";
+          
+          // Try to parse the real error from the response body
+          if (response.error.context?.body) {
+            try {
+              const bodyError = JSON.parse(response.error.context.body);
+              if (bodyError.error) {
+                errorMessage = bodyError.error;
+              }
+            } catch {
+              // If parsing fails, use fallback
+            }
+          } else if (response.error.message && !response.error.message.includes("non-2xx")) {
+            errorMessage = response.error.message;
+          }
+          
+          throw new Error(errorMessage);
         }
 
         if (response.data?.error) {

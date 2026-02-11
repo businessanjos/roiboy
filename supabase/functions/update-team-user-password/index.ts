@@ -127,8 +127,21 @@ serve(async (req: Request) => {
 
     if (updateError) {
       console.error("Error updating password:", updateError);
+      
+      let errorMessage = updateError.message;
+      
+      // Detect weak/pwned password errors
+      if (updateError.code === "weak_password" || updateError.name === "AuthWeakPasswordError" || updateError.message?.toLowerCase().includes("weak")) {
+        const reasons = (updateError as any).reasons || [];
+        if (reasons.includes("pwned")) {
+          errorMessage = "Esta senha foi encontrada em vazamentos de dados conhecidos e não pode ser utilizada por segurança. Por favor, escolha uma senha diferente e mais forte.";
+        } else {
+          errorMessage = "A senha escolhida é muito fraca. Use uma combinação de letras maiúsculas, minúsculas, números e caracteres especiais.";
+        }
+      }
+      
       return new Response(
-        JSON.stringify({ error: updateError.message }),
+        JSON.stringify({ error: errorMessage }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
