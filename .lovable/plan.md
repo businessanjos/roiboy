@@ -1,38 +1,60 @@
 
 
-## Relatório: Por que as notificações de menção ainda não funcionam
+## Adicionar Podium Visual ao Ranking de Vendedores
 
-### Causa raiz encontrada
+### Visao geral
 
-O componente **Timeline.tsx** (onde você está testando) **não usa** a função compartilhada `createMentionNotifications` que já foi corrigida. Ele possui sua **própria função interna** chamada `createNotificationsWithAnchor` (linha 836) que **ainda filtra auto-menções**:
+O componente `ConfigurableRanking` sera expandido para exibir um layout dividido: um **podium visual** a esquerda mostrando os 3 primeiros colocados, e a **tabela de ranking** (ja existente) a direita.
+
+### Layout
 
 ```text
-// Timeline.tsx, linha 841 - ESTE é o problema:
-const userIdsToNotify = mentionedUserIds.filter((id) => id !== currentUser.id);
-if (userIdsToNotify.length === 0) return;  // <- retorna sem criar nada
++---------------------------+-------------------------------+
+|                           |                               |
+|        PODIUM             |        TABELA RANKING         |
+|                           |                               |
+|    [Avatar]               |  # | Vendedor | Faturamento   |
+|      2o                   |  ...                          |
+|  [Avatar]    [Avatar]     |                               |
+|    1o          3o         |                               |
+|  _____|______|______      |                               |
+|  | 2  |  1   |  3  |     |                               |
++---------------------------+-------------------------------+
 ```
 
-Ou seja: quando você menciona a si mesmo na Timeline, os IDs são filtrados, o array fica vazio, e a função retorna sem criar nenhuma notificação.
+### Detalhes do Podium
 
-A correção anterior foi aplicada apenas em `src/lib/mention-notifications.ts`, mas o Timeline.tsx nunca importa nem usa esse arquivo.
+- 3 colunas dispostas na ordem: **2o lugar (esquerda)**, **1o lugar (centro, mais alto)**, **3o lugar (direita)**
+- Cada coluna do podium tera:
+  - Avatar circular do vendedor (com foto real se disponivel)
+  - Nome abaixo do avatar
+  - Valor do faturamento formatado
+  - Uma "base" colorida com altura proporcional a posicao (1o = mais alto, 3o = mais baixo)
+- Cores das bases: dourado para 1o, prata para 2o, bronze para 3o
+- Se houver menos de 3 vendedores, o podium exibe apenas os disponiveis
 
-### Plano de correção
+### Mudancas tecnicas
 
-**Arquivo: `src/components/client/Timeline.tsx`**
+**Arquivo: `src/components/insights/visuals/ConfigurableRanking.tsx`**
 
-1. Remover o filtro de auto-menção na função `createNotificationsWithAnchor` (linha 841)
-2. Remover a checagem `if (userIdsToNotify.length === 0) return;` (linha 843) que se torna redundante, pois a checagem já existe na linha 837
+1. Extrair os top 3 do array `data` para renderizar no podium
+2. Adicionar um componente interno `Podium` que renderiza os 3 primeiros com:
+   - Layout flex com `items-end` para alinhar as bases pela parte inferior
+   - Alturas das bases: 1o = 160px, 2o = 120px, 3o = 90px
+   - Avatar com borda colorida (dourado/prata/bronze)
+   - Numero da posicao na base
+3. Alterar o layout principal de single-column para `flex` com duas areas:
+   - Esquerda (~40%): Podium visual
+   - Direita (~60%): Tabela existente (sem alteracoes)
+4. Em telas/widgets muito pequenos (menos de 400px de largura), o podium sera ocultado e apenas a tabela sera exibida
 
-A mudança é de:
-```text
-const userIdsToNotify = mentionedUserIds.filter((id) => id !== currentUser.id);
-if (userIdsToNotify.length === 0) return;
-```
+### Estilo visual
 
-Para:
-```text
-const userIdsToNotify = mentionedUserIds;
-```
-
-Isso alinha o comportamento da Timeline com os outros componentes que já foram corrigidos, garantindo que todos os mencionados (incluindo o próprio autor) recebam a notificação.
+- Bases do podium com gradientes suaves:
+  - 1o: gradiente dourado (`from-amber-400 to-amber-500`)
+  - 2o: gradiente prata (`from-slate-300 to-slate-400`)
+  - 3o: gradiente bronze (`from-orange-400 to-orange-500`)
+- Avatares maiores no podium (48-56px) com borda de 3px na cor da medalha
+- Nome truncado com `max-w` para nao estourar o layout
+- Faturamento em texto menor abaixo do nome
 
