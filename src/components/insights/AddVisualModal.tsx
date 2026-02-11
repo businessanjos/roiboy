@@ -21,7 +21,7 @@ interface AddVisualModalProps {
 }
 
 type ChartType = "bar" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial";
-type Metric = "revenue" | "deals_count" | "avg_ticket" | "conversion" | "lost_reasons";
+type Metric = "revenue" | "deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count";
 type GroupBy = "month" | "user" | "stage" | "product";
 
 const CHART_TYPES = [
@@ -39,6 +39,7 @@ const METRICS = [
   { value: "avg_ticket" as const, label: "Ticket Médio", description: "Valor médio por negócio" },
   { value: "conversion" as const, label: "Taxa de Conversão", description: "Porcentagem de ganhos" },
   { value: "lost_reasons" as const, label: "Motivos de Perda", description: "Análise de deals perdidos" },
+  { value: "leads_count" as const, label: "Total de Leads", description: "Contagem de todos os leads cadastrados" },
 ];
 
 const GROUP_BY_OPTIONS = [
@@ -50,7 +51,7 @@ const GROUP_BY_OPTIONS = [
 
 // Mapping from simplified selections to full VisualConfig
 const METRIC_TO_CONFIG: Record<Metric, { 
-  dataSource: 'deals'; 
+  dataSource: 'deals' | 'leads'; 
   measureField: string | null; 
   aggregation: 'sum' | 'count' | 'avg' | 'conversion_rate'; 
   formatType: 'currency' | 'decimal' | 'percentage';
@@ -61,6 +62,7 @@ const METRIC_TO_CONFIG: Record<Metric, {
   avg_ticket: { dataSource: 'deals', measureField: 'value', aggregation: 'avg', formatType: 'currency', statusFilter: 'won' },
   conversion: { dataSource: 'deals', measureField: null, aggregation: 'conversion_rate', formatType: 'percentage' },
   lost_reasons: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal', statusFilter: 'lost' },
+  leads_count: { dataSource: 'leads', measureField: null, aggregation: 'count', formatType: 'decimal' },
 };
 
 const GROUP_BY_TO_DIMENSION: Record<GroupBy, { field: string; type: 'date' | 'text'; dateGrouping?: 'day' | 'week' | 'month' | 'year' }> = {
@@ -89,6 +91,7 @@ const METRIC_LABELS: Record<Metric, string> = {
   avg_ticket: "Ticket Médio",
   conversion: "Conversão",
   lost_reasons: "Perdas",
+  leads_count: "Leads",
 };
 
 const GROUP_LABELS: Record<GroupBy, string> = {
