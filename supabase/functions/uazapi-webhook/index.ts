@@ -27,10 +27,19 @@ const departmentCache = new Map<string, CacheEntry<string | null>>();
 // Cache: phone+account → client_id
 const clientPhoneCache = new Map<string, CacheEntry<string | null>>();
 
-function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string): T | undefined {
+// Cache: phone+integrationId or groupJid+integrationId → conversation record
+const conversationCache = new Map<string, CacheEntry<{ id: string; unread_count: number; integration_id: string | null; contact_name: string | null; client_id: string | null; lead_id: string | null; phone_e164?: string | null } | null>>();
+
+// Cache: conversationId → assignment record
+const assignmentCache = new Map<string, CacheEntry<{ id: string; status: string; agent_id: string | null; department_id: string | null; assigned_at: string | null; closed_at: string | null } | null>>();
+
+// Shorter TTL for conversation/assignment caches (2 min) - they change more frequently
+const CONV_CACHE_TTL_MS = 2 * 60 * 1000;
+
+function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string, ttl: number = CACHE_TTL_MS): T | undefined {
   const entry = cache.get(key);
   if (!entry) return undefined;
-  if (Date.now() - entry.ts > CACHE_TTL_MS) {
+  if (Date.now() - entry.ts > ttl) {
     cache.delete(key);
     return undefined;
   }
@@ -889,7 +898,15 @@ serve(async (req) => {
         
         let existingZappConvo;
         
-        if (isGroupMessage && groupJid) {
+        // OPTIMIZATION: Check conversation cache first (saves 1-3 queries on cache hit)
+        const convCacheKey = isGroupMessage && groupJid 
+          ? `group:${groupJid}:${integrationId || sectorId}` 
+          : `direct:${phone}:${integrationId || sectorId}`;
+        const cachedConvo = getCached(conversationCache, convCacheKey, CONV_CACHE_TTL_MS);
+        
+        if (cachedConvo !== undefined) {
+          existingZappConvo = cachedConvo;
+        } else if (isGroupMessage && groupJid) {
           // For groups, search by group_jid + integration_id for multi-instance isolation
           let groupQuery = supabase
             .from("zapp_conversations")
@@ -907,6 +924,8 @@ serve(async (req) => {
           
           const { data } = await groupQuery.maybeSingle();
           existingZappConvo = data;
+          // Cache result (even null = no conversation found)
+          setCache(conversationCache, convCacheKey, data);
         } else {
           // For direct messages, search by phone_e164 + integration_id for multi-instance isolation
           // CRITICAL: This ensures same phone number creates separate conversations per instance
@@ -927,6 +946,8 @@ serve(async (req) => {
           
           const { data } = await directQuery.maybeSingle();
           existingZappConvo = data;
+          // Cache result
+          setCache(conversationCache, convCacheKey, data);
           
           // ============================================
           // LEGACY CONVERSATION FALLBACK
@@ -1015,50 +1036,8 @@ serve(async (req) => {
           // Cross-integration search and unification was causing conversations to "leak" between sectors
         }
 
-        // ============================================
-        // AUTO-UNIFY DUPLICATE CONVERSATIONS
-        // ============================================
-        // If we found a conversation with integration_id, check if there's also a legacy one
-        // If so, merge them to eliminate duplicate entries in the UI
-        
-        // ============================================
-        // AUTO-UNIFY: Skip if conversation already has integration_id
-        // (no legacy duplicate possible) — saves 1 query for ~90% of messages
-        // Also skip if conversation was updated in last 30s (burst optimization)
-        // ============================================
-        if (existingZappConvo && phone && sectorId && integrationId && !isGroupMessage && !existingZappConvo.integration_id) {
-          const { data: legacyDuplicate } = await supabase
-            .from("zapp_conversations")
-            .select("id")
-            .eq("account_id", accountId)
-            .eq("phone_e164", phone)
-            .eq("sector_id", sectorId)
-            .is("integration_id", null)
-            .eq("is_group", false)
-            .neq("id", existingZappConvo.id)
-            .maybeSingle();
-          
-          if (legacyDuplicate) {
-            console.log(`[AUTO-UNIFY] Merging legacy ${legacyDuplicate.id} into ${existingZappConvo.id}`);
-            
-            await supabase
-              .from("zapp_messages")
-              .update({ zapp_conversation_id: existingZappConvo.id })
-              .eq("zapp_conversation_id", legacyDuplicate.id);
-            
-            await supabase
-              .from("zapp_conversation_assignments")
-              .delete()
-              .eq("zapp_conversation_id", legacyDuplicate.id);
-            
-            await supabase
-              .from("zapp_conversations")
-              .delete()
-              .eq("id", legacyDuplicate.id);
-            
-            console.log(`[AUTO-UNIFY] Completed: legacy conversation ${legacyDuplicate.id} deleted, messages moved to ${existingZappConvo.id}`);
-          }
-        }
+        // NOTE: AUTO-UNIFY was REMOVED as optimization - legacy conversations are migrated in-place
+        // by the fallback blocks above (setting integration_id when found)
 
         if (existingZappConvo) {
           zappConversationId = existingZappConvo.id;
@@ -1196,7 +1175,8 @@ serve(async (req) => {
 
           if (newZappConvo) {
             zappConversationId = newZappConvo.id;
-            
+            // Invalidate conversation cache for this key
+            conversationCache.delete(convCacheKey);
             
             // ============================================
             // AUTO-SUGGEST CLIENT LINKS (fire-and-forget, non-blocking)
@@ -1424,8 +1404,11 @@ serve(async (req) => {
             }
           }
 
+            // OPTIMIZATION: Use .select('id') on INSERT to get the message ID
+            // This avoids a separate re-fetch query later for AI queue
+            let insertedMessageDbId: string | null = null;
             if (!isDuplicate && !skipInsert) {
-              const { error: zappMsgError } = await supabase
+              const { data: insertedMsg, error: zappMsgError } = await supabase
                 .from("zapp_messages")
                 .insert({
                   account_id: accountId,
@@ -1435,47 +1418,50 @@ serve(async (req) => {
                   message_type: mediaType || "text",
                   external_message_id: messageId,
                   sent_at: timestamp,
-                  // For group messages, store sender info
                   sender_phone: isGroupMessage ? phone : null,
                   sender_name: isGroupMessage ? contactName : null,
-                  // Media fields - permanent URL if available, otherwise save encrypted for lazy download
                   media_url: permanentMediaUrl || null,
                   media_type: mediaType || null,
                   media_mimetype: mediaMimetype || null,
                   media_filename: (mediaFilename && /^\d+[\._]/.test(mediaFilename)) ? null : (mediaFilename || null),
                   audio_duration_sec: audioDurationSec,
-                  // Lazy download fields - for WhatsApp media that needs processing
                   media_encrypted_url: encryptedMediaUrl || (isInvalidMediaUrl ? mediaUrl : null),
                   media_key: mediaKey || null,
                   media_download_status: initialMediaDownloadStatus,
-                  // Quoted message (reply) fields
                   quoted_message_id: quotedMsgId || null,
                   quoted_content: quotedContent || null,
                   quoted_sender_name: quotedSenderName || null,
-                });
+                })
+                .select("id")
+                .single();
 
               if (zappMsgError) {
                 console.error("Error saving zapp_message:", zappMsgError);
               } else {
-                
+                insertedMessageDbId = insertedMsg?.id || null;
                 console.log(`Zapp message saved! Media: ${mediaType || 'none'}, LazyDownload: ${encryptedMediaUrl ? 'pending' : 'no'}`);
               }
             }
 
           // Create or update zapp_conversation_assignment for the queue
-          // CRITICAL: Prioritize assignment with department_id to avoid duplicates
-          const { data: existingAssignments } = await supabase
-            .from("zapp_conversation_assignments")
-            .select("id, status, agent_id, department_id, assigned_at, closed_at")
-            .eq("account_id", accountId)
-            .eq("zapp_conversation_id", zappConversationId)
-            .order("department_id", { nullsFirst: false }) // Prioritize with department
-            .limit(5);
+          // OPTIMIZATION: Check assignment cache first
+          const assignCacheKey = `assign:${zappConversationId}`;
+          let existingAssignment = getCached(assignmentCache, assignCacheKey, CONV_CACHE_TTL_MS) as { id: string; status: string; agent_id: string | null; department_id: string | null; assigned_at: string | null; closed_at: string | null } | null | undefined;
           
-          // Find the best assignment: prefer one with department_id
-          const existingAssignment = existingAssignments?.find(a => a.department_id !== null) 
-            || existingAssignments?.[0] 
-            || null;
+          if (existingAssignment === undefined) {
+            const { data: existingAssignments } = await supabase
+              .from("zapp_conversation_assignments")
+              .select("id, status, agent_id, department_id, assigned_at, closed_at")
+              .eq("account_id", accountId)
+              .eq("zapp_conversation_id", zappConversationId)
+              .order("department_id", { nullsFirst: false })
+              .limit(5);
+            
+            existingAssignment = existingAssignments?.find(a => a.department_id !== null) 
+              || existingAssignments?.[0] 
+              || null;
+            setCache(assignmentCache, assignCacheKey, existingAssignment);
+          }
 
           if (existingAssignment) {
             // RACE CONDITION GUARD: If closed_at is very recent (< 10s), skip update
@@ -1559,172 +1545,130 @@ serve(async (req) => {
         }
 
         // ============================================
-        // CLIENT ANALYSIS: Only for registered clients (inbound messages)
-        // BATCH OPTIMIZATION: Skip if conversation was updated < 5s ago
-        // (another webhook for the same phone already handled analysis)
+        // CLIENT ANALYSIS: Moved to BACKGROUND (fire-and-forget)
+        // This saves 6-8 queries from the hot path per inbound message
         // ============================================
         
-        // Check if this is a burst message (conversation was just updated)
         const lastMsgAt = existingZappConvo?.last_message_at ? new Date(existingZappConvo.last_message_at as string).getTime() : 0;
         const isBurstMessage = lastMsgAt > 0 && (Date.now() - lastMsgAt) < 5000;
         
-        // Only process client analysis for inbound messages with a phone (skip bursts)
         if (direction === "inbound" && phone && !isBurstMessage) {
-          // OPTIMIZATION: Reuse linkedClientId from conversation creation/lookup
-          // instead of querying clients table again (saves 1 query per inbound message)
-          let analysisClientId = linkedClientId;
-          let clientAvatarUrl: string | null = null;
+          // Capture variables for async closure
+          const _bgAccountId = accountId;
+          const _bgLinkedClientId = linkedClientId;
+          const _bgZappConvoId = zappConversationId;
+          const _bgContent = content;
+          const _bgTimestamp = timestamp;
+          const _bgChatId = chat.id;
+          const _bgProfilePicUrl = chat.image || chat.imagePreview;
+          const _bgPhone = phone;
+          const _bgInsertedMsgId = insertedMessageDbId;
+          const _bgSupabase = supabase;
           
-          // Only query if we have a linkedClientId (to get avatar_url for update check)
-          if (analysisClientId) {
-            const { data: clientData } = await supabase
-              .from("clients")
-              .select("avatar_url")
-              .eq("id", analysisClientId)
-              .maybeSingle();
-            clientAvatarUrl = clientData?.avatar_url || null;
-          }
-
-          if (analysisClientId) {
-            const clientId = analysisClientId;
-            
-            
-            // Auto-update client avatar from WhatsApp profile picture if available
-            const profilePicUrl = chat.image || chat.imagePreview;
-            if (profilePicUrl && !clientAvatarUrl) {
-              const { error: avatarError } = await supabase
-                .from("clients")
-                .update({ avatar_url: profilePicUrl })
-                .eq("id", clientId);
-              
-              if (avatarError) {
-                console.log("Error updating client avatar:", avatarError.message);
-              } else {
+          setTimeout(async () => {
+            try {
+              // --- CLIENT PATH ---
+              if (_bgLinkedClientId) {
+                const clientId = _bgLinkedClientId;
                 
-              }
-            }
-
-            // Find or create conversation (for client analysis)
-            let conversationId: string | null = null;
-            
-            const { data: existingConvo } = await supabase
-              .from("conversations")
-              .select("id")
-              .eq("account_id", accountId)
-              .eq("client_id", clientId)
-              .eq("channel", "whatsapp")
-              .maybeSingle();
-
-            if (existingConvo) {
-              conversationId = existingConvo.id;
-            } else {
-              const { data: newConvo } = await supabase
-                .from("conversations")
-                .insert({
-                  account_id: accountId,
-                  client_id: clientId,
-                  channel: "whatsapp",
-                  external_thread_id: chat.id,
-                })
-                .select("id")
-                .single();
-
-              if (newConvo) {
-                conversationId = newConvo.id;
-              }
-            }
-
-            // Insert message event for AI analysis
-            const { error: messageError } = await supabase
-              .from("message_events")
-              .insert({
-                account_id: accountId,
-                client_id: clientId,
-                conversation_id: conversationId,
-                source: "whatsapp_text",
-                direction: "client_to_team",
-                content_text: content,
-                sent_at: timestamp,
-              });
-
-            if (messageError) {
-              console.error("Error inserting message_event:", messageError);
-            }
-
-            // Queue AI analysis for text messages (async processing for scalability)
-            if (content.length > 10 && !content.startsWith("[")) {
-              try {
-                // Get the message ID we just inserted
-                const { data: insertedMsg } = await supabase
-                  .from("zapp_messages")
-                  .select("id")
-                  .eq("zapp_conversation_id", zappConversationId)
-                  .eq("external_message_id", messageId)
-                  .maybeSingle();
-
-                if (insertedMsg) {
-                  // Insert job into queue instead of calling analyze-message directly
-                  const { error: queueError } = await supabase
-                    .from("ai_analysis_queue")
-                    .insert({
-                      account_id: accountId,
-                      message_id: insertedMsg.id,
-                      client_id: clientId,
-                      status: "pending",
-                      priority: 0, // Normal priority
-                    });
-
-                  if (queueError) {
-                    console.log("Queue insert error (non-blocking):", queueError.message);
-                  } else {
-                    console.log("AI analysis queued for message:", insertedMsg.id);
+                // Avatar update (only if client has no avatar)
+                if (_bgProfilePicUrl) {
+                  const { data: clientData } = await _bgSupabase
+                    .from("clients")
+                    .select("avatar_url")
+                    .eq("id", clientId)
+                    .maybeSingle();
+                  
+                  if (clientData && !clientData.avatar_url) {
+                    await _bgSupabase
+                      .from("clients")
+                      .update({ avatar_url: _bgProfilePicUrl })
+                      .eq("id", clientId);
                   }
                 }
-              } catch (err) {
-                console.log("AI queue error (non-blocking):", err);
-              }
-            }
-          } else {
-            // Not a registered client - check if there's a lead with this phone
-            const normalizedPhoneForLead = phone.replace(/^\+/, ''); // Remove leading + for phone field
-            const { data: existingLead } = await supabase
-              .from("leads")
-              .select("id, avatar_url")
-              .eq("account_id", accountId)
-              .or(`phone.eq.${normalizedPhoneForLead},phone.eq.${phone}`)
-              .maybeSingle();
 
-            if (existingLead) {
-              
-              
-              // Auto-update lead avatar from WhatsApp profile picture if available
-              const profilePicUrl = chat.image || chat.imagePreview;
-              if (profilePicUrl && !existingLead.avatar_url) {
-                const { error: avatarError } = await supabase
-                  .from("leads")
-                  .update({ avatar_url: profilePicUrl })
-                  .eq("id", existingLead.id);
-                
-                if (avatarError) {
-                  console.log("Error updating lead avatar:", avatarError.message);
+                // Find or create conversation (for client analysis)
+                let conversationId: string | null = null;
+                const { data: existingConvo } = await _bgSupabase
+                  .from("conversations")
+                  .select("id")
+                  .eq("account_id", _bgAccountId)
+                  .eq("client_id", clientId)
+                  .eq("channel", "whatsapp")
+                  .maybeSingle();
+
+                if (existingConvo) {
+                  conversationId = existingConvo.id;
                 } else {
-                  
+                  const { data: newConvo } = await _bgSupabase
+                    .from("conversations")
+                    .insert({
+                      account_id: _bgAccountId,
+                      client_id: clientId,
+                      channel: "whatsapp",
+                      external_thread_id: _bgChatId,
+                    })
+                    .select("id")
+                    .single();
+                  if (newConvo) conversationId = newConvo.id;
+                }
+
+                // Insert message event
+                await _bgSupabase
+                  .from("message_events")
+                  .insert({
+                    account_id: _bgAccountId,
+                    client_id: clientId,
+                    conversation_id: conversationId,
+                    source: "whatsapp_text",
+                    direction: "client_to_team",
+                    content_text: _bgContent,
+                    sent_at: _bgTimestamp,
+                  });
+
+                // Queue AI analysis (use insertedMessageDbId directly - no re-fetch!)
+                if (_bgContent.length > 10 && !_bgContent.startsWith("[") && _bgInsertedMsgId) {
+                  await _bgSupabase
+                    .from("ai_analysis_queue")
+                    .insert({
+                      account_id: _bgAccountId,
+                      message_id: _bgInsertedMsgId,
+                      client_id: clientId,
+                      status: "pending",
+                      priority: 0,
+                    });
+                }
+              } else {
+                // --- LEAD PATH ---
+                const normalizedPhoneForLead = _bgPhone.replace(/^\+/, '');
+                const { data: existingLead } = await _bgSupabase
+                  .from("leads")
+                  .select("id, avatar_url")
+                  .eq("account_id", _bgAccountId)
+                  .or(`phone.eq.${normalizedPhoneForLead},phone.eq.${_bgPhone}`)
+                  .maybeSingle();
+
+                if (existingLead) {
+                  // Avatar update
+                  if (_bgProfilePicUrl && !existingLead.avatar_url) {
+                    await _bgSupabase
+                      .from("leads")
+                      .update({ avatar_url: _bgProfilePicUrl })
+                      .eq("id", existingLead.id);
+                  }
+                  // Link lead to conversation
+                  if (_bgZappConvoId) {
+                    await _bgSupabase
+                      .from("zapp_conversations")
+                      .update({ lead_id: existingLead.id })
+                      .eq("id", _bgZappConvoId);
+                  }
                 }
               }
-              
-              // Also update zapp_conversation to link to lead_id
-              if (zappConversationId) {
-                await supabase
-                  .from("zapp_conversations")
-                  .update({ lead_id: existingLead.id })
-                  .eq("id", zappConversationId);
-              }
-            } else {
-              console.log(`Message from ${phone} saved to Zapp only (not a registered client or lead)`);
+            } catch (err) {
+              console.error("[BG-ANALYSIS] Async error:", err);
             }
-          }
-        } else if (direction === "outbound") {
-          console.log(`Outbound message saved to Zapp`);
+          }, 0);
         }
         
 
