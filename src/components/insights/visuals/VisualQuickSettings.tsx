@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
 import { AppearanceSection } from "../visual-builder/AppearanceSection";
 import { 
@@ -39,6 +40,8 @@ import {
   DEFAULT_DISPLAY_SCALE,
 } from "../visual-builder/types";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface InsightsVisual {
@@ -56,6 +59,7 @@ interface VisualQuickSettingsProps {
 
 export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickSettingsProps) {
   const { updateVisual, removeVisual } = useInsightsDashboards();
+  const { currentUser } = useCurrentUser();
   const config = visual.config as VisualConfig | null;
 
   // Local state for appearance settings
@@ -77,11 +81,16 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   const [decimals, setDecimals] = useState<number>(
     config?.formatting?.decimals ?? 2
   );
+  const [hiddenUsers, setHiddenUsers] = useState<string[]>(
+    config?.hiddenUsers ?? []
+  );
+  const [accountUsers, setAccountUsers] = useState<{ name: string }[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Detect if it's a scorecard
+  // Detect types
   const isScorecard = visual.chart_type === 'scorecard';
+  const isCallCommercial = visual.chart_type === 'call_commercial';
 
   // Reset state when visual changes or sheet opens
   useEffect(() => {
@@ -92,8 +101,24 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
       setFillEmptyDates(config?.appearance?.fillEmptyDates ?? DEFAULT_APPEARANCE.fillEmptyDates);
       setDisplayScale(config?.formatting?.displayScale ?? DEFAULT_DISPLAY_SCALE);
       setDecimals(config?.formatting?.decimals ?? 2);
+      setHiddenUsers(config?.hiddenUsers ?? []);
     }
   }, [open, config]);
+
+  // Fetch account users for call_commercial
+  useEffect(() => {
+    if (!open || !isCallCommercial || !currentUser?.account_id) return;
+
+    const fetchUsers = async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('name')
+        .eq('account_id', currentUser.account_id)
+        .order('name');
+      if (data) setAccountUsers(data);
+    };
+    fetchUsers();
+  }, [open, isCallCommercial, currentUser?.account_id]);
 
   const isDimensionDate = config?.dimension?.type === 'date';
 
@@ -115,6 +140,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
           colorPalette,
           fillEmptyDates,
         },
+        hiddenUsers: isCallCommercial ? hiddenUsers : config.hiddenUsers,
       };
 
       await updateVisual(visual.id, { config: newConfig });
@@ -193,7 +219,36 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
               <Separator />
             </div>
           )}
-
+          {/* Call Commercial: hidden users */}
+          {isCallCommercial && accountUsers.length > 0 && (
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Vendedores Visíveis</Label>
+              <div className="space-y-2">
+                {accountUsers.map((user) => {
+                  const isHidden = hiddenUsers.includes(user.name);
+                  return (
+                    <div key={user.name} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`user-${user.name}`}
+                        checked={!isHidden}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setHiddenUsers(prev => prev.filter(n => n !== user.name));
+                          } else {
+                            setHiddenUsers(prev => [...prev, user.name]);
+                          }
+                        }}
+                      />
+                      <label htmlFor={`user-${user.name}`} className="text-sm cursor-pointer">
+                        {user.name}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+              <Separator />
+            </div>
+          )}
           <AppearanceSection
             showDataLabels={showDataLabels}
             onShowDataLabelsChange={setShowDataLabels}

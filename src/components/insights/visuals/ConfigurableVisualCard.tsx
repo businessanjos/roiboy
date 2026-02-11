@@ -176,6 +176,7 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
             data={processedData}
             formatting={config.formatting}
             appearance={config.appearance}
+            visualConfig={config}
             onDrilldown={handleDrilldown}
           />
         </CardContent>

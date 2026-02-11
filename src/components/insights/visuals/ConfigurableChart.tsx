@@ -13,7 +13,7 @@ import {
   CartesianGrid,
   LabelList,
 } from "recharts";
-import { ChartType, FormatType, AppearanceConfig, COLOR_PALETTES, DEFAULT_APPEARANCE } from "../visual-builder/types";
+import { ChartType, FormatType, AppearanceConfig, VisualConfig, COLOR_PALETTES, DEFAULT_APPEARANCE } from "../visual-builder/types";
 import { ChartTooltip } from "./ChartTooltip";
 import { ConfigurableScorecard } from "./ConfigurableScorecard";
 import { ConfigurableRanking } from "./ConfigurableRanking";
@@ -35,6 +35,7 @@ interface ConfigurableChartProps {
     decimals: number;
   };
   appearance?: AppearanceConfig;
+  visualConfig?: VisualConfig;
   onDrilldown?: (groupName?: string) => void;
 }
 
@@ -42,7 +43,7 @@ function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professiona
   return COLOR_PALETTES[palette] || COLOR_PALETTES.professional;
 }
 
-export function ConfigurableChart({ type, data, formatting, appearance, onDrilldown }: ConfigurableChartProps) {
+export function ConfigurableChart({ type, data, formatting, appearance, visualConfig, onDrilldown }: ConfigurableChartProps) {
   const config = appearance || DEFAULT_APPEARANCE;
   
   if (!data || data.length === 0) {
@@ -60,7 +61,7 @@ export function ConfigurableChart({ type, data, formatting, appearance, onDrilld
     case 'ranking':
       return <ConfigurableRanking data={data} formatting={formatting} />;
     case 'call_commercial':
-      return <ConfigurableCallCommercial data={data} formatting={formatting} />;
+      return <ConfigurableCallCommercial data={data} formatting={formatting} hiddenUsers={visualConfig?.hiddenUsers} />;
     case 'bar':
       return <BarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'line':

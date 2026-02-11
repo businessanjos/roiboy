@@ -42,6 +42,8 @@ export interface VisualConfig {
   appearance?: AppearanceConfig;
   // Status filter for deals (won, lost, open)
   statusFilter?: 'won' | 'lost' | 'open';
+  // Hidden users for call_commercial visual
+  hiddenUsers?: string[];
 }
 
 // Data source options
