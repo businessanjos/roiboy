@@ -1,72 +1,82 @@
 
-## Correção: Áudios de clientes não chegam no ROY zAPP
+## Filtros Persistentes por Usuario
 
-### Diagnóstico
+### O que sera feito
 
-Nos logs do webhook, encontrei esta entrada reveladora:
+Criar um hook utilitario `usePersistedFilter` que substitui o `useState` nos filtros de todas as paginas, salvando e restaurando automaticamente os valores no `localStorage` com chave unica por usuario e por pagina. Quando o usuario aplicar qualquer filtro, ele permanecera ativo mesmo ao trocar de aba, fechar o navegador ou reabrir o ROY. Cada usuario tera seus proprios filtros independentes.
 
-```
-[WEBHOOK] BLOCKED: Inbound message without content/media.
-  mediaType: (vazio), mediaUrl: https://mmg.whatsapp.net/...., msgType: media
-```
+### Como vai funcionar
 
-O UAZAPI envia algumas mensagens de áudio (e possivelmente outras mídias) num formato onde `msg.type = "media"` mas **sem** os campos específicos (`audioMessage`, `imageMessage`, etc.). O webhook extrai o `mediaUrl` corretamente (linha 552), mas o `mediaType` permanece vazio porque nenhum branch do `if/else if` é acionado.
+- Ao carregar uma pagina, os filtros serao restaurados do `localStorage` com o valor salvo pelo usuario
+- Ao alterar qualquer filtro, o valor e salvo imediatamente no `localStorage`
+- Ao limpar filtros manualmente (botao "Limpar filtros"), os valores voltam ao padrao e o `localStorage` e atualizado
+- Chave de armazenamento: `roy_filters_{userId}_{pagina}_{campo}` -- isso garante isolamento por usuario
 
-Isso causa **dois bloqueios em cascata**:
+### Paginas afetadas
 
-1. **Linha 802**: `hasMedia = mediaType && (mediaUrl || encryptedMediaUrl)` -- como `mediaType` é vazio, `hasMedia` é `false`
-2. **Linha 823**: A mensagem é bloqueada como "sem conteúdo nem mídia"
-3. **Linhas 677-678**: `isValidWhatsAppMediaUrl` também exige `mediaType`, então mesmo que passasse do bloqueio, a mídia não seria tratada como válida para download
+1. **Clientes** - filterClientStatus, filterProduct, filterVNPS, filterContract, filterResponsible, sortOrder
+2. **Tarefas** - filterUser, filterActivityType, sortBy, sortDirection, filterDateStart, filterDateEnd
+3. **Contratos** - searchTerm, statusFilter, typeFilter, productFilter, sortOrder
+4. **Pipeline de Vendas** - wonMonthFilter, lostMonthFilter
+5. **Financeiro** - statusFilter, categoryFilter
+6. **Dashboard** - statusFilter, quadrantFilter, productFilter
 
-### Causa raiz
+Nota: campos de busca textual (searchQuery/searchTerm) NAO serao persistidos nas paginas de Clientes e Dashboard, pois a busca e mais contextual e transitoria. Nos Contratos sera persistida pois o usuario ja espera esse comportamento.
 
-Falta uma lógica de fallback que infira o `mediaType` a partir do `mimetype` ou do `msg.type` quando os campos específicos de mensagem (audioMessage, etc.) não estão presentes.
+### Detalhes tecnicos
 
-### Solução
+**Novo arquivo:** `src/hooks/usePersistedFilter.ts`
 
-Adicionar um bloco de inferência de `mediaType` logo após toda a extração de conteúdo (depois da linha 659), antes da verificação de bloqueio:
-
-**Arquivo:** `supabase/functions/uazapi-webhook/index.ts`
-
-1. **Inferência de mediaType (após linha 659)**: Se temos `mediaUrl` mas `mediaType` está vazio, inferir o tipo a partir de:
-   - `mediaMimetype` (ex: "audio/ogg" -> "audio", "image/jpeg" -> "image")
-   - `msg.type` ou `msg.messageType` como fallback (ex: "pttMessage" -> "audio", "media" -> inferir do mimetype)
-   - Se nada funcionar mas temos URL de mmg.whatsapp.net, assumir "document" como fallback seguro
-
-2. **Para áudio especificamente**: Detectar tipos PTT ("pttMessage", "ptt") que o UAZAPI usa para notas de voz e mapear para `mediaType = "audio"`
-
-### Detalhes técnicos
-
-Inserir o seguinte bloco entre a linha 659 e a linha 666 do arquivo `supabase/functions/uazapi-webhook/index.ts`:
+Um hook simples que encapsula `useState` + `localStorage`:
 
 ```typescript
-// FALLBACK: Infer mediaType from mimetype or msg.type when specific message fields are absent
-if (mediaUrl && !mediaType) {
-  if (mediaMimetype) {
-    const mimePrefix = mediaMimetype.split("/")[0].toLowerCase();
-    if (mimePrefix === "audio") mediaType = "audio";
-    else if (mimePrefix === "image") mediaType = "image";
-    else if (mimePrefix === "video") mediaType = "video";
-    else mediaType = "document";
-  } else {
-    // Infer from msg.type or messageType
-    const rawType = String(msg.type || msg.messageType || msgAny.messageType || "").toLowerCase();
-    if (rawType.includes("ptt") || rawType.includes("audio")) {
-      mediaType = "audio";
-    } else if (rawType.includes("image")) {
-      mediaType = "image";
-    } else if (rawType.includes("video")) {
-      mediaType = "video";
-    } else if (rawType.includes("sticker")) {
-      mediaType = "sticker";
-    } else if (rawType === "media" || mediaUrl.includes("mmg.whatsapp.net")) {
-      mediaType = "document"; // safe fallback
+import { useState, useCallback } from "react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
+export function usePersistedFilter<T>(
+  page: string,
+  field: string,
+  defaultValue: T
+): [T, (value: T) => void] {
+  const { currentUser } = useCurrentUser();
+  const storageKey = `roy_filters_${currentUser?.id}_${page}_${field}`;
+
+  const [value, setValue] = useState<T>(() => {
+    if (!currentUser?.id) return defaultValue;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      return saved !== null ? JSON.parse(saved) : defaultValue;
+    } catch {
+      return defaultValue;
     }
-  }
-  if (mediaType) {
-    console.log(`[WEBHOOK] Inferred mediaType="${mediaType}" from mimetype="${mediaMimetype}" / msgType="${msg.type}"`);
-  }
+  });
+
+  const setPersistedValue = useCallback((newValue: T) => {
+    setValue(newValue);
+    if (currentUser?.id) {
+      const key = `roy_filters_${currentUser.id}_${page}_${field}`;
+      if (newValue === defaultValue) {
+        localStorage.removeItem(key);
+      } else {
+        localStorage.setItem(key, JSON.stringify(newValue));
+      }
+    }
+  }, [currentUser?.id, page, field, defaultValue]);
+
+  return [value, setPersistedValue];
 }
 ```
 
-Isso resolve o problema sem alterar nenhuma outra parte do fluxo. As mensagens de áudio que antes eram bloqueadas agora terão `mediaType = "audio"` e passarão normalmente pelo pipeline de processamento e download lazy.
+**Alteracoes nas paginas:**
+
+Em cada pagina listada acima, substituir os `useState` dos filtros por `usePersistedFilter`. Exemplo para Clientes:
+
+```typescript
+// Antes:
+const [filterClientStatus, setFilterClientStatus] = useState<string>("all");
+
+// Depois:
+const [filterClientStatus, setFilterClientStatus] = usePersistedFilter("clients", "clientStatus", "all");
+```
+
+A mesma substituicao sera aplicada em todos os filtros de todas as 6 paginas. Nenhuma outra alteracao de logica e necessaria, pois a interface do hook e identica a do `useState`.
