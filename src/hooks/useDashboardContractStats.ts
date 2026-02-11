@@ -7,6 +7,7 @@ interface ContractStats {
   ended: number;
   suspended: number;
   paused: number;
+  expired: number;
   total_clients: number;
 }
 

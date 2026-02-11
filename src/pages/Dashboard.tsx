@@ -20,6 +20,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Legend, CartesianGrid } from "recharts";
 import {
+  Clock,
   Users,
   AlertTriangle,
   TrendingUp,
@@ -907,7 +908,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Status Cards - Single Row */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 md:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 md:grid-cols-6">
             {/* Total de Clientes */}
             <Card className="shadow-card border-l-4 border-l-primary">
               <CardContent className="p-4">
@@ -971,8 +972,21 @@ export default function Dashboard() {
                   <Minus className="h-5 w-5 text-amber-500" />
                 </div>
               </CardContent>
+             </Card>
+
+            {/* Vencidos (active + end_date < today) */}
+            <Card className="shadow-card border-l-4 border-l-orange-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Vencidos</p>
+                    <p className="text-2xl font-bold text-orange-600">{contractStats?.expired ?? 0}</p>
+                  </div>
+                  <Clock className="h-5 w-5 text-orange-500" />
+                </div>
+              </CardContent>
             </Card>
-          </div>
+           </div>
 
           {/* Historical Chart */}
           <Card className="shadow-card overflow-hidden">
@@ -1195,7 +1209,7 @@ export default function Dashboard() {
             </div>
 
             {/* Status Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-6 mb-8">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 mb-8">
               <Card className="border-l-4 border-l-primary">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -1252,6 +1266,18 @@ export default function Dashboard() {
                       <p className="text-4xl font-bold text-amber-600">{(contractStats?.suspended ?? 0) + (contractStats?.paused ?? 0)}</p>
                     </div>
                     <Minus className="h-8 w-8 text-amber-500" />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-l-4 border-l-orange-500">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Vencidos</p>
+                      <p className="text-4xl font-bold text-orange-600">{contractStats?.expired ?? 0}</p>
+                    </div>
+                    <Clock className="h-8 w-8 text-orange-500" />
                   </div>
                 </CardContent>
               </Card>
