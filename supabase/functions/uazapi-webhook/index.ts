@@ -191,9 +191,22 @@ function normalizePhone(phone: string | undefined): string {
   return `+${digits}`;
 }
 
+// ============================================
+// KILL SWITCH: set to true to temporarily disable all processing
+// (function still responds 200 to avoid UAZAPI retry storms)
+// ============================================
+const FUNCTION_DISABLED = true;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  if (FUNCTION_DISABLED) {
+    return new Response(JSON.stringify({ status: "disabled", message: "Function temporarily disabled" }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   try {
