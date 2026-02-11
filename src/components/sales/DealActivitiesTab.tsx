@@ -184,17 +184,13 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
     if (error) {
       console.error("Error updating task:", error);
     } else {
-      fetchTasks();
+      await fetchTasks();
       // Invalidate global cache to sync with Tasks page
       queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
       
       if (!isCurrentlyCompleted) {
-        // Use setTimeout to ensure editingTask is null before dialog opens,
-        // preventing the "completed" checkbox from being pre-checked
         setEditingTask(null);
-        setTimeout(() => {
-          setTaskDialogOpen(true);
-        }, 50);
+        setTaskDialogOpen(true);
       }
     }
   };
