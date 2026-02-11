@@ -72,6 +72,7 @@ export interface EventData {
   rsvp_closed?: boolean;
   rsvp_deadline?: string | null;
   rsvp_closure_message?: string | null;
+  client_id?: string | null;
 }
 
 interface EventEditDialogProps {
@@ -183,6 +184,7 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
         rsvp_deadline: rsvpDeadline ? localDateTimeToUTC(rsvpDeadline) : null,
         rsvp_closure_message: rsvpClosureMessage.trim() || null,
         mentor_user_id: mentorUserId || null,
+        client_id: event.client_id ?? null,
       };
 
       const { error } = await supabase

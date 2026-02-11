@@ -24,8 +24,10 @@ import {
   QrCode,
   Link as LinkIcon,
   Pencil,
+  Plus,
 } from "lucide-react";
 import { ClientTasks } from "./ClientTasks";
+import { ClientIndividualEventDialog } from "./ClientIndividualEventDialog";
 import { format, isPast, isFuture, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -48,6 +50,7 @@ interface Event {
   meeting_url: string | null;
   material_url: string | null;
   is_recurring: boolean;
+  client_id: string | null;
 }
 
 interface EventProduct {
@@ -122,6 +125,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
   const [accountId, setAccountId] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<EventData | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchAccountId();
@@ -200,6 +204,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
           id,
           event_products (product_id)
         `)
+        .is("client_id", null)
         .order("scheduled_at", { ascending: true, nullsFirst: false });
 
       const eventIdsFromProducts = (productEvents || [])
@@ -211,11 +216,20 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         })
         .map((event: any) => event.id);
 
+      // Fetch individual events for this client (client_id set)
+      const { data: individualEvents } = await supabase
+        .from("events")
+        .select("id")
+        .in("client_id", linkedClientIds);
+
+      const eventIdsFromIndividual = (individualEvents || []).map(e => e.id);
+
       // Combine all unique event IDs
       const allEventIds = [...new Set([
         ...eventIdsFromDeliveries,
         ...eventIdsFromAttendances,
         ...eventIdsFromProducts,
+        ...eventIdsFromIndividual,
       ])];
 
       if (allEventIds.length === 0) {
@@ -426,9 +440,14 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         product_id: ep.product_id,
         products: { id: ep.product_id, name: "" }
       })),
+      client_id: event.client_id,
     };
     setEditingEvent(eventData);
     setEditDialogOpen(true);
+  };
+
+  const handleCreateIndividualEvent = () => {
+    setCreateDialogOpen(true);
   };
 
   // Helper to get linked client name for badges
@@ -617,6 +636,14 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
 
   return (
     <div className="space-y-6">
+      {/* Button to create individual event */}
+      <div className="flex justify-end">
+        <Button onClick={handleCreateIndividualEvent} size="sm" className="gap-2" disabled={!accountId}>
+          <Plus className="h-4 w-4" />
+          Novo Evento Individual
+        </Button>
+      </div>
+
       {/* SECTION 1: Client Event Invitations (RSVPs) - ALWAYS VISIBLE */}
       <div>
         <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
@@ -753,6 +780,17 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         event={editingEvent}
         onSuccess={fetchEvents}
       />
+
+      {/* Individual Event Creation Dialog */}
+      {accountId && (
+        <ClientIndividualEventDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          clientId={clientId}
+          accountId={accountId}
+          onSuccess={fetchEvents}
+        />
+      )}
     </div>
   );
 }

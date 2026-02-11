@@ -4393,6 +4393,7 @@ export type Database = {
           budget: number | null
           category: Database["public"]["Enums"]["event_category"]
           checkin_code: string | null
+          client_id: string | null
           color: string | null
           cover_image_url: string | null
           created_at: string
@@ -4435,6 +4436,7 @@ export type Database = {
           budget?: number | null
           category?: Database["public"]["Enums"]["event_category"]
           checkin_code?: string | null
+          client_id?: string | null
           color?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -4477,6 +4479,7 @@ export type Database = {
           budget?: number | null
           category?: Database["public"]["Enums"]["event_category"]
           checkin_code?: string | null
+          client_id?: string | null
           color?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -4518,6 +4521,20 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "events_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
           {
