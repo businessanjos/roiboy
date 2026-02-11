@@ -313,6 +313,10 @@ export function useDeals() {
 
     try {
       const updateData: any = { ...data };
+
+      // Extract product_id before sending to deals table (same pattern as createDeal)
+      const productId = updateData.product_id;
+      delete updateData.product_id;
       
       // Convert empty strings to null for UUID fields
       const uuidFields = ['client_id', 'lead_id', 'stage_id', 'responsible_user_id'];
@@ -370,6 +374,26 @@ export function useDeals() {
           content: newStatus === 'lost' ? (data.lost_reason || null) : null,
           user_id: currentUser.id,
         });
+      }
+
+      // Save product_id (Item da Venda) to deal_field_values if provided
+      if (productId !== undefined) {
+        if (productId && productId !== '') {
+          await supabase
+            .from('deal_field_values')
+            .upsert({
+              account_id: currentUser.account_id,
+              deal_id: dealId,
+              field_id: DEAL_FIELD_IDS.ITEM_VENDA,
+              value_text: productId,
+            }, { onConflict: 'deal_id,field_id' });
+        } else {
+          await supabase
+            .from('deal_field_values')
+            .delete()
+            .eq('deal_id', dealId)
+            .eq('field_id', DEAL_FIELD_IDS.ITEM_VENDA);
+        }
       }
 
       // Refresh deals
