@@ -1,57 +1,34 @@
 
 
-## Abrir diálogo de nova tarefa ao concluir pela edição (TaskDialog)
+## Diagnostico: Erro "Could not find the 'product_id' column of 'deals'"
 
-### Problema
+### Causa raiz
 
-Ao editar uma tarefa, marcar "Marcar como concluída" e salvar, o diálogo fecha mas nao abre automaticamente o diálogo de nova tarefa. Isso acontece porque o `TaskDialog` chama `onOpenChange(false)` e `onSuccess()` (que apenas recarrega as tarefas), sem sinalizar ao `DealActivitiesTab` que houve uma conclusao.
+O campo "Item da Venda" envia um `product_id` no objeto de dados ao salvar o negocio. Na funcao de **criacao** (`createDeal`), esse campo e corretamente extraido antes de inserir na tabela `deals` (pois `product_id` nao e uma coluna dessa tabela — ele e salvo na tabela `deal_field_values`). Porem, na funcao de **atualizacao** (`updateDeal`), o `product_id` **nao e removido** do objeto de dados, e e enviado diretamente para a tabela `deals`, causando o erro de schema.
 
-### Solucao
+### Correcao
 
-Adicionar um callback opcional `onTaskCompleted` ao `TaskDialog`, que sera chamado quando uma tarefa existente for salva com o checkbox de conclusao marcado. O `DealActivitiesTab` usara esse callback para abrir o dialogo de nova tarefa.
+**Arquivo: `src/hooks/useDeals.tsx`**
 
-### Alteracoes
+Na funcao `updateDeal` (por volta da linha 315), apos montar o `updateData`:
 
-**Arquivo: `src/components/tasks/TaskDialog.tsx`**
+1. Extrair `product_id` do `updateData` antes de enviar para o banco (mesma logica usada no `createDeal`)
+2. Apos a atualizacao bem-sucedida do deal, fazer upsert do valor na tabela `deal_field_values` usando o field ID do "Item da Venda" (`033b91fb-3add-4c96-aec9-567fefbd0fb2`)
+3. Se `product_id` for `null` ou string vazia (usuario selecionou "Nenhum"), remover o registro correspondente de `deal_field_values`
 
-1. Adicionar prop opcional `onTaskCompleted?: () => void` na interface `TaskDialogProps`
-2. No `handleSubmit`, quando `task` existe (edicao) e `isCompleted` esta marcado e a tarefa **nao estava** concluida antes (`!task.completed_at`), chamar `onTaskCompleted?.()` apos fechar o dialogo
+### Detalhe tecnico
 
-**Arquivo: `src/components/sales/DealActivitiesTab.tsx`**
+```text
+Fluxo atual (com bug):
+  updateData = { title, value, product_id, ... }
+  -> supabase.from('deals').update(updateData) -> ERRO: coluna nao existe
 
-1. Passar a prop `onTaskCompleted` ao `TaskDialog` com uma funcao que:
-   - Aguarda `fetchTasks()`
-   - Invalida o cache
-   - Abre o dialogo de nova tarefa (`setEditingTask(null)` + `setTaskDialogOpen(true)`)
-
-### Detalhes tecnicos
-
-No `TaskDialog.tsx`, dentro de `handleSubmit` (linhas 321-408), apos a atualizacao bem-sucedida:
-
-```
-// Linha ~401, antes de onOpenChange(false)
-const wasCompletedBefore = !!task.completed_at;
-// ... apos o update ...
-onOpenChange(false);
-onSuccess();
-if (isCompleted && !wasCompletedBefore) {
-  onTaskCompleted?.();
-}
+Fluxo corrigido:
+  updateData = { title, value, ... }  (sem product_id)
+  productId = data.product_id
+  -> supabase.from('deals').update(updateData) -> OK
+  -> supabase.from('deal_field_values').upsert({ field_id, value_text: productId }) -> OK
 ```
 
-No `DealActivitiesTab.tsx`, no componente `TaskDialog`:
-
-```
-<TaskDialog
-  ...
-  onTaskCompleted={async () => {
-    await fetchTasks();
-    queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
-    setEditingTask(null);
-    setTaskDialogOpen(true);
-  }}
-/>
-```
-
-Isso garante que ambos os caminhos (checkbox e edicao) abram o dialogo de nova tarefa ao concluir.
+A alteracao e minima e segue exatamente o mesmo padrao ja implementado na funcao `createDeal` do mesmo arquivo.
 
