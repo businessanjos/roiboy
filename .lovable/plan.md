@@ -1,27 +1,57 @@
 
-## Correção: Diálogo de nova atividade não abre após concluir tarefa
 
-### Causa raiz
+## Abrir diálogo de nova tarefa ao concluir pela edição (TaskDialog)
 
-Na função `handleToggleComplete`, o `fetchTasks()` é chamado sem `await`. Essa função define `setLoading(true)`, o que causa uma re-renderização do componente (mostrando o spinner de loading). O `setTimeout` de 50ms que abre o diálogo dispara durante essa transição, e o estado `taskDialogOpen` pode ser perdido ou o diálogo não consegue montar corretamente durante o ciclo de loading.
+### Problema
 
-### Correção
+Ao editar uma tarefa, marcar "Marcar como concluída" e salvar, o diálogo fecha mas nao abre automaticamente o diálogo de nova tarefa. Isso acontece porque o `TaskDialog` chama `onOpenChange(false)` e `onSuccess()` (que apenas recarrega as tarefas), sem sinalizar ao `DealActivitiesTab` que houve uma conclusao.
+
+### Solucao
+
+Adicionar um callback opcional `onTaskCompleted` ao `TaskDialog`, que sera chamado quando uma tarefa existente for salva com o checkbox de conclusao marcado. O `DealActivitiesTab` usara esse callback para abrir o dialogo de nova tarefa.
+
+### Alteracoes
+
+**Arquivo: `src/components/tasks/TaskDialog.tsx`**
+
+1. Adicionar prop opcional `onTaskCompleted?: () => void` na interface `TaskDialogProps`
+2. No `handleSubmit`, quando `task` existe (edicao) e `isCompleted` esta marcado e a tarefa **nao estava** concluida antes (`!task.completed_at`), chamar `onTaskCompleted?.()` apos fechar o dialogo
 
 **Arquivo: `src/components/sales/DealActivitiesTab.tsx`**
 
-Na função `handleToggleComplete`, trocar a lógica para **aguardar** o `fetchTasks()` antes de abrir o diálogo, e remover o `setTimeout` desnecessário:
+1. Passar a prop `onTaskCompleted` ao `TaskDialog` com uma funcao que:
+   - Aguarda `fetchTasks()`
+   - Invalida o cache
+   - Abre o dialogo de nova tarefa (`setEditingTask(null)` + `setTaskDialogOpen(true)`)
+
+### Detalhes tecnicos
+
+No `TaskDialog.tsx`, dentro de `handleSubmit` (linhas 321-408), apos a atualizacao bem-sucedida:
 
 ```
-// Bloco de sucesso (linhas ~186-199)
-fetchTasks();  -->  await fetchTasks();
-
-// Remover o setTimeout e abrir diretamente:
-if (!isCurrentlyCompleted) {
-  setEditingTask(null);
-  setTaskDialogOpen(true);
+// Linha ~401, antes de onOpenChange(false)
+const wasCompletedBefore = !!task.completed_at;
+// ... apos o update ...
+onOpenChange(false);
+onSuccess();
+if (isCompleted && !wasCompletedBefore) {
+  onTaskCompleted?.();
 }
 ```
 
-Com o `await`, o `fetchTasks` completa totalmente (incluindo `setLoading(false)`) antes de abrir o diálogo, garantindo que o componente está estável e o diálogo monta corretamente em modo de criação.
+No `DealActivitiesTab.tsx`, no componente `TaskDialog`:
 
-Alteração mínima: trocar `fetchTasks()` por `await fetchTasks()` e remover o `setTimeout`.
+```
+<TaskDialog
+  ...
+  onTaskCompleted={async () => {
+    await fetchTasks();
+    queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
+    setEditingTask(null);
+    setTaskDialogOpen(true);
+  }}
+/>
+```
+
+Isso garante que ambos os caminhos (checkbox e edicao) abram o dialogo de nova tarefa ao concluir.
+
