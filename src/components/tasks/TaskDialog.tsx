@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useAuditLog } from "@/hooks/useAuditLog";
+import { formatLocalISOString } from "@/lib/dateUtils";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
 import { useSector } from "@/contexts/SectorContext";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -355,6 +356,39 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           .update(updateData)
           .eq("id", task.id);
         if (error) throw error;
+        
+        // Sync meeting with Google Calendar / Zoom if date/time changed
+        if (task.meeting_url) {
+          const dateChanged = dueDate !== (task.due_date || null);
+          const timeChanged = dueTime !== (task.due_time ? task.due_time.slice(0, 5) : null);
+          
+          if (dateChanged || timeChanged) {
+            try {
+              const startDateTime = dueTime 
+                ? `${dueDate}T${dueTime}:00` 
+                : `${dueDate}T09:00:00`;
+              const startDate = new Date(startDateTime);
+              const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+              
+              const { error: syncError } = await supabase.functions.invoke("update-meeting", {
+                body: {
+                  task_id: task.id,
+                  start_time: formatLocalISOString(startDate),
+                  end_time: formatLocalISOString(endDate),
+                  title: taskTitle,
+                },
+              });
+              
+              if (syncError) {
+                console.error("Error syncing meeting:", syncError);
+              } else {
+                toast.success("Calendário atualizado!");
+              }
+            } catch (syncErr) {
+              console.error("Error syncing meeting (non-blocking):", syncErr);
+            }
+          }
+        }
         
         logAudit({
           action: isCompleted ? "complete" : "update",

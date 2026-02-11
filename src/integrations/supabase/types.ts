@@ -6017,6 +6017,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           due_time: string | null
+          google_calendar_event_id: string | null
           id: string
           lead_id: string | null
           meeting_platform: string | null
@@ -6025,6 +6026,7 @@ export type Database = {
           status: Database["public"]["Enums"]["task_status"]
           title: string
           updated_at: string
+          zoom_meeting_id: string | null
         }
         Insert: {
           account_id: string
@@ -6040,6 +6042,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           due_time?: string | null
+          google_calendar_event_id?: string | null
           id?: string
           lead_id?: string | null
           meeting_platform?: string | null
@@ -6048,6 +6051,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["task_status"]
           title: string
           updated_at?: string
+          zoom_meeting_id?: string | null
         }
         Update: {
           account_id?: string
@@ -6063,6 +6067,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           due_time?: string | null
+          google_calendar_event_id?: string | null
           id?: string
           lead_id?: string | null
           meeting_platform?: string | null
@@ -6071,6 +6076,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["task_status"]
           title?: string
           updated_at?: string
+          zoom_meeting_id?: string | null
         }
         Relationships: [
           {

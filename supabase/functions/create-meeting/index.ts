@@ -64,7 +64,7 @@ async function createZoomMeeting(
   participantEmail: string | undefined,
   supabaseClient: any,
   userId?: string
-): Promise<{ meeting_url: string; meeting_id: string; meeting_password: string }> {
+): Promise<{ meeting_url: string; meeting_id: string; meeting_password: string; google_calendar_event_id?: string }> {
   let accessToken: string | null = null;
   let refreshToken: string | null = null;
   let expiresAt: number | null = null;
@@ -219,7 +219,7 @@ async function createGoogleMeetMeeting(
   supabaseClient: any,
   accountId: string,
   userId?: string
-): Promise<{ meeting_url: string; meeting_id: string; meeting_password: string }> {
+): Promise<{ meeting_url: string; meeting_id: string; meeting_password: string; google_calendar_event_id?: string }> {
   let accessToken: string | null = null;
   let refreshToken: string | null = null;
   let expiresAt: number | null = null;
@@ -460,7 +460,10 @@ serve(async (req) => {
           );
 
           if (calResp.ok) {
-            console.log("Zoom meeting registered in Google Calendar successfully");
+            const calEventData = await calResp.json();
+            console.log("Zoom meeting registered in Google Calendar successfully, event ID:", calEventData.id);
+            // Store the Google Calendar event ID for later sync
+            meetingResult.google_calendar_event_id = calEventData.id;
           } else {
             console.error("Failed to create Google Calendar event for Zoom meeting:", await calResp.text());
           }
@@ -484,13 +487,27 @@ serve(async (req) => {
 
     console.log("Meeting created:", meetingResult);
 
-    // Update task with meeting URL
+    // Update task with meeting URL and external IDs
+    const taskUpdateData: Record<string, any> = {
+      meeting_url: meetingResult.meeting_url,
+      meeting_platform: platform,
+    };
+
+    // Store Google Calendar event ID if available
+    if (platform === "google") {
+      // For Google Meet, the meeting_id IS the calendar event ID
+      taskUpdateData.google_calendar_event_id = meetingResult.meeting_id;
+    } else if (platform === "zoom") {
+      taskUpdateData.zoom_meeting_id = meetingResult.meeting_id;
+      // Also store Google Calendar event ID if Zoom meeting was synced to Calendar
+      if (meetingResult.google_calendar_event_id) {
+        taskUpdateData.google_calendar_event_id = meetingResult.google_calendar_event_id;
+      }
+    }
+
     const { error: updateError } = await supabase
       .from("internal_tasks")
-      .update({
-        meeting_url: meetingResult.meeting_url,
-        meeting_platform: platform,
-      })
+      .update(taskUpdateData)
       .eq("id", task_id);
 
     if (updateError) {

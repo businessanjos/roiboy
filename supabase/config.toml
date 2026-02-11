@@ -176,3 +176,6 @@ verify_jwt = false
 
 [functions.update-deal-notes]
 verify_jwt = false
+
+[functions.update-meeting]
+verify_jwt = false
