@@ -1,32 +1,22 @@
 
+## Correções no fluxo de conclusão/reabertura de tarefas
 
-## Abrir diálogo de nova tarefa automaticamente ao concluir uma tarefa no negócio
+### Problema 1: Checkbox "Marcar como concluída" vem marcada ao criar nova tarefa
 
-### O que sera feito
+Quando o diálogo abre automaticamente após concluir uma tarefa, o campo "Marcar como concluída" pode aparecer pré-marcado. Isso acontece porque o estado `isCompleted` pode não ser resetado corretamente dependendo do fluxo de renderização. A correção garante que ao abrir o diálogo em modo criação, o `isCompleted` sempre seja `false`, adicionando um reset explícito no momento que o diálogo é aberto para nova tarefa no `DealActivitiesTab`.
 
-Quando o vendedor marcar uma tarefa como concluída (checkbox) dentro de um negócio no setor de Vendas, o diálogo de criação de nova tarefa abrirá automaticamente logo em seguida. Isso garante que o vendedor seja incentivado a agendar a próxima atividade, evitando que negócios fiquem sem tarefas pendentes.
+### Problema 2: Desmarcar "concluída" e salvar não reabre a tarefa
 
-### Alteração
+Ao editar uma tarefa concluída, desmarcar "Marcar como concluída" e salvar, a tarefa continua aparecendo como concluída. A causa é que o `TaskDialog` atualiza apenas o campo `completed_at` (para `null`), mas **não** atualiza o `custom_status_id`. Como o `DealActivitiesTab` verifica ambos (`custom_status.is_completed_status || completed_at`) para classificar a tarefa, o `custom_status_id` antigo (que aponta para um status de conclusão) mantém a tarefa como "concluída".
 
-**Arquivo:** `src/components/sales/DealActivitiesTab.tsx`
+### Alterações
 
-Na função `handleToggleComplete`, após a conclusão bem-sucedida de uma tarefa (quando o usuário está **marcando como concluída**, não desmarcando), o sistema abrirá automaticamente o diálogo de nova tarefa:
+**Arquivo: `src/components/tasks/TaskDialog.tsx`**
 
-- Após o `fetchTasks()` e invalidação de cache (linha ~189), verificar se a ação foi de **concluir** (não reabrir)
-- Se sim, limpar o `editingTask` (para garantir que o diálogo abra em modo criação) e abrir o `TaskDialog` com `setTaskDialogOpen(true)`
-- O diálogo já vem pré-configurado com o `dealId` e `leadId` corretos, pois essas props já são passadas ao `TaskDialog` existente
+Na função `handleSubmit`, ao montar o `updateData` para tarefas existentes:
+- Buscar o status adequado (primeiro status de conclusão ou primeiro status pendente) baseado no valor de `isCompleted`
+- Incluir `custom_status_id` no objeto de atualização, sincronizando-o com o estado do checkbox
 
-### Detalhes técnicos
+**Arquivo: `src/components/sales/DealActivitiesTab.tsx`**
 
-Dentro de `handleToggleComplete`, a variável `isCurrentlyCompleted` já indica se a tarefa **estava** concluída antes do clique. Quando `isCurrentlyCompleted === false`, significa que o usuário está concluindo a tarefa -- é nesse caso que o diálogo deve abrir:
-
-```
-// Após o bloco de sucesso (linha ~186-190):
-if (!isCurrentlyCompleted) {
-  // Usuário acabou de concluir -> abrir diálogo de nova tarefa
-  setEditingTask(null);
-  setTaskDialogOpen(true);
-}
-```
-
-Apenas 3 linhas adicionadas em um único arquivo.
+Garantir que ao abrir o diálogo automaticamente após conclusão, o `isCompleted` seja explicitamente resetado, adicionando um pequeno delay ou garantindo a ordem correta dos estados para evitar qualquer race condition na inicialização do formulário.
