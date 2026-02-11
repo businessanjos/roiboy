@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMemo } from "react";
 import { subMonths, format, startOfMonth, endOfMonth, parseISO, isBefore, addYears, differenceInDays } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
 
 interface ClientWithScore {
   id: string;
@@ -235,7 +236,7 @@ export function useUpcomingLifeEvents() {
 
       const upcoming = (eventsData || [])
         .map((event: any) => {
-          const eventDate = new Date(event.event_date);
+          const eventDate = parseLocalDate(event.event_date)!;
           let nextDate = new Date(eventDate);
           
           if (event.is_recurring) {
