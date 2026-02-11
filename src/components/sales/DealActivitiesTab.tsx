@@ -187,6 +187,11 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
       fetchTasks();
       // Invalidate global cache to sync with Tasks page
       queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
+      
+      if (!isCurrentlyCompleted) {
+        setEditingTask(null);
+        setTaskDialogOpen(true);
+      }
     }
   };
 
