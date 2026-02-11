@@ -1207,6 +1207,7 @@ serve(async (req) => {
         // For outbound: single query fetches all candidate messages for dedup
         // For inbound: single query by external_message_id
         // ============================================
+        let insertedMessageDbId: string | null = null;
         if (zappConversationId) {
           let skipInsert = false;
           let isDuplicate = false;
@@ -1325,7 +1326,6 @@ serve(async (req) => {
 
             // OPTIMIZATION: Use .select('id') on INSERT to get the message ID
             // This avoids a separate re-fetch query later for AI queue
-            let insertedMessageDbId: string | null = null;
             if (!isDuplicate && !skipInsert) {
               const { data: insertedMsg, error: zappMsgError } = await supabase
                 .from("zapp_messages")
