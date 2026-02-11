@@ -162,7 +162,7 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
 
     // Parse mentioned users from value when it changes externally
     useEffect(() => {
-      const mentions = value.match(/@(\w+(?:\s\w+)*)/g) || [];
+      const mentions = value.match(/@([\p{L}\p{N}_]+(?:\s[\p{L}\p{N}_]+)*)/gu) || [];
       if (mentions.length === 0) {
         setMentionedUsers([]);
         onMentionSelect?.([]);
