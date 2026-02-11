@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -170,10 +171,10 @@ export default function Tasks() {
   const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterUser, setFilterUser] = useState<string>("all");
-  const [filterActivityType, setFilterActivityType] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<SortOption>("priority");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const [filterUser, setFilterUser] = usePersistedFilter<string>("tasks", "filterUser", "all");
+  const [filterActivityType, setFilterActivityType] = usePersistedFilter<string>("tasks", "filterActivityType", "all");
+  const [sortBy, setSortBy] = usePersistedFilter<SortOption>("tasks", "sortBy", "priority");
+  const [sortDirection, setSortDirection] = usePersistedFilter<SortDirection>("tasks", "sortDirection", "asc");
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -182,8 +183,8 @@ export default function Tasks() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [statusManagerOpen, setStatusManagerOpen] = useState(false);
-  const [filterDateStart, setFilterDateStart] = useState("");
-  const [filterDateEnd, setFilterDateEnd] = useState("");
+  const [filterDateStart, setFilterDateStart] = usePersistedFilter<string>("tasks", "filterDateStart", "");
+  const [filterDateEnd, setFilterDateEnd] = usePersistedFilter<string>("tasks", "filterDateEnd", "");
 
   // Custom task statuses
   const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
@@ -363,13 +364,13 @@ export default function Tasks() {
   const handleColumnSort = useCallback((column: SortOption) => {
     if (sortBy === column) {
       // Toggle direction if same column
-      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
       // New column - reset to ascending
       setSortBy(column);
       setSortDirection("asc");
     }
-  }, [sortBy]);
+  }, [sortBy, sortDirection]);
 
   const getContactInfoFromTask = useCallback((task: Task) => {
     if (!task.deals) return null;

@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -100,8 +101,8 @@ export default function SalesPipeline() {
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
-  const [wonMonthFilter, setWonMonthFilter] = useState<string>('all');
-  const [lostMonthFilter, setLostMonthFilter] = useState<string>('all');
+  const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
+  const [lostMonthFilter, setLostMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostMonthFilter", "all");
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
   
