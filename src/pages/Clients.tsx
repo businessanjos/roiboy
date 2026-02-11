@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -261,13 +262,13 @@ export default function Clients() {
   const [showFilters, setShowFilters] = useState(false);
   
   // Filter states
-  const [filterClientStatus, setFilterClientStatus] = useState<string>("all");
-  const [filterStatus, setFilterStatus] = useState<string>("all"); // Keep for backward compatibility
-  const [filterProduct, setFilterProduct] = useState<string>("all");
-  const [filterVNPS, setFilterVNPS] = useState<string>("all");
-  const [filterContract, setFilterContract] = useState<string>("all");
-  const [filterResponsible, setFilterResponsible] = useState<string>("all");
-  const [sortOrder, setSortOrder] = useState<"recent" | "alphabetical">("recent");
+  const [filterClientStatus, setFilterClientStatus] = usePersistedFilter<string>("clients", "clientStatus", "all");
+  const [filterStatus, setFilterStatus] = usePersistedFilter<string>("clients", "status", "all"); // Keep for backward compatibility
+  const [filterProduct, setFilterProduct] = usePersistedFilter<string>("clients", "product", "all");
+  const [filterVNPS, setFilterVNPS] = usePersistedFilter<string>("clients", "vnps", "all");
+  const [filterContract, setFilterContract] = usePersistedFilter<string>("clients", "contract", "all");
+  const [filterResponsible, setFilterResponsible] = usePersistedFilter<string>("clients", "responsible", "all");
+  const [sortOrder, setSortOrder] = usePersistedFilter<"recent" | "alphabetical">("clients", "sortOrder", "recent");
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);

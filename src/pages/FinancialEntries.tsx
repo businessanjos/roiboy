@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -158,8 +159,8 @@ export default function FinancialEntries() {
   
   const [activeTab, setActiveTab] = useState<"payable" | "receivable">("receivable");
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = usePersistedFilter<string>("financial", "statusFilter", "all");
+  const [categoryFilter, setCategoryFilter] = usePersistedFilter<string>("financial", "categoryFilter", "all");
   const [conciliationFilter, setConciliationFilter] = useState<string>("all");
   const [currentMonth, setCurrentMonth] = useState(new Date());
   

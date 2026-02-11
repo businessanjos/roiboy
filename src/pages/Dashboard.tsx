@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -153,9 +154,9 @@ export default function Dashboard() {
   const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
   
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [quadrantFilter, setQuadrantFilter] = useState<string>("all");
-  const [productFilter, setProductFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = usePersistedFilter<string>("dashboard", "statusFilter", "all");
+  const [quadrantFilter, setQuadrantFilter] = usePersistedFilter<string>("dashboard", "quadrantFilter", "all");
+  const [productFilter, setProductFilter] = usePersistedFilter<string>("dashboard", "productFilter", "all");
   const [gestaoProductFilter, setGestaoProductFilter] = useState<string>("all");
   const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("6");
   const [gestaoCustomDateRange, setGestaoCustomDateRange] = useState<DateRange | undefined>(undefined);

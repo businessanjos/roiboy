@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { supabase } from "@/integrations/supabase/client";
 import { notifyContractCreated } from "@/hooks/useContractNotifications";
 import { Button } from "@/components/ui/button";
@@ -202,11 +203,11 @@ export default function Contracts() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [productFilter, setProductFilter] = useState<string>("all");
-  const [sortOrder, setSortOrder] = useState<"az" | "recent">("recent");
+  const [searchTerm, setSearchTerm] = usePersistedFilter<string>("contracts", "searchTerm", "");
+  const [statusFilter, setStatusFilter] = usePersistedFilter<string>("contracts", "statusFilter", "all");
+  const [typeFilter, setTypeFilter] = usePersistedFilter<string>("contracts", "typeFilter", "all");
+  const [productFilter, setProductFilter] = usePersistedFilter<string>("contracts", "productFilter", "all");
+  const [sortOrder, setSortOrder] = usePersistedFilter<"az" | "recent">("contracts", "sortOrder", "recent");
   const [activeTab, setActiveTab] = useState<string>("fila");
   
   // New contract dialog state
