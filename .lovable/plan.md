@@ -1,39 +1,30 @@
 
 
-## Filtrar vendedores por setor de Vendas no painel de ajustes
+## Scorecard de Lead - Contagem Total de Leads
 
-### Problema
+### O que sera feito
 
-O painel de ajustes do visual "Calls Comerciais" busca **todos os usuarios da conta** na tabela `users`, incluindo pessoas de outros setores (Operacoes, Financeiro, etc.). Deveria listar apenas os vendedores que tem acesso ao setor de **Vendas**.
+Adicionar uma nova opcao de metrica no fluxo de criacao de Scorecard chamada **"Total de Leads"**, que exibira a contagem total de todos os leads cadastrados.
 
-### Solucao
+### Mudancas tecnicas
 
-Alterar a query de busca de usuarios no `VisualQuickSettings.tsx` para consultar a tabela `user_sector_access` com filtro `sector_id = 'vendas'`, trazendo apenas os usuarios ativos nesse setor.
+**1. Arquivo: `src/components/insights/AddVisualModal.tsx`**
 
-### Mudanca tecnica
+- Adicionar novo tipo de metrica `'leads_count'` ao tipo `Metric`
+- Adicionar entrada no array `METRICS` com label "Total de Leads" e descricao "Contagem de todos os leads cadastrados"
+- Adicionar mapeamento em `METRIC_TO_CONFIG` para `leads_count`:
+  - `dataSource: 'leads'`
+  - `measureField: null`
+  - `aggregation: 'count'`
+  - `formatType: 'decimal'`
+- Adicionar label "Leads" em `METRIC_LABELS`
+- Garantir que quando `metric === 'leads_count'` e `chartType === 'scorecard'`, o fluxo funcione em 2 passos (ja funciona pois scorecards sao sempre 2 passos)
 
-**Arquivo: `src/components/insights/visuals/VisualQuickSettings.tsx`**
+**2. Arquivo: `src/hooks/useVisualData.ts`**
 
-Substituir a query atual:
+- Verificar que o case `'leads'` ja suporta `aggregation: 'count'` com `dimension._total` (provavelmente ja suporta pela funcao `fetchLeadsData` existente, mas precisa validar)
+- Se necessario, ajustar para que contagem total funcione quando dimension.field === '_total'
 
-```text
-supabase
-  .from('users')
-  .select('name')
-  .eq('account_id', currentUser.account_id)
-  .order('name')
-```
+### Resultado esperado
 
-Por uma query que filtra pelo setor de vendas:
-
-```text
-supabase
-  .from('user_sector_access')
-  .select('user:users!user_sector_access_user_id_fkey(name)')
-  .eq('account_id', currentUser.account_id)
-  .eq('sector_id', 'vendas')
-  .eq('is_active', true)
-```
-
-O resultado sera mapeado para extrair os nomes dos usuarios e ordenado alfabeticamente. Isso garantira que apenas Everton Pieri, Jonathan Marcato, Darlan Ferreira, Vanessa Minelli e George Oliveira aparecam na lista.
-
+Na lista de metricas do scorecard (passo 2), aparecera uma nova opcao "Total de Leads" apos as opcoes existentes. Ao selecionar, criara um scorecard que mostra o numero total de leads cadastrados na conta.
