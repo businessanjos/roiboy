@@ -22,7 +22,7 @@ interface AddVisualModalProps {
 
 type ChartType = "bar" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial";
 type Metric = "revenue" | "deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count";
-type GroupBy = "month" | "user" | "stage" | "product";
+type GroupBy = "month" | "user" | "stage" | "product" | "mql";
 
 const CHART_TYPES = [
   { value: "bar" as const, label: "Gráfico de Barras", description: "Comparar valores entre categorias", icon: BarChart3 },
@@ -47,6 +47,7 @@ const GROUP_BY_OPTIONS = [
   { value: "user" as const, label: "Por Vendedor", description: "Comparativo entre usuários" },
   { value: "stage" as const, label: "Por Etapa do Funil", description: "Distribuição por stage" },
   { value: "product" as const, label: "Por Produto", description: "Ranking de produtos" },
+  { value: "mql" as const, label: "Por MQL", description: "Classificação MQL do negócio" },
 ];
 
 // Mapping from simplified selections to full VisualConfig
@@ -70,6 +71,7 @@ const GROUP_BY_TO_DIMENSION: Record<GroupBy, { field: string; type: 'date' | 'te
   user: { field: 'responsible_name', type: 'text' },
   stage: { field: 'stage_name', type: 'text' },
   product: { field: 'product_name', type: 'text' },
+  mql: { field: 'mql', type: 'text' },
 };
 
 // Determines the correct date field based on the metric being measured
@@ -99,6 +101,7 @@ const GROUP_LABELS: Record<GroupBy, string> = {
   user: "por Vendedor",
   stage: "por Etapa",
   product: "por Produto",
+  mql: "por MQL",
 };
 
 export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {

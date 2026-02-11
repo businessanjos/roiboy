@@ -88,6 +88,48 @@ function inferStatusFilter(
   return undefined;
 }
 
+const MQL_FIELD_ID = '448404cd-0344-4892-a574-2387b1c17578';
+
+const MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
+  sim_acima_30k: { label: 'SIM - Acima de 30k', color: '#22c55e' },
+  nao_abaixo_30k: { label: 'NÃO - Abaixo de 30k', color: '#ef4444' },
+};
+
+async function enrichDealsWithMql(accountId: string, deals: any[]): Promise<any[]> {
+  if (deals.length === 0) return deals;
+
+  const dealIds = deals.map(d => d.id);
+
+  const { data: mqlValues, error } = await supabase
+    .from('deal_field_values')
+    .select('deal_id, value_text')
+    .eq('field_id', MQL_FIELD_ID)
+    .eq('account_id', accountId)
+    .in('deal_id', dealIds);
+
+  if (error) {
+    console.error('Error fetching MQL values:', error);
+    return deals.map(d => ({ ...d, _mql_label: 'Não informado', _mql_color: undefined }));
+  }
+
+  const mqlMap = new Map<string, { label: string; color: string }>();
+  for (const row of mqlValues || []) {
+    const mapped = MQL_VALUE_MAP[row.value_text || ''];
+    if (mapped) {
+      mqlMap.set(row.deal_id, mapped);
+    }
+  }
+
+  return deals.map(deal => {
+    const mql = mqlMap.get(deal.id);
+    return {
+      ...deal,
+      _mql_label: mql?.label || 'Não informado',
+      _mql_color: mql?.color || undefined,
+    };
+  });
+}
+
 async function fetchDealsData(
   accountId: string,
   measure: VisualConfig['measure'],
@@ -174,6 +216,12 @@ async function fetchDealsData(
   // If dimension is _total, return global aggregation (for Scorecards)
   if (dimension.field === '_total') {
     return aggregateGlobalTotal(data || [], measure);
+  }
+
+  // If grouping by MQL, fetch MQL field values and inject into deals
+  if (dimension.field === 'mql') {
+    const enrichedData = await enrichDealsWithMql(accountId, data || []);
+    return aggregateData(enrichedData, measure, dimension, dateDisplayFormat);
   }
 
   return aggregateData(data || [], measure, dimension, dateDisplayFormat);
@@ -556,6 +604,9 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], dateDispla
   if (field === 'is_active') {
     return item.is_active ? 'Ativo' : 'Inativo';
   }
+  if (field === 'mql') {
+    return item._mql_label || 'Não informado';
+  }
 
   // Handle date fields
   if (dimension.type === 'date') {
@@ -572,6 +623,9 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], dateDispla
 function getGroupColor(item: any, dimension: VisualConfig['dimension']): string | undefined {
   if (dimension.field === 'stage_name') {
     return item.deal_stages?.color;
+  }
+  if (dimension.field === 'mql') {
+    return item._mql_color;
   }
   return undefined;
 }
