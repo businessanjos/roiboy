@@ -1,10 +1,11 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { MentionTextarea } from "@/components/ui/mention-textarea";
 import { Camera, Paperclip, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { createMentionNotifications } from "@/lib/mention-notifications";
 
 interface CurrentUser {
   id: string;
@@ -28,26 +29,48 @@ export function FinancialQuickNoteInput({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isUploadingFile, setIsUploadingFile] = useState(false);
+  const [mentionedUsers, setMentionedUsers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
+  const [clientName, setClientName] = useState("");
   
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch client name for notifications
+  useEffect(() => {
+    supabase.from("clients").select("full_name").eq("id", clientId).single().then(({ data }) => {
+      if (data) setClientName(data.full_name);
+    });
+  }, [clientId]);
 
   const handleQuickComment = async () => {
     if (!quickComment.trim() || !currentUser) return;
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("client_followups").insert({
+      const { data: newFollowup, error } = await supabase.from("client_followups").insert({
         client_id: clientId,
         account_id: currentUser.account_id,
         user_id: currentUser.id,
         type: "financial_note",
         content: quickComment.trim(),
-      });
+      }).select("id").single();
 
       if (error) throw error;
 
+      if (mentionedUsers.length > 0 && newFollowup) {
+        await createMentionNotifications({
+          mentionedUsers,
+          currentUser,
+          commentContent: quickComment.trim(),
+          followupId: newFollowup.id,
+          clientId,
+          clientName,
+          linkPath: `/clients/${clientId}?tab=financeiro#comment-${newFollowup.id}`,
+        });
+      }
+
       setQuickComment("");
+      setMentionedUsers([]);
       toast.success("Anotação adicionada!");
       onNoteAdded?.();
     } catch (error) {
@@ -142,6 +165,7 @@ export function FinancialQuickNoteInput({
           placeholder="Escreva uma nota financeira..."
           className="flex-1"
           onKeyDown={handleKeyDown}
+          onMentionSelect={setMentionedUsers}
         />
 
         {/* Hidden file inputs */}

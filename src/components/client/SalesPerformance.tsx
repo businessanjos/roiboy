@@ -20,6 +20,13 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { createMentionNotifications } from "@/lib/mention-notifications";
+
+interface MentionedUser {
+  id: string;
+  name: string;
+  avatar_url: string | null;
+}
 
 interface SalesGoal {
   id: string;
@@ -51,6 +58,8 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id: string } | null>(null);
+  const [mentionedUsers, setMentionedUsers] = useState<MentionedUser[]>([]);
+  const [clientName, setClientName] = useState("");
   
   // File input refs
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -62,6 +71,15 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
       .select("id, name, avatar_url, account_id")
       .single();
     if (data) setCurrentUser(data);
+  };
+
+  const fetchClientName = async () => {
+    const { data } = await supabase
+      .from("clients")
+      .select("full_name")
+      .eq("id", clientId)
+      .single();
+    if (data) setClientName(data.full_name);
   };
 
   useEffect(() => {
@@ -88,6 +106,7 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
 
     fetchData();
     fetchCurrentUser();
+    fetchClientName();
 
     // Subscribe to realtime changes
     const channel = supabase
@@ -141,18 +160,33 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
     
     setSaving(true);
     try {
-      const { error } = await supabase.from("client_followups").insert({
+      const { data: newFollowup, error } = await supabase.from("client_followups").insert({
         account_id: currentUser.account_id,
         client_id: clientId,
         user_id: currentUser.id,
         type: "sales_note",
         title: null,
         content: quickComment.trim(),
-      });
+      }).select("id").single();
 
       if (error) throw error;
+
+      // Create notifications for mentioned users
+      if (mentionedUsers.length > 0 && newFollowup) {
+        await createMentionNotifications({
+          mentionedUsers,
+          currentUser,
+          commentContent: quickComment.trim(),
+          followupId: newFollowup.id,
+          clientId,
+          clientName,
+          linkPath: `/clients/${clientId}?tab=vendas#comment-${newFollowup.id}`,
+        });
+      }
+
       toast.success("Nota de vendas adicionada!");
       setQuickComment("");
+      setMentionedUsers([]);
     } catch (error: any) {
       console.error("Error adding note:", error);
       toast.error(error.message || "Erro ao adicionar nota");
@@ -420,6 +454,7 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
               value={quickComment}
               onChange={setQuickComment}
               onKeyDown={handleQuickKeyDown}
+              onMentionSelect={setMentionedUsers}
               className="pr-24"
             />
             <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">

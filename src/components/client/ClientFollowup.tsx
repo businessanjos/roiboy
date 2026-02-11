@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MentionInput, extractMentions } from "@/components/ui/mention-input";
+import { createMentionNotifications } from "@/lib/mention-notifications";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -158,6 +159,9 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [savingReply, setSavingReply] = useState(false);
+  const [mentionedUsers, setMentionedUsers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
+  const [replyMentionedUsers, setReplyMentionedUsers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
+  const [clientName, setClientName] = useState("");
   
   // File input refs
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -165,6 +169,15 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
   const replyInputRef = useRef<HTMLInputElement>(null);
 
   const PAGE_SIZE = 10;
+
+  useEffect(() => {
+    // Fetch client name for notifications
+    const fetchName = async () => {
+      const { data } = await supabase.from("clients").select("full_name").eq("id", clientId).single();
+      if (data) setClientName(data.full_name);
+    };
+    fetchName();
+  }, [clientId]);
 
   useEffect(() => {
     if (linkedClientIds.length > 0) {
@@ -368,7 +381,7 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
     
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { data: newFollowup, error } = await supabase
         .from("client_followups")
         .insert({
           account_id: currentUser.account_id,
@@ -377,11 +390,27 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
           type: "note",
           title: null,
           content: quickComment.trim(),
-        });
+        })
+        .select("id")
+        .single();
 
       if (error) throw error;
+
+      if (mentionedUsers.length > 0 && newFollowup) {
+        await createMentionNotifications({
+          mentionedUsers,
+          currentUser,
+          commentContent: quickComment.trim(),
+          followupId: newFollowup.id,
+          clientId,
+          clientName,
+          linkPath: `/clients/${clientId}#comment-${newFollowup.id}`,
+        });
+      }
+
       toast.success("Nota adicionada!");
       setQuickComment("");
+      setMentionedUsers([]);
       fetchFollowups();
     } catch (error: any) {
       console.error("Error saving quick comment:", error);
@@ -404,7 +433,7 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
     
     setSavingReply(true);
     try {
-      const { error } = await supabase
+      const { data: newFollowup, error } = await supabase
         .from("client_followups")
         .insert({
           account_id: currentUser.account_id,
@@ -414,11 +443,27 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
           title: null,
           content: replyContent.trim(),
           parent_id: parentId,
-        });
+        })
+        .select("id")
+        .single();
 
       if (error) throw error;
+
+      if (replyMentionedUsers.length > 0 && newFollowup) {
+        await createMentionNotifications({
+          mentionedUsers: replyMentionedUsers,
+          currentUser,
+          commentContent: replyContent.trim(),
+          followupId: newFollowup.id,
+          clientId,
+          clientName,
+          linkPath: `/clients/${clientId}#comment-${newFollowup.id}`,
+        });
+      }
+
       toast.success("Resposta enviada!");
       setReplyContent("");
+      setReplyMentionedUsers([]);
       setReplyingTo(null);
       fetchFollowups();
     } catch (error: any) {
@@ -1147,6 +1192,7 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
                         value={replyContent}
                         onChange={setReplyContent}
                         onKeyDown={(e) => handleReplyKeyDown(e, followup.id)}
+                        onMentionSelect={setReplyMentionedUsers}
                         className="text-sm pr-16 min-h-[36px]"
                       />
                       <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -1218,6 +1264,7 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
               value={quickComment}
               onChange={setQuickComment}
               onKeyDown={handleQuickKeyDown}
+              onMentionSelect={setMentionedUsers}
               className="pr-24"
             />
             <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
