@@ -36,11 +36,7 @@ export async function createMentionNotifications({
   if (!currentUser.account_id || mentionedUsers.length === 0) return;
 
   try {
-    const userIdsToNotify = mentionedUsers
-      .map((u) => u.id)
-      .filter((id) => id !== currentUser.id);
-
-    if (userIdsToNotify.length === 0) return;
+    const userIdsToNotify = mentionedUsers.map((u) => u.id);
 
     const contextLabel = clientName ? `Em ${clientName}` : "Em um cliente";
     const snippet = commentContent.slice(0, 100) + (commentContent.length > 100 ? "..." : "");
