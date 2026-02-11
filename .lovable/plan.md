@@ -1,22 +1,27 @@
 
-## Correções no fluxo de conclusão/reabertura de tarefas
+## Correção: Diálogo de nova atividade não abre após concluir tarefa
 
-### Problema 1: Checkbox "Marcar como concluída" vem marcada ao criar nova tarefa
+### Causa raiz
 
-Quando o diálogo abre automaticamente após concluir uma tarefa, o campo "Marcar como concluída" pode aparecer pré-marcado. Isso acontece porque o estado `isCompleted` pode não ser resetado corretamente dependendo do fluxo de renderização. A correção garante que ao abrir o diálogo em modo criação, o `isCompleted` sempre seja `false`, adicionando um reset explícito no momento que o diálogo é aberto para nova tarefa no `DealActivitiesTab`.
+Na função `handleToggleComplete`, o `fetchTasks()` é chamado sem `await`. Essa função define `setLoading(true)`, o que causa uma re-renderização do componente (mostrando o spinner de loading). O `setTimeout` de 50ms que abre o diálogo dispara durante essa transição, e o estado `taskDialogOpen` pode ser perdido ou o diálogo não consegue montar corretamente durante o ciclo de loading.
 
-### Problema 2: Desmarcar "concluída" e salvar não reabre a tarefa
-
-Ao editar uma tarefa concluída, desmarcar "Marcar como concluída" e salvar, a tarefa continua aparecendo como concluída. A causa é que o `TaskDialog` atualiza apenas o campo `completed_at` (para `null`), mas **não** atualiza o `custom_status_id`. Como o `DealActivitiesTab` verifica ambos (`custom_status.is_completed_status || completed_at`) para classificar a tarefa, o `custom_status_id` antigo (que aponta para um status de conclusão) mantém a tarefa como "concluída".
-
-### Alterações
-
-**Arquivo: `src/components/tasks/TaskDialog.tsx`**
-
-Na função `handleSubmit`, ao montar o `updateData` para tarefas existentes:
-- Buscar o status adequado (primeiro status de conclusão ou primeiro status pendente) baseado no valor de `isCompleted`
-- Incluir `custom_status_id` no objeto de atualização, sincronizando-o com o estado do checkbox
+### Correção
 
 **Arquivo: `src/components/sales/DealActivitiesTab.tsx`**
 
-Garantir que ao abrir o diálogo automaticamente após conclusão, o `isCompleted` seja explicitamente resetado, adicionando um pequeno delay ou garantindo a ordem correta dos estados para evitar qualquer race condition na inicialização do formulário.
+Na função `handleToggleComplete`, trocar a lógica para **aguardar** o `fetchTasks()` antes de abrir o diálogo, e remover o `setTimeout` desnecessário:
+
+```
+// Bloco de sucesso (linhas ~186-199)
+fetchTasks();  -->  await fetchTasks();
+
+// Remover o setTimeout e abrir diretamente:
+if (!isCurrentlyCompleted) {
+  setEditingTask(null);
+  setTaskDialogOpen(true);
+}
+```
+
+Com o `await`, o `fetchTasks` completa totalmente (incluindo `setLoading(false)`) antes de abrir o diálogo, garantindo que o componente está estável e o diálogo monta corretamente em modo de criação.
+
+Alteração mínima: trocar `fetchTasks()` por `await fetchTasks()` e remover o `setTimeout`.
