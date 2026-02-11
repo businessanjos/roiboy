@@ -90,6 +90,7 @@ interface TaskDialogProps {
   suggestedTitle?: string;
   forceSectorId?: string;
   onSuccess: () => void;
+  onTaskCompleted?: () => void;
 }
 
 const PRIORITY_LABELS = {
@@ -99,7 +100,7 @@ const PRIORITY_LABELS = {
   urgent: "Urgente",
 };
 
-export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId, initialActivityTypeId, suggestedTitle, forceSectorId, onSuccess }: TaskDialogProps) {
+export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId, initialActivityTypeId, suggestedTitle, forceSectorId, onSuccess, onTaskCompleted }: TaskDialogProps) {
   const { currentUser } = useCurrentUser();
   const { hasVendasAccess } = useSectorAccess();
   const { logAudit } = useAuditLog();
@@ -398,8 +399,12 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         toast.success("Tarefa criada!");
       }
 
+      const wasCompletedBefore = !!task?.completed_at;
       onOpenChange(false);
       onSuccess();
+      if (task && isCompleted && !wasCompletedBefore) {
+        onTaskCompleted?.();
+      }
     } catch (error: any) {
       console.error("Error saving task:", error);
       toast.error(error.message || "Erro ao salvar tarefa");
