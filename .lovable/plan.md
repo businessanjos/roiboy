@@ -1,55 +1,77 @@
 
+## Corrigir notificacoes de mencao (@) em todos os componentes
 
-## Melhorar tratamento de erro de senha fraca/comprometida
+### Problema identificado
 
-### Problema
+Apos investigacao, apenas **1 de 5 componentes** que permitem mencoes com "@" realmente cria notificacoes. O componente `Timeline.tsx` funciona corretamente, mas os seguintes **nao criam notificacoes**:
 
-A senha "Anjos123!" foi **rejeitada pelo sistema de autenticacao** porque consta em bases de dados de senhas vazadas (Have I Been Pwned). Essa e uma protecao de seguranca ativa -- nao e um bug. Porem, o usuario ve apenas "Edge Function returned a non-2xx status code", sem entender o motivo real.
+1. **ClientFollowup.tsx** - Notas e respostas na aba "Acompanhamento" do cliente
+2. **SalesPerformance.tsx** - Notas na aba de vendas do cliente
+3. **ClientFinancial.tsx** - Notas na aba financeira do cliente
+4. **FinancialQuickNoteInput.tsx** - Input de nota financeira rapida
 
-### Causa raiz nos logs
+Nesses componentes, o usuario pode digitar "@Fulano" e selecionar a pessoa, mas nenhuma notificacao e criada -- os IDs dos usuarios mencionados simplesmente nao sao rastreados nem enviados ao banco.
 
-```
-AuthWeakPasswordError: Password is known to be weak and easy to guess
-code: "weak_password"
-reasons: ["pwned"]
-```
+### Causa raiz
 
-### Correcao
+Os componentes usam `MentionInput` ou `MentionTextarea` mas **nao passam a prop `onMentionSelect`**, entao os IDs dos usuarios mencionados sao descartados. Alem disso, nao ha logica para inserir registros na tabela `notifications` apos o envio do comentario.
 
-**Arquivo: `supabase/functions/update-team-user-password/index.ts`**
+### Solucao
 
-No bloco que trata o `updateError` (linha 128-133):
-- Detectar quando o erro e do tipo `weak_password` ou contem "weak" na mensagem
-- Retornar uma mensagem em portugues clara e orientativa ao usuario
+Para cada componente afetado:
 
-**Arquivo: `src/components/settings/TeamManager.tsx`** (ou componente que chama a Edge Function)
+1. Adicionar estado `mentionedUsers` para rastrear usuarios mencionados
+2. Passar `onMentionSelect` ao `MentionInput`/`MentionTextarea`
+3. Apos inserir o comentario no banco, criar notificacoes para os usuarios mencionados (mesmo padrao do `Timeline.tsx`)
+4. Limpar `mentionedUsers` apos o envio
 
-- Melhorar o tratamento da resposta de erro da Edge Function
-- Exibir a mensagem de erro retornada pelo servidor em vez de mensagem generica
-- Garantir que o `error` do body JSON seja lido e exibido no toast
+### Detalhes tecnicos por arquivo
 
-### Mensagem proposta para o usuario
+**1. `src/components/client/ClientFollowup.tsx`**
+- Adicionar `useState` para `mentionedUsers`
+- Passar `onMentionSelect={setMentionedUsers}` nos dois `MentionInput` (nota rapida e resposta)
+- No `handleQuickComment`: apos inserir followup, criar notificacoes com link `/clients/{clientId}`
+- No `handleReply`: mesma logica de notificacao
+- Modificar os inserts para usar `.select("id").single()` para obter o ID do followup criado (necessario para o link)
 
-Quando a senha for rejeitada por ser comprometida:
-> "Esta senha foi encontrada em vazamentos de dados conhecidos e nao pode ser utilizada por seguranca. Por favor, escolha uma senha diferente e mais forte."
+**2. `src/components/client/SalesPerformance.tsx`**
+- Adicionar estado `mentionedUsers`
+- Passar `onMentionSelect` ao `MentionInput`
+- Apos inserir nota, criar notificacoes com link para a aba de vendas do cliente
 
-Quando a senha for fraca por outros motivos:
-> "A senha escolhida e muito fraca. Use uma combinacao de letras maiusculas, minusculas, numeros e caracteres especiais."
+**3. `src/components/client/ClientFinancial.tsx`**
+- Adicionar estado `mentionedUsers`
+- Passar `onMentionSelect` ao `MentionInput`
+- Apos inserir nota, criar notificacoes com link para a aba financeira do cliente
 
-### Detalhe tecnico
+**4. `src/components/client/FinancialQuickNoteInput.tsx`**
+- Adicionar estado `mentionedUsers`
+- Passar `onMentionSelect` ao `MentionTextarea`
+- Apos inserir nota, criar notificacoes com link para a aba financeira do cliente
+
+### Logica de criacao de notificacao (reutilizada)
+
+Para evitar duplicacao, sera criada uma funcao utilitaria compartilhada:
 
 ```text
-Fluxo atual:
-  updateError.code === "weak_password"
-  -> return { error: updateError.message }  (mensagem em ingles)
-  -> frontend nao le o body -> exibe erro generico
+src/lib/mention-notifications.ts
 
-Fluxo corrigido:
-  updateError.code === "weak_password" ou updateError.name === "AuthWeakPasswordError"
-  -> return { error: "mensagem clara em portugues" }
-  -> frontend le o body JSON -> exibe toast com a mensagem real
+Funcao: createMentionNotifications({
+  supabase, mentionedUserIds, currentUser, 
+  commentContent, followupId, clientId, clientName, linkPath
+})
+- Filtra o proprio usuario da lista
+- Cria registros na tabela notifications com:
+  - type: "mention"
+  - title: "{nome} mencionou voce"
+  - content: trecho do comentario
+  - link: caminho para o comentario especifico
+  - triggered_by_user_id: usuario atual
 ```
 
 ### Resultado esperado
 
-O usuario vera um toast informativo dizendo que a senha escolhida e comprometida e precisa escolher outra, em vez do erro generico "Edge Function returned a non-2xx status code".
+Ao mencionar "@Fulano" em qualquer campo de comentario do sistema (timeline, acompanhamento, vendas, financeiro), o usuario mencionado recebera:
+- Um toast em tempo real (se estiver online)
+- Uma notificacao push no navegador (se habilitada)
+- Uma entrada na aba Notificacoes com link clicavel que redireciona ao local exato da mencao
