@@ -1,32 +1,32 @@
 
 
-## Adicionar card "Vencidos" no Dashboard de Gestão
+## Abrir diálogo de nova tarefa automaticamente ao concluir uma tarefa no negócio
 
 ### O que sera feito
 
-Adicionar um novo card "Vencidos" na linha de status do Dashboard de Gestão (Operações), mostrando a contagem de contratos que estão com status "active" mas cuja data de término (`end_date`) já passou. Atualmente existem 5 contratos nessa situação.
+Quando o vendedor marcar uma tarefa como concluída (checkbox) dentro de um negócio no setor de Vendas, o diálogo de criação de nova tarefa abrirá automaticamente logo em seguida. Isso garante que o vendedor seja incentivado a agendar a próxima atividade, evitando que negócios fiquem sem tarefas pendentes.
 
-### Alterações necessárias
+### Alteração
 
-**1. Banco de dados -- Atualizar a função RPC `get_dashboard_contract_counts`**
+**Arquivo:** `src/components/sales/DealActivitiesTab.tsx`
 
-Adicionar o campo `expired` na resposta da função, contando contratos onde `status = 'active' AND end_date < CURRENT_DATE`:
+Na função `handleToggleComplete`, após a conclusão bem-sucedida de uma tarefa (quando o usuário está **marcando como concluída**, não desmarcando), o sistema abrirá automaticamente o diálogo de nova tarefa:
 
-```sql
-'expired', COUNT(*) FILTER (WHERE status = 'active' AND end_date IS NOT NULL AND end_date < CURRENT_DATE)
-```
-
-**2. Hook `src/hooks/useDashboardContractStats.ts`**
-
-Adicionar `expired: number` na interface `ContractStats`.
-
-**3. Dashboard `src/pages/Dashboard.tsx`**
-
-- Alterar o grid de `md:grid-cols-5` para `md:grid-cols-6` para acomodar o novo card
-- Adicionar o card "Vencidos" após "Congelamentos", com borda vermelha-alaranjada e ícone `Clock` (ou `Timer`), exibindo `contractStats?.expired ?? 0`
+- Após o `fetchTasks()` e invalidação de cache (linha ~189), verificar se a ação foi de **concluir** (não reabrir)
+- Se sim, limpar o `editingTask` (para garantir que o diálogo abra em modo criação) e abrir o `TaskDialog` com `setTaskDialogOpen(true)`
+- O diálogo já vem pré-configurado com o `dealId` e `leadId` corretos, pois essas props já são passadas ao `TaskDialog` existente
 
 ### Detalhes técnicos
 
-- "Vencidos" não é um status explícito na tabela; é derivado de `status = 'active'` + `end_date < hoje`
-- Esses contratos continuam contando como "Ativos" no card de Ativos (comportamento atual mantido). O card "Vencidos" é uma métrica adicional de alerta
-- A contagem vem direto da RPC, sem carga extra no frontend
+Dentro de `handleToggleComplete`, a variável `isCurrentlyCompleted` já indica se a tarefa **estava** concluída antes do clique. Quando `isCurrentlyCompleted === false`, significa que o usuário está concluindo a tarefa -- é nesse caso que o diálogo deve abrir:
+
+```
+// Após o bloco de sucesso (linha ~186-190):
+if (!isCurrentlyCompleted) {
+  // Usuário acabou de concluir -> abrir diálogo de nova tarefa
+  setEditingTask(null);
+  setTaskDialogOpen(true);
+}
+```
+
+Apenas 3 linhas adicionadas em um único arquivo.
