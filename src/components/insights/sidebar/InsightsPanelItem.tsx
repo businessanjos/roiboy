@@ -30,6 +30,7 @@ export function InsightsPanelItem({
   readOnly = false,
 }: InsightsPanelItemProps) {
   const [showActions, setShowActions] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -56,8 +57,8 @@ export function InsightsPanelItem({
         </div>
 
         {/* Actions dropdown - shows on hover */}
-        {!readOnly && (showActions || renameDialogOpen || deleteDialogOpen) && (
-          <DropdownMenu>
+        {!readOnly && (showActions || dropdownOpen || renameDialogOpen || deleteDialogOpen) && (
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button
                 variant="ghost"
