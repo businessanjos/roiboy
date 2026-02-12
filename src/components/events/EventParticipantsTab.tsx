@@ -103,6 +103,7 @@ interface EventParticipantsTabProps {
   accountId: string | null;
   maxCapacity?: number | null;
   onUpdate?: () => void;
+  isLocked?: boolean;
 }
 
 const rsvpStatusConfig: Record<EventRsvpStatus, { label: string; color: string; icon: React.ElementType }> = {
@@ -118,7 +119,8 @@ export default function EventParticipantsTab({
   eventId, 
   accountId, 
   maxCapacity,
-  onUpdate 
+  onUpdate,
+  isLocked
 }: EventParticipantsTabProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -517,11 +519,11 @@ export default function EventParticipantsTab({
       {/* Actions */}
       <div className="flex justify-between items-center">
         <div className="flex gap-2">
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={() => setDialogOpen(true)} disabled={isLocked}>
             <UserPlus className="h-4 w-4 mr-2" />
             Convidar
           </Button>
-          <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={isLocked}>
             <Upload className="h-4 w-4 mr-2" />
             Importar
           </Button>

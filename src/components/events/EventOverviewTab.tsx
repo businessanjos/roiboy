@@ -44,9 +44,10 @@ interface Props {
   event: Event;
   accountId: string | null;
   onUpdate: () => void;
+  isLocked?: boolean;
 }
 
-export default function EventOverviewTab({ event, accountId, onUpdate }: Props) {
+export default function EventOverviewTab({ event, accountId, onUpdate, isLocked }: Props) {
   const { toast: hookToast } = useToast();
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -267,7 +268,7 @@ export default function EventOverviewTab({ event, accountId, onUpdate }: Props) 
             <CardDescription>Dados gerais e configurações</CardDescription>
           </div>
           {!editing ? (
-            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+            <Button variant="outline" size="sm" onClick={() => setEditing(true)} disabled={isLocked}>
               <Pencil className="h-4 w-4 mr-2" />
               Editar
             </Button>
