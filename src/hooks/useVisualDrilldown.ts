@@ -299,8 +299,14 @@ async function fetchTasksRecords(
     .in('activity_type_id', typeIds)
     .not('assigned_to', 'is', null);
 
-  if (filters.startDate) baseQuery = baseQuery.gte('due_date', filters.startDate);
-  if (filters.endDate) baseQuery = baseQuery.lte('due_date', filters.endDate);
+  if (filters.startDate) {
+    const startDate = filters.startDate.split('T')[0];
+    baseQuery = baseQuery.gte('due_date', startDate);
+  }
+  if (filters.endDate) {
+    const endDate = filters.endDate.split('T')[0];
+    baseQuery = baseQuery.lte('due_date', endDate);
+  }
   if (filters.userId && filters.userId !== 'all') baseQuery = baseQuery.eq('assigned_to', filters.userId);
 
   // Paginate
