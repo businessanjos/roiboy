@@ -273,9 +273,23 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
         .eq("id", id);
       
       if (error) throw error;
+      return { id, updates };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["insights-visuals", activeDashboardId] });
+    onSuccess: ({ id, updates }) => {
+      const isLayoutOnly = Object.keys(updates).length === 1 && updates.layout !== undefined;
+      
+      if (isLayoutOnly) {
+        // Optimistic update: patch cache directly without refetch to prevent snap-back
+        queryClient.setQueryData(
+          ["insights-visuals", activeDashboardId],
+          (old: InsightsVisual[] | undefined) => {
+            if (!old) return old;
+            return old.map(v => v.id === id ? { ...v, layout: updates.layout! } : v);
+          }
+        );
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["insights-visuals", activeDashboardId] });
+      }
     },
     onError: (error) => {
       console.error("Error updating visual:", error);

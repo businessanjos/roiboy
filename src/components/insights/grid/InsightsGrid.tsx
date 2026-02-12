@@ -25,14 +25,73 @@ interface InsightsGridProps {
   readOnly?: boolean;
 }
 
-const ROW_HEIGHT = 20;  // Ultra-granular: 5x mais fino para movimento suave
-const COLS = 48;        // Ultra-granular: 4x mais colunas para posicionamento preciso
-const MARGIN: [number, number] = [0, 0];
+const ROW_HEIGHT = 20;
+const COLS = 48;
+
+function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
+  const existingLayout = visual.layout;
+
+  if (existingLayout) {
+    const isOldScale = existingLayout.x <= 12 && existingLayout.w <= 12;
+
+    if (isOldScale) {
+      return {
+        i: visual.id,
+        x: existingLayout.x * 4,
+        y: existingLayout.y * 5,
+        w: existingLayout.w * 4,
+        h: existingLayout.h * 5,
+        minW: 8,
+        minH: 10,
+      };
+    }
+
+    return {
+      i: visual.id,
+      x: existingLayout.x,
+      y: existingLayout.y,
+      w: existingLayout.w,
+      h: existingLayout.h,
+      minW: 8,
+      minH: 10,
+    };
+  }
+
+  return {
+    i: visual.id,
+    x: (index % 2) * 26,
+    y: Math.floor(index / 2) * 27,
+    w: 24,
+    h: 25,
+    minW: 8,
+    minH: 10,
+  };
+}
 
 export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: InsightsGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1200);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Local layout state — only syncs from props when visuals are added/removed
+  const [localLayout, setLocalLayout] = useState<LayoutItem[]>(() =>
+    visuals.map((v, i) => visualToLayoutItem(v, i))
+  );
+
+  // Track visual IDs to detect additions/removals (not layout changes)
+  const prevVisualIdsRef = useRef<string>(visuals.map(v => v.id).sort().join(","));
+
+  useEffect(() => {
+    const currentIds = visuals.map(v => v.id).sort().join(",");
+    if (currentIds !== prevVisualIdsRef.current) {
+      // Visuals were added or removed — rebuild layout, keeping local positions for existing items
+      prevVisualIdsRef.current = currentIds;
+      setLocalLayout(prev => {
+        const existingMap = new Map(prev.map(item => [item.i, item]));
+        return visuals.map((v, i) => existingMap.get(v.id) || visualToLayoutItem(v, i));
+      });
+    }
+    // Intentionally NOT syncing when only layout data changes from props
+  }, [visuals]);
 
   // Update container width on mount and resize
   useEffect(() => {
@@ -45,7 +104,6 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
     updateWidth();
 
     if (readOnly) {
-      // In readOnly/focus mode, only re-measure on fullscreen changes (not every resize)
       document.addEventListener("fullscreenchange", updateWidth);
       return () => document.removeEventListener("fullscreenchange", updateWidth);
     } else {
@@ -54,90 +112,43 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
     }
   }, [readOnly]);
 
-  // Convert visuals to layout items (detect old scale and convert if needed)
-  const layout = useMemo<LayoutItem[]>(() => {
-    return visuals.map((visual, index) => {
-      const existingLayout = visual.layout;
-      
-      if (existingLayout) {
-        // Detect if layout is in old scale (12 cols) or new scale (48 cols)
-        // Old scale: x and w are typically <= 12, new scale: values are larger
-        const isOldScale = existingLayout.x <= 12 && existingLayout.w <= 12;
-        
-        if (isOldScale) {
-          // Convert from old scale (12 cols/100px rows) to new scale (48 cols/20px rows)
-          return {
-            i: visual.id,
-            x: existingLayout.x * 4,
-            y: existingLayout.y * 5,
-            w: existingLayout.w * 4,
-            h: existingLayout.h * 5,
-            minW: 8,
-            minH: 10,
-          };
-        }
-        
-        // New scale: use values directly (preserves exact positioning)
-        return {
-          i: visual.id,
-          x: existingLayout.x,
-          y: existingLayout.y,
-          w: existingLayout.w,
-          h: existingLayout.h,
-          minW: 8,
-          minH: 10,
-        };
-      }
-
-      // Default layout for new visuals with spacing gap
-      return {
-        i: visual.id,
-        x: (index % 2) * 26,           // 26 = card(24) + gap(2) ~40px spacing
-        y: Math.floor(index / 2) * 27, // 27 = card(25) + gap(2)
-        w: 24,
-        h: 25,
+  // Handle user drag/resize stop — update local state AND persist
+  const handleUserLayoutChange = useCallback(
+    (newLayout: LayoutItem[]) => {
+      // Update local state immediately (prevents snap-back)
+      setLocalLayout(newLayout.map(item => ({
+        i: item.i,
+        x: item.x,
+        y: item.y,
+        w: item.w,
+        h: item.h,
         minW: 8,
         minH: 10,
-      };
-    });
-  }, [visuals]);
+      })));
 
-  // Handle layout changes with debounce (scale down to DB format)
-  const handleLayoutChange = useCallback(
-    (newLayout: LayoutItem[]) => {
-      // Clear existing debounce
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-
-      // Debounce by 500ms to avoid excessive saves
-      debounceRef.current = setTimeout(() => {
-        // Save directly in granular scale (48 cols/20px rows) - no conversion
-        const layoutUpdates = newLayout.map((item) => ({
-          id: item.i,
-          layout: {
-            i: item.i,
-            x: item.x,
-            y: item.y,
-            w: item.w,
-            h: item.h,
-          },
-        }));
-
-        onLayoutChange(layoutUpdates);
-      }, 500);
+      // Persist to DB
+      const layoutUpdates = newLayout.map((item) => ({
+        id: item.i,
+        layout: { i: item.i, x: item.x, y: item.y, w: item.w, h: item.h },
+      }));
+      onLayoutChange(layoutUpdates);
     },
     [onLayoutChange]
   );
 
-  // Cleanup debounce on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, []);
+  const handleDragStop = useCallback(
+    (layout: LayoutItem[]) => {
+      handleUserLayoutChange(layout);
+    },
+    [handleUserLayoutChange]
+  );
+
+  const handleResizeStop = useCallback(
+    (layout: LayoutItem[]) => {
+      handleUserLayoutChange(layout);
+    },
+    [handleUserLayoutChange]
+  );
 
   if (visuals.length === 0) {
     return null;
@@ -147,9 +158,10 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
     <div ref={containerRef} className="insights-grid">
       <GridLayout
         className="layout"
-        layout={layout}
+        layout={localLayout}
         width={width}
-        onLayoutChange={handleLayoutChange}
+        onDragStop={handleDragStop}
+        onResizeStop={handleResizeStop}
         gridConfig={{
           cols: COLS,
           rowHeight: ROW_HEIGHT,
