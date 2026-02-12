@@ -1,55 +1,31 @@
 
 
-## Adicionar metrica "Ciclo de Vendas" ao Scorecard
+## Corrigir redimensionamento de visuais no grid do Insights
 
-### O que sera feito
+### Problema identificado
 
-Adicionar uma nova opcao de metrica chamada **"Ciclo de Vendas"** na lista de metricas do modal "Adicionar Visual" (Passo 2). Essa metrica calcula a media de dias entre a "Data do primeiro contato" (campo customizado em `deal_field_values`, ID `166fe351-b29b-4f08-b330-88f82c65f625`) e a data em que o negocio foi ganho (`won_at`).
+Dois problemas estao causando o snap-back ao redimensionar:
 
-### Calculo
+1. **Sincronizacao de layout**: O componente usa `onResizeStop` para atualizar o `localLayout`, mas o `react-grid-layout` v2 precisa que o `layout` prop esteja sincronizado durante toda a interacao (nao apenas no final). Sem usar `onLayoutChange` para manter o estado sincronizado continuamente, o RGL reverte para o valor do prop `layout` antigo no proximo render.
 
-Para cada negocio com status "won" que possua ambos `won_at` e `value_date` (primeiro contato) preenchidos:
-- Diferenca em dias = `won_at - value_date`
-- Resultado final = media aritmetica dessas diferencas
+2. **Altura minima no Card**: O `ConfigurableVisualCard` tem `min-h-[250px]` no Card, que conflita com alturas menores definidas pelo grid (ex: `h:12 * rowHeight:20 = 240px`).
 
-O scorecard exibira o valor em dias (ex: "15 dias") com a contagem de negocios usados no calculo.
-
-### Arquivos afetados
+### Solucao
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/components/insights/AddVisualModal.tsx` | Adicionar `sales_cycle` ao tipo `Metric`, ao array `METRICS`, ao mapeamento `METRIC_TO_CONFIG` e ao `METRIC_LABELS` |
-| `src/hooks/useVisualData.ts` | Adicionar tratamento especial para `aggregation: 'sales_cycle'` dentro do `fetchDealsData`, criando uma funcao dedicada que busca negocios ganhos + campo primeiro contato e calcula a media de dias |
-| `src/components/insights/visual-builder/types.ts` | Adicionar `'sales_cycle'` ao tipo `Aggregation` e ao array `AGGREGATION_OPTIONS` |
+| `src/components/insights/grid/InsightsGrid.tsx` | Adicionar `onLayoutChange` para manter `localLayout` sincronizado continuamente durante drag/resize. Manter `onDragStop`/`onResizeStop` apenas para persistir no banco. |
+| `src/components/insights/visuals/ConfigurableVisualCard.tsx` | Remover `min-h-[250px]` do Card principal e do CardContent, substituindo por dimensoes flexiveis que respeitem o tamanho do grid |
 
 ### Detalhes tecnicos
 
-**1. AddVisualModal.tsx**
-- Nova entrada em `METRICS`:
-  - `{ value: "sales_cycle", label: "Ciclo de Vendas", description: "Media de dias entre primeiro contato e fechamento" }`
-- Nova entrada em `METRIC_TO_CONFIG`:
-  - `sales_cycle: { dataSource: 'deals', measureField: null, aggregation: 'sales_cycle', formatType: 'decimal', statusFilter: 'won' }`
-- Nova entrada em `METRIC_LABELS`:
-  - `sales_cycle: "Ciclo de Vendas"`
+**InsightsGrid.tsx:**
+- Adicionar handler `onLayoutChange` que atualiza `localLayout` a cada mudanca (isso mantem o prop `layout` sincronizado com o estado interno do RGL, evitando o snap-back)
+- Manter `onDragStop`/`onResizeStop` exclusivamente para disparar a persistencia no banco de dados
+- Usar um ref para rastrear o layout mais recente e evitar atualizacoes desnecessarias
 
-**2. useVisualData.ts**
-- No `fetchDealsData`, antes da query principal, detectar `measure.aggregation === 'sales_cycle'` e chamar uma funcao dedicada `calculateSalesCycle`
-- Essa funcao:
-  1. Busca negocios ganhos (`status = 'won'`, `won_at IS NOT NULL`) no periodo filtrado (usando `won_at` como campo de data)
-  2. Busca os `deal_field_values` com `field_id = '166fe351-...'` para esses negocios
-  3. Para cada negocio com ambas as datas, calcula a diferenca em dias
-  4. Retorna a media como `value` e a contagem como `count`
-  5. Formata o sufixo " dias" no display
-
-**3. types.ts**
-- Adicionar `'sales_cycle'` ao union type `Aggregation`
-- Adicionar ao array `AGGREGATION_OPTIONS`: `{ value: 'sales_cycle', label: 'Ciclo de Vendas' }`
-
-### Formato de exibicao
-
-O scorecard exibira algo como:
-- **"15"** (valor principal, com formato decimal e 0 casas)
-- **"23 registros"** (contagem de negocios usados)
-- O titulo auto-gerado sera "Ciclo de Vendas"
-- Tambem suportara agrupamento por vendedor, mes, etc. nos graficos de barra/linha
+**ConfigurableVisualCard.tsx:**
+- Trocar `min-h-[250px]` por `h-full` para que o card preencha o espaco do grid sem forcar um tamanho minimo
+- Remover `min-h-[200px]` do CardContent, usando `flex-1` que ja esta presente
+- Nos estados de loading e erro, tambem remover alturas fixas
 
