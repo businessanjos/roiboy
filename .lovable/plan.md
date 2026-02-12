@@ -1,66 +1,49 @@
 
 
-## Preencher "Data do primeiro contato" ao concluir tarefa
+## Corrigir contagem de leads nos visuais de Insights
 
-### Logica
+### Problema
 
-Quando uma tarefa cujo titulo contenha "Primeiro Contato" for marcada como concluida (ou seja, `completed_at` mudar de NULL para um valor), o sistema preenchera automaticamente o campo personalizado "Data do primeiro contato" (ID: `166fe351-b29b-4f08-b330-88f82c65f625`) no negocio vinculado.
+A funcao `fetchLeadsData` em `src/hooks/useVisualData.ts` busca todos os registros da tabela `leads` usando `.select('id, status, source, ...')`, que esta limitado a 1000 linhas pelo padrao do banco. Para um scorecard de contagem total, o resultado mostra "1.000" quando na realidade existem 2.755+ leads.
 
-### Abordagem: Trigger no banco de dados
+### Solucao
 
-Usar um trigger no banco e a melhor opcao porque:
-- Cobre **todos** os caminhos de conclusao (TaskDialog, TaskCard, pagina de Tarefas, API, edge functions)
-- Nao depende de mudancas em multiplos componentes do frontend
-- Execucao atomica e confiavel
+Para o caso de scorecard (quando `dimension.field === '_total'` e a agregacao e `count`), substituir a query que busca todos os registros por uma query de contagem server-side usando `{ count: 'exact', head: true }`. Isso retorna apenas o numero total sem transferir nenhuma linha, eliminando o limite de 1000.
+
+Para os demais casos (agrupamentos por status, origem, etc.), sera necessario paginar os resultados para garantir que todos os registros sejam processados.
 
 ### Detalhes tecnicos
 
-**Migracao SQL: criar funcao + trigger**
+**Arquivo:** `src/hooks/useVisualData.ts`
 
-```text
-CREATE OR REPLACE FUNCTION sync_first_contact_date()
-  RETURNS trigger AS $$
-BEGIN
-  -- Dispara apenas quando completed_at muda de NULL para um valor
-  IF NEW.completed_at IS NOT NULL 
-     AND (OLD.completed_at IS NULL)
-     AND NEW.deal_id IS NOT NULL
-     AND NEW.title ILIKE '%Primeiro Contato%' 
-  THEN
-    INSERT INTO deal_field_values (account_id, deal_id, field_id, value_date)
-    VALUES (
-      NEW.account_id,
-      NEW.deal_id,
-      '166fe351-b29b-4f08-b330-88f82c65f625',
-      (NEW.completed_at AT TIME ZONE 'America/Sao_Paulo')::date
-    )
-    ON CONFLICT (deal_id, field_id)
-    DO UPDATE SET value_date = (NEW.completed_at AT TIME ZONE 'America/Sao_Paulo')::date;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public';
+Modificar a funcao `fetchLeadsData` (linha ~459):
 
-CREATE TRIGGER trg_sync_first_contact_date
-  AFTER UPDATE ON internal_tasks
-  FOR EACH ROW
-  EXECUTE FUNCTION sync_first_contact_date();
-```
+1. **Scorecard (_total):** Detectar quando e um scorecard de contagem e usar query otimizada:
+   ```text
+   // Antes: busca ate 1000 linhas e conta no JS
+   .select('id, status, source, revenue_range, created_at')
+   
+   // Depois: conta no servidor sem limite
+   .select('*', { count: 'exact', head: true })
+   ```
 
-Pontos importantes:
-- `AT TIME ZONE 'America/Sao_Paulo'` converte o timestamp UTC para o fuso horario correto antes de extrair a data, evitando o problema de datas adiantadas/atrasadas
-- `ON CONFLICT ... DO UPDATE` garante idempotencia (upsert)
-- `ILIKE '%Primeiro Contato%'` faz match case-insensitive com qualquer tarefa que contenha "Primeiro Contato" no titulo
-- So dispara no `UPDATE` (quando `completed_at` passa de NULL para preenchido)
+2. **Agrupamentos (status, source, etc.):** Implementar paginacao para buscar TODOS os registros em lotes de 1000:
+   ```text
+   // Buscar em lotes ate esgotar os resultados
+   let allData = [];
+   let from = 0;
+   const pageSize = 1000;
+   while (true) {
+     const { data } = await query.range(from, from + pageSize - 1);
+     allData.push(...data);
+     if (data.length < pageSize) break;
+     from += pageSize;
+   }
+   ```
 
 ### Resultado esperado
 
-- Ao marcar "Primeiro Contato Realizado" como concluida, o campo "Data do primeiro contato" sera preenchido automaticamente com a data correta no fuso de Sao Paulo
-- Funciona independentemente de onde a tarefa for concluida (dialog, card, API)
-- Nenhuma alteracao no frontend necessaria
+- O scorecard de "Total de Leads" exibira o numero correto (2.755 em vez de 1.000)
+- Agrupamentos por dimensao tambem refletirao a totalidade dos dados
+- Performance otimizada: scorecards usam contagem server-side sem transferir dados
 
-### Arquivos modificados
-
-| Arquivo | Mudanca |
-|---------|---------|
-| Migracao SQL | Criar funcao `sync_first_contact_date` + trigger `trg_sync_first_contact_date` |
