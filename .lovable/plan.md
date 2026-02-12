@@ -1,38 +1,45 @@
 
 
-## Corrigir status de entrega (checks) e configuracao automatica de webhook
+## Diagnosticar e corrigir checks de entrega de mensagens
 
-### Problema identificado
+### Problema real
 
-Duas falhas combinadas impedem os checks de funcionar:
+Os logs confirmam que **nenhum evento de ACK/status chegou** ao webhook. Isso pode significar:
 
-1. **Evento `messages.update` nao habilitado no UAZAPI**: O webhook do UAZAPI precisa escutar o evento `messages.update` para receber atualizacoes de status (sent/delivered/read). Atualmente, so `messages` esta habilitado.
+1. O UAZAPI GO v2 nao esta enviando os eventos `messages.update` apesar da configuracao
+2. O evento chega com um `EventType` diferente do esperado e esta sendo descartado silenciosamente pelo filtro de "eventos desconhecidos" (linha 307)
 
-2. **Acao `configure_webhook` inexistente**: O frontend chama `uazapi-manager` com `action: "configure_webhook"`, mas essa acao nao esta implementada no edge function. Isso significa que o botao "Configurar Webhook" nao faz nada.
+### Causa provavel
 
-### Solucao
+Na linha 307-310 do `uazapi-webhook/index.ts`, existe uma lista de eventos permitidos (`handledEvents`). Qualquer evento que nao esteja nessa lista E que nao seja identificado como ACK nas linhas 259-260 e **descartado silenciosamente**. Se o UAZAPI envia o ACK com um nome de evento diferente (ex: `message_ack`, `status`, `MESSAGE_ACK`, `update`, etc.), ele e ignorado sem nenhum log.
 
-**Arquivo: `supabase/functions/uazapi-manager/index.ts`**
+### Solucao em 2 etapas
 
-Adicionar a acao `configure_webhook` que configura automaticamente o webhook do UAZAPI com **todos os eventos necessarios**, incluindo `messages.update`:
+**Etapa 1: Adicionar log de diagnostico (para descobrir o formato real)**
 
-- Usa o endpoint da API UAZAPI para configurar o webhook URL apontando para `uazapi-webhook`
-- Habilita os eventos: `messages`, `messages.update`, `connection`, `groups`, `qrcode`
-- Atualiza o campo `webhook_configured` na integracao
+No `uazapi-webhook/index.ts`, adicionar um log logo apos receber o payload (antes de qualquer filtro) que registre o `eventType` de TODOS os eventos recebidos. Isso permitira ver exatamente o que o UAZAPI envia.
 
-### Acao imediata do usuario
+```
+// Logo apos extrair o eventType (linha 216):
+console.log(`[WEBHOOK] Event received: ${eventType}, keys: ${Object.keys(payload).join(",")}`);
+```
 
-Enquanto o codigo e atualizado, voce pode resolver manualmente adicionando o evento **`messages.update`** na configuracao de webhook do UAZAPI. Este e o evento que carrega os dados de ACK (sent=2, delivered=3, read=4).
+**Etapa 2: Tornar o ACK handler mais abrangente**
 
-### Detalhes tecnicos
+Alem de verificar o `eventType`, verificar tambem se o payload contem campos tipicos de ACK (`ack`, `status`, `update`) independente do nome do evento. Isso garante que o ACK seja processado mesmo que o UAZAPI use um nome de evento inesperado.
+
+### Mudancas tecnicas
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `supabase/functions/uazapi-manager/index.ts` | Adicionar handler para `action: "configure_webhook"` usando a API UAZAPI para configurar webhook com eventos corretos |
+| `supabase/functions/uazapi-webhook/index.ts` | 1. Adicionar log do eventType para todos os payloads recebidos |
+| `supabase/functions/uazapi-webhook/index.ts` | 2. Expandir deteccao de ACK: verificar presenca de campo `ack` no payload independente do eventType |
+| `supabase/functions/uazapi-webhook/index.ts` | 3. Adicionar log detalhado quando ACK e detectado (messageId, ack value, status resultante) |
 
 ### O que muda para o usuario
 
-- Os checks das mensagens enviadas serao atualizados corretamente: relogio (pendente) -> 1 check (enviado) -> 2 checks (entregue) -> 2 checks azuis (lido)
-- O botao "Configurar Webhook" na tela de integracoes passara a funcionar
-- Novas instancias terao o webhook configurado automaticamente com todos os eventos necessarios
+- Apos o deploy, os logs mostrarao exatamente quais eventos o UAZAPI esta enviando
+- Se o ACK estiver chegando com outro nome de evento, sera capturado pela logica expandida
+- Os checks passarao a funcionar corretamente (1 check = enviado, 2 = entregue, 2 azuis = lido)
+- Caso o UAZAPI nao esteja enviando nenhum evento de status, os logs confirmarao isso e sera necessario verificar a configuracao diretamente no painel do UAZAPI
 
