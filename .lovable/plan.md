@@ -1,60 +1,40 @@
 
 
-## Corrigir checks de entrega: salvar external_message_id no envio
+## Blindar a funcionalidade de delivery status (checks) do WhatsApp
 
-### Problema raiz
+### O que sera feito
 
-Os logs confirmam que o backend esta processando os ACKs corretamente -- as mensagens **antigas** (que tem `external_message_id`) estao sendo atualizadas para `delivered` e `read` no banco. Porem, as **mensagens novas** enviadas pelo frontend ficam presas com `delivery_status: sent` porque sao salvas **sem** `external_message_id`.
+Criar uma memoria arquitetural detalhada que documenta os componentes criticos do sistema de delivery status (ACK/checks) para que futuras alteracoes no codigo nunca quebrem essa funcionalidade.
 
-Fluxo atual:
-1. Frontend chama `uazapi-manager` para enviar -> UAZAPI retorna `id: "554388346806:3EB0E3..."` 
-2. Frontend salva no `zapp_messages` **sem** `external_message_id` (NULL)
-3. Webhook recebe ACK com `MessageIDs: ["3EB0E3..."]` e busca com `ilike` no `external_message_id`
-4. Nao encontra nenhuma mensagem (porque o campo e NULL) -> ACK e perdido
+### Componentes criticos a proteger
 
-### Solucao
+**1. Backend: `supabase/functions/uazapi-webhook/index.ts` (linhas 262-388)**
+- Deteccao de ACK por nome de evento: inclui `messages_update`, `messages.update`, `message_ack`, etc.
+- Deteccao de ACK por conteudo do payload: campo `ack`, array `event`, objeto `event` com `MessageIDs`
+- Formato UAZAPI GO v2: `event` e um OBJETO (nao array) com `MessageIDs: string[]` e `Type: "Delivered"|"Read"|"Sent"`
+- Mapeamento de status: `"Read"` -> ack 4, `"Delivered"` -> ack 3, `"Sent"` -> ack 2
+- Query com `ilike("%messageId")` porque o banco armazena `owner:messageId` mas o UAZAPI envia apenas `messageId`
 
-**Arquivo: `src/pages/RoyZapp.tsx`**
+**2. Frontend: `src/pages/RoyZapp.tsx`**
+- Envio de texto: captura `sendResult.data.id` e salva como `external_message_id` no insert do `zapp_messages`
+- Envio de midia: captura `data.data.id` e salva como `external_message_id`
+- Envio de audio: atualiza o registro com `external_message_id` apos o envio
+- Envio de contato: captura `contactSendResult.data.id` e salva como `external_message_id`
 
-Na logica de envio de mensagens (send_text e send_media), capturar o `id` retornado pelo `uazapi-manager` e salva-lo como `external_message_id` na insercao do `zapp_messages`.
+**3. Kill switch: `FUNCTION_DISABLED = false` (linha 198)**
+- Deve permanecer `false` para que os ACKs sejam processados
+- Se ativado, os checks param de funcionar
 
-Mudancas:
-1. Capturar `data` da resposta do `uazapi-manager` (em vez de descartar)
-2. Extrair o `id` ou `messageid` da resposta
-3. Incluir como `external_message_id` no insert do `zapp_messages`
-4. Atualizar o state local com o `external_message_id`
+### Regras de protecao
 
-Isso se aplica a:
-- Envio de texto (linha ~1738)
-- Envio de midia (linha ~2240)
-- Envio para grupos (se aplicavel)
+1. **NUNCA** remover a deteccao de `hasEventObject` (objeto com `MessageIDs`)
+2. **NUNCA** remover o mapeamento de strings (`"Read"`, `"Delivered"`) para numeros
+3. **NUNCA** trocar `ilike` por `eq` na query de ACK -- o match parcial e essencial
+4. **NUNCA** remover a captura de `external_message_id` no envio de mensagens (texto, midia, audio, contato)
+5. **NUNCA** ativar `FUNCTION_DISABLED = true` sem saber que isso desativa os checks
+6. **NUNCA** remover `messages_update` da lista de eventos ACK detectados
 
-### Detalhes tecnicos
+### Implementacao
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/pages/RoyZapp.tsx` | Envio de texto: capturar `data.data.id` da resposta do uazapi-manager e salvar como `external_message_id` |
-| `src/pages/RoyZapp.tsx` | Envio de midia: mesma logica acima |
-| `src/pages/RoyZapp.tsx` | Atualizar state local com `external_message_id` apos o insert |
+Atualizar a memoria `features/roy-zapp/message-delivery-reliability-unified` com todos os detalhes tecnicos acima para servir como referencia permanente.
 
-### Exemplo da mudanca
-
-Antes:
-```text
-const { error } = await supabase.functions.invoke("uazapi-manager", { body: payload });
-// ... insert sem external_message_id
-```
-
-Depois:
-```text
-const { data: sendResult, error } = await supabase.functions.invoke("uazapi-manager", { body: payload });
-const externalId = sendResult?.data?.id || sendResult?.data?.messageid || null;
-// ... insert com external_message_id: externalId
-```
-
-### O que muda para o usuario
-
-- Mensagens enviadas terao o `external_message_id` preenchido imediatamente
-- Os ACKs do UAZAPI conseguirao encontrar a mensagem no banco
-- Os checks serao atualizados em tempo real: relogio -> 1 check -> 2 checks cinza -> 2 checks azuis
-- Funciona para texto, midia e mensagens em grupos
