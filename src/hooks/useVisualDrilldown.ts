@@ -135,26 +135,38 @@ async function fetchLeadsRecords(
   filters: any,
   groupName?: string
 ): Promise<DrilldownRecord[]> {
-  let query = supabase
+  let baseQuery = supabase
     .from('leads')
     .select('id, full_name, status, source, revenue_range, created_at, email, phone')
-    .eq('account_id', accountId);
+    .eq('account_id', accountId)
+    .is('converted_to_client_id', null);
 
   if (filters.startDate) {
-    query = query.gte('created_at', filters.startDate);
+    baseQuery = baseQuery.gte('created_at', filters.startDate);
   }
   if (filters.endDate) {
-    query = query.lte('created_at', filters.endDate);
+    baseQuery = baseQuery.lte('created_at', filters.endDate);
   }
 
-  const { data, error } = await query.order('created_at', { ascending: false });
+  // Paginate to fetch ALL records beyond the 1000-row default
+  let allData: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
 
-  if (error) {
-    console.error('Error fetching leads drilldown:', error);
-    return [];
+  while (true) {
+    const { data, error } = await baseQuery.order('created_at', { ascending: false }).range(from, from + pageSize - 1);
+
+    if (error) {
+      console.error('Error fetching leads drilldown:', error);
+      return [];
+    }
+
+    allData = allData.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
   }
 
-  let filteredData = data || [];
+  let filteredData = allData;
   if (groupName && config.dimension) {
     filteredData = filteredData.filter((item: any) => {
       const itemGroup = getGroupKey(item, config.dimension, config);
