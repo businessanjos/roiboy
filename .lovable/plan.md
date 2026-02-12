@@ -1,60 +1,60 @@
 
 
-## Corrigir extração de ACK para o formato real do UAZAPI GO v2
+## Corrigir checks de entrega: salvar external_message_id no envio
 
-### Problema encontrado nos logs
+### Problema raiz
 
-O código atual espera `event` como um **array** com campos `id` e `status`, mas o UAZAPI GO v2 envia `event` como um **objeto** com esta estrutura:
+Os logs confirmam que o backend esta processando os ACKs corretamente -- as mensagens **antigas** (que tem `external_message_id`) estao sendo atualizadas para `delivered` e `read` no banco. Porem, as **mensagens novas** enviadas pelo frontend ficam presas com `delivery_status: sent` porque sao salvas **sem** `external_message_id`.
 
-```text
-{
-  "EventType": "messages_update",
-  "event": {
-    "MessageIDs": ["3EB038719B72377701266F"],
-    "Type": "Delivered" | "Read",
-    "IsFromMe": false,
-    "Chat": "5531...@s.whatsapp.net"
-  },
-  "state": "Delivered" | "Read",
-  "type": "ReadReceipt"
-}
-```
-
-Tres problemas especificos:
-1. `event` e um objeto, nao um array -- `Array.isArray(event)` retorna `false`
-2. O message ID esta em `event.MessageIDs[0]`, nao em `event.id`
-3. O status e uma string em `event.Type` ou `state` ("Delivered"/"Read"), nao um numero `ack`
+Fluxo atual:
+1. Frontend chama `uazapi-manager` para enviar -> UAZAPI retorna `id: "554388346806:3EB0E3..."` 
+2. Frontend salva no `zapp_messages` **sem** `external_message_id` (NULL)
+3. Webhook recebe ACK com `MessageIDs: ["3EB0E3..."]` e busca com `ilike` no `external_message_id`
+4. Nao encontra nenhuma mensagem (porque o campo e NULL) -> ACK e perdido
 
 ### Solucao
 
-**Arquivo: `supabase/functions/uazapi-webhook/index.ts`**
+**Arquivo: `src/pages/RoyZapp.tsx`**
 
-Adicionar deteccao do formato objeto em `event`:
+Na logica de envio de mensagens (send_text e send_media), capturar o `id` retornado pelo `uazapi-manager` e salva-lo como `external_message_id` na insercao do `zapp_messages`.
 
-1. Apos checar `Array.isArray(eventArray)`, adicionar verificacao se `event` e um objeto com campo `MessageIDs`
-2. Extrair `messageId` de `event.MessageIDs[0]`
-3. Mapear strings de status para valores numericos de ACK:
-   - `"Delivered"` -> ack 3 (entregue, 2 checks cinza)
-   - `"Read"` -> ack 4 (lido, 2 checks azuis)
-   - `"Sent"` -> ack 2 (enviado, 1 check)
-4. Tambem verificar o campo `state` do payload raiz como fallback
-5. O message ID no UAZAPI nao inclui o prefixo do owner -- ajustar a query para buscar com `LIKE` ou `ilike` usando o sufixo do ID
+Mudancas:
+1. Capturar `data` da resposta do `uazapi-manager` (em vez de descartar)
+2. Extrair o `id` ou `messageid` da resposta
+3. Incluir como `external_message_id` no insert do `zapp_messages`
+4. Atualizar o state local com o `external_message_id`
 
-### Mudanca no match do banco
-
-O `external_message_id` salvo no banco tem formato `554388346806:3EB038719B72377701266F` (owner:messageId), mas o UAZAPI envia apenas `3EB038719B72377701266F` no `MessageIDs`. A query precisa usar `.ilike("external_message_id", `%${messageId}`)` para encontrar o match.
+Isso se aplica a:
+- Envio de texto (linha ~1738)
+- Envio de midia (linha ~2240)
+- Envio para grupos (se aplicavel)
 
 ### Detalhes tecnicos
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `supabase/functions/uazapi-webhook/index.ts` | Adicionar deteccao de `event` como objeto (nao apenas array) |
-| `supabase/functions/uazapi-webhook/index.ts` | Extrair messageId de `event.MessageIDs[0]` |
-| `supabase/functions/uazapi-webhook/index.ts` | Mapear `event.Type` / `state` strings para ack numerico |
-| `supabase/functions/uazapi-webhook/index.ts` | Usar query com `ilike` para match parcial do external_message_id |
+| `src/pages/RoyZapp.tsx` | Envio de texto: capturar `data.data.id` da resposta do uazapi-manager e salvar como `external_message_id` |
+| `src/pages/RoyZapp.tsx` | Envio de midia: mesma logica acima |
+| `src/pages/RoyZapp.tsx` | Atualizar state local com `external_message_id` apos o insert |
+
+### Exemplo da mudanca
+
+Antes:
+```text
+const { error } = await supabase.functions.invoke("uazapi-manager", { body: payload });
+// ... insert sem external_message_id
+```
+
+Depois:
+```text
+const { data: sendResult, error } = await supabase.functions.invoke("uazapi-manager", { body: payload });
+const externalId = sendResult?.data?.id || sendResult?.data?.messageid || null;
+// ... insert com external_message_id: externalId
+```
 
 ### O que muda para o usuario
 
-- Mensagens enviadas mostrarao 2 checks cinza quando entregues
-- Mensagens lidas mostrarao 2 checks azuis
-- O processamento sera automatico sem necessidade de configuracao adicional
+- Mensagens enviadas terao o `external_message_id` preenchido imediatamente
+- Os ACKs do UAZAPI conseguirao encontrar a mensagem no banco
+- Os checks serao atualizados em tempo real: relogio -> 1 check -> 2 checks cinza -> 2 checks azuis
+- Funciona para texto, midia e mensagens em grupos
