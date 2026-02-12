@@ -1,73 +1,50 @@
 
 
-## Corrigir encolhimento repentino dos visuais no Modo Foco
+## Exibir tag "Faturamento Atual" nos cards do Pipeline
 
-### Causa raiz identificada
+### O que sera feito
 
-**Duas grids renderizadas ao mesmo tempo:** Quando o Modo Foco esta ativo, a grid normal (por tras do overlay) continua montada e escutando eventos de `window.resize`. Ao entrar em tela cheia, o resize dispara `handleLayoutChange` na grid oculta, que **salva novas posicoes no banco de dados** baseadas no container escondido/comprimido. Os visuais atualizam via prop e a grid do Modo Foco re-renderiza com posicoes corrompidas.
+Adicionar uma tag sutil em cada card de negocio no pipeline mostrando o valor do campo personalizado "Faturamento Atual". Se o negocio nao tiver esse dado preenchido, a tag simplesmente nao aparece.
 
-**CSS zoom afeta a medicao de largura:** Dentro do container com `zoom`, o `offsetWidth` retorna um valor reduzido. Quando o resize acontece, a grid mede uma largura menor, recalcula as posicoes dos itens, e os visuais encolhem.
+### Abordagem
 
-### Solucao (2 arquivos)
+Para evitar 541+ queries individuais (uma por card), a busca sera feita em lote no componente `DealKanban`, que ja tem acesso a todos os deals. O mapa de valores sera passado via props ate o `DealCard`.
 
-**Arquivo 1: `src/components/insights/InsightsMainContent.tsx`**
+### Detalhes tecnicos
 
-- Quando `isFocusMode` esta ativo, NAO renderizar a `InsightsGrid` normal. Substituir por `null` ou simplesmente ocultar com condicionais. Isso impede que a grid oculta dispare saves de layout durante fullscreen/resize.
+**Arquivo 1: `src/components/sales/DealKanban.tsx`**
 
-```text
-// ANTES (ambas as grids montadas):
-{focusModeOverlay}
-...
-<InsightsGrid visuals={visuals} onLayoutChange={handleLayoutChange} />
+- Adicionar um `useEffect` que busca todos os `deal_field_values` com `field_id = 'ed5c7c0e-0740-4945-b982-70a593ffae0c'` (Faturamento Atual) para os deals carregados
+- Buscar tambem as `options` do campo para mapear `value_text` para o `label` legivel (ex: `acima_100k` -> `Acima de 100 mil reais`)
+- Criar um `Record<string, string>` mapeando `deal_id` -> label do faturamento
+- Passar esse mapa como prop `faturamentoMap` para `DealKanbanColumn`
 
-// DEPOIS (grid normal desabilitada durante foco):
-{focusModeOverlay}
-...
-{!isFocusMode && <InsightsGrid visuals={visuals} onLayoutChange={handleLayoutChange} />}
-```
+**Arquivo 2: `src/components/sales/DealKanbanColumn.tsx`**
 
-**Arquivo 2: `src/components/insights/grid/InsightsGrid.tsx`**
+- Receber a nova prop `faturamentoMap?: Record<string, string>`
+- Repassar o valor correspondente para cada `DealCard` como `faturamentoLabel`
 
-- Ao medir a largura do container, compensar o zoom do ancestral. Usar `getBoundingClientRect().width` (que retorna tamanho visual pos-zoom) e dividir pelo ratio de zoom detectado:
+**Arquivo 3: `src/components/sales/DealCard.tsx`**
 
-```text
-const updateWidth = () => {
-  if (containerRef.current) {
-    const rect = containerRef.current.getBoundingClientRect();
-    const offsetW = containerRef.current.offsetWidth;
-    // Se zoom estiver aplicado, rect.width != offsetWidth
-    // Usar offsetWidth que e o valor correto para layout CSS dentro do zoom
-    setWidth(offsetW);
-  }
-};
-```
+- Receber nova prop opcional `faturamentoLabel?: string`
+- Renderizar uma Badge sutil (estilo outline, cor neutra, texto pequeno) na area de tags do card, junto com as tags existentes, exibindo o label do faturamento
+- Se `faturamentoLabel` for undefined/null, nao renderizar nada
 
-- Isso ja e o comportamento atual, mas para garantir estabilidade, adicionar um check: em modo `readOnly`, medir largura apenas uma vez no mount e ao entrar/sair de fullscreen (via `fullscreenchange` event), evitando re-medicoes por outros resize events que possam causar instabilidade:
+### Visual da tag
+
+A tag tera um estilo discreto e consistente com as tags ja existentes no card:
 
 ```text
-useEffect(() => {
-  const updateWidth = () => {
-    if (containerRef.current) {
-      setWidth(containerRef.current.offsetWidth);
-    }
-  };
-  updateWidth();
-  
-  if (readOnly) {
-    // Em readOnly, apenas re-medir ao mudar fullscreen (nao em qualquer resize)
-    document.addEventListener("fullscreenchange", updateWidth);
-    return () => document.removeEventListener("fullscreenchange", updateWidth);
-  } else {
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
-  }
-}, [readOnly]);
+[Acima de 100 mil reais]   <-- Badge outline, text-[10px], icone opcional de "$"
 ```
 
-### Resumo das mudancas
+Sera posicionada na linha de tags existentes, antes das tags normais do deal.
 
-| Arquivo | Mudanca | Impacto |
-|---------|---------|---------|
-| `InsightsMainContent.tsx` | Nao renderizar grid normal quando Modo Foco ativo | Impede saves de layout corrompidos |
-| `InsightsGrid.tsx` | Em modo readOnly, re-medir largura apenas no fullscreenchange | Estabiliza dimensoes durante zoom |
+### Arquivos modificados
+
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/components/sales/DealKanban.tsx` | Busca em lote dos valores de Faturamento Atual + mapa |
+| `src/components/sales/DealKanbanColumn.tsx` | Repassa prop faturamentoMap para DealCard |
+| `src/components/sales/DealCard.tsx` | Renderiza Badge com faturamentoLabel |
 
