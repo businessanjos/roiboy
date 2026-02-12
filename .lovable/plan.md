@@ -1,31 +1,37 @@
 
 
-## Corrigir redimensionamento de visuais no grid do Insights
+## Adicionar Grafico de Barras Horizontal
 
-### Problema identificado
+### O que sera feito
 
-Dois problemas estao causando o snap-back ao redimensionar:
+Adicionar um novo tipo de visualizacao **"Barras Horizontal"** ao modal de criacao de visuais e ao sistema de renderizacao. Esse grafico exibe as categorias no eixo Y e os valores no eixo X (como no exemplo "Canal de Venda"), ideal para comparar categorias com nomes longos.
 
-1. **Sincronizacao de layout**: O componente usa `onResizeStop` para atualizar o `localLayout`, mas o `react-grid-layout` v2 precisa que o `layout` prop esteja sincronizado durante toda a interacao (nao apenas no final). Sem usar `onLayoutChange` para manter o estado sincronizado continuamente, o RGL reverte para o valor do prop `layout` antigo no proximo render.
-
-2. **Altura minima no Card**: O `ConfigurableVisualCard` tem `min-h-[250px]` no Card, que conflita com alturas menores definidas pelo grid (ex: `h:12 * rowHeight:20 = 240px`).
-
-### Solucao
+### Arquivos afetados
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/components/insights/grid/InsightsGrid.tsx` | Adicionar `onLayoutChange` para manter `localLayout` sincronizado continuamente durante drag/resize. Manter `onDragStop`/`onResizeStop` apenas para persistir no banco. |
-| `src/components/insights/visuals/ConfigurableVisualCard.tsx` | Remover `min-h-[250px]` do Card principal e do CardContent, substituindo por dimensoes flexiveis que respeitem o tamanho do grid |
+| `src/components/insights/visual-builder/types.ts` | Adicionar `'bar_horizontal'` ao tipo `ChartType` e ao array `CHART_TYPE_OPTIONS` |
+| `src/components/insights/AddVisualModal.tsx` | Adicionar opcao "Barras Horizontal" ao array `CHART_TYPES` com icone adequado |
+| `src/components/insights/visuals/ConfigurableChart.tsx` | Adicionar case `'bar_horizontal'` no switch e criar componente `HorizontalBarChartView` usando Recharts `BarChart` com `layout="vertical"` |
+| `src/components/insights/visual-builder/ChartTypeSelector.tsx` | Adicionar mapeamento de icone para `bar_horizontal` no `ICON_MAP` |
 
 ### Detalhes tecnicos
 
-**InsightsGrid.tsx:**
-- Adicionar handler `onLayoutChange` que atualiza `localLayout` a cada mudanca (isso mantem o prop `layout` sincronizado com o estado interno do RGL, evitando o snap-back)
-- Manter `onDragStop`/`onResizeStop` exclusivamente para disparar a persistencia no banco de dados
-- Usar um ref para rastrear o layout mais recente e evitar atualizacoes desnecessarias
+**1. types.ts**
+- `ChartType` passa a incluir `'bar_horizontal'`
+- Nova entrada em `CHART_TYPE_OPTIONS`: `{ value: 'bar_horizontal', label: 'Barras Horizontal' }`
 
-**ConfigurableVisualCard.tsx:**
-- Trocar `min-h-[250px]` por `h-full` para que o card preencha o espaco do grid sem forcar um tamanho minimo
-- Remover `min-h-[200px]` do CardContent, usando `flex-1` que ja esta presente
-- Nos estados de loading e erro, tambem remover alturas fixas
+**2. AddVisualModal.tsx**
+- Nova entrada em `CHART_TYPES`: `{ value: "bar_horizontal", label: "Barras Horizontal", description: "Barras na horizontal para categorias", icon: BarChart3 }` (icone rotacionado via CSS `rotate-90`)
+- O fluxo de 3 etapas (formato, metrica, agrupamento) sera identico ao do grafico de barras normal
+
+**3. ConfigurableChart.tsx**
+- Novo componente `HorizontalBarChartView` usando `<BarChart layout="vertical">` do Recharts
+- O eixo X exibe valores (numerico) e o eixo Y exibe categorias (nomes)
+- Barras com `radius={[0, 4, 4, 0]}` (cantos arredondados a direita)
+- Labels de valor exibidos a direita das barras
+- Margem esquerda maior para acomodar nomes de categorias
+
+**4. ChartTypeSelector.tsx**
+- Adicionar `bar_horizontal` ao `ICON_MAP` usando `BarChart3` (com rotacao aplicada no componente)
 
