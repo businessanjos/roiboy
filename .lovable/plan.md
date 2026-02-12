@@ -1,65 +1,41 @@
 
 
-## Permitir comentario junto ao anexo de imagem/arquivo na Timeline
+## Corrigir cards que expandem/reduzem sozinhos apos redimensionar
 
-### Problema atual
+### Causa raiz
 
-Quando o usuario anexa uma imagem (pelo botao de camera, paste ou drag-and-drop) ou um arquivo (pelo botao de clipe), o envio e imediato e o campo `content` e salvo como `null`. Isso forca o usuario a enviar o comentario como uma mensagem separada.
+O problema e um **ciclo de feedback** entre o grid e o banco de dados:
 
-### O que sera feito
+1. Usuario redimensiona o card -- `onLayoutChange` dispara com debounce de 500ms
+2. O `updateVisual` salva no banco e, ao ter sucesso, chama `queryClient.invalidateQueries` (linha 278 de `useInsightsDashboards.tsx`)
+3. Isso forca um refetch dos visuais do banco de dados
+4. O `layout` do `InsightsGrid` e recalculado via `useMemo` a partir dos novos `visuals` (que podem ainda conter o layout antigo se o debounce nao completou, ou se o refetch foi mais rapido que o save)
+5. O card "pula" de volta para o tamanho anterior
 
-Unificar o fluxo para que, ao selecionar qualquer arquivo (imagem ou documento), ele apareca como preview acima do campo de texto, permitindo que o usuario escreva um comentario opcional antes de clicar em Enviar. O comentario sera salvo junto com o arquivo no mesmo registro da timeline.
+Alem disso, o `onLayoutChange` do `react-grid-layout` dispara tambem na montagem inicial e quando o layout muda externamente, criando mais ciclos de atualizacao desnecessarias.
 
-### Mudancas no fluxo
+### Solucao
 
-```text
-ANTES:
-  Clica em Camera/Clipe → Upload imediato (sem comentario)
-  Cola/Arrasta imagem → Preview → Envia (sem comentario)
+**Arquivo: `src/components/insights/grid/InsightsGrid.tsx`**
 
-DEPOIS:
-  Clica em Camera/Clipe → Preview do arquivo aparece acima do textarea
-  Cola/Arrasta imagem → Preview da imagem aparece acima do textarea
-  Usuario pode digitar um comentario no textarea (opcional)
-  Clica em Enviar → Arquivo + comentario sao salvos juntos
-```
+1. **Gerenciar layout localmente**: manter um estado `localLayout` interno que so e sincronizado com os props na montagem inicial ou quando os visuais mudam de fato (novos visuais adicionados/removidos), nao quando o layout de um visual existente muda
+2. **Ignorar `onLayoutChange` na montagem**: usar uma flag `isUserInteracting` para distinguir entre mudancas feitas pelo usuario (drag/resize) e mudancas internas do grid (re-render, montagem)
+3. **Usar callbacks de drag/resize stop**: usar `onDragStop` e `onResizeStop` em vez de `onLayoutChange` para capturar apenas as alteracoes intencionais do usuario
+
+**Arquivo: `src/hooks/useInsightsDashboards.tsx`**
+
+4. **Nao invalidar query em updates de layout**: quando o `updateVisual` recebe apenas `layout`, nao chamar `invalidateQueries` -- usar update otimista no cache local para evitar o refetch que causa o "snap back"
 
 ### Detalhes tecnicos
 
-**Arquivo: `src/components/client/Timeline.tsx`**
-
-1. **Expandir o estado de preview** para suportar tanto imagens quanto arquivos:
-   - Renomear/expandir `pastedImagePreview` para `filePreview` com tipo `{ file: File; url: string; type: "image" | "file" }`
-   - Imagens mostram thumbnail, arquivos mostram icone + nome
-
-2. **Alterar `handleFileSelect`** (botao camera/clipe):
-   - Em vez de fazer upload imediato, setar o `filePreview` com o arquivo selecionado
-   - O usuario pode entao digitar um comentario no textarea
-
-3. **Alterar `sendPastedImage` → `sendFileWithComment`**:
-   - Fazer upload do arquivo do `filePreview`
-   - Inserir no `client_followups` com:
-     - `content: comment.trim() || null` (comentario opcional)
-     - `file_url`, `file_name`, `file_size` do arquivo
-     - `type`: "image" ou "file" conforme o tipo do preview
-   - Limpar tanto o `filePreview` quanto o `comment` apos envio
-
-4. **Atualizar a UI de preview** (aparece em dois lugares no codigo, linhas ~1186-1217 e ~1365-1396):
-   - Manter o layout atual de preview mas adaptar para mostrar tambem arquivos (nao apenas imagens)
-   - Arquivos: exibir icone de documento + nome do arquivo
-   - Imagens: manter thumbnail como esta
-
-5. **Ajustar o botao de Enviar**:
-   - Quando ha um `filePreview` ativo, o botao de Enviar do textarea deve chamar `sendFileWithComment` (nao `handleSubmitComment`)
-   - Quando nao ha preview, manter o comportamento atual de enviar somente texto
-
-6. **Ajustar Enter para envio**:
-   - Se ha `filePreview`, Enter envia o arquivo com comentario
-   - Se nao ha, Enter envia comentario de texto normalmente
-
-### Arquivos modificados
-
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/components/client/Timeline.tsx` | Unificar fluxo de upload com comentario opcional, expandir preview para arquivos, ajustar logica de envio |
+| `src/components/insights/grid/InsightsGrid.tsx` | Substituir `onLayoutChange` por `onDragStop`/`onResizeStop`; manter estado local do layout para evitar resets externos |
+| `src/hooks/useInsightsDashboards.tsx` | Usar update otimista do cache (setQueryData) em vez de invalidateQueries para updates de layout |
+
+### O que muda para o usuario
+
+- Ao redimensionar ou mover um card, ele permanece exatamente no tamanho/posicao definido
+- Sem "pulos" ou expansoes inesperadas
+- O salvamento continua funcionando com debounce de 500ms
 
