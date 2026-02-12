@@ -1,50 +1,35 @@
 
+## Reconectar instância [CANAL] Eternum Club ao setor de Operacoes
 
-## Exibir tag "Faturamento Atual" nos cards do Pipeline
+### Problema
 
-### O que sera feito
+Na acao anterior, o comando `unlink_instance` **deletou o registro** da instancia "[CANAL] Eternum Club" do banco de dados. O objetivo era apenas desconecta-la do setor, nao remove-la completamente. Agora a instancia existe no UAZAPI (connected, phone 554388346806) mas nao existe mais na tabela `integrations` do ROY.
 
-Adicionar uma tag sutil em cada card de negocio no pipeline mostrando o valor do campo personalizado "Faturamento Atual". Se o negocio nao tiver esse dado preenchido, a tag simplesmente nao aparece.
+### Solucao
 
-### Abordagem
+**Passo 1: Re-inserir o registro na tabela `integrations`**
 
-Para evitar 541+ queries individuais (uma por card), a busca sera feita em lote no componente `DealKanban`, que ja tem acesso a todos os deals. O mapa de valores sera passado via props ate o `DealCard`.
+Usar a action `add_instance_to_sector` que ja existe no `uazapi-manager` para re-vincular a instancia "[CANAL] Eternum Club" ao setor `operacoes`. Essa action busca a instancia no UAZAPI pelo nome, obtem o token e status, e insere no banco automaticamente.
 
-### Detalhes tecnicos
-
-**Arquivo 1: `src/components/sales/DealKanban.tsx`**
-
-- Adicionar um `useEffect` que busca todos os `deal_field_values` com `field_id = 'ed5c7c0e-0740-4945-b982-70a593ffae0c'` (Faturamento Atual) para os deals carregados
-- Buscar tambem as `options` do campo para mapear `value_text` para o `label` legivel (ex: `acima_100k` -> `Acima de 100 mil reais`)
-- Criar um `Record<string, string>` mapeando `deal_id` -> label do faturamento
-- Passar esse mapa como prop `faturamentoMap` para `DealKanbanColumn`
-
-**Arquivo 2: `src/components/sales/DealKanbanColumn.tsx`**
-
-- Receber a nova prop `faturamentoMap?: Record<string, string>`
-- Repassar o valor correspondente para cada `DealCard` como `faturamentoLabel`
-
-**Arquivo 3: `src/components/sales/DealCard.tsx`**
-
-- Receber nova prop opcional `faturamentoLabel?: string`
-- Renderizar uma Badge sutil (estilo outline, cor neutra, texto pequeno) na area de tags do card, junto com as tags existentes, exibindo o label do faturamento
-- Se `faturamentoLabel` for undefined/null, nao renderizar nada
-
-### Visual da tag
-
-A tag tera um estilo discreto e consistente com as tags ja existentes no card:
-
+Chamar via edge function:
 ```text
-[Acima de 100 mil reais]   <-- Badge outline, text-[10px], icone opcional de "$"
+action: "add_instance_to_sector"
+instance_name: "[CANAL] Eternum Club"
+sector_id: "operacoes"
 ```
 
-Sera posicionada na linha de tags existentes, antes das tags normais do deal.
+**Passo 2: Verificar a conexao**
 
-### Arquivos modificados
+Apos a insercao, consultar o banco para confirmar que o registro foi criado corretamente com status `connected` e o token da instancia.
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/components/sales/DealKanban.tsx` | Busca em lote dos valores de Faturamento Atual + mapa |
-| `src/components/sales/DealKanbanColumn.tsx` | Repassa prop faturamentoMap para DealCard |
-| `src/components/sales/DealCard.tsx` | Renderiza Badge com faturamentoLabel |
+**Passo 3: Configurar webhook (se necessario)**
 
+Verificar se o campo `webhook_configured` precisa ser atualizado no config da integracao, garantindo que mensagens recebidas sejam processadas corretamente.
+
+### Observacao importante sobre o webhook
+
+O webhook do WhatsApp (`uazapi-webhook`) possui um kill switch ativo (`FUNCTION_DISABLED = true`). Mesmo reconectando a instancia, mensagens NAO serao processadas ate que o kill switch seja desativado. Isso e uma decisao separada.
+
+### Arquivos que serao modificados
+
+Nenhum arquivo de codigo precisa ser alterado. A acao sera feita via chamada direta ao edge function existente e, se necessario, insercao manual no banco.
