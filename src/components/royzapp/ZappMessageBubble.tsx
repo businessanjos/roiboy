@@ -651,6 +651,8 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
                   <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
                 ) : message.delivery_status === "delivered" ? (
                   <CheckCheck className="h-3.5 w-3.5 text-zapp-text-muted" />
+                ) : message.delivery_status === "sent" ? (
+                  <Check className="h-3.5 w-3.5 text-zapp-text-muted" />
                 ) : message.delivery_status === "pending" ? (
                   <Clock className="h-3 w-3 text-zapp-text-muted" />
                 ) : (
