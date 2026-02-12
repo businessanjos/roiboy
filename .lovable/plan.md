@@ -1,49 +1,54 @@
 
 
-## Corrigir contagem de leads nos visuais de Insights
+## Corrigir contagem de leads nos Insights: filtro de convertidos + paginacao no drilldown
 
-### Problema
+### Problemas identificados
 
-A funcao `fetchLeadsData` em `src/hooks/useVisualData.ts` busca todos os registros da tabela `leads` usando `.select('id, status, source, ...')`, que esta limitado a 1000 linhas pelo padrao do banco. Para um scorecard de contagem total, o resultado mostra "1.000" quando na realidade existem 2.755+ leads.
+1. **Contagem incorreta (2.802 vs 2.755):** A query de contagem no scorecard NAO filtra leads ja convertidos em clientes (`converted_to_client_id IS NULL`). A aba Leads aplica esse filtro, resultando em 2.755. O Insights conta todos (2.803), gerando discrepancia.
+
+2. **Drilldown limitado a 1.000 registros:** O hook `useVisualDrilldown.ts` (funcao `fetchLeadsRecords`) continua usando uma query simples sem paginacao, limitada aos primeiros 1.000 registros pelo banco.
 
 ### Solucao
 
-Para o caso de scorecard (quando `dimension.field === '_total'` e a agregacao e `count`), substituir a query que busca todos os registros por uma query de contagem server-side usando `{ count: 'exact', head: true }`. Isso retorna apenas o numero total sem transferir nenhuma linha, eliminando o limite de 1000.
-
-Para os demais casos (agrupamentos por status, origem, etc.), sera necessario paginar os resultados para garantir que todos os registros sejam processados.
-
-### Detalhes tecnicos
+#### 1. Adicionar filtro `converted_to_client_id IS NULL` em TODAS as queries de leads
 
 **Arquivo:** `src/hooks/useVisualData.ts`
 
-Modificar a funcao `fetchLeadsData` (linha ~459):
+- Na query de contagem server-side (scorecard, linha ~468): adicionar `.is('converted_to_client_id', null)`
+- Na query paginada (agrupamentos, linha ~496): adicionar `.is('converted_to_client_id', null)`
 
-1. **Scorecard (_total):** Detectar quando e um scorecard de contagem e usar query otimizada:
-   ```text
-   // Antes: busca ate 1000 linhas e conta no JS
-   .select('id, status, source, revenue_range, created_at')
-   
-   // Depois: conta no servidor sem limite
-   .select('*', { count: 'exact', head: true })
-   ```
+**Arquivo:** `src/hooks/useVisualDrilldown.ts`
 
-2. **Agrupamentos (status, source, etc.):** Implementar paginacao para buscar TODOS os registros em lotes de 1000:
-   ```text
-   // Buscar em lotes ate esgotar os resultados
-   let allData = [];
-   let from = 0;
-   const pageSize = 1000;
-   while (true) {
-     const { data } = await query.range(from, from + pageSize - 1);
-     allData.push(...data);
-     if (data.length < pageSize) break;
-     from += pageSize;
-   }
-   ```
+- Na funcao `fetchLeadsRecords` (linha ~138): adicionar `.is('converted_to_client_id', null)`
+
+#### 2. Paginar o drilldown de leads
+
+**Arquivo:** `src/hooks/useVisualDrilldown.ts`
+
+Substituir a query unica na funcao `fetchLeadsRecords` por um loop de paginacao identico ao implementado em `useVisualData.ts`:
+
+```text
+let allData = [];
+let from = 0;
+const pageSize = 1000;
+while (true) {
+  const { data } = await query.range(from, from + pageSize - 1);
+  allData = allData.concat(data || []);
+  if (!data || data.length < pageSize) break;
+  from += pageSize;
+}
+```
 
 ### Resultado esperado
 
-- O scorecard de "Total de Leads" exibira o numero correto (2.755 em vez de 1.000)
-- Agrupamentos por dimensao tambem refletirao a totalidade dos dados
-- Performance otimizada: scorecards usam contagem server-side sem transferir dados
+- Scorecard mostrara **2.755** (contagem real de leads ativos, excluindo convertidos)
+- Drilldown mostrara **todos** os registros, nao apenas os primeiros 1.000
+- Dados consistentes entre aba Leads e visuais de Insights
+
+### Arquivos modificados
+
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/hooks/useVisualData.ts` | Adicionar `.is('converted_to_client_id', null)` nas queries de scorecard e paginada |
+| `src/hooks/useVisualDrilldown.ts` | Adicionar filtro de convertidos + implementar paginacao na funcao `fetchLeadsRecords` |
 
