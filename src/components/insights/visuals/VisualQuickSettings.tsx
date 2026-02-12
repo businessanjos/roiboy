@@ -29,6 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { AppearanceSection } from "../visual-builder/AppearanceSection";
 import { 
   VisualConfig, 
@@ -85,6 +86,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
     config?.hiddenUsers ?? []
   );
   const [accountUsers, setAccountUsers] = useState<{ name: string }[]>([]);
+  const [title, setTitle] = useState(visual.title || "");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -95,6 +97,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   // Reset state when visual changes or sheet opens
   useEffect(() => {
     if (open) {
+      setTitle(visual.title || "");
       setShowDataLabels(config?.appearance?.showDataLabels ?? DEFAULT_APPEARANCE.showDataLabels);
       setDateDisplayFormat(config?.appearance?.dateDisplayFormat ?? DEFAULT_APPEARANCE.dateDisplayFormat);
       setColorPalette(config?.appearance?.colorPalette ?? DEFAULT_APPEARANCE.colorPalette);
@@ -150,7 +153,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
         hiddenUsers: isCallCommercial ? hiddenUsers : config.hiddenUsers,
       };
 
-      await updateVisual(visual.id, { config: newConfig });
+      await updateVisual(visual.id, { config: newConfig, title: title.trim() || visual.title });
       toast.success("Ajustes salvos!");
       onOpenChange(false);
     } catch (error) {
@@ -178,12 +181,19 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
       <SheetContent side="right" className="w-[340px] sm:w-[400px] flex flex-col">
         <SheetHeader className="flex-shrink-0">
           <SheetTitle>Ajustes do Visual</SheetTitle>
-          <SheetDescription className="truncate">
-            {visual.title || "Visual sem título"}
-          </SheetDescription>
+          <SheetDescription className="sr-only">Configurações do visual</SheetDescription>
         </SheetHeader>
 
         <div className="py-6 space-y-6 flex-1 overflow-y-auto">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Título do Visual</Label>
+            <Input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Digite o título do visual"
+            />
+          </div>
+          <Separator />
           {/* Scorecard formatting options */}
           {isScorecard && (
             <div className="space-y-4">
