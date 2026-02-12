@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AddVisualModal } from "./AddVisualModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
-import { ConfigurableVisualCard } from "./visuals/ConfigurableVisualCard";
+
 import { ZoomControls } from "@/components/ui/zoom-controls";
 
 export function InsightsMainContent() {
@@ -156,19 +156,17 @@ export function InsightsMainContent() {
               </div>
             </div>
 
-            <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top center', width: `${10000 / focusZoom}%` }}>
+            <div style={{ zoom: focusZoom / 100 }}>
             {/* Filters */}
             <InsightsFilterBar />
 
-            {/* Visuals in simple grid (no drag) */}
+            {/* Visuals preserving saved layout (read-only) */}
             {hasVisuals && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {visuals.map((visual) => (
-                  <div key={visual.id} className="min-h-[400px]">
-                    <ConfigurableVisualCard visual={visual} />
-                  </div>
-                ))}
-              </div>
+              <InsightsGrid 
+                visuals={visuals} 
+                onLayoutChange={() => {}} 
+                readOnly 
+              />
             )}
             </div>
           </div>

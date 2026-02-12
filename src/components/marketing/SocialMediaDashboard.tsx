@@ -543,7 +543,7 @@ export function SocialMediaDashboard() {
               </div>
             </div>
 
-            <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top center', width: `${10000 / focusZoom}%` }}>
+            <div style={{ zoom: focusZoom / 100 }}>
             {/* KPI Cards - Zoomed */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
               <Card>

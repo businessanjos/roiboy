@@ -22,13 +22,14 @@ interface LayoutItem {
 interface InsightsGridProps {
   visuals: InsightsVisual[];
   onLayoutChange: (layouts: Array<{ id: string; layout: LayoutItem }>) => void;
+  readOnly?: boolean;
 }
 
 const ROW_HEIGHT = 20;  // Ultra-granular: 5x mais fino para movimento suave
 const COLS = 48;        // Ultra-granular: 4x mais colunas para posicionamento preciso
 const MARGIN: [number, number] = [0, 0];
 
-export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
+export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: InsightsGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1200);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
@@ -149,11 +150,11 @@ export function InsightsGrid({ visuals, onLayoutChange }: InsightsGridProps) {
           containerPadding: [0, 0] as [number, number],
         }}
         dragConfig={{
-          enabled: true,
+          enabled: !readOnly,
           handle: ".widget-drag-handle",
         }}
         resizeConfig={{
-          enabled: true,
+          enabled: !readOnly,
         }}
         compactor={freePositionCompactor}
       >
