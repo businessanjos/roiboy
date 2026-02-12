@@ -1,86 +1,64 @@
 
+## Corrigir filtro de datas no visual "Calls Comerciais"
 
-## Corrigir visual "Calls Comerciais": filtros, paginacao e drilldown
+### Problema raiz
 
-### Problemas identificados
+O campo `due_date` na tabela `internal_tasks` e do tipo `date` (nao `timestamp`). Os filtros do Insights passam timestamps ISO completos como `2026-02-01T03:00:00.000Z`. A API REST do banco pode nao converter corretamente esse timestamp para comparacao com uma coluna `date`, fazendo com que o filtro seja ignorado e todos os registros sejam retornados.
 
-1. **Filtros ignorados:** A funcao `fetchTasksCallCommercialData` recebe apenas `accountId` e ignora completamente os filtros de data e usuario aplicados na barra de filtros do Insights.
-
-2. **Limite de 1.000 registros:** A query de tarefas nao tem paginacao, entao contas com muitas tarefas terao dados incompletos.
-
-3. **Drilldown zerado:** O hook `useVisualDrilldown.ts` nao tem `case 'tasks'` no switch — retorna array vazio, resultando em "0 registros" ao explorar dados.
+**Prova:** Os numeros exibidos (Jonathan: 6/46, Darlan: 6/36, Vanessa: 1/10) coincidem exatamente com os totais historicos sem filtro de data.
 
 ### Solucao
 
-#### 1. Aplicar filtros na funcao de dados (`useVisualData.ts`)
+Converter os timestamps ISO para formato de data pura (`YYYY-MM-DD`) antes de aplicar filtros na coluna `due_date`. Isso garante compatibilidade com o tipo da coluna.
 
-Modificar `fetchTasksCallCommercialData` para receber e aplicar `filters`:
+### Detalhes tecnicos
 
-- **Filtro de data:** Aplicar `filters.startDate` e `filters.endDate` sobre o campo `due_date` (ou `created_at`) das tarefas
-- **Filtro de usuario:** Aplicar `filters.userId` sobre `assigned_to`
-- **Paginacao:** Buscar em lotes de 1.000 ate esgotar resultados
+**Arquivo 1:** `src/hooks/useVisualData.ts`
+
+Na funcao `fetchTasksCallCommercialData` (~linha 822), converter os filtros:
 
 ```text
-async function fetchTasksCallCommercialData(
-  accountId: string,
-  filters: any   // <-- ADICIONAR
-): Promise<AggregatedDataPoint[]> {
-  // ... buscar activity types ...
+// ANTES (pode falhar com coluna date):
+if (filters.startDate) baseQuery = baseQuery.gte('due_date', filters.startDate);
+if (filters.endDate) baseQuery = baseQuery.lte('due_date', filters.endDate);
 
-  // Aplicar filtros
-  let baseQuery = supabase
-    .from('internal_tasks')
-    .select('id, activity_type_id, completed_at, assigned_to, due_date, users!internal_tasks_assigned_to_fkey(name)')
-    .eq('account_id', accountId)
-    .in('activity_type_id', typeIds)
-    .not('assigned_to', 'is', null);
-
-  if (filters.startDate) baseQuery = baseQuery.gte('due_date', filters.startDate);
-  if (filters.endDate) baseQuery = baseQuery.lte('due_date', filters.endDate);
-  if (filters.userId && filters.userId !== 'all') baseQuery = baseQuery.eq('assigned_to', filters.userId);
-
-  // Paginar
-  let allTasks = [];
-  let from = 0;
-  const pageSize = 1000;
-  while (true) {
-    const { data } = await baseQuery.range(from, from + pageSize - 1);
-    allTasks = allTasks.concat(data || []);
-    if (!data || data.length < pageSize) break;
-    from += pageSize;
-  }
-  // ... resto da logica de agrupamento ...
+// DEPOIS (formato compativel com coluna date):
+if (filters.startDate) {
+  const startDate = filters.startDate.split('T')[0];
+  baseQuery = baseQuery.gte('due_date', startDate);
+}
+if (filters.endDate) {
+  const endDate = filters.endDate.split('T')[0];
+  baseQuery = baseQuery.lte('due_date', endDate);
 }
 ```
 
-Atualizar a chamada no switch para passar `filters`:
+**Arquivo 2:** `src/hooks/useVisualDrilldown.ts`
+
+Na funcao `fetchTasksRecords` (~linha 262), aplicar a mesma conversao:
 
 ```text
-case 'tasks':
-  result = await fetchTasksCallCommercialData(currentUser.account_id, filters);
-  break;
+if (filters.startDate) {
+  const startDate = filters.startDate.split('T')[0];
+  baseQuery = baseQuery.gte('due_date', startDate);
+}
+if (filters.endDate) {
+  const endDate = filters.endDate.split('T')[0];
+  baseQuery = baseQuery.lte('due_date', endDate);
+}
 ```
 
-#### 2. Adicionar drilldown de tarefas (`useVisualDrilldown.ts`)
+### Dados esperados com filtro "Este Mes" (Fevereiro 2026)
 
-Adicionar `case 'tasks'` no switch e criar funcao `fetchTasksRecords`:
-
-```text
-case 'tasks':
-  return fetchTasksRecords(currentUser.account_id, config, filters, groupName);
-```
-
-A funcao `fetchTasksRecords` buscara as tarefas com paginacao e as retornara como `DrilldownRecord[]` com campos relevantes (titulo, responsavel, status, data).
+| Vendedor | Agendadas (abertas) | Concluidas |
+|----------|---------------------|------------|
+| Jonathan Marcato | 3 | 12 |
+| Darlan Ferreira | 5 | 14 |
+| Vanessa Minelli | 1 | 2 |
 
 ### Arquivos modificados
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/hooks/useVisualData.ts` | Adicionar `filters` a `fetchTasksCallCommercialData`, aplicar filtros de data/usuario, paginar |
-| `src/hooks/useVisualDrilldown.ts` | Adicionar `case 'tasks'` + funcao `fetchTasksRecords` com paginacao e filtros |
-
-### Resultado esperado
-
-- Os numeros de "Agend." e "Conc." respeitarao os filtros de data/usuario selecionados
-- "Explorar Dados" mostrara todos os registros de tarefas (nao mais 0)
-- Dados completos sem limite de 1.000 linhas
+| `src/hooks/useVisualData.ts` | Converter ISO para YYYY-MM-DD nos filtros de `due_date` |
+| `src/hooks/useVisualDrilldown.ts` | Mesma conversao nos filtros de `due_date` do drilldown |
