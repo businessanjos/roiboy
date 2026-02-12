@@ -47,7 +47,7 @@ export function useVisualData({ config, enabled = true }: UseVisualDataParams) {
           result = await fetchProductsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
           break;
         case 'tasks':
-          result = await fetchTasksCallCommercialData(currentUser.account_id);
+          result = await fetchTasksCallCommercialData(currentUser.account_id, filters);
           break;
         default:
           result = [];
@@ -788,7 +788,8 @@ function fillMissingDates(
 
 // Fetch tasks data for Call Comercial visual
 async function fetchTasksCallCommercialData(
-  accountId: string
+  accountId: string,
+  filters: any
 ): Promise<AggregatedDataPoint[]> {
   // Fetch activity types for "Call Comercial Agendada" and "Call Comercial Concluida"
   const { data: activityTypes, error: atError } = await supabase
@@ -810,22 +811,41 @@ async function fetchTasksCallCommercialData(
   // Fetch tasks for both types with user info
   const typeIds = [agendadaType?.id, concluidaType?.id].filter(Boolean) as string[];
 
-  const { data: tasks, error: tasksError } = await supabase
+  let baseQuery = supabase
     .from('internal_tasks')
-    .select('id, activity_type_id, completed_at, assigned_to, users!internal_tasks_assigned_to_fkey(name)')
+    .select('id, activity_type_id, completed_at, assigned_to, due_date, users!internal_tasks_assigned_to_fkey(name)')
     .eq('account_id', accountId)
     .in('activity_type_id', typeIds)
     .not('assigned_to', 'is', null);
 
-  if (tasksError || !tasks) {
-    console.error('Error fetching tasks:', tasksError);
-    return [];
+  // Apply date filters on due_date
+  if (filters.startDate) baseQuery = baseQuery.gte('due_date', filters.startDate);
+  if (filters.endDate) baseQuery = baseQuery.lte('due_date', filters.endDate);
+  // Apply user filter
+  if (filters.userId && filters.userId !== 'all') baseQuery = baseQuery.eq('assigned_to', filters.userId);
+
+  // Paginate to fetch ALL records
+  let allTasks: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+
+  while (true) {
+    const { data, error: tasksError } = await baseQuery.order('due_date', { ascending: false }).range(from, from + pageSize - 1);
+
+    if (tasksError) {
+      console.error('Error fetching tasks:', tasksError);
+      return [];
+    }
+
+    allTasks = allTasks.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
   }
 
   // Group by user
   const userMap = new Map<string, { scheduled: number; completed: number }>();
 
-  for (const task of tasks) {
+  for (const task of allTasks) {
     const userName = (task.users as any)?.name;
     if (!userName) continue;
 

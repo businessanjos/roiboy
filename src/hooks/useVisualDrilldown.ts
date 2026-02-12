@@ -39,6 +39,8 @@ export function useVisualDrilldown({ config, groupName, enabled = true }: UseVis
           return fetchLeadsRecords(currentUser.account_id, config, filters, groupName);
         case 'products':
           return fetchProductsRecords(currentUser.account_id, config, filters, groupName);
+        case 'tasks':
+          return fetchTasksRecords(currentUser.account_id, config, filters, groupName);
         default:
           return [];
       }
@@ -271,4 +273,72 @@ function formatDateGroup(dateString: string, grouping: string): string {
   } catch {
     return 'Data Inválida';
   }
+}
+
+async function fetchTasksRecords(
+  accountId: string,
+  config: VisualConfig,
+  filters: any,
+  groupName?: string
+): Promise<DrilldownRecord[]> {
+  // Fetch activity types for Call Comercial
+  const { data: activityTypes } = await supabase
+    .from('activity_types')
+    .select('id, name')
+    .eq('account_id', accountId)
+    .in('name', ['Call Comercial Agendada', 'Call Comercial Concluída']);
+
+  if (!activityTypes || activityTypes.length === 0) return [];
+
+  const typeIds = activityTypes.map(at => at.id);
+
+  let baseQuery = supabase
+    .from('internal_tasks')
+    .select('id, title, activity_type_id, completed_at, assigned_to, due_date, created_at, users!internal_tasks_assigned_to_fkey(name), activity_types!internal_tasks_activity_type_id_fkey(name)')
+    .eq('account_id', accountId)
+    .in('activity_type_id', typeIds)
+    .not('assigned_to', 'is', null);
+
+  if (filters.startDate) baseQuery = baseQuery.gte('due_date', filters.startDate);
+  if (filters.endDate) baseQuery = baseQuery.lte('due_date', filters.endDate);
+  if (filters.userId && filters.userId !== 'all') baseQuery = baseQuery.eq('assigned_to', filters.userId);
+
+  // Paginate
+  let allData: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+
+  while (true) {
+    const { data, error } = await baseQuery.order('due_date', { ascending: false }).range(from, from + pageSize - 1);
+
+    if (error) {
+      console.error('Error fetching tasks drilldown:', error);
+      return [];
+    }
+
+    allData = allData.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  // Filter by group name (user name) if provided
+  if (groupName) {
+    allData = allData.filter((task: any) => {
+      const userName = (task.users as any)?.name;
+      return userName === groupName;
+    });
+  }
+
+  return allData.map((task: any) => ({
+    id: task.id,
+    name: task.title || `Tarefa #${task.id.slice(0, 8)}`,
+    value: 1,
+    status: task.completed_at ? 'Concluída' : 'Pendente',
+    date: task.due_date || task.created_at,
+    extra: {
+      responsible: (task.users as any)?.name,
+      activity_type: (task.activity_types as any)?.name,
+      completed_at: task.completed_at,
+    },
+  }));
 }
