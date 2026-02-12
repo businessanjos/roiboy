@@ -195,7 +195,7 @@ function normalizePhone(phone: string | undefined): string {
 // KILL SWITCH: set to true to temporarily disable all processing
 // (function still responds 200 to avoid UAZAPI retry storms)
 // ============================================
-const FUNCTION_DISABLED = true;
+const FUNCTION_DISABLED = false;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
