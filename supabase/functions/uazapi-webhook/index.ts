@@ -278,26 +278,45 @@ serve(async (req) => {
     const hasUpdateInData = Array.isArray(dataMessages) && 
       dataMessages.length > 0 && 
       (dataMessages[0] as Record<string, unknown>)?.update !== undefined;
-    // UAZAPI GO v2 sends 'event' array with status updates
-    const eventArray = payloadAny.event;
-    const hasEventArray = Array.isArray(eventArray) && eventArray.length > 0;
+    // UAZAPI GO v2 sends 'event' as array OR object with status updates
+    const eventField = payloadAny.event;
+    const hasEventArray = Array.isArray(eventField) && eventField.length > 0;
+    // UAZAPI GO v2 also sends 'event' as an object with MessageIDs
+    const hasEventObject = eventField && typeof eventField === "object" && !Array.isArray(eventField) && 
+      (eventField as Record<string, unknown>).MessageIDs !== undefined;
     
-    const isAckEvent = isAckByEventName || hasAckField || hasUpdateInData || hasEventArray;
+    const isAckEvent = isAckByEventName || hasAckField || hasUpdateInData || hasEventArray || hasEventObject;
     
     if (isAckEvent) {
-      console.log(`[ACK-DIAG] ACK event detected! eventType="${eventType}", isAckByEventName=${isAckByEventName}, hasAckField=${hasAckField}, hasUpdateInData=${hasUpdateInData}, hasEventArray=${hasEventArray}`);
+      console.log(`[ACK-DIAG] ACK event detected! eventType="${eventType}", isAckByEventName=${isAckByEventName}, hasAckField=${hasAckField}, hasUpdateInData=${hasUpdateInData}, hasEventArray=${hasEventArray}, hasEventObject=${hasEventObject}`);
       console.log(`[ACK-DIAG] Payload snippet: ${JSON.stringify(payloadAny).substring(0, 800)}`);
       
       let messageId = "";
       let ack = 0;
+      const messageIds: string[] = [];
+      
+      // UAZAPI GO v2 format: event is an OBJECT with MessageIDs array and Type string
+      if (hasEventObject) {
+        const eventObj = eventField as Record<string, unknown>;
+        const ids = eventObj.MessageIDs as string[];
+        if (Array.isArray(ids) && ids.length > 0) {
+          messageIds.push(...ids);
+          messageId = ids[0];
+        }
+        // Map string status to numeric ack
+        const typeStr = String(eventObj.Type || payloadAny.state || "").toLowerCase();
+        if (typeStr === "read") ack = 4;
+        else if (typeStr === "delivered") ack = 3;
+        else if (typeStr === "sent") ack = 2;
+        console.log(`[ACK-DIAG] Extracted from event OBJECT: messageIds=${JSON.stringify(messageIds)}, type="${typeStr}", ack=${ack}`);
+      }
       
       // UAZAPI GO v2 format: event is an array like [{id, fromMe, status, remoteJid}]
-      if (hasEventArray) {
-        const eventItem = (eventArray as Array<Record<string, unknown>>)[0];
+      if (!messageId && hasEventArray) {
+        const eventItem = (eventField as Array<Record<string, unknown>>)[0];
         messageId = String(eventItem?.id || "");
-        // status field: 2=sent, 3=delivered, 4=read
         ack = Number(eventItem?.status || eventItem?.ack || 0);
-        console.log(`[ACK-DIAG] Extracted from event array: messageId="${messageId}", ack=${ack}, eventItem=${JSON.stringify(eventItem)}`);
+        console.log(`[ACK-DIAG] Extracted from event array: messageId="${messageId}", ack=${ack}`);
       }
       
       // Fallback: Extract from data.messages format
@@ -323,9 +342,12 @@ serve(async (req) => {
         }
       }
       
-      console.log(`[ACK-DIAG] Extracted: messageId="${messageId}", ack=${ack}`);
+      console.log(`[ACK-DIAG] Extracted: messageId="${messageId}", ack=${ack}, messageIds=${JSON.stringify(messageIds)}`);
       
-      if (!messageId) {
+      // Use messageIds array if we have multiple, otherwise single messageId
+      const idsToProcess = messageIds.length > 0 ? messageIds : (messageId ? [messageId] : []);
+      
+      if (idsToProcess.length === 0) {
         console.log(`[ACK-DIAG] No message ID found, skipping. Full payload: ${JSON.stringify(payloadAny).substring(0, 1000)}`);
         return new Response(JSON.stringify({ ignored: true, reason: "ack_no_message_id" }), { 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
@@ -334,26 +356,34 @@ serve(async (req) => {
       
       const status = ack === 4 ? "read" : ack === 3 ? "delivered" : ack === 2 ? "sent" : ack === 1 ? "pending" : "failed";
       
-      console.log(`[ACK] Processing: messageId="${messageId}", ack=${ack}, status="${status}"`);
+      console.log(`[ACK] Processing: ids=${JSON.stringify(idsToProcess)}, ack=${ack}, status="${status}"`);
       
       // Single lightweight query - no integration lookup needed
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const ackSupabase = createClient(supabaseUrl, supabaseKey);
       
-      const { data: updateResult, error: updateError } = await ackSupabase
-        .from("zapp_messages")
-        .update({ delivery_status: status })
-        .eq("external_message_id", messageId)
-        .select("id, external_message_id, delivery_status");
+      let totalUpdated = 0;
       
-      if (updateError) {
-        console.error(`[ACK] Update error: ${updateError.message}`);
-      } else {
-        console.log(`[ACK] Updated ${updateResult?.length || 0} messages to status "${status}" for external_message_id="${messageId}"`);
+      for (const id of idsToProcess) {
+        // Use ilike with suffix match because external_message_id is stored as "owner:messageId"
+        // but UAZAPI sends only the messageId part
+        const { data: updateResult, error: updateError } = await ackSupabase
+          .from("zapp_messages")
+          .update({ delivery_status: status })
+          .ilike("external_message_id", `%${id}`)
+          .select("id, external_message_id, delivery_status");
+        
+        if (updateError) {
+          console.error(`[ACK] Update error for id="${id}": ${updateError.message}`);
+        } else {
+          const count = updateResult?.length || 0;
+          totalUpdated += count;
+          console.log(`[ACK] Updated ${count} messages to status "${status}" for id="${id}" (ilike match)`);
+        }
       }
       
-      return new Response(JSON.stringify({ success: true, event: eventType, status, messagesUpdated: updateResult?.length || 0 }), { 
+      return new Response(JSON.stringify({ success: true, event: eventType, status, messagesUpdated: totalUpdated }), { 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
