@@ -40,6 +40,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { cn } from '@/lib/utils';
+import { ZoomControls } from '@/components/ui/zoom-controls';
 
 interface ProfileWithMetrics {
   id: string;
@@ -68,6 +69,7 @@ export function TikTokDashboard() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [focusZoom, setFocusZoom] = useState(100);
   const focusModeRef = useRef<HTMLDivElement>(null);
 
   // ESC key listener for focus mode
@@ -536,7 +538,8 @@ export function TikTokDashboard() {
             {/* Header with buttons */}
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl font-bold">Visão Consolidada TikTok</h2>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} />
                 <Select value={monthFilter} onValueChange={setMonthFilter}>
                   <SelectTrigger className="w-[180px] bg-card">
                     <SelectValue placeholder="Período" />
@@ -571,6 +574,7 @@ export function TikTokDashboard() {
               </div>
             </div>
 
+            <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top center', width: `${10000 / focusZoom}%` }}>
             {/* KPI Cards - Zoomed */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-10">
               <Card>
@@ -728,6 +732,7 @@ export function TikTokDashboard() {
                 </div>
               </CardContent>
             </Card>
+            </div>
           </div>
         </div>,
         document.body

@@ -9,6 +9,7 @@ import { AddVisualModal } from "./AddVisualModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
 import { ConfigurableVisualCard } from "./visuals/ConfigurableVisualCard";
+import { ZoomControls } from "@/components/ui/zoom-controls";
 
 export function InsightsMainContent() {
   const { 
@@ -26,6 +27,7 @@ export function InsightsMainContent() {
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [focusZoom, setFocusZoom] = useState(100);
   const focusModeRef = useRef<HTMLDivElement>(null);
 
   // ESC listener
@@ -139,7 +141,8 @@ export function InsightsMainContent() {
                 <BarChart3 className="h-6 w-6 text-primary" />
                 <h1 className="text-3xl font-bold">{activeDashboard.name}</h1>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} />
                 <Button variant="outline" size="icon" onClick={toggleFullscreen}>
                   {isFullscreen ? (
                     <Minimize2 className="h-4 w-4" />
@@ -153,6 +156,7 @@ export function InsightsMainContent() {
               </div>
             </div>
 
+            <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top center', width: `${10000 / focusZoom}%` }}>
             {/* Filters */}
             <InsightsFilterBar />
 
@@ -166,6 +170,7 @@ export function InsightsMainContent() {
                 ))}
               </div>
             )}
+            </div>
           </div>
         </div>,
         document.body

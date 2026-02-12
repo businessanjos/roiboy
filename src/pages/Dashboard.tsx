@@ -56,6 +56,7 @@ import { toast } from "sonner";
 import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth, subMonths, subDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DateRange } from "react-day-picker";
+import { ZoomControls } from "@/components/ui/zoom-controls";
 import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
@@ -166,6 +167,7 @@ export default function Dashboard() {
   // Focus mode states
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [focusZoom, setFocusZoom] = useState(100);
   const focusModeRef = useRef<HTMLDivElement>(null);
 
   // ESC key listener for focus mode
@@ -1162,7 +1164,8 @@ export default function Dashboard() {
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl font-bold">Dashboard Operacional</h2>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} />
                 <Button
                   variant="outline"
                   size="icon"
@@ -1186,6 +1189,7 @@ export default function Dashboard() {
               </div>
             </div>
 
+            <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top center', width: `${10000 / focusZoom}%` }}>
             {/* Clientes por Produto */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {products.map((product) => {
@@ -1374,6 +1378,7 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
+            </div>
             </div>
           </div>
         </div>,
