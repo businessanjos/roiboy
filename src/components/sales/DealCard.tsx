@@ -24,9 +24,10 @@ interface DealCardProps {
   deal: Deal;
   onClick: () => void;
   isDragging?: boolean;
+  faturamentoLabel?: string;
 }
 
-export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
+export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel }: DealCardProps) {
   const [activitiesDialogOpen, setActivitiesDialogOpen] = useState(false);
   const [activityStatus, setActivityStatus] = useState<ActivityStatus>({ pendingCount: 0, hasOverdue: false, totalActivities: 0 });
   
@@ -359,11 +360,19 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
           </div>
         )}
 
-        {/* Tags - Only if exists (exclude renovação/vencido as they're shown above) */}
-        {deal.tags && deal.tags.length > 0 && (
+        {/* Tags - Faturamento + existing tags */}
+        {(faturamentoLabel || (deal.tags && deal.tags.length > 0)) && (
           <div className="flex flex-wrap gap-1">
+            {faturamentoLabel && (
+              <Badge 
+                variant="outline" 
+                className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
+              >
+                $ {faturamentoLabel}
+              </Badge>
+            )}
             {deal.tags
-              .filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase()))
+              ?.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase()))
               .slice(0, 2)
               .map((tag, index) => (
                 <Badge 
@@ -374,7 +383,7 @@ export function DealCard({ deal, onClick, isDragging = false }: DealCardProps) {
                   {tag}
                 </Badge>
               ))}
-            {deal.tags.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase())).length > 2 && (
+            {deal.tags && deal.tags.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase())).length > 2 && (
               <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-background">
                 +{deal.tags.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase())).length - 2}
               </Badge>
