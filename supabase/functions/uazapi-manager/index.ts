@@ -249,6 +249,71 @@ serve(async (req) => {
       console.log(`[uazapi-manager] PIN ${pinHash ? 'updated' : 'removed'} for integration ${integration_id}`);
       result = { success: true };
     
+    } else if (action === "configure_webhook") {
+      // ✅ Configurar webhook automaticamente com todos os eventos necessários
+      if (!token) {
+        return new Response(JSON.stringify({ error: "WhatsApp não conectado. Conecte primeiro." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const webhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
+      
+      const webhookConfig = {
+        url: webhookUrl,
+        enabled: true,
+        events: ["messages", "messages.update", "connection", "groups", "qrcode"]
+      };
+      
+      console.log(`[uazapi-manager] Configuring webhook for ${instanceName}: ${webhookUrl}`);
+      console.log(`[uazapi-manager] Events: ${webhookConfig.events.join(", ")}`);
+      
+      // Tentar múltiplos endpoints possíveis da UAZAPI GO v2
+      let webhookResult: any = null;
+      let webhookSuccess = false;
+      
+      const endpoints = [
+        { path: "/webhook/set", method: "POST" },
+        { path: "/instance/webhook", method: "PUT" },
+        { path: "/webhook", method: "POST" },
+      ];
+      
+      for (const ep of endpoints) {
+        try {
+          console.log(`[uazapi-manager] Trying ${ep.method} ${ep.path}...`);
+          webhookResult = await uazapiInstance(ep.path, ep.method, token!, webhookConfig);
+          webhookSuccess = true;
+          console.log(`[uazapi-manager] Webhook configured via ${ep.path}`);
+          break;
+        } catch (err) {
+          console.log(`[uazapi-manager] ${ep.path} failed: ${(err as Error).message}`);
+        }
+      }
+      
+      if (!webhookSuccess) {
+        // Fallback: tentar via admin endpoint
+        try {
+          webhookResult = await uazapiAdmin(`/instance/webhook/${instanceName}`, "PUT", webhookConfig);
+          webhookSuccess = true;
+          console.log(`[uazapi-manager] Webhook configured via admin endpoint`);
+        } catch (err) {
+          console.log(`[uazapi-manager] Admin webhook also failed: ${(err as Error).message}`);
+        }
+      }
+      
+      // Atualizar status no banco
+      if (intData?.id) {
+        const currentConfig = intData.config || {};
+        await supabase.from("integrations").update({ 
+          config: { ...currentConfig, webhook_configured: webhookSuccess, webhook_url: webhookUrl, webhook_events: webhookConfig.events }
+        }).eq("id", intData.id);
+      }
+      
+      if (!webhookSuccess) {
+        return new Response(JSON.stringify({ error: "Não foi possível configurar o webhook automaticamente. Configure manualmente no painel UAZAPI.", details: webhookResult }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      
+      result = { success: true, webhook_url: webhookUrl, events: webhookConfig.events };
+    
     } else if (action === "unlink_instance") {
       if (!integration_id) {
         return new Response(
