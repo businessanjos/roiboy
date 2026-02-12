@@ -1,54 +1,86 @@
 
 
-## Corrigir contagem de leads nos Insights: filtro de convertidos + paginacao no drilldown
+## Corrigir visual "Calls Comerciais": filtros, paginacao e drilldown
 
 ### Problemas identificados
 
-1. **Contagem incorreta (2.802 vs 2.755):** A query de contagem no scorecard NAO filtra leads ja convertidos em clientes (`converted_to_client_id IS NULL`). A aba Leads aplica esse filtro, resultando em 2.755. O Insights conta todos (2.803), gerando discrepancia.
+1. **Filtros ignorados:** A funcao `fetchTasksCallCommercialData` recebe apenas `accountId` e ignora completamente os filtros de data e usuario aplicados na barra de filtros do Insights.
 
-2. **Drilldown limitado a 1.000 registros:** O hook `useVisualDrilldown.ts` (funcao `fetchLeadsRecords`) continua usando uma query simples sem paginacao, limitada aos primeiros 1.000 registros pelo banco.
+2. **Limite de 1.000 registros:** A query de tarefas nao tem paginacao, entao contas com muitas tarefas terao dados incompletos.
+
+3. **Drilldown zerado:** O hook `useVisualDrilldown.ts` nao tem `case 'tasks'` no switch — retorna array vazio, resultando em "0 registros" ao explorar dados.
 
 ### Solucao
 
-#### 1. Adicionar filtro `converted_to_client_id IS NULL` em TODAS as queries de leads
+#### 1. Aplicar filtros na funcao de dados (`useVisualData.ts`)
 
-**Arquivo:** `src/hooks/useVisualData.ts`
+Modificar `fetchTasksCallCommercialData` para receber e aplicar `filters`:
 
-- Na query de contagem server-side (scorecard, linha ~468): adicionar `.is('converted_to_client_id', null)`
-- Na query paginada (agrupamentos, linha ~496): adicionar `.is('converted_to_client_id', null)`
-
-**Arquivo:** `src/hooks/useVisualDrilldown.ts`
-
-- Na funcao `fetchLeadsRecords` (linha ~138): adicionar `.is('converted_to_client_id', null)`
-
-#### 2. Paginar o drilldown de leads
-
-**Arquivo:** `src/hooks/useVisualDrilldown.ts`
-
-Substituir a query unica na funcao `fetchLeadsRecords` por um loop de paginacao identico ao implementado em `useVisualData.ts`:
+- **Filtro de data:** Aplicar `filters.startDate` e `filters.endDate` sobre o campo `due_date` (ou `created_at`) das tarefas
+- **Filtro de usuario:** Aplicar `filters.userId` sobre `assigned_to`
+- **Paginacao:** Buscar em lotes de 1.000 ate esgotar resultados
 
 ```text
-let allData = [];
-let from = 0;
-const pageSize = 1000;
-while (true) {
-  const { data } = await query.range(from, from + pageSize - 1);
-  allData = allData.concat(data || []);
-  if (!data || data.length < pageSize) break;
-  from += pageSize;
+async function fetchTasksCallCommercialData(
+  accountId: string,
+  filters: any   // <-- ADICIONAR
+): Promise<AggregatedDataPoint[]> {
+  // ... buscar activity types ...
+
+  // Aplicar filtros
+  let baseQuery = supabase
+    .from('internal_tasks')
+    .select('id, activity_type_id, completed_at, assigned_to, due_date, users!internal_tasks_assigned_to_fkey(name)')
+    .eq('account_id', accountId)
+    .in('activity_type_id', typeIds)
+    .not('assigned_to', 'is', null);
+
+  if (filters.startDate) baseQuery = baseQuery.gte('due_date', filters.startDate);
+  if (filters.endDate) baseQuery = baseQuery.lte('due_date', filters.endDate);
+  if (filters.userId && filters.userId !== 'all') baseQuery = baseQuery.eq('assigned_to', filters.userId);
+
+  // Paginar
+  let allTasks = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data } = await baseQuery.range(from, from + pageSize - 1);
+    allTasks = allTasks.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  // ... resto da logica de agrupamento ...
 }
 ```
 
-### Resultado esperado
+Atualizar a chamada no switch para passar `filters`:
 
-- Scorecard mostrara **2.755** (contagem real de leads ativos, excluindo convertidos)
-- Drilldown mostrara **todos** os registros, nao apenas os primeiros 1.000
-- Dados consistentes entre aba Leads e visuais de Insights
+```text
+case 'tasks':
+  result = await fetchTasksCallCommercialData(currentUser.account_id, filters);
+  break;
+```
+
+#### 2. Adicionar drilldown de tarefas (`useVisualDrilldown.ts`)
+
+Adicionar `case 'tasks'` no switch e criar funcao `fetchTasksRecords`:
+
+```text
+case 'tasks':
+  return fetchTasksRecords(currentUser.account_id, config, filters, groupName);
+```
+
+A funcao `fetchTasksRecords` buscara as tarefas com paginacao e as retornara como `DrilldownRecord[]` com campos relevantes (titulo, responsavel, status, data).
 
 ### Arquivos modificados
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/hooks/useVisualData.ts` | Adicionar `.is('converted_to_client_id', null)` nas queries de scorecard e paginada |
-| `src/hooks/useVisualDrilldown.ts` | Adicionar filtro de convertidos + implementar paginacao na funcao `fetchLeadsRecords` |
+| `src/hooks/useVisualData.ts` | Adicionar `filters` a `fetchTasksCallCommercialData`, aplicar filtros de data/usuario, paginar |
+| `src/hooks/useVisualDrilldown.ts` | Adicionar `case 'tasks'` + funcao `fetchTasksRecords` com paginacao e filtros |
 
+### Resultado esperado
+
+- Os numeros de "Agend." e "Conc." respeitarao os filtros de data/usuario selecionados
+- "Explorar Dados" mostrara todos os registros de tarefas (nao mais 0)
+- Dados completos sem limite de 1.000 linhas
