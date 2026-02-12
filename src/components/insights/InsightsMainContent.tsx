@@ -210,10 +210,12 @@ export function InsightsMainContent() {
             <Skeleton className="h-48" />
           </div>
         ) : hasVisuals ? (
-          <InsightsGrid 
-            visuals={visuals} 
-            onLayoutChange={handleLayoutChange} 
-          />
+          !isFocusMode && (
+            <InsightsGrid 
+              visuals={visuals} 
+              onLayoutChange={handleLayoutChange} 
+            />
+          )
         ) : (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">

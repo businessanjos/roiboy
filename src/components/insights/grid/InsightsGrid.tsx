@@ -43,9 +43,16 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
     };
 
     updateWidth();
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
-  }, []);
+
+    if (readOnly) {
+      // In readOnly/focus mode, only re-measure on fullscreen changes (not every resize)
+      document.addEventListener("fullscreenchange", updateWidth);
+      return () => document.removeEventListener("fullscreenchange", updateWidth);
+    } else {
+      window.addEventListener("resize", updateWidth);
+      return () => window.removeEventListener("resize", updateWidth);
+    }
+  }, [readOnly]);
 
   // Convert visuals to layout items (detect old scale and convert if needed)
   const layout = useMemo<LayoutItem[]>(() => {
