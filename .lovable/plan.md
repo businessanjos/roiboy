@@ -1,70 +1,48 @@
 
+## Melhorias no create-deal: Item da Venda automatico
 
-## Correcao: Eventos compartilhados entre clientes sendo sobrescritos
+### Contexto atual
 
-### Diagnostico
+A edge function `create-deal` ja recebe o campo `product_id` (nome do produto, ex: "Rykas Mentoring") e faz fuzzy match contra a tabela `products`. O UUID encontrado e salvo no campo personalizado "Item da Venda" (ID: `033b91fb`). Porem, ha melhorias a fazer para garantir que tudo funcione de ponta a ponta.
 
-O problema NAO e um bug de codigo, mas sim uma limitacao arquitetural. Eis o que acontece:
+### Melhorias planejadas
 
-1. Eventos sao vinculados a **produtos** (tabela `event_products`), nao a clientes individuais
-2. Todos os clientes que possuem o mesmo produto veem os **mesmos eventos** na aba Agenda
-3. Quando voce "cria" ou "edita" um evento (ex: "Mentoria Individual Com Ever"), esta alterando um **unico registro** na tabela `events`
-4. Como todos os clientes com aquele produto compartilham o mesmo registro, a alteracao aparece para todos
+#### 1. Corrigir duplicidade de insercao do "Item da Venda"
 
-Exemplo concreto: o evento "Mentoria Individual Com Ever - ON-LINE" (ID: `a8406aaf`) esta vinculado ao produto `b8c50eca`. Todo cliente que possui esse produto ve esse mesmo evento. Se voce edita esse evento a partir da agenda do Cliente B, o Cliente A tambem ve a mudanca, porque e o mesmo registro.
+Atualmente, o `product_id` e salvo na secao de fuzzy match (linha ~156) E tambem pode ser salvo novamente na secao de campos customizados em batch se o parametro coincidir. Vamos garantir que o campo so seja inserido uma vez, usando `upsert` com `onConflict: 'deal_id,field_id'` para evitar erros.
 
-### Solucao proposta
+#### 2. Auto-preencher o valor do negocio com o preco do produto
 
-Adicionar suporte a **eventos individuais por cliente**, separados dos eventos compartilhados por produto.
-
-#### 1. Migracao de banco: adicionar `client_id` na tabela `events`
+Quando `payload.value` nao for enviado (ou for 0), e o produto for encontrado, usar o `price` do produto como valor do negocio:
 
 ```text
-ALTER TABLE public.events ADD COLUMN client_id UUID REFERENCES public.clients(id) ON DELETE SET NULL;
-CREATE INDEX idx_events_client_id ON public.events(client_id);
+// Se produto encontrado e valor nao informado:
+if (productMatch && (!payload.value || payload.value === 0)) {
+  await supabase.from("deals").update({ value: productMatch.price }).eq("id", newDeal.id);
+}
 ```
 
-Eventos com `client_id` preenchido sao individuais (aparecem apenas na agenda daquele cliente). Eventos sem `client_id` continuam funcionando como hoje (compartilhados via produtos).
+#### 3. Melhorar o fuzzy match para lidar com `\n` e espacos extras
 
-#### 2. Atualizar `ClientAgenda.tsx` para buscar eventos individuais do cliente
-
-Alem dos eventos via produtos/deliveries/attendance, tambem buscar eventos onde `client_id` corresponde ao cliente atual (ou linked clients):
+O campo vindo do n8n pode conter `\n` no final (como visto na imagem: "Rykas Mentoring\n"). Adicionar sanitizacao:
 
 ```text
-// Adicionar ao fetchEvents():
-const { data: individualEvents } = await supabase
-  .from("events")
-  .select("*, event_products(product_id)")
-  .in("client_id", linkedClientIds);
-
-// Combinar com allEventIds existentes
+const productName = payload.product_id.trim().replace(/\\n/g, '').replace(/\n/g, '');
 ```
 
-#### 3. Atualizar `EventEditDialog.tsx` para preservar o `client_id`
+#### 4. Usar upsert ao inves de insert para evitar conflitos
 
-Ao salvar um evento individual, garantir que `client_id` e mantido no update.
+Trocar `insert` por `upsert` no salvamento do campo "Item da Venda", garantindo idempotencia caso a funcao seja chamada mais de uma vez.
 
-#### 4. Adicionar botao "Novo Evento Individual" na ClientAgenda
-
-Permitir criar eventos diretamente na agenda do cliente, pre-preenchendo o `client_id`. Isso criara um evento exclusivo daquele cliente, separado dos eventos compartilhados por produto.
-
-#### 5. Atualizar pagina `/events` para exibir contexto
-
-Na listagem geral de eventos, mostrar se o evento e individual (com nome do cliente) ou compartilhado (via produto).
-
-### Arquivos modificados
+### Arquivo modificado
 
 | Arquivo | Mudanca |
 |---------|---------|
-| Migracao SQL | Adicionar coluna `client_id` + indice |
-| `src/components/client/ClientAgenda.tsx` | Buscar eventos individuais + botao "Novo Evento" |
-| `src/components/events/EventEditDialog.tsx` | Suportar criacao (alem de edicao) com `client_id` |
-| `src/pages/Events.tsx` | Mostrar badge de cliente individual na listagem |
+| `supabase/functions/create-deal/index.ts` | Sanitizar nome do produto, upsert no campo Item da Venda, auto-preencher valor do negocio com preco do produto |
 
 ### Resultado esperado
 
-- Eventos de mentoria individual ficam exclusivos de cada cliente
-- Eventos compartilhados por produto continuam funcionando normalmente
-- O usuario pode criar eventos individuais diretamente na agenda do cliente
-- Editar um evento individual nao afeta outros clientes
-
+- O campo "Item da Venda" nos campos personalizados sera preenchido corretamente com o UUID do produto
+- O valor do negocio sera preenchido automaticamente com o preco do produto quando nao informado
+- Nomes com caracteres extras (`\n`, espacos) serao limpos antes do matching
+- Sem risco de duplicidade de registros em `deal_field_values`
