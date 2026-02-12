@@ -57,7 +57,7 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
   switch (type) {
     case 'number':
     case 'scorecard':
-      return <ConfigurableScorecard data={data} formatting={formatting} />;
+      return <ConfigurableScorecard data={data} formatting={formatting} config={visualConfig} />;
     case 'ranking':
       return <ConfigurableRanking data={data} formatting={formatting} />;
     case 'call_commercial':
