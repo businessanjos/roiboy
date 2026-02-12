@@ -1,49 +1,66 @@
 
 
-## Correcao: "Item da Venda" salvo como UUID em vez do valor correto do select
+## Preencher "Data do primeiro contato" ao concluir tarefa
 
-### Problema identificado
+### Logica
 
-O campo "Item da Venda" e do tipo **select** com opcoes pre-definidas:
+Quando uma tarefa cujo titulo contenha "Primeiro Contato" for marcada como concluida (ou seja, `completed_at` mudar de NULL para um valor), o sistema preenchera automaticamente o campo personalizado "Data do primeiro contato" (ID: `166fe351-b29b-4f08-b330-88f82c65f625`) no negocio vinculado.
 
-| Label | Value |
-|-------|-------|
-| Rykas Pass | `rykas_pass` |
-| Rykas Mentoring | `rykas_mentoring` |
-| Eternum Club | `eternum_club` |
-| ... | ... |
+### Abordagem: Trigger no banco de dados
 
-O codigo atual faz fuzzy match contra a tabela `products` e salva o **UUID do produto** (ex: `8d3e9bb6-054b-44b3-952f-5920e0ed8775`) no campo. Porem, a UI espera o **value da opcao** (ex: `rykas_mentoring`). Como o UUID nao corresponde a nenhuma opcao do select, o campo aparece vazio.
+Usar um trigger no banco e a melhor opcao porque:
+- Cobre **todos** os caminhos de conclusao (TaskDialog, TaskCard, pagina de Tarefas, API, edge functions)
+- Nao depende de mudancas em multiplos componentes do frontend
+- Execucao atomica e confiavel
 
-### Solucao
+### Detalhes tecnicos
 
-Alem do fuzzy match contra a tabela `products` (que continua necessario para obter o preco e vincular o produto), adicionar um **segundo match** contra as opcoes do campo select para determinar o `value` correto a salvar.
-
-O fluxo sera:
+**Migracao SQL: criar funcao + trigger**
 
 ```text
-1. Recebe "Rykas Mentoring" do n8n
-2. Busca opcoes do campo select (custom_fields.options)
-3. Match "Rykas Mentoring" -> encontra opcao com label "Rykas Mentoring" -> value "rykas_mentoring"
-4. Salva "rykas_mentoring" em deal_field_values.value_text
-5. Busca produto na tabela products para obter preco (auto-fill do valor do negocio)
+CREATE OR REPLACE FUNCTION sync_first_contact_date()
+  RETURNS trigger AS $$
+BEGIN
+  -- Dispara apenas quando completed_at muda de NULL para um valor
+  IF NEW.completed_at IS NOT NULL 
+     AND (OLD.completed_at IS NULL)
+     AND NEW.deal_id IS NOT NULL
+     AND NEW.title ILIKE '%Primeiro Contato%' 
+  THEN
+    INSERT INTO deal_field_values (account_id, deal_id, field_id, value_date)
+    VALUES (
+      NEW.account_id,
+      NEW.deal_id,
+      '166fe351-b29b-4f08-b330-88f82c65f625',
+      (NEW.completed_at AT TIME ZONE 'America/Sao_Paulo')::date
+    )
+    ON CONFLICT (deal_id, field_id)
+    DO UPDATE SET value_date = (NEW.completed_at AT TIME ZONE 'America/Sao_Paulo')::date;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public';
+
+CREATE TRIGGER trg_sync_first_contact_date
+  AFTER UPDATE ON internal_tasks
+  FOR EACH ROW
+  EXECUTE FUNCTION sync_first_contact_date();
 ```
 
-### Mudanca tecnica
-
-**Arquivo:** `supabase/functions/create-deal/index.ts`
-
-Na secao de fuzzy match do `product_id`:
-
-1. Buscar as opcoes do campo select `033b91fb` na tabela `custom_fields`
-2. Fazer match do nome recebido contra as labels das opcoes (case-insensitive, com suporte a match parcial)
-3. Salvar o `value` da opcao encontrada (ex: `rykas_mentoring`) em vez do UUID do produto
-4. Se nenhuma opcao corresponder, salvar o nome original como fallback
-5. Manter o match contra `products` para obter o preco
+Pontos importantes:
+- `AT TIME ZONE 'America/Sao_Paulo'` converte o timestamp UTC para o fuso horario correto antes de extrair a data, evitando o problema de datas adiantadas/atrasadas
+- `ON CONFLICT ... DO UPDATE` garante idempotencia (upsert)
+- `ILIKE '%Primeiro Contato%'` faz match case-insensitive com qualquer tarefa que contenha "Primeiro Contato" no titulo
+- So dispara no `UPDATE` (quando `completed_at` passa de NULL para preenchido)
 
 ### Resultado esperado
 
-- O campo "Item da Venda" aparecera preenchido corretamente na UI com a tag colorida (ex: "Rykas Mentoring" em azul)
-- O valor do negocio continuara sendo preenchido automaticamente com o preco do produto
-- Compativel com todos os itens: Rykas Pass, Rykas Mentoring, Eternum Club, etc.
+- Ao marcar "Primeiro Contato Realizado" como concluida, o campo "Data do primeiro contato" sera preenchido automaticamente com a data correta no fuso de Sao Paulo
+- Funciona independentemente de onde a tarefa for concluida (dialog, card, API)
+- Nenhuma alteracao no frontend necessaria
 
+### Arquivos modificados
+
+| Arquivo | Mudanca |
+|---------|---------|
+| Migracao SQL | Criar funcao `sync_first_contact_date` + trigger `trg_sync_first_contact_date` |
