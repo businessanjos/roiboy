@@ -40,6 +40,7 @@ interface InsightsDashboardsContextType {
   createDashboard: (name: string) => Promise<void>;
   deleteDashboard: (id: string) => Promise<void>;
   renameDashboard: (id: string, name: string) => Promise<void>;
+  reorderDashboards: (orderedIds: string[]) => Promise<void>;
   navigateToDashboard: (id: string) => void;
   setActiveDashboardId: (id: string | null) => void;
   
@@ -83,6 +84,7 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
         .from("insights_dashboards")
         .select("*")
         .eq("account_id", currentUser.account_id)
+        .order("display_order" as any, { ascending: true })
         .order("created_at", { ascending: true });
       
       if (error) throw error;
@@ -297,6 +299,26 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
     },
   });
 
+  // Reorder dashboards mutation
+  const reorderMutation = useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      const updates = orderedIds.map((id, index) =>
+        supabase
+          .from("insights_dashboards")
+          .update({ display_order: index } as any)
+          .eq("id", id)
+      );
+      const results = await Promise.all(updates);
+      const failed = results.find(r => r.error);
+      if (failed?.error) throw failed.error;
+    },
+    onError: (error) => {
+      console.error("Error reordering dashboards:", error);
+      toast.error("Erro ao reordenar painéis");
+      queryClient.invalidateQueries({ queryKey: ["insights-dashboards"] });
+    },
+  });
+
   // Action handlers
   const createDashboard = useCallback(async (name: string) => {
     await createMutation.mutateAsync(name);
@@ -326,6 +348,21 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
     await updateVisualMutation.mutateAsync({ id, updates });
   }, [updateVisualMutation]);
 
+  const reorderDashboards = useCallback(async (orderedIds: string[]) => {
+    // Optimistic update
+    queryClient.setQueryData(
+      ["insights-dashboards", currentUser?.account_id],
+      (old: InsightsDashboard[] | undefined) => {
+        if (!old) return old;
+        return orderedIds.map((id, index) => {
+          const d = old.find(d => d.id === id);
+          return d ? { ...d } : null;
+        }).filter(Boolean) as InsightsDashboard[];
+      }
+    );
+    await reorderMutation.mutateAsync(orderedIds);
+  }, [reorderMutation, queryClient, currentUser?.account_id]);
+
   const value = useMemo<InsightsDashboardsContextType>(() => ({
     dashboards,
     activeDashboard,
@@ -336,6 +373,7 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
     createDashboard,
     deleteDashboard,
     renameDashboard,
+    reorderDashboards,
     navigateToDashboard,
     setActiveDashboardId,
     addVisual,
@@ -352,6 +390,7 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
     createDashboard,
     deleteDashboard,
     renameDashboard,
+    reorderDashboards,
     navigateToDashboard,
     addVisual,
     removeVisual,
