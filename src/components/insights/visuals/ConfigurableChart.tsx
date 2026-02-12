@@ -64,6 +64,8 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
       return <ConfigurableCallCommercial data={data} formatting={formatting} hiddenUsers={visualConfig?.hiddenUsers} />;
     case 'bar':
       return <BarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
+    case 'bar_horizontal':
+      return <HorizontalBarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'line':
       return <LineChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'pie':
@@ -132,7 +134,65 @@ function BarChartView({
   );
 }
 
-function LineChartView({ 
+function HorizontalBarChartView({ 
+  data, 
+  formatting, 
+  appearance,
+  onDrilldown 
+}: { 
+  data: AggregatedDataPoint[]; 
+  formatting: ConfigurableChartProps['formatting']; 
+  appearance: AppearanceConfig;
+  onDrilldown?: (groupName?: string) => void;
+}) {
+  const colors = getChartColors(appearance.colorPalette);
+  
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart layout="vertical" data={data} margin={{ top: 10, right: 30, left: 20, bottom: 10 }}>
+        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+        <XAxis
+          type="number"
+          tickFormatter={(value) => formatValueCompact(value, formatting.type)}
+          tick={{ fontSize: 11 }}
+          className="text-muted-foreground"
+        />
+        <YAxis
+          dataKey="name"
+          type="category"
+          tick={{ fontSize: 11 }}
+          className="text-muted-foreground"
+          width={120}
+          interval={0}
+        />
+        <Tooltip content={<ChartTooltip formatting={formatting} showCount />} />
+        <Bar 
+          dataKey="value" 
+          radius={[0, 4, 4, 0]}
+          onClick={(data) => onDrilldown?.(data.name)}
+          style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
+        >
+          {appearance.showDataLabels && (
+            <LabelList 
+              dataKey="value" 
+              position="right" 
+              formatter={(value: number) => formatValueCompact(value, formatting.type)}
+              style={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
+            />
+          )}
+          {data.map((entry, index) => (
+            <Cell
+              key={`cell-${index}`}
+              fill={entry.color || colors[index % colors.length]}
+            />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+function LineChartView({
   data, 
   formatting, 
   appearance,

@@ -20,12 +20,13 @@ interface AddVisualModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type ChartType = "bar" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial";
+type ChartType = "bar" | "bar_horizontal" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial";
 type Metric = "revenue" | "deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle";
 type GroupBy = "month" | "user" | "stage" | "product" | "mql";
 
 const CHART_TYPES = [
   { value: "bar" as const, label: "Gráfico de Barras", description: "Comparar valores entre categorias", icon: BarChart3 },
+  { value: "bar_horizontal" as const, label: "Barras Horizontal", description: "Barras na horizontal para categorias", icon: BarChart3 },
   { value: "line" as const, label: "Gráfico de Linhas", description: "Visualizar tendências ao longo do tempo", icon: LineChart },
   { value: "pie" as const, label: "Gráfico de Pizza", description: "Mostrar proporções de um todo", icon: PieChart },
   { value: "scorecard" as const, label: "Scorecard", description: "Exibir um número ou KPI destacado", icon: Hash },
@@ -337,6 +338,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
                       )}
                       <Icon className={cn(
                         "h-8 w-8",
+                        type.value === 'bar_horizontal' && "rotate-90",
                         isSelected ? "text-primary" : "text-muted-foreground"
                       )} />
                       <span className="font-medium text-sm">{type.label}</span>

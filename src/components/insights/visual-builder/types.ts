@@ -2,7 +2,7 @@ export type DataSource = 'deals' | 'leads' | 'products' | 'tasks';
 export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate' | 'sales_cycle';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
-export type ChartType = 'bar' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial';
+export type ChartType = 'bar' | 'bar_horizontal' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
 export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature';
 export type DisplayScale = 'full' | 'auto' | 'thousands' | 'millions' | 'billions';
@@ -80,6 +80,7 @@ export const FORMAT_TYPE_OPTIONS: { value: FormatType; label: string; symbol: st
 // Chart type options
 export const CHART_TYPE_OPTIONS: { value: ChartType; label: string }[] = [
   { value: 'bar', label: 'Barras' },
+  { value: 'bar_horizontal', label: 'Barras Horizontal' },
   { value: 'line', label: 'Linhas' },
   { value: 'pie', label: 'Pizza' },
   { value: 'number', label: 'Scorecard' },
