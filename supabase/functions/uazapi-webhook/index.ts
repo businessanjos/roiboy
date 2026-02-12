@@ -267,46 +267,60 @@ serve(async (req) => {
     const payloadAny = payload as Record<string, unknown>;
     const isAckByEventName = eventType === "messages.ack" || eventType === "message.ack" || 
                        eventType === "ack" || eventType === "messages.update" ||
+                       eventType === "messages_update" || eventType === "MESSAGES_UPDATE" ||
                        eventType === "message_ack" || eventType === "MESSAGE_ACK" ||
                        eventType === "message.update" || eventType === "MESSAGE_UPDATE" ||
                        eventType === "status.update" || eventType === "message_status";
     
-    // Also detect ACK by payload content: if payload has 'ack' field or data.messages[0].update.status
+    // Also detect ACK by payload content: if payload has 'ack' field or event array with update/status
     const hasAckField = payloadAny.ack !== undefined;
     const dataMessages = (payloadAny.data as Record<string, unknown>)?.messages;
     const hasUpdateInData = Array.isArray(dataMessages) && 
       dataMessages.length > 0 && 
       (dataMessages[0] as Record<string, unknown>)?.update !== undefined;
+    // UAZAPI GO v2 sends 'event' array with status updates
+    const eventArray = payloadAny.event;
+    const hasEventArray = Array.isArray(eventArray) && eventArray.length > 0;
     
-    const isAckEvent = isAckByEventName || hasAckField || hasUpdateInData;
+    const isAckEvent = isAckByEventName || hasAckField || hasUpdateInData || hasEventArray;
     
     if (isAckEvent) {
-      console.log(`[ACK-DIAG] ACK event detected! eventType="${eventType}", isAckByEventName=${isAckByEventName}, hasAckField=${hasAckField}, hasUpdateInData=${hasUpdateInData}`);
-      console.log(`[ACK-DIAG] Payload snippet: ${JSON.stringify(payloadAny).substring(0, 500)}`);
+      console.log(`[ACK-DIAG] ACK event detected! eventType="${eventType}", isAckByEventName=${isAckByEventName}, hasAckField=${hasAckField}, hasUpdateInData=${hasUpdateInData}, hasEventArray=${hasEventArray}`);
+      console.log(`[ACK-DIAG] Payload snippet: ${JSON.stringify(payloadAny).substring(0, 800)}`);
       
       let messageId = "";
       let ack = 0;
       
-      // Extract message ID and ack status from various UAZAPI formats
-      const dataObj = payloadAny.data as Record<string, unknown> | undefined;
-      const msgObj = payloadAny.message as Record<string, unknown> | undefined;
-      
-      if (dataObj?.messages && Array.isArray(dataObj.messages)) {
-        const msgUpdate = (dataObj.messages as Array<Record<string, unknown>>)[0];
-        messageId = (msgUpdate?.key as Record<string, unknown>)?.id as string || "";
-        const updateObj = msgUpdate?.update as Record<string, unknown>;
-        ack = Number(updateObj?.status || msgUpdate?.ack || updateObj?.ack || 0);
-      } else if (dataObj?.id || msgObj?.id) {
-        messageId = String(dataObj?.id || msgObj?.id || "");
-        ack = Number(dataObj?.ack || dataObj?.status || msgObj?.ack || msgObj?.status || payloadAny.ack || 0);
-      } else if (payloadAny.ack !== undefined) {
-        messageId = String(payloadAny.id || payloadAny.messageId || payloadAny.message_id || "");
-        ack = Number(payloadAny.ack);
+      // UAZAPI GO v2 format: event is an array like [{id, fromMe, status, remoteJid}]
+      if (hasEventArray) {
+        const eventItem = (eventArray as Array<Record<string, unknown>>)[0];
+        messageId = String(eventItem?.id || "");
+        // status field: 2=sent, 3=delivered, 4=read
+        ack = Number(eventItem?.status || eventItem?.ack || 0);
+        console.log(`[ACK-DIAG] Extracted from event array: messageId="${messageId}", ack=${ack}, eventItem=${JSON.stringify(eventItem)}`);
       }
-      // Try extracting from message.id if still empty
-      if (!messageId && msgObj) {
-        messageId = String(msgObj.id || msgObj.messageId || msgObj.message_id || "");
-        if (!ack) ack = Number(msgObj.ack || msgObj.status || 0);
+      
+      // Fallback: Extract from data.messages format
+      if (!messageId) {
+        const dataObj = payloadAny.data as Record<string, unknown> | undefined;
+        const msgObj = payloadAny.message as Record<string, unknown> | undefined;
+        
+        if (dataObj?.messages && Array.isArray(dataObj.messages)) {
+          const msgUpdate = (dataObj.messages as Array<Record<string, unknown>>)[0];
+          messageId = (msgUpdate?.key as Record<string, unknown>)?.id as string || "";
+          const updateObj = msgUpdate?.update as Record<string, unknown>;
+          ack = Number(updateObj?.status || msgUpdate?.ack || updateObj?.ack || 0);
+        } else if (dataObj?.id || msgObj?.id) {
+          messageId = String(dataObj?.id || msgObj?.id || "");
+          ack = Number(dataObj?.ack || dataObj?.status || msgObj?.ack || msgObj?.status || payloadAny.ack || 0);
+        } else if (payloadAny.ack !== undefined) {
+          messageId = String(payloadAny.id || payloadAny.messageId || payloadAny.message_id || "");
+          ack = Number(payloadAny.ack);
+        }
+        if (!messageId && msgObj) {
+          messageId = String(msgObj.id || msgObj.messageId || msgObj.message_id || "");
+          if (!ack) ack = Number(msgObj.ack || msgObj.status || 0);
+        }
       }
       
       console.log(`[ACK-DIAG] Extracted: messageId="${messageId}", ack=${ack}`);
