@@ -463,32 +463,62 @@ async function fetchLeadsData(
   filters: any,
   dateDisplayFormat: DateDisplayFormat
 ): Promise<AggregatedDataPoint[]> {
-  let query = supabase
-    .from('leads')
-    .select('id, status, source, revenue_range, created_at')
-    .eq('account_id', accountId);
-
-  if (filters.startDate) {
-    query = query.gte('created_at', filters.startDate);
-  }
-  if (filters.endDate) {
-    query = query.lte('created_at', filters.endDate);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Error fetching leads:', error);
-    return [];
-  }
-
-  // If dimension is _total, return global aggregation (for Scorecards)
+  // For scorecard total count, use server-side count (no 1000-row limit)
   if (dimension.field === '_total') {
-    return aggregateGlobalTotal(data || [], { ...measure, aggregation: 'count' });
+    let countQuery = supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('account_id', accountId);
+
+    if (filters.startDate) {
+      countQuery = countQuery.gte('created_at', filters.startDate);
+    }
+    if (filters.endDate) {
+      countQuery = countQuery.lte('created_at', filters.endDate);
+    }
+
+    const { count, error } = await countQuery;
+
+    if (error) {
+      console.error('Error fetching leads count:', error);
+      return [];
+    }
+
+    return [{ name: 'Total', value: count || 0 }];
+  }
+
+  // For grouped data, paginate to fetch ALL records beyond the 1000-row default
+  let allData: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+
+  while (true) {
+    let query = supabase
+      .from('leads')
+      .select('id, status, source, revenue_range, created_at')
+      .eq('account_id', accountId);
+
+    if (filters.startDate) {
+      query = query.gte('created_at', filters.startDate);
+    }
+    if (filters.endDate) {
+      query = query.lte('created_at', filters.endDate);
+    }
+
+    const { data, error } = await query.range(from, from + pageSize - 1);
+
+    if (error) {
+      console.error('Error fetching leads:', error);
+      return [];
+    }
+
+    allData = allData.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
   }
 
   // Leads only support count aggregation
-  return aggregateData(data || [], { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
+  return aggregateData(allData, { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
 }
 
 async function fetchProductsData(
