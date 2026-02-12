@@ -127,7 +127,34 @@ serve(async (req) => {
         // Sanitize: remove \n literals, actual newlines, and extra whitespace
         const productName = payload.product_id.trim().replace(/\\n/g, '').replace(/\n/g, '').trim();
 
-        // Try exact match first, then ILIKE
+        const fieldId = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
+
+        // 1. Fetch select options for "Item da Venda" field
+        const { data: fieldDef } = await supabase
+          .from("custom_fields")
+          .select("options")
+          .eq("id", fieldId)
+          .maybeSingle();
+
+        // 2. Match input against select option labels (case-insensitive)
+        let selectValue: string = productName; // fallback
+        if (fieldDef?.options && Array.isArray(fieldDef.options)) {
+          const options = fieldDef.options as Array<{ label: string; value: string }>;
+          const lower = productName.toLowerCase();
+          const match = options.find((o) => o.label.toLowerCase() === lower)
+            || options.find((o) => o.label.toLowerCase().includes(lower) || lower.includes(o.label.toLowerCase()));
+          if (match) selectValue = match.value;
+        }
+
+        // 3. Save the select option value to deal_field_values
+        await supabase.from("deal_field_values").upsert({
+          account_id: accountId,
+          deal_id: newDeal.id,
+          field_id: fieldId,
+          value_text: selectValue,
+        }, { onConflict: "deal_id,field_id" });
+
+        // 4. Also match against products table for price auto-fill
         const { data: exact } = await supabase
           .from("products")
           .select("id, name, price")
@@ -136,10 +163,8 @@ serve(async (req) => {
           .limit(1)
           .maybeSingle();
 
-        if (exact) {
-          productMatchResult = exact;
-        } else {
-          // Fuzzy: search with partial match
+        productMatchResult = exact || null;
+        if (!productMatchResult) {
           const { data: partial } = await supabase
             .from("products")
             .select("id, name, price")
@@ -150,24 +175,12 @@ serve(async (req) => {
           productMatchResult = partial;
         }
 
-        // Save to deal_field_values with field "Item da Venda" using upsert
-        const fieldId = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
-        const valueToStore = productMatchResult ? productMatchResult.id : productName;
-
-        await supabase.from("deal_field_values").upsert({
-          account_id: accountId,
-          deal_id: newDeal.id,
-          field_id: fieldId,
-          value_text: valueToStore,
-        }, { onConflict: "deal_id,field_id" });
-
-        // Auto-fill deal value with product price when not provided
+        // 5. Auto-fill deal value with product price when not provided
         if (productMatchResult?.price && (!payload.value || payload.value === 0)) {
           await supabase.from("deals").update({ value: productMatchResult.price }).eq("id", newDeal.id);
         }
       } catch (err) {
         console.error("Error matching product:", err);
-        // Non-blocking: deal is already created
       }
     }
 
