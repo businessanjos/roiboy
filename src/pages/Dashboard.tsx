@@ -1189,7 +1189,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top center', width: `${10000 / focusZoom}%` }}>
+            <div style={{ zoom: focusZoom / 100 }}>
             {/* Clientes por Produto */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {products.map((product) => {

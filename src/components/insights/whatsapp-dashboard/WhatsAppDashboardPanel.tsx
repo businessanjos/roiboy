@@ -200,7 +200,7 @@ export function WhatsAppDashboardPanel() {
               </div>
             </div>
 
-            <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top center', width: `${10000 / focusZoom}%` }}>
+            <div style={{ zoom: focusZoom / 100 }}>
             {/* Filters */}
             <InsightsFilterBar />
 
