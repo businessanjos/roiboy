@@ -1,67 +1,73 @@
 
 
-## Corrigir layout e zoom no Modo Foco dos Insights
+## Corrigir encolhimento repentino dos visuais no Modo Foco
 
-### Problema 1: Layout nao preservado
+### Causa raiz identificada
 
-O Modo Foco renderiza os visuais em um grid CSS simples (`grid-cols-2`), ignorando completamente as posicoes salvas no `InsightsGrid`. Por isso o "Ranking de Vendedores" aparece lado a lado com o "Calls Comerciais" no Modo Foco, mas na visualizacao normal um fica acima do outro.
+**Duas grids renderizadas ao mesmo tempo:** Quando o Modo Foco esta ativo, a grid normal (por tras do overlay) continua montada e escutando eventos de `window.resize`. Ao entrar em tela cheia, o resize dispara `handleLayoutChange` na grid oculta, que **salva novas posicoes no banco de dados** baseadas no container escondido/comprimido. Os visuais atualizam via prop e a grid do Modo Foco re-renderiza com posicoes corrompidas.
 
-### Problema 2: Zoom causa corte nos visuais
+**CSS zoom afeta a medicao de largura:** Dentro do container com `zoom`, o `offsetWidth` retorna um valor reduzido. Quando o resize acontece, a grid mede uma largura menor, recalcula as posicoes dos itens, e os visuais encolhem.
 
-O `transform: scale()` escala visualmente mas nao altera o tamanho real do elemento no layout. O container pai nao sabe que o conteudo cresceu, causando overflow oculto e partes dos visuais cortadas.
+### Solucao (2 arquivos)
 
-### Solucao
+**Arquivo 1: `src/components/insights/InsightsMainContent.tsx`**
 
-**1. Usar `InsightsGrid` no Modo Foco (somente leitura)**
-
-Substituir o grid CSS simples pelo componente `InsightsGrid` real, porem com drag/resize desabilitado. Isso preserva exatamente o posicionamento configurado pelo usuario.
-
-Adicionar uma prop `readOnly` ao `InsightsGrid` que desabilita drag e resize.
-
-**2. Usar CSS `zoom` ao inves de `transform: scale()`**
-
-A propriedade CSS `zoom` altera o tamanho real de layout do conteudo. O browser recalcula o fluxo, scroll e dimensoes automaticamente -- nenhum conteudo fica oculto. Isso se aplica a todos os overlays de Modo Foco (Insights, WhatsApp, Dashboard, TikTok, Social Media).
-
-### Detalhes tecnicos
-
-**Arquivo 1:** `src/components/insights/grid/InsightsGrid.tsx`
-
-- Adicionar prop opcional `readOnly?: boolean`
-- Quando `readOnly=true`, desabilitar drag e resize no `GridLayout`
-
-**Arquivo 2:** `src/components/insights/InsightsMainContent.tsx`
-
-- No Modo Foco, substituir o `<div className="grid grid-cols-2">` pelo `<InsightsGrid visuals={visuals} onLayoutChange={() => {}} readOnly />` 
-- Trocar `transform: scale()` por `zoom: focusZoom / 100` no container de conteudo
-
-**Arquivos 3-5:** Aplicar a mesma troca de `transform: scale()` para `zoom` nos demais overlays:
-- `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`
-- `src/pages/Dashboard.tsx`
-- `src/components/marketing/TikTokDashboard.tsx`
-- `src/components/marketing/SocialMediaDashboard.tsx`
-
-### Mudanca de estilo (em todos os overlays)
+- Quando `isFocusMode` esta ativo, NAO renderizar a `InsightsGrid` normal. Substituir por `null` ou simplesmente ocultar com condicionais. Isso impede que a grid oculta dispare saves de layout durante fullscreen/resize.
 
 ```text
-// ANTES (causa corte):
-style={{ 
-  transform: `scale(${zoom / 100})`, 
-  transformOrigin: 'top center', 
-  width: `${10000 / zoom}%` 
-}}
+// ANTES (ambas as grids montadas):
+{focusModeOverlay}
+...
+<InsightsGrid visuals={visuals} onLayoutChange={handleLayoutChange} />
 
-// DEPOIS (zoom real sem corte):
-style={{ zoom: zoom / 100 }}
+// DEPOIS (grid normal desabilitada durante foco):
+{focusModeOverlay}
+...
+{!isFocusMode && <InsightsGrid visuals={visuals} onLayoutChange={handleLayoutChange} />}
 ```
 
-### Arquivos modificados
+**Arquivo 2: `src/components/insights/grid/InsightsGrid.tsx`**
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/components/insights/grid/InsightsGrid.tsx` | Adicionar prop `readOnly` |
-| `src/components/insights/InsightsMainContent.tsx` | Usar `InsightsGrid readOnly` + CSS `zoom` |
-| `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx` | CSS `zoom` |
-| `src/pages/Dashboard.tsx` | CSS `zoom` |
-| `src/components/marketing/TikTokDashboard.tsx` | CSS `zoom` |
-| `src/components/marketing/SocialMediaDashboard.tsx` | CSS `zoom` |
+- Ao medir a largura do container, compensar o zoom do ancestral. Usar `getBoundingClientRect().width` (que retorna tamanho visual pos-zoom) e dividir pelo ratio de zoom detectado:
+
+```text
+const updateWidth = () => {
+  if (containerRef.current) {
+    const rect = containerRef.current.getBoundingClientRect();
+    const offsetW = containerRef.current.offsetWidth;
+    // Se zoom estiver aplicado, rect.width != offsetWidth
+    // Usar offsetWidth que e o valor correto para layout CSS dentro do zoom
+    setWidth(offsetW);
+  }
+};
+```
+
+- Isso ja e o comportamento atual, mas para garantir estabilidade, adicionar um check: em modo `readOnly`, medir largura apenas uma vez no mount e ao entrar/sair de fullscreen (via `fullscreenchange` event), evitando re-medicoes por outros resize events que possam causar instabilidade:
+
+```text
+useEffect(() => {
+  const updateWidth = () => {
+    if (containerRef.current) {
+      setWidth(containerRef.current.offsetWidth);
+    }
+  };
+  updateWidth();
+  
+  if (readOnly) {
+    // Em readOnly, apenas re-medir ao mudar fullscreen (nao em qualquer resize)
+    document.addEventListener("fullscreenchange", updateWidth);
+    return () => document.removeEventListener("fullscreenchange", updateWidth);
+  } else {
+    window.addEventListener("resize", updateWidth);
+    return () => window.removeEventListener("resize", updateWidth);
+  }
+}, [readOnly]);
+```
+
+### Resumo das mudancas
+
+| Arquivo | Mudanca | Impacto |
+|---------|---------|---------|
+| `InsightsMainContent.tsx` | Nao renderizar grid normal quando Modo Foco ativo | Impede saves de layout corrompidos |
+| `InsightsGrid.tsx` | Em modo readOnly, re-medir largura apenas no fullscreenchange | Estabiliza dimensoes durante zoom |
 
