@@ -468,7 +468,8 @@ async function fetchLeadsData(
     let countQuery = supabase
       .from('leads')
       .select('*', { count: 'exact', head: true })
-      .eq('account_id', accountId);
+      .eq('account_id', accountId)
+      .is('converted_to_client_id', null);
 
     if (filters.startDate) {
       countQuery = countQuery.gte('created_at', filters.startDate);
@@ -496,7 +497,8 @@ async function fetchLeadsData(
     let query = supabase
       .from('leads')
       .select('id, status, source, revenue_range, created_at')
-      .eq('account_id', accountId);
+      .eq('account_id', accountId)
+      .is('converted_to_client_id', null);
 
     if (filters.startDate) {
       query = query.gte('created_at', filters.startDate);
