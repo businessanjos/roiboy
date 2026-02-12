@@ -248,6 +248,39 @@ serve(async (req) => {
       
       console.log(`[uazapi-manager] PIN ${pinHash ? 'updated' : 'removed'} for integration ${integration_id}`);
       result = { success: true };
+    
+    } else if (action === "unlink_instance") {
+      if (!integration_id) {
+        return new Response(
+          JSON.stringify({ error: "integration_id é obrigatório" }), 
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      const { data: int } = await supabase
+        .from("integrations")
+        .select("id")
+        .eq("id", integration_id)
+        .eq("account_id", accountId)
+        .single();
+        
+      if (!int) {
+        return new Response(
+          JSON.stringify({ error: "Instância não encontrada" }), 
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      const { error: deleteError } = await supabase
+        .from("integrations")
+        .delete()
+        .eq("id", integration_id)
+        .eq("account_id", accountId);
+        
+      if (deleteError) throw deleteError;
+      
+      console.log(`[uazapi-manager] Integration ${integration_id} unlinked successfully`);
+      result = { success: true };
     }
 
     return new Response(JSON.stringify({ data: result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
