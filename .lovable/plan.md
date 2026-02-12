@@ -1,48 +1,49 @@
 
-## Melhorias no create-deal: Item da Venda automatico
 
-### Contexto atual
+## Correcao: "Item da Venda" salvo como UUID em vez do valor correto do select
 
-A edge function `create-deal` ja recebe o campo `product_id` (nome do produto, ex: "Rykas Mentoring") e faz fuzzy match contra a tabela `products`. O UUID encontrado e salvo no campo personalizado "Item da Venda" (ID: `033b91fb`). Porem, ha melhorias a fazer para garantir que tudo funcione de ponta a ponta.
+### Problema identificado
 
-### Melhorias planejadas
+O campo "Item da Venda" e do tipo **select** com opcoes pre-definidas:
 
-#### 1. Corrigir duplicidade de insercao do "Item da Venda"
+| Label | Value |
+|-------|-------|
+| Rykas Pass | `rykas_pass` |
+| Rykas Mentoring | `rykas_mentoring` |
+| Eternum Club | `eternum_club` |
+| ... | ... |
 
-Atualmente, o `product_id` e salvo na secao de fuzzy match (linha ~156) E tambem pode ser salvo novamente na secao de campos customizados em batch se o parametro coincidir. Vamos garantir que o campo so seja inserido uma vez, usando `upsert` com `onConflict: 'deal_id,field_id'` para evitar erros.
+O codigo atual faz fuzzy match contra a tabela `products` e salva o **UUID do produto** (ex: `8d3e9bb6-054b-44b3-952f-5920e0ed8775`) no campo. Porem, a UI espera o **value da opcao** (ex: `rykas_mentoring`). Como o UUID nao corresponde a nenhuma opcao do select, o campo aparece vazio.
 
-#### 2. Auto-preencher o valor do negocio com o preco do produto
+### Solucao
 
-Quando `payload.value` nao for enviado (ou for 0), e o produto for encontrado, usar o `price` do produto como valor do negocio:
+Alem do fuzzy match contra a tabela `products` (que continua necessario para obter o preco e vincular o produto), adicionar um **segundo match** contra as opcoes do campo select para determinar o `value` correto a salvar.
 
-```text
-// Se produto encontrado e valor nao informado:
-if (productMatch && (!payload.value || payload.value === 0)) {
-  await supabase.from("deals").update({ value: productMatch.price }).eq("id", newDeal.id);
-}
-```
-
-#### 3. Melhorar o fuzzy match para lidar com `\n` e espacos extras
-
-O campo vindo do n8n pode conter `\n` no final (como visto na imagem: "Rykas Mentoring\n"). Adicionar sanitizacao:
+O fluxo sera:
 
 ```text
-const productName = payload.product_id.trim().replace(/\\n/g, '').replace(/\n/g, '');
+1. Recebe "Rykas Mentoring" do n8n
+2. Busca opcoes do campo select (custom_fields.options)
+3. Match "Rykas Mentoring" -> encontra opcao com label "Rykas Mentoring" -> value "rykas_mentoring"
+4. Salva "rykas_mentoring" em deal_field_values.value_text
+5. Busca produto na tabela products para obter preco (auto-fill do valor do negocio)
 ```
 
-#### 4. Usar upsert ao inves de insert para evitar conflitos
+### Mudanca tecnica
 
-Trocar `insert` por `upsert` no salvamento do campo "Item da Venda", garantindo idempotencia caso a funcao seja chamada mais de uma vez.
+**Arquivo:** `supabase/functions/create-deal/index.ts`
 
-### Arquivo modificado
+Na secao de fuzzy match do `product_id`:
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `supabase/functions/create-deal/index.ts` | Sanitizar nome do produto, upsert no campo Item da Venda, auto-preencher valor do negocio com preco do produto |
+1. Buscar as opcoes do campo select `033b91fb` na tabela `custom_fields`
+2. Fazer match do nome recebido contra as labels das opcoes (case-insensitive, com suporte a match parcial)
+3. Salvar o `value` da opcao encontrada (ex: `rykas_mentoring`) em vez do UUID do produto
+4. Se nenhuma opcao corresponder, salvar o nome original como fallback
+5. Manter o match contra `products` para obter o preco
 
 ### Resultado esperado
 
-- O campo "Item da Venda" nos campos personalizados sera preenchido corretamente com o UUID do produto
-- O valor do negocio sera preenchido automaticamente com o preco do produto quando nao informado
-- Nomes com caracteres extras (`\n`, espacos) serao limpos antes do matching
-- Sem risco de duplicidade de registros em `deal_field_values`
+- O campo "Item da Venda" aparecera preenchido corretamente na UI com a tag colorida (ex: "Rykas Mentoring" em azul)
+- O valor do negocio continuara sendo preenchido automaticamente com o preco do produto
+- Compativel com todos os itens: Rykas Pass, Rykas Mentoring, Eternum Club, etc.
+
