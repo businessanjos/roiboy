@@ -1,35 +1,30 @@
 
-## Reconectar instância [CANAL] Eternum Club ao setor de Operacoes
 
-### Problema
+## Corrigir recebimento de mensagens no ROY zAPP
 
-Na acao anterior, o comando `unlink_instance` **deletou o registro** da instancia "[CANAL] Eternum Club" do banco de dados. O objetivo era apenas desconecta-la do setor, nao remove-la completamente. Agora a instancia existe no UAZAPI (connected, phone 554388346806) mas nao existe mais na tabela `integrations` do ROY.
+### Causa raiz
 
-### Solucao
+O webhook de recebimento de mensagens (`uazapi-webhook`) possui uma trava de seguranca (kill switch) ativa na linha 198 do arquivo:
 
-**Passo 1: Re-inserir o registro na tabela `integrations`**
-
-Usar a action `add_instance_to_sector` que ja existe no `uazapi-manager` para re-vincular a instancia "[CANAL] Eternum Club" ao setor `operacoes`. Essa action busca a instancia no UAZAPI pelo nome, obtem o token e status, e insere no banco automaticamente.
-
-Chamar via edge function:
-```text
-action: "add_instance_to_sector"
-instance_name: "[CANAL] Eternum Club"
-sector_id: "operacoes"
+```
+const FUNCTION_DISABLED = true;
 ```
 
-**Passo 2: Verificar a conexao**
+Quando ativada, a funcao retorna status 200 imediatamente sem processar nenhuma mensagem recebida. Por isso:
+- Envio funciona (usa o `uazapi-manager`, funcao separada)
+- Recebimento nao funciona (depende do webhook que esta desligado)
 
-Apos a insercao, consultar o banco para confirmar que o registro foi criado corretamente com status `connected` e o token da instancia.
+### Correcao
 
-**Passo 3: Configurar webhook (se necessario)**
+Alterar uma unica linha no arquivo `supabase/functions/uazapi-webhook/index.ts`:
 
-Verificar se o campo `webhook_configured` precisa ser atualizado no config da integracao, garantindo que mensagens recebidas sejam processadas corretamente.
+| Arquivo | Mudanca |
+|---------|---------|
+| `supabase/functions/uazapi-webhook/index.ts` | Alterar `FUNCTION_DISABLED = true` para `FUNCTION_DISABLED = false` na linha 198 |
 
-### Observacao importante sobre o webhook
+Apos essa mudanca, o webhook voltara a processar mensagens recebidas normalmente, inserindo-as na tabela `zapp_messages` e atualizando a conversa em tempo real.
 
-O webhook do WhatsApp (`uazapi-webhook`) possui um kill switch ativo (`FUNCTION_DISABLED = true`). Mesmo reconectando a instancia, mensagens NAO serao processadas ate que o kill switch seja desativado. Isso e uma decisao separada.
+### Risco
 
-### Arquivos que serao modificados
+Esta flag foi ativada intencionalmente para reduzir consumo de recursos e custos. Reativa-la significa que o webhook voltara a consumir recursos do Cloud a cada mensagem recebida via WhatsApp. Se isso for aceitavel, a correcao e imediata.
 
-Nenhum arquivo de codigo precisa ser alterado. A acao sera feita via chamada direta ao edge function existente e, se necessario, insercao manual no banco.
