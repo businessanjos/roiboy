@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -16,6 +16,7 @@ import { ZappNavigationProvider } from "@/contexts/ZappNavigationContext";
 import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
 import { RequiredFieldsModal } from "./RequiredFieldsModal";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
+import { supabase } from "@/integrations/supabase/client";
 
 interface DealKanbanProps {
   stages: DealStage[];
@@ -38,6 +39,53 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
   const { validateDealMove } = useRequiredFieldsValidation();
   const [requiredFieldsModal, setRequiredFieldsModal] = useState<RequiredFieldsModalState | null>(null);
+  const [faturamentoMap, setFaturamentoMap] = useState<Record<string, string>>({});
+
+  // Batch fetch "Faturamento Atual" field values for all deals
+  const FATURAMENTO_FIELD_ID = 'ed5c7c0e-0740-4945-b982-70a593ffae0c';
+  
+  useEffect(() => {
+    if (deals.length === 0) return;
+    
+    const fetchFaturamento = async () => {
+      const dealIds = deals.map(d => d.id);
+      
+      // Fetch field values and the field definition (with options) in parallel
+      const [valuesRes, fieldRes] = await Promise.all([
+        supabase
+          .from("deal_field_values")
+          .select("deal_id, value_text")
+          .eq("field_id", FATURAMENTO_FIELD_ID)
+          .in("deal_id", dealIds)
+          .not("value_text", "is", null),
+        supabase
+          .from("custom_fields")
+          .select("options")
+          .eq("id", FATURAMENTO_FIELD_ID)
+          .single(),
+      ]);
+      
+      const optionMap: Record<string, string> = {};
+      if (fieldRes.data?.options && Array.isArray(fieldRes.data.options)) {
+        (fieldRes.data.options as Array<{ value: string; label: string }>).forEach(opt => {
+          optionMap[opt.value] = opt.label;
+        });
+      }
+      
+      const map: Record<string, string> = {};
+      if (valuesRes.data) {
+        valuesRes.data.forEach(v => {
+          if (v.value_text) {
+            map[v.deal_id] = optionMap[v.value_text] || v.value_text;
+          }
+        });
+      }
+      
+      setFaturamentoMap(map);
+    };
+    
+    fetchFaturamento();
+  }, [deals]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -180,6 +228,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
                 deals={dealsByStage[stage.id] || []}
                 onDealClick={onDealClick}
                 conversionRate={index > 0 ? conversionRates[stage.id] : undefined}
+                faturamentoMap={faturamentoMap}
               />
             ))}
           </div>
