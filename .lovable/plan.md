@@ -1,57 +1,37 @@
 
 
-## Botoes de "Evento Concluido", "Evento Cancelado" e "Reabrir Evento"
+## Adicionar coluna de Status e filtro na listagem de Eventos
 
 ### O que sera feito
 
-Adicionar no canto superior direito da pagina de detalhes do evento:
+1. **Nova coluna "Status"** na tabela de eventos, posicionada entre "Produtos" e "Acoes", exibindo badges coloridos:
+   - **Em Aberto** (badge outline/cinza) - para eventos com status `null`, `draft`, `planned`, `confirmed` ou `in_progress`
+   - **Concluido** (badge verde/secondary) - para status `completed`
+   - **Cancelado** (badge vermelho/destructive) - para status `cancelled`
 
-- **Evento Em Aberto** (status default): dois botoes visiveis
-  - "Evento Concluido" (verde, icone check) - marca como `completed`
-  - "Evento Cancelado" (vermelho, icone alerta) - marca como `cancelled`
+2. **Novo filtro de Status** ao lado dos filtros existentes (Tipo e Modalidade), com as opcoes:
+   - Todos os status (default)
+   - Em Aberto
+   - Concluido
+   - Cancelado
 
-- **Evento Concluido ou Cancelado**: um unico botao
-  - "Reabrir Evento" (cinza, icone de reabrir) - volta para `planned`
-
-Quando concluido ou cancelado:
-  - Botao "Editar" na aba Geral fica desabilitado
-  - Acoes de adicionar participantes/convidar ficam desabilitadas
-  - O status badge no header reflete o novo estado
+3. **Logica de filtragem** atualizada para considerar o novo filtro
 
 ### Detalhes tecnicos
 
-**Arquivo: `src/pages/EventDetail.tsx`**
+**Arquivo: `src/pages/Events.tsx`**
 
-1. Adicionar funcao `handleChangeStatus(newStatus: string)` que faz `supabase.from("events").update({ status }).eq("id", id)` e chama `fetchEvent()` apos sucesso
-2. No bloco de botoes do header (linha 272, `<div className="flex gap-2">`), adicionar:
-   - Se `event.status` NAO for `completed` nem `cancelled`: renderizar botao verde "Evento Concluido" e botao vermelho "Evento Cancelado"
-   - Se `event.status` FOR `completed` ou `cancelled`: renderizar botao cinza "Reabrir Evento"
-3. Adicionar dialogo de confirmacao (AlertDialog) antes de executar a acao, com mensagem adequada para cada caso
-4. Calcular `isLocked = event.status === 'completed' || event.status === 'cancelled'` e passar como prop para os componentes de tab que permitem edicao
-
-**Arquivo: `src/components/events/EventOverviewTab.tsx`**
-
-- Receber prop `isLocked?: boolean` e desabilitar o botao "Editar" quando `isLocked` for true
-
-**Arquivo: `src/components/events/EventParticipantsTab.tsx`**
-
-- Receber prop `isLocked?: boolean` e desabilitar botoes de adicionar/convidar participantes quando `isLocked` for true
-
-### Fluxo visual
-
-```text
-Status "Em Aberto" (planned/draft/qualquer outro):
-  [Evento Concluido (verde)]  [Evento Cancelado (vermelho)]
-
-Status "Concluido" ou "Cancelado":
-  [Reabrir Evento (cinza)]
-```
+- Adicionar estado `filterStatus` com valor default `"all"`
+- Incluir o campo `status` na interface `Event` (ja existe na tabela do banco, mas nao esta na interface local)
+- Adicionar um novo `FilterItem` com `Select` para o filtro de status entre as opcoes: "Todos os status", "Em Aberto", "Concluido", "Cancelado"
+- Atualizar `filteredEvents` para incluir filtro por status, mapeando "open" para qualquer status que nao seja `completed` nem `cancelled`
+- Atualizar `hasActiveFilters` e `clearFilters` para incluir o novo filtro
+- Adicionar `TableHead` "Status" no header da tabela (entre Produtos e Acoes)
+- Adicionar `TableCell` com badge colorido para cada evento na tabela
 
 ### Arquivos modificados
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/pages/EventDetail.tsx` | Botoes de status + funcao de update + AlertDialog de confirmacao + prop isLocked |
-| `src/components/events/EventOverviewTab.tsx` | Prop isLocked para desabilitar edicao |
-| `src/components/events/EventParticipantsTab.tsx` | Prop isLocked para desabilitar convites |
+| `src/pages/Events.tsx` | Nova coluna Status na tabela + novo filtro de status + estado filterStatus + logica de filtragem |
 
