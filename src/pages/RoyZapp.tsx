@@ -1735,11 +1735,14 @@ export default function RoyZapp() {
           }
         }
         
-        const { error } = await supabase.functions.invoke("uazapi-manager", {
+        const { data: sendResult, error } = await supabase.functions.invoke("uazapi-manager", {
           body: payload,
         });
         
         if (error) throw error;
+        
+        // Extract external_message_id from UAZAPI response
+        const externalId = sendResult?.data?.id || sendResult?.data?.messageid || sendResult?.id || sendResult?.messageid || null;
         
         // Save message to zapp_messages in background
         if (conversationId) {
@@ -1750,6 +1753,7 @@ export default function RoyZapp() {
             content: messageContent,
             message_type: "text",
             sent_at: now,
+            external_message_id: externalId,
             // Dados da mensagem citada
             quoted_message_id: replyContext?.external_message_id || null,
             quoted_content: replyContext?.content || null,
@@ -1761,7 +1765,7 @@ export default function RoyZapp() {
           // Replace temp message with real one and mark as sent
           if (insertedMessage) {
             setMessages(prev => prev.map(m => 
-              m.id === tempMessageId ? { ...m, id: insertedMessage.id, send_status: "sent" as const } : m
+              m.id === tempMessageId ? { ...m, id: insertedMessage.id, send_status: "sent" as const, external_message_id: externalId } : m
             ));
           }
           
@@ -2035,6 +2039,9 @@ export default function RoyZapp() {
         throw new Error(data.error || "Falha ao enviar mídia");
       }
       
+      // Extract external_message_id from UAZAPI response
+      const externalId = data?.data?.id || data?.data?.messageid || data?.id || data?.messageid || null;
+      
       // Save message to zapp_messages
       if (selectedConversation.zapp_conversation_id) {
         const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
@@ -2048,12 +2055,13 @@ export default function RoyZapp() {
           media_mimetype: file.type,
           media_filename: file.name,
           sent_at: now,
+          external_message_id: externalId,
         }).select("id").single();
         
         // Replace temp message with real one
         if (insertedMessage) {
           setMessages(prev => prev.map(m => 
-            m.id === tempMessageId ? { ...m, id: insertedMessage.id, media_url: mediaUrl } : m
+            m.id === tempMessageId ? { ...m, id: insertedMessage.id, media_url: mediaUrl, external_message_id: externalId } : m
           ));
         }
         
@@ -2339,10 +2347,16 @@ export default function RoyZapp() {
           throw new Error(innerData.message || "Falha ao enviar áudio");
         }
         
+        // Extract external_message_id from UAZAPI response and update DB record
+        const audioExternalId = innerData?.id || innerData?.messageid || data?.data?.id || data?.data?.messageid || null;
+        if (audioExternalId && insertedMessageId) {
+          await supabase.from("zapp_messages").update({ external_message_id: audioExternalId }).eq("id", insertedMessageId);
+        }
+        
         // 5. UPDATE UI: Mark as sent
         setMessages(prev => prev.map(m => 
           m.id === insertedMessageId 
-            ? { ...m, delivery_status: "sent" as const }
+            ? { ...m, delivery_status: "sent" as const, external_message_id: audioExternalId }
             : m
         ));
         
@@ -2571,11 +2585,14 @@ export default function RoyZapp() {
         payload.phone = phone;
       }
       
-      const { error } = await supabase.functions.invoke("uazapi-manager", {
+      const { data: contactSendResult, error } = await supabase.functions.invoke("uazapi-manager", {
         body: payload,
       });
       
       if (error) throw error;
+      
+      // Extract external_message_id from UAZAPI response
+      const contactExternalId = contactSendResult?.data?.id || contactSendResult?.data?.messageid || contactSendResult?.id || contactSendResult?.messageid || null;
       
       // Save message to zapp_messages
       if (selectedConversation.zapp_conversation_id) {
@@ -2586,11 +2603,12 @@ export default function RoyZapp() {
           content: contactMessage,
           message_type: "text",
           sent_at: now,
+          external_message_id: contactExternalId,
         }).select("id").single();
         
         if (insertedMessage) {
           setMessages(prev => prev.map(m => 
-            m.id === tempMessageId ? { ...m, id: insertedMessage.id } : m
+            m.id === tempMessageId ? { ...m, id: insertedMessage.id, external_message_id: contactExternalId } : m
           ));
         }
         
