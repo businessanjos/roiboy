@@ -33,7 +33,7 @@ export function InsightsMainContent() {
   // ESC listener
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isFocusMode) setIsFocusMode(false);
+      if (e.key === "Escape" && isFocusMode) { setIsFocusMode(false); setFocusZoom(100); }
     };
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
@@ -150,7 +150,7 @@ export function InsightsMainContent() {
                     <Maximize2 className="h-4 w-4" />
                   )}
                 </Button>
-                <Button variant="outline" size="icon" onClick={() => setIsFocusMode(false)}>
+                <Button variant="outline" size="icon" onClick={() => { setIsFocusMode(false); setFocusZoom(100); }}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
