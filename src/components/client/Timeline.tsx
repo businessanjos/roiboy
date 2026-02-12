@@ -762,8 +762,8 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
-  // Image paste/drop preview state
-  const [pastedImagePreview, setPastedImagePreview] = useState<{ file: File; url: string } | null>(null);
+  // File preview state (supports both images and documents)
+  const [filePreview, setFilePreview] = useState<{ file: File; url: string; type: "image" | "file" } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   // Track mentioned users from MentionTextarea callback (IDs are reliable, not regex-based)
   const [mentionedUsers, setMentionedUsers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
@@ -905,7 +905,11 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmitComment();
+      if (filePreview) {
+        sendFileWithComment();
+      } else {
+        handleSubmitComment();
+      }
     }
   };
 
@@ -926,7 +930,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
             return;
           }
           const previewUrl = URL.createObjectURL(file);
-          setPastedImagePreview({ file, url: previewUrl });
+          setFilePreview({ file, url: previewUrl, type: "image" });
         }
         break;
       }
@@ -955,47 +959,56 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
         return;
       }
       const previewUrl = URL.createObjectURL(file);
-      setPastedImagePreview({ file, url: previewUrl });
+      setFilePreview({ file, url: previewUrl, type: "image" });
     }
   };
 
-  // Discard pasted image preview
-  const discardImagePreview = () => {
-    if (pastedImagePreview) {
-      URL.revokeObjectURL(pastedImagePreview.url);
+  // Discard file preview
+  const discardFilePreview = () => {
+    if (filePreview) {
+      URL.revokeObjectURL(filePreview.url);
     }
-    setPastedImagePreview(null);
+    setFilePreview(null);
   };
 
-  // Send pasted/dropped image
-  const sendPastedImage = async () => {
-    if (!pastedImagePreview || !currentUser || !clientId) return;
+  // Send file with optional comment
+  const sendFileWithComment = async () => {
+    if (!filePreview || !currentUser || !clientId) return;
     
     setUploading(true);
     try {
-      const fileData = await uploadFile(pastedImagePreview.file);
+      const fileData = await uploadFile(filePreview.file);
       
-      const { error } = await supabase
+      const { data: newFollowup, error } = await supabase
         .from("client_followups")
         .insert({
           account_id: currentUser.account_id!,
           client_id: clientId,
           user_id: currentUser.id,
-          type: "image",
-          content: null,
+          type: filePreview.type,
+          content: comment.trim() || null,
           file_url: fileData.url,
           file_name: fileData.name,
           file_size: fileData.size,
-        });
+        })
+        .select("id")
+        .single();
 
       if (error) throw error;
       
-      toast.success("Imagem enviada!");
-      discardImagePreview();
+      // Create notifications for mentioned users
+      if (mentionedUsers.length > 0 && newFollowup) {
+        await createNotificationsWithAnchor(mentionedUsers.map((u) => u.id), comment.trim(), newFollowup.id);
+      }
+      
+      toast.success(filePreview.type === "image" ? "Imagem enviada!" : "Arquivo enviado!");
+      discardFilePreview();
+      setComment("");
+      setMentionedUsers([]);
       onCommentAdded?.();
     } catch (error: any) {
-      console.error("Error sending pasted image:", error);
-      toast.error("Erro ao enviar imagem");
+      console.error("Error sending file:", error);
+      toast.error("Erro ao enviar arquivo");
     } finally {
       setUploading(false);
     }
@@ -1097,8 +1110,8 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     };
   };
 
-  // Handle file selection from input
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "file") => {
+  // Handle file selection from input - now sets preview instead of immediate upload
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "file") => {
     const file = e.target.files?.[0];
     if (!file || !currentUser || !clientId) return;
 
@@ -1108,37 +1121,12 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
       return;
     }
 
-    setUploading(true);
-    try {
-      const fileData = await uploadFile(file);
-      
-      // Insert into client_followups table
-      const { error } = await supabase
-        .from("client_followups")
-        .insert({
-          account_id: currentUser.account_id!,
-          client_id: clientId,
-          user_id: currentUser.id,
-          type: type,
-          content: null,
-          file_url: fileData.url,
-          file_name: fileData.name,
-          file_size: fileData.size,
-        });
-
-      if (error) throw error;
-      
-      toast.success(type === "image" ? "Imagem enviada!" : "Arquivo enviado!");
-      onCommentAdded?.(); // Reload events
-    } catch (error: any) {
-      console.error("Error uploading file:", error);
-      toast.error("Erro ao enviar arquivo");
-    } finally {
-      setUploading(false);
-      // Clear input
-      if (type === "image" && imageInputRef.current) imageInputRef.current.value = "";
-      if (type === "file" && fileInputRef.current) fileInputRef.current.value = "";
-    }
+    const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : "";
+    setFilePreview({ file, url: previewUrl, type });
+    
+    // Clear input so same file can be re-selected
+    if (type === "image" && imageInputRef.current) imageInputRef.current.value = "";
+    if (type === "file" && fileInputRef.current) fileInputRef.current.value = "";
   };
 
   // Filter events based on active filters
@@ -1183,36 +1171,36 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
-              {/* Image paste/drop preview */}
-              {pastedImagePreview && (
+              {/* File preview (image or document) */}
+              {filePreview && (
                 <div className="flex items-center gap-3 p-3 mb-2 bg-muted/50 rounded-lg border">
-                  <img 
-                    src={pastedImagePreview.url} 
-                    alt="Preview" 
-                    className="h-16 w-16 object-cover rounded"
-                  />
+                  {filePreview.type === "image" && filePreview.url ? (
+                    <img 
+                      src={filePreview.url} 
+                      alt="Preview" 
+                      className="h-16 w-16 object-cover rounded"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 flex items-center justify-center bg-primary/10 rounded">
+                      <FileText className="h-6 w-6 text-primary" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">Imagem pronta para envio</p>
+                    <p className="text-sm font-medium">
+                      {filePreview.type === "image" ? "Imagem pronta para envio" : "Arquivo pronto para envio"}
+                    </p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {pastedImagePreview.file.name}
+                      {filePreview.file.name} · {formatFileSize(filePreview.file.size)}
                     </p>
                   </div>
                   <Button 
                     variant="ghost" 
                     size="icon"
                     className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={discardImagePreview}
+                    onClick={discardFilePreview}
                     disabled={uploading}
                   >
                     <Trash2 className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={sendPastedImage}
-                    disabled={uploading}
-                  >
-                    {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
                 </div>
               )}
@@ -1271,14 +1259,14 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
                     <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                {comment.trim() && (
+                {(comment.trim() || filePreview) && (
                   <button
                     type="button"
-                    onClick={handleSubmitComment}
-                    disabled={submitting}
+                    onClick={filePreview ? sendFileWithComment : handleSubmitComment}
+                    disabled={submitting || uploading}
                     className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
                   >
-                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {(submitting || uploading) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </button>
                 )}
               </div>
@@ -1361,36 +1349,36 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            {/* Image paste/drop preview */}
-            {pastedImagePreview && (
+            {/* File preview (image or document) */}
+            {filePreview && (
               <div className="flex items-center gap-3 p-3 mb-2 bg-muted/50 rounded-lg border">
-                <img 
-                  src={pastedImagePreview.url} 
-                  alt="Preview" 
-                  className="h-16 w-16 object-cover rounded"
-                />
+                {filePreview.type === "image" && filePreview.url ? (
+                  <img 
+                    src={filePreview.url} 
+                    alt="Preview" 
+                    className="h-16 w-16 object-cover rounded"
+                  />
+                ) : (
+                  <div className="h-16 w-16 flex items-center justify-center bg-primary/10 rounded">
+                    <FileText className="h-6 w-6 text-primary" />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">Imagem pronta para envio</p>
+                  <p className="text-sm font-medium">
+                    {filePreview.type === "image" ? "Imagem pronta para envio" : "Arquivo pronto para envio"}
+                  </p>
                   <p className="text-xs text-muted-foreground truncate">
-                    {pastedImagePreview.file.name}
+                    {filePreview.file.name} · {formatFileSize(filePreview.file.size)}
                   </p>
                 </div>
                 <Button 
                   variant="ghost" 
                   size="icon"
                   className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={discardImagePreview}
+                  onClick={discardFilePreview}
                   disabled={uploading}
                 >
                   <Trash2 className="h-4 w-4" />
-                </Button>
-                <Button 
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={sendPastedImage}
-                  disabled={uploading}
-                >
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
               </div>
             )}
@@ -1449,14 +1437,14 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
                   <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              {comment.trim() && (
+              {(comment.trim() || filePreview) && (
                 <button
                   type="button"
-                  onClick={handleSubmitComment}
-                  disabled={submitting}
+                  onClick={filePreview ? sendFileWithComment : handleSubmitComment}
+                  disabled={submitting || uploading}
                   className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
                 >
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                  {(submitting || uploading) ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </button>
               )}
             </div>
