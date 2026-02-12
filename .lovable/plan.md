@@ -1,32 +1,36 @@
 
 
-## Corrigir botao "..." (mais opcoes) nos paineis do Insights
+## Reordenar paineis do Insights com drag-and-drop
 
-### Problema
+### O que sera feito
 
-O `DropdownMenu` e renderizado condicionalmente com base no estado `showActions`, que e controlado por `onMouseEnter`/`onMouseLeave` do div pai. Quando o usuario clica no botao "...", o dropdown abre, mas o conteudo do menu e renderizado em um **portal** (fora do div pai). O mouse saindo do div pai dispara `onMouseLeave`, que seta `showActions = false`, desmontando o `DropdownMenu` inteiro antes que o usuario consiga interagir.
+Adicionar a possibilidade de arrastar e soltar os paineis na sidebar do Insights para reordena-los livremente. A nova ordem sera salva no banco de dados.
 
-### Solucao
+### Mudancas necessarias
 
-Adicionar um estado `dropdownOpen` controlado para o `DropdownMenu` e incluir essa variavel na condicao de renderizacao, garantindo que o dropdown permaneca montado enquanto estiver aberto.
+**1. Banco de dados**
+
+A tabela `insights_dashboards` nao possui uma coluna de ordenacao. Sera criada uma coluna `display_order` (integer, default 0) para persistir a ordem personalizada.
+
+**2. Frontend - Drag and drop**
+
+O projeto ja possui `@dnd-kit/core` e `@dnd-kit/sortable` instalados. Serao utilizados para implementar o arraste na lista de paineis.
 
 ### Arquivos afetados
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/components/insights/sidebar/InsightsDashboardItem.tsx` | Adicionar estado `dropdownOpen`, usar `DropdownMenu` controlado (`open`/`onOpenChange`), incluir `dropdownOpen` na condicao de visibilidade |
-| `src/components/insights/sidebar/InsightsPanelItem.tsx` | Mesma correcao |
+| Migracao SQL | Adicionar coluna `display_order` integer default 0 na tabela `insights_dashboards` |
+| `src/hooks/useInsightsDashboards.tsx` | Ordenar dashboards por `display_order` em vez de `created_at`; adicionar mutation `reorderDashboards` que atualiza o `display_order` de cada dashboard |
+| `src/components/insights/sidebar/InsightsDashboardList.tsx` | Envolver a lista com `DndContext` e `SortableContext` do dnd-kit; receber callback `onReorder` |
+| `src/components/insights/sidebar/InsightsDashboardItem.tsx` | Usar `useSortable` do dnd-kit para tornar cada item arrastavel (grip handle ou arrastar pelo item inteiro) |
+| `src/components/insights/sidebar/InsightsSidebar.tsx` | Passar a funcao `reorderDashboards` para o `InsightsDashboardList` |
 
 ### Detalhes tecnicos
 
-Em ambos os arquivos:
-
-1. Adicionar `const [dropdownOpen, setDropdownOpen] = useState(false);`
-2. Mudar a condicao de renderizacao de:
-   - `showActions || renameDialogOpen || deleteDialogOpen`
-   - para: `showActions || dropdownOpen || renameDialogOpen || deleteDialogOpen`
-3. Tornar o `DropdownMenu` controlado:
-   - `<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>`
-
-Isso garante que quando o dropdown esta aberto, ele permanece montado mesmo que o mouse saia do div pai.
+- A migracao inicializara `display_order` com base na ordem atual de `created_at` usando `ROW_NUMBER()`
+- O query de fetch ordenara por `display_order ASC, created_at ASC`
+- Ao soltar um item (`onDragEnd`), calcula a nova ordem e faz um batch update otimista no cache do react-query, seguido de updates individuais no banco
+- O icone de grip (6 pontos) aparecera ao lado esquerdo de cada item, antes do icone do painel
+- O padrao segue exatamente o que ja existe em `SortableFieldItem.tsx` do modulo de vendas
 
