@@ -71,11 +71,11 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
   // Render loading state
   if (isLoading) {
     return (
-      <Card className="min-h-[250px]">
-        <CardHeader className="pb-2">
+      <Card className="h-full flex flex-col">
+        <CardHeader className="pb-2 flex-shrink-0">
           <Skeleton className="h-5 w-40" />
         </CardHeader>
-        <CardContent className="h-[200px]">
+        <CardContent className="flex-1">
           <Skeleton className="h-full w-full" />
         </CardContent>
       </Card>
@@ -85,14 +85,14 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
   // Render error state
   if (error) {
     return (
-      <Card className="min-h-[250px]">
-        <CardHeader className="pb-2">
+      <Card className="h-full flex flex-col">
+        <CardHeader className="pb-2 flex-shrink-0">
           <CardTitle className="text-base flex items-center gap-2">
             <AlertCircle className="h-4 w-4 text-destructive" />
             {visual.title || "Erro"}
           </CardTitle>
         </CardHeader>
-        <CardContent className="h-[200px] flex items-center justify-center">
+        <CardContent className="flex-1 flex items-center justify-center">
           <p className="text-sm text-destructive">Erro ao carregar dados</p>
         </CardContent>
       </Card>
@@ -102,11 +102,11 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
   // Render empty config state
   if (!config) {
     return (
-      <Card className="min-h-[250px]">
-        <CardHeader className="pb-2">
+      <Card className="h-full flex flex-col">
+        <CardHeader className="pb-2 flex-shrink-0">
           <CardTitle className="text-base">{visual.title || "Visual"}</CardTitle>
         </CardHeader>
-        <CardContent className="h-[200px] flex flex-col items-center justify-center text-muted-foreground">
+        <CardContent className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
           <BarChart3 className="h-12 w-12 mb-2 opacity-50" />
           <p className="text-sm">Configuração não encontrada</p>
         </CardContent>
@@ -121,7 +121,7 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
 
   return (
     <>
-      <Card className="min-h-[250px] flex flex-col h-full">
+      <Card className="flex flex-col h-full">
         <CardHeader className="pb-2 flex-shrink-0">
           <CardTitle className="text-base flex items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
@@ -170,7 +170,7 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 min-h-[200px]">
+        <CardContent className="flex-1 min-h-0">
           <ConfigurableChart
             type={chartType}
             data={processedData}
