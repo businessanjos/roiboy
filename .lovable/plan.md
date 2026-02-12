@@ -1,41 +1,67 @@
 
-## Zoom individual para cada janela com Modo Foco
 
-### O que sera feito
+## Corrigir layout e zoom no Modo Foco dos Insights
 
-Cada overlay de "Modo Foco" tera um controle de zoom independente (slider de 50% a 200%), permitindo ajustar o tamanho do conteudo individualmente em cada tela/monitor sem afetar as outras janelas do ROY.
+### Problema 1: Layout nao preservado
 
-### Como vai funcionar
+O Modo Foco renderiza os visuais em um grid CSS simples (`grid-cols-2`), ignorando completamente as posicoes salvas no `InsightsGrid`. Por isso o "Ranking de Vendedores" aparece lado a lado com o "Calls Comerciais" no Modo Foco, mas na visualizacao normal um fica acima do outro.
 
-- Um slider de zoom aparece no header do Modo Foco, entre os botoes existentes
-- O zoom aplica `transform: scale(X)` no container de conteudo, com `transform-origin: top center`
-- Cada janela mantem seu proprio estado de zoom, independente das outras
-- O valor padrao e 100%
-- Botoes de + e - para ajuste fino, alem do slider
+### Problema 2: Zoom causa corte nos visuais
+
+O `transform: scale()` escala visualmente mas nao altera o tamanho real do elemento no layout. O container pai nao sabe que o conteudo cresceu, causando overflow oculto e partes dos visuais cortadas.
+
+### Solucao
+
+**1. Usar `InsightsGrid` no Modo Foco (somente leitura)**
+
+Substituir o grid CSS simples pelo componente `InsightsGrid` real, porem com drag/resize desabilitado. Isso preserva exatamente o posicionamento configurado pelo usuario.
+
+Adicionar uma prop `readOnly` ao `InsightsGrid` que desabilita drag e resize.
+
+**2. Usar CSS `zoom` ao inves de `transform: scale()`**
+
+A propriedade CSS `zoom` altera o tamanho real de layout do conteudo. O browser recalcula o fluxo, scroll e dimensoes automaticamente -- nenhum conteudo fica oculto. Isso se aplica a todos os overlays de Modo Foco (Insights, WhatsApp, Dashboard, TikTok, Social Media).
 
 ### Detalhes tecnicos
 
-**Novo arquivo:** `src/components/ui/zoom-controls.tsx`
+**Arquivo 1:** `src/components/insights/grid/InsightsGrid.tsx`
 
-Componente reutilizavel com:
-- Slider (range 50%-200%, step 10%)
-- Botoes ZoomIn/ZoomOut
-- Label com porcentagem atual
-- Props: `zoom`, `onZoomChange`
+- Adicionar prop opcional `readOnly?: boolean`
+- Quando `readOnly=true`, desabilitar drag e resize no `GridLayout`
 
-**5 arquivos modificados** (adicionar zoom ao Modo Foco de cada um):
+**Arquivo 2:** `src/components/insights/InsightsMainContent.tsx`
 
-| Arquivo | Janela |
-|---------|--------|
-| `src/pages/Dashboard.tsx` | Dashboard Operacional (Gestao) |
-| `src/components/insights/InsightsMainContent.tsx` | Insights / Leaderboard |
-| `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx` | WhatsApp Dashboard |
-| `src/components/marketing/TikTokDashboard.tsx` | TikTok Dashboard |
-| `src/components/marketing/SocialMediaDashboard.tsx` | Social Media Dashboard |
+- No Modo Foco, substituir o `<div className="grid grid-cols-2">` pelo `<InsightsGrid visuals={visuals} onLayoutChange={() => {}} readOnly />` 
+- Trocar `transform: scale()` por `zoom: focusZoom / 100` no container de conteudo
 
-Em cada arquivo:
-1. Adicionar estado `const [zoom, setZoom] = useState(100)`
-2. Inserir `<ZoomControls zoom={zoom} onZoomChange={setZoom} />` no header do overlay
-3. Envolver o conteudo do overlay com `<div style={{ transform: \`scale(${zoom / 100})\`, transformOrigin: 'top center', width: \`${10000 / zoom}%\` }}>` para manter o conteudo centralizado e responsivo ao zoom
+**Arquivos 3-5:** Aplicar a mesma troca de `transform: scale()` para `zoom` nos demais overlays:
+- `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`
+- `src/pages/Dashboard.tsx`
+- `src/components/marketing/TikTokDashboard.tsx`
+- `src/components/marketing/SocialMediaDashboard.tsx`
 
-A propriedade `width` compensatoria garante que ao dar zoom-out (ex: 70%) o conteudo se expanda para preencher a tela, e ao dar zoom-in (ex: 150%) o conteudo se reduza proporcionalmente, evitando espacos vazios ou overflow horizontal.
+### Mudanca de estilo (em todos os overlays)
+
+```text
+// ANTES (causa corte):
+style={{ 
+  transform: `scale(${zoom / 100})`, 
+  transformOrigin: 'top center', 
+  width: `${10000 / zoom}%` 
+}}
+
+// DEPOIS (zoom real sem corte):
+style={{ zoom: zoom / 100 }}
+```
+
+### Arquivos modificados
+
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/components/insights/grid/InsightsGrid.tsx` | Adicionar prop `readOnly` |
+| `src/components/insights/InsightsMainContent.tsx` | Usar `InsightsGrid readOnly` + CSS `zoom` |
+| `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx` | CSS `zoom` |
+| `src/pages/Dashboard.tsx` | CSS `zoom` |
+| `src/components/marketing/TikTokDashboard.tsx` | CSS `zoom` |
+| `src/components/marketing/SocialMediaDashboard.tsx` | CSS `zoom` |
+
