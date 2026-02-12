@@ -94,6 +94,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
   const [loading, setLoading] = useState(true);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [showAllCompleted, setShowAllCompleted] = useState(false);
 
   useEffect(() => {
     fetchTasks();
@@ -318,7 +319,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
                 Concluídas ({completedTasks.length})
               </p>
               <div className="rounded-lg border bg-muted/20 divide-y opacity-70">
-                {completedTasks.slice(0, 5).map((task) => (
+                {completedTasks.slice(0, showAllCompleted ? completedTasks.length : 5).map((task) => (
                   <div
                     key={task.id}
                     className="flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/30"
@@ -339,9 +340,15 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
                   </div>
                 ))}
                 {completedTasks.length > 5 && (
-                  <div className="text-center text-[10px] text-muted-foreground py-1.5">
-                    + {completedTasks.length - 5} outras
-                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowAllCompleted(!showAllCompleted);
+                    }}
+                    className="w-full text-center text-[10px] text-muted-foreground py-1.5 hover:bg-muted/30 cursor-pointer"
+                  >
+                    {showAllCompleted ? "Mostrar menos" : `+ ${completedTasks.length - 5} outras`}
+                  </button>
                 )}
               </div>
             </div>
