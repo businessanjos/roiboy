@@ -214,6 +214,12 @@ serve(async (req) => {
 
     // Determine event type (UAZAPI uses EventType, some versions use event)
     const eventType = payload.EventType || payload.event;
+    
+    // ============================================
+    // DIAGNOSTIC LOG: Log ALL incoming events to discover exact format
+    // ============================================
+    const payloadKeys = Object.keys(payload).join(",");
+    console.log(`[WEBHOOK-DIAG] Event received: "${eventType || 'NONE'}", keys: [${payloadKeys}]`);
 
     // ============================================
     // EARLY-RETURN: Skip low-value events BEFORE creating Supabase client
@@ -256,10 +262,28 @@ serve(async (req) => {
     // 4. LIGHTWEIGHT ACK HANDLER: Process ack events with minimal overhead
     // ACK events are ~30% of all invocations (3 per message: sent→delivered→read)
     // They only need 1 UPDATE query, so we bypass the full integration identification flow
-    const isAckEvent = eventType === "messages.ack" || eventType === "message.ack" || 
-                       eventType === "ack" || eventType === "messages.update";
+    
+    // Detect ACK by event name OR by payload content (some UAZAPI versions use different event names)
+    const payloadAny = payload as Record<string, unknown>;
+    const isAckByEventName = eventType === "messages.ack" || eventType === "message.ack" || 
+                       eventType === "ack" || eventType === "messages.update" ||
+                       eventType === "message_ack" || eventType === "MESSAGE_ACK" ||
+                       eventType === "message.update" || eventType === "MESSAGE_UPDATE" ||
+                       eventType === "status.update" || eventType === "message_status";
+    
+    // Also detect ACK by payload content: if payload has 'ack' field or data.messages[0].update.status
+    const hasAckField = payloadAny.ack !== undefined;
+    const dataMessages = (payloadAny.data as Record<string, unknown>)?.messages;
+    const hasUpdateInData = Array.isArray(dataMessages) && 
+      dataMessages.length > 0 && 
+      (dataMessages[0] as Record<string, unknown>)?.update !== undefined;
+    
+    const isAckEvent = isAckByEventName || hasAckField || hasUpdateInData;
+    
     if (isAckEvent) {
-      const payloadAny = payload as Record<string, unknown>;
+      console.log(`[ACK-DIAG] ACK event detected! eventType="${eventType}", isAckByEventName=${isAckByEventName}, hasAckField=${hasAckField}, hasUpdateInData=${hasUpdateInData}`);
+      console.log(`[ACK-DIAG] Payload snippet: ${JSON.stringify(payloadAny).substring(0, 500)}`);
+      
       let messageId = "";
       let ack = 0;
       
@@ -271,16 +295,24 @@ serve(async (req) => {
         const msgUpdate = (dataObj.messages as Array<Record<string, unknown>>)[0];
         messageId = (msgUpdate?.key as Record<string, unknown>)?.id as string || "";
         const updateObj = msgUpdate?.update as Record<string, unknown>;
-        ack = Number(updateObj?.status || msgUpdate?.ack || 0);
+        ack = Number(updateObj?.status || msgUpdate?.ack || updateObj?.ack || 0);
       } else if (dataObj?.id || msgObj?.id) {
         messageId = String(dataObj?.id || msgObj?.id || "");
-        ack = Number(dataObj?.ack || payloadAny.ack || 0);
+        ack = Number(dataObj?.ack || dataObj?.status || msgObj?.ack || msgObj?.status || payloadAny.ack || 0);
       } else if (payloadAny.ack !== undefined) {
-        messageId = String(payloadAny.id || "");
+        messageId = String(payloadAny.id || payloadAny.messageId || payloadAny.message_id || "");
         ack = Number(payloadAny.ack);
       }
+      // Try extracting from message.id if still empty
+      if (!messageId && msgObj) {
+        messageId = String(msgObj.id || msgObj.messageId || msgObj.message_id || "");
+        if (!ack) ack = Number(msgObj.ack || msgObj.status || 0);
+      }
+      
+      console.log(`[ACK-DIAG] Extracted: messageId="${messageId}", ack=${ack}`);
       
       if (!messageId) {
+        console.log(`[ACK-DIAG] No message ID found, skipping. Full payload: ${JSON.stringify(payloadAny).substring(0, 1000)}`);
         return new Response(JSON.stringify({ ignored: true, reason: "ack_no_message_id" }), { 
           headers: { ...corsHeaders, "Content-Type": "application/json" } 
         });
@@ -288,17 +320,26 @@ serve(async (req) => {
       
       const status = ack === 4 ? "read" : ack === 3 ? "delivered" : ack === 2 ? "sent" : ack === 1 ? "pending" : "failed";
       
+      console.log(`[ACK] Processing: messageId="${messageId}", ack=${ack}, status="${status}"`);
+      
       // Single lightweight query - no integration lookup needed
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const ackSupabase = createClient(supabaseUrl, supabaseKey);
       
-      await ackSupabase
+      const { data: updateResult, error: updateError } = await ackSupabase
         .from("zapp_messages")
         .update({ delivery_status: status })
-        .eq("external_message_id", messageId);
+        .eq("external_message_id", messageId)
+        .select("id, external_message_id, delivery_status");
       
-      return new Response(JSON.stringify({ success: true, event: eventType, status }), { 
+      if (updateError) {
+        console.error(`[ACK] Update error: ${updateError.message}`);
+      } else {
+        console.log(`[ACK] Updated ${updateResult?.length || 0} messages to status "${status}" for external_message_id="${messageId}"`);
+      }
+      
+      return new Response(JSON.stringify({ success: true, event: eventType, status, messagesUpdated: updateResult?.length || 0 }), { 
         headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
     }
