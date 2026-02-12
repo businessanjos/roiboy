@@ -14,12 +14,14 @@ import { EngagementByDayCards } from "./EngagementByDayCards";
 import { TimeSavedCard } from "./TimeSavedCard";
 import { InsightsFilterBar } from "../InsightsFilterBar";
 import { CollapsibleSection } from "./CollapsibleSection";
+import { ZoomControls } from "@/components/ui/zoom-controls";
 
 export function WhatsAppDashboardPanel() {
   const { data, isLoading } = useWhatsAppDashboardData();
 
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [focusZoom, setFocusZoom] = useState(100);
   const focusModeRef = useRef<HTMLDivElement>(null);
 
   // ESC listener
@@ -183,7 +185,8 @@ export function WhatsAppDashboardPanel() {
                 <h1 className="text-3xl font-bold">Dashboard Operacional - WhatsApp</h1>
                 <p className="text-sm text-muted-foreground">Métricas de agendamento e eficiência operacional</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
+                <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} />
                 <Button variant="outline" size="icon" onClick={toggleFullscreen}>
                   {isFullscreen ? (
                     <Minimize2 className="h-4 w-4" />
@@ -197,11 +200,13 @@ export function WhatsAppDashboardPanel() {
               </div>
             </div>
 
+            <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top center', width: `${10000 / focusZoom}%` }}>
             {/* Filters */}
             <InsightsFilterBar />
 
             {/* Dashboard Content */}
             {dashboardContent}
+            </div>
           </div>
         </div>,
         document.body
