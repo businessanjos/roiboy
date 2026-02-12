@@ -113,6 +113,7 @@ interface Event {
   checkin_code: string | null;
   created_at: string;
   client_id: string | null;
+  status: string | null;
 }
 
 interface Product {
@@ -150,6 +151,7 @@ export default function Events() {
   const [filterModality, setFilterModality] = useState<string>("all");
   const [modalityTab, setModalityTab] = useState<"all" | "presencial" | "online">("all");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   // Form state
   const [title, setTitle] = useState("");
@@ -590,18 +592,28 @@ export default function Events() {
     const matchesModality = filterModality === "all" || event.modality === filterModality;
     const matchesModalityTab = modalityTab === "all" || event.modality === modalityTab;
     
-    return matchesSearch && matchesType && matchesModality && matchesModalityTab;
+    let matchesStatus = true;
+    if (filterStatus === "open") {
+      matchesStatus = !event.status || (event.status !== "completed" && event.status !== "cancelled");
+    } else if (filterStatus === "completed") {
+      matchesStatus = event.status === "completed";
+    } else if (filterStatus === "cancelled") {
+      matchesStatus = event.status === "cancelled";
+    }
+    
+    return matchesSearch && matchesType && matchesModality && matchesModalityTab && matchesStatus;
   });
 
   // Count events by modality
   const presencialCount = events.filter(e => e.modality === "presencial").length;
   const onlineCount = events.filter(e => e.modality === "online").length;
 
-  const hasActiveFilters = filterEventType !== "all" || filterModality !== "all";
+  const hasActiveFilters = filterEventType !== "all" || filterModality !== "all" || filterStatus !== "all";
 
   const clearFilters = () => {
     setFilterEventType("all");
     setFilterModality("all");
+    setFilterStatus("all");
   };
 
   return (
@@ -664,6 +676,19 @@ export default function Events() {
                     <SelectItem value="all">Todas</SelectItem>
                     <SelectItem value="online">Online</SelectItem>
                     <SelectItem value="presencial">Presencial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FilterItem>
+              <FilterItem>
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-full sm:w-[150px] h-10">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os status</SelectItem>
+                    <SelectItem value="open">Em Aberto</SelectItem>
+                    <SelectItem value="completed">Concluído</SelectItem>
+                    <SelectItem value="cancelled">Cancelado</SelectItem>
                   </SelectContent>
                 </Select>
               </FilterItem>
@@ -1186,6 +1211,7 @@ export default function Events() {
                     </TableHead>
                     <TableHead className="min-w-[80px]">Vagas</TableHead>
                     <TableHead className="min-w-[120px]">Produtos</TableHead>
+                    <TableHead className="min-w-[100px]">Status</TableHead>
                     <TableHead className="text-right min-w-[100px]">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1301,6 +1327,22 @@ export default function Events() {
                             ))
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {event.status === "completed" ? (
+                          <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20">
+                            <Check className="h-3 w-3 mr-1" />
+                            Concluído
+                          </Badge>
+                        ) : event.status === "cancelled" ? (
+                          <Badge variant="destructive">
+                            Cancelado
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">
+                            Em Aberto
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">
