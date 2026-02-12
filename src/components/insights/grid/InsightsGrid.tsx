@@ -32,26 +32,26 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
   const existingLayout = visual.layout;
 
   if (existingLayout) {
-    const isOldScale = existingLayout.x <= 12 && existingLayout.w <= 12;
-
-    if (isOldScale) {
+    // Explicit scale marker means it was saved in 48-col grid — use as-is
+    if (existingLayout.scale === 48) {
       return {
         i: visual.id,
-        x: existingLayout.x * 4,
-        y: existingLayout.y * 5,
-        w: existingLayout.w * 4,
-        h: existingLayout.h * 5,
+        x: existingLayout.x,
+        y: existingLayout.y,
+        w: existingLayout.w,
+        h: existingLayout.h,
         minW: 8,
         minH: 10,
       };
     }
 
+    // Legacy: no scale marker — apply 12→48 migration
     return {
       i: visual.id,
-      x: existingLayout.x,
-      y: existingLayout.y,
-      w: existingLayout.w,
-      h: existingLayout.h,
+      x: existingLayout.x * 4,
+      y: existingLayout.y * 5,
+      w: existingLayout.w * 4,
+      h: existingLayout.h * 5,
       minW: 8,
       minH: 10,
     };
@@ -129,7 +129,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
       // Persist to DB
       const layoutUpdates = newLayout.map((item) => ({
         id: item.i,
-        layout: { i: item.i, x: item.x, y: item.y, w: item.w, h: item.h },
+        layout: { i: item.i, x: item.x, y: item.y, w: item.w, h: item.h, scale: 48 },
       }));
       onLayoutChange(layoutUpdates);
     },
