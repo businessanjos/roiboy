@@ -112,10 +112,9 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
     }
   }, [readOnly]);
 
-  // Handle user drag/resize stop — update local state AND persist
-  const handleUserLayoutChange = useCallback(
+  // Keep local layout in sync continuously during drag/resize (prevents snap-back)
+  const handleContinuousLayoutChange = useCallback(
     (newLayout: LayoutItem[]) => {
-      // Update local state immediately (prevents snap-back)
       setLocalLayout(newLayout.map(item => ({
         i: item.i,
         x: item.x,
@@ -125,8 +124,13 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
         minW: 8,
         minH: 10,
       })));
+    },
+    []
+  );
 
-      // Persist to DB
+  // Persist to DB only on drag/resize stop
+  const handlePersist = useCallback(
+    (newLayout: LayoutItem[]) => {
       const layoutUpdates = newLayout.map((item) => ({
         id: item.i,
         layout: { i: item.i, x: item.x, y: item.y, w: item.w, h: item.h, scale: 48 },
@@ -134,20 +138,6 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
       onLayoutChange(layoutUpdates);
     },
     [onLayoutChange]
-  );
-
-  const handleDragStop = useCallback(
-    (layout: LayoutItem[]) => {
-      handleUserLayoutChange(layout);
-    },
-    [handleUserLayoutChange]
-  );
-
-  const handleResizeStop = useCallback(
-    (layout: LayoutItem[]) => {
-      handleUserLayoutChange(layout);
-    },
-    [handleUserLayoutChange]
   );
 
   if (visuals.length === 0) {
@@ -160,8 +150,9 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
         className="layout"
         layout={localLayout}
         width={width}
-        onDragStop={handleDragStop}
-        onResizeStop={handleResizeStop}
+        onLayoutChange={handleContinuousLayoutChange}
+        onDragStop={handlePersist}
+        onResizeStop={handlePersist}
         gridConfig={{
           cols: COLS,
           rowHeight: ROW_HEIGHT,
