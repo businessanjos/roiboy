@@ -27,8 +27,21 @@ import {
   QrCode,
   ExternalLink,
   Image,
-  MessageSquare
+  MessageSquare,
+  CheckCircle2,
+  AlertTriangle,
+  RotateCcw
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 import EventScheduleTab from "@/components/events/EventScheduleTab";
 import EventChecklistTab from "@/components/events/EventChecklistTab";
@@ -79,6 +92,8 @@ export default function EventDetail() {
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("overview");
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
 
   // Stats for the overview
   const [stats, setStats] = useState({
@@ -185,6 +200,39 @@ export default function EventDetail() {
     });
   };
 
+  const isLocked = event?.status === 'completed' || event?.status === 'cancelled';
+
+  const handleChangeStatus = async (newStatus: string) => {
+    if (!id) return;
+    const { error } = await supabase
+      .from("events")
+      .update({ status: newStatus })
+      .eq("id", id);
+
+    if (error) {
+      toast({ title: "Erro", description: "Não foi possível alterar o status", variant: "destructive" });
+    } else {
+      toast({ title: "Sucesso", description: "Status do evento atualizado" });
+      fetchEvent();
+      fetchStats();
+    }
+  };
+
+  const confirmStatusChange = (status: string) => {
+    setPendingStatus(status);
+    setStatusDialogOpen(true);
+  };
+
+  const getStatusDialogContent = () => {
+    if (pendingStatus === 'completed') {
+      return { title: "Concluir Evento", description: "Tem certeza que deseja marcar este evento como concluído? Não será possível fazer alterações ou convidar participantes enquanto estiver concluído." };
+    }
+    if (pendingStatus === 'cancelled') {
+      return { title: "Cancelar Evento", description: "Tem certeza que deseja cancelar este evento? Não será possível fazer alterações ou convidar participantes enquanto estiver cancelado." };
+    }
+    return { title: "Reabrir Evento", description: "Deseja reabrir este evento? Ele voltará ao status 'Planejado' e poderá ser editado novamente." };
+  };
+
   const getEventTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
       live: "Live",
@@ -269,7 +317,7 @@ export default function EventDetail() {
             </div>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {event.meeting_url && (
               <Button variant="outline" size="sm" asChild>
                 <a href={event.meeting_url} target="_blank" rel="noopener noreferrer">
@@ -282,6 +330,35 @@ export default function EventDetail() {
               <Button variant="outline" size="sm">
                 <QrCode className="h-4 w-4 mr-2" />
                 {event.checkin_code}
+              </Button>
+            )}
+            {!isLocked ? (
+              <>
+                <Button 
+                  size="sm" 
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={() => confirmStatusChange('completed')}
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Evento Concluído
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="destructive"
+                  onClick={() => confirmStatusChange('cancelled')}
+                >
+                  <AlertTriangle className="h-4 w-4 mr-2" />
+                  Evento Cancelado
+                </Button>
+              </>
+            ) : (
+              <Button 
+                size="sm" 
+                variant="secondary"
+                onClick={() => confirmStatusChange('planned')}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reabrir Evento
               </Button>
             )}
           </div>
@@ -421,7 +498,8 @@ export default function EventDetail() {
             onUpdate={() => {
               fetchEvent();
               fetchStats();
-            }} 
+            }}
+            isLocked={isLocked}
           />
         </TabsContent>
 
@@ -464,6 +542,7 @@ export default function EventDetail() {
             accountId={accountId}
             maxCapacity={event.max_capacity}
             onUpdate={fetchStats}
+            isLocked={isLocked}
           />
         </TabsContent>
 
@@ -479,6 +558,25 @@ export default function EventDetail() {
           <EventFeedbackTab eventId={event.id} accountId={accountId} />
         </TabsContent>
       </Tabs>
+
+      {/* Status Change Confirmation Dialog */}
+      <AlertDialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{getStatusDialogContent().title}</AlertDialogTitle>
+            <AlertDialogDescription>{getStatusDialogContent().description}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (pendingStatus) handleChangeStatus(pendingStatus);
+              setStatusDialogOpen(false);
+            }}>
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
