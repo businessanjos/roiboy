@@ -1,5 +1,5 @@
 export type DataSource = 'deals' | 'leads' | 'products' | 'tasks';
-export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate';
+export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate' | 'sales_cycle';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
 export type ChartType = 'bar' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial';
@@ -59,6 +59,7 @@ export const AGGREGATION_OPTIONS: { value: Aggregation; label: string }[] = [
   { value: 'sum', label: 'Soma' },
   { value: 'avg', label: 'Média' },
   { value: 'count', label: 'Contagem' },
+  { value: 'sales_cycle', label: 'Ciclo de Vendas' },
 ];
 
 // Date grouping options
@@ -199,6 +200,7 @@ export function generateVisualTitle(
     avg: 'Média',
     count: 'Quantidade',
     conversion_rate: 'Taxa de Conversão',
+    sales_cycle: 'Ciclo de Vendas',
   };
 
   const measureLabel = DATA_SOURCE_FIELDS[dataSource].numeric.find(f => f.value === measureField)?.label || measureField;

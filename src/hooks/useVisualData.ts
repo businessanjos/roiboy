@@ -89,6 +89,116 @@ function inferStatusFilter(
 }
 
 const MQL_FIELD_ID = '448404cd-0344-4892-a574-2387b1c17578';
+const FIRST_CONTACT_FIELD_ID = '166fe351-b29b-4f08-b330-88f82c65f625';
+
+// Calculate average sales cycle in days (won_at - first contact date)
+async function calculateSalesCycle(
+  accountId: string,
+  filters: any,
+  dimension: VisualConfig['dimension'],
+  dateDisplayFormat: DateDisplayFormat
+): Promise<AggregatedDataPoint[]> {
+  // 1. Fetch won deals with won_at
+  let query = supabase
+    .from('deals')
+    .select('id, won_at, users!deals_responsible_user_id_fkey(name)')
+    .eq('account_id', accountId)
+    .eq('status', 'won')
+    .not('won_at', 'is', null);
+
+  if (filters.startDate) query = query.gte('won_at', filters.startDate);
+  if (filters.endDate) query = query.lte('won_at', filters.endDate);
+  if (filters.userId && filters.userId !== 'all') query = query.eq('responsible_user_id', filters.userId);
+  if (filters.stageId && filters.stageId !== 'all') query = query.eq('stage_id', filters.stageId);
+
+  // Paginate to fetch all
+  let allDeals: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if (error) { console.error('Error fetching deals for sales cycle:', error); return []; }
+    allDeals = allDeals.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  if (allDeals.length === 0) return [{ name: 'Total', value: 0, count: 0 }];
+
+  // 2. Fetch first contact dates for these deals
+  const dealIds = allDeals.map(d => d.id);
+  let allFieldValues: any[] = [];
+  // Paginate field values too (in batches of IDs due to `in` limit)
+  const batchSize = 500;
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batch = dealIds.slice(i, i + batchSize);
+    const { data: fvData, error: fvError } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, value_date')
+      .eq('field_id', FIRST_CONTACT_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('deal_id', batch);
+    if (fvError) { console.error('Error fetching first contact dates:', fvError); continue; }
+    allFieldValues = allFieldValues.concat(fvData || []);
+  }
+
+  const firstContactMap = new Map<string, string>();
+  for (const fv of allFieldValues) {
+    if (fv.value_date) firstContactMap.set(fv.deal_id, fv.value_date);
+  }
+
+  // 3. Calculate days difference per deal
+  const dealCycles: { deal: any; days: number }[] = [];
+  for (const deal of allDeals) {
+    const firstContactStr = firstContactMap.get(deal.id);
+    if (!firstContactStr || !deal.won_at) continue;
+    const wonDate = new Date(deal.won_at);
+    // Parse value_date as local date (YYYY-MM-DD)
+    const [y, m, d] = firstContactStr.split('-').map(Number);
+    const firstContact = new Date(y, m - 1, d);
+    const diffMs = wonDate.getTime() - firstContact.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays >= 0) dealCycles.push({ deal, days: diffDays });
+  }
+
+  // 4. If scorecard (global total), return average
+  if (dimension.field === '_total') {
+    if (dealCycles.length === 0) return [{ name: 'Total', value: 0, count: 0 }];
+    const avg = dealCycles.reduce((sum, dc) => sum + dc.days, 0) / dealCycles.length;
+    return [{ name: 'Total', value: Math.round(avg), count: dealCycles.length }];
+  }
+
+  // 5. Grouped (by user, date, etc.)
+  const groups = new Map<string, { totalDays: number; count: number }>();
+  for (const { deal, days } of dealCycles) {
+    let groupKey: string;
+    if (dimension.field === 'responsible_name') {
+      groupKey = (deal.users as any)?.name || 'Sem Responsável';
+    } else if (dimension.type === 'date') {
+      groupKey = formatDateGroup(deal.won_at, dimension.dateGrouping || 'month', dateDisplayFormat);
+    } else {
+      groupKey = (deal as any)[dimension.field] || 'Não informado';
+    }
+    if (!groups.has(groupKey)) groups.set(groupKey, { totalDays: 0, count: 0 });
+    const g = groups.get(groupKey)!;
+    g.totalDays += days;
+    g.count++;
+  }
+
+  const result: AggregatedDataPoint[] = [];
+  for (const [name, { totalDays, count }] of groups) {
+    if (dimension.field === 'responsible_name' && name === 'Sem Responsável') continue;
+    result.push({ name, value: Math.round(totalDays / count), count });
+  }
+
+  if (dimension.type === 'date') {
+    result.sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    result.sort((a, b) => a.value - b.value);
+  }
+
+  return result;
+}
 
 const MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
   sim_acima_30k: { label: 'SIM - Acima de 30k', color: '#22c55e' },
@@ -138,6 +248,11 @@ async function fetchDealsData(
   dateDisplayFormat: DateDisplayFormat,
   statusFilter?: 'won' | 'lost' | 'open'
 ): Promise<AggregatedDataPoint[]> {
+  // Special handling for sales cycle calculation
+  if (measure.aggregation === 'sales_cycle') {
+    return calculateSalesCycle(accountId, filters, dimension, dateDisplayFormat);
+  }
+
   // Special handling for conversion rate calculation
   if (measure.aggregation === 'conversion_rate') {
     if (dimension.field === '_total') {

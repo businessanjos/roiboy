@@ -21,7 +21,7 @@ interface AddVisualModalProps {
 }
 
 type ChartType = "bar" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial";
-type Metric = "revenue" | "deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count";
+type Metric = "revenue" | "deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle";
 type GroupBy = "month" | "user" | "stage" | "product" | "mql";
 
 const CHART_TYPES = [
@@ -40,6 +40,7 @@ const METRICS = [
   { value: "conversion" as const, label: "Taxa de Conversão", description: "Porcentagem de ganhos" },
   { value: "lost_reasons" as const, label: "Motivos de Perda", description: "Análise de deals perdidos" },
   { value: "leads_count" as const, label: "Total de Leads", description: "Contagem de todos os leads cadastrados" },
+  { value: "sales_cycle" as const, label: "Ciclo de Vendas", description: "Média de dias entre primeiro contato e fechamento" },
 ];
 
 const GROUP_BY_OPTIONS = [
@@ -54,7 +55,7 @@ const GROUP_BY_OPTIONS = [
 const METRIC_TO_CONFIG: Record<Metric, { 
   dataSource: 'deals' | 'leads'; 
   measureField: string | null; 
-  aggregation: 'sum' | 'count' | 'avg' | 'conversion_rate'; 
+  aggregation: 'sum' | 'count' | 'avg' | 'conversion_rate' | 'sales_cycle'; 
   formatType: 'currency' | 'decimal' | 'percentage';
   statusFilter?: 'won' | 'lost';
 }> = {
@@ -64,6 +65,7 @@ const METRIC_TO_CONFIG: Record<Metric, {
   conversion: { dataSource: 'deals', measureField: null, aggregation: 'conversion_rate', formatType: 'percentage' },
   lost_reasons: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal', statusFilter: 'lost' },
   leads_count: { dataSource: 'leads', measureField: null, aggregation: 'count', formatType: 'decimal' },
+  sales_cycle: { dataSource: 'deals', measureField: null, aggregation: 'sales_cycle', formatType: 'decimal', statusFilter: 'won' },
 };
 
 const GROUP_BY_TO_DIMENSION: Record<GroupBy, { field: string; type: 'date' | 'text'; dateGrouping?: 'day' | 'week' | 'month' | 'year' }> = {
@@ -79,6 +81,7 @@ const getDateFieldForMetric = (metric: Metric): string => {
   switch (metric) {
     case 'revenue':      // Revenue = WON deals
     case 'avg_ticket':   // Avg ticket also based on won deals
+    case 'sales_cycle':  // Sales cycle also based on won deals
       return 'won_at';
     case 'lost_reasons': // Losses = LOST deals
       return 'lost_at';
@@ -94,6 +97,7 @@ const METRIC_LABELS: Record<Metric, string> = {
   conversion: "Conversão",
   lost_reasons: "Perdas",
   leads_count: "Leads",
+  sales_cycle: "Ciclo de Vendas",
 };
 
 const GROUP_LABELS: Record<GroupBy, string> = {
