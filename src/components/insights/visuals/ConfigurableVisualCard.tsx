@@ -41,13 +41,19 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
   // Apply custom formula if present
   const processedData = useMemo(() => {
     if (!data) return [];
-    if (!config?.customFormula) return data;
-
-    return data.map((item) => ({
-      ...item,
-      value: evaluateFormula(config.customFormula!, { value: item.value }),
-    }));
-  }, [data, config?.customFormula]);
+    let result = data;
+    if (config?.customFormula) {
+      result = result.map((item) => ({
+        ...item,
+        value: evaluateFormula(config.customFormula!, { value: item.value }),
+      }));
+    }
+    // Filter out hidden categories
+    if (config?.hiddenCategories?.length) {
+      result = result.filter((item) => !config.hiddenCategories!.includes(item.name));
+    }
+    return result;
+  }, [data, config?.customFormula, config?.hiddenCategories]);
 
   // Generate info tooltip content
   const infoContent = useMemo(() => {
