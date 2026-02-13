@@ -80,11 +80,15 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
   // Track visual IDs to detect additions/removals (not layout changes)
   const prevVisualIdsRef = useRef<string>(visuals.map(v => v.id).sort().join(","));
 
+  // Guard: skip the automatic onLayoutChange fired on mount
+  const isMountedRef = useRef(false);
+
   useEffect(() => {
     const currentIds = visuals.map(v => v.id).sort().join(",");
     if (currentIds !== prevVisualIdsRef.current) {
       // Visuals were added or removed — rebuild layout, keeping local positions for existing items
       prevVisualIdsRef.current = currentIds;
+      isMountedRef.current = false; // Reset mount guard for new visual set
       setLocalLayout(prev => {
         const existingMap = new Map(prev.map(item => [item.i, item]));
         return visuals.map((v, i) => existingMap.get(v.id) || visualToLayoutItem(v, i));
@@ -113,8 +117,13 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
   }, [readOnly]);
 
   // Keep local layout in sync continuously during drag/resize (prevents snap-back)
+  // Skip the first call which is the automatic mount event from react-grid-layout
   const handleContinuousLayoutChange = useCallback(
     (newLayout: LayoutItem[]) => {
+      if (!isMountedRef.current) {
+        isMountedRef.current = true;
+        return;
+      }
       setLocalLayout(newLayout.map(item => ({
         i: item.i,
         x: item.x,
