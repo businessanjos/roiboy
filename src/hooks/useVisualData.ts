@@ -205,6 +205,54 @@ const MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
   nao_abaixo_30k: { label: 'NÃO - Abaixo de 30k', color: '#ef4444' },
 };
 
+const LEAD_MQL_FIELD_ID = 'e4270e93-e9b9-4d9b-9589-d614ce335bcd';
+
+const LEAD_MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
+  opt_1: { label: 'SIM - Acima de 30k', color: '#22c55e' },
+  opt_2: { label: 'NAO - Abaixo de 30k', color: '#ef4444' },
+};
+
+async function enrichLeadsWithMql(accountId: string, leads: any[]): Promise<any[]> {
+  if (leads.length === 0) return leads;
+
+  const leadIds = leads.map(l => l.id);
+  let allMqlValues: any[] = [];
+  const batchSize = 500;
+
+  for (let i = 0; i < leadIds.length; i += batchSize) {
+    const batch = leadIds.slice(i, i + batchSize);
+    const { data, error } = await supabase
+      .from('lead_field_values')
+      .select('lead_id, value_text')
+      .eq('field_id', LEAD_MQL_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('lead_id', batch);
+
+    if (error) {
+      console.error('Error fetching lead MQL values:', error);
+      continue;
+    }
+    allMqlValues = allMqlValues.concat(data || []);
+  }
+
+  const mqlMap = new Map<string, { label: string; color: string }>();
+  for (const row of allMqlValues) {
+    const mapped = LEAD_MQL_VALUE_MAP[row.value_text || ''];
+    if (mapped) {
+      mqlMap.set(row.lead_id, mapped);
+    }
+  }
+
+  return leads.map(lead => {
+    const mql = mqlMap.get(lead.id);
+    return {
+      ...lead,
+      _mql_label: mql?.label || 'Não informado',
+      _mql_color: mql?.color || undefined,
+    };
+  });
+}
+
 async function enrichDealsWithMql(accountId: string, deals: any[]): Promise<any[]> {
   if (deals.length === 0) return deals;
 
@@ -632,6 +680,12 @@ async function fetchLeadsData(
     allData = allData.concat(data || []);
     if (!data || data.length < pageSize) break;
     from += pageSize;
+  }
+
+  // If grouping by MQL, fetch MQL field values and inject into leads
+  if (dimension.field === 'mql') {
+    const enrichedData = await enrichLeadsWithMql(accountId, allData);
+    return aggregateData(enrichedData, { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
   }
 
   // Leads only support count aggregation
