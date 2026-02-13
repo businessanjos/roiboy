@@ -1,51 +1,31 @@
 
 
-## Adicionar Toggle de Visual e Remover Cards de Retencao/Valor Perdido
+## Restaurar Cards de Taxa de Retencao e Valor Perdido (condicionais ao toggle)
 
-### Mudancas
+Os cards foram removidos completamente na edicao anterior, mas a intencao era apenas ocultá-los no modo "Comercial". Vou restaura-los com exibicao condicional.
 
-**1. Novo botao de alternancia no header (ao lado de "Modo Foco")**
+### Mudancas no arquivo `src/pages/Dashboard.tsx`
 
-Adicionar um state `gestaoViewMode` com dois valores: `"operacoes"` (padrao, visual completo) e `"comercial"` (sem cancelamentos/encerramentos/congelamentos). O botao usara um icone (ex: `ToggleLeft`/`ToggleRight` ou `Eye`/`EyeOff`) e alternara entre os dois modos.
+**1. Restaurar import do icone `DollarSign`**
 
-**2. Visual "Comercial" (simplificado)**
+Adicionar `DollarSign` na lista de imports do `lucide-react`.
 
-Quando ativo:
-- **Status cards**: Ocultar os cards de Cancelamentos, Encerramentos e Congelamentos. Manter Total Clientes, Ativos e Vencidos (grid ajusta de 6 para 3 colunas)
-- **Grafico Evolucao Mensal**: Mostrar apenas a barra de "Novos" (ocultar cancelamentos, encerramentos, congelamentos). Subtitulo muda para "Novos contratos nos ultimos 6 meses"
+**2. Restaurar os dois `useMemo` removidos**
 
-**3. Remover cards de Taxa de Retencao e Valor Perdido**
+- `retentionMetrics`: calcula taxa de retencao com base no `monthlyChartData` (novos vs cancelamentos do mes atual)
+- `lostFinancialValue`: calcula valor financeiro perdido com cancelamentos e encerramentos usando `cancelled_at` e os status corretos (`cancelled`, `dismissed`, `dropout_7d`, `ended`)
 
-Remover completamente a secao "Retention & Financial Loss Row" (linhas 1110-1165) da view normal e a secao correspondente no Focus Mode (linhas 1343-1391). O `retentionMetrics` e `lostFinancialValue` useMemo podem ser removidos tambem.
+**3. Restaurar os cards na view normal (apos o grafico, antes do `</TabsContent>`)**
 
-### Arquivo afetado
+Dois cards lado a lado em um grid, envolvidos por `{gestaoViewMode === "operacoes" && (...)}`:
+- Card "Taxa de Retencao" com porcentagem e indicador visual
+- Card "Valor Perdido (Mes Atual)" com valor em R$ de cancelamentos e encerramentos
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `src/pages/Dashboard.tsx` | Adicionar state `gestaoViewMode`, botao toggle no header, condicionar exibicao de cards/barras do grafico, remover cards de retencao/valor perdido |
+**4. Restaurar os cards no Focus Mode (apos o grafico de Evolucao Mensal)**
 
-### Detalhes tecnicos
+Mesma logica condicional com `gestaoViewMode === "operacoes"`.
 
-**Novo state:**
-```typescript
-const [gestaoViewMode, setGestaoViewMode] = useState<"operacoes" | "comercial">("operacoes");
-```
+### Resultado
 
-**Botao no header (ao lado de Modo Foco):**
-```typescript
-<Button
-  variant="outline"
-  size="sm"
-  onClick={() => setGestaoViewMode(prev => prev === "operacoes" ? "comercial" : "operacoes")}
->
-  {gestaoViewMode === "operacoes" ? <Eye /> : <EyeOff />}
-  {gestaoViewMode === "operacoes" ? "Operacoes" : "Comercial"}
-</Button>
-```
-
-**Status cards**: Envolver os cards de Cancelamentos, Encerramentos e Congelamentos com `{gestaoViewMode === "operacoes" && (...)}`. Ajustar grid para `md:grid-cols-${gestaoViewMode === "operacoes" ? 6 : 3}`.
-
-**Grafico**: Renderizar as `<Bar>` de cancelamentos, encerramentos e congelamentos apenas quando `gestaoViewMode === "operacoes"`.
-
-**Remocoes**: Deletar os blocos de Taxa de Retencao e Valor Perdido tanto na view normal quanto no Focus Mode. Remover os useMemo `retentionMetrics` e `lostFinancialValue` que ficam orfaos.
-
+- Modo **Operacoes**: Exibe todos os cards incluindo Taxa de Retencao e Valor Perdido
+- Modo **Comercial**: Oculta cancelamentos, encerramentos, congelamentos, taxa de retencao e valor perdido
