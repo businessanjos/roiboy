@@ -186,8 +186,9 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
       console.error("Error updating task:", error);
     } else {
       await fetchTasks();
-      // Invalidate global cache to sync with Tasks page
+      // Invalidate global cache to sync with Tasks page and DealCard status
       queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["deal-activity-status", dealId] });
       
       if (!isCurrentlyCompleted) {
         setEditingTask(null);
@@ -366,6 +367,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
         onTaskCompleted={async () => {
           await fetchTasks();
           queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
+          queryClient.invalidateQueries({ queryKey: ["deal-activity-status", dealId] });
           setEditingTask(null);
           setTaskDialogOpen(true);
         }}

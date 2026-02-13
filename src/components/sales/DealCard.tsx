@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Deal } from "@/hooks/useDeals";
@@ -9,16 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Mail, Phone, Calendar, RefreshCw, AlertTriangle, ListTodo, MessageCircle } from "lucide-react";
-import { format, differenceInDays, startOfDay, isBefore } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DealActivitiesDialog } from "./DealActivitiesDialog";
-import { supabase } from "@/integrations/supabase/client";
-
-interface ActivityStatus {
-  pendingCount: number;
-  hasOverdue: boolean;
-  totalActivities: number;
-}
+import { useDealActivityStatus } from "@/hooks/useDealActivityStatus";
 
 interface DealCardProps {
   deal: Deal;
@@ -29,57 +23,9 @@ interface DealCardProps {
 
 export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel }: DealCardProps) {
   const [activitiesDialogOpen, setActivitiesDialogOpen] = useState(false);
-  const [activityStatus, setActivityStatus] = useState<ActivityStatus>({ pendingCount: 0, hasOverdue: false, totalActivities: 0 });
+  const activityStatus = useDealActivityStatus(deal.id);
   
   const { openZappConversation, loading: zappLoading } = useZappNavigationContext();
-  
-  // Fetch all activities status for this deal
-  useEffect(() => {
-    const fetchActivityStatus = async () => {
-      const { data, error } = await supabase
-        .from("internal_tasks")
-        .select(`
-          id, 
-          due_date,
-          completed_at,
-          custom_status:task_statuses!internal_tasks_custom_status_id_fkey(is_completed_status)
-        `)
-        .eq("deal_id", deal.id);
-      
-      if (!error && data) {
-        const totalActivities = data.length;
-        
-        // Filter pending (not completed)
-        const pending = data.filter(t => !t.completed_at && !t.custom_status?.is_completed_status);
-        
-        // Check for overdue tasks
-        const today = startOfDay(new Date());
-        const hasOverdue = pending.some(t => {
-          if (!t.due_date) return false;
-          const dueDate = startOfDay(new Date(t.due_date + 'T00:00:00'));
-          return isBefore(dueDate, today);
-        });
-        
-        setActivityStatus({ pendingCount: pending.length, hasOverdue, totalActivities });
-      }
-    };
-    
-    fetchActivityStatus();
-    
-    // Subscribe to changes
-    const channel = supabase
-      .channel(`deal-card-tasks-${deal.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "internal_tasks", filter: `deal_id=eq.${deal.id}` },
-        () => fetchActivityStatus()
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [deal.id]);
   const {
     attributes,
     listeners,
