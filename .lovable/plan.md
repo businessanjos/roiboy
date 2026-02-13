@@ -1,54 +1,52 @@
 
-## Corrigir gravacao de campos select na edge function create-lead
+
+## Excluir Lead com deals vinculados (cascade + aviso)
 
 ### Problema
-Os campos MQL e Canal sao do tipo **select** (selecao de opcoes). O sistema espera que o valor gravado em `value_text` seja o **ID interno da opcao** (ex: `opt_1`, `opt_2`), nao o **texto do label** (ex: "SIM - Acima de 30k").
+A exclusao de um Lead falha quando ha negocios (deals) vinculados por causa da foreign key `deals_lead_id_fkey`. O usuario quer que os deals sejam excluidos junto, mas com um aviso previo listando os negocios afetados.
 
-A edge function esta gravando o texto do label, por isso a UI nao reconhece o valor e exibe "---".
+### Mudancas
 
-O campo Faturamento Atual funciona porque e do tipo **text**, que aceita texto livre.
+**1. Hook `src/hooks/useLeads.tsx` - funcao `deleteLead`**
 
-### Mapeamento das opcoes
+Refatorar para:
+1. Consultar deals vinculados ao lead (`deals.lead_id = leadId`)
+2. Retornar a lista de deals encontrados para a UI decidir se mostra o aviso
+3. Criar uma nova funcao `deleteLeadWithDeals` que:
+   - Deleta registros em `lead_field_values` (campos personalizados)
+   - Deleta registros em `lead_timeline` (historico)
+   - Deleta os deals vinculados
+   - Deleta o lead
 
-**MQL (select):**
-- "SIM - Acima de 30k" → `opt_1`
-- "NAO - Abaixo de 30k" → `opt_2`
+Nova funcao exposta:
+```text
+checkLeadDeals(leadId) -> Deal[] | null
+deleteLeadWithDeals(leadId) -> boolean
+```
 
-**Canal (select):**
-- "Organico" → `opt_1`
-- "Trafego Pago" → `opt_2`
-- "Indicacao" → `opt_1770990177251`
-- "Prospeccao ativa" → `opt_1770990180958`
-- "Trafego Alheio" → `opt_1770990186415`
-- "Esteira / Carteira" → `opt_1770990194848`
-- "Social Seller" → `opt_1770990199860`
-- "Recorrencia" → `opt_1770990203418`
+**2. Componente `src/components/sales/LeadsTab.tsx` - AlertDialog de exclusao**
 
-### Solucao
+Refatorar o fluxo:
+1. Ao clicar em "Excluir", buscar deals vinculados via `checkLeadDeals`
+2. Se houver deals, exibir no AlertDialog uma lista com os nomes dos negocios e um aviso claro
+3. Se nao houver deals, manter o aviso simples atual
+4. Ao confirmar, chamar `deleteLeadWithDeals` que faz a exclusao em cascata
 
-**Arquivo: `supabase/functions/create-lead/index.ts`**
-
-Apos criar o lead e antes de inserir em `lead_field_values`, buscar a definicao dos campos personalizados no banco para obter as opcoes. Para campos do tipo `select`, converter o texto recebido (label) para o ID da opcao (`value`), fazendo match case-insensitive e com normalizacao de acentos.
+Exemplo visual do dialog quando ha deals:
 
 ```text
-// 1. Buscar definicao dos custom fields
-const { data: customFields } = await supabase
-  .from('custom_fields')
-  .select('id, field_type, options')
-  .in('id', [fieldIds...]);
+Excluir lead?
 
-// 2. Para cada campo, se for select, buscar o option.value pelo label
-function resolveSelectValue(fieldDef, rawText) {
-  if (fieldDef.field_type !== 'select') return rawText;
-  const normalized = rawText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  const match = fieldDef.options.find(opt =>
-    opt.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === normalized
-  );
-  return match ? match.value : null; // null se nao encontrar
-}
+Este lead possui 2 negocios vinculados que tambem serao excluidos:
+
+  - Negocio: Projeto Website (R$ 5.000)
+  - Negocio: Consultoria SEO (R$ 2.000)
+
+Esta acao nao pode ser desfeita.
+
+[Cancelar]  [Excluir tudo]
 ```
 
 ### O que nao muda
-- JSON do n8n (continua enviando texto legivel como "Trafego Pago")
-- UI do Lead (ja sabe ler opt_1, opt_2 etc)
-- Faturamento Atual (continua sendo texto livre)
+- Botao de excluir na tabela e no detalhe do lead (mesmo local)
+- Leads sem deals continuam sendo excluidos normalmente com o aviso simples
