@@ -1,57 +1,51 @@
 
 
-## Corrigir Filtro de Contratos no Dashboard de Gestao
+## Adicionar Toggle de Visual e Remover Cards de Retencao/Valor Perdido
 
-### Problema
+### Mudancas
 
-O codigo corrigido anteriormente esta com a logica correta para contar novos/cancelamentos/encerramentos, **porem o filtro `filteredContractData` esta eliminando contratos antes de chegar ao calculo**.
+**1. Novo botao de alternancia no header (ao lado de "Modo Foco")**
 
-O filtro atual (linhas 265-274) escolhe **uma unica data** por contrato para verificar se esta no periodo:
-- Se tem `cancelled_at`, usa apenas essa data
-- Senao, usa `start_date`
+Adicionar um state `gestaoViewMode` com dois valores: `"operacoes"` (padrao, visual completo) e `"comercial"` (sem cancelamentos/encerramentos/congelamentos). O botao usara um icone (ex: `ToggleLeft`/`ToggleRight` ou `Eye`/`EyeOff`) e alternara entre os dois modos.
 
-Isso causa dois problemas:
-1. Um contrato iniciado em agosto e cancelado em janeiro: o filtro usa `cancelled_at` (janeiro), entao ele **nao aparece como "novo" em agosto**
-2. Contratos ativos antigos (sem `cancelled_at`, com `start_date` fora do periodo): sao **completamente excluidos**, embora ainda sejam relevantes para contexto
+**2. Visual "Comercial" (simplificado)**
 
-### Solucao
+Quando ativo:
+- **Status cards**: Ocultar os cards de Cancelamentos, Encerramentos e Congelamentos. Manter Total Clientes, Ativos e Vencidos (grid ajusta de 6 para 3 colunas)
+- **Grafico Evolucao Mensal**: Mostrar apenas a barra de "Novos" (ocultar cancelamentos, encerramentos, congelamentos). Subtitulo muda para "Novos contratos nos ultimos 6 meses"
 
-Alterar o filtro para incluir um contrato se **qualquer** uma de suas datas relevantes cair dentro do periodo selecionado.
+**3. Remover cards de Taxa de Retencao e Valor Perdido**
+
+Remover completamente a secao "Retention & Financial Loss Row" (linhas 1110-1165) da view normal e a secao correspondente no Focus Mode (linhas 1343-1391). O `retentionMetrics` e `lostFinancialValue` useMemo podem ser removidos tambem.
 
 ### Arquivo afetado
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/pages/Dashboard.tsx` | Corrigir logica do `filteredContractData` (linhas 265-274) |
+| `src/pages/Dashboard.tsx` | Adicionar state `gestaoViewMode`, botao toggle no header, condicionar exibicao de cards/barras do grafico, remover cards de retencao/valor perdido |
 
 ### Detalhes tecnicos
 
-**Substituir** a logica atual do filtro por:
-
+**Novo state:**
 ```typescript
-return contractData.filter(contract => {
-  // Include contract if ANY relevant date falls within the period
-  const startDate = contract.start_date ? parseISO(contract.start_date) : null;
-  const exitDate = contract.cancelled_at 
-    ? parseISO(contract.cancelled_at)
-    : contract.status_changed_at
-      ? parseISO(contract.status_changed_at)
-      : null;
-
-  const startInPeriod = startDate && startDate >= periodStart && startDate <= periodEnd;
-  const exitInPeriod = exitDate && exitDate >= periodStart && exitDate <= periodEnd;
-
-  if (!startInPeriod && !exitInPeriod) return false;
-
-  // Filter by product
-  if (gestaoProductFilter !== "all") {
-    const clientProducts = clientProductsMap[contract.client_id] || [];
-    if (!clientProducts.includes(gestaoProductFilter)) return false;
-  }
-
-  return true;
-});
+const [gestaoViewMode, setGestaoViewMode] = useState<"operacoes" | "comercial">("operacoes");
 ```
 
-Com essa correcao, um contrato que iniciou em agosto e foi cancelado em janeiro aparecera no `filteredContractData` em ambos os contextos: sera contado como "novo" em agosto E como "cancelamento" em janeiro, refletindo os dados reais do banco.
+**Botao no header (ao lado de Modo Foco):**
+```typescript
+<Button
+  variant="outline"
+  size="sm"
+  onClick={() => setGestaoViewMode(prev => prev === "operacoes" ? "comercial" : "operacoes")}
+>
+  {gestaoViewMode === "operacoes" ? <Eye /> : <EyeOff />}
+  {gestaoViewMode === "operacoes" ? "Operacoes" : "Comercial"}
+</Button>
+```
+
+**Status cards**: Envolver os cards de Cancelamentos, Encerramentos e Congelamentos com `{gestaoViewMode === "operacoes" && (...)}`. Ajustar grid para `md:grid-cols-${gestaoViewMode === "operacoes" ? 6 : 3}`.
+
+**Grafico**: Renderizar as `<Bar>` de cancelamentos, encerramentos e congelamentos apenas quando `gestaoViewMode === "operacoes"`.
+
+**Remocoes**: Deletar os blocos de Taxa de Retencao e Valor Perdido tanto na view normal quanto no Focus Mode. Remover os useMemo `retentionMetrics` e `lostFinancialValue` que ficam orfaos.
 
