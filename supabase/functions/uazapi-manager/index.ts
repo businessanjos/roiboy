@@ -261,7 +261,7 @@ serve(async (req) => {
       const webhookConfig = {
         url: webhookUrl,
         enabled: true,
-        events: ["messages", "messages.update", "connection", "groups", "qrcode"]
+        events: ["messages", "messages.update", "messages.delete", "connection", "groups", "qrcode"]
       };
       
       console.log(`[uazapi-manager] Configuring webhook for ${instanceName}: ${webhookUrl}`);
