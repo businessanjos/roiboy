@@ -236,10 +236,42 @@ export function useLeads() {
     }
   };
 
-  const deleteLead = async (leadId: string): Promise<boolean> => {
+  const checkLeadDeals = async (leadId: string) => {
+    if (!currentUser?.account_id) return [];
+    const { data } = await supabase
+      .from('deals')
+      .select('id, title, value')
+      .eq('lead_id', leadId)
+      .eq('account_id', currentUser.account_id);
+    return data || [];
+  };
+
+  const deleteLeadWithDeals = async (leadId: string): Promise<boolean> => {
     if (!currentUser?.account_id) return false;
 
     try {
+      // 1. Delete lead field values
+      await supabase
+        .from('lead_field_values')
+        .delete()
+        .eq('lead_id', leadId)
+        .eq('account_id', currentUser.account_id);
+
+      // 2. Delete lead timeline
+      await supabase
+        .from('lead_timeline')
+        .delete()
+        .eq('lead_id', leadId)
+        .eq('account_id', currentUser.account_id);
+
+      // 3. Delete associated deals
+      await supabase
+        .from('deals')
+        .delete()
+        .eq('lead_id', leadId)
+        .eq('account_id', currentUser.account_id);
+
+      // 4. Delete the lead
       const { error } = await supabase
         .from('leads')
         .delete()
@@ -252,7 +284,7 @@ export function useLeads() {
 
       toast({
         title: "Lead excluído",
-        description: "O lead foi removido",
+        description: "O lead e seus negócios vinculados foram removidos",
       });
 
       return true;
@@ -310,7 +342,8 @@ export function useLeads() {
     qualifiedLeads,
     createLead,
     updateLead,
-    deleteLead,
+    checkLeadDeals,
+    deleteLeadWithDeals,
     markAsConvertedToDeal,
     refetch: fetchLeads,
   };

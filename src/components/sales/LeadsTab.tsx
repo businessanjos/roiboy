@@ -116,7 +116,8 @@ export default function LeadsTab() {
     qualifiedLeads,
     createLead,
     updateLead,
-    deleteLead,
+    checkLeadDeals,
+    deleteLeadWithDeals,
     markAsConvertedToDeal,
   } = useLeads();
   const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
@@ -135,6 +136,8 @@ export default function LeadsTab() {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
   const [deleteLeadId, setDeleteLeadId] = useState<string | null>(null);
+  const [deleteLeadDeals, setDeleteLeadDeals] = useState<{ id: string; title: string; value: number | null }[]>([]);
+  const [loadingDeleteCheck, setLoadingDeleteCheck] = useState(false);
   
   
   // Import state
@@ -393,10 +396,19 @@ export default function LeadsTab() {
     setDialogStep('lead-form');
   };
 
+  const handleRequestDelete = async (leadId: string) => {
+    setLoadingDeleteCheck(true);
+    setDeleteLeadId(leadId);
+    const deals = await checkLeadDeals(leadId);
+    setDeleteLeadDeals(deals);
+    setLoadingDeleteCheck(false);
+  };
+
   const handleDelete = async () => {
     if (deleteLeadId) {
-      await deleteLead(deleteLeadId);
+      await deleteLeadWithDeals(deleteLeadId);
       setDeleteLeadId(null);
+      setDeleteLeadDeals([]);
     }
   };
 
@@ -1184,7 +1196,7 @@ export default function LeadsTab() {
                               className="text-destructive"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setDeleteLeadId(lead.id);
+                                handleRequestDelete(lead.id);
                               }}
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
@@ -1511,7 +1523,7 @@ export default function LeadsTab() {
         }}
         onDelete={(leadId) => {
           setDetailLead(null);
-          setDeleteLeadId(leadId);
+          handleRequestDelete(leadId);
         }}
         onCreateDeal={(lead) => {
           setDetailLead(null);
@@ -1539,23 +1551,45 @@ export default function LeadsTab() {
       {/* Delete Confirmation */}
       <AlertDialog
         open={!!deleteLeadId}
-        onOpenChange={(open) => !open && setDeleteLeadId(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteLeadId(null);
+            setDeleteLeadDeals([]);
+          }
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir lead?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O lead será permanentemente
-              excluído.
+            <AlertDialogDescription asChild>
+              <div>
+                {deleteLeadDeals.length > 0 ? (
+                  <>
+                    <p className="mb-2">
+                      Este lead possui <strong>{deleteLeadDeals.length}</strong> negócio(s) vinculado(s) que também será(ão) excluído(s):
+                    </p>
+                    <ul className="list-disc list-inside space-y-1 mb-3 text-sm">
+                      {deleteLeadDeals.map((deal) => (
+                        <li key={deal.id}>
+                          {deal.title}
+                          {deal.value ? ` (R$ ${deal.value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })})` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : null}
+                <p>Esta ação não pode ser desfeita.</p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={loadingDeleteCheck}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Excluir
+              {deleteLeadDeals.length > 0 ? "Excluir tudo" : "Excluir"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
