@@ -101,6 +101,33 @@ serve(async (req) => {
       .select("id, full_name, phone, status")
       .single();
 
+    // Sync custom field values for MQL, Canal, Faturamento
+    if (newLead) {
+      const fieldMappings = [
+        { fieldId: "e4270e93-e9b9-4d9b-9589-d614ce335bcd", value: payload.mql },
+        { fieldId: "3bcdcf47-076e-47f2-a1ab-a4dd1ec8398a", value: payload.canal },
+        { fieldId: "e352a1ca-cfbc-435a-95f7-2f53b5cac041", value: payload.revenue_range },
+      ];
+
+      const fieldInserts = fieldMappings
+        .filter((m) => m.value && m.value.trim())
+        .map((m) => ({
+          lead_id: newLead.id,
+          field_id: m.fieldId,
+          account_id: accountId,
+          value_text: m.value!.trim(),
+        }));
+
+      if (fieldInserts.length > 0) {
+        const { error: fieldError } = await supabase
+          .from("lead_field_values")
+          .insert(fieldInserts);
+        if (fieldError) {
+          console.error("Error inserting lead field values:", fieldError);
+        }
+      }
+    }
+
     if (insertError) {
       console.error("Error creating lead:", insertError);
       return new Response(
