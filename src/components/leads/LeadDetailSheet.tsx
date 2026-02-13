@@ -34,6 +34,7 @@ import {
   Settings,
   Trash2,
   Instagram,
+  User,
 } from "lucide-react";
 import { LeadTimeline } from "./LeadTimeline";
 import { LeadCustomFieldsManager, LeadCustomField } from "@/components/custom-fields/LeadCustomFieldsManager";
@@ -81,6 +82,8 @@ interface Deal {
   title: string;
   value: number;
   stage?: { name: string } | null;
+  responsible_user_id?: string | null;
+  responsible?: { name: string } | null;
 }
 
 interface LeadDetailSheetProps {
@@ -190,7 +193,7 @@ export function LeadDetailSheet({
       // Fetch associated deals
       const { data: dealsData, error: dealsError } = await supabase
         .from("deals")
-        .select("id, title, value, stage:deal_stages(name)")
+        .select("id, title, value, responsible_user_id, stage:deal_stages(name), responsible:users!deals_responsible_user_id_fkey(name)")
         .eq("lead_id", leadId)
         .order("created_at", { ascending: false });
 
@@ -266,6 +269,16 @@ export function LeadDetailSheet({
               </SheetHeader>
 
               <div className="mt-6 space-y-6">
+                {/* Owner (dynamic from most recent deal) */}
+                {(() => {
+                  const ownerName = deals.length > 0 ? deals[0]?.responsible?.name : null;
+                  return ownerName ? (
+                    <div className="flex items-center gap-3">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span>Proprietário: {ownerName}</span>
+                    </div>
+                  ) : null;
+                })()}
                 {/* Contact Info */}
                 <div className="space-y-3">
                   {lead.phone && (
