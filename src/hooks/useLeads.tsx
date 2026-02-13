@@ -21,6 +21,8 @@ export interface Lead {
   converted_at: string | null;
   tags: string[];
   revenue_range: string | null;
+  mql: string | null;
+  canal: string | null;
   created_at: string;
   updated_at: string;
   // Joined
@@ -40,6 +42,8 @@ export interface CreateLeadData {
   responsible_user_id?: string;
   tags?: string[];
   revenue_range?: string;
+  mql?: string;
+  canal?: string;
   external_id?: string;
   external_source?: string;
   instagram?: string;

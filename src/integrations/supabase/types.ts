@@ -6314,6 +6314,7 @@ export type Database = {
           business_street: string | null
           business_street_number: string | null
           business_zip_code: string | null
+          canal: string | null
           city: string | null
           cnpj: string | null
           companies: Json | null
@@ -6331,6 +6332,7 @@ export type Database = {
           id: string
           instagram: string | null
           instagrams: Json | null
+          mql: string | null
           neighborhood: string | null
           notes: string | null
           phone: string | null
@@ -6369,6 +6371,7 @@ export type Database = {
           business_street?: string | null
           business_street_number?: string | null
           business_zip_code?: string | null
+          canal?: string | null
           city?: string | null
           cnpj?: string | null
           companies?: Json | null
@@ -6386,6 +6389,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           instagrams?: Json | null
+          mql?: string | null
           neighborhood?: string | null
           notes?: string | null
           phone?: string | null
@@ -6424,6 +6428,7 @@ export type Database = {
           business_street?: string | null
           business_street_number?: string | null
           business_zip_code?: string | null
+          canal?: string | null
           city?: string | null
           cnpj?: string | null
           companies?: Json | null
@@ -6441,6 +6446,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           instagrams?: Json | null
+          mql?: string | null
           neighborhood?: string | null
           notes?: string | null
           phone?: string | null
