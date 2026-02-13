@@ -19,6 +19,8 @@ interface CreateLeadPayload {
   instagram?: string;
   source?: string;
   revenue_range?: string;
+  mql?: string;
+  canal?: string;
   tags?: string[];
   notes?: string;
 }
@@ -90,6 +92,8 @@ serve(async (req) => {
         instagram: payload.instagram?.trim() || null,
         source: payload.source?.trim() || null,
         revenue_range: payload.revenue_range?.trim() || null,
+        mql: payload.mql?.trim() || null,
+        canal: payload.canal?.trim() || null,
         tags: tags.length > 0 ? tags : [],
         notes: payload.notes?.trim() || null,
         status: "new",
