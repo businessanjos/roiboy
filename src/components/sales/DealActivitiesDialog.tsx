@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -75,6 +76,7 @@ export function DealActivitiesDialog({
   dealId, 
   leadId 
 }: DealActivitiesDialogProps) {
+  const queryClient = useQueryClient();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
@@ -193,6 +195,8 @@ export function DealActivitiesDialog({
       toast.error("Erro ao concluir atividade");
     } else {
       toast.success("Atividade concluída!");
+      queryClient.invalidateQueries({ queryKey: ["deal-activity-status", dealId] });
+      queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
     }
   };
 
