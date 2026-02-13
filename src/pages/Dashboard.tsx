@@ -45,7 +45,8 @@ import {
   TrendingDown,
   Minus,
   BarChart3,
-  DollarSign,
+  Eye,
+  EyeOff,
   Filter,
   Video,
   Maximize2,
@@ -164,6 +165,7 @@ export default function Dashboard() {
   const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("6");
   const [gestaoCustomDateRange, setGestaoCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [gestaoDatePickerOpen, setGestaoDatePickerOpen] = useState(false);
+  const [gestaoViewMode, setGestaoViewMode] = useState<"operacoes" | "comercial">("operacoes");
 
   // Focus mode states
   const [isFocusMode, setIsFocusMode] = useState(false);
@@ -335,88 +337,6 @@ export default function Dashboard() {
     return Object.values(months);
   }, [filteredContractData, gestaoPeriodRange]);
 
-  // Calculate retention metrics
-  const retentionMetrics = useMemo(() => {
-    const currentMonth = monthlyChartData[monthlyChartData.length - 1];
-    const lastMonth = monthlyChartData[monthlyChartData.length - 2];
-    
-    if (!currentMonth) return { rate: 0, trend: 'flat' as const, novos: 0, saidas: 0 };
-    
-    const novos = currentMonth.novos;
-    const saidas = currentMonth.cancelamentos + currentMonth.encerramentos + currentMonth.congelamentos;
-    const netChange = novos - saidas;
-    
-    // Calculate rate: positive means growth, negative means churn
-    const rate = saidas > 0 ? Math.round((novos / saidas) * 100) : (novos > 0 ? 100 : 0);
-    
-    // Compare with last month
-    let trend: 'up' | 'flat' | 'down' = 'flat';
-    if (lastMonth) {
-      const lastSaidas = lastMonth.cancelamentos + lastMonth.encerramentos + lastMonth.congelamentos;
-      const lastRate = lastSaidas > 0 ? Math.round((lastMonth.novos / lastSaidas) * 100) : (lastMonth.novos > 0 ? 100 : 0);
-      if (rate > lastRate) trend = 'up';
-      else if (rate < lastRate) trend = 'down';
-    }
-    
-    return { rate, trend, novos, saidas, netChange };
-  }, [monthlyChartData]);
-
-  // Calculate lost financial value and counts from cancelled and ended contracts
-  const lostFinancialValue = useMemo(() => {
-    const currentMonthStart = startOfMonth(new Date());
-    const currentMonthEnd = endOfMonth(new Date());
-    const previousMonthStart = startOfMonth(subMonths(new Date(), 1));
-    const previousMonthEnd = endOfMonth(subMonths(new Date(), 1));
-    
-    let totalLost = 0;
-    let cancelamentosValue = 0;
-    let demissoesValue = 0;
-    let cancelamentosCount = 0;
-    let demissoesCount = 0;
-    let previousTotalLost = 0;
-    
-    // Use contractData instead of filtered for consistent period comparison
-    contractData.forEach((contract) => {
-      const exitDate = contract.cancelled_at || contract.status_changed_at;
-      if (exitDate) {
-        const changedAt = parseISO(exitDate);
-        
-        // Current month
-        if (changedAt >= currentMonthStart && changedAt <= currentMonthEnd) {
-          if (["cancelled", "dismissed", "dropout_7d"].includes(contract.status)) {
-            cancelamentosValue += contract.value || 0;
-            cancelamentosCount++;
-          } else if (contract.status === "ended") {
-            demissoesValue += contract.value || 0;
-            demissoesCount++;
-          }
-        }
-        
-        // Previous month
-        if (changedAt >= previousMonthStart && changedAt <= previousMonthEnd) {
-          if (["cancelled", "dismissed", "dropout_7d", "ended"].includes(contract.status)) {
-            previousTotalLost += contract.value || 0;
-          }
-        }
-      }
-    });
-    
-    totalLost = cancelamentosValue + demissoesValue;
-    
-    // Calculate trend
-    let trend: 'up' | 'flat' | 'down' = 'flat';
-    let percentChange = 0;
-    if (previousTotalLost > 0) {
-      percentChange = Math.round(((totalLost - previousTotalLost) / previousTotalLost) * 100);
-      if (totalLost < previousTotalLost) trend = 'down'; // Less loss is good
-      else if (totalLost > previousTotalLost) trend = 'up'; // More loss is bad
-    } else if (totalLost > 0) {
-      trend = 'up';
-      percentChange = 100;
-    }
-    
-    return { totalLost, cancelamentosValue, demissoesValue, cancelamentosCount, demissoesCount, previousTotalLost, trend, percentChange };
-  }, [contractData]);
 
   // Filter clients by gestaoProductFilter for status cards
   const gestaoFilteredClients = useMemo(() => {
@@ -542,6 +462,15 @@ export default function Dashboard() {
           <p className="text-sm sm:text-base text-muted-foreground">Visão geral do seu negócio</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setGestaoViewMode(prev => prev === "operacoes" ? "comercial" : "operacoes")}
+            title={gestaoViewMode === "operacoes" ? "Mudar para visual Comercial" : "Mudar para visual Operações"}
+          >
+            {gestaoViewMode === "operacoes" ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+            <span className="hidden sm:inline ml-2">{gestaoViewMode === "operacoes" ? "Operações" : "Comercial"}</span>
+          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -920,7 +849,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Status Cards - Single Row */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 md:grid-cols-6">
+          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-6" : "md:grid-cols-3"}`}>
             {/* Total de Clientes */}
             <Card className="shadow-card border-l-4 border-l-primary">
               <CardContent className="p-4">
@@ -948,6 +877,7 @@ export default function Dashboard() {
             </Card>
 
             {/* Cancelamentos */}
+            {gestaoViewMode === "operacoes" && (
             <Card className="shadow-card border-l-4 border-l-danger">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -959,8 +889,10 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
+            )}
 
             {/* Encerramentos */}
+            {gestaoViewMode === "operacoes" && (
             <Card className="shadow-card border-l-4 border-l-warning">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -972,8 +904,10 @@ export default function Dashboard() {
                 </div>
               </CardContent>
             </Card>
+            )}
 
             {/* Congelamentos (suspended + paused) */}
+            {gestaoViewMode === "operacoes" && (
             <Card className="shadow-card border-l-4 border-l-amber-500">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -984,7 +918,8 @@ export default function Dashboard() {
                   <Minus className="h-5 w-5 text-amber-500" />
                 </div>
               </CardContent>
-             </Card>
+            </Card>
+            )}
 
             {/* Vencidos (active + end_date < today) */}
             <Card className="shadow-card border-l-4 border-l-orange-500">
@@ -1011,7 +946,7 @@ export default function Dashboard() {
                     </div>
                     Evolução Mensal
                   </CardTitle>
-                  <CardDescription className="mt-1">Novos, cancelamentos, encerramentos e congelamentos nos últimos 6 meses</CardDescription>
+                  <CardDescription className="mt-1">{gestaoViewMode === "operacoes" ? "Novos, cancelamentos, encerramentos e congelamentos nos últimos 6 meses" : "Novos contratos nos últimos 6 meses"}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -1072,30 +1007,34 @@ export default function Dashboard() {
                     animationDuration={800}
                     animationEasing="ease-out"
                   />
-                  <Bar 
-                    dataKey="cancelamentos" 
-                    fill="url(#cancelamentosGradient)" 
-                    radius={[6, 6, 0, 0]} 
-                    name="Cancelamentos"
-                    animationDuration={800}
-                    animationEasing="ease-out"
-                  />
-                  <Bar 
-                    dataKey="encerramentos" 
-                    fill="url(#encerramentosGradient)" 
-                    radius={[6, 6, 0, 0]} 
-                    name="Encerramentos"
-                    animationDuration={800}
-                    animationEasing="ease-out"
-                  />
-                  <Bar 
-                    dataKey="congelamentos" 
-                    fill="url(#congelamentosGradient)" 
-                    radius={[6, 6, 0, 0]} 
-                    name="Congelamentos"
-                    animationDuration={800}
-                    animationEasing="ease-out"
-                  />
+                  {gestaoViewMode === "operacoes" && (
+                    <>
+                      <Bar 
+                        dataKey="cancelamentos" 
+                        fill="url(#cancelamentosGradient)" 
+                        radius={[6, 6, 0, 0]} 
+                        name="Cancelamentos"
+                        animationDuration={800}
+                        animationEasing="ease-out"
+                      />
+                      <Bar 
+                        dataKey="encerramentos" 
+                        fill="url(#encerramentosGradient)" 
+                        radius={[6, 6, 0, 0]} 
+                        name="Encerramentos"
+                        animationDuration={800}
+                        animationEasing="ease-out"
+                      />
+                      <Bar 
+                        dataKey="congelamentos" 
+                        fill="url(#congelamentosGradient)" 
+                        radius={[6, 6, 0, 0]} 
+                        name="Congelamentos"
+                        animationDuration={800}
+                        animationEasing="ease-out"
+                      />
+                    </>
+                  )}
                   <Legend 
                     wrapperStyle={{ paddingTop: 20 }}
                     iconType="circle"
@@ -1106,63 +1045,6 @@ export default function Dashboard() {
               </ChartContainer>
             </CardContent>
           </Card>
-
-          {/* Retention & Financial Loss Row */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Retention Rate Card */}
-            <Card className={`shadow-card border-l-4 ${retentionMetrics.rate >= 100 ? 'border-l-green-500' : retentionMetrics.rate >= 50 ? 'border-l-amber-500' : 'border-l-red-500'}`}>
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Taxa de Retenção</p>
-                    <div className="flex items-center gap-2">
-                      <p className={`text-3xl font-bold ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
-                        {retentionMetrics.rate}%
-                      </p>
-                      {retentionMetrics.trend === 'up' && <TrendingUp className="h-5 w-5 text-green-500" />}
-                      {retentionMetrics.trend === 'down' && <TrendingDown className="h-5 w-5 text-red-500" />}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {retentionMetrics.novos} novos vs {retentionMetrics.saidas} saídas (mês atual)
-                    </p>
-                  </div>
-                  <div className={`h-12 w-12 rounded-full flex items-center justify-center ${retentionMetrics.rate >= 100 ? 'bg-green-100 dark:bg-green-900/30' : retentionMetrics.rate >= 50 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                    <Target className={`h-6 w-6 ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Financial Loss Card */}
-            <Card className="shadow-card border-l-4 border-l-red-500">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Valor Perdido (Mês Atual)</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-3xl font-bold text-red-600">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.totalLost)}
-                      </p>
-                      {lostFinancialValue.trend === 'down' && <TrendingDown className="h-5 w-5 text-green-500" />}
-                      {lostFinancialValue.trend === 'up' && <TrendingUp className="h-5 w-5 text-red-500" />}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Cancelamentos: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.cancelamentosValue)} | 
-                      Demissões: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.demissoesValue)}
-                    </p>
-                    <p className={`text-xs mt-1 ${lostFinancialValue.trend === 'down' ? 'text-green-600' : lostFinancialValue.trend === 'up' ? 'text-red-500' : 'text-muted-foreground'}`}>
-                      {lostFinancialValue.trend === 'down' && `↓ ${Math.abs(lostFinancialValue.percentChange)}% vs mês anterior`}
-                      {lostFinancialValue.trend === 'up' && `↑ ${lostFinancialValue.percentChange}% vs mês anterior`}
-                      {lostFinancialValue.trend === 'flat' && 'Sem alteração vs mês anterior'}
-                    </p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-red-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
 
         </TabsContent>
       </Tabs>
@@ -1223,7 +1105,7 @@ export default function Dashboard() {
             </div>
 
             {/* Status Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-6 mb-8">
+            <div className={`grid grid-cols-2 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-6" : "md:grid-cols-3"} gap-6 mb-8`}>
               <Card className="border-l-4 border-l-primary">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -1248,6 +1130,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
+              {gestaoViewMode === "operacoes" && (
               <Card className="border-l-4 border-l-destructive">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -1259,7 +1142,9 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
+              )}
 
+              {gestaoViewMode === "operacoes" && (
               <Card className="border-l-4 border-l-warning">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -1271,7 +1156,9 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
+              )}
 
+              {gestaoViewMode === "operacoes" && (
               <Card className="border-l-4 border-l-amber-500">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
@@ -1283,6 +1170,7 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
+              )}
 
               <Card className="border-l-4 border-l-orange-500">
                 <CardContent className="p-6">
@@ -1331,64 +1219,19 @@ export default function Dashboard() {
                     <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 14, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} />
                     <ChartTooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }} />
                     <Bar dataKey="novos" fill="url(#focusNovosGradient)" radius={[6, 6, 0, 0]} name="Novos" />
-                    <Bar dataKey="cancelamentos" fill="url(#focusCancelamentosGradient)" radius={[6, 6, 0, 0]} name="Cancelamentos" />
-                    <Bar dataKey="encerramentos" fill="url(#focusEncerramentosGradient)" radius={[6, 6, 0, 0]} name="Encerramentos" />
-                    <Bar dataKey="congelamentos" fill="url(#focusCongelamentosGradient)" radius={[6, 6, 0, 0]} name="Congelamentos" />
+                    {gestaoViewMode === "operacoes" && (
+                      <>
+                        <Bar dataKey="cancelamentos" fill="url(#focusCancelamentosGradient)" radius={[6, 6, 0, 0]} name="Cancelamentos" />
+                        <Bar dataKey="encerramentos" fill="url(#focusEncerramentosGradient)" radius={[6, 6, 0, 0]} name="Encerramentos" />
+                        <Bar dataKey="congelamentos" fill="url(#focusCongelamentosGradient)" radius={[6, 6, 0, 0]} name="Congelamentos" />
+                      </>
+                    )}
                     <Legend wrapperStyle={{ paddingTop: 20 }} iconType="circle" iconSize={10} formatter={(value) => <span className="text-base text-muted-foreground ml-1">{value}</span>} />
                   </BarChart>
                 </ChartContainer>
               </CardContent>
             </Card>
 
-            {/* Retention & Financial Loss */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <Card className={`border-l-4 ${retentionMetrics.rate >= 100 ? 'border-l-green-500' : retentionMetrics.rate >= 50 ? 'border-l-amber-500' : 'border-l-red-500'}`}>
-                <CardContent className="p-8">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-base font-medium text-muted-foreground">Taxa de Retenção</p>
-                      <div className="flex items-center gap-3">
-                        <p className={`text-4xl font-bold ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
-                          {retentionMetrics.rate}%
-                        </p>
-                        {retentionMetrics.trend === 'up' && <TrendingUp className="h-6 w-6 text-green-500" />}
-                        {retentionMetrics.trend === 'down' && <TrendingDown className="h-6 w-6 text-red-500" />}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        {retentionMetrics.novos} novos vs {retentionMetrics.saidas} saídas (mês atual)
-                      </p>
-                    </div>
-                    <div className={`h-14 w-14 rounded-full flex items-center justify-center ${retentionMetrics.rate >= 100 ? 'bg-green-100 dark:bg-green-900/30' : retentionMetrics.rate >= 50 ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
-                      <Target className={`h-7 w-7 ${retentionMetrics.rate >= 100 ? 'text-green-600' : retentionMetrics.rate >= 50 ? 'text-amber-600' : 'text-red-600'}`} />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-l-4 border-l-red-500">
-                <CardContent className="p-8">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-base font-medium text-muted-foreground">Valor Perdido (Mês Atual)</p>
-                      <div className="flex items-center gap-3">
-                        <p className="text-4xl font-bold text-red-600">
-                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.totalLost)}
-                        </p>
-                        {lostFinancialValue.trend === 'down' && <TrendingDown className="h-6 w-6 text-green-500" />}
-                        {lostFinancialValue.trend === 'up' && <TrendingUp className="h-6 w-6 text-red-500" />}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Cancelamentos: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.cancelamentosValue)} | 
-                        Demissões: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(lostFinancialValue.demissoesValue)}
-                      </p>
-                    </div>
-                    <div className="h-14 w-14 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                      <DollarSign className="h-7 w-7 text-red-600" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
             </div>
           </div>
         </div>,
