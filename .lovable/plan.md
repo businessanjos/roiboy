@@ -1,27 +1,31 @@
 
-## Adicionar Filtro de Etapas no Funil de Vendas
 
-### Objetivo
-Inserir um botao sutil no header do card "Funil de Vendas" que, ao ser clicado, expande um popover com checkboxes para marcar/desmarcar quais etapas aparecem no funil.
+## Adicionar campo "Proprietario" dinamico no detalhe do Lead
+
+### Conceito
+O campo "Proprietario" nao sera um campo salvo no lead -- ele sera calculado dinamicamente a partir do **vendedor responsavel pelo negocio mais recente** vinculado ao lead. Se nao houver negocios, o campo nao aparece.
 
 ### Mudancas
 
-**Arquivo: `src/components/insights/whatsapp-dashboard/SalesFunnelChart.tsx`**
+**Arquivo: `src/components/leads/LeadDetailSheet.tsx`**
 
-- Adicionar um state local `hiddenStages` (Set de nomes de etapas ocultas), inicialmente vazio (todas visiveis)
-- Adicionar um botao de icone discreto (icone `Settings2` ou `SlidersHorizontal` do lucide-react) ao lado do titulo "Funil de Vendas"
-- Ao clicar no botao, abrir um `Popover` (do Radix/shadcn) contendo a lista de todas as etapas do pipeline + "Venda"
-- Cada etapa sera um item com `Checkbox` e o nome da etapa, com a cor da etapa como indicador visual (bolinha colorida)
-- Ao marcar/desmarcar, o state `hiddenStages` e atualizado e o funil re-renderiza mostrando apenas as etapas selecionadas
-- A logica de calculo cumulativo sera aplicada somente sobre as etapas visiveis, garantindo que o funil se recalcule corretamente
+1. Alterar a query de deals (linha 191-195) para tambem buscar `responsible_user_id` e o nome do usuario responsavel via join:
+```text
+.select("id, title, value, responsible_user_id, stage:deal_stages(name), responsible:users!deals_responsible_user_id_fkey(name)")
+```
 
-### Detalhes de UI
-- O botao ficara posicionado no `CardHeader`, ao lado direito do titulo
-- Estilo ghost + tamanho pequeno para ser sutil e nao competir visualmente com o funil
-- O popover tera fundo solido (`bg-popover`), z-index alto, e largura fixa (~220px)
-- Cada checkbox tera uma bolinha colorida com a cor da etapa para facilitar a identificacao
+2. Adicionar uma variavel derivada `ownerName` que pega o nome do responsavel do primeiro deal (mais recente, ja que a query ordena por `created_at desc`)
+
+3. Exibir na secao de informacoes de contato (entre a origem e a data de criacao) um item com icone `User` mostrando "Proprietario: Nome do Vendedor"
+   - Estilo igual aos outros campos de contato (icone + texto)
+   - So aparece se existir pelo menos um deal com responsavel
+
+### Interface Deal
+Atualizar a interface `Deal` local para incluir:
+- `responsible_user_id?: string | null`
+- `responsible?: { name: string } | null`
 
 ### Comportamento
-- Por padrao, todas as etapas vem marcadas (visiveis)
-- Desmarcar uma etapa a remove do funil e recalcula as larguras e conversoes
-- Deve haver pelo menos 1 etapa visivel (desabilitar desmarcacao se restar apenas 1)
+- Somente leitura, sem edicao
+- Atualiza automaticamente quando o lead e aberto (recalculado a cada abertura)
+- Se o negocio mais recente nao tiver responsavel, nao exibe o campo
