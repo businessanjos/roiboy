@@ -59,24 +59,6 @@ const LEAD_STATUS = [
   { value: "unqualified", label: "Não Qualificado", color: "bg-gray-500" },
 ];
 
-const CANAL_OPTIONS: Record<string, string> = {
-  trafego_pago: "Tráfego Pago",
-  indicacao: "Indicação",
-  organico: "Orgânico",
-  instagram: "Instagram",
-  whatsapp: "WhatsApp",
-  google: "Google",
-  evento: "Evento",
-  outro: "Outro",
-};
-
-const REVENUE_RANGES: Record<string, string> = {
-  ate_81k: "Até R$ 81 mil",
-  "81k_360k": "R$ 81 mil - R$ 360 mil",
-  "360k_1m": "R$ 360 mil - R$ 1 milhão",
-  "1m_5m": "R$ 1 milhão - R$ 5 milhões",
-  acima_5m: "Acima de R$ 5 milhões",
-};
 
 interface Lead {
   id: string;
@@ -91,10 +73,7 @@ interface Lead {
   status: string;
   notes: string | null;
   created_at: string;
-  mql: string | null;
-  canal: string | null;
   responsible_user_id: string | null;
-  revenue_range: string | null;
 }
 
 interface Deal {
@@ -133,7 +112,7 @@ export function LeadDetailSheet({
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(false);
   const [customFields, setCustomFields] = useState<LeadCustomField[]>([]);
-  const [responsibleUserName, setResponsibleUserName] = useState<string | null>(null);
+  
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [managerOpen, setManagerOpen] = useState(false);
 
@@ -207,17 +186,6 @@ export function LeadDetailSheet({
         instagrams: Array.isArray(leadData.instagrams) ? leadData.instagrams as string[] : null,
       });
 
-      // Fetch responsible user name
-      if (leadData.responsible_user_id) {
-        const { data: userData } = await supabase
-          .from("users")
-          .select("name")
-          .eq("id", leadData.responsible_user_id)
-          .single();
-        setResponsibleUserName(userData?.name || null);
-      } else {
-        setResponsibleUserName(null);
-      }
 
       // Fetch associated deals
       const { data: dealsData, error: dealsError } = await supabase
@@ -378,37 +346,6 @@ export function LeadDetailSheet({
                   </div>
                 </div>
 
-                {/* Fixed Fields: MQL, Proprietário, Canal, Faturamento */}
-                {(lead.mql || lead.responsible_user_id || lead.canal || lead.revenue_range) && (
-                  <div className="grid grid-cols-2 gap-2">
-                    {lead.mql && (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
-                        <span className="text-xs text-muted-foreground">MQL:</span>
-                        <Badge variant={lead.mql === "sim" ? "default" : "secondary"} className="text-xs">
-                          {lead.mql === "sim" ? "Sim" : "Não"}
-                        </Badge>
-                      </div>
-                    )}
-                    {lead.responsible_user_id && responsibleUserName && (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
-                        <span className="text-xs text-muted-foreground">Proprietário:</span>
-                        <span className="text-xs font-medium truncate">{responsibleUserName}</span>
-                      </div>
-                    )}
-                    {lead.canal && (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
-                        <span className="text-xs text-muted-foreground">Canal:</span>
-                        <span className="text-xs font-medium">{CANAL_OPTIONS[lead.canal] || lead.canal}</span>
-                      </div>
-                    )}
-                    {lead.revenue_range && (
-                      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
-                        <span className="text-xs text-muted-foreground">Faturamento:</span>
-                        <span className="text-xs font-medium">{REVENUE_RANGES[lead.revenue_range] || lead.revenue_range}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
 
                 {customFields.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">

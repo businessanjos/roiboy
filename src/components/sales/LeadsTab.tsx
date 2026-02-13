@@ -835,7 +835,7 @@ export default function LeadsTab() {
           instagram: row.instagram,
           instagrams: row.instagrams,
           birth_date: row.birth_date,
-          revenue_range: row.revenue_range,
+          
           external_id: row.external_id,
           external_source: row.external_source,
           // Residential address
