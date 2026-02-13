@@ -253,6 +253,77 @@ async function enrichLeadsWithMql(accountId: string, leads: any[]): Promise<any[
   });
 }
 
+async function enrichLeadsWithOwner(accountId: string, leads: any[]): Promise<any[]> {
+  if (leads.length === 0) return leads;
+
+  const leadIds = leads.map(l => l.id);
+  let allDeals: any[] = [];
+  const batchSize = 500;
+
+  // 1. Fetch all deals linked to these leads
+  for (let i = 0; i < leadIds.length; i += batchSize) {
+    const batch = leadIds.slice(i, i + batchSize);
+    const { data, error } = await supabase
+      .from('deals')
+      .select('id, lead_id, responsible_user_id, created_at')
+      .eq('account_id', accountId)
+      .in('lead_id', batch);
+
+    if (error) {
+      console.error('Error fetching deals for lead owners:', error);
+      continue;
+    }
+    allDeals = allDeals.concat(data || []);
+  }
+
+  // 2. For each lead, find the most recent deal
+  const latestDealByLead = new Map<string, { responsible_user_id: string }>();
+  for (const deal of allDeals) {
+    if (!deal.lead_id || !deal.responsible_user_id) continue;
+    const existing = latestDealByLead.get(deal.lead_id);
+    if (!existing) {
+      latestDealByLead.set(deal.lead_id, deal);
+    } else {
+      // Compare created_at to keep the most recent
+      if (new Date(deal.created_at) > new Date((existing as any).created_at)) {
+        latestDealByLead.set(deal.lead_id, deal);
+      }
+    }
+  }
+
+  // 3. Fetch user names for all responsible_user_ids
+  const userIds = [...new Set(
+    Array.from(latestDealByLead.values()).map(d => d.responsible_user_id)
+  )];
+
+  const userNameMap = new Map<string, string>();
+  for (let i = 0; i < userIds.length; i += batchSize) {
+    const batch = userIds.slice(i, i + batchSize);
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name')
+      .in('id', batch);
+
+    if (error) {
+      console.error('Error fetching user names for lead owners:', error);
+      continue;
+    }
+    for (const user of data || []) {
+      userNameMap.set(user.id, user.name);
+    }
+  }
+
+  // 4. Inject responsible_name into each lead
+  return leads.map(lead => {
+    const deal = latestDealByLead.get(lead.id);
+    const userName = deal ? userNameMap.get(deal.responsible_user_id) : null;
+    return {
+      ...lead,
+      responsible_name: userName || 'Sem Proprietário',
+    };
+  });
+}
+
 async function enrichDealsWithMql(accountId: string, deals: any[]): Promise<any[]> {
   if (deals.length === 0) return deals;
 
@@ -688,6 +759,12 @@ async function fetchLeadsData(
     return aggregateData(enrichedData, { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
   }
 
+  // If grouping by Vendedor (owner), enrich leads with owner from latest deal
+  if (dimension.field === 'responsible_name') {
+    const enrichedData = await enrichLeadsWithOwner(accountId, allData);
+    return aggregateData(enrichedData, { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
+  }
+
   // Leads only support count aggregation
   return aggregateData(allData, { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
 }
@@ -800,7 +877,7 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], dateDispla
     return item.deal_stages?.name || 'Sem Etapa';
   }
   if (field === 'responsible_name') {
-    return item.users?.name || 'Sem Responsável';
+    return item.responsible_name || item.users?.name || 'Sem Responsável';
   }
   if (field === 'is_active') {
     return item.is_active ? 'Ativo' : 'Inativo';
