@@ -109,14 +109,36 @@ serve(async (req) => {
         { fieldId: "e352a1ca-cfbc-435a-95f7-2f53b5cac041", value: payload.revenue_range },
       ];
 
+      const fieldIds = fieldMappings.map((m) => m.fieldId);
+
+      // Fetch custom field definitions to resolve select options
+      const { data: customFields } = await supabase
+        .from("custom_fields")
+        .select("id, field_type, options")
+        .in("id", fieldIds);
+
+      const normalize = (str: string) =>
+        str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+      const resolveValue = (fieldId: string, rawText: string): string | null => {
+        const fieldDef = customFields?.find((f: any) => f.id === fieldId);
+        if (!fieldDef || fieldDef.field_type !== "select") return rawText;
+        const normalizedInput = normalize(rawText);
+        const match = (fieldDef.options as any[])?.find(
+          (opt: any) => normalize(opt.label) === normalizedInput
+        );
+        return match ? match.value : null;
+      };
+
       const fieldInserts = fieldMappings
         .filter((m) => m.value && m.value.trim())
         .map((m) => ({
           lead_id: newLead.id,
           field_id: m.fieldId,
           account_id: accountId,
-          value_text: m.value!.trim(),
-        }));
+          value_text: resolveValue(m.fieldId, m.value!.trim()),
+        }))
+        .filter((m) => m.value_text !== null);
 
       if (fieldInserts.length > 0) {
         const { error: fieldError } = await supabase
