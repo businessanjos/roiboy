@@ -163,6 +163,7 @@ export const DATA_SOURCE_FIELDS: Record<DataSource, {
       { value: 'source', label: 'Origem', type: 'text' },
       { value: 'revenue_range', label: 'Faixa de Faturamento', type: 'text' },
       { value: 'created_at', label: 'Data de Criação', type: 'date' },
+      { value: 'responsible_name', label: 'Vendedor', type: 'text' },
     ],
   },
   products: {
