@@ -94,11 +94,11 @@ function BarChartView({
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis
           dataKey="name"
-          tick={{ fontSize: 11 }}
+          tick={{ fontSize: 10 }}
           className="text-muted-foreground"
-          angle={-45}
+          angle={-35}
           textAnchor="end"
-          height={60}
+          height={100}
           interval={0}
         />
         <YAxis
