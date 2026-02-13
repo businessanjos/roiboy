@@ -263,22 +263,25 @@ export default function Dashboard() {
     const { periodStart, periodEnd } = gestaoPeriodRange;
     
     return contractData.filter(contract => {
-      // Filter by period - use cancelled_at, start_date, or status_changed_at
-      const contractDate = contract.cancelled_at 
+      // Include contract if ANY relevant date falls within the period
+      const startDate = contract.start_date ? parseISO(contract.start_date) : null;
+      const exitDate = contract.cancelled_at 
         ? parseISO(contract.cancelled_at)
-        : contract.start_date
-          ? parseISO(contract.start_date)
-          : contract.status_changed_at
-            ? parseISO(contract.status_changed_at)
-            : null;
-      if (!contractDate || contractDate < periodStart || contractDate > periodEnd) return false;
-      
+        : contract.status_changed_at
+          ? parseISO(contract.status_changed_at)
+          : null;
+
+      const startInPeriod = startDate && startDate >= periodStart && startDate <= periodEnd;
+      const exitInPeriod = exitDate && exitDate >= periodStart && exitDate <= periodEnd;
+
+      if (!startInPeriod && !exitInPeriod) return false;
+
       // Filter by product
       if (gestaoProductFilter !== "all") {
         const clientProducts = clientProductsMap[contract.client_id] || [];
         if (!clientProducts.includes(gestaoProductFilter)) return false;
       }
-      
+
       return true;
     });
   }, [contractData, gestaoProductFilter, gestaoPeriodRange, clientProductsMap]);
