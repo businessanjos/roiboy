@@ -164,6 +164,7 @@ export const DATA_SOURCE_FIELDS: Record<DataSource, {
       { value: 'revenue_range', label: 'Faixa de Faturamento', type: 'text' },
       { value: 'created_at', label: 'Data de Criação', type: 'date' },
       { value: 'responsible_name', label: 'Vendedor', type: 'text' },
+      { value: 'faturamento_atual', label: 'Faturamento Atual', type: 'text' },
     ],
   },
   products: {

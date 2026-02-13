@@ -212,6 +212,44 @@ const LEAD_MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
   opt_2: { label: 'NAO - Abaixo de 30k', color: '#ef4444' },
 };
 
+const LEAD_FATURAMENTO_FIELD_ID = 'e352a1ca-cfbc-435a-95f7-2f53b5cac041';
+
+async function enrichLeadsWithFaturamento(accountId: string, leads: any[]): Promise<any[]> {
+  if (leads.length === 0) return leads;
+
+  const leadIds = leads.map(l => l.id);
+  let allValues: any[] = [];
+  const batchSize = 500;
+
+  for (let i = 0; i < leadIds.length; i += batchSize) {
+    const batch = leadIds.slice(i, i + batchSize);
+    const { data, error } = await supabase
+      .from('lead_field_values')
+      .select('lead_id, value_text')
+      .eq('field_id', LEAD_FATURAMENTO_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('lead_id', batch);
+
+    if (error) {
+      console.error('Error fetching lead faturamento values:', error);
+      continue;
+    }
+    allValues = allValues.concat(data || []);
+  }
+
+  const fatMap = new Map<string, string>();
+  for (const row of allValues) {
+    if (row.value_text) {
+      fatMap.set(row.lead_id, row.value_text);
+    }
+  }
+
+  return leads.map(lead => ({
+    ...lead,
+    faturamento_atual: fatMap.get(lead.id) || 'Não informado',
+  }));
+}
+
 async function enrichLeadsWithMql(accountId: string, leads: any[]): Promise<any[]> {
   if (leads.length === 0) return leads;
 
@@ -765,6 +803,12 @@ async function fetchLeadsData(
     return aggregateData(enrichedData, { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
   }
 
+  // If grouping by Faturamento Atual, enrich leads with custom field value
+  if (dimension.field === 'faturamento_atual') {
+    const enrichedData = await enrichLeadsWithFaturamento(accountId, allData);
+    return aggregateData(enrichedData, { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
+  }
+
   // Leads only support count aggregation
   return aggregateData(allData, { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
 }
@@ -884,6 +928,9 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], dateDispla
   }
   if (field === 'mql') {
     return item._mql_label || 'Não informado';
+  }
+  if (field === 'faturamento_atual') {
+    return item.faturamento_atual || 'Não informado';
   }
 
   // Handle date fields
