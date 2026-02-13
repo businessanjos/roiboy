@@ -214,6 +214,22 @@ export default function Leads() {
     }
   }, [dialogStep, currentUser?.account_id]);
 
+  // Team users for Proprietário select
+  const [teamUsers, setTeamUsers] = useState<{ id: string; name: string }[]>([]);
+  
+  useEffect(() => {
+    const loadTeamUsers = async () => {
+      if (!currentUser?.account_id) return;
+      const { data } = await supabase
+        .from("users")
+        .select("id, name")
+        .eq("account_id", currentUser.account_id)
+        .order("name");
+      setTeamUsers(data || []);
+    };
+    loadTeamUsers();
+  }, [currentUser?.account_id]);
+
   // Form state
   const [formData, setFormData] = useState({
     full_name: "",
@@ -223,6 +239,10 @@ export default function Leads() {
     notes: "",
     additional_phones: [] as { label?: string; number: string }[],
     emails: [] as string[],
+    mql: "",
+    canal: "",
+    responsible_user_id: "",
+    revenue_range: "",
   });
   
   // Temp input state for adding multi-value fields
@@ -317,6 +337,10 @@ export default function Leads() {
       notes: "",
       additional_phones: [],
       emails: [],
+      mql: "",
+      canal: "",
+      responsible_user_id: "",
+      revenue_range: "",
     });
     setDealFormData({
       title: "",
@@ -353,6 +377,10 @@ export default function Leads() {
       notes: lead.notes || "",
       additional_phones: formattedPhones,
       emails: (lead.emails as string[]) || [],
+      mql: lead.mql || "",
+      canal: lead.canal || "",
+      responsible_user_id: lead.responsible_user_id || "",
+      revenue_range: lead.revenue_range || "",
     });
     setNewPhone("");
     setNewEmail("");
@@ -431,9 +459,18 @@ export default function Leads() {
   const handleSave = async () => {
     if (!formData.full_name.trim()) return;
 
+    // Clean empty optional fields to avoid sending empty strings
+    const cleanedData = {
+      ...formData,
+      mql: formData.mql || undefined,
+      canal: formData.canal || undefined,
+      responsible_user_id: formData.responsible_user_id || undefined,
+      revenue_range: formData.revenue_range || undefined,
+    };
+
     // If editing, just update
     if (selectedLead) {
-      await updateLead(selectedLead.id, formData);
+      await updateLead(selectedLead.id, cleanedData);
       setIsDialogOpen(false);
       resetForm();
       return;
@@ -453,7 +490,7 @@ export default function Leads() {
     }
 
     // Create new lead
-    await createLead(formData);
+    await createLead(cleanedData);
     setIsDialogOpen(false);
     resetForm();
   };
@@ -1643,7 +1680,86 @@ export default function Leads() {
                       </SelectItem>
                     ))}
                   </SelectContent>
-                </Select>
+              </Select>
+              </div>
+
+              {/* 4 Fixed Fields: MQL, Proprietário, Canal, Faturamento */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>MQL</Label>
+                  <Select
+                    value={formData.mql}
+                    onValueChange={(value) => setFormData({ ...formData, mql: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="MQL?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sim">Sim</SelectItem>
+                      <SelectItem value="nao">Não</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Proprietário</Label>
+                  <Select
+                    value={formData.responsible_user_id}
+                    onValueChange={(value) => setFormData({ ...formData, responsible_user_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecionar..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {teamUsers.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          {user.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Canal</Label>
+                  <Select
+                    value={formData.canal}
+                    onValueChange={(value) => setFormData({ ...formData, canal: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Canal de venda" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="trafego_pago">Tráfego Pago</SelectItem>
+                      <SelectItem value="indicacao">Indicação</SelectItem>
+                      <SelectItem value="organico">Orgânico</SelectItem>
+                      <SelectItem value="instagram">Instagram</SelectItem>
+                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                      <SelectItem value="google">Google</SelectItem>
+                      <SelectItem value="evento">Evento</SelectItem>
+                      <SelectItem value="outro">Outro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Faturamento</Label>
+                  <Select
+                    value={formData.revenue_range}
+                    onValueChange={(value) => setFormData({ ...formData, revenue_range: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Faixa de faturamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {REVENUE_RANGES.map((range) => (
+                        <SelectItem key={range.value} value={range.value}>
+                          {range.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-2">
