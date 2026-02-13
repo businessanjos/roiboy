@@ -1,50 +1,54 @@
 
-## Sincronizar campos da API com campos personalizados do Lead
+## Corrigir gravacao de campos select na edge function create-lead
 
 ### Problema
-Os campos `mql`, `canal` e `revenue_range` sao salvos nas colunas da tabela `leads`, mas a UI exibe dados atraves do sistema de **campos personalizados** (tabela `lead_field_values`). Por isso, mesmo com os valores chegando corretamente via API, eles nao aparecem no detalhe do Lead.
+Os campos MQL e Canal sao do tipo **select** (selecao de opcoes). O sistema espera que o valor gravado em `value_text` seja o **ID interno da opcao** (ex: `opt_1`, `opt_2`), nao o **texto do label** (ex: "SIM - Acima de 30k").
+
+A edge function esta gravando o texto do label, por isso a UI nao reconhece o valor e exibe "---".
+
+O campo Faturamento Atual funciona porque e do tipo **text**, que aceita texto livre.
+
+### Mapeamento das opcoes
+
+**MQL (select):**
+- "SIM - Acima de 30k" → `opt_1`
+- "NAO - Abaixo de 30k" → `opt_2`
+
+**Canal (select):**
+- "Organico" → `opt_1`
+- "Trafego Pago" → `opt_2`
+- "Indicacao" → `opt_1770990177251`
+- "Prospeccao ativa" → `opt_1770990180958`
+- "Trafego Alheio" → `opt_1770990186415`
+- "Esteira / Carteira" → `opt_1770990194848`
+- "Social Seller" → `opt_1770990199860`
+- "Recorrencia" → `opt_1770990203418`
 
 ### Solucao
-Atualizar a edge function `create-lead` para, apos criar o lead, tambem inserir os valores nos campos personalizados correspondentes na tabela `lead_field_values`.
-
-### Mapeamento dos campos personalizados (IDs ja existentes no banco)
-
-| Campo API       | Custom Field ID                        | Nome no sistema      |
-|-----------------|----------------------------------------|----------------------|
-| `mql`           | `e4270e93-e9b9-4d9b-9589-d614ce335bcd` | MQL                  |
-| `canal`         | `3bcdcf47-076e-47f2-a1ab-a4dd1ec8398a` | Canal                |
-| `revenue_range` | `e352a1ca-cfbc-435a-95f7-2f53b5cac041` | Faturamento Atual    |
-
-### Mudanca tecnica
 
 **Arquivo: `supabase/functions/create-lead/index.ts`**
 
-Apos o insert do lead (linha 100), adicionar logica para inserir em `lead_field_values`:
+Apos criar o lead e antes de inserir em `lead_field_values`, buscar a definicao dos campos personalizados no banco para obter as opcoes. Para campos do tipo `select`, converter o texto recebido (label) para o ID da opcao (`value`), fazendo match case-insensitive e com normalizacao de acentos.
 
 ```text
-// Mapear campos para custom fields
-const fieldMappings = [
-  { fieldId: "e4270e93-...", value: payload.mql },
-  { fieldId: "3bcdcf47-...", value: payload.canal },
-  { fieldId: "e352a1ca-...", value: payload.revenue_range },
-];
+// 1. Buscar definicao dos custom fields
+const { data: customFields } = await supabase
+  .from('custom_fields')
+  .select('id, field_type, options')
+  .in('id', [fieldIds...]);
 
-// Inserir apenas campos com valor preenchido
-const fieldInserts = fieldMappings
-  .filter(m => m.value?.trim())
-  .map(m => ({
-    lead_id: newLead.id,
-    field_id: m.fieldId,
-    account_id: accountId,
-    value_text: m.value.trim(),
-  }));
-
-if (fieldInserts.length > 0) {
-  await supabase.from("lead_field_values").insert(fieldInserts);
+// 2. Para cada campo, se for select, buscar o option.value pelo label
+function resolveSelectValue(fieldDef, rawText) {
+  if (fieldDef.field_type !== 'select') return rawText;
+  const normalized = rawText.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const match = fieldDef.options.find(opt =>
+    opt.label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") === normalized
+  );
+  return match ? match.value : null; // null se nao encontrar
 }
 ```
 
 ### O que nao muda
-- JSON do n8n (ja esta correto com `mql`, `canal`, `revenue_range`)
-- Colunas na tabela leads (continuam sendo populadas)
-- UI do detalhe do Lead (ja le de `lead_field_values`)
+- JSON do n8n (continua enviando texto legivel como "Trafego Pago")
+- UI do Lead (ja sabe ler opt_1, opt_2 etc)
+- Faturamento Atual (continua sendo texto livre)
