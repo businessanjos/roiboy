@@ -43,6 +43,7 @@ interface ContractData {
   id: string;
   status: string;
   status_changed_at: string | null;
+  cancelled_at: string | null;
   start_date: string;
   value: number;
   client_id: string;
@@ -354,8 +355,8 @@ export function useContractData() {
       
       const { data, error } = await supabase
         .from("client_contracts")
-        .select("id, status, status_changed_at, start_date, value, client_id")
-        .or(`start_date.gte.${format(twelveMonthsAgo, "yyyy-MM-dd")},status_changed_at.gte.${twelveMonthsAgo.toISOString()}`)
+        .select("id, status, status_changed_at, cancelled_at, start_date, value, client_id")
+        .or(`start_date.gte.${format(twelveMonthsAgo, "yyyy-MM-dd")},status_changed_at.gte.${twelveMonthsAgo.toISOString()},cancelled_at.gte.${twelveMonthsAgo.toISOString()}`)
         .order("start_date", { ascending: true });
 
       if (error) throw error;
