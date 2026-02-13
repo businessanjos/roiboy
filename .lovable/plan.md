@@ -1,108 +1,57 @@
 
-## Corrigir metricas do Dashboard de Gestao (Retencao, Valor Perdido, Evolucao Mensal)
 
-### Problemas identificados
+## Corrigir Filtro de Contratos no Dashboard de Gestao
 
-Apos analise dos dados no banco, encontrei **3 bugs criticos** que explicam por que os cards e o grafico estao incorretos:
+### Problema
 
-1. **Cancelamentos/encerramentos sempre zerados no grafico**: O codigo usa a coluna `status_changed_at` para contar eventos por mes, porem essa coluna esta **sempre NULL** no banco. A data real esta na coluna `cancelled_at`.
+O codigo corrigido anteriormente esta com a logica correta para contar novos/cancelamentos/encerramentos, **porem o filtro `filteredContractData` esta eliminando contratos antes de chegar ao calculo**.
 
-2. **Status incorretos no codigo**: O codigo procura pelo status `"churned"` para contar cancelamentos, mas no banco o status real e `"cancelled"`. Alem disso, os status `"dismissed"` e `"dropout_7d"` nao sao contabilizados.
+O filtro atual (linhas 265-274) escolhe **uma unica data** por contrato para verificar se esta no periodo:
+- Se tem `cancelled_at`, usa apenas essa data
+- Senao, usa `start_date`
 
-3. **Novos sub-contados**: O codigo so conta como "novos" contratos que **atualmente** tem status `"active"`. Ou seja, um contrato criado em agosto que foi cancelado em janeiro nao aparece como "novo" em agosto. Todos os contratos devem contar como "novos" no mes de criacao, independente do status atual.
-
-### Dados reais (ultimos meses)
-
-| Mes | Novos (real) | Cancelamentos | Demissoes | Encerramentos |
-|-----|-------------|---------------|-----------|---------------|
-| ago/25 | 19 | 5 | 0 | 0 |
-| set/25 | 27 | 7 | 1 | 0 |
-| out/25 | 23 | 3 | 1 | 0 |
-| nov/25 | 17 | 1 | 0 | 0 |
-| dez/25 | 19 | 2 | 1 | 0 |
-| jan/26 | 49 | 9 | 16+1 | 153 |
-| fev/26 | 11 | 1 | 1 | 3 |
-
-Com esses dados reais, a taxa de retencao de fevereiro deveria ser muito diferente de 100%.
+Isso causa dois problemas:
+1. Um contrato iniciado em agosto e cancelado em janeiro: o filtro usa `cancelled_at` (janeiro), entao ele **nao aparece como "novo" em agosto**
+2. Contratos ativos antigos (sem `cancelled_at`, com `start_date` fora do periodo): sao **completamente excluidos**, embora ainda sejam relevantes para contexto
 
 ### Solucao
 
-#### 1. Corrigir `monthlyChartData` (calculo do grafico)
+Alterar o filtro para incluir um contrato se **qualquer** uma de suas datas relevantes cair dentro do periodo selecionado.
 
-- Usar `cancelled_at` em vez de `status_changed_at` para determinar o mes do evento
-- Contar **todos** contratos como "novos" pelo `start_date`, independente do status atual
-- Mapear os status corretamente:
-  - `"cancelled"` e `"dropout_7d"` -> Cancelamentos
-  - `"dismissed"` -> Cancelamentos (ou categoria propria se preferir)
-  - `"ended"` -> Encerramentos
-  - `"paused"` e `"suspended"` -> Congelamentos
-
-#### 2. Corrigir `retentionMetrics`
-
-Nenhuma mudanca necessaria aqui pois ele ja deriva de `monthlyChartData`. Corrigindo os dados de entrada, a taxa sera calculada corretamente.
-
-#### 3. Corrigir `lostFinancialValue`
-
-- Usar `cancelled_at` em vez de `status_changed_at`
-- Mapear `"cancelled"` em vez de `"churned"` para o calculo de valor de cancelamentos
-- Incluir `"dismissed"` no calculo
-
-#### 4. Corrigir a query de busca de contratos (`useContractData`)
-
-- Incluir `cancelled_at` no SELECT
-- Ajustar o filtro OR para tambem considerar `cancelled_at` no periodo
-
-### Arquivos afetados
+### Arquivo afetado
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `src/hooks/useDashboardData.tsx` | Adicionar `cancelled_at` ao SELECT e ao filtro da query `useContractData` |
-| `src/pages/Dashboard.tsx` | Corrigir `monthlyChartData` para usar `cancelled_at` e mapear status corretos; corrigir `lostFinancialValue` da mesma forma |
+| `src/pages/Dashboard.tsx` | Corrigir logica do `filteredContractData` (linhas 265-274) |
 
 ### Detalhes tecnicos
 
-**useDashboardData.tsx - useContractData:**
+**Substituir** a logica atual do filtro por:
+
 ```typescript
-// SELECT: adicionar cancelled_at
-.select("id, status, status_changed_at, cancelled_at, start_date, value, client_id")
+return contractData.filter(contract => {
+  // Include contract if ANY relevant date falls within the period
+  const startDate = contract.start_date ? parseISO(contract.start_date) : null;
+  const exitDate = contract.cancelled_at 
+    ? parseISO(contract.cancelled_at)
+    : contract.status_changed_at
+      ? parseISO(contract.status_changed_at)
+      : null;
 
-// Filtro: incluir cancelled_at
-.or(`start_date.gte.${...},status_changed_at.gte.${...},cancelled_at.gte.${...}`)
-```
+  const startInPeriod = startDate && startDate >= periodStart && startDate <= periodEnd;
+  const exitInPeriod = exitDate && exitDate >= periodStart && exitDate <= periodEnd;
 
-**Dashboard.tsx - monthlyChartData:**
-```typescript
-// Novos: contar TODOS contratos pelo start_date (remover filtro de status)
-if (contract.start_date) {
-  const startKey = format(parseISO(contract.start_date), "yyyy-MM");
-  if (months[startKey]) months[startKey].novos++;
-}
+  if (!startInPeriod && !exitInPeriod) return false;
 
-// Saidas: usar cancelled_at em vez de status_changed_at
-const exitDate = contract.cancelled_at || contract.status_changed_at;
-if (exitDate && contract.status !== "active") {
-  const key = format(parseISO(exitDate), "yyyy-MM");
-  if (months[key]) {
-    if (["cancelled", "dismissed", "dropout_7d"].includes(contract.status)) {
-      months[key].cancelamentos++;
-    } else if (contract.status === "ended") {
-      months[key].encerramentos++;
-    } else if (["paused", "suspended"].includes(contract.status)) {
-      months[key].congelamentos++;
-    }
+  // Filter by product
+  if (gestaoProductFilter !== "all") {
+    const clientProducts = clientProductsMap[contract.client_id] || [];
+    if (!clientProducts.includes(gestaoProductFilter)) return false;
   }
-}
+
+  return true;
+});
 ```
 
-**Dashboard.tsx - lostFinancialValue:**
-```typescript
-// Usar cancelled_at em vez de status_changed_at
-const changedAt = parseISO(contract.cancelled_at || contract.status_changed_at);
+Com essa correcao, um contrato que iniciou em agosto e foi cancelado em janeiro aparecera no `filteredContractData` em ambos os contextos: sera contado como "novo" em agosto E como "cancelamento" em janeiro, refletindo os dados reais do banco.
 
-// Mapear status corretos
-if (["cancelled", "dismissed", "dropout_7d"].includes(contract.status)) {
-  cancelamentosValue += contract.value || 0;
-} else if (contract.status === "ended") {
-  demissoesValue += contract.value || 0;
-}
-```
