@@ -1,53 +1,46 @@
 
+## Indicador de Status de Atividades em Tempo Real no DealCard
 
-## Adicionar 4 Campos Fixos ao Cadastro de Leads
+### Problema
+Quando uma tarefa do negocio e concluida (via dialogo de atividades ou aba de atividades), o indicador de status no card ("Atrasado!", "A fazer", "Feito") nao atualiza imediatamente. O card depende exclusivamente de uma subscription Realtime do Supabase que pode ter latencia de 1-3 segundos ou falhar silenciosamente.
 
-### Contexto
+### Solucao
+Migrar a busca de status de atividades do DealCard de `useState` + `useEffect` manual para **React Query**, permitindo que qualquer componente que conclua uma tarefa invalide o cache e force uma atualizacao imediata no card.
 
-A tabela `leads` ja possui `responsible_user_id` (Proprietario) e `revenue_range` (Faturamento), mas eles nao aparecem no formulario de criacao nem no detalhe do lead. Os campos MQL e Canal precisam de novas colunas no banco.
+### Mudancas
 
-### 1. Migracao de Banco de Dados
+**1. Criar hook `useDealActivityStatus`**
+- Novo hook em `src/hooks/useDealActivityStatus.ts`
+- Usa `useQuery` com query key `["deal-activity-status", dealId]`
+- Mantem a mesma logica de busca (pending count, has overdue, total)
+- Inclui subscription Realtime como complemento (para mudancas de outros usuarios)
 
-Adicionar duas novas colunas na tabela `leads`:
+**2. Atualizar `DealCard.tsx`**
+- Remover o `useEffect` manual que faz fetch e subscribe (linhas 37-82)
+- Remover o state `activityStatus`
+- Usar o novo hook `useDealActivityStatus(deal.id)`
+- Resultado: menos codigo, mesmo comportamento + reatividade via cache
 
-| Coluna | Tipo | Descricao |
-|--------|------|-----------|
-| `mql` | `text` (nullable) | Valores: `"sim"` ou `"nao"` |
-| `canal` | `text` (nullable) | Canal de venda (ex: Trafego Pago, Indicacao, Organico, etc) |
+**3. Atualizar `DealActivitiesDialog.tsx`**
+- Apos concluir tarefa (`handleCompleteTask`), invalidar a query `["deal-activity-status", dealId]`
+- Isso forca o DealCard a refazer a busca imediatamente
 
-### 2. Opcoes dos Campos
+**4. Atualizar `DealActivitiesTab.tsx`**
+- Nos mesmos pontos onde ja faz `invalidateQueries({ queryKey: ["internal-tasks"] })`, adicionar tambem `invalidateQueries({ queryKey: ["deal-activity-status"] })`
 
-- **MQL**: Escolha entre "Sim" e "Nao"
-- **Proprietario**: Selecionar usuario da equipe (ja existe como `responsible_user_id`)
-- **Canal**: Opcoes como Trafego Pago, Indicacao, Organico, Instagram, WhatsApp, Google, Evento, Outro
-- **Faturamento**: Faixas ja existentes no sistema (Ate R$81mil, R$81mil-R$360mil, etc, usando `revenue_range`)
+### Detalhes Tecnicos
 
-### 3. Arquivos Afetados
+```text
+Fluxo atual (com latencia):
+  Usuario completa tarefa --> DB atualiza --> Realtime notifica (1-3s) --> Card refaz fetch
 
-| Arquivo | Mudanca |
-|---------|---------|
-| **Migracao SQL** | Adicionar colunas `mql` e `canal` na tabela `leads` |
-| `src/hooks/useLeads.tsx` | Adicionar `mql` e `canal` ao tipo `Lead` e `CreateLeadData` |
-| `src/pages/Leads.tsx` | Adicionar os 4 campos no formulario de criacao/edicao (step `lead-form`) |
-| `src/components/leads/LeadDetailSheet.tsx` | Exibir os 4 campos na visualizacao do lead |
+Fluxo novo (instantaneo):
+  Usuario completa tarefa --> DB atualiza --> invalidateQueries --> Card refaz fetch (imediato)
+                                          --> Realtime (backup para outros usuarios)
+```
 
-### 4. Detalhes Tecnicos
+**Query key**: `["deal-activity-status", dealId]` — permite invalidar um card especifico ou todos de uma vez.
 
-**Formulario de Criacao (Leads.tsx)**:
-- Adicionar `mql`, `canal`, `responsible_user_id` e `revenue_range` ao `formData` state
-- Inserir 4 novos campos Select no formulario entre Origem e Observacoes
-- MQL: Select com opcoes Sim/Nao
-- Canal: Select com opcoes pre-definidas
-- Proprietario: Select carregando usuarios da equipe (`users` table)
-- Faturamento: Select com as faixas `REVENUE_RANGES` ja definidas no arquivo
+**staleTime**: 30 segundos — evita refetches excessivos quando muitos cards estao visiveis no Kanban.
 
-**Detalhe do Lead (LeadDetailSheet.tsx)**:
-- Exibir os 4 campos como informacoes fixas na secao de contato, com icones apropriados
-- Proprietario mostra nome do usuario
-- MQL, Canal e Faturamento mostram seus respectivos labels
-
-**Hook useLeads.tsx**:
-- Adicionar `mql: string | null` e `canal: string | null` ao tipo `Lead`
-- Adicionar `mql?: string` e `canal?: string` ao tipo `CreateLeadData`
-- Incluir no `resetForm` e no `openEditDialog`
-
+**Realtime mantido**: A subscription continua ativa como fallback para mudancas feitas por outros usuarios ou de outros dispositivos.
