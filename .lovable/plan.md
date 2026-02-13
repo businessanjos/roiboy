@@ -1,52 +1,38 @@
 
 
-## Excluir Lead com deals vinculados (cascade + aviso)
+## Corrigir visual "Leads por MQL" para ler dados dos campos personalizados
 
 ### Problema
-A exclusao de um Lead falha quando ha negocios (deals) vinculados por causa da foreign key `deals_lead_id_fkey`. O usuario quer que os deals sejam excluidos junto, mas com um aviso previo listando os negocios afetados.
+O visual "Leads por MQL" mostra "Nao informado (100%)" porque a funcao `fetchLeadsData` no hook `useVisualData.ts` nao busca o valor de MQL na tabela `lead_field_values`. O campo MQL do Lead e um campo personalizado (ID: `e4270e93-e9b9-4d9b-9589-d614ce335bcd`) armazenado em `lead_field_values`, nao na coluna `leads.mql`.
 
-### Mudancas
+Ja existe uma funcao similar para Deals (`enrichDealsWithMql`) que busca o MQL da tabela `deal_field_values`. Precisamos replicar essa logica para Leads.
 
-**1. Hook `src/hooks/useLeads.tsx` - funcao `deleteLead`**
+### Mapeamento
 
-Refatorar para:
-1. Consultar deals vinculados ao lead (`deals.lead_id = leadId`)
-2. Retornar a lista de deals encontrados para a UI decidir se mostra o aviso
-3. Criar uma nova funcao `deleteLeadWithDeals` que:
-   - Deleta registros em `lead_field_values` (campos personalizados)
-   - Deleta registros em `lead_timeline` (historico)
-   - Deleta os deals vinculados
-   - Deleta o lead
+| Opcao (value_text)  | Label               | Cor     |
+|---------------------|----------------------|---------|
+| `opt_1`             | SIM - Acima de 30k   | #22c55e |
+| `opt_2`             | NAO - Abaixo de 30k  | #ef4444 |
 
-Nova funcao exposta:
+### Mudanca tecnica
+
+**Arquivo: `src/hooks/useVisualData.ts`**
+
+1. Criar constante `LEAD_MQL_FIELD_ID = 'e4270e93-e9b9-4d9b-9589-d614ce335bcd'`
+
+2. Criar mapa de valores para o MQL de Leads:
 ```text
-checkLeadDeals(leadId) -> Deal[] | null
-deleteLeadWithDeals(leadId) -> boolean
+const LEAD_MQL_VALUE_MAP = {
+  opt_1: { label: 'SIM - Acima de 30k', color: '#22c55e' },
+  opt_2: { label: 'NAO - Abaixo de 30k', color: '#ef4444' },
+};
 ```
 
-**2. Componente `src/components/sales/LeadsTab.tsx` - AlertDialog de exclusao**
+3. Criar funcao `enrichLeadsWithMql(accountId, leads)` similar a `enrichDealsWithMql`, mas buscando de `lead_field_values` em vez de `deal_field_values`, e usando `lead_id` em vez de `deal_id`.
 
-Refatorar o fluxo:
-1. Ao clicar em "Excluir", buscar deals vinculados via `checkLeadDeals`
-2. Se houver deals, exibir no AlertDialog uma lista com os nomes dos negocios e um aviso claro
-3. Se nao houver deals, manter o aviso simples atual
-4. Ao confirmar, chamar `deleteLeadWithDeals` que faz a exclusao em cascata
-
-Exemplo visual do dialog quando ha deals:
-
-```text
-Excluir lead?
-
-Este lead possui 2 negocios vinculados que tambem serao excluidos:
-
-  - Negocio: Projeto Website (R$ 5.000)
-  - Negocio: Consultoria SEO (R$ 2.000)
-
-Esta acao nao pode ser desfeita.
-
-[Cancelar]  [Excluir tudo]
-```
+4. Na funcao `fetchLeadsData`, apos coletar todos os leads, verificar se o agrupamento e por `mql`. Se for, chamar `enrichLeadsWithMql` antes de agregar os dados — exatamente como ja e feito para Deals na funcao `fetchDealsData` (linhas 337-339).
 
 ### O que nao muda
-- Botao de excluir na tabela e no detalhe do lead (mesmo local)
-- Leads sem deals continuam sendo excluidos normalmente com o aviso simples
+- Visuais de MQL de Deals (continuam usando `deal_field_values`)
+- UI do perfil do Lead (ja exibe MQL corretamente)
+- Demais agrupamentos de Leads (por data, status, etc.)
