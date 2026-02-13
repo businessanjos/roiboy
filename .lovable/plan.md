@@ -1,31 +1,53 @@
 
 
-## Restaurar Cards de Taxa de Retencao e Valor Perdido (condicionais ao toggle)
+## Adicionar 4 Campos Fixos ao Cadastro de Leads
 
-Os cards foram removidos completamente na edicao anterior, mas a intencao era apenas ocultá-los no modo "Comercial". Vou restaura-los com exibicao condicional.
+### Contexto
 
-### Mudancas no arquivo `src/pages/Dashboard.tsx`
+A tabela `leads` ja possui `responsible_user_id` (Proprietario) e `revenue_range` (Faturamento), mas eles nao aparecem no formulario de criacao nem no detalhe do lead. Os campos MQL e Canal precisam de novas colunas no banco.
 
-**1. Restaurar import do icone `DollarSign`**
+### 1. Migracao de Banco de Dados
 
-Adicionar `DollarSign` na lista de imports do `lucide-react`.
+Adicionar duas novas colunas na tabela `leads`:
 
-**2. Restaurar os dois `useMemo` removidos**
+| Coluna | Tipo | Descricao |
+|--------|------|-----------|
+| `mql` | `text` (nullable) | Valores: `"sim"` ou `"nao"` |
+| `canal` | `text` (nullable) | Canal de venda (ex: Trafego Pago, Indicacao, Organico, etc) |
 
-- `retentionMetrics`: calcula taxa de retencao com base no `monthlyChartData` (novos vs cancelamentos do mes atual)
-- `lostFinancialValue`: calcula valor financeiro perdido com cancelamentos e encerramentos usando `cancelled_at` e os status corretos (`cancelled`, `dismissed`, `dropout_7d`, `ended`)
+### 2. Opcoes dos Campos
 
-**3. Restaurar os cards na view normal (apos o grafico, antes do `</TabsContent>`)**
+- **MQL**: Escolha entre "Sim" e "Nao"
+- **Proprietario**: Selecionar usuario da equipe (ja existe como `responsible_user_id`)
+- **Canal**: Opcoes como Trafego Pago, Indicacao, Organico, Instagram, WhatsApp, Google, Evento, Outro
+- **Faturamento**: Faixas ja existentes no sistema (Ate R$81mil, R$81mil-R$360mil, etc, usando `revenue_range`)
 
-Dois cards lado a lado em um grid, envolvidos por `{gestaoViewMode === "operacoes" && (...)}`:
-- Card "Taxa de Retencao" com porcentagem e indicador visual
-- Card "Valor Perdido (Mes Atual)" com valor em R$ de cancelamentos e encerramentos
+### 3. Arquivos Afetados
 
-**4. Restaurar os cards no Focus Mode (apos o grafico de Evolucao Mensal)**
+| Arquivo | Mudanca |
+|---------|---------|
+| **Migracao SQL** | Adicionar colunas `mql` e `canal` na tabela `leads` |
+| `src/hooks/useLeads.tsx` | Adicionar `mql` e `canal` ao tipo `Lead` e `CreateLeadData` |
+| `src/pages/Leads.tsx` | Adicionar os 4 campos no formulario de criacao/edicao (step `lead-form`) |
+| `src/components/leads/LeadDetailSheet.tsx` | Exibir os 4 campos na visualizacao do lead |
 
-Mesma logica condicional com `gestaoViewMode === "operacoes"`.
+### 4. Detalhes Tecnicos
 
-### Resultado
+**Formulario de Criacao (Leads.tsx)**:
+- Adicionar `mql`, `canal`, `responsible_user_id` e `revenue_range` ao `formData` state
+- Inserir 4 novos campos Select no formulario entre Origem e Observacoes
+- MQL: Select com opcoes Sim/Nao
+- Canal: Select com opcoes pre-definidas
+- Proprietario: Select carregando usuarios da equipe (`users` table)
+- Faturamento: Select com as faixas `REVENUE_RANGES` ja definidas no arquivo
 
-- Modo **Operacoes**: Exibe todos os cards incluindo Taxa de Retencao e Valor Perdido
-- Modo **Comercial**: Oculta cancelamentos, encerramentos, congelamentos, taxa de retencao e valor perdido
+**Detalhe do Lead (LeadDetailSheet.tsx)**:
+- Exibir os 4 campos como informacoes fixas na secao de contato, com icones apropriados
+- Proprietario mostra nome do usuario
+- MQL, Canal e Faturamento mostram seus respectivos labels
+
+**Hook useLeads.tsx**:
+- Adicionar `mql: string | null` e `canal: string | null` ao tipo `Lead`
+- Adicionar `mql?: string` e `canal?: string` ao tipo `CreateLeadData`
+- Incluir no `resetForm` e no `openEditDialog`
+
