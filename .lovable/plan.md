@@ -1,35 +1,27 @@
 
+## Adicionar Filtro de Etapas no Funil de Vendas
 
-## Reverter os 4 Campos Fixos (MQL, Proprietario, Canal, Faturamento) do Cadastro de Leads
+### Objetivo
+Inserir um botao sutil no header do card "Funil de Vendas" que, ao ser clicado, expande um popover com checkboxes para marcar/desmarcar quais etapas aparecem no funil.
 
-### O que sera removido
+### Mudancas
 
-Todas as referencias aos 4 campos fixos que foram adicionados pela instrucao anterior, sem afetar nenhuma outra funcionalidade.
+**Arquivo: `src/components/insights/whatsapp-dashboard/SalesFunnelChart.tsx`**
 
-### Arquivos e Mudancas
+- Adicionar um state local `hiddenStages` (Set de nomes de etapas ocultas), inicialmente vazio (todas visiveis)
+- Adicionar um botao de icone discreto (icone `Settings2` ou `SlidersHorizontal` do lucide-react) ao lado do titulo "Funil de Vendas"
+- Ao clicar no botao, abrir um `Popover` (do Radix/shadcn) contendo a lista de todas as etapas do pipeline + "Venda"
+- Cada etapa sera um item com `Checkbox` e o nome da etapa, com a cor da etapa como indicador visual (bolinha colorida)
+- Ao marcar/desmarcar, o state `hiddenStages` e atualizado e o funil re-renderiza mostrando apenas as etapas selecionadas
+- A logica de calculo cumulativo sera aplicada somente sobre as etapas visiveis, garantindo que o funil se recalcule corretamente
 
-**1. `src/pages/Leads.tsx`**
-- Remover a constante `REVENUE_RANGES` (linhas 105-111) e a funcao `normalizeRevenueRange` (linhas 114-125)
-- Remover o state `filterRevenueRange` (linha 150)
-- Remover o state `teamUsers` e o useEffect que carrega usuarios da equipe (linhas 218-231)
-- Remover `mql`, `canal`, `responsible_user_id`, `revenue_range` do `formData` inicial (linhas 242-245) e do `resetForm` (linhas 340-343)
-- Remover esses campos do `openEditDialog` (linhas 380-383)
-- Remover a limpeza em `handleSave` / `cleanedData` (linhas 465-468)
-- Remover o bloco de UI dos 4 campos fixos no formulario (linhas 1686-1763)
-- Remover o filtro de faturamento na barra de filtros e na logica de filtragem
-- Remover mapeamento de `revenue_range` na importacao CSV
+### Detalhes de UI
+- O botao ficara posicionado no `CardHeader`, ao lado direito do titulo
+- Estilo ghost + tamanho pequeno para ser sutil e nao competir visualmente com o funil
+- O popover tera fundo solido (`bg-popover`), z-index alto, e largura fixa (~220px)
+- Cada checkbox tera uma bolinha colorida com a cor da etapa para facilitar a identificacao
 
-**2. `src/components/leads/LeadDetailSheet.tsx`**
-- Remover a exibicao dos campos MQL, Proprietario, Canal e Faturamento na secao de detalhes (o bloco com grid de badges)
-- Remover constantes `CANAL_OPTIONS` e `REVENUE_RANGES`
-- Remover state `responsibleUserName` e a busca do nome do usuario responsavel
-
-**3. `src/hooks/useLeads.tsx`**
-- Remover `mql`, `canal`, `revenue_range` da interface `Lead` e de `CreateLeadData`
-- Manter `responsible_user_id` pois e usado por outros modulos (ex: RoyZapp)
-
-### O que NAO sera alterado
-- Colunas `mql`, `canal`, `revenue_range` no banco de dados (ficam intactas, sem perda de dados)
-- O campo `responsible_user_id` continuara existindo na interface Lead (e usado em outros locais)
-- Nenhuma outra funcionalidade (importacao de leads geral, timeline, deals, etc.) sera afetada
-
+### Comportamento
+- Por padrao, todas as etapas vem marcadas (visiveis)
+- Desmarcar uma etapa a remove do funil e recalcula as larguras e conversoes
+- Deve haver pelo menos 1 etapa visivel (desabilitar desmarcacao se restar apenas 1)
