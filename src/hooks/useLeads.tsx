@@ -16,6 +16,9 @@ export interface Lead {
   source: string | null;
   notes: string | null;
   status: string;
+  mql: string | null;
+  canal: string | null;
+  revenue_range: string | null;
   responsible_user_id: string | null;
   converted_to_client_id: string | null;
   converted_at: string | null;
