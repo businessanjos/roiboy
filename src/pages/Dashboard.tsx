@@ -68,6 +68,7 @@ interface ContractData {
   id: string;
   status: string;
   status_changed_at: string | null;
+  cancelled_at: string | null;
   start_date: string;
   value: number;
   client_id: string;
@@ -262,11 +263,15 @@ export default function Dashboard() {
     const { periodStart, periodEnd } = gestaoPeriodRange;
     
     return contractData.filter(contract => {
-      // Filter by period
-      const contractDate = contract.status_changed_at 
-        ? parseISO(contract.status_changed_at) 
-        : parseISO(contract.start_date);
-      if (contractDate < periodStart || contractDate > periodEnd) return false;
+      // Filter by period - use cancelled_at, start_date, or status_changed_at
+      const contractDate = contract.cancelled_at 
+        ? parseISO(contract.cancelled_at)
+        : contract.start_date
+          ? parseISO(contract.start_date)
+          : contract.status_changed_at
+            ? parseISO(contract.status_changed_at)
+            : null;
+      if (!contractDate || contractDate < periodStart || contractDate > periodEnd) return false;
       
       // Filter by product
       if (gestaoProductFilter !== "all") {
@@ -297,26 +302,27 @@ export default function Dashboard() {
     }
     
     filteredContractData.forEach((contract) => {
-      // Count new contracts by start_date
+      // Count new contracts by start_date - ALL contracts, regardless of current status
       if (contract.start_date) {
         const startDate = parseISO(contract.start_date);
         const startKey = format(startDate, "yyyy-MM");
-        if (months[startKey] && contract.status === "active") {
+        if (months[startKey]) {
           months[startKey].novos++;
         }
       }
       
-      // Count status changes
-      if (contract.status_changed_at && contract.status !== "active") {
-        const date = parseISO(contract.status_changed_at);
+      // Count exits using cancelled_at (fallback to status_changed_at)
+      const exitDate = contract.cancelled_at || contract.status_changed_at;
+      if (exitDate && contract.status !== "active" && contract.status !== "pending") {
+        const date = parseISO(exitDate);
         const key = format(date, "yyyy-MM");
         
         if (months[key]) {
-          if (contract.status === "churned") {
+          if (["cancelled", "dismissed", "dropout_7d"].includes(contract.status)) {
             months[key].cancelamentos++;
           } else if (contract.status === "ended") {
             months[key].encerramentos++;
-          } else if (contract.status === "paused") {
+          } else if (["paused", "suspended"].includes(contract.status)) {
             months[key].congelamentos++;
           }
         }
@@ -368,12 +374,13 @@ export default function Dashboard() {
     
     // Use contractData instead of filtered for consistent period comparison
     contractData.forEach((contract) => {
-      if (contract.status_changed_at) {
-        const changedAt = parseISO(contract.status_changed_at);
+      const exitDate = contract.cancelled_at || contract.status_changed_at;
+      if (exitDate) {
+        const changedAt = parseISO(exitDate);
         
         // Current month
         if (changedAt >= currentMonthStart && changedAt <= currentMonthEnd) {
-          if (contract.status === "churned") {
+          if (["cancelled", "dismissed", "dropout_7d"].includes(contract.status)) {
             cancelamentosValue += contract.value || 0;
             cancelamentosCount++;
           } else if (contract.status === "ended") {
@@ -384,7 +391,7 @@ export default function Dashboard() {
         
         // Previous month
         if (changedAt >= previousMonthStart && changedAt <= previousMonthEnd) {
-          if (contract.status === "churned" || contract.status === "ended") {
+          if (["cancelled", "dismissed", "dropout_7d", "ended"].includes(contract.status)) {
             previousTotalLost += contract.value || 0;
           }
         }
