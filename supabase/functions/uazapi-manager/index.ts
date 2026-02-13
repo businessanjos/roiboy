@@ -90,7 +90,7 @@ serve(async (req) => {
     console.log(`[uazapi-manager] Found integration: ${intData?.id || "NONE"}, token: ${token ? "present" : "MISSING"}`);
 
     // Ações que requerem token
-    const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect"];
+    const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect", "delete_message"];
     if (tokenRequiredActions.includes(action) && !token) {
       console.error(`[uazapi-manager] Token required but missing for action: ${action}`);
       return new Response(JSON.stringify({ error: "WhatsApp não configurado para este setor." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -313,6 +313,17 @@ serve(async (req) => {
       }
       
       result = { success: true, webhook_url: webhookUrl, events: webhookConfig.events };
+    
+    } else if (action === "delete_message") {
+      const messageId = payload.message_id;
+      if (!messageId) {
+        return new Response(
+          JSON.stringify({ error: "message_id é obrigatório" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      result = await uazapiInstance("/message/delete", "POST", token!, { id: messageId });
+      result = { deleted: true, api_response: result };
     
     } else if (action === "unlink_instance") {
       if (!integration_id) {
