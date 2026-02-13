@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -42,6 +42,7 @@ import {
 } from "../visual-builder/types";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useVisualData } from "@/hooks/useVisualData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -62,6 +63,23 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   const { updateVisual, removeVisual } = useInsightsDashboards();
   const { currentUser } = useCurrentUser();
   const config = visual.config as VisualConfig | null;
+
+  // Detect types
+  const isScorecard = visual.chart_type === 'scorecard';
+  const isCallCommercial = visual.chart_type === 'call_commercial';
+  const showCategoryFilter = !isScorecard && !isCallCommercial;
+
+  // Fetch visual data to extract unique categories
+  const { data: visualData } = useVisualData({
+    config,
+    enabled: open && !!config && showCategoryFilter,
+  });
+
+  // Extract unique category names from data
+  const availableCategories = useMemo(() => {
+    if (!visualData || !showCategoryFilter) return [];
+    return [...new Set(visualData.map(d => d.name))].sort((a, b) => a.localeCompare(b));
+  }, [visualData, showCategoryFilter]);
 
   // Local state for appearance settings
   const [showDataLabels, setShowDataLabels] = useState(
@@ -85,14 +103,13 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   const [hiddenUsers, setHiddenUsers] = useState<string[]>(
     config?.hiddenUsers ?? []
   );
+  const [hiddenCategories, setHiddenCategories] = useState<string[]>(
+    config?.hiddenCategories ?? []
+  );
   const [accountUsers, setAccountUsers] = useState<{ name: string }[]>([]);
   const [title, setTitle] = useState(visual.title || "");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Detect types
-  const isScorecard = visual.chart_type === 'scorecard';
-  const isCallCommercial = visual.chart_type === 'call_commercial';
 
   // Reset state when visual changes or sheet opens
   useEffect(() => {
@@ -105,6 +122,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
       setDisplayScale(config?.formatting?.displayScale ?? DEFAULT_DISPLAY_SCALE);
       setDecimals(config?.formatting?.decimals ?? 2);
       setHiddenUsers(config?.hiddenUsers ?? []);
+      setHiddenCategories(config?.hiddenCategories ?? []);
     }
   }, [open, config]);
 
@@ -151,6 +169,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
           fillEmptyDates,
         },
         hiddenUsers: isCallCommercial ? hiddenUsers : config.hiddenUsers,
+        hiddenCategories: showCategoryFilter ? hiddenCategories : config.hiddenCategories,
       };
 
       await updateVisual(visual.id, { config: newConfig, title: title.trim() || visual.title });
@@ -258,6 +277,36 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
                       />
                       <label htmlFor={`user-${user.name}`} className="text-sm cursor-pointer">
                         {user.name}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+              <Separator />
+            </div>
+          )}
+          {/* Category filter for non-scorecard, non-call_commercial visuals */}
+          {showCategoryFilter && availableCategories.length > 0 && (
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Categorias Visíveis</Label>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {availableCategories.map((category) => {
+                  const isHidden = hiddenCategories.includes(category);
+                  return (
+                    <div key={category} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`cat-${category}`}
+                        checked={!isHidden}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setHiddenCategories(prev => prev.filter(c => c !== category));
+                          } else {
+                            setHiddenCategories(prev => [...prev, category]);
+                          }
+                        }}
+                      />
+                      <label htmlFor={`cat-${category}`} className="text-sm cursor-pointer">
+                        {category}
                       </label>
                     </div>
                   );

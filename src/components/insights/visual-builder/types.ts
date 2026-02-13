@@ -44,6 +44,8 @@ export interface VisualConfig {
   statusFilter?: 'won' | 'lost' | 'open';
   // Hidden users for call_commercial visual
   hiddenUsers?: string[];
+  // Hidden categories for filtering chart groups
+  hiddenCategories?: string[];
 }
 
 // Data source options
