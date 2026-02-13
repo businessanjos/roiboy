@@ -352,21 +352,6 @@ export function LeadDetailSheet({
                     </div>
                   )}
 
-                  {/* MQL, Canal, Faturamento badges */}
-                  <div className="flex flex-wrap gap-1.5">
-                    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/50 bg-muted/30 text-xs">
-                      <span className="font-medium text-muted-foreground">MQL:</span>
-                      <span>{lead.mql || "---"}</span>
-                    </div>
-                    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/50 bg-muted/30 text-xs">
-                      <span className="font-medium text-muted-foreground">Canal:</span>
-                      <span>{lead.canal || "---"}</span>
-                    </div>
-                    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/50 bg-muted/30 text-xs">
-                      <span className="font-medium text-muted-foreground">Faturamento:</span>
-                      <span>{lead.revenue_range || "---"}</span>
-                    </div>
-                  </div>
                   <div className="flex items-center gap-3">
                     <Clock className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
