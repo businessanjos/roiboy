@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Lead } from "@/hooks/useLeads";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, GitMerge, ArrowRight, User, Phone, Mail, Calendar, Tag, FileText, DollarSign, Instagram, Briefcase, Clock } from "lucide-react";
+import { Search, GitMerge, ArrowRight, User, Phone, Mail, Calendar, Tag, FileText, Instagram, Briefcase, Clock } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -40,7 +40,7 @@ export interface MergedLeadData {
   notes: string | null;
   status: string;
   tags: string[];
-  revenue_range: string | null;
+  
   responsible_user_id: string | null;
 }
 
@@ -53,7 +53,7 @@ interface FieldChoice {
   instagram: MergeChoice;
   source: MergeChoice;
   status: MergeChoice;
-  revenue_range: MergeChoice;
+  
   responsible_user_id: MergeChoice;
 }
 
@@ -81,7 +81,6 @@ export function MergeLeadDialog({
     instagram: "target",
     source: "target",
     status: "target",
-    revenue_range: "target",
     responsible_user_id: "target",
   });
 
@@ -145,7 +144,7 @@ export function MergeLeadDialog({
         instagram: choices.instagram === "source" ? sourceLead.instagram : targetLead.instagram,
         source: choices.source === "source" ? sourceLead.source : targetLead.source,
         status: choices.status === "source" ? sourceLead.status : targetLead.status,
-        revenue_range: choices.revenue_range === "source" ? sourceLead.revenue_range : targetLead.revenue_range,
+        
         responsible_user_id: choices.responsible_user_id === "source" ? sourceLead.responsible_user_id : targetLead.responsible_user_id,
         // Merge arrays
         emails: mergeArrays(sourceLead.emails, targetLead.emails),
@@ -189,7 +188,7 @@ export function MergeLeadDialog({
       instagram: "target",
       source: "target",
       status: "target",
-      revenue_range: "target",
+      
       responsible_user_id: "target",
     });
   };
@@ -357,15 +356,6 @@ export function MergeLeadDialog({
                   showBoth={false}
                 />
 
-                <FieldComparison
-                  icon={<DollarSign className="h-4 w-4" />}
-                  label="Faixa de Faturamento"
-                  sourceValue={sourceLead.revenue_range}
-                  targetValue={targetLead.revenue_range}
-                  choice={choices.revenue_range}
-                  onChoiceChange={(v) => handleChoiceChange("revenue_range", v)}
-                  showBoth={false}
-                />
 
                 {/* Auto-merged fields info */}
                 <div className="p-3 bg-muted/50 rounded-lg space-y-2">

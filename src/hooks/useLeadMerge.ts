@@ -33,7 +33,7 @@ export function useLeadMerge() {
           notes: mergedData.notes,
           status: mergedData.status,
           tags: mergedData.tags,
-          revenue_range: mergedData.revenue_range,
+          
           responsible_user_id: mergedData.responsible_user_id,
         })
         .eq("id", targetLeadId)

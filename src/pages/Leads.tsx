@@ -102,27 +102,6 @@ const LEAD_STATUS = [
   { value: "unqualified", label: "Não Qualificado", color: "bg-gray-500" },
 ];
 
-const REVENUE_RANGES = [
-  { value: "ate_81k", label: "Até R$ 81 mil" },
-  { value: "81k_360k", label: "R$ 81 mil - R$ 360 mil" },
-  { value: "360k_1m", label: "R$ 360 mil - R$ 1 milhão" },
-  { value: "1m_5m", label: "R$ 1 milhão - R$ 5 milhões" },
-  { value: "acima_5m", label: "Acima de R$ 5 milhões" },
-];
-
-// Normalize revenue range from various formats to our standard values
-const normalizeRevenueRange = (value: string | undefined): string | undefined => {
-  if (!value) return undefined;
-  const normalized = value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-  
-  if (normalized.includes("81") && normalized.includes("360")) return "81k_360k";
-  if (normalized.includes("360") && (normalized.includes("1m") || normalized.includes("milhao") || normalized.includes("1.000"))) return "360k_1m";
-  if ((normalized.includes("1m") || normalized.includes("milhao") || normalized.includes("1.000")) && (normalized.includes("5m") || normalized.includes("5.000"))) return "1m_5m";
-  if (normalized.includes("acima") || normalized.includes("5m") || normalized.includes("5.000") || normalized.includes("mais")) return "acima_5m";
-  if (normalized.includes("ate") || normalized.includes("81") || normalized.includes("menor")) return "ate_81k";
-  
-  return undefined;
-};
 
 export default function Leads() {
   const navigate = useNavigate();
@@ -147,7 +126,7 @@ export default function Leads() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSource, setFilterSource] = useState<string>("all");
-  const [filterRevenueRange, setFilterRevenueRange] = useState<string>("all");
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
@@ -214,21 +193,6 @@ export default function Leads() {
     }
   }, [dialogStep, currentUser?.account_id]);
 
-  // Team users for Proprietário select
-  const [teamUsers, setTeamUsers] = useState<{ id: string; name: string }[]>([]);
-  
-  useEffect(() => {
-    const loadTeamUsers = async () => {
-      if (!currentUser?.account_id) return;
-      const { data } = await supabase
-        .from("users")
-        .select("id, name")
-        .eq("account_id", currentUser.account_id)
-        .order("name");
-      setTeamUsers(data || []);
-    };
-    loadTeamUsers();
-  }, [currentUser?.account_id]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -239,10 +203,6 @@ export default function Leads() {
     notes: "",
     additional_phones: [] as { label?: string; number: string }[],
     emails: [] as string[],
-    mql: "",
-    canal: "",
-    responsible_user_id: "",
-    revenue_range: "",
   });
   
   // Temp input state for adding multi-value fields
@@ -337,10 +297,6 @@ export default function Leads() {
       notes: "",
       additional_phones: [],
       emails: [],
-      mql: "",
-      canal: "",
-      responsible_user_id: "",
-      revenue_range: "",
     });
     setDealFormData({
       title: "",
@@ -377,10 +333,6 @@ export default function Leads() {
       notes: lead.notes || "",
       additional_phones: formattedPhones,
       emails: (lead.emails as string[]) || [],
-      mql: lead.mql || "",
-      canal: lead.canal || "",
-      responsible_user_id: lead.responsible_user_id || "",
-      revenue_range: lead.revenue_range || "",
     });
     setNewPhone("");
     setNewEmail("");
@@ -462,10 +414,6 @@ export default function Leads() {
     // Clean empty optional fields to avoid sending empty strings
     const cleanedData = {
       ...formData,
-      mql: formData.mql || undefined,
-      canal: formData.canal || undefined,
-      responsible_user_id: formData.responsible_user_id || undefined,
-      revenue_range: formData.revenue_range || undefined,
     };
 
     // If editing, just update
@@ -875,7 +823,7 @@ export default function Leads() {
         instagrams: instagramsArr.length > 1 ? instagramsArr : undefined,
         // Personal
         birth_date: colMap.birth_date !== undefined ? cleanValue(values[colMap.birth_date]) : undefined,
-        revenue_range: colMap.revenue_range !== undefined ? normalizeRevenueRange(values[colMap.revenue_range]) : undefined,
+        revenue_range: colMap.revenue_range !== undefined ? cleanValue(values[colMap.revenue_range]) : undefined,
         // Residential address
         zip_code: colMap.zip_code !== undefined ? cleanValue(values[colMap.zip_code]) : undefined,
         street: colMap.street !== undefined ? cleanValue(values[colMap.street]) : undefined,
@@ -1103,11 +1051,10 @@ export default function Leads() {
     }
   };
 
-  const hasActiveFilters = filterSource !== "all" || filterRevenueRange !== "all";
+  const hasActiveFilters = filterSource !== "all";
   
   const clearFilters = () => {
     setFilterSource("all");
-    setFilterRevenueRange("all");
   };
 
   const filteredLeads = leads.filter((lead) => {
@@ -1117,9 +1064,8 @@ export default function Leads() {
       lead.email?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesSource = filterSource === "all" || lead.source === filterSource;
-    const matchesRevenue = filterRevenueRange === "all" || lead.revenue_range === filterRevenueRange;
     
-    return matchesSearch && matchesSource && matchesRevenue;
+    return matchesSearch && matchesSource;
   });
 
   const getInitials = (name: string) => {
@@ -1243,19 +1189,6 @@ export default function Leads() {
               </SelectContent>
             </Select>
             
-            <Select value={filterRevenueRange} onValueChange={setFilterRevenueRange}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Faturamento" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos faturamentos</SelectItem>
-                {REVENUE_RANGES.map((range) => (
-                  <SelectItem key={range.value} value={range.value}>
-                    {range.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             
             {hasActiveFilters && (
               <Button variant="ghost" size="icon" onClick={clearFilters} title="Limpar filtros">
@@ -1683,84 +1616,6 @@ export default function Leads() {
               </Select>
               </div>
 
-              {/* 4 Fixed Fields: MQL, Proprietário, Canal, Faturamento */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>MQL</Label>
-                  <Select
-                    value={formData.mql}
-                    onValueChange={(value) => setFormData({ ...formData, mql: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="MQL?" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sim">Sim</SelectItem>
-                      <SelectItem value="nao">Não</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Proprietário</Label>
-                  <Select
-                    value={formData.responsible_user_id}
-                    onValueChange={(value) => setFormData({ ...formData, responsible_user_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecionar..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {teamUsers.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          {user.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Canal</Label>
-                  <Select
-                    value={formData.canal}
-                    onValueChange={(value) => setFormData({ ...formData, canal: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Canal de venda" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="trafego_pago">Tráfego Pago</SelectItem>
-                      <SelectItem value="indicacao">Indicação</SelectItem>
-                      <SelectItem value="organico">Orgânico</SelectItem>
-                      <SelectItem value="instagram">Instagram</SelectItem>
-                      <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                      <SelectItem value="google">Google</SelectItem>
-                      <SelectItem value="evento">Evento</SelectItem>
-                      <SelectItem value="outro">Outro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Faturamento</Label>
-                  <Select
-                    value={formData.revenue_range}
-                    onValueChange={(value) => setFormData({ ...formData, revenue_range: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Faixa de faturamento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {REVENUE_RANGES.map((range) => (
-                        <SelectItem key={range.value} value={range.value}>
-                          {range.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="notes">Observações</Label>
