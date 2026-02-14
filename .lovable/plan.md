@@ -1,37 +1,23 @@
 
 
-## Corrigir flickering dos visuais ao trocar de painel
+## Corrigir bug: etapas ocultas do funil reaparecem no Modo Foco
 
 ### Causa raiz
-Quando o usuario troca de painel e volta, o componente `InsightsGrid` remonta. Na montagem, o `react-grid-layout` dispara `onLayoutChange` automaticamente, o que chama `handleContinuousLayoutChange` e atualiza o `localLayout`. Se o layout calculado pela biblioteca diferir minimamente do layout salvo no banco, o componente re-renderiza, disparando outro `onLayoutChange`, criando um ciclo de oscilacao (flickering).
+O componente `SalesFunnelChart` armazena as etapas ocultas (`hiddenStages`) em um `useState` interno. Quando o Modo Foco e ativado, o `dashboardContent` e renderizado **duas vezes**: na view normal e no portal. O portal cria uma **nova instancia** do `SalesFunnelChart` com `hiddenStages` vazio, fazendo todas as etapas reaparecerem.
 
 ### Solucao
-Ignorar o evento `onLayoutChange` que dispara automaticamente na montagem do componente. Somente processar eventos de layout durante interacoes reais (drag/resize).
+Elevar o estado `hiddenStages` para o componente pai (`WhatsAppDashboardPanel`) e passa-lo como props para o `SalesFunnelChart`. Assim, ambas as instancias (normal e foco) compartilham o mesmo estado.
 
-### Mudanca tecnica
+### Mudancas
 
-**`src/components/insights/grid/InsightsGrid.tsx`**
-- Adicionar um `useRef` booleano (`isMountedRef`) que inicia como `false`
-- No primeiro `onLayoutChange` (disparado automaticamente na montagem), ignorar a chamada e marcar o ref como `true`
-- Somente sincronizar o `localLayout` em chamadas subsequentes (durante drag/resize reais)
-- Resetar o ref quando os IDs dos visuais mudam (nova montagem logica)
+**1. `SalesFunnelChart.tsx`**
+- Adicionar props opcionais `hiddenStages` e `onHiddenStagesChange` na interface
+- Usar o estado externo quando fornecido, mantendo fallback para estado interno (retrocompatibilidade)
 
-```text
-const isMountedRef = useRef(false);
-
-// Reset on visual changes
-useEffect(() => {
-  isMountedRef.current = false;
-}, [visual IDs]);
-
-// In handleContinuousLayoutChange:
-if (!isMountedRef.current) {
-  isMountedRef.current = true;
-  return; // skip initial mount event
-}
-// ... rest of sync logic
-```
+**2. `WhatsAppDashboardPanel.tsx`**
+- Criar `useState<Set<string>>` para `hiddenStages` no nivel do painel
+- Passar `hiddenStages` e `onHiddenStagesChange` para o `SalesFunnelChart` no `dashboardContent`
 
 ### Resultado
-Os visuais manterao suas posicoes estaveis ao trocar entre paineis, sem flicker.
+Ao desmarcar "No Show" na view normal, o Modo Foco tambem respeita a selecao, pois ambas as renderizacoes compartilham o mesmo estado.
 
