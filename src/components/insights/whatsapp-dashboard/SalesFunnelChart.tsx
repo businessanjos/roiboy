@@ -16,10 +16,14 @@ interface StageData {
 interface SalesFunnelChartProps {
   stages: StageData[];
   isLoading?: boolean;
+  hiddenStages?: Set<string>;
+  onHiddenStagesChange?: (hiddenStages: Set<string>) => void;
 }
 
-export function SalesFunnelChart({ stages, isLoading }: SalesFunnelChartProps) {
-  const [hiddenStages, setHiddenStages] = useState<Set<string>>(new Set());
+export function SalesFunnelChart({ stages, isLoading, hiddenStages: externalHidden, onHiddenStagesChange }: SalesFunnelChartProps) {
+  const [internalHidden, setInternalHidden] = useState<Set<string>>(new Set());
+  const hiddenStages = externalHidden ?? internalHidden;
+  const setHiddenStages = onHiddenStagesChange ?? setInternalHidden;
 
   // Calculate total won deals
   const totalWonDeals = stages.reduce((sum, s) => sum + (s.wonCount || 0), 0);
