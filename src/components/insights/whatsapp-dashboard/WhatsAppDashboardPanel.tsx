@@ -19,6 +19,7 @@ import { ZoomControls } from "@/components/ui/zoom-controls";
 export function WhatsAppDashboardPanel() {
   const { data, isLoading } = useWhatsAppDashboardData();
 
+  const [hiddenFunnelStages, setHiddenFunnelStages] = useState<Set<string>>(new Set());
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusZoom, setFocusZoom] = useState(100);
@@ -104,6 +105,8 @@ export function WhatsAppDashboardPanel() {
             <SalesFunnelChart 
               stages={data?.stageDistribution || []} 
               isLoading={isLoading}
+              hiddenStages={hiddenFunnelStages}
+              onHiddenStagesChange={setHiddenFunnelStages}
             />
           </div>
           <div className="lg:col-span-2">
