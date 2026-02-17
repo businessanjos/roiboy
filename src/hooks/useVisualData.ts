@@ -768,7 +768,7 @@ async function fetchLeadsData(
   while (true) {
     let query = supabase
       .from('leads')
-      .select('id, status, source, revenue_range, created_at')
+      .select('id, status, source, revenue_range, canal, created_at')
       .eq('account_id', accountId)
       .is('converted_to_client_id', null);
 
@@ -931,6 +931,9 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], dateDispla
   }
   if (field === 'faturamento_atual') {
     return item.faturamento_atual || 'Não informado';
+  }
+  if (field === 'canal') {
+    return item.canal || 'Não informado';
   }
 
   // Handle date fields

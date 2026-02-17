@@ -22,7 +22,7 @@ interface AddVisualModalProps {
 
 type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge";
 type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta";
-type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual";
+type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual" | "canal";
 
 const CHART_TYPES = [
   { value: "bar" as const, label: "Gráfico de Barras", description: "Comparar valores entre categorias", icon: BarChart3 },
@@ -55,6 +55,7 @@ const GROUP_BY_OPTIONS = [
   { value: "product" as const, label: "Por Produto", description: "Ranking de produtos" },
   { value: "mql" as const, label: "Por MQL", description: "Classificação MQL do negócio" },
   { value: "faturamento_atual" as const, label: "Por Faturamento Atual", description: "Faixa de faturamento do lead" },
+  { value: "canal" as const, label: "Por Canal", description: "Canal de aquisição do lead" },
 ];
 
 // Mapping from simplified selections to full VisualConfig
@@ -83,6 +84,7 @@ const GROUP_BY_TO_DIMENSION: Record<GroupBy, { field: string; type: 'date' | 'te
   product: { field: 'product_name', type: 'text' },
   mql: { field: 'mql', type: 'text' },
   faturamento_atual: { field: 'faturamento_atual', type: 'text' },
+  canal: { field: 'canal', type: 'text' },
 };
 
 // Determines the correct date field based on the metric being measured
@@ -119,6 +121,7 @@ const GROUP_LABELS: Record<GroupBy, string> = {
   product: "por Produto",
   mql: "por MQL",
   faturamento_atual: "por Faturamento Atual",
+  canal: "por Canal",
 };
 
 export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
