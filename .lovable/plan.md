@@ -1,72 +1,65 @@
 
 
-## Adicionar Filtro por Campo do Lead nos Visuais
+## Adicionar Filtro por Campos Personalizados do Negocio nos Visuais
 
 ### Resumo
 
-Adicionar uma nova secao "Filtro por Lead" na janela de ajustes de todos os visuais (VisualQuickSettings). O usuario podera selecionar um campo do Lead (MQL, Canal ou Faturamento Atual) e marcar quais opcoes desse campo devem ser incluidas no visual.
+Adicionar uma nova secao "Filtro por Negocio" na janela de ajustes dos visuais, logo abaixo do filtro por Lead existente. O usuario podera selecionar qualquer campo personalizado do negocio (MQL, Canal de Venda, Item da Venda, Faturamento Atual, Origem da Venda, Ganhou Bonus, etc.) e marcar quais opcoes desse campo devem ser incluidas no visual.
 
 ### Como vai funcionar
 
-1. Na janela de ajustes do visual, aparecera uma nova secao "Filtro por Lead"
-2. Um dropdown permite selecionar o campo: MQL, Canal ou Faturamento Atual
-3. Ao selecionar um campo, as opcoes disponiveis aparecem como checkboxes
-4. Apenas os registros com leads que possuem os valores selecionados serao incluidos no visual
+1. Na janela de ajustes, aparecera uma nova secao "Filtro por Negocio" abaixo do "Filtro por Lead"
+2. Um dropdown listara todos os campos personalizados dos negocios (buscados dinamicamente da tabela `custom_fields` com `show_in_deals = true`)
+3. Ao selecionar um campo, as opcoes disponiveis aparecem como checkboxes (para campos select/multi_select: usa opcoes da definicao; para outros tipos: busca valores unicos de `deal_field_values`)
+4. Apenas negocios que possuem um dos valores selecionados serao incluidos no visual
 5. Se nenhum filtro for selecionado, o visual exibe todos os dados (comportamento atual)
-
-### Campos disponiveis e suas opcoes
-
-- **MQL**: SIM - Acima de 30k, NAO - Abaixo de 30k
-- **Canal**: Organico, Trafego Pago, Indicacao, Prospeccao ativa, Trafego Alheio, Esteira/Carteira, Social Seller, Recorrencia
-- **Faturamento Atual**: Valores livres (texto) - o sistema buscara os valores unicos existentes no banco
 
 ### Secao tecnica
 
 **1. Tipo VisualConfig (`src/components/insights/visual-builder/types.ts`)**
 
-Adicionar nova propriedade ao `VisualConfig`:
+Adicionar nova propriedade:
 
-```typescript
-leadFieldFilter?: {
-  fieldId: string;       // UUID do campo (MQL, Canal, Faturamento)
-  fieldName: string;     // Nome do campo para exibicao
-  selectedValues: string[]; // Labels selecionados (ex: ["Trafego Pago", "Organico"])
+```
+dealFieldFilter?: {
+  fieldId: string;
+  fieldName: string;
+  selectedValues: string[];
 };
 ```
 
-**2. VisualQuickSettings (`src/components/insights/visuals/VisualQuickSettings.tsx`)**
+**2. Novo componente (`src/components/insights/visuals/DealFieldFilterSection.tsx`)**
 
-- Adicionar secao "Filtro por Lead" com:
-  - Select para escolher o campo (MQL, Canal, Faturamento Atual)
-  - Ao selecionar, buscar opcoes: para MQL e Canal, usar os `options` do `custom_fields`; para Faturamento, buscar valores unicos de `lead_field_values`
-  - Checkboxes para marcar quais opcoes incluir
-- Estado local: `leadFieldFilter` inicializado a partir de `config.leadFieldFilter`
-- No `handleSave`, persistir `leadFieldFilter` no config
+Seguindo o mesmo padrao do `LeadFieldFilterSection`:
+- Busca campos com `show_in_deals = true` da tabela `custom_fields` (dinamico, nao hardcoded)
+- Ao selecionar um campo, busca as opcoes: se campo tipo select/multi_select, usa `options` da definicao; senao, busca valores unicos de `deal_field_values`
+- Exibe checkboxes para selecionar quais valores incluir
 
-**3. Filtragem nos dados (`src/hooks/useVisualData.ts` e `src/hooks/useStackedVisualData.ts`)**
+**3. VisualQuickSettings (`src/components/insights/visuals/VisualQuickSettings.tsx`)**
 
-Quando `config.leadFieldFilter` estiver presente com `selectedValues.length > 0`:
+- Adicionar estado local para `dealFilterFieldId`, `dealFilterFieldName`, `dealFilterValues`
+- Renderizar `DealFieldFilterSection` entre o `LeadFieldFilterSection` e o `AppearanceSection`
+- No `handleSave`, persistir `dealFieldFilter` no config
+- No `useEffect` de reset, inicializar a partir de `config.dealFieldFilter`
 
-- **Para Deals (`fetchDealsData`)**: Buscar `lead_id` dos deals, consultar `lead_field_values` para o `fieldId` especificado, e filtrar apenas deals cujos leads possuem um dos valores selecionados
-- **Para Leads (`fetchLeadsData`)**: Mesma logica, filtrar leads pela tabela `lead_field_values`
-- **Para Stacked (`fetchStackedDealsData`)**: Aplicar o mesmo filtro
+**4. Utilitario de filtragem (`src/hooks/useDealFieldFilter.ts`)**
 
-A logica de filtragem sera:
-1. Apos buscar os registros, extrair os IDs relevantes (deal_id ou lead_id)
-2. Buscar `lead_field_values` para o `fieldId` do filtro
-3. Mapear `value_text` para labels (usando mapa de opcoes para campos select)
-4. Manter apenas registros cujo lead possui um valor que esta em `selectedValues`
+Nova funcao `filterByDealField` que:
+- Recebe array de deals, accountId e o filtro
+- Busca `deal_field_values` para o `fieldId` do filtro nos IDs dos deals
+- Mapeia labels para values (para campos select) e filtra apenas deals com valores correspondentes
+- Retorna array filtrado
 
-**4. Constantes de referencia**
+**5. Integracao nos hooks de dados (`src/hooks/useVisualData.ts` e `src/hooks/useStackedVisualData.ts`)**
 
-Utilizar os UUIDs ja conhecidos:
-- MQL Lead: `e4270e93-e9b9-4d9b-9589-d614ce335bcd`
-- Canal Lead: `3bcdcf47-076e-47f2-a1ab-a4dd1ec8398a`
-- Faturamento Atual Lead: `e352a1ca-cfbc-435a-95f7-2f53b5cac041`
+- Importar e aplicar `filterByDealField` apos o fetch dos deals e apos o filtro de lead (se houver)
+- Aplicar apenas quando `config.dealFieldFilter?.selectedValues?.length > 0`
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `types.ts` | Adicionar `leadFieldFilter` ao `VisualConfig` |
-| `VisualQuickSettings.tsx` | Nova secao de UI com select + checkboxes + busca de opcoes |
-| `useVisualData.ts` | Funcao auxiliar para filtrar por lead field + integrar em `fetchDealsData` e `fetchLeadsData` |
-| `useStackedVisualData.ts` | Integrar filtro por lead field em `fetchStackedDealsData` |
+| `types.ts` | Adicionar `dealFieldFilter` ao `VisualConfig` |
+| `DealFieldFilterSection.tsx` | Novo componente (mesmo estilo do LeadFieldFilterSection) |
+| `VisualQuickSettings.tsx` | Novo estado + renderizar DealFieldFilterSection + persistir no save |
+| `useDealFieldFilter.ts` | Nova funcao utilitaria de filtragem por campo do deal |
+| `useVisualData.ts` | Integrar filtro por deal field apos fetch dos deals |
+| `useStackedVisualData.ts` | Integrar filtro por deal field apos fetch dos deals |
