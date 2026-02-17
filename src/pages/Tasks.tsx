@@ -486,7 +486,7 @@ export default function Tasks() {
     if (!activeTab) return true;
     
     if (task.custom_status_id === activeTab) return true;
-    if (!task.custom_status_id && activeTab === defaultStatus?.id) return true;
+    if (!task.custom_status_id && activeTab === defaultStatus?.id && !task.completed_at) return true;
     if (!task.custom_status_id && task.completed_at && targetStatus?.is_completed_status) return true;
     
     return false;
@@ -539,6 +539,7 @@ export default function Tasks() {
     customStatuses.forEach(status => {
       counts[status.id] = baseFilteredTasks.filter(t => {
         if (t.custom_status_id === status.id) return true;
+        if (!t.custom_status_id && status.is_default && !t.completed_at) return true;
         if (!t.custom_status_id && t.completed_at && status.is_completed_status) return true;
         return false;
       }).length;
