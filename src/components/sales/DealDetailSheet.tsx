@@ -704,20 +704,21 @@ export function DealDetailSheet({
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                  {deal.client_id ? (
+                  {deal.lead_id ? (
                     <button
                       onClick={() => {
                         onOpenChange(false);
-                        navigate(`/clients/${deal.client_id}`);
+                        navigate(`/leads?lead=${deal.lead_id}`);
                       }}
                       className="text-primary hover:underline font-medium"
                     >
                       {contactName}
                     </button>
-                  ) : deal.lead_id ? (
+                  ) : deal.client_id ? (
                     <button
                       onClick={() => {
-                        navigate(`/leads?lead=${deal.lead_id}`);
+                        onOpenChange(false);
+                        navigate(`/clients/${deal.client_id}`);
                       }}
                       className="text-primary hover:underline font-medium"
                     >
