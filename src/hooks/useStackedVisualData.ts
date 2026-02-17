@@ -130,10 +130,8 @@ async function fetchStackedDealsData(
       case 'year': return format(date, 'yyyy');
       case 'month': return format(date, 'MMM/yy');
       case 'week': return `Sem ${format(date, 'dd/MM')}`;
-      default: {
-        const spansMultipleMonths = rangeStart.getMonth() !== rangeEnd.getMonth() || rangeStart.getFullYear() !== rangeEnd.getFullYear();
-        return spansMultipleMonths ? format(date, 'd/MMM') : String(date.getDate());
-      }
+      default:
+        return format(date, 'dd');
     }
   };
 

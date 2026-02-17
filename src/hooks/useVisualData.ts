@@ -1005,7 +1005,7 @@ function formatDateGroup(dateString: string, grouping: DateGrouping, displayForm
 
     switch (grouping) {
       case 'day':
-        return format(date, 'dd/MM/yyyy', { locale: ptBR });
+        return format(date, 'dd');
       case 'week':
         const weekStart = startOfWeek(date, { locale: ptBR });
         return format(weekStart, "'Sem' w/yyyy", { locale: ptBR });
@@ -1044,7 +1044,7 @@ function fillMissingDates(
   switch (grouping) {
     case 'day':
       eachDayOfInterval({ start: startDate, end: endDate }).forEach(date => {
-        allDates.push(format(date, 'dd/MM/yyyy', { locale: ptBR }));
+        allDates.push(format(date, 'dd'));
       });
       break;
     case 'week':
