@@ -58,6 +58,7 @@ interface Deal {
     name: string;
     color: string;
   } | null;
+  lead_id: string | null;
   responsible_user?: {
     id: string;
     name: string;
@@ -271,7 +272,7 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
       updated_at: deal.created_at,
       stage_id: deal.stage?.id || null,
       client_id: clientId,
-      lead_id: null,
+      lead_id: deal.lead_id ?? null,
       responsible_user_id: deal.responsible_user?.id || null,
       contact_name: null,
       contact_phone: null,
