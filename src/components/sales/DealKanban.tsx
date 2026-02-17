@@ -83,9 +83,36 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
       return map;
     };
 
+    const resolveProductUUIDs = async (map: Record<string, string>) => {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const unresolvedUUIDs = Object.entries(map)
+        .filter(([, value]) => uuidRegex.test(value))
+        .map(([, value]) => value);
+
+      if (unresolvedUUIDs.length === 0) return map;
+
+      const { data: products } = await supabase
+        .from("products")
+        .select("id, name")
+        .in("id", [...new Set(unresolvedUUIDs)]);
+
+      if (!products || products.length === 0) return map;
+
+      const productMap: Record<string, string> = {};
+      products.forEach(p => { productMap[p.id] = p.name; });
+
+      const resolved = { ...map };
+      for (const [dealId, value] of Object.entries(resolved)) {
+        if (productMap[value]) {
+          resolved[dealId] = productMap[value];
+        }
+      }
+      return resolved;
+    };
+
     Promise.all([
       fetchFieldMap(FATURAMENTO_FIELD_ID),
-      fetchFieldMap(ITEM_VENDA_FIELD_ID),
+      fetchFieldMap(ITEM_VENDA_FIELD_ID).then(resolveProductUUIDs),
     ]).then(([fatMap, itemMap]) => {
       setFaturamentoMap(fatMap);
       setItemVendaMap(itemMap);
