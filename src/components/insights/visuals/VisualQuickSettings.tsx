@@ -31,6 +31,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AppearanceSection } from "../visual-builder/AppearanceSection";
+import { LeadFieldFilterSection } from "./LeadFieldFilterSection";
 import { 
   VisualConfig, 
   DateDisplayFormat, 
@@ -115,6 +116,11 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
+  // Lead field filter state
+  const [leadFilterFieldId, setLeadFilterFieldId] = useState(config?.leadFieldFilter?.fieldId ?? '');
+  const [leadFilterFieldName, setLeadFilterFieldName] = useState(config?.leadFieldFilter?.fieldName ?? '');
+  const [leadFilterValues, setLeadFilterValues] = useState<string[]>(config?.leadFieldFilter?.selectedValues ?? []);
+  
   // Monthly goals state for gauge revenue_vs_goal
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
 
@@ -130,6 +136,9 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
       setDecimals(config?.formatting?.decimals ?? 2);
       setHiddenUsers(config?.hiddenUsers ?? []);
       setHiddenCategories(config?.hiddenCategories ?? []);
+      setLeadFilterFieldId(config?.leadFieldFilter?.fieldId ?? '');
+      setLeadFilterFieldName(config?.leadFieldFilter?.fieldName ?? '');
+      setLeadFilterValues(config?.leadFieldFilter?.selectedValues ?? []);
       
       // Initialize monthly goals
       if (config?.gaugeConfig?.monthlyGoals) {
@@ -194,6 +203,11 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
         },
         hiddenUsers: isCallCommercial ? hiddenUsers : config.hiddenUsers,
         hiddenCategories: showCategoryFilter ? hiddenCategories : config.hiddenCategories,
+        leadFieldFilter: leadFilterFieldId ? {
+          fieldId: leadFilterFieldId,
+          fieldName: leadFilterFieldName,
+          selectedValues: leadFilterValues,
+        } : undefined,
         ...(showMonthlyGoals && {
           gaugeConfig: {
             ...config.gaugeConfig,
@@ -378,6 +392,14 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
               <Separator />
             </div>
           )}
+          {/* Lead field filter for all visuals */}
+          <LeadFieldFilterSection
+            selectedFieldId={leadFilterFieldId}
+            selectedFieldName={leadFilterFieldName}
+            selectedValues={leadFilterValues}
+            onFieldChange={(id, name) => { setLeadFilterFieldId(id); setLeadFilterFieldName(name); }}
+            onSelectedValuesChange={setLeadFilterValues}
+          />
           <AppearanceSection
             showDataLabels={showDataLabels}
             onShowDataLabelsChange={setShowDataLabels}

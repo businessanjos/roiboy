@@ -5,6 +5,7 @@ import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { VisualConfig, DateGrouping, DateDisplayFormat } from "@/components/insights/visual-builder/types";
 import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval, eachDayOfInterval, eachYearOfInterval, startOfMonth, startOfYear, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { filterByLeadField } from "@/hooks/useLeadFieldFilter";
 
 export interface AggregatedDataPoint {
   name: string;
@@ -27,7 +28,7 @@ export function useVisualData({ config, enabled = true }: UseVisualDataParams) {
     queryFn: async (): Promise<AggregatedDataPoint[]> => {
       if (!config || !currentUser?.account_id) return [];
 
-      const { dataSource, measure, dimension, appearance, statusFilter } = config;
+      const { dataSource, measure, dimension, appearance, statusFilter, leadFieldFilter } = config;
       const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
       const fillEmptyDates = appearance?.fillEmptyDates || false;
 
@@ -38,10 +39,10 @@ export function useVisualData({ config, enabled = true }: UseVisualDataParams) {
 
       switch (dataSource) {
         case 'deals':
-          result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter);
+          result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFieldFilter);
           break;
         case 'leads':
-          result = await fetchLeadsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
+          result = await fetchLeadsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, leadFieldFilter);
           break;
         case 'products':
           result = await fetchProductsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
@@ -403,7 +404,8 @@ async function fetchDealsData(
   dimension: VisualConfig['dimension'],
   filters: any,
   dateDisplayFormat: DateDisplayFormat,
-  statusFilter?: 'won' | 'lost' | 'open'
+  statusFilter?: 'won' | 'lost' | 'open',
+  leadFieldFilter?: VisualConfig['leadFieldFilter']
 ): Promise<AggregatedDataPoint[]> {
   // Special handling for sales cycle calculation
   if (measure.aggregation === 'sales_cycle') {
@@ -427,6 +429,7 @@ async function fetchDealsData(
     .from('deals')
     .select(`
       id,
+      lead_id,
       value,
       probability,
       status,
@@ -485,18 +488,24 @@ async function fetchDealsData(
     return [];
   }
 
+  // Apply lead field filter if configured
+  let filteredData = data || [];
+  if (leadFieldFilter && leadFieldFilter.selectedValues && leadFieldFilter.selectedValues.length > 0) {
+    filteredData = await filterByLeadField(filteredData, accountId, leadFieldFilter, 'deals');
+  }
+
   // If dimension is _total, return global aggregation (for Scorecards)
   if (dimension.field === '_total') {
-    return aggregateGlobalTotal(data || [], measure);
+    return aggregateGlobalTotal(filteredData, measure);
   }
 
   // If grouping by MQL, fetch MQL field values and inject into deals
   if (dimension.field === 'mql') {
-    const enrichedData = await enrichDealsWithMql(accountId, data || []);
+    const enrichedData = await enrichDealsWithMql(accountId, filteredData);
     return aggregateData(enrichedData, measure, dimension, dateDisplayFormat);
   }
 
-  return aggregateData(data || [], measure, dimension, dateDisplayFormat);
+  return aggregateData(filteredData, measure, dimension, dateDisplayFormat);
 }
 
 // Calculate conversion rate as (won deals / total deals) * 100
@@ -733,10 +742,14 @@ async function fetchLeadsData(
   measure: VisualConfig['measure'],
   dimension: VisualConfig['dimension'],
   filters: any,
-  dateDisplayFormat: DateDisplayFormat
+  dateDisplayFormat: DateDisplayFormat,
+  leadFieldFilter?: VisualConfig['leadFieldFilter']
 ): Promise<AggregatedDataPoint[]> {
-  // For scorecard total count, use server-side count (no 1000-row limit)
-  if (dimension.field === '_total') {
+  // Determine if we need lead field filtering
+  const hasLeadFilter = leadFieldFilter && leadFieldFilter.selectedValues && leadFieldFilter.selectedValues.length > 0;
+
+  // For scorecard total count WITHOUT lead filter, use server-side count
+  if (dimension.field === '_total' && !hasLeadFilter) {
     let countQuery = supabase
       .from('leads')
       .select('*', { count: 'exact', head: true })
@@ -760,7 +773,7 @@ async function fetchLeadsData(
     return [{ name: 'Total', value: count || 0 }];
   }
 
-  // For grouped data, paginate to fetch ALL records beyond the 1000-row default
+  // For grouped data or filtered scorecards, paginate to fetch ALL records
   let allData: any[] = [];
   let from = 0;
   const pageSize = 1000;
@@ -789,6 +802,16 @@ async function fetchLeadsData(
     allData = allData.concat(data || []);
     if (!data || data.length < pageSize) break;
     from += pageSize;
+  }
+
+  // Apply lead field filter if configured
+  if (hasLeadFilter) {
+    allData = await filterByLeadField(allData, accountId, leadFieldFilter!, 'leads');
+  }
+
+  // For scorecard total with filter, return count after filtering
+  if (dimension.field === '_total') {
+    return [{ name: 'Total', value: allData.length }];
   }
 
   // If grouping by MQL, fetch MQL field values and inject into leads

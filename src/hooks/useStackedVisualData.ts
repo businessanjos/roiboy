@@ -4,6 +4,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { VisualConfig } from "@/components/insights/visual-builder/types";
 import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek } from "date-fns";
+import { filterByLeadField } from "@/hooks/useLeadFieldFilter";
 
 export interface StackedDataPoint {
   name: string;
@@ -48,7 +49,7 @@ async function fetchStackedDealsData(
   let query = supabase
     .from('deals')
     .select(`
-      id, value, status, created_at, won_at, lost_at,
+      id, lead_id, value, status, created_at, won_at, lost_at,
       users!deals_responsible_user_id_fkey(name)
     `)
     .eq('account_id', accountId);
@@ -90,6 +91,12 @@ async function fetchStackedDealsData(
     allDeals = allDeals.concat(data || []);
     if (!data || data.length < pageSize) break;
     from += pageSize;
+  }
+
+  // Apply lead field filter if configured
+  const { leadFieldFilter } = config;
+  if (leadFieldFilter && leadFieldFilter.selectedValues && leadFieldFilter.selectedValues.length > 0) {
+    allDeals = await filterByLeadField(allDeals, accountId, leadFieldFilter, 'deals');
   }
 
   const dateGrouping = config.dimension.dateGrouping || 'day';

@@ -54,6 +54,12 @@ export interface VisualConfig {
     subType: GaugeSubType;
     monthlyGoals?: Record<string, number>; // "YYYY-MM" -> value in R$
   };
+  // Lead field filter
+  leadFieldFilter?: {
+    fieldId: string;       // UUID do campo (MQL, Canal, Faturamento)
+    fieldName: string;     // Nome do campo para exibição
+    selectedValues: string[]; // Labels selecionados
+  };
 }
 
 // Data source options
