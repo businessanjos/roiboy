@@ -1,37 +1,28 @@
 
+## Filtrar drilldown de "Negocios Ganhos" para exibir apenas deals com status "won"
 
-## Adicionar metrica "Negocios Ganhos" ao Scorecard
+### Problema
 
-### O que sera feito
+O hook `useVisualDrilldown.ts` na funcao `fetchDealsRecords` nao aplica o `statusFilter` definido na configuracao do visual. Para o scorecard "Negocios Ganhos", que tem `statusFilter: 'won'`, o drilldown mostra todos os 664 registros (open, lost, won) em vez de exibir somente os negocios com status "won".
 
-Adicionar uma nova opcao de metrica chamada **"Negocios Ganhos"** ao Scorecard, que conta apenas negocios convertidos com status "won".
+### Solucao
 
-### Mudancas
+Adicionar uma verificacao de `config.statusFilter` na funcao `fetchDealsRecords` do arquivo `src/hooks/useVisualDrilldown.ts`. Se o valor existir (ex: `'won'` ou `'lost'`), aplicar `.eq('status', statusFilter)` na query do Supabase.
 
-**`src/components/insights/AddVisualModal.tsx`**
+### Mudanca
 
-1. Adicionar `won_deals_count` ao tipo `Metric`:
-   ```
-   type Metric = "revenue" | "deals_count" | ... | "won_deals_count" | "meta";
-   ```
+**`src/hooks/useVisualDrilldown.ts`** - funcao `fetchDealsRecords` (linha ~75, apos `.eq('account_id', accountId)`):
 
-2. Adicionar na lista `METRICS` (apos `deals_count`):
-   ```
-   { value: "won_deals_count", label: "Negocios Ganhos", description: "Contagem de deals convertidos em ganho" }
-   ```
+Adicionar:
+```typescript
+// Apply status filter from visual config (e.g., 'won' for won deals scorecard)
+if (config.statusFilter) {
+  query = query.eq('status', config.statusFilter);
+}
+```
 
-3. Adicionar em `METRIC_TO_CONFIG`:
-   ```
-   won_deals_count: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal', statusFilter: 'won' }
-   ```
-   Isso usa `statusFilter: 'won'` para filtrar apenas negocios ganhos (mesmo padrao ja usado por `revenue` e `avg_ticket`).
+### Arquivo modificado
 
-4. Adicionar em `METRIC_LABELS`:
-   ```
-   won_deals_count: "Negocios Ganhos"
-   ```
-
-### Resultado
-
-O usuario podera criar um Scorecard que exibe a contagem de negocios ganhos no periodo filtrado, utilizando o mesmo mecanismo de `statusFilter: 'won'` ja existente.
-
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/hooks/useVisualDrilldown.ts` | Aplicar `statusFilter` do config na query de deals |
