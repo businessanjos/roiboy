@@ -1,25 +1,31 @@
 
-## Redirecionar link do nome do Lead para a pagina de Leads
 
-### Problema
+## Corrigir redirecionamento do nome do Lead na pagina do Cliente
 
-No detalhe do negocio (DealDetailSheet), ao clicar no nome do contato (ex: "Magda Paula Morais Cardoso"), o sistema redireciona para `/clients/{client_id}` (pagina do cliente). O usuario deseja que o link aponte para `/leads?lead={lead_id}` (pagina do lead vinculado ao negocio).
+### Causa raiz
 
-### Mudanca
+O problema esta no arquivo `src/components/client/ClientDeals.tsx`. Quando o usuario abre os detalhes de um negocio a partir da pagina do cliente, o componente converte os dados do negocio para o formato esperado pelo `DealDetailSheet`. Nessa conversao (linha 274), o `lead_id` esta **fixado como `null`**:
 
-**Arquivo:** `src/components/sales/DealDetailSheet.tsx` (linhas 707-728)
+```
+lead_id: null,  // <-- problema: ignora o lead_id real do negocio
+```
 
-Inverter a prioridade da logica de navegacao:
+Isso faz com que o `DealDetailSheet` nunca encontre um `lead_id` e sempre caia no fallback para `client_id`, redirecionando para a pagina do cliente.
 
-- **Antes:** `client_id` tem prioridade sobre `lead_id` — se existe cliente, vai para `/clients/{id}`
-- **Depois:** `lead_id` tem prioridade sobre `client_id` — se existe lead vinculado, vai para `/leads?lead={id}`
+### Mudancas
 
-Logica atualizada:
+**Arquivo:** `src/components/client/ClientDeals.tsx`
 
-1. Se `deal.lead_id` existe: navegar para `/leads?lead={lead_id}`
-2. Senao, se `deal.client_id` existe: navegar para `/clients/{client_id}`
-3. Senao: exibir texto sem link
+1. Adicionar `lead_id` na interface local `Deal` (linha 43-65):
+   - Adicionar `lead_id: string | null;`
 
-### Secao tecnica
+2. Na conversao do deal para o sheet (linha 274):
+   - Trocar `lead_id: null` por `lead_id: deal.lead_id ?? null`
+   - Isso usa o `lead_id` real vindo do banco de dados
 
-Apenas uma mudanca no arquivo `DealDetailSheet.tsx`: inverter a ordem dos blocos condicionais nas linhas 707-728, colocando `deal.lead_id` como primeira condicao e `deal.client_id` como fallback.
+### Resultado
+
+Quando o usuario clicar no nome do contato nos detalhes do negocio (aberto a partir da pagina do cliente), o sistema ira:
+- Redirecionar para `/leads?lead={lead_id}` se houver lead vinculado
+- Redirecionar para `/clients/{client_id}` apenas como fallback
+
