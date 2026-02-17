@@ -1,44 +1,35 @@
 
-## Exibir "Item da Venda" nos cards do Pipeline
 
-### Resumo
+## Corrigir exibicao de UUID no badge "Item da Venda"
 
-Adicionar uma tag com o valor de "Item da Venda" ao lado da tag de "Faturamento Atual" nos cards de negocios do pipeline.
+### Problema
 
-### Abordagem
+Alguns negocios armazenam o UUID de um produto diretamente no campo "Item da Venda" (em vez de um valor de opcao do campo personalizado). O codigo atual tenta mapear o valor para um label de opcao, mas quando nao encontra, exibe o valor bruto -- resultando em UUIDs visiveis nos cards.
 
-Seguir o mesmo padrao ja usado para "Faturamento Atual": buscar os valores em lote no `DealKanban`, passar o mapa para `DealKanbanColumn` e de la para o `DealCard`.
+### Solucao
 
-### Mudancas
+Apos montar o mapa de opcoes, identificar valores que nao foram resolvidos (continuam como UUID) e buscar os nomes correspondentes na tabela `products`.
 
-**1. `src/components/sales/DealKanban.tsx`**
+### Mudanca
 
-- Adicionar constante `ITEM_VENDA_FIELD_ID = '033b91fb-3add-4c96-aec9-567fefbd0fb2'`
-- No `useEffect` existente que busca faturamento, adicionar busca paralela para "Item da Venda" (mesmo padrao: `deal_field_values` + `custom_fields` para mapear option value para label)
-- Criar estado `itemVendaMap: Record<string, string>`
-- Passar `itemVendaMap` para `DealKanbanColumn`
-- Passar na `DragOverlay` tambem
+**`src/components/sales/DealKanban.tsx`** - Na funcao `fetchFieldMap`, apos montar o mapa inicial, adicionar logica especifica para o campo "Item da Venda":
 
-**2. `src/components/sales/DealKanbanColumn.tsx`**
+1. Coletar os valores que parecem ser UUIDs (nao resolvidos pelo `optionMap`)
+2. Buscar os nomes na tabela `products` com `.in("id", uuids)`
+3. Substituir os UUIDs pelos nomes dos produtos no mapa final
 
-- Adicionar prop `itemVendaMap?: Record<string, string>`
-- Passar `itemVendaLabel={itemVendaMap?.[deal.id]}` para `DealCard`
+```text
+Fluxo:
+value_text -> optionMap[value_text] encontrado? -> usa label
+value_text -> nao encontrado, parece UUID? -> busca em products -> usa product.name
+value_text -> nenhum match -> exibe value_text original
+```
 
-**3. `src/components/sales/DealCard.tsx`**
-
-- Adicionar prop `itemVendaLabel?: string`
-- Na secao de tags (linha ~310), ao lado do badge de faturamento, renderizar um badge para "Item da Venda" com estilo distinto (ex: azul sutil) quando o valor existir
-
-### Visual do badge
-
-O badge de "Item da Venda" tera estilo similar ao de faturamento mas com cor diferente para diferenciar:
-- Faturamento: verde (emerald) - ja existente
-- Item da Venda: azul (blue) - novo
-
-### Arquivos modificados
+### Escopo
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `DealKanban.tsx` | Batch fetch do campo "Item da Venda", novo estado e prop |
-| `DealKanbanColumn.tsx` | Receber e repassar `itemVendaMap` |
-| `DealCard.tsx` | Nova prop `itemVendaLabel`, renderizar badge azul |
+| `DealKanban.tsx` | Adicionar resolucao de UUIDs de produtos apos montagem do mapa de "Item da Venda" |
+
+Apenas um arquivo modificado. A logica de fallback para produtos sera aplicada somente ao campo `ITEM_VENDA_FIELD_ID`.
+
