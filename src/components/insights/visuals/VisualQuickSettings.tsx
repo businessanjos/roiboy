@@ -67,7 +67,9 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   // Detect types
   const isScorecard = visual.chart_type === 'scorecard';
   const isCallCommercial = visual.chart_type === 'call_commercial';
-  const showCategoryFilter = !isScorecard && !isCallCommercial;
+  const isGauge = visual.chart_type === 'gauge';
+  const isGaugeRevenue = isGauge && config?.gaugeConfig?.subType === 'revenue_vs_goal';
+  const showCategoryFilter = !isScorecard && !isCallCommercial && !isGauge;
 
   // Fetch visual data to extract unique categories
   const { data: visualData } = useVisualData({
@@ -110,6 +112,9 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   const [title, setTitle] = useState(visual.title || "");
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Monthly goals state for gauge revenue_vs_goal
+  const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
 
   // Reset state when visual changes or sheet opens
   useEffect(() => {
@@ -123,6 +128,17 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
       setDecimals(config?.formatting?.decimals ?? 2);
       setHiddenUsers(config?.hiddenUsers ?? []);
       setHiddenCategories(config?.hiddenCategories ?? []);
+      
+      // Initialize monthly goals
+      if (config?.gaugeConfig?.monthlyGoals) {
+        const goals: Record<string, string> = {};
+        Object.entries(config.gaugeConfig.monthlyGoals).forEach(([k, v]) => {
+          goals[k] = String(v);
+        });
+        setMonthlyGoals(goals);
+      } else {
+        setMonthlyGoals({});
+      }
     }
   }, [open, config]);
 
@@ -155,6 +171,12 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
 
     setIsSaving(true);
     try {
+      const parsedGoals: Record<string, number> = {};
+      Object.entries(monthlyGoals).forEach(([k, v]) => {
+        const num = Number(v);
+        if (num > 0) parsedGoals[k] = num;
+      });
+
       const newConfig: VisualConfig = {
         ...config,
         formatting: {
@@ -170,6 +192,13 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
         },
         hiddenUsers: isCallCommercial ? hiddenUsers : config.hiddenUsers,
         hiddenCategories: showCategoryFilter ? hiddenCategories : config.hiddenCategories,
+        ...(isGaugeRevenue && {
+          gaugeConfig: {
+            ...config.gaugeConfig,
+            subType: 'revenue_vs_goal' as const,
+            monthlyGoals: parsedGoals,
+          },
+        }),
       };
 
       await updateVisual(visual.id, { config: newConfig, title: title.trim() || visual.title });
@@ -213,6 +242,38 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
             />
           </div>
           <Separator />
+          {/* Gauge monthly goals editor */}
+          {isGaugeRevenue && (
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Metas Mensais (R$)</Label>
+              <p className="text-xs text-muted-foreground">Defina a meta de faturamento para cada mês.</p>
+              <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                {(() => {
+                  const now = new Date();
+                  const months: { key: string; label: string }[] = [];
+                  for (let i = -2; i <= 6; i++) {
+                    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+                    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                    const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                    months.push({ key, label });
+                  }
+                  return months.map((m) => (
+                    <div key={m.key} className="flex items-center gap-2">
+                      <span className="text-sm w-[130px] capitalize">{m.label}</span>
+                      <Input
+                        type="number"
+                        className="h-8 text-sm"
+                        placeholder="0"
+                        value={monthlyGoals[m.key] || ''}
+                        onChange={(e) => setMonthlyGoals(prev => ({ ...prev, [m.key]: e.target.value }))}
+                      />
+                    </div>
+                  ));
+                })()}
+              </div>
+              <Separator />
+            </div>
+          )}
           {/* Scorecard formatting options */}
           {isScorecard && (
             <div className="space-y-4">
