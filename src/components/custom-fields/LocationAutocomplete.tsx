@@ -127,7 +127,7 @@ export function LocationAutocomplete({
       setLoading(true);
       try {
         const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5&countrycodes=br`,
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&addressdetails=1&limit=5`,
           {
             headers: {
               "Accept-Language": "pt-BR",
