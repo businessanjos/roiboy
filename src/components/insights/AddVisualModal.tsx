@@ -127,6 +127,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [gaugeSubType, setGaugeSubType] = useState<'days_elapsed' | 'revenue_vs_goal'>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState("");
+  const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
 
   // Scorecards, rankings, call_commercial and gauge have only 2 steps
   const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge') ? 2 : 3;
@@ -141,6 +142,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       setTitle("");
       setGaugeSubType('days_elapsed');
       setGaugeGoal("");
+      setMonthlyGoals({});
     }
   }, [open]);
 
@@ -305,12 +307,19 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           },
           appearance: DEFAULT_APPEARANCE,
           statusFilter: metricConfig.statusFilter,
-          ...(isMeta && gaugeGoal ? {
-            gaugeConfig: {
-              subType: 'revenue_vs_goal' as const,
-              monthlyGoals: { [monthKey]: Number(gaugeGoal) },
-            },
-          } : {}),
+          ...(isMeta ? (() => {
+            const parsedGoals: Record<string, number> = {};
+            Object.entries(monthlyGoals).forEach(([k, v]) => {
+              const num = Number(v);
+              if (num > 0) parsedGoals[k] = num;
+            });
+            return Object.keys(parsedGoals).length > 0 ? {
+              gaugeConfig: {
+                subType: 'revenue_vs_goal' as const,
+                monthlyGoals: parsedGoals,
+              },
+            } : {};
+          })() : {}),
         };
       } else {
         const baseDimensionConfig = GROUP_BY_TO_DIMENSION[groupBy!];
@@ -520,19 +529,34 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
               {/* Title field for Scorecards (shown in step 2 since it's the final step) */}
               {chartType === 'scorecard' && (
                 <>
-                  {metric === 'meta' && (
-                    <div className="space-y-2 pt-4 border-t">
-                      <Label htmlFor="scorecard-goal">Meta do Mês Atual (R$)</Label>
-                      <Input
-                        id="scorecard-goal"
-                        type="number"
-                        value={gaugeGoal}
-                        onChange={(e) => setGaugeGoal(e.target.value)}
-                        placeholder="Ex: 100000"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Você pode editar metas de outros meses nos ajustes do visual após criá-lo.
-                      </p>
+              {metric === 'meta' && (
+                    <div className="space-y-3 pt-4 border-t">
+                      <Label className="text-base font-medium">Metas Mensais (R$)</Label>
+                      <p className="text-xs text-muted-foreground">Defina a meta de faturamento para cada mês.</p>
+                      <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                        {(() => {
+                          const currentYear = new Date().getFullYear();
+                          const months: { key: string; label: string }[] = [];
+                          for (let m = 0; m < 12; m++) {
+                            const d = new Date(currentYear, m, 1);
+                            const key = `${currentYear}-${String(m + 1).padStart(2, '0')}`;
+                            const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+                            months.push({ key, label });
+                          }
+                          return months.map((m) => (
+                            <div key={m.key} className="flex items-center gap-2">
+                              <span className="text-sm w-[130px] capitalize">{m.label}</span>
+                              <Input
+                                type="number"
+                                className="h-8 text-sm"
+                                placeholder="0"
+                                value={monthlyGoals[m.key] || ''}
+                                onChange={(e) => setMonthlyGoals(prev => ({ ...prev, [m.key]: e.target.value }))}
+                              />
+                            </div>
+                          ));
+                        })()}
+                      </div>
                     </div>
                   )}
                   <div className="space-y-2 pt-4 border-t">
