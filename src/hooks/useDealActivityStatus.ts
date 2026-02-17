@@ -48,8 +48,9 @@ export function useDealActivityStatus(dealId: string) {
   const query = useQuery({
     queryKey: ["deal-activity-status", dealId],
     queryFn: () => fetchActivityStatus(dealId),
-    staleTime: 30 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 5 * 1000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
   });
 
   // Realtime fallback for changes from other users
