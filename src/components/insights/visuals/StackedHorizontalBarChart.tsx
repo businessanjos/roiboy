@@ -39,7 +39,7 @@ const CustomTooltip = ({ active, payload, label, formatting }: any) => {
 
   return (
     <div className="bg-popover border border-border rounded-lg shadow-lg p-3 text-sm">
-      <p className="font-medium mb-1">Dia {label}</p>
+      <p className="font-medium mb-1">{label}</p>
       {payload.map((entry: any, index: number) => (
         entry.value > 0 && (
           <div key={index} className="flex items-center gap-2">

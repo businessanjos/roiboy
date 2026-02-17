@@ -27,7 +27,7 @@ type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atu
 const CHART_TYPES = [
   { value: "bar" as const, label: "Gráfico de Barras", description: "Comparar valores entre categorias", icon: BarChart3 },
   { value: "bar_horizontal" as const, label: "Barras Horizontal", description: "Barras na horizontal para categorias", icon: BarChart3 },
-  { value: "bar_stacked" as const, label: "Barras Empilhadas", description: "Barras horizontais empilhadas por vendedor (diário)", icon: BarChart3 },
+  { value: "bar_stacked" as const, label: "Barras Empilhadas", description: "Barras horizontais empilhadas por categoria", icon: BarChart3 },
   { value: "line" as const, label: "Gráfico de Linhas", description: "Visualizar tendências ao longo do tempo", icon: LineChart },
   { value: "pie" as const, label: "Gráfico de Pizza", description: "Mostrar proporções de um todo", icon: PieChart },
   { value: "scorecard" as const, label: "Scorecard", description: "Exibir um número ou KPI destacado", icon: Hash },
@@ -136,9 +136,10 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   const [gaugeSubType, setGaugeSubType] = useState<'days_elapsed' | 'revenue_vs_goal'>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState("");
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
+  const [dateGrouping, setDateGrouping] = useState<'day' | 'week' | 'month' | 'year'>('month');
 
   // Scorecards, rankings, call_commercial and gauge have only 2 steps
-  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge' || chartType === 'bar_stacked') ? 2 : 3;
+  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge') ? 2 : 3;
 
   // Reset form when modal closes
   useEffect(() => {
@@ -151,6 +152,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       setGaugeSubType('days_elapsed');
       setGaugeGoal("");
       setMonthlyGoals({});
+      setDateGrouping('month');
     }
   }, [open]);
 
@@ -162,17 +164,16 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       setTitle("Calls Comerciais");
     } else if (chartType === 'gauge') {
       setTitle(gaugeSubType === 'days_elapsed' ? 'Dias Corridos do Mês' : 'Faturamento x Meta');
-    } else if (chartType === 'bar_stacked') {
-      if (metric) {
-        setTitle(`${METRIC_LABELS[metric]} Diário por Vendedor`);
-      }
     } else if (chartType === 'scorecard' && metric) {
       setTitle(metric === 'meta' ? 'Meta' : METRIC_LABELS[metric]);
     } else if (metric && groupBy) {
-      const generatedTitle = `${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}`;
+      const DATE_GROUPING_LABELS: Record<string, string> = { day: 'Diário', week: 'Semanal', month: 'Mensal', year: 'Anual' };
+      const isTemporalGroup = GROUP_BY_TO_DIMENSION[groupBy]?.type === 'date';
+      const seasonalitySuffix = isTemporalGroup ? ` (${DATE_GROUPING_LABELS[dateGrouping]})` : '';
+      const generatedTitle = `${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}${seasonalitySuffix}`;
       setTitle(generatedTitle);
     }
-  }, [chartType, metric, groupBy, gaugeSubType]);
+  }, [chartType, metric, groupBy, gaugeSubType, dateGrouping]);
 
   const canProceedStep1 = chartType !== null;
   const canProceedStep2 = metric !== null;
@@ -182,8 +183,6 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
     ? metric !== null && title.trim() !== "" && activeDashboardId !== null
     : (chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge')
     ? title.trim() !== "" && activeDashboardId !== null
-    : chartType === 'bar_stacked'
-    ? metric !== null && title.trim() !== "" && activeDashboardId !== null
     : groupBy !== null && title.trim() !== "" && activeDashboardId !== null;
 
   const handleNext = () => {
@@ -197,52 +196,6 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   const handleCreate = async () => {
     if (!chartType || !activeDashboardId) return;
     
-    // For bar_stacked, create with daily grouping and stackBy
-    if (chartType === 'bar_stacked') {
-      if (!metric || !canCreate) return;
-      setIsCreating(true);
-      try {
-        const metricConfig = METRIC_TO_CONFIG[metric];
-        const dateField = getDateFieldForMetric(metric);
-        const config: VisualConfig = {
-          dataSource: metricConfig.dataSource,
-          measure: {
-            field: metricConfig.measureField || '',
-            aggregation: metricConfig.aggregation,
-          },
-          dimension: {
-            field: dateField,
-            type: 'date',
-            dateGrouping: 'day',
-          },
-          formatting: {
-            type: metricConfig.formatType,
-            decimals: metricConfig.formatType === 'currency' ? 0 : 0,
-          },
-          appearance: {
-            ...DEFAULT_APPEARANCE,
-            fillEmptyDates: true,
-            showDataLabels: true,
-          },
-          statusFilter: metricConfig.statusFilter,
-          stackBy: 'responsible_name',
-        };
-        await addVisual({
-          dashboard_id: activeDashboardId,
-          title: title.trim(),
-          chart_type: 'bar_stacked',
-          config,
-          layout: { x: 0, y: 0, w: 12, h: 8 },
-        });
-        onOpenChange(false);
-      } catch (error) {
-        console.error("Error creating visual:", error);
-      } finally {
-        setIsCreating(false);
-      }
-      return;
-    }
-
     // For ranking and call_commercial, metric and groupBy are fixed
     if (chartType === 'ranking') {
       if (!canCreate) return;
@@ -388,6 +341,9 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           : baseDimensionConfig.field;
         const isTemporalGrouping = baseDimensionConfig.type === 'date';
 
+        // Use the selected dateGrouping for temporal dimensions
+        const effectiveDateGrouping = isTemporalGrouping ? dateGrouping : baseDimensionConfig.dateGrouping;
+
         config = {
           dataSource: metricConfig.dataSource,
           measure: {
@@ -397,7 +353,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           dimension: {
             field: dimensionField,
             type: baseDimensionConfig.type,
-            ...(baseDimensionConfig.dateGrouping && { dateGrouping: baseDimensionConfig.dateGrouping }),
+            ...(effectiveDateGrouping && { dateGrouping: effectiveDateGrouping }),
           },
           formatting: {
             type: metricConfig.formatType,
@@ -409,6 +365,9 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             showDataLabels: isTemporalGrouping,
           },
           statusFilter: metricConfig.statusFilter,
+          // For bar_stacked: add stackBy
+          ...(chartType === 'bar_stacked' && isTemporalGrouping && { stackBy: 'responsible_name' }),
+          ...(chartType === 'bar_stacked' && !isTemporalGrouping && groupBy !== 'user' && { stackBy: 'responsible_name' }),
         };
       }
 
@@ -417,7 +376,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
         title: title.trim(),
         chart_type: chartType,
         config,
-        layout: { x: 0, y: 0, w: chartType === 'scorecard' ? 3 : 6, h: chartType === 'scorecard' ? 2 : 4 },
+        layout: { x: 0, y: 0, w: chartType === 'scorecard' ? 3 : (chartType === 'bar_stacked' ? 12 : 6), h: chartType === 'scorecard' ? 2 : (chartType === 'bar_stacked' ? 8 : 4) },
       });
 
       onOpenChange(false);
@@ -665,6 +624,32 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
                   ))}
                 </RadioGroup>
               </div>
+
+              {/* Seasonality selector for temporal groupings */}
+              {groupBy && GROUP_BY_TO_DIMENSION[groupBy]?.type === 'date' && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Sazonalidade</Label>
+                  <div className="flex gap-2">
+                    {([
+                      { value: 'day' as const, label: 'Diário' },
+                      { value: 'week' as const, label: 'Semanal' },
+                      { value: 'month' as const, label: 'Mensal' },
+                      { value: 'year' as const, label: 'Anual' },
+                    ]).map((opt) => (
+                      <Button
+                        key={opt.value}
+                        type="button"
+                        variant={dateGrouping === opt.value ? 'default' : 'outline'}
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setDateGrouping(opt.value)}
+                      >
+                        {opt.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="visual-title">Título do Visual</Label>
