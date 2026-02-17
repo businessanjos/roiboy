@@ -1,26 +1,28 @@
 
 
-## Corrigir: Visual "Dias Corridos" exibe "Sem dados para exibir"
+## Corrigir: Exibir apenas meses do ano atual nas Metas Mensais
 
-### Causa raiz
+### Problema
 
-No `ConfigurableChart.tsx`, ha uma verificacao na linha 50 que retorna "Sem dados para exibir" quando `data.length === 0`. Como o gauge de "Dias Corridos" tem a busca de dados desabilitada (nao precisa do banco), o array `processedData` chega sempre vazio, e o componente nunca alcanca o `case 'gauge'`.
+O editor de metas mensais no VisualQuickSettings gera meses com `i = -2` a `i = 6`, o que inclui meses do ano anterior (ex: Dezembro de 2025). O usuario deseja ver apenas meses do ano corrente (2026).
 
-### Solucao
+### Mudanca
 
-Mover a verificacao de dados vazios para **depois** do case `'gauge'`, ou simplesmente excluir o tipo `gauge` dessa verificacao. Gauges geram seus proprios dados internamente.
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
 
-### Mudancas
+Alterar a logica de geracao dos meses na secao "Metas Mensais" para listar todos os 12 meses do ano atual (Janeiro a Dezembro de 2026), em vez de usar o intervalo relativo de -2 a +6.
 
-**`src/components/insights/visuals/ConfigurableChart.tsx`**
-
-Alterar a guarda de dados vazios para ignorar o tipo `gauge`:
-
-```
-if (type !== 'gauge' && (!data || data.length === 0)) {
-  return <div>Sem dados para exibir</div>;
+```typescript
+const now = new Date();
+const currentYear = now.getFullYear();
+const months = [];
+for (let m = 0; m < 12; m++) {
+  const d = new Date(currentYear, m, 1);
+  const key = `${currentYear}-${String(m + 1).padStart(2, '0')}`;
+  const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  months.push({ key, label });
 }
 ```
 
-Nenhuma outra mudanca necessaria -- o componente `GaugeFromConfig` ja possui toda a logica interna para calcular os dias corridos do mes atual.
+Isso garante que apenas os meses de Janeiro a Dezembro do ano atual sejam exibidos.
 
