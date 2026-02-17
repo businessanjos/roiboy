@@ -264,7 +264,7 @@ function formatDateGroup(dateString: string, grouping: string): string {
 
     switch (grouping) {
       case 'day':
-        return format(date, 'dd/MM/yyyy', { locale: ptBR });
+        return format(date, 'dd');
       case 'week':
         const weekStart = startOfWeek(date, { locale: ptBR });
         return format(weekStart, "'Sem' w/yyyy", { locale: ptBR });
