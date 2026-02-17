@@ -2,7 +2,7 @@ export type DataSource = 'deals' | 'leads' | 'products' | 'tasks';
 export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate' | 'sales_cycle';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
-export type ChartType = 'bar' | 'bar_horizontal' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial' | 'gauge';
+export type ChartType = 'bar' | 'bar_horizontal' | 'bar_stacked' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial' | 'gauge';
 export type GaugeSubType = 'days_elapsed' | 'revenue_vs_goal';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
 export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature';
@@ -47,6 +47,8 @@ export interface VisualConfig {
   hiddenUsers?: string[];
   // Hidden categories for filtering chart groups
   hiddenCategories?: string[];
+  // Stack by field for stacked bar charts (e.g., 'responsible_name')
+  stackBy?: string;
   // Gauge configuration
   gaugeConfig?: {
     subType: GaugeSubType;
@@ -89,6 +91,7 @@ export const FORMAT_TYPE_OPTIONS: { value: FormatType; label: string; symbol: st
 export const CHART_TYPE_OPTIONS: { value: ChartType; label: string }[] = [
   { value: 'bar', label: 'Barras' },
   { value: 'bar_horizontal', label: 'Barras Horizontal' },
+  { value: 'bar_stacked', label: 'Barras Empilhadas' },
   { value: 'line', label: 'Linhas' },
   { value: 'pie', label: 'Pizza' },
   { value: 'number', label: 'Scorecard' },

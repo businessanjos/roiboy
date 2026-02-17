@@ -19,7 +19,9 @@ import { ConfigurableScorecard } from "./ConfigurableScorecard";
 import { ConfigurableRanking } from "./ConfigurableRanking";
 import { ConfigurableCallCommercial } from "./ConfigurableCallCommercial";
 import { GaugeFromConfig } from "./ConfigurableGauge";
+import { StackedHorizontalBarChart } from "./StackedHorizontalBarChart";
 import { formatValueCompact } from "@/lib/formula-evaluator";
+import { StackedDataPoint } from "@/hooks/useStackedVisualData";
 
 interface AggregatedDataPoint {
   name: string;
@@ -37,6 +39,8 @@ interface ConfigurableChartProps {
   };
   appearance?: AppearanceConfig;
   visualConfig?: VisualConfig;
+  stackedData?: StackedDataPoint[];
+  stackedSeriesKeys?: string[];
   onDrilldown?: (groupName?: string) => void;
 }
 
@@ -44,7 +48,7 @@ function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professiona
   return COLOR_PALETTES[palette] || COLOR_PALETTES.professional;
 }
 
-export function ConfigurableChart({ type, data, formatting, appearance, visualConfig, onDrilldown }: ConfigurableChartProps) {
+export function ConfigurableChart({ type, data, formatting, appearance, visualConfig, stackedData, stackedSeriesKeys, onDrilldown }: ConfigurableChartProps) {
   const config = appearance || DEFAULT_APPEARANCE;
   
   if (type !== 'gauge' && (!data || data.length === 0)) {
@@ -69,6 +73,15 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
       return <BarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'bar_horizontal':
       return <HorizontalBarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
+    case 'bar_stacked':
+      return (
+        <StackedHorizontalBarChart
+          data={stackedData || []}
+          seriesKeys={stackedSeriesKeys || []}
+          formatting={formatting}
+          appearance={config}
+        />
+      );
     case 'line':
       return <LineChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'pie':
