@@ -74,6 +74,11 @@ async function fetchDealsRecords(
     `)
     .eq('account_id', accountId);
 
+  // Apply status filter from visual config (e.g., 'won' for won deals scorecard)
+  if (config.statusFilter) {
+    query = query.eq('status', config.statusFilter);
+  }
+
   // Determine which date field to use for filters based on dimension
   const dateFilterField = config.dimension?.type === 'date' && config.dimension.field 
     ? config.dimension.field 
