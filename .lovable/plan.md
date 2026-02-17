@@ -1,49 +1,37 @@
 
-## Expandir editor de metas no modal de criacao do Scorecard "Meta"
 
-### Problema
+## Adicionar metrica "Negocios Ganhos" ao Scorecard
 
-Ao criar um Scorecard de "Meta", o modal exibe apenas um campo para a meta do mes atual. O usuario deseja poder inserir metas para todos os 12 meses do ano, da mesma forma que o editor de metas do Gauge "Faturamento x Meta" funciona nos ajustes rapidos (VisualQuickSettings).
+### O que sera feito
+
+Adicionar uma nova opcao de metrica chamada **"Negocios Ganhos"** ao Scorecard, que conta apenas negocios convertidos com status "won".
 
 ### Mudancas
 
 **`src/components/insights/AddVisualModal.tsx`**
 
-1. Substituir o campo unico "Meta do Mes Atual (R$)" por um editor com os 12 meses do ano atual (Janeiro a Dezembro), identico ao que ja existe no VisualQuickSettings.
+1. Adicionar `won_deals_count` ao tipo `Metric`:
+   ```
+   type Metric = "revenue" | "deals_count" | ... | "won_deals_count" | "meta";
+   ```
 
-2. Trocar o state `gaugeGoal` (string unica) por um `monthlyGoals` (Record de string para string) para armazenar os valores de cada mes.
+2. Adicionar na lista `METRICS` (apos `deals_count`):
+   ```
+   { value: "won_deals_count", label: "Negocios Ganhos", description: "Contagem de deals convertidos em ganho" }
+   ```
 
-3. Na funcao de criacao, converter o `monthlyGoals` em `Record<string, number>` e salvar em `gaugeConfig.monthlyGoals`.
+3. Adicionar em `METRIC_TO_CONFIG`:
+   ```
+   won_deals_count: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal', statusFilter: 'won' }
+   ```
+   Isso usa `statusFilter: 'won'` para filtrar apenas negocios ganhos (mesmo padrao ja usado por `revenue` e `avg_ticket`).
 
-### Detalhes tecnicos
+4. Adicionar em `METRIC_LABELS`:
+   ```
+   won_deals_count: "Negocios Ganhos"
+   ```
 
-Trecho do editor de meses (mesmo padrao do VisualQuickSettings):
+### Resultado
 
-```typescript
-const currentYear = new Date().getFullYear();
-const months = [];
-for (let m = 0; m < 12; m++) {
-  const d = new Date(currentYear, m, 1);
-  const key = `${currentYear}-${String(m + 1).padStart(2, '0')}`;
-  const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-  months.push({ key, label });
-}
-```
+O usuario podera criar um Scorecard que exibe a contagem de negocios ganhos no periodo filtrado, utilizando o mesmo mecanismo de `statusFilter: 'won'` ja existente.
 
-Cada mes tera um campo de input numerico, e os valores serao salvos no config como `gaugeConfig.monthlyGoals`.
-
-Na funcao `handleCreate`, converter:
-
-```typescript
-const parsedGoals: Record<string, number> = {};
-Object.entries(monthlyGoals).forEach(([k, v]) => {
-  const num = Number(v);
-  if (num > 0) parsedGoals[k] = num;
-});
-```
-
-### Arquivo modificado
-
-| Arquivo | Mudanca |
-|---------|---------|
-| `AddVisualModal.tsx` | Substituir input unico por editor de 12 meses para scorecard de "Meta" |
