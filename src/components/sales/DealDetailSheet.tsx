@@ -227,11 +227,40 @@ export function DealDetailSheet({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [localWonAt, setLocalWonAt] = useState<string | null>(deal?.won_at || null);
+  const [resolvedLeadId, setResolvedLeadId] = useState<string | null>(null);
   
   // Sincronizar estado local com prop quando deal muda
   useEffect(() => {
     setLocalWonAt(deal?.won_at || null);
   }, [deal?.won_at]);
+
+  // Busca inteligente do Lead quando deal.lead_id é null
+  useEffect(() => {
+    setResolvedLeadId(null);
+    if (!deal || deal.lead_id || !open) return;
+    
+    const contactName = deal.client?.full_name || deal.lead?.full_name || deal.contact_name;
+    if (!contactName) return;
+
+    const findLead = async () => {
+      try {
+        // Buscar lead por nome exato
+        const { data } = await supabase
+          .from('leads')
+          .select('id')
+          .ilike('full_name', contactName)
+          .limit(1)
+          .maybeSingle();
+        
+        if (data) {
+          setResolvedLeadId(data.id);
+        }
+      } catch (err) {
+        console.error('[DealDetailSheet] Error resolving lead:', err);
+      }
+    };
+    findLead();
+  }, [deal?.id, deal?.lead_id, open]);
   
   const { mergeDeals } = useDealMerge();
 
@@ -704,11 +733,11 @@ export function DealDetailSheet({
                   )}
                 </div>
                 <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
-                  {deal.lead_id ? (
+                  {(deal.lead_id || resolvedLeadId) ? (
                     <button
                       onClick={() => {
                         onOpenChange(false);
-                        navigate(`/leads?lead=${deal.lead_id}`);
+                        navigate(`/leads?lead=${deal.lead_id || resolvedLeadId}`);
                       }}
                       className="text-primary hover:underline font-medium"
                     >
