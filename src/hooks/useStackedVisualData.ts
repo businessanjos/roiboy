@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { VisualConfig } from "@/components/insights/visual-builder/types";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
 
 export interface StackedDataPoint {
   name: string;
@@ -83,10 +83,33 @@ async function fetchStackedDealsData(
     from += pageSize;
   }
 
-  if (allDeals.length === 0) return { data: [], seriesKeys: [] };
+  // Determine the full date range from filters
+  let rangeStart: Date;
+  let rangeEnd: Date;
 
-  // Group by day number and by seller
-  const dayMap = new Map<number, Map<string, number>>();
+  if (filters.startDate && filters.endDate) {
+    rangeStart = parseISO(filters.startDate);
+    rangeEnd = parseISO(filters.endDate);
+  } else if (filters.startDate) {
+    rangeStart = parseISO(filters.startDate);
+    rangeEnd = endOfMonth(rangeStart);
+  } else if (filters.endDate) {
+    rangeEnd = parseISO(filters.endDate);
+    rangeStart = startOfMonth(rangeEnd);
+  } else {
+    // Default to current month
+    rangeStart = startOfMonth(new Date());
+    rangeEnd = endOfMonth(new Date());
+  }
+
+  // Generate all days in the interval
+  const allDays = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
+
+  // Check if range spans multiple months
+  const spansMultipleMonths = rangeStart.getMonth() !== rangeEnd.getMonth() || rangeStart.getFullYear() !== rangeEnd.getFullYear();
+
+  // Group by full date key (yyyy-MM-dd) and by seller
+  const dayMap = new Map<string, Map<string, number>>();
   const allSellers = new Set<string>();
 
   for (const deal of allDeals) {
@@ -94,20 +117,19 @@ async function fetchStackedDealsData(
     if (!dateStr) continue;
 
     const date = parseISO(dateStr);
-    const dayNum = date.getDate();
+    const dayKey = format(date, 'yyyy-MM-dd');
     const sellerName = (deal.users as any)?.name || 'Sem Responsável';
 
     allSellers.add(sellerName);
 
-    if (!dayMap.has(dayNum)) dayMap.set(dayNum, new Map());
-    const sellerMap = dayMap.get(dayNum)!;
+    if (!dayMap.has(dayKey)) dayMap.set(dayKey, new Map());
+    const sellerMap = dayMap.get(dayKey)!;
 
     const currentVal = sellerMap.get(sellerName) || 0;
 
     if (measure.aggregation === 'count') {
       sellerMap.set(sellerName, currentVal + 1);
     } else {
-      // sum or avg - for stacked, sum makes more sense
       sellerMap.set(sellerName, currentVal + (deal.value || 0));
     }
   }
@@ -117,24 +139,20 @@ async function fetchStackedDealsData(
 
   const seriesKeys = Array.from(allSellers).sort();
 
-  // Build data points for each day that has data
+  // Build data points for ALL days in the range
   const result: StackedDataPoint[] = [];
-  const sortedDays = Array.from(dayMap.keys()).sort((a, b) => a - b);
 
-  for (const day of sortedDays) {
-    const sellerMap = dayMap.get(day)!;
-    const point: StackedDataPoint = { name: String(day) };
-    let hasValue = false;
+  for (const day of allDays) {
+    const dayKey = format(day, 'yyyy-MM-dd');
+    const label = spansMultipleMonths ? format(day, 'd/MMM') : String(day.getDate());
+    const sellerMap = dayMap.get(dayKey);
+    const point: StackedDataPoint = { name: label };
 
     for (const seller of seriesKeys) {
-      const val = sellerMap.get(seller) || 0;
-      if (val > 0) hasValue = true;
-      point[seller] = val;
+      point[seller] = sellerMap?.get(seller) || 0;
     }
 
-    if (hasValue) {
-      result.push(point);
-    }
+    result.push(point);
   }
 
   return { data: result, seriesKeys };
