@@ -1042,11 +1042,29 @@ function fillMissingDates(
 
   // Generate all date keys in the range
   switch (grouping) {
-    case 'day':
-      eachDayOfInterval({ start: startDate, end: endDate }).forEach(date => {
-        allDates.push(format(date, 'dd'));
+    case 'day': {
+      // Fixed 01-31 range: aggregate same day across months
+      for (let d = 1; d <= 31; d++) {
+        allDates.push(String(d).padStart(2, '0'));
+      }
+      // Aggregate data points with same day label (sum values across months)
+      const aggregated = new Map<string, AggregatedDataPoint>();
+      for (const point of data) {
+        const existing = aggregated.get(point.name);
+        if (existing) {
+          existing.value += point.value;
+          existing.count = (existing.count || 0) + (point.count || 0);
+        } else {
+          aggregated.set(point.name, { ...point });
+        }
+      }
+      // Replace dataMap with aggregated data
+      return allDates.map(dateKey => aggregated.get(dateKey) || {
+        name: dateKey,
+        value: 0,
+        count: 0,
       });
-      break;
+    }
     case 'week':
       eachWeekOfInterval({ start: startDate, end: endDate }, { locale: ptBR }).forEach(date => {
         allDates.push(format(date, "'Sem' w/yyyy", { locale: ptBR }));

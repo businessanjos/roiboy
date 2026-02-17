@@ -121,7 +121,7 @@ async function fetchStackedDealsData(
         const weekStart = startOfWeek(date, { weekStartsOn: 1 });
         return format(weekStart, 'yyyy-MM-dd');
       }
-      default: return format(date, 'yyyy-MM-dd');
+      default: return format(date, 'dd');
     }
   };
 
@@ -148,7 +148,11 @@ async function fetchStackedDealsData(
       eachWeekOfInterval({ start: rangeStart, end: rangeEnd }, { weekStartsOn: 1 }).forEach(d => allPeriods.push({ key: getPeriodKey(d), label: getPeriodLabel(d) }));
       break;
     default:
-      eachDayOfInterval({ start: rangeStart, end: rangeEnd }).forEach(d => allPeriods.push({ key: getPeriodKey(d), label: getPeriodLabel(d) }));
+      // Fixed 01-31 range: aggregate same day across months
+      for (let d = 1; d <= 31; d++) {
+        const key = String(d).padStart(2, '0');
+        allPeriods.push({ key, label: key });
+      }
   }
 
   // Group by period key and by seller
