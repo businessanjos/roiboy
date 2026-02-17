@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { VisualConfig } from "@/components/insights/visual-builder/types";
-import { format, parseISO, eachDayOfInterval, startOfMonth, endOfMonth } from "date-fns";
+import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek } from "date-fns";
 
 export interface StackedDataPoint {
   name: string;
@@ -92,6 +92,8 @@ async function fetchStackedDealsData(
     from += pageSize;
   }
 
+  const dateGrouping = config.dimension.dateGrouping || 'day';
+
   // Determine the full date range from filters
   let rangeStart: Date;
   let rangeEnd: Date;
@@ -106,19 +108,53 @@ async function fetchStackedDealsData(
     rangeEnd = parseISO(filters.endDate);
     rangeStart = startOfMonth(rangeEnd);
   } else {
-    // Default to current month
-    rangeStart = startOfMonth(new Date());
-    rangeEnd = endOfMonth(new Date());
+    rangeStart = startOfYear(new Date());
+    rangeEnd = endOfYear(new Date());
   }
 
-  // Generate all days in the interval
-  const allDays = eachDayOfInterval({ start: rangeStart, end: rangeEnd });
+  // Helper to get period key and label from a date
+  const getPeriodKey = (date: Date): string => {
+    switch (dateGrouping) {
+      case 'year': return format(date, 'yyyy');
+      case 'month': return format(date, 'yyyy-MM');
+      case 'week': {
+        const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+        return format(weekStart, 'yyyy-MM-dd');
+      }
+      default: return format(date, 'yyyy-MM-dd');
+    }
+  };
 
-  // Check if range spans multiple months
-  const spansMultipleMonths = rangeStart.getMonth() !== rangeEnd.getMonth() || rangeStart.getFullYear() !== rangeEnd.getFullYear();
+  const getPeriodLabel = (date: Date): string => {
+    switch (dateGrouping) {
+      case 'year': return format(date, 'yyyy');
+      case 'month': return format(date, 'MMM/yy');
+      case 'week': return `Sem ${format(date, 'dd/MM')}`;
+      default: {
+        const spansMultipleMonths = rangeStart.getMonth() !== rangeEnd.getMonth() || rangeStart.getFullYear() !== rangeEnd.getFullYear();
+        return spansMultipleMonths ? format(date, 'd/MMM') : String(date.getDate());
+      }
+    }
+  };
 
-  // Group by full date key (yyyy-MM-dd) and by seller
-  const dayMap = new Map<string, Map<string, number>>();
+  // Generate all periods in the interval
+  const allPeriods: { key: string; label: string }[] = [];
+  switch (dateGrouping) {
+    case 'year':
+      eachYearOfInterval({ start: rangeStart, end: rangeEnd }).forEach(d => allPeriods.push({ key: getPeriodKey(d), label: getPeriodLabel(d) }));
+      break;
+    case 'month':
+      eachMonthOfInterval({ start: rangeStart, end: rangeEnd }).forEach(d => allPeriods.push({ key: getPeriodKey(d), label: getPeriodLabel(d) }));
+      break;
+    case 'week':
+      eachWeekOfInterval({ start: rangeStart, end: rangeEnd }, { weekStartsOn: 1 }).forEach(d => allPeriods.push({ key: getPeriodKey(d), label: getPeriodLabel(d) }));
+      break;
+    default:
+      eachDayOfInterval({ start: rangeStart, end: rangeEnd }).forEach(d => allPeriods.push({ key: getPeriodKey(d), label: getPeriodLabel(d) }));
+  }
+
+  // Group by period key and by seller
+  const periodMap = new Map<string, Map<string, number>>();
   const allSellers = new Set<string>();
 
   for (const deal of allDeals) {
@@ -126,13 +162,13 @@ async function fetchStackedDealsData(
     if (!dateStr) continue;
 
     const date = parseISO(dateStr);
-    const dayKey = format(date, 'yyyy-MM-dd');
+    const periodKey = getPeriodKey(date);
     const sellerName = (deal.users as any)?.name || 'Sem Responsável';
 
     allSellers.add(sellerName);
 
-    if (!dayMap.has(dayKey)) dayMap.set(dayKey, new Map());
-    const sellerMap = dayMap.get(dayKey)!;
+    if (!periodMap.has(periodKey)) periodMap.set(periodKey, new Map());
+    const sellerMap = periodMap.get(periodKey)!;
 
     const currentVal = sellerMap.get(sellerName) || 0;
 
@@ -148,14 +184,12 @@ async function fetchStackedDealsData(
 
   const seriesKeys = Array.from(allSellers).sort();
 
-  // Build data points for ALL days in the range
+  // Build data points for ALL periods in the range
   const result: StackedDataPoint[] = [];
 
-  for (const day of allDays) {
-    const dayKey = format(day, 'yyyy-MM-dd');
-    const label = spansMultipleMonths ? format(day, 'd/MMM') : String(day.getDate());
-    const sellerMap = dayMap.get(dayKey);
-    const point: StackedDataPoint = { name: label };
+  for (const period of allPeriods) {
+    const sellerMap = periodMap.get(period.key);
+    const point: StackedDataPoint = { name: period.label };
 
     for (const seller of seriesKeys) {
       point[seller] = sellerMap?.get(seller) || 0;
