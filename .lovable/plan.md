@@ -1,65 +1,50 @@
 
 
-## Adicionar Filtro por Campos Personalizados do Negocio nos Visuais
+## Corrigir filtros de campos personalizados para campos multi_select
 
-### Resumo
+### Problema
 
-Adicionar uma nova secao "Filtro por Negocio" na janela de ajustes dos visuais, logo abaixo do filtro por Lead existente. O usuario podera selecionar qualquer campo personalizado do negocio (MQL, Canal de Venda, Item da Venda, Faturamento Atual, Origem da Venda, Ganhou Bonus, etc.) e marcar quais opcoes desse campo devem ser incluidas no visual.
+Os filtros por campo personalizado do Negocio (e potencialmente do Lead) nao funcionam para campos do tipo `multi_select`. O motivo e que campos `multi_select` armazenam os valores na coluna `value_json` (como array JSON, ex: `["opt_1767723846709"]`), enquanto o codigo atual so consulta a coluna `value_text`, que e `null` para esses campos.
 
-### Como vai funcionar
+Exemplo concreto: o campo "Origem da Venda" e `multi_select`. Ao filtrar por "[TRAF-IMP-EC]", o sistema busca em `value_text` que esta `null`, retornando zero resultados mesmo com negocios existentes.
 
-1. Na janela de ajustes, aparecera uma nova secao "Filtro por Negocio" abaixo do "Filtro por Lead"
-2. Um dropdown listara todos os campos personalizados dos negocios (buscados dinamicamente da tabela `custom_fields` com `show_in_deals = true`)
-3. Ao selecionar um campo, as opcoes disponiveis aparecem como checkboxes (para campos select/multi_select: usa opcoes da definicao; para outros tipos: busca valores unicos de `deal_field_values`)
-4. Apenas negocios que possuem um dos valores selecionados serao incluidos no visual
-5. Se nenhum filtro for selecionado, o visual exibe todos os dados (comportamento atual)
+### Solucao
 
-### Secao tecnica
+Atualizar ambos os utilitarios de filtragem para verificar tambem `value_json` quando o campo for do tipo `multi_select`.
 
-**1. Tipo VisualConfig (`src/components/insights/visual-builder/types.ts`)**
+### Mudancas tecnicas
 
-Adicionar nova propriedade:
+**1. `src/hooks/useDealFieldFilter.ts`**
+
+- Buscar tambem `field_type` na consulta do `custom_fields` (alem de `options`)
+- Quando `field_type === 'multi_select'`:
+  - Buscar `value_json` em vez de `value_text` da tabela `deal_field_values`
+  - Comparar cada valor do array JSON contra os valores selecionados (mapeados de labels para option values)
+- Quando `field_type === 'select'`:
+  - Manter logica atual (`value_text` comparado com option values)
+- Para campos sem options (texto livre):
+  - Manter logica atual (`value_text` comparado diretamente)
+
+**2. `src/hooks/useLeadFieldFilter.ts`**
+
+- Mesma correcao: buscar `field_type` junto com `options`
+- Para `multi_select`: buscar `value_json` de `lead_field_values` e verificar se algum valor do array esta nos valores selecionados
+- Para `select` e texto livre: manter logica atual
+
+### Logica de matching para multi_select
 
 ```
-dealFieldFilter?: {
-  fieldId: string;
-  fieldName: string;
-  selectedValues: string[];
-};
+// value_json contem um array como ["opt_1767723846709"]
+// selectedValues contem labels como ["[TRAF-IMP-EC]"]
+// optionLabelToValue mapeia label -> value (ex: "[TRAF-IMP-EC]" -> "opt_1767723846709")
+
+Para cada row:
+  Se value_json e um array:
+    Para cada valor no array:
+      Se valor esta nos selectedValueKeys -> marcar deal como match
 ```
-
-**2. Novo componente (`src/components/insights/visuals/DealFieldFilterSection.tsx`)**
-
-Seguindo o mesmo padrao do `LeadFieldFilterSection`:
-- Busca campos com `show_in_deals = true` da tabela `custom_fields` (dinamico, nao hardcoded)
-- Ao selecionar um campo, busca as opcoes: se campo tipo select/multi_select, usa `options` da definicao; senao, busca valores unicos de `deal_field_values`
-- Exibe checkboxes para selecionar quais valores incluir
-
-**3. VisualQuickSettings (`src/components/insights/visuals/VisualQuickSettings.tsx`)**
-
-- Adicionar estado local para `dealFilterFieldId`, `dealFilterFieldName`, `dealFilterValues`
-- Renderizar `DealFieldFilterSection` entre o `LeadFieldFilterSection` e o `AppearanceSection`
-- No `handleSave`, persistir `dealFieldFilter` no config
-- No `useEffect` de reset, inicializar a partir de `config.dealFieldFilter`
-
-**4. Utilitario de filtragem (`src/hooks/useDealFieldFilter.ts`)**
-
-Nova funcao `filterByDealField` que:
-- Recebe array de deals, accountId e o filtro
-- Busca `deal_field_values` para o `fieldId` do filtro nos IDs dos deals
-- Mapeia labels para values (para campos select) e filtra apenas deals com valores correspondentes
-- Retorna array filtrado
-
-**5. Integracao nos hooks de dados (`src/hooks/useVisualData.ts` e `src/hooks/useStackedVisualData.ts`)**
-
-- Importar e aplicar `filterByDealField` apos o fetch dos deals e apos o filtro de lead (se houver)
-- Aplicar apenas quando `config.dealFieldFilter?.selectedValues?.length > 0`
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `types.ts` | Adicionar `dealFieldFilter` ao `VisualConfig` |
-| `DealFieldFilterSection.tsx` | Novo componente (mesmo estilo do LeadFieldFilterSection) |
-| `VisualQuickSettings.tsx` | Novo estado + renderizar DealFieldFilterSection + persistir no save |
-| `useDealFieldFilter.ts` | Nova funcao utilitaria de filtragem por campo do deal |
-| `useVisualData.ts` | Integrar filtro por deal field apos fetch dos deals |
-| `useStackedVisualData.ts` | Integrar filtro por deal field apos fetch dos deals |
+| `useDealFieldFilter.ts` | Buscar `field_type`, adicionar suporte a `multi_select` via `value_json` |
+| `useLeadFieldFilter.ts` | Mesma correcao para filtros de lead com campos `multi_select` |
