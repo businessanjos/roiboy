@@ -11,6 +11,7 @@ interface ChartTypeSelectorProps {
 const ICON_MAP: Record<ChartType, React.ElementType> = {
   bar: BarChart3,
   bar_horizontal: BarChart3,
+  bar_stacked: BarChart3,
   line: LineChart,
   pie: PieChart,
   number: Hash,
@@ -44,7 +45,7 @@ export function ChartTypeSelector({ value, onChange }: ChartTypeSelectorProps) {
             >
               <Icon className={cn(
                 "h-5 w-5",
-                option.value === 'bar_horizontal' && "rotate-90",
+                (option.value === 'bar_horizontal' || option.value === 'bar_stacked') && "rotate-90",
                 isSelected ? "text-primary" : "text-muted-foreground"
               )} />
               <span className={cn(

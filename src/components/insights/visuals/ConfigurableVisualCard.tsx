@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings } from "lucide-react";
 import { useVisualData } from "@/hooks/useVisualData";
+import { useStackedVisualData } from "@/hooks/useStackedVisualData";
 import { ConfigurableChart } from "./ConfigurableChart";
 import { DrilldownDialog } from "./DrilldownDialog";
 import { VisualQuickSettings } from "./VisualQuickSettings";
@@ -35,11 +36,20 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
 
   // Days elapsed gauge doesn't need data from the database
   const isGaugeDaysElapsed = chartType === 'gauge' && config?.gaugeConfig?.subType === 'days_elapsed';
+  const isStacked = chartType === 'bar_stacked' && !!config?.stackBy;
 
   const { data, isLoading, error } = useVisualData({
     config,
-    enabled: !!config && !isGaugeDaysElapsed,
+    enabled: !!config && !isGaugeDaysElapsed && !isStacked,
   });
+
+  const { data: stackedResult, isLoading: stackedLoading, error: stackedError } = useStackedVisualData({
+    config,
+    enabled: !!config && isStacked,
+  });
+
+  const effectiveLoading = isStacked ? stackedLoading : isLoading;
+  const effectiveError = isStacked ? stackedError : error;
 
   // Apply custom formula if present
   const processedData = useMemo(() => {
@@ -78,7 +88,7 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
   }, [config]);
 
   // Render loading state
-  if (isLoading) {
+  if (effectiveLoading) {
     return (
       <Card className="h-full flex flex-col">
         <CardHeader className="pb-2 flex-shrink-0">
@@ -92,7 +102,7 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
   }
 
   // Render error state
-  if (error) {
+  if (effectiveError) {
     return (
       <Card className="h-full flex flex-col">
         <CardHeader className="pb-2 flex-shrink-0">
@@ -179,13 +189,15 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 min-h-0">
+        <CardContent className="flex-1 min-h-0 overflow-auto">
           <ConfigurableChart
             type={chartType}
             data={processedData}
             formatting={config.formatting}
             appearance={config.appearance}
             visualConfig={config}
+            stackedData={stackedResult?.data}
+            stackedSeriesKeys={stackedResult?.seriesKeys}
             onDrilldown={handleDrilldown}
           />
         </CardContent>
