@@ -1,71 +1,49 @@
 
+## Expandir editor de metas no modal de criacao do Scorecard "Meta"
 
-## Adicionar "Meta" ao Scorecard e corrigir filtro do Gauge "Faturamento x Meta"
+### Problema
 
-### Problema atual
-
-1. O Gauge "Faturamento x Meta" sempre usa o mes corrente para buscar a meta (hardcoded `new Date()`), ignorando os filtros de data da pagina. Quando o filtro e "Este Ano", ele mostra o faturamento do ano inteiro mas a meta de apenas 1 mes.
-2. O Scorecard nao possui opcao de exibir "Meta" como metrica.
+Ao criar um Scorecard de "Meta", o modal exibe apenas um campo para a meta do mes atual. O usuario deseja poder inserir metas para todos os 12 meses do ano, da mesma forma que o editor de metas do Gauge "Faturamento x Meta" funciona nos ajustes rapidos (VisualQuickSettings).
 
 ### Mudancas
 
-#### 1. Passar filtros de data para o Gauge (`ConfigurableGauge.tsx`)
+**`src/components/insights/AddVisualModal.tsx`**
 
-- Importar `useInsightsFilters` no `RevenueVsGoalGauge`
-- Em vez de usar `new Date()` para pegar a meta de 1 mes, analisar o range de datas do filtro ativo:
-  - Se o filtro cobre apenas 1 mes: exibir a meta daquele mes
-  - Se o filtro cobre multiplos meses (ex: ano inteiro): somar as metas de todos os meses dentro do range
-- A meta (max do gauge) passa a ser a soma das metas dos meses no periodo filtrado
-- Atualizar sublabel para refletir o periodo
+1. Substituir o campo unico "Meta do Mes Atual (R$)" por um editor com os 12 meses do ano atual (Janeiro a Dezembro), identico ao que ja existe no VisualQuickSettings.
 
-#### 2. Adicionar metrica "Meta" no modal de criacao (`AddVisualModal.tsx`)
+2. Trocar o state `gaugeGoal` (string unica) por um `monthlyGoals` (Record de string para string) para armazenar os valores de cada mes.
 
-- Adicionar nova opcao na lista de metricas do Scorecard: `{ value: "meta", label: "Meta", description: "Meta de faturamento configurada" }`
-- Quando `metric === 'meta'` e `chartType === 'scorecard'`:
-  - Exibir campo para inserir a meta do mes atual (igual ao gauge)
-  - Salvar `monthlyGoals` dentro de `gaugeConfig` no config do scorecard
+3. Na funcao de criacao, converter o `monthlyGoals` em `Record<string, number>` e salvar em `gaugeConfig.monthlyGoals`.
 
-#### 3. Renderizar scorecard de "Meta" (`ConfigurableScorecard.tsx`)
+### Detalhes tecnicos
 
-- Verificar se `config?.gaugeConfig?.monthlyGoals` existe
-- Importar `useInsightsFilters` para ler o range de datas ativo
-- Calcular a meta baseada no filtro:
-  - Filtro de 1 mes: exibir meta daquele mes
-  - Filtro de ano/trimestre: somar metas dos meses cobertos
-- Exibir o valor formatado como currency
+Trecho do editor de meses (mesmo padrao do VisualQuickSettings):
 
-#### 4. Editor de metas no VisualQuickSettings (`VisualQuickSettings.tsx`)
-
-- Estender a condicao `isGaugeRevenue` para incluir tambem scorecards com `gaugeConfig.monthlyGoals`
-- Assim o editor de metas mensais aparece tambem para scorecards de "Meta"
-
-#### 5. Tipos (`types.ts`)
-
-Nenhuma mudanca necessaria -- `gaugeConfig` ja existe no `VisualConfig` e pode ser reutilizado pelo scorecard.
-
----
-
-### Logica de calculo da meta por filtro
-
-```text
-filtro startDate / endDate
-  |
-  v
-Extrair meses cobertos (ex: 2026-01 ate 2026-12)
-  |
-  v
-Somar monthlyGoals[mes] para cada mes no range
-  |
-  v
-Resultado = meta total do periodo
+```typescript
+const currentYear = new Date().getFullYear();
+const months = [];
+for (let m = 0; m < 12; m++) {
+  const d = new Date(currentYear, m, 1);
+  const key = `${currentYear}-${String(m + 1).padStart(2, '0')}`;
+  const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  months.push({ key, label });
+}
 ```
 
-### Arquivos modificados
+Cada mes tera um campo de input numerico, e os valores serao salvos no config como `gaugeConfig.monthlyGoals`.
+
+Na funcao `handleCreate`, converter:
+
+```typescript
+const parsedGoals: Record<string, number> = {};
+Object.entries(monthlyGoals).forEach(([k, v]) => {
+  const num = Number(v);
+  if (num > 0) parsedGoals[k] = num;
+});
+```
+
+### Arquivo modificado
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `ConfigurableGauge.tsx` | Usar filtros de data para calcular meta do periodo |
-| `ConfigurableScorecard.tsx` | Suportar exibicao de meta com filtros |
-| `AddVisualModal.tsx` | Nova metrica "Meta" para scorecard |
-| `VisualQuickSettings.tsx` | Exibir editor de metas para scorecards de meta |
-
+| `AddVisualModal.tsx` | Substituir input unico por editor de 12 meses para scorecard de "Meta" |
