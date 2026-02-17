@@ -18,6 +18,7 @@ import { ChartTooltip } from "./ChartTooltip";
 import { ConfigurableScorecard } from "./ConfigurableScorecard";
 import { ConfigurableRanking } from "./ConfigurableRanking";
 import { ConfigurableCallCommercial } from "./ConfigurableCallCommercial";
+import { GaugeFromConfig } from "./ConfigurableGauge";
 import { formatValueCompact } from "@/lib/formula-evaluator";
 
 interface AggregatedDataPoint {
@@ -62,6 +63,8 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
       return <ConfigurableRanking data={data} formatting={formatting} />;
     case 'call_commercial':
       return <ConfigurableCallCommercial data={data} formatting={formatting} hiddenUsers={visualConfig?.hiddenUsers} />;
+    case 'gauge':
+      return <GaugeFromConfig data={data} visualConfig={visualConfig} />;
     case 'bar':
       return <BarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'bar_horizontal':

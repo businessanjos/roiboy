@@ -33,9 +33,12 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
   const [drilldownGroup, setDrilldownGroup] = useState<string | undefined>();
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // Days elapsed gauge doesn't need data from the database
+  const isGaugeDaysElapsed = chartType === 'gauge' && config?.gaugeConfig?.subType === 'days_elapsed';
+
   const { data, isLoading, error } = useVisualData({
     config,
-    enabled: !!config,
+    enabled: !!config && !isGaugeDaysElapsed,
   });
 
   // Apply custom formula if present
