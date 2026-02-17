@@ -3,8 +3,7 @@ import { VisualConfig } from "@/components/insights/visual-builder/types";
 
 /**
  * Filters deal records by deal custom field values.
- * Uses deal.id to look up deal_field_values.
- * Returns the filtered array of records.
+ * Supports select (value_text), multi_select (value_json), and free text fields.
  */
 export async function filterByDealField<T extends { id: string }>(
   records: T[],
@@ -19,12 +18,14 @@ export async function filterByDealField<T extends { id: string }>(
 
   const dealIds = records.map(r => r.id);
 
-  // Get field definition to check if it has options (select field)
+  // Get field definition including field_type
   const { data: fieldDef } = await supabase
     .from('custom_fields')
-    .select('options')
+    .select('options, field_type')
     .eq('id', dealFieldFilter.fieldId)
     .maybeSingle();
+
+  const fieldType = fieldDef?.field_type || '';
 
   // Build option label->value map for select fields
   const optionLabelToValue = new Map<string, string>();
@@ -36,17 +37,19 @@ export async function filterByDealField<T extends { id: string }>(
     }
   }
 
-  const isSelectField = optionLabelToValue.size > 0;
+  const isMultiSelect = fieldType === 'multi_select';
+  const isSelectField = optionLabelToValue.size > 0 && !isMultiSelect;
 
-  // Fetch deal_field_values for these deals in batches
+  // Fetch deal_field_values in batches
   let allValues: any[] = [];
   const batchSize = 500;
+  const selectColumns = isMultiSelect ? 'deal_id, value_json' : 'deal_id, value_text';
 
   for (let i = 0; i < dealIds.length; i += batchSize) {
     const batch = dealIds.slice(i, i + batchSize);
     const { data, error } = await supabase
       .from('deal_field_values')
-      .select('deal_id, value_text')
+      .select(selectColumns)
       .eq('field_id', dealFieldFilter.fieldId)
       .eq('account_id', accountId)
       .in('deal_id', batch);
@@ -61,7 +64,25 @@ export async function filterByDealField<T extends { id: string }>(
   // Match values
   const matchingDealIds = new Set<string>();
 
-  if (isSelectField) {
+  if (isMultiSelect) {
+    // Map selected labels to their option value keys
+    const selectedValueKeys = new Set(
+      dealFieldFilter.selectedValues
+        .map(label => optionLabelToValue.get(label))
+        .filter(Boolean) as string[]
+    );
+
+    for (const row of allValues) {
+      if (row.value_json && Array.isArray(row.value_json)) {
+        for (const val of row.value_json) {
+          if (selectedValueKeys.has(val)) {
+            matchingDealIds.add(row.deal_id);
+            break;
+          }
+        }
+      }
+    }
+  } else if (isSelectField) {
     const selectedValueKeys = new Set(
       dealFieldFilter.selectedValues
         .map(label => optionLabelToValue.get(label))
