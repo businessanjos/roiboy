@@ -69,6 +69,8 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   const isCallCommercial = visual.chart_type === 'call_commercial';
   const isGauge = visual.chart_type === 'gauge';
   const isGaugeRevenue = isGauge && config?.gaugeConfig?.subType === 'revenue_vs_goal';
+  const isMetaScorecard = isScorecard && !!config?.gaugeConfig?.monthlyGoals;
+  const showMonthlyGoals = isGaugeRevenue || isMetaScorecard;
   const showCategoryFilter = !isScorecard && !isCallCommercial && !isGauge;
 
   // Fetch visual data to extract unique categories
@@ -192,10 +194,10 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
         },
         hiddenUsers: isCallCommercial ? hiddenUsers : config.hiddenUsers,
         hiddenCategories: showCategoryFilter ? hiddenCategories : config.hiddenCategories,
-        ...(isGaugeRevenue && {
+        ...(showMonthlyGoals && {
           gaugeConfig: {
             ...config.gaugeConfig,
-            subType: 'revenue_vs_goal' as const,
+            subType: config.gaugeConfig?.subType || 'revenue_vs_goal' as const,
             monthlyGoals: parsedGoals,
           },
         }),
@@ -243,7 +245,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
           </div>
           <Separator />
           {/* Gauge monthly goals editor */}
-          {isGaugeRevenue && (
+          {showMonthlyGoals && (
             <div className="space-y-3">
               <Label className="text-base font-medium">Metas Mensais (R$)</Label>
               <p className="text-xs text-muted-foreground">Defina a meta de faturamento para cada mês.</p>

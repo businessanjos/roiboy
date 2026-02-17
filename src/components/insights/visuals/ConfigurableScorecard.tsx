@@ -1,6 +1,8 @@
 import { formatValueWithScale } from "@/lib/formula-evaluator";
 import { FormatType, DisplayScale } from "../visual-builder/types";
 import { VisualConfig } from "../visual-builder/types";
+import { useInsightsFilters } from "@/hooks/useInsightsFilters";
+import { sumGoalsInRange } from "@/lib/monthRange";
 
 interface ConfigurableScorecardProps {
   data: Array<{ name: string; value: number; count?: number }>;
@@ -14,8 +16,15 @@ interface ConfigurableScorecardProps {
 }
 
 export function ConfigurableScorecard({ data, formatting, title, config }: ConfigurableScorecardProps) {
+  const { filters } = useInsightsFilters();
+  
+  // Check if this is a "Meta" scorecard
+  const isMetaScorecard = !!config?.gaugeConfig?.monthlyGoals && config?.measure?.aggregation === 'sum' && config?.measure?.field === 'meta';
+  
   // Sum all values for scorecard
-  const totalValue = data.reduce((acc, item) => acc + item.value, 0);
+  const totalValue = isMetaScorecard
+    ? sumGoalsInRange(config?.gaugeConfig?.monthlyGoals, filters.startDate, filters.endDate)
+    : data.reduce((acc, item) => acc + item.value, 0);
   const totalCount = data.reduce((acc, item) => acc + (item.count || 0), 0);
   
   const isSalesCycle = config?.measure?.aggregation === 'sales_cycle';
@@ -25,7 +34,7 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
     ? `${totalValue}`
     : formatValueWithScale(
         totalValue, 
-        formatting.type, 
+        isMetaScorecard ? 'currency' : formatting.type, 
         formatting.decimals,
         formatting.displayScale || 'auto'
       );

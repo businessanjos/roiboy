@@ -21,7 +21,7 @@ interface AddVisualModalProps {
 }
 
 type ChartType = "bar" | "bar_horizontal" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge";
-type Metric = "revenue" | "deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle";
+type Metric = "revenue" | "deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta";
 type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual";
 
 const CHART_TYPES = [
@@ -43,6 +43,7 @@ const METRICS = [
   { value: "lost_reasons" as const, label: "Motivos de Perda", description: "Análise de deals perdidos" },
   { value: "leads_count" as const, label: "Total de Leads", description: "Contagem de todos os leads cadastrados" },
   { value: "sales_cycle" as const, label: "Ciclo de Vendas", description: "Média de dias entre primeiro contato e fechamento" },
+  { value: "meta" as const, label: "Meta", description: "Meta de faturamento configurada manualmente" },
 ];
 
 const GROUP_BY_OPTIONS = [
@@ -69,6 +70,7 @@ const METRIC_TO_CONFIG: Record<Metric, {
   lost_reasons: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal', statusFilter: 'lost' },
   leads_count: { dataSource: 'leads', measureField: null, aggregation: 'count', formatType: 'decimal' },
   sales_cycle: { dataSource: 'deals', measureField: null, aggregation: 'sales_cycle', formatType: 'decimal', statusFilter: 'won' },
+  meta: { dataSource: 'deals', measureField: 'meta', aggregation: 'sum', formatType: 'currency' },
 };
 
 const GROUP_BY_TO_DIMENSION: Record<GroupBy, { field: string; type: 'date' | 'text'; dateGrouping?: 'day' | 'week' | 'month' | 'year' }> = {
@@ -102,6 +104,7 @@ const METRIC_LABELS: Record<Metric, string> = {
   lost_reasons: "Perdas",
   leads_count: "Leads",
   sales_cycle: "Ciclo de Vendas",
+  meta: "Meta",
 };
 
 const GROUP_LABELS: Record<GroupBy, string> = {
@@ -150,7 +153,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
     } else if (chartType === 'gauge') {
       setTitle(gaugeSubType === 'days_elapsed' ? 'Dias Corridos do Mês' : 'Faturamento x Meta');
     } else if (chartType === 'scorecard' && metric) {
-      setTitle(METRIC_LABELS[metric]);
+      setTitle(metric === 'meta' ? 'Meta' : METRIC_LABELS[metric]);
     } else if (metric && groupBy) {
       const generatedTitle = `${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}`;
       setTitle(generatedTitle);
@@ -281,6 +284,10 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       let config: VisualConfig;
       
       if (chartType === 'scorecard') {
+        const isMeta = metric === 'meta';
+        const now = new Date();
+        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
         config = {
           dataSource: metricConfig.dataSource,
           measure: {
@@ -298,6 +305,12 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           },
           appearance: DEFAULT_APPEARANCE,
           statusFilter: metricConfig.statusFilter,
+          ...(isMeta && gaugeGoal ? {
+            gaugeConfig: {
+              subType: 'revenue_vs_goal' as const,
+              monthlyGoals: { [monthKey]: Number(gaugeGoal) },
+            },
+          } : {}),
         };
       } else {
         const baseDimensionConfig = GROUP_BY_TO_DIMENSION[groupBy!];
@@ -506,15 +519,32 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
 
               {/* Title field for Scorecards (shown in step 2 since it's the final step) */}
               {chartType === 'scorecard' && (
-                <div className="space-y-2 pt-4 border-t">
-                  <Label htmlFor="visual-title-scorecard">Título do Scorecard</Label>
-                  <Input
-                    id="visual-title-scorecard"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Ex: Faturamento Total"
-                  />
-                </div>
+                <>
+                  {metric === 'meta' && (
+                    <div className="space-y-2 pt-4 border-t">
+                      <Label htmlFor="scorecard-goal">Meta do Mês Atual (R$)</Label>
+                      <Input
+                        id="scorecard-goal"
+                        type="number"
+                        value={gaugeGoal}
+                        onChange={(e) => setGaugeGoal(e.target.value)}
+                        placeholder="Ex: 100000"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Você pode editar metas de outros meses nos ajustes do visual após criá-lo.
+                      </p>
+                    </div>
+                  )}
+                  <div className="space-y-2 pt-4 border-t">
+                    <Label htmlFor="visual-title-scorecard">Título do Scorecard</Label>
+                    <Input
+                      id="visual-title-scorecard"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Ex: Faturamento Total"
+                    />
+                  </div>
+                </>
               )}
             </div>
           )}
