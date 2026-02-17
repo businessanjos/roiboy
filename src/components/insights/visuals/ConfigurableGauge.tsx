@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { VisualConfig } from "../visual-builder/types";
+import { useInsightsFilters } from "@/hooks/useInsightsFilters";
+import { sumGoalsInRange, getMonthKeysInRange } from "@/lib/monthRange";
 
 interface ConfigurableGaugeProps {
   value: number;
@@ -128,9 +130,12 @@ function DaysElapsedGauge() {
 }
 
 function RevenueVsGoalGauge({ data, visualConfig }: GaugeWrapperProps) {
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const goal = visualConfig?.gaugeConfig?.monthlyGoals?.[monthKey] || 0;
+  const { filters } = useInsightsFilters();
+  const goals = visualConfig?.gaugeConfig?.monthlyGoals;
+
+  const goal = useMemo(() => {
+    return sumGoalsInRange(goals, filters.startDate, filters.endDate);
+  }, [goals, filters.startDate, filters.endDate]);
 
   // Sum all values from data (revenue from won deals)
   const totalRevenue = useMemo(() => {
@@ -143,11 +148,22 @@ function RevenueVsGoalGauge({ data, visualConfig }: GaugeWrapperProps) {
     return `R$ ${v.toFixed(0)}`;
   };
 
+  // Build period label
+  const periodLabel = useMemo(() => {
+    const keys = getMonthKeysInRange(filters.startDate, filters.endDate);
+    if (keys.length === 1) {
+      const [y, m] = keys[0].split('-');
+      const d = new Date(Number(y), Number(m) - 1, 1);
+      return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    }
+    return `${keys.length} meses`;
+  }, [filters.startDate, filters.endDate]);
+
   if (goal <= 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-sm">
-        <p>Meta não definida para {monthKey}</p>
-        <p className="text-xs mt-1">Configure a meta nos ajustes do visual</p>
+        <p>Meta não definida para o período</p>
+        <p className="text-xs mt-1">Configure as metas nos ajustes do visual</p>
       </div>
     );
   }
@@ -157,7 +173,7 @@ function RevenueVsGoalGauge({ data, visualConfig }: GaugeWrapperProps) {
       value={totalRevenue}
       max={goal}
       label="Faturamento x Meta"
-      sublabel={`${formatCurrency(totalRevenue)} de ${formatCurrency(goal)}`}
+      sublabel={`${formatCurrency(totalRevenue)} de ${formatCurrency(goal)} — ${periodLabel}`}
       formatValue={formatCurrency}
     />
   );
