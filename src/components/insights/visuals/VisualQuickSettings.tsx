@@ -32,6 +32,7 @@ import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AppearanceSection } from "../visual-builder/AppearanceSection";
 import { LeadFieldFilterSection } from "./LeadFieldFilterSection";
+import { DealFieldFilterSection } from "./DealFieldFilterSection";
 import { 
   VisualConfig, 
   DateDisplayFormat, 
@@ -121,6 +122,11 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   const [leadFilterFieldName, setLeadFilterFieldName] = useState(config?.leadFieldFilter?.fieldName ?? '');
   const [leadFilterValues, setLeadFilterValues] = useState<string[]>(config?.leadFieldFilter?.selectedValues ?? []);
   
+  // Deal field filter state
+  const [dealFilterFieldId, setDealFilterFieldId] = useState(config?.dealFieldFilter?.fieldId ?? '');
+  const [dealFilterFieldName, setDealFilterFieldName] = useState(config?.dealFieldFilter?.fieldName ?? '');
+  const [dealFilterValues, setDealFilterValues] = useState<string[]>(config?.dealFieldFilter?.selectedValues ?? []);
+  
   // Monthly goals state for gauge revenue_vs_goal
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
 
@@ -139,6 +145,9 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
       setLeadFilterFieldId(config?.leadFieldFilter?.fieldId ?? '');
       setLeadFilterFieldName(config?.leadFieldFilter?.fieldName ?? '');
       setLeadFilterValues(config?.leadFieldFilter?.selectedValues ?? []);
+      setDealFilterFieldId(config?.dealFieldFilter?.fieldId ?? '');
+      setDealFilterFieldName(config?.dealFieldFilter?.fieldName ?? '');
+      setDealFilterValues(config?.dealFieldFilter?.selectedValues ?? []);
       
       // Initialize monthly goals
       if (config?.gaugeConfig?.monthlyGoals) {
@@ -207,6 +216,11 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
           fieldId: leadFilterFieldId,
           fieldName: leadFilterFieldName,
           selectedValues: leadFilterValues,
+        } : undefined,
+        dealFieldFilter: dealFilterFieldId ? {
+          fieldId: dealFilterFieldId,
+          fieldName: dealFilterFieldName,
+          selectedValues: dealFilterValues,
         } : undefined,
         ...(showMonthlyGoals && {
           gaugeConfig: {
@@ -399,6 +413,14 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
             selectedValues={leadFilterValues}
             onFieldChange={(id, name) => { setLeadFilterFieldId(id); setLeadFilterFieldName(name); }}
             onSelectedValuesChange={setLeadFilterValues}
+          />
+          {/* Deal field filter for all visuals */}
+          <DealFieldFilterSection
+            selectedFieldId={dealFilterFieldId}
+            selectedFieldName={dealFilterFieldName}
+            selectedValues={dealFilterValues}
+            onFieldChange={(id, name) => { setDealFilterFieldId(id); setDealFilterFieldName(name); }}
+            onSelectedValuesChange={setDealFilterValues}
           />
           <AppearanceSection
             showDataLabels={showDataLabels}

@@ -60,6 +60,12 @@ export interface VisualConfig {
     fieldName: string;     // Nome do campo para exibição
     selectedValues: string[]; // Labels selecionados
   };
+  // Deal custom field filter
+  dealFieldFilter?: {
+    fieldId: string;       // UUID do campo personalizado do negócio
+    fieldName: string;     // Nome do campo para exibição
+    selectedValues: string[]; // Labels selecionados
+  };
 }
 
 // Data source options
