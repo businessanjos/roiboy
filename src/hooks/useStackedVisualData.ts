@@ -57,8 +57,17 @@ async function fetchStackedDealsData(
     query = query.eq('status', statusFilter);
   }
 
-  // Determine date field
-  const dateField = dimension.field || 'created_at';
+  // Determine date field with smart mapping (same logic as useVisualData)
+  let dateField: string;
+  if (dimension.field && dimension.field !== 'created_at') {
+    dateField = dimension.field;
+  } else if (statusFilter === 'won') {
+    dateField = 'won_at';
+  } else if (statusFilter === 'lost') {
+    dateField = 'lost_at';
+  } else {
+    dateField = 'created_at';
+  }
 
   if (dateField === 'won_at') {
     query = query.not('won_at', 'is', null);
