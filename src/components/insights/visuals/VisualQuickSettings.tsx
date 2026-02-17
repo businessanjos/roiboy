@@ -249,11 +249,11 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
               <p className="text-xs text-muted-foreground">Defina a meta de faturamento para cada mês.</p>
               <div className="space-y-2 max-h-[250px] overflow-y-auto">
                 {(() => {
-                  const now = new Date();
+                  const currentYear = new Date().getFullYear();
                   const months: { key: string; label: string }[] = [];
-                  for (let i = -2; i <= 6; i++) {
-                    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-                    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                  for (let m = 0; m < 12; m++) {
+                    const d = new Date(currentYear, m, 1);
+                    const key = `${currentYear}-${String(m + 1).padStart(2, '0')}`;
                     const label = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
                     months.push({ key, label });
                   }
