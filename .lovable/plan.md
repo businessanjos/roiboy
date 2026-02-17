@@ -1,38 +1,40 @@
 
 
-## Exibir apenas o numero do dia nos visuais com sazonalidade "Diario"
+## Agrupar dias 1-31 com soma entre meses na sazonalidade "Diario"
 
 ### Problema
 
-Quando a sazonalidade e "Diario", os eixos dos graficos exibem datas completas como "01/02/2026", "02/02/2026", etc., ocupando muito espaco e dificultando a leitura. O usuario quer ver apenas "01, 02, 03..." — os dados ja refletem o periodo filtrado (mensal ou anual), entao o contexto do mes/ano ja esta implicito.
+Quando o filtro e anual (ex: 2026 inteiro), o agrupamento diario gera 365 pontos no grafico (um para cada dia do ano). O comportamento desejado e: sempre exibir apenas 31 pontos (dias 1 a 31), somando os valores de mesmo dia entre todos os meses do intervalo. Exemplo: dia "13" = soma do dia 13 de janeiro + dia 13 de fevereiro + ... + dia 13 de dezembro.
 
 ### Mudancas
 
-**1. `src/hooks/useVisualData.ts`** — Funcao `formatDateGroup` e `fillMissingDates`
+**1. `src/hooks/useVisualData.ts`**
 
-- Alterar o case `'day'` de `format(date, 'dd/MM/yyyy')` para `format(date, 'dd')` (apenas o numero do dia com zero a esquerda)
-- Atualizar `fillMissingDates` para usar o mesmo formato `'dd'` no case `'day'`
+- `formatDateGroup`: manter `format(date, 'dd')` (ja esta correto)
+- `fillMissingDates`: no case `'day'`, em vez de gerar todos os dias do intervalo, gerar apenas os labels "01" a "31". Antes de retornar, agregar (somar) os valores de pontos com mesmo label
+- Na funcao principal de agregacao (onde os dados sao agrupados por `formatDateGroup`), pontos com o mesmo label "dd" serao naturalmente combinados pois a chave e apenas o dia. Porem, como o `groupByDate` faz um `reduce` usando a chave formatada, os dias iguais de meses diferentes ja serao somados. O `fillMissingDates` so precisa garantir que exibe 01-31 fixos
 
-**2. `src/hooks/useStackedVisualData.ts`** — Funcao `getPeriodLabel`
+- Ajustar `fillMissingDates` para o case `'day'`: gerar labels fixos "01" a "31", agregar dados duplicados somando `value` e `count`
 
-- Alterar o default (day) para sempre retornar `format(date, 'dd')` — apenas o numero do dia, sem distincao de filtro multi-mes vs mono-mes (o filtro ja define o contexto)
+**2. `src/hooks/useStackedVisualData.ts`**
 
-### Comportamento esperado
+- `getPeriodKey` no case default (day): mudar de `format(date, 'yyyy-MM-dd')` para `format(date, 'dd')` — assim dias iguais de meses diferentes compartilham a mesma chave e os valores sao somados
+- `getPeriodLabel`: manter `format(date, 'dd')` (ja esta correto)
+- Geracao de periodos (`allPeriods`): no case default (day), em vez de usar `eachDayOfInterval`, gerar fixamente 31 periodos com keys/labels de "01" a "31"
 
-| Sazonalidade | Label no eixo | Exemplo |
-|-------------|---------------|---------|
-| Diario | Apenas o dia | 01, 02, 03, ..., 28 |
-| Semanal | Sem XX/MM | Sem 03/02 |
-| Mensal | MMM/AA | Fev/26 |
-| Anual | AAAA | 2026 |
+### Secao tecnica
 
-Quando filtrado por mes (ex: Fev/2026), os dias 01-28 representam os dias daquele mes.
-Quando filtrado por ano, os dias representam a soma de todos os dias (01 = dia 1 de todos os meses somados).
-
-### Arquivos modificados
+**Arquivos modificados:**
 
 | Arquivo | Mudanca |
 |---------|---------|
-| `useVisualData.ts` | `formatDateGroup` day case: `'dd'`; `fillMissingDates` day case: `'dd'` |
-| `useStackedVisualData.ts` | `getPeriodLabel` day case: `format(date, 'dd')` |
-| `useVisualDrilldown.ts` | `formatDateGroup` day case: `'dd'` (manter consistencia) |
+| `useVisualData.ts` | `fillMissingDates` day case: gerar labels fixos 01-31 e agregar duplicados |
+| `useStackedVisualData.ts` | `getPeriodKey` day: usar `'dd'`; geracao de periodos day: fixo 01-31 |
+
+### Comportamento esperado
+
+- Filtro mensal (ex: Fev/2026): dias 01-28 com dados, dias 29-31 com zero
+- Filtro anual (ex: 2026): dias 01-31 com soma de todos os meses
+- Filtro customizado (ex: Jan-Mar): dias 01-31 com soma dos 3 meses
+- Sempre exibe exatamente 31 pontos no eixo X
+
