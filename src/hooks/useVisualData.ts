@@ -6,6 +6,7 @@ import { VisualConfig, DateGrouping, DateDisplayFormat } from "@/components/insi
 import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval, eachDayOfInterval, eachYearOfInterval, startOfMonth, startOfYear, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { filterByLeadField } from "@/hooks/useLeadFieldFilter";
+import { filterByDealField } from "@/hooks/useDealFieldFilter";
 
 export interface AggregatedDataPoint {
   name: string;
@@ -28,7 +29,7 @@ export function useVisualData({ config, enabled = true }: UseVisualDataParams) {
     queryFn: async (): Promise<AggregatedDataPoint[]> => {
       if (!config || !currentUser?.account_id) return [];
 
-      const { dataSource, measure, dimension, appearance, statusFilter, leadFieldFilter } = config;
+      const { dataSource, measure, dimension, appearance, statusFilter, leadFieldFilter, dealFieldFilter } = config;
       const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
       const fillEmptyDates = appearance?.fillEmptyDates || false;
 
@@ -39,7 +40,7 @@ export function useVisualData({ config, enabled = true }: UseVisualDataParams) {
 
       switch (dataSource) {
         case 'deals':
-          result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFieldFilter);
+          result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFieldFilter, dealFieldFilter);
           break;
         case 'leads':
           result = await fetchLeadsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, leadFieldFilter);
@@ -405,7 +406,8 @@ async function fetchDealsData(
   filters: any,
   dateDisplayFormat: DateDisplayFormat,
   statusFilter?: 'won' | 'lost' | 'open',
-  leadFieldFilter?: VisualConfig['leadFieldFilter']
+  leadFieldFilter?: VisualConfig['leadFieldFilter'],
+  dealFieldFilter?: VisualConfig['dealFieldFilter']
 ): Promise<AggregatedDataPoint[]> {
   // Special handling for sales cycle calculation
   if (measure.aggregation === 'sales_cycle') {
@@ -492,6 +494,11 @@ async function fetchDealsData(
   let filteredData = data || [];
   if (leadFieldFilter && leadFieldFilter.selectedValues && leadFieldFilter.selectedValues.length > 0) {
     filteredData = await filterByLeadField(filteredData, accountId, leadFieldFilter, 'deals');
+  }
+
+  // Apply deal field filter if configured
+  if (dealFieldFilter && dealFieldFilter.selectedValues && dealFieldFilter.selectedValues.length > 0) {
+    filteredData = await filterByDealField(filteredData, accountId, dealFieldFilter);
   }
 
   // If dimension is _total, return global aggregation (for Scorecards)

@@ -5,6 +5,7 @@ import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { VisualConfig } from "@/components/insights/visual-builder/types";
 import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek } from "date-fns";
 import { filterByLeadField } from "@/hooks/useLeadFieldFilter";
+import { filterByDealField } from "@/hooks/useDealFieldFilter";
 
 export interface StackedDataPoint {
   name: string;
@@ -94,9 +95,14 @@ async function fetchStackedDealsData(
   }
 
   // Apply lead field filter if configured
-  const { leadFieldFilter } = config;
+  const { leadFieldFilter, dealFieldFilter } = config;
   if (leadFieldFilter && leadFieldFilter.selectedValues && leadFieldFilter.selectedValues.length > 0) {
     allDeals = await filterByLeadField(allDeals, accountId, leadFieldFilter, 'deals');
+  }
+
+  // Apply deal field filter if configured
+  if (dealFieldFilter && dealFieldFilter.selectedValues && dealFieldFilter.selectedValues.length > 0) {
+    allDeals = await filterByDealField(allDeals, accountId, dealFieldFilter);
   }
 
   const dateGrouping = config.dimension.dateGrouping || 'day';
