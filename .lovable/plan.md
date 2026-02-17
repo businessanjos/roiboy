@@ -1,23 +1,35 @@
 
 
-## Corrigir bug: etapas ocultas do funil reaparecem no Modo Foco
+## Corrigir: Status de atividades nos cards do Pipeline nao atualiza apos conclusao
 
 ### Causa raiz
-O componente `SalesFunnelChart` armazena as etapas ocultas (`hiddenStages`) em um `useState` interno. Quando o Modo Foco e ativado, o `dashboardContent` e renderizado **duas vezes**: na view normal e no portal. O portal cria uma **nova instancia** do `SalesFunnelChart` com `hiddenStages` vazio, fazendo todas as etapas reaparecerem.
+
+O hook `useDealActivityStatus` esta configurado com `refetchOnWindowFocus: false`, o que impede a atualizacao dos dados quando o usuario volta para a aba do Pipeline. Alem disso, o `staleTime` de 30 segundos faz com que dados em cache sejam servidos mesmo apos a conclusao de tarefas em outro contexto (ex: dentro do DealDetailSheet).
+
+A assinatura Realtime esta configurada, porem o `refetchOnWindowFocus: false` e o fator principal do problema reportado -- ao concluir uma tarefa e atualizar a pagina, a query remonta mas pode haver condicoes de corrida com o cache do React Query.
 
 ### Solucao
-Elevar o estado `hiddenStages` para o componente pai (`WhatsAppDashboardPanel`) e passa-lo como props para o `SalesFunnelChart`. Assim, ambas as instancias (normal e foco) compartilham o mesmo estado.
 
-### Mudancas
+Ajustar a configuracao do React Query no hook `useDealActivityStatus` para garantir atualizacao imediata:
 
-**1. `SalesFunnelChart.tsx`**
-- Adicionar props opcionais `hiddenStages` e `onHiddenStagesChange` na interface
-- Usar o estado externo quando fornecido, mantendo fallback para estado interno (retrocompatibilidade)
+### Mudancas tecnicas
 
-**2. `WhatsAppDashboardPanel.tsx`**
-- Criar `useState<Set<string>>` para `hiddenStages` no nivel do painel
-- Passar `hiddenStages` e `onHiddenStagesChange` para o `SalesFunnelChart` no `dashboardContent`
+**`src/hooks/useDealActivityStatus.ts`**
+
+1. Alterar `refetchOnWindowFocus` de `false` para `true` -- ao voltar para a aba ou apos F5, os dados serao rebuscados automaticamente
+2. Reduzir `staleTime` de 30 segundos para 5 segundos -- dados ficam frescos por menos tempo, garantindo que ao navegar entre paineis o status seja atualizado rapidamente
+3. Adicionar `refetchOnMount: 'always'` -- garante que ao remontar o componente (ex: trocar de etapa no pipeline e voltar), os dados sejam sempre rebuscados do banco
+
+```
+staleTime: 5 * 1000,
+refetchOnWindowFocus: true,
+refetchOnMount: 'always',
+```
 
 ### Resultado
-Ao desmarcar "No Show" na view normal, o Modo Foco tambem respeita a selecao, pois ambas as renderizacoes compartilham o mesmo estado.
+
+- Ao concluir uma tarefa e voltar ao Pipeline, o card reflete o status correto imediatamente
+- Ao dar F5 ou trocar de aba e voltar, os dados sao atualizados
+- A assinatura Realtime continua funcionando como fallback para mudancas de outros usuarios
+- O impacto em performance e minimo pois a query e leve (busca apenas id, due_date, completed_at e custom_status por deal)
 
