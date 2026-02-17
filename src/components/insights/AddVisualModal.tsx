@@ -21,7 +21,7 @@ interface AddVisualModalProps {
 }
 
 type ChartType = "bar" | "bar_horizontal" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge";
-type Metric = "revenue" | "deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta";
+type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta";
 type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual";
 
 const CHART_TYPES = [
@@ -38,6 +38,7 @@ const CHART_TYPES = [
 const METRICS = [
   { value: "revenue" as const, label: "Valor Total (R$)", description: "Soma dos valores de negócios" },
   { value: "deals_count" as const, label: "Quantidade de Negócios", description: "Contagem de deals" },
+  { value: "won_deals_count" as const, label: "Negócios Ganhos", description: "Contagem de deals convertidos em ganho" },
   { value: "avg_ticket" as const, label: "Ticket Médio", description: "Valor médio por negócio" },
   { value: "conversion" as const, label: "Taxa de Conversão", description: "Porcentagem de ganhos" },
   { value: "lost_reasons" as const, label: "Motivos de Perda", description: "Análise de deals perdidos" },
@@ -65,6 +66,7 @@ const METRIC_TO_CONFIG: Record<Metric, {
 }> = {
   revenue: { dataSource: 'deals', measureField: 'value', aggregation: 'sum', formatType: 'currency', statusFilter: 'won' },
   deals_count: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal' },
+  won_deals_count: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal', statusFilter: 'won' },
   avg_ticket: { dataSource: 'deals', measureField: 'value', aggregation: 'avg', formatType: 'currency', statusFilter: 'won' },
   conversion: { dataSource: 'deals', measureField: null, aggregation: 'conversion_rate', formatType: 'percentage' },
   lost_reasons: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal', statusFilter: 'lost' },
@@ -88,6 +90,7 @@ const getDateFieldForMetric = (metric: Metric): string => {
     case 'revenue':      // Revenue = WON deals
     case 'avg_ticket':   // Avg ticket also based on won deals
     case 'sales_cycle':  // Sales cycle also based on won deals
+    case 'won_deals_count': // Won deals count
       return 'won_at';
     case 'lost_reasons': // Losses = LOST deals
       return 'lost_at';
@@ -99,6 +102,7 @@ const getDateFieldForMetric = (metric: Metric): string => {
 const METRIC_LABELS: Record<Metric, string> = {
   revenue: "Faturamento",
   deals_count: "Negócios",
+  won_deals_count: "Negócios Ganhos",
   avg_ticket: "Ticket Médio",
   conversion: "Conversão",
   lost_reasons: "Perdas",
