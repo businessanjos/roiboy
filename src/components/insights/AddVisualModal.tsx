@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight, Trophy, Phone } from "lucide-react";
+import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight, Trophy, Phone, Gauge } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { VisualConfig, DEFAULT_APPEARANCE } from "./visual-builder/types";
@@ -20,7 +20,7 @@ interface AddVisualModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type ChartType = "bar" | "bar_horizontal" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial";
+type ChartType = "bar" | "bar_horizontal" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge";
 type Metric = "revenue" | "deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle";
 type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual";
 
@@ -32,6 +32,7 @@ const CHART_TYPES = [
   { value: "scorecard" as const, label: "Scorecard", description: "Exibir um número ou KPI destacado", icon: Hash },
   { value: "ranking" as const, label: "Ranking", description: "Tabela ordenada com medalhas e barras de progresso", icon: Trophy },
   { value: "call_commercial" as const, label: "Calls Comerciais", description: "Agendadas vs Concluídas por vendedor", icon: Phone },
+  { value: "gauge" as const, label: "Conta-Giro", description: "Velocímetro de progresso mensal", icon: Gauge },
 ];
 
 const METRICS = [
@@ -121,9 +122,11 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   const [groupBy, setGroupBy] = useState<GroupBy | null>(null);
   const [title, setTitle] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [gaugeSubType, setGaugeSubType] = useState<'days_elapsed' | 'revenue_vs_goal'>('days_elapsed');
+  const [gaugeGoal, setGaugeGoal] = useState("");
 
-  // Scorecards and rankings have only 2 steps, other charts have 3
-  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial') ? 2 : 3;
+  // Scorecards, rankings, call_commercial and gauge have only 2 steps
+  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge') ? 2 : 3;
 
   // Reset form when modal closes
   useEffect(() => {
@@ -133,6 +136,8 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       setMetric(null);
       setGroupBy(null);
       setTitle("");
+      setGaugeSubType('days_elapsed');
+      setGaugeGoal("");
     }
   }, [open]);
 
@@ -142,13 +147,15 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       setTitle("Ranking de Vendedores");
     } else if (chartType === 'call_commercial') {
       setTitle("Calls Comerciais");
+    } else if (chartType === 'gauge') {
+      setTitle(gaugeSubType === 'days_elapsed' ? 'Dias Corridos do Mês' : 'Faturamento x Meta');
     } else if (chartType === 'scorecard' && metric) {
       setTitle(METRIC_LABELS[metric]);
     } else if (metric && groupBy) {
       const generatedTitle = `${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}`;
       setTitle(generatedTitle);
     }
-  }, [chartType, metric, groupBy]);
+  }, [chartType, metric, groupBy, gaugeSubType]);
 
   const canProceedStep1 = chartType !== null;
   const canProceedStep2 = metric !== null;
@@ -156,7 +163,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   // Validation for creating the visual
   const canCreate = chartType === 'scorecard'
     ? metric !== null && title.trim() !== "" && activeDashboardId !== null
-    : (chartType === 'ranking' || chartType === 'call_commercial')
+    : (chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge')
     ? title.trim() !== "" && activeDashboardId !== null
     : groupBy !== null && title.trim() !== "" && activeDashboardId !== null;
 
@@ -215,6 +222,41 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           dashboard_id: activeDashboardId,
           title: title.trim(),
           chart_type: 'call_commercial',
+          config,
+          layout: { x: 0, y: 0, w: 6, h: 4 },
+        });
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Error creating visual:", error);
+      } finally {
+        setIsCreating(false);
+      }
+      return;
+    }
+
+    if (chartType === 'gauge') {
+      if (!canCreate) return;
+      setIsCreating(true);
+      try {
+        const now = new Date();
+        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const isRevenue = gaugeSubType === 'revenue_vs_goal';
+        const config: VisualConfig = {
+          dataSource: 'deals',
+          measure: { field: isRevenue ? 'value' : '', aggregation: isRevenue ? 'sum' : 'count' },
+          dimension: { field: 'created_at', type: 'date', dateGrouping: 'month' },
+          formatting: { type: isRevenue ? 'currency' : 'decimal', decimals: 2 },
+          appearance: DEFAULT_APPEARANCE,
+          ...(isRevenue && { statusFilter: 'won' as const }),
+          gaugeConfig: {
+            subType: gaugeSubType,
+            ...(isRevenue && gaugeGoal ? { monthlyGoals: { [monthKey]: Number(gaugeGoal) } } : {}),
+          },
+        };
+        await addVisual({
+          dashboard_id: activeDashboardId,
+          title: title.trim(),
+          chart_type: 'gauge',
           config,
           layout: { x: 0, y: 0, w: 6, h: 4 },
         });
@@ -355,7 +397,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             </div>
           )}
 
-          {/* Step 2: What to Measure (+ Title for Scorecards) OR Title for Rankings */}
+          {/* Step 2: Title for Rankings/Call Commercial */}
           {step === 2 && (chartType === 'ranking' || chartType === 'call_commercial') && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
@@ -375,7 +417,64 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             </div>
           )}
 
-          {step === 2 && chartType !== 'ranking' && chartType !== 'call_commercial' && (
+          {/* Step 2: Gauge configuration */}
+          {step === 2 && chartType === 'gauge' && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">Escolha o tipo de conta-giro</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { value: 'days_elapsed' as const, label: 'Dias Corridos', description: 'Dias passados vs total do mês' },
+                  { value: 'revenue_vs_goal' as const, label: 'Faturamento x Meta', description: 'Receita atual vs meta mensal' },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setGaugeSubType(opt.value)}
+                    className={cn(
+                      "relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
+                      gaugeSubType === opt.value
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50 hover:bg-muted/50"
+                    )}
+                  >
+                    {gaugeSubType === opt.value && (
+                      <Check className="absolute top-2 right-2 h-4 w-4 text-primary" />
+                    )}
+                    <Gauge className={cn("h-7 w-7", gaugeSubType === opt.value ? "text-primary" : "text-muted-foreground")} />
+                    <span className="font-medium text-sm">{opt.label}</span>
+                    <span className="text-xs text-muted-foreground text-center leading-tight">{opt.description}</span>
+                  </button>
+                ))}
+              </div>
+
+              {gaugeSubType === 'revenue_vs_goal' && (
+                <div className="space-y-2 pt-2 border-t">
+                  <Label htmlFor="gauge-goal">Meta do Mês Atual (R$)</Label>
+                  <Input
+                    id="gauge-goal"
+                    type="number"
+                    value={gaugeGoal}
+                    onChange={(e) => setGaugeGoal(e.target.value)}
+                    placeholder="Ex: 100000"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Você pode editar metas de outros meses nos ajustes do visual após criá-lo.
+                  </p>
+                </div>
+              )}
+
+              <div className="space-y-2 pt-2 border-t">
+                <Label htmlFor="visual-title-gauge">Título</Label>
+                <Input
+                  id="visual-title-gauge"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Ex: Dias Corridos do Mês"
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 2 && chartType !== 'ranking' && chartType !== 'call_commercial' && chartType !== 'gauge' && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">O que você quer medir?</p>
               <RadioGroup
