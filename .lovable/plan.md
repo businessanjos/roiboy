@@ -1,50 +1,39 @@
 
-
-## Corrigir filtros de campos personalizados para campos multi_select
+## Corrigir filtro de tarefas: tarefas concluidas aparecendo na aba Pendente
 
 ### Problema
 
-Os filtros por campo personalizado do Negocio (e potencialmente do Lead) nao funcionam para campos do tipo `multi_select`. O motivo e que campos `multi_select` armazenam os valores na coluna `value_json` (como array JSON, ex: `["opt_1767723846709"]`), enquanto o codigo atual so consulta a coluna `value_text`, que e `null` para esses campos.
+Tarefas que possuem `completed_at` preenchido (ou seja, ja foram concluidas) mas nao possuem `custom_status_id` definido estao aparecendo na aba "Pendente". Isso ocorre porque a logica atual na linha 489 do `Tasks.tsx` diz:
 
-Exemplo concreto: o campo "Origem da Venda" e `multi_select`. Ao filtrar por "[TRAF-IMP-EC]", o sistema busca em `value_text` que esta `null`, retornando zero resultados mesmo com negocios existentes.
+```
+if (!task.custom_status_id && activeTab === defaultStatus?.id) return true;
+```
+
+Essa condicao inclui TODAS as tarefas sem `custom_status_id` quando o tab ativo e o status padrao (Pendente), inclusive tarefas que ja foram concluidas (tem `completed_at` preenchido).
 
 ### Solucao
 
-Atualizar ambos os utilitarios de filtragem para verificar tambem `value_json` quando o campo for do tipo `multi_select`.
+Adicionar uma verificacao extra na linha 489: tarefas sem `custom_status_id` so devem aparecer no tab "Pendente" se NAO estiverem concluidas (`completed_at === null`).
 
-### Mudancas tecnicas
+### Mudanca tecnica
 
-**1. `src/hooks/useDealFieldFilter.ts`**
+**Arquivo: `src/pages/Tasks.tsx` (linha 489)**
 
-- Buscar tambem `field_type` na consulta do `custom_fields` (alem de `options`)
-- Quando `field_type === 'multi_select'`:
-  - Buscar `value_json` em vez de `value_text` da tabela `deal_field_values`
-  - Comparar cada valor do array JSON contra os valores selecionados (mapeados de labels para option values)
-- Quando `field_type === 'select'`:
-  - Manter logica atual (`value_text` comparado com option values)
-- Para campos sem options (texto livre):
-  - Manter logica atual (`value_text` comparado diretamente)
-
-**2. `src/hooks/useLeadFieldFilter.ts`**
-
-- Mesma correcao: buscar `field_type` junto com `options`
-- Para `multi_select`: buscar `value_json` de `lead_field_values` e verificar se algum valor do array esta nos valores selecionados
-- Para `select` e texto livre: manter logica atual
-
-### Logica de matching para multi_select
-
-```
-// value_json contem um array como ["opt_1767723846709"]
-// selectedValues contem labels como ["[TRAF-IMP-EC]"]
-// optionLabelToValue mapeia label -> value (ex: "[TRAF-IMP-EC]" -> "opt_1767723846709")
-
-Para cada row:
-  Se value_json e um array:
-    Para cada valor no array:
-      Se valor esta nos selectedValueKeys -> marcar deal como match
+De:
+```typescript
+if (!task.custom_status_id && activeTab === defaultStatus?.id) return true;
 ```
 
-| Arquivo | Mudanca |
-|---------|---------|
-| `useDealFieldFilter.ts` | Buscar `field_type`, adicionar suporte a `multi_select` via `value_json` |
-| `useLeadFieldFilter.ts` | Mesma correcao para filtros de lead com campos `multi_select` |
+Para:
+```typescript
+if (!task.custom_status_id && activeTab === defaultStatus?.id && !task.completed_at) return true;
+```
+
+Isso garante que tarefas sem status personalizado mas com `completed_at` preenchido nao aparecerao na aba Pendente -- elas serao corretamente mostradas apenas na aba Concluido (via linha 490).
+
+Mesma correcao tambem no `statusCounts` (linhas 540-543) para que a contagem no tab reflita os numeros corretos, adicionando `&& !t.completed_at` quando checando o status padrao.
+
+| Arquivo | Linha | Mudanca |
+|---------|-------|---------|
+| `src/pages/Tasks.tsx` | 489 | Adicionar `&& !task.completed_at` para excluir concluidas do tab Pendente |
+| `src/pages/Tasks.tsx` | 540-543 | Adicionar `&& !t.completed_at` na contagem do status padrao |
