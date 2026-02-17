@@ -19,9 +19,10 @@ interface DealCardProps {
   onClick: () => void;
   isDragging?: boolean;
   faturamentoLabel?: string;
+  itemVendaLabel?: string;
 }
 
-export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel }: DealCardProps) {
+export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel }: DealCardProps) {
   const [activitiesDialogOpen, setActivitiesDialogOpen] = useState(false);
   const activityStatus = useDealActivityStatus(deal.id);
   
@@ -307,7 +308,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel }
         )}
 
         {/* Tags - Faturamento + existing tags */}
-        {(faturamentoLabel || (deal.tags && deal.tags.length > 0)) && (
+        {(faturamentoLabel || itemVendaLabel || (deal.tags && deal.tags.length > 0)) && (
           <div className="flex flex-wrap gap-1">
             {faturamentoLabel && (
               <Badge 
@@ -315,6 +316,14 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel }
                 className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
               >
                 $ {faturamentoLabel}
+              </Badge>
+            )}
+            {itemVendaLabel && (
+              <Badge 
+                variant="outline" 
+                className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-700 border-blue-500/30"
+              >
+                {itemVendaLabel}
               </Badge>
             )}
             {deal.tags

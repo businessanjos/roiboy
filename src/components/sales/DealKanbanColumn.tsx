@@ -12,6 +12,7 @@ interface DealKanbanColumnProps {
   onDealClick: (deal: Deal) => void;
   conversionRate?: number;
   faturamentoMap?: Record<string, string>;
+  itemVendaMap?: Record<string, string>;
 }
 
 const getStageIcon = (stageName: string, color: string) => {
@@ -36,7 +37,7 @@ const getStageIcon = (stageName: string, color: string) => {
   return <Users className={iconClass} style={{ color }} />;
 };
 
-export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap }: DealKanbanColumnProps) {
+export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap, itemVendaMap }: DealKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
   });
@@ -104,6 +105,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
                 deal={deal}
                 onClick={() => onDealClick(deal)}
                 faturamentoLabel={faturamentoMap?.[deal.id]}
+                itemVendaLabel={itemVendaMap?.[deal.id]}
               />
             ))
           )}

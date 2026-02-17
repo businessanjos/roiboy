@@ -40,38 +40,38 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
   const { validateDealMove } = useRequiredFieldsValidation();
   const [requiredFieldsModal, setRequiredFieldsModal] = useState<RequiredFieldsModalState | null>(null);
   const [faturamentoMap, setFaturamentoMap] = useState<Record<string, string>>({});
+  const [itemVendaMap, setItemVendaMap] = useState<Record<string, string>>({});
 
-  // Batch fetch "Faturamento Atual" field values for all deals
   const FATURAMENTO_FIELD_ID = 'ed5c7c0e-0740-4945-b982-70a593ffae0c';
-  
+  const ITEM_VENDA_FIELD_ID = '033b91fb-3add-4c96-aec9-567fefbd0fb2';
+
   useEffect(() => {
     if (deals.length === 0) return;
-    
-    const fetchFaturamento = async () => {
-      const dealIds = deals.map(d => d.id);
-      
-      // Fetch field values and the field definition (with options) in parallel
+
+    const dealIds = deals.map(d => d.id);
+
+    const fetchFieldMap = async (fieldId: string): Promise<Record<string, string>> => {
       const [valuesRes, fieldRes] = await Promise.all([
         supabase
           .from("deal_field_values")
           .select("deal_id, value_text")
-          .eq("field_id", FATURAMENTO_FIELD_ID)
+          .eq("field_id", fieldId)
           .in("deal_id", dealIds)
           .not("value_text", "is", null),
         supabase
           .from("custom_fields")
           .select("options")
-          .eq("id", FATURAMENTO_FIELD_ID)
+          .eq("id", fieldId)
           .single(),
       ]);
-      
+
       const optionMap: Record<string, string> = {};
       if (fieldRes.data?.options && Array.isArray(fieldRes.data.options)) {
         (fieldRes.data.options as Array<{ value: string; label: string }>).forEach(opt => {
           optionMap[opt.value] = opt.label;
         });
       }
-      
+
       const map: Record<string, string> = {};
       if (valuesRes.data) {
         valuesRes.data.forEach(v => {
@@ -80,11 +80,16 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
           }
         });
       }
-      
-      setFaturamentoMap(map);
+      return map;
     };
-    
-    fetchFaturamento();
+
+    Promise.all([
+      fetchFieldMap(FATURAMENTO_FIELD_ID),
+      fetchFieldMap(ITEM_VENDA_FIELD_ID),
+    ]).then(([fatMap, itemMap]) => {
+      setFaturamentoMap(fatMap);
+      setItemVendaMap(itemMap);
+    });
   }, [deals]);
 
   const sensors = useSensors(
@@ -229,6 +234,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
                 onDealClick={onDealClick}
                 conversionRate={index > 0 ? conversionRates[stage.id] : undefined}
                 faturamentoMap={faturamentoMap}
+                itemVendaMap={itemVendaMap}
               />
             ))}
           </div>
