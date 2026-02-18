@@ -104,7 +104,7 @@ export default function EventDetail() {
     checklistDone: 0,
     giftsTotal: 0,
     attendeesCount: 0,
-    attendanceCount: 0,
+    noShowCount: 0,
     scheduleItems: 0
   });
 
@@ -191,11 +191,12 @@ export default function EventDetail() {
       .select("*", { count: 'exact', head: true })
       .eq("event_id", id);
 
-    // Fetch attendance (check-in) count
-    const { count: attendanceCount } = await supabase
-      .from("attendance")
+    // Fetch no-show count
+    const { count: noShowCount } = await supabase
+      .from("event_participants")
       .select("*", { count: 'exact', head: true })
-      .eq("event_id", id);
+      .eq("event_id", id)
+      .eq("rsvp_status", "no_show");
 
     setStats({
       totalCosts,
@@ -204,7 +205,7 @@ export default function EventDetail() {
       checklistDone,
       giftsTotal: giftsTotal || 0,
       attendeesCount: attendeesCount || 0,
-      attendanceCount: attendanceCount || 0,
+      noShowCount: noShowCount || 0,
       scheduleItems: scheduleItems || 0
     });
   };
@@ -394,7 +395,7 @@ export default function EventDetail() {
               <UserX className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500" />
             </div>
             <div>
-              <p className="text-xl sm:text-2xl font-bold">{Math.max(0, stats.attendeesCount - stats.attendanceCount)}</p>
+              <p className="text-xl sm:text-2xl font-bold">{stats.noShowCount}</p>
               <p className="text-[10px] sm:text-xs text-muted-foreground">Não Compareceu</p>
             </div>
           </div>
