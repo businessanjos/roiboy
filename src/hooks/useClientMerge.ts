@@ -43,6 +43,15 @@ export function useClientMerge() {
     }
 
     try {
+      // Step 0: Neutralize source client phone to avoid unique constraint conflict
+      const { error: neutralizeError } = await supabase
+        .from("clients")
+        .update({ phone_e164: `+0000${Date.now()}` })
+        .eq("id", sourceClientId)
+        .eq("account_id", currentUser.account_id);
+
+      if (neutralizeError) throw neutralizeError;
+
       // 1. Update target client with merged data
       const { error: updateError } = await supabase
         .from("clients")
