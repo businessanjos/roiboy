@@ -105,6 +105,10 @@ Deno.serve(async (req) => {
         tags,
         avatar_url,
         responsible_user_id,
+        emails,
+        cpf,
+        cnpj,
+        notes,
         client_products (
           product_id,
           products:product_id (
