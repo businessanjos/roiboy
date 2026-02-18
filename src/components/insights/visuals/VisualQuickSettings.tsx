@@ -37,6 +37,7 @@ import {
   VisualConfig, 
   DateDisplayFormat, 
   ColorPalette, 
+  FontScale,
   DisplayScale,
   DEFAULT_APPEARANCE,
   DISPLAY_SCALE_OPTIONS,
@@ -100,6 +101,9 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   const [fillEmptyDates, setFillEmptyDates] = useState(
     config?.appearance?.fillEmptyDates ?? DEFAULT_APPEARANCE.fillEmptyDates
   );
+  const [fontScale, setFontScale] = useState<FontScale>(
+    config?.appearance?.fontScale ?? DEFAULT_APPEARANCE.fontScale ?? 'normal'
+  );
   const [displayScale, setDisplayScale] = useState<DisplayScale>(
     config?.formatting?.displayScale ?? DEFAULT_DISPLAY_SCALE
   );
@@ -138,6 +142,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
       setDateDisplayFormat(config?.appearance?.dateDisplayFormat ?? DEFAULT_APPEARANCE.dateDisplayFormat);
       setColorPalette(config?.appearance?.colorPalette ?? DEFAULT_APPEARANCE.colorPalette);
       setFillEmptyDates(config?.appearance?.fillEmptyDates ?? DEFAULT_APPEARANCE.fillEmptyDates);
+      setFontScale(config?.appearance?.fontScale ?? DEFAULT_APPEARANCE.fontScale ?? 'normal');
       setDisplayScale(config?.formatting?.displayScale ?? DEFAULT_DISPLAY_SCALE);
       setDecimals(config?.formatting?.decimals ?? 2);
       setHiddenUsers(config?.hiddenUsers ?? []);
@@ -209,6 +214,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
           dateDisplayFormat,
           colorPalette,
           fillEmptyDates,
+          fontScale,
         },
         hiddenUsers: isCallCommercial ? hiddenUsers : config.hiddenUsers,
         hiddenCategories: showCategoryFilter ? hiddenCategories : config.hiddenCategories,
@@ -432,6 +438,8 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
             fillEmptyDates={fillEmptyDates}
             onFillEmptyDatesChange={setFillEmptyDates}
             isDimensionDate={isDimensionDate}
+            fontScale={fontScale}
+            onFontScaleChange={setFontScale}
           />
         </div>
 

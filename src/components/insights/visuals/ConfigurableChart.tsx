@@ -13,7 +13,7 @@ import {
   CartesianGrid,
   LabelList,
 } from "recharts";
-import { ChartType, FormatType, AppearanceConfig, VisualConfig, COLOR_PALETTES, DEFAULT_APPEARANCE } from "../visual-builder/types";
+import { ChartType, FormatType, AppearanceConfig, VisualConfig, COLOR_PALETTES, DEFAULT_APPEARANCE, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 import { ChartTooltip } from "./ChartTooltip";
 import { ConfigurableScorecard } from "./ConfigurableScorecard";
 import { ConfigurableRanking } from "./ConfigurableRanking";
@@ -64,9 +64,9 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
     case 'scorecard':
       return <ConfigurableScorecard data={data} formatting={formatting} config={visualConfig} />;
     case 'ranking':
-      return <ConfigurableRanking data={data} formatting={formatting} />;
+      return <ConfigurableRanking data={data} formatting={formatting} appearance={config} />;
     case 'call_commercial':
-      return <ConfigurableCallCommercial data={data} formatting={formatting} hiddenUsers={visualConfig?.hiddenUsers} />;
+      return <ConfigurableCallCommercial data={data} formatting={formatting} hiddenUsers={visualConfig?.hiddenUsers} appearance={config} />;
     case 'gauge':
       return <GaugeFromConfig data={data} visualConfig={visualConfig} />;
     case 'bar':
@@ -162,6 +162,7 @@ function HorizontalBarChartView({
   onDrilldown?: (groupName?: string) => void;
 }) {
   const colors = getChartColors(appearance.colorPalette);
+  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
   
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -170,13 +171,13 @@ function HorizontalBarChartView({
         <XAxis
           type="number"
           tickFormatter={(value) => formatValueCompact(value, formatting.type)}
-          tick={{ fontSize: 11 }}
+          tick={{ fontSize: Math.round(11 * m) }}
           className="text-muted-foreground"
         />
         <YAxis
           dataKey="name"
           type="category"
-          tick={{ fontSize: 11 }}
+          tick={{ fontSize: Math.round(11 * m) }}
           className="text-muted-foreground"
           width={120}
           interval={0}
@@ -193,7 +194,7 @@ function HorizontalBarChartView({
               dataKey="value" 
               position="right" 
               formatter={(value: number) => formatValueCompact(value, formatting.type)}
-              style={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
+              style={{ fontSize: Math.round(10 * m), fill: 'hsl(var(--foreground))' }}
             />
           )}
           {data.map((entry, index) => (
@@ -221,6 +222,7 @@ function LineChartView({
 }) {
   const colors = getChartColors(appearance.colorPalette);
   const primaryColor = colors[0];
+  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
   
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -228,7 +230,7 @@ function LineChartView({
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis
           dataKey="name"
-          tick={{ fontSize: 11 }}
+          tick={{ fontSize: Math.round(11 * m) }}
           className="text-muted-foreground"
           angle={-45}
           textAnchor="end"
@@ -237,7 +239,7 @@ function LineChartView({
         />
         <YAxis
           tickFormatter={(value) => formatValueCompact(value, formatting.type)}
-          tick={{ fontSize: 11 }}
+          tick={{ fontSize: Math.round(11 * m) }}
           className="text-muted-foreground"
           width={60}
         />
@@ -255,7 +257,7 @@ function LineChartView({
               dataKey="value" 
               position="top" 
               formatter={(value: number) => formatValueCompact(value, formatting.type)}
-              style={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
+              style={{ fontSize: Math.round(10 * m), fill: 'hsl(var(--foreground))' }}
             />
           )}
         </Line>
@@ -276,6 +278,7 @@ function PieChartView({
   onDrilldown?: (groupName?: string) => void;
 }) {
   const colors = getChartColors(appearance.colorPalette);
+  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
   
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -291,7 +294,7 @@ function PieChartView({
           label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
           labelLine={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
           onClick={(data) => onDrilldown?.(data.name)}
-          style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
+          style={{ cursor: onDrilldown ? 'pointer' : 'default', fontSize: Math.round(12 * m) }}
         >
           {data.map((entry, index) => (
             <Cell

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { VisualConfig } from "../visual-builder/types";
+import { VisualConfig, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { sumGoalsInRange, getMonthKeysInRange } from "@/lib/monthRange";
 
@@ -10,6 +10,7 @@ interface ConfigurableGaugeProps {
   label: string;
   sublabel?: string;
   formatValue?: (v: number) => string;
+  fontScale?: number;
 }
 
 // Color bands for the gauge arc
@@ -32,7 +33,7 @@ function describeArc(cx: number, cy: number, r: number, startAngle: number, endA
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArc} 0 ${end.x} ${end.y}`;
 }
 
-export function ConfigurableGauge({ value, min = 0, max, label, sublabel, formatValue }: ConfigurableGaugeProps) {
+export function ConfigurableGauge({ value, min = 0, max, label, sublabel, formatValue, fontScale = 1 }: ConfigurableGaugeProps) {
   const cx = 150;
   const cy = 130;
   const r = 100;
@@ -83,15 +84,15 @@ export function ConfigurableGauge({ value, min = 0, max, label, sublabel, format
         <circle cx={cx} cy={cy} r={4} fill="hsl(var(--background))" />
 
         {/* Value text */}
-        <text x={cx} y={cy + 30} textAnchor="middle" className="text-lg font-bold fill-foreground" fontSize="20">
+        <text x={cx} y={cy + 30} textAnchor="middle" className="font-bold fill-foreground" fontSize={Math.round(20 * fontScale)}>
           {displayValue}
         </text>
-        <text x={cx} y={cy + 50} textAnchor="middle" className="fill-muted-foreground" fontSize="14">
+        <text x={cx} y={cy + 50} textAnchor="middle" className="fill-muted-foreground" fontSize={Math.round(14 * fontScale)}>
           {displayPercent}
         </text>
       </svg>
-      <p className="text-sm font-medium text-foreground mt-1">{label}</p>
-      {sublabel && <p className="text-xs text-muted-foreground">{sublabel}</p>}
+      <p className="font-medium text-foreground mt-1" style={{ fontSize: `${Math.round(14 * fontScale)}px` }}>{label}</p>
+      {sublabel && <p className="text-muted-foreground" style={{ fontSize: `${Math.round(12 * fontScale)}px` }}>{sublabel}</p>}
     </div>
   );
 }
@@ -104,15 +105,16 @@ interface GaugeWrapperProps {
 
 export function GaugeFromConfig({ data, visualConfig }: GaugeWrapperProps) {
   const subType = visualConfig?.gaugeConfig?.subType || 'days_elapsed';
+  const m = FONT_SCALE_MULTIPLIERS[visualConfig?.appearance?.fontScale || 'normal'];
 
   if (subType === 'days_elapsed') {
-    return <DaysElapsedGauge />;
+    return <DaysElapsedGauge fontScale={m} />;
   }
 
-  return <RevenueVsGoalGauge data={data} visualConfig={visualConfig} />;
+  return <RevenueVsGoalGauge data={data} visualConfig={visualConfig} fontScale={m} />;
 }
 
-function DaysElapsedGauge() {
+function DaysElapsedGauge({ fontScale = 1 }: { fontScale?: number }) {
   const now = new Date();
   const currentDay = now.getDate();
   const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -125,11 +127,12 @@ function DaysElapsedGauge() {
       label="Dias Corridos"
       sublabel={`${currentDay} de ${totalDays} dias — ${monthName}`}
       formatValue={(v) => `${v}/${totalDays}`}
+      fontScale={fontScale}
     />
   );
 }
 
-function RevenueVsGoalGauge({ data, visualConfig }: GaugeWrapperProps) {
+function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperProps & { fontScale?: number }) {
   const { filters } = useInsightsFilters();
   const goals = visualConfig?.gaugeConfig?.monthlyGoals;
 
@@ -175,6 +178,7 @@ function RevenueVsGoalGauge({ data, visualConfig }: GaugeWrapperProps) {
       label="Faturamento x Meta"
       sublabel={`${formatCurrency(totalRevenue)} de ${formatCurrency(goal)} — ${periodLabel}`}
       formatValue={formatCurrency}
+      fontScale={fontScale}
     />
   );
 }

@@ -11,9 +11,11 @@ import { cn } from "@/lib/utils";
 import {
   DateDisplayFormat,
   ColorPalette,
+  FontScale,
   DATE_DISPLAY_FORMAT_OPTIONS,
   COLOR_PALETTES,
   COLOR_PALETTE_OPTIONS,
+  FONT_SCALE_OPTIONS,
 } from "./types";
 
 interface AppearanceSectionProps {
@@ -26,6 +28,8 @@ interface AppearanceSectionProps {
   fillEmptyDates: boolean;
   onFillEmptyDatesChange: (value: boolean) => void;
   isDimensionDate: boolean;
+  fontScale?: FontScale;
+  onFontScaleChange?: (value: FontScale) => void;
 }
 
 export function AppearanceSection({
@@ -38,6 +42,8 @@ export function AppearanceSection({
   fillEmptyDates,
   onFillEmptyDatesChange,
   isDimensionDate,
+  fontScale = 'normal',
+  onFontScaleChange,
 }: AppearanceSectionProps) {
   return (
     <div className="space-y-4">
@@ -109,6 +115,25 @@ export function AppearanceSection({
           ))}
         </div>
       </div>
+
+      {/* Font Scale */}
+      {onFontScaleChange && (
+        <div className="space-y-2">
+          <Label className="text-sm font-normal">Tamanho da Fonte</Label>
+          <Select value={fontScale} onValueChange={(v) => onFontScaleChange(v as FontScale)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FONT_SCALE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Fill Empty Dates - Only show when dimension is date */}
       {isDimensionDate && (
