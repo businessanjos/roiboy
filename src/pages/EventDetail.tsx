@@ -15,8 +15,9 @@ import {
   Calendar, 
   Clock, 
   MapPin, 
-  Users, 
+  Users,
   Users2,
+  UserX,
   Video,
   DollarSign,
   Gift,
@@ -103,6 +104,7 @@ export default function EventDetail() {
     checklistDone: 0,
     giftsTotal: 0,
     attendeesCount: 0,
+    attendanceCount: 0,
     scheduleItems: 0
   });
 
@@ -189,6 +191,12 @@ export default function EventDetail() {
       .select("*", { count: 'exact', head: true })
       .eq("event_id", id);
 
+    // Fetch attendance (check-in) count
+    const { count: attendanceCount } = await supabase
+      .from("attendance")
+      .select("*", { count: 'exact', head: true })
+      .eq("event_id", id);
+
     setStats({
       totalCosts,
       paidCosts,
@@ -196,6 +204,7 @@ export default function EventDetail() {
       checklistDone,
       giftsTotal: giftsTotal || 0,
       attendeesCount: attendeesCount || 0,
+      attendanceCount: attendanceCount || 0,
       scheduleItems: scheduleItems || 0
     });
   };
@@ -366,7 +375,7 @@ export default function EventDetail() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-7">
         <Card className="p-3 sm:p-4">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
@@ -375,6 +384,18 @@ export default function EventDetail() {
             <div>
               <p className="text-xl sm:text-2xl font-bold">{stats.attendeesCount}</p>
               <p className="text-[10px] sm:text-xs text-muted-foreground">Participantes</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 rounded-lg bg-red-500/10">
+              <UserX className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500" />
+            </div>
+            <div>
+              <p className="text-xl sm:text-2xl font-bold">{Math.max(0, stats.attendeesCount - stats.attendanceCount)}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Não Compareceu</p>
             </div>
           </div>
         </Card>
