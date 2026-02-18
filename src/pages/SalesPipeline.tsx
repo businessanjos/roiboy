@@ -549,34 +549,46 @@ export default function SalesPipeline() {
           negotiation_description: contractDataFromDeal.negotiation_description || null,
         };
 
-        const { data: newContract, error: contractError } = await supabase
+        // Anti-duplicate check: verify no contract exists for this deal
+        const { data: existingContract } = await supabase
           .from("client_contracts")
-          .insert(contractData)
           .select("id")
-          .single();
+          .eq("deal_id", dealId)
+          .maybeSingle();
 
-        if (contractError) {
-          console.error("[MarkAsWon] Error creating contract:", contractError);
-          // Ask user if they want to continue without contract
-          const continueWithoutContract = window.confirm(
-            "Houve um erro ao criar o contrato. Deseja marcar como ganho mesmo assim?\n\n" +
-            "Você precisará criar o contrato manualmente depois."
-          );
-          if (!continueWithoutContract) {
-            return; // User cancelled - don't proceed
+        if (existingContract) {
+          console.warn("[MarkAsWon] Contract already exists for deal:", dealId, "- skipping creation");
+          contractCreated = true; // Contract exists, treat as success
+        } else {
+          const { data: newContract, error: contractError } = await supabase
+            .from("client_contracts")
+            .insert(contractData)
+            .select("id")
+            .single();
+
+          if (contractError) {
+            console.error("[MarkAsWon] Error creating contract:", contractError);
+            // Ask user if they want to continue without contract
+            const continueWithoutContract = window.confirm(
+              "Houve um erro ao criar o contrato. Deseja marcar como ganho mesmo assim?\n\n" +
+              "Você precisará criar o contrato manualmente depois."
+            );
+            if (!continueWithoutContract) {
+              return; // User cancelled - don't proceed
+            }
+            toast.warning("Negócio será marcado como ganho, mas o contrato precisará ser criado manualmente.");
+          } else if (newContract) {
+            contractCreated = true;
+            // Send notifications to operations and financial teams
+            await notifyContractCreated({
+              contractId: newContract.id,
+              clientName,
+              contractValue: deal.value || 0,
+              fromDeal: true,
+              createdByUserId: currentUser.id,
+              accountId: currentUser.account_id,
+            });
           }
-          toast.warning("Negócio será marcado como ganho, mas o contrato precisará ser criado manualmente.");
-        } else if (newContract) {
-          contractCreated = true;
-          // Send notifications to operations and financial teams
-          await notifyContractCreated({
-            contractId: newContract.id,
-            clientName,
-            contractValue: deal.value || 0,
-            fromDeal: true,
-            createdByUserId: currentUser.id,
-            accountId: currentUser.account_id,
-          });
         }
       }
 
