@@ -1,56 +1,65 @@
 
-
-## Eliminar espaco em branco no Modo Foco (Fullscreen)
+## Permitir iniciar conversa com numero novo no ROY zAPP
 
 ### Problema
 
-No Modo Foco / tela cheia, os visuais do grid ocupam apenas a area necessaria baseada em suas posicoes fixas (grid de 48 colunas com rowHeight de 20px). O espaco restante do viewport fica vazio com o fundo da pagina, criando uma aparencia incompleta -- especialmente visivel em TVs via Chromecast.
+O dialogo "Nova Conversa" busca apenas em registros existentes (clientes, leads, conversas). Se o numero nao existe em nenhuma dessas tabelas, o usuario ve "Nenhum contato encontrado" -- mesmo que seja um numero valido do WhatsApp. O WhatsApp nativo encontra porque valida direto no servidor, mas o ROY zAPP so busca no banco local.
 
-### Solucao: Auto-fit do zoom ao conteudo
+### Solucao
 
-Implementar um calculo automatico de zoom que faz o conteudo preencher toda a altura disponivel do viewport. O sistema vai:
-
-1. Medir a altura real do conteudo (filtros + grid) apos a renderizacao
-2. Comparar com a altura disponivel do viewport (descontando o header do modo foco)
-3. Calcular o zoom ideal para que o conteudo preencha a tela sem scroll
-4. Aplicar esse zoom automaticamente ao entrar no modo foco
-5. Permitir que o usuario ainda ajuste manualmente via controles de zoom
-
-Se o conteudo for maior que a tela (zoom ficaria < 50%), manter o zoom em 50% e permitir scroll.
+Quando a busca retorna zero resultados e o termo digitado parece ser um numero de telefone valido, exibir uma opcao extra: "Iniciar conversa com +55 22 98117-3231". Ao clicar, o sistema cria a conversa normalmente usando a logica existente de `createConversationWithContact` com `type: 'conversation'`.
 
 ### Mudancas tecnicas
 
-**Arquivo: `src/components/insights/InsightsMainContent.tsx`**
+**Arquivo: `src/pages/RoyZapp.tsx`**
 
-| Mudanca | Descricao |
-|---------|-----------|
-| Novo ref `contentRef` | Ref para o div que contem filtros + grid (o div com `zoom`) |
-| Novo `useEffect` de auto-fit | Ao entrar no modo foco (`isFocusMode === true`), medir `contentRef.scrollHeight` e `window.innerHeight`, calcular zoom ideal e aplicar via `setFocusZoom` |
-| Logica de calculo | `autoZoom = Math.floor((viewportAvailable / contentNaturalHeight) * 100)`, clamped entre 50 e 200 |
-| Medir com zoom=100 primeiro | Temporariamente renderizar com zoom 100% para obter a altura natural, depois aplicar o zoom calculado |
+Na funcao `searchContacts` (linha ~3162-3228), apos combinar todos os resultados e verificar que `finalCombined` esta vazio:
 
-A logica em pseudocodigo:
+1. Verificar se o termo de busca e um numero de telefone valido (comeca com `+` e tem pelo menos 10 digitos, ou e uma sequencia de digitos >= 10)
+2. Normalizar o telefone para formato E.164 (garantir que comece com `+`)
+3. Adicionar um contato sintetico na lista de resultados:
+   ```
+   {
+     id: 'new-phone-' + normalizedPhone,
+     full_name: normalizedPhone,  // Ex: "+5522981173231"
+     phone_e164: normalizedPhone,
+     avatar_url: null,
+     type: 'conversation'
+   }
+   ```
 
+Isso usa o fluxo existente de criacao de conversa sem vinculo a cliente/lead.
+
+**Arquivo: `src/components/royzapp/dialogs/ZappNewConversationDialog.tsx`**
+
+Atualizar a mensagem de "Nenhum contato encontrado" para nao aparecer quando existe a opcao de novo numero. Nenhuma mudanca estrutural necessaria, pois o contato sintetico ja sera renderizado pela lista existente.
+
+### Detalhes da implementacao
+
+No `searchContacts`, apos a linha ~3174 onde `finalCombined` e calculado:
+
+```typescript
+// Se nao encontrou nenhum contato individual e a busca parece um telefone valido,
+// oferecer opcao de iniciar conversa com esse numero
+if (combined.length === 0 && groups.length === 0) {
+  const phoneDigits = trimmedSearch.replace(/\D/g, '');
+  if (phoneDigits.length >= 10) {
+    const formattedPhone = trimmedSearch.startsWith('+') 
+      ? trimmedSearch 
+      : `+${phoneDigits}`;
+    finalCombined.push({
+      id: `new-phone-${phoneDigits}`,
+      full_name: formattedPhone,
+      phone_e164: formattedPhone,
+      avatar_url: null,
+      type: 'conversation' as const,
+    });
+  }
+}
 ```
-ao entrar no modo foco:
-  1. renderizar conteudo com zoom = 100%
-  2. apos o layout (requestAnimationFrame):
-     - headerHeight = altura do header do modo foco (~72px)
-     - padding = 48px (p-6 top + bottom)
-     - availableHeight = window.innerHeight - headerHeight - padding
-     - contentHeight = contentRef.scrollHeight
-     - idealZoom = (availableHeight / contentHeight) * 100
-     - setFocusZoom(clamp(idealZoom, 50, 200))
-```
 
-**Arquivo: `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`**
+Nao e necessario mudar o `createConversationWithContact` pois ele ja suporta contatos do tipo `conversation` -- cria a zapp_conversation com o telefone e sem lead_id/client_id.
 
-Aplicar a mesma logica de auto-fit para manter consistencia entre os dois tipos de dashboard no modo foco.
-
-### Resultado esperado
-
-- Ao abrir o modo foco, os visuais preenchem automaticamente toda a tela disponivel
-- Sem espaco em branco visivel abaixo dos visuais
-- O usuario ainda pode ajustar o zoom manualmente se preferir
-- O calculo se adapta a diferentes resolucoes de tela e quantidades de visuais
-
+| Arquivo | Mudanca |
+|---------|---------|
+| `src/pages/RoyZapp.tsx` | Adicionar logica de contato sintetico por telefone quando busca retorna vazia |
