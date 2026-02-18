@@ -151,7 +151,7 @@ export default function Events() {
   const [filterModality, setFilterModality] = useState<string>("all");
   const [modalityTab, setModalityTab] = useState<"all" | "presencial" | "online">("all");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("open");
 
   // Form state
   const [title, setTitle] = useState("");
