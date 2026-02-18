@@ -19,6 +19,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Wifi, WifiOff, Lock, Trash2, Kanban, PauseCircle, Ban, GitMerge } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import * as XLSX from "xlsx";
 import { ClientKanban } from "@/components/client/ClientKanban";
 import { OnboardingOrchestrated } from "@/components/client/OnboardingOrchestrated";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
@@ -335,6 +337,74 @@ export default function Clients() {
 
   // Get required custom fields
   const requiredFields = customFields.filter(f => f.is_required);
+
+  // Export clients function
+  const exportClients = (format: 'csv' | 'xlsx') => {
+    if (clients.length === 0) {
+      toast.error("Nenhum cliente para exportar");
+      return;
+    }
+
+    const rows = clients.map((client: any) => {
+      const vnps = vnpsMap[client.id];
+      const score = scoreMap[client.id];
+      const contract = contractMap[client.id];
+      const responsible = teamUsers.find(u => u.id === client.responsible_user_id);
+      const productNames = client.client_products?.map((cp: any) => cp.products?.name).filter(Boolean).join(", ") || "";
+      const tags = Array.isArray(client.tags) ? client.tags.join(", ") : "";
+
+      return {
+        "Nome": client.full_name || "",
+        "Telefone": client.phone_e164 || "",
+        "Email": client.email || "",
+        "CPF": client.cpf || "",
+        "CNPJ": client.cnpj || "",
+        "Empresa": client.company_name || "",
+        "Status": client.status || "",
+        "Produto(s)": productNames,
+        "Status Contrato": contract?.status || "",
+        "Início Contrato": contract?.start_date || "",
+        "Fim Contrato": contract?.end_date || "",
+        "V-NPS": vnps?.vnps_score ?? "",
+        "Classe V-NPS": vnps?.vnps_class || "",
+        "E-Score": score?.escore ?? "",
+        "Roizômetro": score?.roizometer ?? "",
+        "Responsável": responsible?.name || "",
+        "Tags": tags,
+        "Observações": client.notes || "",
+      };
+    });
+
+    const now = format === 'csv' ? 'csv' : 'xlsx';
+    const fileName = `clientes_${new Date().toISOString().slice(0, 10)}.${now}`;
+
+    if (format === 'csv') {
+      const headers = Object.keys(rows[0]);
+      const csvContent = [
+        headers.join(";"),
+        ...rows.map(row => headers.map(h => {
+          const val = String((row as any)[h] ?? "").replace(/"/g, '""');
+          return `"${val}"`;
+        }).join(";"))
+      ].join("\n");
+
+      const BOM = "\uFEFF";
+      const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Clientes");
+      XLSX.writeFile(wb, fileName);
+    }
+
+    toast.success(`Exportação ${format.toUpperCase()} concluída!`);
+  };
 
   const fetchClients = async () => {
     // Use accountId from currentUser hook
@@ -1295,6 +1365,27 @@ export default function Clients() {
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
+
+          {/* Export Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="sm:size-default">
+                <Download className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Exportar</span>
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => exportClients('csv')}>
+                <FileText className="h-4 w-4 mr-2" />
+                Exportar como CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportClients('xlsx')}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Exportar como Excel (XLSX)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Import CSV Dialog */}
           <Dialog open={importDialogOpen} onOpenChange={(open) => {
