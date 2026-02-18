@@ -6,10 +6,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AddressLink } from "@/components/ui/address-link";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Calendar, MapPin, Monitor, CheckCircle, Clock, Users, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import type { RsvpFormField } from "@/components/events/RsvpFieldsEditor";
+
+const DEFAULT_FIELDS: RsvpFormField[] = [
+  { key: "name", label: "Nome completo", type: "text", required: true, enabled: true },
+  { key: "phone", label: "Telefone (WhatsApp)", type: "tel", required: true, enabled: true },
+  { key: "email", label: "E-mail", type: "email", required: true, enabled: true },
+  { key: "rg", label: "RG", type: "text", required: true, enabled: true },
+];
 
 interface EventInfo {
   event_id: string;
@@ -22,6 +37,7 @@ interface EventInfo {
   max_capacity: number | null;
   current_confirmed: number;
   has_capacity: boolean;
+  rsvp_form_fields: RsvpFormField[] | null;
 }
 
 export default function PublicEventRegistration() {
@@ -37,15 +53,10 @@ export default function PublicEventRegistration() {
     is_client: boolean;
   } | null>(null);
   
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [rg, setRg] = useState("");
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (code) {
-      fetchEvent();
-    }
+    if (code) fetchEvent();
   }, [code]);
 
   const fetchEvent = async () => {
@@ -53,11 +64,13 @@ export default function PublicEventRegistration() {
       const { data, error } = await supabase.rpc("get_event_by_registration_code", {
         p_code: code!
       });
-
       if (error) throw error;
-
       if (data && data.length > 0) {
-        setEvent(data[0] as EventInfo);
+        const raw = data[0] as any;
+        setEvent({
+          ...raw,
+          rsvp_form_fields: raw.rsvp_form_fields as RsvpFormField[] | null,
+        });
       }
     } catch (error) {
       console.error("Error fetching event:", error);
@@ -66,46 +79,55 @@ export default function PublicEventRegistration() {
     }
   };
 
+  const getFields = (): RsvpFormField[] => {
+    if (!event?.rsvp_form_fields) return DEFAULT_FIELDS;
+    return event.rsvp_form_fields.filter(f => f.enabled);
+  };
+
   const formatPhoneE164 = (phone: string): string => {
     const digits = phone.replace(/\D/g, "");
-    if (digits.startsWith("55")) {
-      return "+" + digits;
-    }
+    if (digits.startsWith("55")) return "+" + digits;
     return "+55" + digits;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!name.trim()) {
-      toast.error("Por favor, informe seu nome");
-      return;
-    }
-    
-    if (!phone.trim()) {
-      toast.error("Por favor, informe seu telefone");
-      return;
-    }
+    const fields = getFields();
 
-    if (!email.trim()) {
-      toast.error("Por favor, informe seu e-mail");
-      return;
-    }
-
-    if (!rg.trim()) {
-      toast.error("Por favor, informe seu RG");
-      return;
+    // Validate required fields
+    for (const field of fields) {
+      if (field.required && !formValues[field.key]?.trim()) {
+        toast.error(`Por favor, informe: ${field.label}`);
+        return;
+      }
     }
 
     setSubmitting(true);
 
     try {
+      // Separate standard fields from custom fields
+      const name = formValues["name"]?.trim() || "";
+      const phone = formatPhoneE164(formValues["phone"] || "");
+      const email = formValues["email"]?.trim() || "";
+      const rg = formValues["rg"]?.trim() || "";
+
+      // Custom fields = anything not name/phone/email/rg
+      const customFields: Record<string, string> = {};
+      for (const field of fields) {
+        if (!["name", "phone", "email", "rg"].includes(field.key) && formValues[field.key]?.trim()) {
+          customFields[field.key] = formValues[field.key].trim();
+          // Also store label for readability
+          customFields[`_label_${field.key}`] = field.label;
+        }
+      }
+
       const { data, error } = await supabase.rpc("register_for_event", {
         p_code: code!,
-        p_name: name.trim(),
-        p_phone: formatPhoneE164(phone),
-        p_email: email.trim(),
-        p_rg: rg.trim()
+        p_name: name,
+        p_phone: phone,
+        p_email: email || null,
+        p_rg: rg || null,
+        p_custom_fields: Object.keys(customFields).length > 0 ? customFields : {},
       });
 
       if (error) throw error;
@@ -121,7 +143,7 @@ export default function PublicEventRegistration() {
         status: response.status || "confirmed",
         waitlist_position: response.waitlist_position || null,
         message: response.message || "Inscrição realizada!",
-        is_client: response.is_client || false
+        is_client: response.is_client || false,
       });
       setSubmitted(true);
       toast.success(response.message);
@@ -201,7 +223,6 @@ export default function PublicEventRegistration() {
                 </p>
               )}
             </div>
-
             {result.is_client && (
               <p className="text-sm text-center text-muted-foreground">
                 Identificamos você como cliente! Seu cadastro foi vinculado automaticamente.
@@ -212,6 +233,8 @@ export default function PublicEventRegistration() {
       </div>
     );
   }
+
+  const fields = getFields();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
@@ -278,53 +301,44 @@ export default function PublicEventRegistration() {
             </div>
           )}
 
-          {/* Registration Form */}
+          {/* Dynamic Registration Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome completo *</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Seu nome"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefone (WhatsApp) *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(11) 99999-9999"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="seu@email.com"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="rg">RG *</Label>
-              <Input
-                id="rg"
-                value={rg}
-                onChange={(e) => setRg(e.target.value)}
-                placeholder="00.000.000-0"
-                required
-              />
-            </div>
+            {fields.map((field) => (
+              <div key={field.key} className="space-y-2">
+                <Label htmlFor={field.key}>
+                  {field.label} {field.required && "*"}
+                </Label>
+                {field.type === "select" && field.options ? (
+                  <Select
+                    value={formValues[field.key] || ""}
+                    onValueChange={(v) => setFormValues(prev => ({ ...prev, [field.key]: v }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={`Selecione ${field.label.toLowerCase()}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {field.options.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input
+                    id={field.key}
+                    type={field.type === "number" ? "number" : field.type}
+                    value={formValues[field.key] || ""}
+                    onChange={(e) => setFormValues(prev => ({ ...prev, [field.key]: e.target.value }))}
+                    placeholder={
+                      field.key === "phone" ? "(11) 99999-9999" :
+                      field.key === "email" ? "seu@email.com" :
+                      field.key === "rg" ? "00.000.000-0" :
+                      field.label
+                    }
+                    required={field.required}
+                  />
+                )}
+              </div>
+            ))}
 
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? "Inscrevendo..." : event.has_capacity ? "Confirmar Inscrição" : "Entrar na Lista de Espera"}

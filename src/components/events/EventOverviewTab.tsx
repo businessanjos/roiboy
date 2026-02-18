@@ -15,8 +15,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Save, Pencil, Copy, Link, RefreshCw, Upload, FileText, X, Loader2, Image as ImageIcon, CalendarOff } from "lucide-react";
+import { Save, Pencil, Copy, Link, RefreshCw, Upload, FileText, X, Loader2, Image as ImageIcon, CalendarOff, Settings2 } from "lucide-react";
 import { toast } from "sonner";
+import RsvpFieldsEditor from "./RsvpFieldsEditor";
+import type { RsvpFormField } from "./RsvpFieldsEditor";
 
 interface Event {
   id: string;
@@ -60,6 +62,7 @@ export default function EventOverviewTab({ event, accountId, onUpdate, isLocked 
   const [rsvpDeadline, setRsvpDeadline] = useState(event.rsvp_deadline || "");
   const [rsvpClosureMessage, setRsvpClosureMessage] = useState(event.rsvp_closure_message || "");
   const [savingRsvpSettings, setSavingRsvpSettings] = useState(false);
+  const [rsvpFieldsEditorOpen, setRsvpFieldsEditorOpen] = useState(false);
 
   // Sync RSVP states when event prop changes
   useEffect(() => {
@@ -430,6 +433,10 @@ export default function EventOverviewTab({ event, accountId, onUpdate, isLocked 
                   Gerar novo código
                 </Button>
               </div>
+              <Button variant="outline" size="sm" onClick={() => setRsvpFieldsEditorOpen(true)}>
+                <Settings2 className="h-4 w-4 mr-2" />
+                Editar campos do formulário
+              </Button>
             </div>
           ) : (
             <div className="text-center py-6">
@@ -634,6 +641,14 @@ export default function EventOverviewTab({ event, accountId, onUpdate, isLocked 
           </div>
         </CardContent>
       </Card>
+
+      <RsvpFieldsEditor
+        open={rsvpFieldsEditorOpen}
+        onOpenChange={setRsvpFieldsEditorOpen}
+        eventId={event.id}
+        currentFields={(event as any).rsvp_form_fields as RsvpFormField[] | null}
+        onSaved={onUpdate}
+      />
     </div>
   );
 }
