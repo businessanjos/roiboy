@@ -1,37 +1,43 @@
 
-## Corrigir card "Nao Compareceu" para usar o status correto
+
+## Corrigir erro de constraint ao mesclar clientes
 
 ### Problema
 
-O card "Nao Compareceu" usa a formula `participantes - check-ins (attendance)`, que retorna 19 (todos os participantes) porque nenhum registro existe na tabela `attendance`. O valor correto deveria ser **5**, que e a contagem de participantes com `rsvp_status = 'no_show'` na tabela `event_participants`.
+Ao mesclar dois clientes, o passo 1 tenta atualizar o telefone do cliente destino com o valor escolhido. Porem, o cliente origem ainda existe no banco com o mesmo telefone, violando a constraint unica `clients_account_id_phone_e164_key` (account_id + phone_e164).
+
+### Causa raiz
+
+A ordem das operacoes esta incorreta:
+1. Atualiza o destino (com telefone que pode conflitar) -- FALHA AQUI
+2. Transfere dados
+3. Deleta a origem
 
 ### Solucao
 
-Substituir a query da tabela `attendance` por uma query filtrada na tabela `event_participants` com `rsvp_status = 'no_show'`.
+Adicionar um **passo 0** que neutraliza o telefone do cliente origem antes de qualquer atualizacao no destino. Isso remove o conflito de unicidade.
 
-### Mudancas tecnicas
+### Mudanca tecnica
 
-**Arquivo: `src/pages/EventDetail.tsx`**
+**Arquivo: `src/hooks/useClientMerge.ts`**
 
-1. **Alterar a query de attendance** (linhas 194-198): Substituir a busca na tabela `attendance` por uma contagem filtrada em `event_participants` com `rsvp_status = 'no_show'`:
+Inserir antes do passo 1 (update do target) o seguinte bloco:
 
 ```typescript
-// Antes (incorreto):
-const { count: attendanceCount } = await supabase
-  .from("attendance")
-  .select("*", { count: 'exact', head: true })
-  .eq("event_id", id);
+// Step 0: Neutralize source client phone to avoid unique constraint conflict
+const { error: neutralizeError } = await supabase
+  .from("clients")
+  .update({ phone_e164: `+0000${Date.now()}` })
+  .eq("id", sourceClientId)
+  .eq("account_id", currentUser.account_id);
 
-// Depois (correto):
-const { count: noShowCount } = await supabase
-  .from("event_participants")
-  .select("*", { count: 'exact', head: true })
-  .eq("event_id", id)
-  .eq("rsvp_status", "no_show");
+if (neutralizeError) throw neutralizeError;
 ```
 
-2. **Renomear o campo no state** (linhas 104, 207): Trocar `attendanceCount` por `noShowCount` no objeto `stats` e no `setStats`.
+Isso define o telefone da origem para um valor temporario unico, liberando a constraint para que o update do destino funcione. O cliente origem sera deletado logo depois no passo 20, entao esse valor temporario nunca sera visivel.
 
-3. **Atualizar o card** (linha ~395): Exibir `stats.noShowCount` diretamente, sem calculo de subtracao.
+### Resultado
 
-O resultado: o card exibira **5** (participantes marcados como "Nao Compareceu"), consistente com o que aparece na aba Participantes.
+- A mesclagem funciona mesmo quando o telefone escolhido conflita com o da origem
+- Nenhuma mudanca visivel para o usuario
+- O fluxo continua exatamente como antes apos a neutralizacao
