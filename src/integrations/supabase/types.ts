@@ -4093,6 +4093,7 @@ export type Database = {
           account_id: string
           client_id: string | null
           created_at: string
+          custom_data: Json | null
           event_id: string
           guest_email: string | null
           guest_name: string | null
@@ -4112,6 +4113,7 @@ export type Database = {
           account_id: string
           client_id?: string | null
           created_at?: string
+          custom_data?: Json | null
           event_id: string
           guest_email?: string | null
           guest_name?: string | null
@@ -4131,6 +4133,7 @@ export type Database = {
           account_id?: string
           client_id?: string | null
           created_at?: string
+          custom_data?: Json | null
           event_id?: string
           guest_email?: string | null
           guest_name?: string | null
@@ -4421,6 +4424,7 @@ export type Database = {
           rsvp_closed: boolean
           rsvp_closure_message: string | null
           rsvp_deadline: string | null
+          rsvp_form_fields: Json | null
           scheduled_at: string | null
           start_time: string | null
           status: string | null
@@ -4464,6 +4468,7 @@ export type Database = {
           rsvp_closed?: boolean
           rsvp_closure_message?: string | null
           rsvp_deadline?: string | null
+          rsvp_form_fields?: Json | null
           scheduled_at?: string | null
           start_time?: string | null
           status?: string | null
@@ -4507,6 +4512,7 @@ export type Database = {
           rsvp_closed?: boolean
           rsvp_closure_message?: string | null
           rsvp_deadline?: string | null
+          rsvp_form_fields?: Json | null
           scheduled_at?: string | null
           start_time?: string | null
           status?: string | null
