@@ -1,38 +1,56 @@
 
 
-## Resolver exibicao de "opt_1" nos formularios de Operacoes
+## Eliminar espaco em branco no Modo Foco (Fullscreen)
 
 ### Problema
 
-Quando uma cliente responde perguntas de selecao unica ou multipla nos formularios, o sistema armazena o valor interno da opcao (ex: `opt_1`, `opt_2`). Ao exibir as respostas no perfil do cliente, o componente `ClientFormResponses` mostra esse valor interno em vez do texto legivel (ex: "Todos geram bons leads.").
+No Modo Foco / tela cheia, os visuais do grid ocupam apenas a area necessaria baseada em suas posicoes fixas (grid de 48 colunas com rowHeight de 20px). O espaco restante do viewport fica vazio com o fundo da pagina, criando uma aparencia incompleta -- especialmente visivel em TVs via Chromecast.
 
-Isso acontece porque:
-1. O fetch dos campos customizados na linha 91 busca apenas `id, name` -- nao busca `options` nem `field_type`
-2. A funcao `formatValue` (linha 163) simplesmente converte o valor para string, sem tentar resolver o label da opcao
+### Solucao: Auto-fit do zoom ao conteudo
 
-### Solucao
+Implementar um calculo automatico de zoom que faz o conteudo preencher toda a altura disponivel do viewport. O sistema vai:
 
-Alterar o componente `ClientFormResponses.tsx` para:
+1. Medir a altura real do conteudo (filtros + grid) apos a renderizacao
+2. Comparar com a altura disponivel do viewport (descontando o header do modo foco)
+3. Calcular o zoom ideal para que o conteudo preencha a tela sem scroll
+4. Aplicar esse zoom automaticamente ao entrar no modo foco
+5. Permitir que o usuario ainda ajuste manualmente via controles de zoom
 
-1. **Buscar dados completos dos campos**: Alterar a query de `custom_fields` para incluir `options` e `field_type` alem de `id` e `name`
-2. **Criar um mapa de resolucao de opcoes**: Construir um mapa que, dado um `fieldId` e um `value` (ex: `opt_1`), retorne o `label` correspondente
-3. **Atualizar `formatValue`**: Receber o `fieldId` como parametro e, para campos do tipo `select` ou `multi_select`, resolver os valores para seus labels antes de exibir
+Se o conteudo for maior que a tela (zoom ficaria < 50%), manter o zoom em 50% e permitir scroll.
 
 ### Mudancas tecnicas
 
-**Arquivo: `src/components/client/ClientFormResponses.tsx`**
+**Arquivo: `src/components/insights/InsightsMainContent.tsx`**
 
-| Local | Mudanca |
-|-------|---------|
-| Linha 68 (state) | Alterar tipo do `customFieldsMap` para armazenar `{name, options, field_type}` em vez de apenas `name` |
-| Linhas 89-96 (fetch) | Buscar `id, name, options, field_type` dos custom_fields |
-| Linha 159-161 (getFieldLabel) | Adaptar para novo formato do mapa |
-| Linhas 163-169 (formatValue) | Receber `fieldId`, resolver valores de opcao para labels usando o mapa de opcoes |
-| Linha 246 (render) | Passar `fieldId` para `formatValue` |
+| Mudanca | Descricao |
+|---------|-----------|
+| Novo ref `contentRef` | Ref para o div que contem filtros + grid (o div com `zoom`) |
+| Novo `useEffect` de auto-fit | Ao entrar no modo foco (`isFocusMode === true`), medir `contentRef.scrollHeight` e `window.innerHeight`, calcular zoom ideal e aplicar via `setFocusZoom` |
+| Logica de calculo | `autoZoom = Math.floor((viewportAvailable / contentNaturalHeight) * 100)`, clamped entre 50 e 200 |
+| Medir com zoom=100 primeiro | Temporariamente renderizar com zoom 100% para obter a altura natural, depois aplicar o zoom calculado |
 
-A logica de resolucao sera:
-- Para campos `select`: verificar se o valor (ex: `opt_1`) existe nas opcoes do campo e retornar o `label`
-- Para campos `multi_select`: verificar se o valor e um array, resolver cada item para seu label
-- Para campos `boolean`: manter a logica existente de "Sim"/"Nao"
-- Para demais tipos: manter o comportamento atual
+A logica em pseudocodigo:
+
+```
+ao entrar no modo foco:
+  1. renderizar conteudo com zoom = 100%
+  2. apos o layout (requestAnimationFrame):
+     - headerHeight = altura do header do modo foco (~72px)
+     - padding = 48px (p-6 top + bottom)
+     - availableHeight = window.innerHeight - headerHeight - padding
+     - contentHeight = contentRef.scrollHeight
+     - idealZoom = (availableHeight / contentHeight) * 100
+     - setFocusZoom(clamp(idealZoom, 50, 200))
+```
+
+**Arquivo: `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`**
+
+Aplicar a mesma logica de auto-fit para manter consistencia entre os dois tipos de dashboard no modo foco.
+
+### Resultado esperado
+
+- Ao abrir o modo foco, os visuais preenchem automaticamente toda a tela disponivel
+- Sem espaco em branco visivel abaixo dos visuais
+- O usuario ainda pode ajustar o zoom manualmente se preferir
+- O calculo se adapta a diferentes resolucoes de tela e quantidades de visuais
 
