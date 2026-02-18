@@ -10879,6 +10879,7 @@ export type Database = {
           event_title: string
           has_capacity: boolean
           max_capacity: number
+          rsvp_form_fields: Json
         }[]
       }
       get_event_for_checkin: {
@@ -10980,6 +10981,7 @@ export type Database = {
       register_for_event: {
         Args: {
           p_code: string
+          p_custom_fields?: Json
           p_email?: string
           p_name: string
           p_phone: string
