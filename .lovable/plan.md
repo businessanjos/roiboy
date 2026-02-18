@@ -1,50 +1,27 @@
 
 
-## Corrigir erro ao atualizar status do contrato
+## Exibir apenas eventos "Em Aberto" por padrao na aba de Eventos
 
-### Problema identificado
+### Problema
 
-O `handleSave` no `ContractDetailSheet.tsx` captura qualquer erro mas exibe apenas a mensagem generica "Erro ao atualizar contrato", escondendo a causa real. Alem disso, ha dois problemas potenciais no envio dos dados:
+Atualmente, o filtro de status na pagina de Eventos inicia com o valor `"all"` (Todos os status), fazendo com que eventos concluidos e cancelados aparecam na listagem por padrao. No setor de Operacoes, isso polui a visualizacao com eventos que ja foram finalizados.
 
-1. **Formato de `cancelled_at`**: O campo e do tipo `timestamp with time zone` no banco, mas o formulario pode enviar uma string no formato `"2025-02-13"` (apenas data), que pode ser rejeitada pelo PostgREST em certas configuracoes.
-2. **`status_changed_at` nao e atualizado**: Quando o status muda, o campo `status_changed_at` nao e enviado na atualizacao, perdendo o rastreamento de quando a mudanca ocorreu.
+### Solucao
 
-### Mudancas tecnicas
+Alterar o valor inicial do estado `filterStatus` de `"all"` para `"open"` no arquivo `src/pages/Events.tsx`. Isso fara com que, por padrao, somente eventos em aberto sejam exibidos. O usuario ainda podera selecionar "Todos os status", "Concluido" ou "Cancelado" no filtro para visualizar os demais.
 
-**Arquivo: `src/components/contracts/ContractDetailSheet.tsx`**
+### Detalhes tecnicos
 
-1. **Melhorar log e exibicao do erro real** (linhas 256-258): Alterar o `catch` para mostrar a mensagem real do erro no toast e logar o objeto completo:
+**Arquivo: `src/pages/Events.tsx` (linha 154)**
 
+Alterar:
 ```typescript
-} catch (error: any) {
-  console.error("Error updating contract:", error);
-  const errorMsg = error?.message || error?.details || "Erro desconhecido";
-  toast.error(`Erro ao atualizar contrato: ${errorMsg}`);
-}
+const [filterStatus, setFilterStatus] = useState<string>("all");
+```
+Para:
+```typescript
+const [filterStatus, setFilterStatus] = useState<string>("open");
 ```
 
-2. **Formatar `cancelled_at` como timestamp ISO completo** (linha 236): Converter a data para um timestamp valido ao inves de enviar apenas a data:
-
-```typescript
-cancelled_at: formData.cancelled_at 
-  ? new Date(formData.cancelled_at + "T00:00:00").toISOString() 
-  : null,
-```
-
-3. **Adicionar `status_changed_at` quando o status muda** (linha 233-244): Detectar se o status mudou e atualizar o campo:
-
-```typescript
-const statusChanged = contract.status !== formData.status;
-const updateData = {
-  ...campos existentes,
-  status_changed_at: statusChanged ? new Date().toISOString() : contract.status_changed_at,
-};
-```
-
-### Resultado esperado
-
-- O erro real sera exibido no toast para diagnostico
-- O `cancelled_at` sera enviado em formato ISO compativel com `timestamptz`
-- O `status_changed_at` sera atualizado corretamente quando o status mudar
-- A atualizacao do contrato para "Encerrado" (ou qualquer outro status) funcionara sem erros
+A logica de filtragem ja existe corretamente nas linhas 596-601 e nao precisa de nenhuma alteracao. Somente o valor padrao muda.
 
