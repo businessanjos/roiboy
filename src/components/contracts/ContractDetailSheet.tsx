@@ -230,16 +230,20 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
     
     setSaving(true);
     try {
+      const statusChanged = contract.status !== formData.status;
       const updateData = {
         start_date: formData.start_date,
         end_date: formData.end_date || null,
-        cancelled_at: formData.cancelled_at || null,
+        cancelled_at: formData.cancelled_at
+          ? new Date(formData.cancelled_at + "T00:00:00").toISOString()
+          : null,
         value: parseFloat(formData.value) || 0,
         contract_type: formData.contract_type,
         product_id: formData.product_id || null,
         payment_option: buildPaymentOption(),
         notes: formData.notes || null,
         status: formData.status,
+        status_changed_at: statusChanged ? new Date().toISOString() : contract.status_changed_at,
         updated_at: new Date().toISOString(),
       };
 
@@ -253,9 +257,10 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
       toast.success("Contrato atualizado com sucesso");
       setIsEditing(false);
       onUpdate();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating contract:", error);
-      toast.error("Erro ao atualizar contrato");
+      const errorMsg = error?.message || error?.details || "Erro desconhecido";
+      toast.error(`Erro ao atualizar contrato: ${errorMsg}`);
     } finally {
       setSaving(false);
     }
