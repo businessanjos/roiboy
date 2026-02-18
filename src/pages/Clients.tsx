@@ -338,72 +338,152 @@ export default function Clients() {
   // Get required custom fields
   const requiredFields = customFields.filter(f => f.is_required);
 
-  // Export clients function
-  const exportClients = (format: 'csv' | 'xlsx') => {
-    if (clients.length === 0) {
-      toast.error("Nenhum cliente para exportar");
-      return;
-    }
+  // Export clients function - fetches ALL clients with pagination
+  const [exporting, setExporting] = useState(false);
 
-    const rows = clients.map((client: any) => {
-      const vnps = vnpsMap[client.id];
-      const score = scoreMap[client.id];
-      const contract = contractMap[client.id];
-      const responsible = teamUsers.find(u => u.id === client.responsible_user_id);
-      const productNames = client.client_products?.map((cp: any) => cp.products?.name).filter(Boolean).join(", ") || "";
-      const tags = Array.isArray(client.tags) ? client.tags.join(", ") : "";
+  const exportClients = async (exportFormat: 'csv' | 'xlsx') => {
+    if (exporting) return;
+    setExporting(true);
+    toast.info("Preparando exportação...");
 
-      return {
-        "Nome": client.full_name || "",
-        "Telefone": client.phone_e164 || "",
-        "Email": client.email || "",
-        "CPF": client.cpf || "",
-        "CNPJ": client.cnpj || "",
-        "Empresa": client.company_name || "",
-        "Status": client.status || "",
-        "Produto(s)": productNames,
-        "Status Contrato": contract?.status || "",
-        "Início Contrato": contract?.start_date || "",
-        "Fim Contrato": contract?.end_date || "",
-        "V-NPS": vnps?.vnps_score ?? "",
-        "Classe V-NPS": vnps?.vnps_class || "",
-        "E-Score": score?.escore ?? "",
-        "Roizômetro": score?.roizometer ?? "",
-        "Responsável": responsible?.name || "",
-        "Tags": tags,
-        "Observações": client.notes || "",
+    try {
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const accId = currentUser?.account_id;
+      const userId = currentUser?.id;
+      if (!accId || !userId) {
+        toast.error("Usuário não autenticado");
+        setExporting(false);
+        return;
+      }
+
+      // Build filter params (same as fetchClients)
+      const baseParams: Record<string, string> = {};
+      if (searchQuery) baseParams["search"] = searchQuery;
+      if (filterResponsible !== "all") baseParams["responsible_user_id"] = filterResponsible;
+      if (filterProduct !== "all") baseParams["product_id"] = filterProduct;
+      if (filterVNPS !== "all") baseParams["vnps_class"] = filterVNPS;
+      if (filterContract !== "all") baseParams["contract_filter"] = filterContract;
+      if (filterClientStatus !== "all") baseParams["client_status"] = filterClientStatus;
+
+      const PAGE_SIZE = 200;
+      let allClients: any[] = [];
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const params = new URLSearchParams({
+          ...baseParams,
+          limit: String(PAGE_SIZE),
+          offset: String(offset),
+        });
+
+        const response = await fetch(
+          `${SUPABASE_URL}/functions/v1/list-clients?${params.toString()}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              "x-account-id": accId,
+              "x-session-token": userId,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          toast.error("Erro ao buscar clientes para exportação");
+          setExporting(false);
+          return;
+        }
+
+        const result = await response.json();
+        const batch = result.clients || [];
+        allClients = [...allClients, ...batch];
+
+        if (batch.length < PAGE_SIZE) {
+          hasMore = false;
+        } else {
+          offset += PAGE_SIZE;
+        }
+      }
+
+      if (allClients.length === 0) {
+        toast.error("Nenhum cliente para exportar");
+        setExporting(false);
+        return;
+      }
+
+      // Helper to extract first email from emails field
+      const getEmail = (client: any): string => {
+        if (!client.emails) return "";
+        if (Array.isArray(client.emails)) return client.emails[0] || "";
+        if (typeof client.emails === "string") return client.emails;
+        return "";
       };
-    });
 
-    const now = format === 'csv' ? 'csv' : 'xlsx';
-    const fileName = `clientes_${new Date().toISOString().slice(0, 10)}.${now}`;
+      const rows = allClients.map((client: any) => {
+        const vnps = client.vnps;
+        const score = client.score;
+        const contract = client.contract;
+        const responsible = client.responsible_user;
+        const productNames = client.products?.map((p: any) => p.name).filter(Boolean).join(", ") || "";
+        const tags = Array.isArray(client.tags) ? client.tags.join(", ") : "";
 
-    if (format === 'csv') {
-      const headers = Object.keys(rows[0]);
-      const csvContent = [
-        headers.join(";"),
-        ...rows.map(row => headers.map(h => {
-          const val = String((row as any)[h] ?? "").replace(/"/g, '""');
-          return `"${val}"`;
-        }).join(";"))
-      ].join("\n");
+        return {
+          "Nome": client.full_name || "",
+          "Telefone": client.phone_e164 || "",
+          "Email": getEmail(client),
+          "CPF": client.cpf || "",
+          "CNPJ": client.cnpj || "",
+          "Empresa": client.company_name || "",
+          "Status": client.status || "",
+          "Produto(s)": productNames,
+          "Status Contrato": contract?.status || "",
+          "Início Contrato": contract?.start_date || "",
+          "Fim Contrato": contract?.end_date || "",
+          "V-NPS": vnps?.vnps_score ?? "",
+          "Classe V-NPS": vnps?.vnps_class || "",
+          "E-Score": score?.escore ?? "",
+          "Roizômetro": score?.roizometer ?? "",
+          "Responsável": responsible?.name || "",
+          "Tags": tags,
+          "Observações": client.notes || "",
+        };
+      });
 
-      const BOM = "\uFEFF";
-      const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      a.click();
-      URL.revokeObjectURL(url);
-    } else {
-      const ws = XLSX.utils.json_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Clientes");
-      XLSX.writeFile(wb, fileName);
+      const fileName = `clientes_${new Date().toISOString().slice(0, 10)}.${exportFormat}`;
+
+      if (exportFormat === 'csv') {
+        const headers = Object.keys(rows[0]);
+        const csvContent = [
+          headers.join(";"),
+          ...rows.map(row => headers.map(h => {
+            const val = String((row as any)[h] ?? "").replace(/"/g, '""');
+            return `"${val}"`;
+          }).join(";"))
+        ].join("\n");
+
+        const BOM = "\uFEFF";
+        const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Clientes");
+        XLSX.writeFile(wb, fileName);
+      }
+
+      toast.success(`Exportação concluída! ${allClients.length} clientes exportados.`);
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Erro ao exportar clientes");
+    } finally {
+      setExporting(false);
     }
-
-    toast.success(`Exportação ${format.toUpperCase()} concluída!`);
   };
 
   const fetchClients = async () => {
