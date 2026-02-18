@@ -39,6 +39,11 @@ export function InsightsMainContent() {
     return () => document.removeEventListener("keydown", handleEsc);
   }, [isFocusMode]);
 
+  // Reset zoom when switching dashboards
+  useEffect(() => {
+    setFocusZoom(100);
+  }, [activeDashboardId]);
+
   // Fullscreen change listener
   useEffect(() => {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);
