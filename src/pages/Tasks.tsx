@@ -485,6 +485,9 @@ export default function Tasks() {
     
     if (!activeTab) return true;
     
+    // Se a aba ativa NAO e de conclusao, excluir tarefas com completed_at
+    if (!targetStatus?.is_completed_status && task.completed_at) return false;
+    
     if (task.custom_status_id === activeTab) return true;
     if (!task.custom_status_id && activeTab === defaultStatus?.id && !task.completed_at) return true;
     if (!task.custom_status_id && task.completed_at && targetStatus?.is_completed_status) return true;
