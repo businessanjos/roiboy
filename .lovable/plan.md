@@ -1,32 +1,37 @@
 
+## Corrigir card "Nao Compareceu" para usar o status correto
 
-## Adicionar card "Não Compareceu" nos detalhes do evento
+### Problema
 
-### O que muda
+O card "Nao Compareceu" usa a formula `participantes - check-ins (attendance)`, que retorna 19 (todos os participantes) porque nenhum registro existe na tabela `attendance`. O valor correto deveria ser **5**, que e a contagem de participantes com `rsvp_status = 'no_show'` na tabela `event_participants`.
 
-Adicionar um novo card de estatística na seção de Quick Stats da página de detalhes do evento, mostrando quantos participantes convidados **não compareceram** (diferença entre participantes convidados e check-ins registrados).
+### Solucao
+
+Substituir a query da tabela `attendance` por uma query filtrada na tabela `event_participants` com `rsvp_status = 'no_show'`.
 
 ### Mudancas tecnicas
 
 **Arquivo: `src/pages/EventDetail.tsx`**
 
-1. **Importar `UserX`** do lucide-react (linha 13-34) -- ícone de "usuário ausente"
+1. **Alterar a query de attendance** (linhas 194-198): Substituir a busca na tabela `attendance` por uma contagem filtrada em `event_participants` com `rsvp_status = 'no_show'`:
 
-2. **Adicionar `attendanceCount` ao state `stats`** (linhas 99-107) -- novo campo para armazenar quantos fizeram check-in
+```typescript
+// Antes (incorreto):
+const { count: attendanceCount } = await supabase
+  .from("attendance")
+  .select("*", { count: 'exact', head: true })
+  .eq("event_id", id);
 
-3. **Buscar contagem de attendance no `fetchStats`** (linhas 153-200):
-   - Adicionar query: `supabase.from("attendance").select("*", { count: 'exact', head: true }).eq("event_id", id)`
-   - Salvar como `attendanceCount` no stats
+// Depois (correto):
+const { count: noShowCount } = await supabase
+  .from("event_participants")
+  .select("*", { count: 'exact', head: true })
+  .eq("event_id", id)
+  .eq("rsvp_status", "no_show");
+```
 
-4. **Alterar grid de 6 para 7 colunas** (linha 369):
-   - De `lg:grid-cols-6` para `lg:grid-cols-7`
+2. **Renomear o campo no state** (linhas 104, 207): Trocar `attendanceCount` por `noShowCount` no objeto `stats` e no `setStats`.
 
-5. **Adicionar novo card** após o card de "Participantes" (após linha 380):
-   ```
-   Card com ícone UserX em vermelho/10
-   Valor: stats.attendeesCount - stats.attendanceCount (mínimo 0)
-   Label: "Não Compareceu"
-   ```
+3. **Atualizar o card** (linha ~395): Exibir `stats.noShowCount` diretamente, sem calculo de subtracao.
 
-O cálculo é simples: `Math.max(0, participantes - checkins)`. Se ninguém fez check-in mas há 19 participantes, mostra 19. Se todos fizeram check-in, mostra 0.
-
+O resultado: o card exibira **5** (participantes marcados como "Nao Compareceu"), consistente com o que aparece na aba Participantes.
