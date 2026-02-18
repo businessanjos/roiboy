@@ -1,43 +1,50 @@
 
 
-## Corrigir erro de constraint ao mesclar clientes
+## Corrigir erro ao atualizar status do contrato
 
-### Problema
+### Problema identificado
 
-Ao mesclar dois clientes, o passo 1 tenta atualizar o telefone do cliente destino com o valor escolhido. Porem, o cliente origem ainda existe no banco com o mesmo telefone, violando a constraint unica `clients_account_id_phone_e164_key` (account_id + phone_e164).
+O `handleSave` no `ContractDetailSheet.tsx` captura qualquer erro mas exibe apenas a mensagem generica "Erro ao atualizar contrato", escondendo a causa real. Alem disso, ha dois problemas potenciais no envio dos dados:
 
-### Causa raiz
+1. **Formato de `cancelled_at`**: O campo e do tipo `timestamp with time zone` no banco, mas o formulario pode enviar uma string no formato `"2025-02-13"` (apenas data), que pode ser rejeitada pelo PostgREST em certas configuracoes.
+2. **`status_changed_at` nao e atualizado**: Quando o status muda, o campo `status_changed_at` nao e enviado na atualizacao, perdendo o rastreamento de quando a mudanca ocorreu.
 
-A ordem das operacoes esta incorreta:
-1. Atualiza o destino (com telefone que pode conflitar) -- FALHA AQUI
-2. Transfere dados
-3. Deleta a origem
+### Mudancas tecnicas
 
-### Solucao
+**Arquivo: `src/components/contracts/ContractDetailSheet.tsx`**
 
-Adicionar um **passo 0** que neutraliza o telefone do cliente origem antes de qualquer atualizacao no destino. Isso remove o conflito de unicidade.
-
-### Mudanca tecnica
-
-**Arquivo: `src/hooks/useClientMerge.ts`**
-
-Inserir antes do passo 1 (update do target) o seguinte bloco:
+1. **Melhorar log e exibicao do erro real** (linhas 256-258): Alterar o `catch` para mostrar a mensagem real do erro no toast e logar o objeto completo:
 
 ```typescript
-// Step 0: Neutralize source client phone to avoid unique constraint conflict
-const { error: neutralizeError } = await supabase
-  .from("clients")
-  .update({ phone_e164: `+0000${Date.now()}` })
-  .eq("id", sourceClientId)
-  .eq("account_id", currentUser.account_id);
-
-if (neutralizeError) throw neutralizeError;
+} catch (error: any) {
+  console.error("Error updating contract:", error);
+  const errorMsg = error?.message || error?.details || "Erro desconhecido";
+  toast.error(`Erro ao atualizar contrato: ${errorMsg}`);
+}
 ```
 
-Isso define o telefone da origem para um valor temporario unico, liberando a constraint para que o update do destino funcione. O cliente origem sera deletado logo depois no passo 20, entao esse valor temporario nunca sera visivel.
+2. **Formatar `cancelled_at` como timestamp ISO completo** (linha 236): Converter a data para um timestamp valido ao inves de enviar apenas a data:
 
-### Resultado
+```typescript
+cancelled_at: formData.cancelled_at 
+  ? new Date(formData.cancelled_at + "T00:00:00").toISOString() 
+  : null,
+```
 
-- A mesclagem funciona mesmo quando o telefone escolhido conflita com o da origem
-- Nenhuma mudanca visivel para o usuario
-- O fluxo continua exatamente como antes apos a neutralizacao
+3. **Adicionar `status_changed_at` quando o status muda** (linha 233-244): Detectar se o status mudou e atualizar o campo:
+
+```typescript
+const statusChanged = contract.status !== formData.status;
+const updateData = {
+  ...campos existentes,
+  status_changed_at: statusChanged ? new Date().toISOString() : contract.status_changed_at,
+};
+```
+
+### Resultado esperado
+
+- O erro real sera exibido no toast para diagnostico
+- O `cancelled_at` sera enviado em formato ISO compativel com `timestamptz`
+- O `status_changed_at` sera atualizado corretamente quando o status mudar
+- A atualizacao do contrato para "Encerrado" (ou qualquer outro status) funcionara sem erros
+
