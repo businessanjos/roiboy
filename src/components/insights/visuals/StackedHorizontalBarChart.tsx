@@ -9,7 +9,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { FormatType, AppearanceConfig, COLOR_PALETTES } from "../visual-builder/types";
+import { FormatType, AppearanceConfig, COLOR_PALETTES, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 import { formatValueCompact } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
 
@@ -61,7 +61,7 @@ const CustomTooltip = ({ active, payload, label, formatting }: any) => {
   );
 };
 
-const renderInsideLabel = (props: any, formatting: { type: FormatType }) => {
+const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMultiplier: number) => {
   const { x, y, width, height, value } = props;
   if (!value || value === 0 || width < 50) return null;
 
@@ -72,7 +72,7 @@ const renderInsideLabel = (props: any, formatting: { type: FormatType }) => {
       fill="white"
       textAnchor="middle"
       dominantBaseline="middle"
-      fontSize={10}
+      fontSize={Math.round(10 * fontMultiplier)}
       fontWeight={600}
     >
       {formatValueCompact(value, formatting.type)}
@@ -87,6 +87,7 @@ export function StackedHorizontalBarChart({
   appearance,
 }: StackedHorizontalBarChartProps) {
   const colors = getChartColors(appearance.colorPalette);
+  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
 
   if (!data || data.length === 0 || seriesKeys.length === 0) {
     return (
@@ -112,13 +113,13 @@ export function StackedHorizontalBarChart({
         <XAxis
           type="number"
           tickFormatter={(value) => formatValueCompact(value, formatting.type)}
-          tick={{ fontSize: 11 }}
+          tick={{ fontSize: Math.round(11 * m) }}
           className="text-muted-foreground"
         />
         <YAxis
           dataKey="name"
           type="category"
-          tick={{ fontSize: 11 }}
+          tick={{ fontSize: Math.round(11 * m) }}
           className="text-muted-foreground"
           width={30}
           interval={0}
@@ -127,7 +128,7 @@ export function StackedHorizontalBarChart({
         <Legend
           verticalAlign="top"
           height={36}
-          wrapperStyle={{ fontSize: 12 }}
+          wrapperStyle={{ fontSize: Math.round(12 * m) }}
         />
         {seriesKeys.map((key, index) => (
           <Bar
@@ -140,7 +141,7 @@ export function StackedHorizontalBarChart({
             {appearance.showDataLabels && (
               <LabelList
                 dataKey={key}
-                content={(props: any) => renderInsideLabel(props, formatting)}
+                content={(props: any) => renderInsideLabel(props, formatting, m)}
               />
             )}
           </Bar>

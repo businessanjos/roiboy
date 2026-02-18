@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { FormatType } from "../visual-builder/types";
+import { FormatType, AppearanceConfig, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 
 interface AggregatedDataPoint {
   name: string;
@@ -17,6 +17,7 @@ interface ConfigurableRankingProps {
     type: FormatType;
     decimals: number;
   };
+  appearance?: AppearanceConfig;
 }
 
 interface UserAvatar {
@@ -68,10 +69,12 @@ function Podium({
   data,
   avatars,
   formatting,
+  fontMultiplier,
 }: {
   data: AggregatedDataPoint[];
   avatars: Record<string, UserAvatar>;
   formatting: ConfigurableRankingProps['formatting'];
+  fontMultiplier: number;
 }) {
   const top3 = data.slice(0, 3);
   // Reorder: 2nd, 1st, 3rd
@@ -102,12 +105,12 @@ function Podium({
             </Avatar>
 
             {/* Name */}
-            <span className="text-[11px] font-medium text-foreground truncate max-w-[80px] text-center leading-tight">
+            <span className="font-medium text-foreground truncate max-w-[80px] text-center leading-tight" style={{ fontSize: `${Math.round(11 * fontMultiplier)}px` }}>
               {item.name.split(' ')[0]}
             </span>
 
             {/* Value */}
-            <span className="text-[10px] text-muted-foreground font-medium tabular-nums mb-1.5">
+            <span className="text-muted-foreground font-medium tabular-nums mb-1.5" style={{ fontSize: `${Math.round(10 * fontMultiplier)}px` }}>
               {formatCurrency(item.value, formatting.type, formatting.decimals)}
             </span>
 
@@ -127,7 +130,8 @@ function Podium({
   );
 }
 
-export function ConfigurableRanking({ data, formatting }: ConfigurableRankingProps) {
+export function ConfigurableRanking({ data, formatting, appearance }: ConfigurableRankingProps) {
+  const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'];
   const { currentUser } = useCurrentUser();
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
   const containerRef = useRef<HTMLDivElement>(null);
@@ -185,15 +189,15 @@ export function ConfigurableRanking({ data, formatting }: ConfigurableRankingPro
       {/* Podium - left side */}
       {showPodium && hasPodiumData && (
         <div className="w-[40%] shrink-0 flex items-end justify-center">
-          <Podium data={data} avatars={avatars} formatting={formatting} />
+          <Podium data={data} avatars={avatars} formatting={formatting} fontMultiplier={m} />
         </div>
       )}
 
       {/* Table - right side */}
       <div className="flex-1 min-w-0">
-        <table className="w-full text-sm">
+        <table className="w-full" style={{ fontSize: `${Math.round(14 * m)}px` }}>
           <thead>
-            <tr className="text-muted-foreground text-xs border-b">
+            <tr className="text-muted-foreground border-b" style={{ fontSize: `${Math.round(12 * m)}px` }}>
               <th className="text-left py-2 px-1 w-8">#</th>
               <th className="text-left py-2 px-1">Vendedor</th>
               <th className="text-right py-2 px-1">Faturamento</th>

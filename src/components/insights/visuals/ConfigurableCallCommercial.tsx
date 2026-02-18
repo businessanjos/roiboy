@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Calendar, CheckCircle2 } from "lucide-react";
-import { FormatType } from "../visual-builder/types";
+import { FormatType, FONT_SCALE_MULTIPLIERS, AppearanceConfig } from "../visual-builder/types";
 
 interface AggregatedDataPoint {
   name: string;
@@ -18,6 +18,7 @@ interface ConfigurableCallCommercialProps {
     decimals: number;
   };
   hiddenUsers?: string[];
+  appearance?: AppearanceConfig;
 }
 
 interface UserAvatar {
@@ -35,7 +36,8 @@ function getInitials(name: string): string {
     .toUpperCase();
 }
 
-export function ConfigurableCallCommercial({ data, hiddenUsers }: ConfigurableCallCommercialProps) {
+export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: ConfigurableCallCommercialProps) {
+  const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'];
   const { currentUser } = useCurrentUser();
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
 
@@ -97,7 +99,7 @@ export function ConfigurableCallCommercial({ data, hiddenUsers }: ConfigurableCa
               </Avatar>
 
               {/* Name */}
-              <span className="text-xs font-medium text-foreground truncate max-w-[120px] text-center leading-tight">
+              <span className="font-medium text-foreground truncate max-w-[120px] text-center leading-tight" style={{ fontSize: `${Math.round(12 * m)}px` }}>
                 {item.name}
               </span>
 
@@ -106,7 +108,7 @@ export function ConfigurableCallCommercial({ data, hiddenUsers }: ConfigurableCa
                 {/* Agendadas em aberto */}
                 <div className="flex flex-col items-center gap-0.5 rounded-lg bg-muted px-3 py-2 min-w-[52px]">
                   <Calendar className="h-3.5 w-3.5 text-amber-500" />
-                  <span className="text-lg font-bold text-foreground tabular-nums leading-none">
+                  <span className="font-bold text-foreground tabular-nums leading-none" style={{ fontSize: `${Math.round(18 * m)}px` }}>
                     {scheduled}
                   </span>
                   <span className="text-[9px] text-muted-foreground font-medium leading-none">
@@ -117,7 +119,7 @@ export function ConfigurableCallCommercial({ data, hiddenUsers }: ConfigurableCa
                 {/* Concluídas */}
                 <div className="flex flex-col items-center gap-0.5 rounded-lg bg-muted px-3 py-2 min-w-[52px]">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-                  <span className="text-lg font-bold text-foreground tabular-nums leading-none">
+                  <span className="font-bold text-foreground tabular-nums leading-none" style={{ fontSize: `${Math.round(18 * m)}px` }}>
                     {completed}
                   </span>
                   <span className="text-[9px] text-muted-foreground font-medium leading-none">
