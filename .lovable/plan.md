@@ -1,62 +1,109 @@
 
-## Filtrar convites automáticos para incluir apenas clientes com contratos ativos
 
-### Problema
+## Campos personalizaveis no formulario de confirmacao de presenca (RSVP)
 
-Quando um produto é vinculado a um evento, o trigger `sync_event_participants_from_product` no banco de dados convida automaticamente **todos** os clientes que possuem aquele produto na tabela `client_products`, independentemente do status do contrato. Isso faz com que clientes com contratos inativos, cancelados ou encerrados também recebam convites.
+### Contexto atual
 
-### Causa raiz
+O formulario de inscricao publica (`/inscricao/:code`) possui 4 campos fixos: **Nome**, **Telefone**, **E-mail** e **RG**. Todos sao obrigatorios e nao podem ser alterados por evento. Cada evento pode precisar de informacoes diferentes, entao e necessario permitir que o administrador configure quais campos solicitar.
 
-O trigger atual consulta apenas a tabela `client_products` sem verificar a tabela `client_contracts`. A logica precisa cruzar com `client_contracts` para garantir que o cliente tenha um contrato com status ativo para aquele produto.
+### Solucao proposta
 
-### Solucao
+Criar um sistema de configuracao de campos do formulario RSVP por evento, permitindo ativar/desativar campos padrao e adicionar campos customizados.
 
-Alterar a funcao `sync_event_participants_from_product()` no banco de dados para adicionar um JOIN com `client_contracts`, filtrando apenas clientes que tenham pelo menos um contrato ativo (`status = 'active'`) vinculado ao produto em questao.
+---
 
-### Detalhes tecnicos
+### 1. Migracao no banco de dados
 
-**Migracao SQL**: Recriar a funcao com a seguinte logica atualizada:
+Adicionar uma coluna `rsvp_form_fields` (JSONB) na tabela `events` para armazenar a configuracao dos campos do formulario de cada evento.
 
 ```sql
-CREATE OR REPLACE FUNCTION public.sync_event_participants_from_product()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path TO 'public'
-AS $$
-DECLARE
-  v_client RECORD;
-BEGIN
-  FOR v_client IN 
-    SELECT DISTINCT cp.client_id
-    FROM client_products cp
-    INNER JOIN client_contracts cc 
-      ON cc.client_id = cp.client_id
-      AND cc.product_id = cp.product_id
-      AND cc.account_id = cp.account_id
-      AND cc.status = 'active'
-    WHERE cp.product_id = NEW.product_id
-      AND cp.account_id = NEW.account_id
-  LOOP
-    INSERT INTO event_participants (
-      account_id, event_id, client_id, rsvp_status, invited_at
-    )
-    SELECT 
-      NEW.account_id, NEW.event_id, v_client.client_id, 'pending', now()
-    WHERE NOT EXISTS (
-      SELECT 1 FROM event_participants ep
-      WHERE ep.event_id = NEW.event_id
-        AND ep.client_id = v_client.client_id
-    );
-  END LOOP;
-  
-  RETURN NEW;
-END;
-$$;
+ALTER TABLE public.events 
+ADD COLUMN rsvp_form_fields jsonb DEFAULT null;
 ```
 
-A diferenca principal e o `INNER JOIN client_contracts` que exige que o cliente tenha um contrato com status `'active'` para o mesmo produto e conta. Clientes sem contrato ativo nao serao convidados.
+Estrutura do JSON:
 
-### Nenhuma mudanca no frontend
+```text
+[
+  { "key": "name",    "label": "Nome completo",   "type": "text",  "required": true,  "enabled": true  },
+  { "key": "phone",   "label": "Telefone",        "type": "tel",   "required": true,  "enabled": true  },
+  { "key": "email",   "label": "E-mail",          "type": "email", "required": true,  "enabled": true  },
+  { "key": "rg",      "label": "RG",              "type": "text",  "required": true,  "enabled": true  },
+  { "key": "custom1", "label": "Empresa",         "type": "text",  "required": false, "enabled": true  }
+]
+```
 
-A logica de convite automatico e inteiramente no banco de dados (trigger). Nenhum arquivo do frontend precisa ser alterado.
+Quando `rsvp_form_fields` for `null`, o formulario usara os 4 campos padrao atuais (retrocompatibilidade total).
+
+---
+
+### 2. Novo componente: RsvpFieldsEditor
+
+**Arquivo: `src/components/events/RsvpFieldsEditor.tsx`**
+
+Um dialog/sheet acessivel a partir da aba "Visao Geral" do evento (ao lado do bloco de RSVP) com:
+
+- Lista dos 4 campos padrao (Nome, Telefone, E-mail, RG) com toggle de ativado/desativado e toggle de obrigatorio/opcional
+- "Nome" e "Telefone" sempre ativados e obrigatorios (necessarios para identificar o cliente no sistema)
+- Botao "Adicionar campo" para criar campos customizados com label e tipo (texto, numero, select/lista)
+- Arrastar para reordenar campos
+- Botao Salvar que persiste o JSON na coluna `rsvp_form_fields` do evento
+
+---
+
+### 3. Integrar editor na aba Visao Geral do evento
+
+**Arquivo: `src/components/events/EventOverviewTab.tsx`**
+
+Adicionar um botao "Editar campos do formulario" dentro do card de RSVP (ao lado do link), que abre o `RsvpFieldsEditor`.
+
+---
+
+### 4. Expor campos na RPC `get_event_by_registration_code`
+
+A funcao RPC sera recriada para incluir `rsvp_form_fields` no retorno, assim o formulario publico sabe quais campos renderizar.
+
+---
+
+### 5. Atualizar formulario publico de inscricao
+
+**Arquivo: `src/pages/PublicEventRegistration.tsx`**
+
+- Ao receber os dados do evento, verificar se `rsvp_form_fields` existe
+- Se existir, renderizar dinamicamente apenas os campos configurados
+- Se nao existir (null), renderizar os 4 campos padrao atuais (retrocompatibilidade)
+- Campos customizados serao enviados como JSON na RPC `register_for_event` em um parametro adicional `p_custom_fields`
+
+---
+
+### 6. Atualizar RPC `register_for_event`
+
+Adicionar parametro opcional `p_custom_fields jsonb DEFAULT '{}'` para receber campos extras. Os dados customizados serao armazenados no campo `metadata` (ou nova coluna `custom_data`) da tabela `event_participants`.
+
+---
+
+### 7. Adicionar coluna para dados customizados nos participantes
+
+```sql
+ALTER TABLE public.event_participants
+ADD COLUMN custom_data jsonb DEFAULT null;
+```
+
+Isso permite armazenar as respostas dos campos customizados junto ao registro do participante.
+
+---
+
+### Resumo dos arquivos afetados
+
+| Arquivo | Acao |
+|---|---|
+| Migracao SQL | Adicionar `rsvp_form_fields` em `events` e `custom_data` em `event_participants` |
+| `src/components/events/RsvpFieldsEditor.tsx` | Novo componente para editar campos |
+| `src/components/events/EventOverviewTab.tsx` | Botao para abrir o editor de campos |
+| `src/pages/PublicEventRegistration.tsx` | Renderizar campos dinamicamente |
+| RPC `get_event_by_registration_code` | Retornar `rsvp_form_fields` |
+| RPC `register_for_event` | Aceitar e salvar `p_custom_fields` |
+
+### Retrocompatibilidade
+
+Eventos existentes sem `rsvp_form_fields` continuarao funcionando exatamente como antes com os 4 campos fixos. Nenhum dado existente sera perdido.
