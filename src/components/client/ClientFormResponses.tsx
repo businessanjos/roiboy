@@ -65,7 +65,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
   const [formResponses, setFormResponses] = useState<FormResponse[]>([]);
   const [diagnostic, setDiagnostic] = useState<DiagnosticData | null>(null);
   const [expandedResponses, setExpandedResponses] = useState<Set<string>>(new Set());
-  const [customFieldsMap, setCustomFieldsMap] = useState<Map<string, string>>(new Map());
+  const [customFieldsMap, setCustomFieldsMap] = useState<Map<string, { name: string; field_type: string | null; options: any[] | null }>>(new Map());
 
   useEffect(() => {
     fetchData();
@@ -88,11 +88,11 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
       if (accountId) {
         const { data: fieldsData } = await supabase
           .from("custom_fields")
-          .select("id, name")
+          .select("id, name, field_type, options")
           .eq("account_id", accountId);
 
         if (fieldsData) {
-          setCustomFieldsMap(new Map(fieldsData.map(f => [f.id, f.name])));
+          setCustomFieldsMap(new Map(fieldsData.map(f => [f.id, { name: f.name, field_type: f.field_type, options: f.options as any[] | null }])));
         }
       }
 
@@ -157,12 +157,31 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
   };
 
   const getFieldLabel = (fieldId: string): string => {
-    return customFieldsMap.get(fieldId) || fieldId;
+    const field = customFieldsMap.get(fieldId);
+    return field?.name || fieldId;
   };
 
-  const formatValue = (value: any): string => {
+  const resolveOptionLabel = (options: any[], value: string): string => {
+    const opt = options.find((o: any) => o.value === value);
+    return opt?.label || value;
+  };
+
+  const formatValue = (value: any, fieldId?: string): string => {
     if (value === null || value === undefined) return "—";
     if (typeof value === "boolean") return value ? "Sim" : "Não";
+    
+    if (fieldId) {
+      const field = customFieldsMap.get(fieldId);
+      if (field?.options && Array.isArray(field.options) && field.options.length > 0) {
+        if (Array.isArray(value)) {
+          return value.map(v => resolveOptionLabel(field.options!, String(v))).join(", ");
+        }
+        if (typeof value === "string" && value.startsWith("opt_")) {
+          return resolveOptionLabel(field.options, value);
+        }
+      }
+    }
+
     if (Array.isArray(value)) return value.join(", ");
     if (typeof value === "object") return JSON.stringify(value);
     return String(value);
@@ -243,7 +262,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                         {getFieldLabel(fieldId)}
                       </span>
                       <span className="col-span-2">
-                        {formatValue(value)}
+                        {formatValue(value, fieldId)}
                       </span>
                     </div>
                   ))}
