@@ -3173,6 +3173,24 @@ export default function RoyZapp() {
     // Add groups (no phone deduplication needed)
     const finalCombined = [...combined, ...groups];
 
+    // Se não encontrou nenhum contato e a busca parece um telefone válido,
+    // oferecer opção de iniciar conversa com esse número
+    if (combined.length === 0 && groups.length === 0) {
+      const phoneDigits = trimmedSearch.replace(/\D/g, '');
+      if (phoneDigits.length >= 10) {
+        const formattedPhone = trimmedSearch.startsWith('+') 
+          ? trimmedSearch 
+          : `+${phoneDigits}`;
+        finalCombined.push({
+          id: `new-phone-${phoneDigits}`,
+          full_name: formattedPhone,
+          phone_e164: formattedPhone,
+          avatar_url: null,
+          type: 'conversation' as const,
+        });
+      }
+    }
+
     // Fetch common groups for the found contacts (only for non-group contacts)
     const phonesForGroupSearch = combined.map(c => c.phone_e164?.replace(/\D/g, '')).filter(Boolean) as string[];
     
