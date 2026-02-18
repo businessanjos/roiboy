@@ -24,6 +24,7 @@ export function WhatsAppDashboardPanel() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusZoom, setFocusZoom] = useState(100);
   const focusModeRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // ESC listener
   useEffect(() => {
@@ -32,6 +33,25 @@ export function WhatsAppDashboardPanel() {
     };
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
+  }, [isFocusMode]);
+
+  // Auto-fit zoom when entering focus mode
+  useEffect(() => {
+    if (!isFocusMode || !contentRef.current) return;
+    setFocusZoom(100);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!contentRef.current) return;
+        const headerHeight = 72;
+        const padding = 48;
+        const availableHeight = window.innerHeight - headerHeight - padding;
+        const contentHeight = contentRef.current.scrollHeight;
+        if (contentHeight > 0) {
+          const idealZoom = Math.floor((availableHeight / contentHeight) * 100);
+          setFocusZoom(Math.min(Math.max(idealZoom, 50), 200));
+        }
+      });
+    });
   }, [isFocusMode]);
 
   // Fullscreen change listener
@@ -203,7 +223,7 @@ export function WhatsAppDashboardPanel() {
               </div>
             </div>
 
-            <div style={{ zoom: focusZoom / 100 }}>
+            <div ref={contentRef} style={{ zoom: focusZoom / 100 }}>
             {/* Filters */}
             <InsightsFilterBar />
 
