@@ -1,27 +1,44 @@
 
 
-## Adicionar product_id ao output do get-lead-deals
+## Duas alteracoes necessarias
 
-O campo "Item da Venda" (que contem o product_id) nao e uma coluna da tabela `deals` -- ele e armazenado na tabela `deal_field_values` com o `field_id = '033b91fb-3add-4c96-aec9-567fefbd0fb2'`.
+### 1. Atualizar Edge Function `get-lead-deals`
 
-### Alteracao
+Atualmente o campo `product_id` retorna o valor bruto do campo personalizado (ex: `rykas_mentoring`). Precisa resolver esse valor para o UUID real do produto e incluir tambem o nome.
 
 **Arquivo**: `supabase/functions/get-lead-deals/index.ts`
 
-Apos buscar os deals, fazer uma segunda query para buscar os `deal_field_values` correspondentes ao campo "Item da Venda" para todos os deals retornados, e incluir o `product_id` (valor do campo `value_text`) no output de cada deal.
+**Logica**:
+1. Apos buscar os `deal_field_values`, obter a definicao do campo customizado (`custom_fields`) para mapear option keys para labels
+2. Buscar na tabela `products` pelo nome correspondente a label
+3. Retornar `product_id` como UUID real e `product_name` como nome do produto
 
-### Logica
+**Output por deal passara a ter**:
+- `product_id`: UUID real do produto (ex: `8d3e9bb6-054b-44b3-952f-5920e0ed8775`) ou null
+- `product_name`: nome do produto (ex: `Rykas Mentoring`) ou null
 
-```text
-1. Buscar deals normalmente (como ja faz)
-2. Extrair os IDs dos deals retornados
-3. Buscar em deal_field_values WHERE field_id = '033b91fb...' AND deal_id IN (...)
-4. Mapear cada deal ao seu product_id (value_text)
-5. Incluir "product_id" no JSON de cada deal
+### 2. Codigo JavaScript para o node "Filtrar" no n8n
+
+O codigo para o node Code do n8n que filtra e passa adiante somente o negocio mais recente cujo produto corresponda ao produto do contrato:
+
+```javascript
+// Recebe os deals do node anterior e o product_id do contrato
+const deals = $input.first().json.deals || [];
+const contractProductId = $('step3_find_product').first().json.product_id;
+
+// Filtra deals que tem o mesmo product_id do contrato
+const matching = deals.filter(d => d.product_id && d.product_id === contractProductId);
+
+// Ordena por created_at decrescente e pega o mais recente
+matching.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+if (matching.length > 0) {
+  return [{ json: matching[0] }];
+}
+
+// Se nenhum deal corresponder, retorna vazio
+return [];
 ```
 
-### Output esperado por deal
-
-Cada deal no array passara a incluir:
-- `product_id`: o UUID do produto (ou null se nao preenchido)
+> **Nota**: Ajuste `$('step3_find_product')` para o nome correto do node que contem o `product_id` do contrato. O codigo compara UUIDs diretamente, garantindo precisao maxima.
 
