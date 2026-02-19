@@ -1,79 +1,22 @@
 
-## Corrigir tela branca no painel compartilhado (2 erros de contexto)
+## Corrigir layout achatado no painel compartilhado
 
-### Problema identificado
+### Problema
 
-O erro no console e claro:
-```
-Error: useInsightsFilters must be used within InsightsFiltersProvider
-```
+O grid do painel compartilhado esta renderizando os visuais em uma coluna estreita e achatada por dois motivos:
 
-O componente `SharedVisualCard` renderiza `ConfigurableChart`, que por sua vez renderiza sub-componentes como `ConfigurableScorecard` e `ConfigurableGauge` (RevenueVsGoalGauge). Esses dois componentes chamam `useInsightsFilters()`, que exige o `InsightsFiltersProvider` na arvore de componentes. Na pagina compartilhada, esse provider nao existe, causando o crash e a tela branca.
+1. **Falta o `compactor`**: O `InsightsGrid` original usa `getCompactor(null, true, false)` para permitir posicionamento livre sem compactacao. O `SharedInsightsDashboard` nao tem essa configuracao, entao o `react-grid-layout` compacta todos os itens verticalmente, achatando o layout.
 
-### Cadeia de erro
+2. **Faltam estilos CSS**: O grid original tem estilos customizados para transicoes e handles de redimensionamento. Sem eles, o grid pode se comportar de forma inesperada.
 
-```text
-SharedVisualCard
-  -> ConfigurableChart
-    -> ConfigurableScorecard -> useInsightsFilters() -> CRASH
-    -> ConfigurableGauge (RevenueVsGoalGauge) -> useInsightsFilters() -> CRASH
-```
+### Alteracoes
 
-### Solucao
+**Arquivo: `src/pages/SharedInsightsDashboard.tsx`**
 
-Duas abordagens complementares para resolver de forma robusta:
+1. Importar `getCompactor` de `react-grid-layout/core`
+2. Criar a constante `freePositionCompactor` igual ao `InsightsGrid`
+3. Adicionar a prop `compactor={freePositionCompactor}` no `GridLayout`
+4. Adicionar estilos CSS inline para o grid (transicoes desabilitadas, placeholder oculto)
+5. Adicionar classe `shared-insights-grid` ao container para scoping dos estilos
 
-**1. Proteger o `SharedVisualCard` com Error Boundary**
-
-Envolver o conteudo do `SharedVisualCard` com um React Error Boundary para que, se qualquer sub-componente falhar, o card exiba uma mensagem amigavel em vez de derrubar toda a pagina.
-
-**2. Tornar `useInsightsFilters` seguro fora do provider**
-
-Modificar o hook `useInsightsFilters` para retornar valores padrao quando usado fora do provider, em vez de lancar um erro. Isso e a correcao principal:
-
-- No arquivo `src/hooks/useInsightsFilters.tsx`, alterar a funcao `useInsightsFilters` para verificar se o contexto existe e, caso nao exista, retornar um objeto com filtros padrao (datas do ano atual, sem filtros de usuario/estagio) em vez de lancar `throw new Error(...)`.
-
-### Detalhes tecnicos
-
-**Arquivo `src/hooks/useInsightsFilters.tsx`** (alteracao principal):
-
-Alterar de:
-```typescript
-export function useInsightsFilters() {
-  const ctx = useContext(InsightsFiltersContext);
-  if (!ctx) throw new Error("useInsightsFilters must be used within InsightsFiltersProvider");
-  return ctx;
-}
-```
-
-Para:
-```typescript
-const defaultFilters = {
-  startDate: new Date(new Date().getFullYear(), 0, 1),
-  endDate: new Date(new Date().getFullYear(), 11, 31),
-  userId: null,
-  stageId: null,
-};
-
-const defaultContext = {
-  filters: defaultFilters,
-  setFilters: () => {},
-  // ... outros campos com valores neutros
-};
-
-export function useInsightsFilters() {
-  const ctx = useContext(InsightsFiltersContext);
-  if (!ctx) return defaultContext;
-  return ctx;
-}
-```
-
-**Arquivo `src/components/insights/visuals/SharedVisualCard.tsx`**:
-
-Adicionar um Error Boundary simples ao redor do `ConfigurableChart` como camada extra de protecao, garantindo que visuais que falhem por qualquer motivo nao derrubem toda a pagina.
-
-### Resultado esperado
-
-- Visuais do tipo scorecard, gauge e demais renderizarao corretamente na pagina compartilhada usando filtros padrao (ano atual)
-- Se algum visual individual falhar, apenas aquele card mostrara mensagem de erro, sem derrubar a pagina inteira
-- Nenhuma alteracao necessaria na edge function (os dados ja estao sendo computados corretamente no servidor)
+Essas alteracoes alinham o comportamento do grid compartilhado com o grid original, garantindo que os visuais respeitem suas posicoes salvas e ocupem a tela inteira.
