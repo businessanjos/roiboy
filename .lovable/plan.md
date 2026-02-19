@@ -1,77 +1,79 @@
 
+## Corrigir tela branca no painel compartilhado (2 erros de contexto)
 
-## Corrigir tela branca no painel compartilhado
+### Problema identificado
 
-### Problema
+O erro no console e claro:
+```
+Error: useInsightsFilters must be used within InsightsFiltersProvider
+```
 
-Quando o acesso e aprovado, a pagina compartilhada tenta renderizar o componente `ConfigurableVisualCard`, que internamente chama `useCurrentUser()`. Como a pagina compartilhada nao tem autenticacao (nao tem `CurrentUserProvider`), o hook lanca um erro e toda a pagina quebra com tela branca.
+O componente `SharedVisualCard` renderiza `ConfigurableChart`, que por sua vez renderiza sub-componentes como `ConfigurableScorecard` e `ConfigurableGauge` (RevenueVsGoalGauge). Esses dois componentes chamam `useInsightsFilters()`, que exige o `InsightsFiltersProvider` na arvore de componentes. Na pagina compartilhada, esse provider nao existe, causando o crash e a tela branca.
 
-Alem disso, mesmo que o provider existisse, o visitante nao esta autenticado no sistema, entao as queries diretas ao banco seriam bloqueadas pelas politicas de seguranca (RLS).
+### Cadeia de erro
 
-### Causa raiz
-
-A cadeia de dependencias e:
 ```text
-SharedInsightsDashboard
-  -> InsightsGrid
-    -> ConfigurableVisualCard
-      -> useVisualData()
-        -> useCurrentUser()  // ERRO: sem CurrentUserProvider
+SharedVisualCard
+  -> ConfigurableChart
+    -> ConfigurableScorecard -> useInsightsFilters() -> CRASH
+    -> ConfigurableGauge (RevenueVsGoalGauge) -> useInsightsFilters() -> CRASH
 ```
 
 ### Solucao
 
-Criar um componente simplificado `SharedVisualCard` que recebe dados pre-computados da edge function em vez de buscar do banco. A edge function `shared-dashboard` sera atualizada para computar os dados de cada visual no servidor (usando service role, que ignora RLS).
+Duas abordagens complementares para resolver de forma robusta:
 
-### Alteracoes
+**1. Proteger o `SharedVisualCard` com Error Boundary**
 
-**1. Edge Function `supabase/functions/shared-dashboard/index.ts`**
+Envolver o conteudo do `SharedVisualCard` com um React Error Boundary para que, se qualquer sub-componente falhar, o card exiba uma mensagem amigavel em vez de derrubar toda a pagina.
 
-Quando o status e "approved", alem de retornar os visuais, tambem computar os dados de cada visual no servidor. Para cada visual, executar a query correspondente (deals, leads, etc.) usando o `supabaseAdmin` e retornar os resultados agregados junto com o visual:
+**2. Tornar `useInsightsFilters` seguro fora do provider**
 
-- Adicionar uma funcao `computeVisualData(supabaseAdmin, visual, accountId)` que replica a logica basica de agregacao do `useVisualData`
-- No response de "approved", incluir um campo `visualsData` com os dados pre-computados: `{ [visualId]: dataPoints[] }`
+Modificar o hook `useInsightsFilters` para retornar valores padrao quando usado fora do provider, em vez de lancar um erro. Isso e a correcao principal:
 
-**2. Novo componente `src/components/insights/visuals/SharedVisualCard.tsx`**
+- No arquivo `src/hooks/useInsightsFilters.tsx`, alterar a funcao `useInsightsFilters` para verificar se o contexto existe e, caso nao exista, retornar um objeto com filtros padrao (datas do ano atual, sem filtros de usuario/estagio) em vez de lancar `throw new Error(...)`.
 
-Criar um componente leve que:
-- Recebe o visual config E os dados pre-computados como props
-- Renderiza o `ConfigurableChart` diretamente com os dados (sem hooks de fetch)
-- Nao usa `useCurrentUser` nem `useVisualData`
-- E somente leitura (sem drilldown, sem settings)
+### Detalhes tecnicos
 
-**3. Atualizar `src/pages/SharedInsightsDashboard.tsx`**
+**Arquivo `src/hooks/useInsightsFilters.tsx`** (alteracao principal):
 
-- Armazenar `visualsData` retornado pela edge function
-- Renderizar um grid customizado com `SharedVisualCard` em vez de `InsightsGrid` + `ConfigurableVisualCard`
-- Usar `react-grid-layout` diretamente para posicionar os cards conforme o layout salvo
-
-### Detalhes tecnicos da edge function
-
-A funcao `computeVisualData` tera logica simplificada para os data sources principais:
-
+Alterar de:
 ```typescript
-async function computeVisualData(supabase, visual, accountId) {
-  const config = visual.config;
-  if (!config) return [];
-  
-  switch (config.dataSource) {
-    case 'deals': {
-      let query = supabase.from('deals').select('value, status, created_at, ...')
-        .eq('account_id', accountId);
-      // Apply statusFilter, date filters from config
-      // Aggregate by dimension
-      // Return [{name, value, count}]
-    }
-    case 'leads': { ... }
-    case 'products': { ... }
-    default: return [];
-  }
+export function useInsightsFilters() {
+  const ctx = useContext(InsightsFiltersContext);
+  if (!ctx) throw new Error("useInsightsFilters must be used within InsightsFiltersProvider");
+  return ctx;
 }
 ```
 
-Para a primeira versao, focaremos nos data sources `deals` (o mais usado), com agregacoes basicas (count, sum). Visuais com data sources nao suportados mostrarao uma mensagem "Dados indisponiveis na visualizacao compartilhada".
+Para:
+```typescript
+const defaultFilters = {
+  startDate: new Date(new Date().getFullYear(), 0, 1),
+  endDate: new Date(new Date().getFullYear(), 11, 31),
+  userId: null,
+  stageId: null,
+};
+
+const defaultContext = {
+  filters: defaultFilters,
+  setFilters: () => {},
+  // ... outros campos com valores neutros
+};
+
+export function useInsightsFilters() {
+  const ctx = useContext(InsightsFiltersContext);
+  if (!ctx) return defaultContext;
+  return ctx;
+}
+```
+
+**Arquivo `src/components/insights/visuals/SharedVisualCard.tsx`**:
+
+Adicionar um Error Boundary simples ao redor do `ConfigurableChart` como camada extra de protecao, garantindo que visuais que falhem por qualquer motivo nao derrubem toda a pagina.
 
 ### Resultado esperado
 
-Ao acessar o link compartilhado apos aprovacao, o visitante vera os graficos do painel com dados reais, renderizados a partir de dados computados no servidor, sem necessidade de autenticacao no cliente.
+- Visuais do tipo scorecard, gauge e demais renderizarao corretamente na pagina compartilhada usando filtros padrao (ano atual)
+- Se algum visual individual falhar, apenas aquele card mostrara mensagem de erro, sem derrubar a pagina inteira
+- Nenhuma alteracao necessaria na edge function (os dados ja estao sendo computados corretamente no servidor)
