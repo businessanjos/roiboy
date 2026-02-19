@@ -82,8 +82,8 @@ export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboard
   }, [open, fetchShare]);
 
   useEffect(() => {
-    if (shareId) fetchRequests();
-  }, [shareId, fetchRequests]);
+    if (open && shareId) fetchRequests();
+  }, [open, shareId, fetchRequests]);
 
   const createShareLink = async () => {
     if (!currentUser) return;
