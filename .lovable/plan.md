@@ -1,57 +1,38 @@
 
+## Criar Edge Function para anexar contrato ao historico do negocio
 
-## Correção: Respostas do formulário não aparecem
+### O que sera feito
 
-### Problema
+Criar uma nova Edge Function `attach-deal-file` que recebe um arquivo (contrato PDF) e o `deal_id` via **Form-Data**, faz upload no bucket `deal-activities` e insere uma entrada no historico de atividades do negocio.
 
-Ao abrir as respostas de um formulário, a seção "Respostas do Formulário" aparece vazia. Isso ocorre porque a função `viewResponses` (que abre o dialog de respostas) busca os dados das respostas, mas **não carrega os campos customizados** (`customFields`) do formulário. Sem os campos carregados, o componente `FormResponseViewer` não consegue mapear e exibir nenhuma resposta.
+### Edge Function: `supabase/functions/attach-deal-file/index.ts`
 
-### Causa raiz
+- **Metodo**: POST
+- **Autenticacao**: API Key (mesma logica dos outros endpoints, via `x-api-key` ou `Authorization`)
+- **Body**: Form-Data com:
+  - `deal_id` (string, UUID do negocio)
+  - `file` (binary, o arquivo PDF do contrato)
+  - `title` (string, opcional - titulo da nota, default: "Contrato anexado")
+- **Logica**:
+  1. Autentica a requisicao
+  2. Valida o `deal_id` e verifica que pertence a conta
+  3. Faz upload do arquivo no bucket `deal-activities` no path `{account_id}/deals/{deal_id}/{uuid}.{ext}`
+  4. Obtem a URL publica do arquivo
+  5. Insere registro em `deal_activities` com `type: "file"`, `file_url`, `file_name`, `file_size`
+  6. Retorna sucesso com o `activity_id`
 
-No arquivo `src/pages/Forms.tsx`, a função `viewResponses` (linha 948) faz:
-1. Busca as respostas do formulário na tabela `form_responses`
-2. Mas **não chama** `fetchCustomFields(form.id)` para carregar as definições dos campos
+### Configuracao no n8n (HTTP Request)
 
-O estado `customFields` fica vazio (ou com dados de outro formulário editado anteriormente), e o `FormResponseViewer` não tem como renderizar as respostas.
+Apos criada a funcao, configure o node "Anexa Contrato no Negocio" assim:
 
-### Solução
-
-Adicionar a chamada `await fetchCustomFields(form.id)` dentro da função `viewResponses`, logo antes ou junto da busca de respostas.
-
-### Alteração
-
-**Arquivo**: `src/pages/Forms.tsx`
-
-Na função `viewResponses` (linha ~948), adicionar `fetchCustomFields(form.id)` para que os campos sejam carregados junto com as respostas:
-
-```typescript
-const viewResponses = async (form: Form) => {
-  setSelectedForm(form);
-  setLoadingResponses(true);
-  setResponsesDialogOpen(true);
-  resetPreview();
-
-  try {
-    // Buscar campos E respostas em paralelo
-    const [_, responsesResult] = await Promise.all([
-      fetchCustomFields(form.id),
-      supabase
-        .from("form_responses")
-        .select(`*, clients:client_id (id, full_name, phone_e164, avatar_url)`)
-        .eq("form_id", form.id)
-        .order("submitted_at", { ascending: false }),
-    ]);
-
-    if (responsesResult.error) throw responsesResult.error;
-    setResponses(responsesResult.data || []);
-  } catch (error: any) {
-    console.error("Error fetching responses:", error);
-    toast.error("Erro ao carregar respostas");
-  } finally {
-    setLoadingResponses(false);
-  }
-};
-```
-
-Isso garante que os campos customizados estejam disponíveis quando o `FormResponseViewer` renderizar, permitindo exibir as respostas corretamente.
-
+- **Method**: `POST`
+- **URL**: `https://mtzoavtbtqflufyccern.supabase.co/functions/v1/attach-deal-file`
+- **Authentication**: None (usar header customizado)
+- **Send Headers**: Ativado
+  - `x-api-key`: sua chave de API
+- **Send Body**: Ativado
+- **Body Content Type**: `Form-Data`
+- **Body Fields**:
+  1. **Name**: `deal_id` | **Type**: Form Data | **Value**: `{{ $('Filtra os Negócios').item.json.id }}`
+  2. **Name**: `file` | **Type**: n8n Binary File | **Input Data Field Name**: `data`
+  3. **Name**: `title` | **Type**: Form Data | **Value**: `Contrato assinado` (opcional)
