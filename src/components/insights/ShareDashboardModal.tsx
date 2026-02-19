@@ -124,10 +124,21 @@ export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboard
     toast.success(newActive ? "Link reativado" : "Link desativado");
   };
 
-  const copyLink = () => {
+  const copyLink = async () => {
     if (!shareToken) return;
     const url = `${window.location.origin}/shared/insights/${shareToken}`;
-    navigator.clipboard.writeText(url);
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = url;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
     toast.success("Link copiado!");
@@ -183,7 +194,7 @@ export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboard
                 <div className="flex-1 bg-muted rounded-md px-3 py-2 text-sm font-mono truncate overflow-hidden min-w-0">
                   {shareUrl}
                 </div>
-                <Button variant="outline" size="icon" onClick={copyLink} className="shrink-0">
+                <Button variant="outline" size="icon" onClick={(e) => { e.stopPropagation(); copyLink(); }} className="shrink-0">
                   {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
