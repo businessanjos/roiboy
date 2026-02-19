@@ -1,28 +1,23 @@
 
 
-## Corrigir conteudo oculto no modal de Compartilhamento
+## Corrigir overflow no modal de Compartilhamento (solucao definitiva)
 
 ### Problema
 
-O `overflow-hidden` adicionado ao `DialogContent` esta cortando o botao de copiar e o texto "Nenhuma solicitacao de acesso ainda." na parte inferior do modal.
+A URL longa do link de compartilhamento continua vazando para fora do modal. O botao "Copiar" e o botao "Desativar" aparecem fora dos limites do modal. Tentativas anteriores de usar `overflow-hidden` no `DialogContent` cortaram conteudo vertical.
 
-### Causa
+### Causa raiz
 
-O `overflow-hidden` no `DialogContent` resolve o vazamento lateral mas tambem corta o conteudo que precisa de espaco vertical. O modal nao esta expandindo o suficiente para acomodar todo o conteudo.
+O `DialogContent` usa `max-w-lg` mas os filhos flex nao estao respeitando esse limite. O `truncate` no texto da URL nao funciona porque o container flex pai nao tem uma largura explicita limitada. Precisamos restringir o overflow apenas no eixo horizontal, sem afetar o eixo vertical.
 
 ### Correcao
 
 **Arquivo**: `src/components/insights/ShareDashboardModal.tsx`
 
-1. **Remover `overflow-hidden` do `DialogContent`** - essa abordagem e muito agressiva e corta conteudo legitimo.
+1. **Adicionar `overflow-x-hidden` ao `DialogContent`** (em vez de `overflow-hidden` que corta verticalmente tambem):
+   - Linha 157: `sm:max-w-lg` -> `sm:max-w-lg overflow-x-hidden`
 
-2. **Adicionar `overflow-hidden` apenas no container do link** (a div flex que contem a URL e o botao copiar) em vez do DialogContent inteiro. O container flex da URL ja tem `min-w-0` e `truncate`, entao basta garantir que o wrapper nao ultrapasse o limite.
+Isso resolve o vazamento horizontal da URL e dos botoes sem cortar conteudo que precisa de espaco vertical (como "Nenhuma solicitacao de acesso ainda" e o botao de copiar).
 
-3. **Usar `max-w-full` no container flex da URL** para garantir que ele respeite o limite do pai sem afetar o resto do modal.
-
-Alteracoes especificas:
-- Linha 157: `sm:max-w-lg overflow-hidden` -> `sm:max-w-lg`
-- Linha 182: `flex items-center gap-2 min-w-0` -> `flex items-center gap-2 min-w-0 overflow-hidden`
-
-Isso mantem o truncamento da URL sem cortar o botao de copiar nem o conteudo abaixo.
+Essa e uma unica alteracao CSS que corrige ambos os problemas simultaneamente.
 
