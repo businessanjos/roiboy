@@ -58,16 +58,21 @@ export default function SharedInsightsDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
-  const [gridWidth, setGridWidth] = useState(1200);
+  const [gridWidth, setGridWidth] = useState(0);
 
   useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) setGridWidth(containerRef.current.offsetWidth);
-    };
-    updateWidth();
-    window.addEventListener("resize", updateWidth);
-    return () => window.removeEventListener("resize", updateWidth);
-  }, [state]);
+    const el = containerRef.current;
+    if (!el) return;
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const w = entry.contentRect.width;
+        if (w > 0) setGridWidth(w);
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const callEdge = useCallback(
     async (method: string, path: string, body?: any) => {
@@ -242,46 +247,48 @@ export default function SharedInsightsDashboard() {
           </div>
         </div>
 
-        {visuals.length > 0 ? (
-          <div ref={containerRef} className="shared-insights-grid">
-            <GridLayout
-              className="layout"
-              layout={gridLayout}
-              width={gridWidth}
-              gridConfig={{
-                cols: COLS,
-                rowHeight: ROW_HEIGHT,
-                margin: [0, 0] as [number, number],
-                containerPadding: [0, 0] as [number, number],
-              }}
-              dragConfig={{ enabled: false }}
-              resizeConfig={{ enabled: false }}
-              compactor={freePositionCompactor}
-            >
-              {visuals.map((visual) => (
-                <div key={visual.id} className="h-full">
-                  <SharedVisualCard
-                    visual={visual}
-                    data={visualsData[visual.id] || []}
-                  />
-                </div>
-              ))}
-            </GridLayout>
-            <style>{`
-              .shared-insights-grid .react-grid-item {
-                transition: none;
-              }
-              .shared-insights-grid .react-grid-placeholder {
-                display: none !important;
-              }
-            `}</style>
-          </div>
-        ) : (
-          <div className="text-center py-16 text-muted-foreground">
-            <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Este painel não possui visuais configurados.</p>
-          </div>
-        )}
+        <div ref={containerRef} className="shared-insights-grid">
+          {visuals.length > 0 && gridWidth > 0 ? (
+            <>
+              <GridLayout
+                className="layout"
+                layout={gridLayout}
+                width={gridWidth}
+                gridConfig={{
+                  cols: COLS,
+                  rowHeight: ROW_HEIGHT,
+                  margin: [0, 0] as [number, number],
+                  containerPadding: [0, 0] as [number, number],
+                }}
+                dragConfig={{ enabled: false }}
+                resizeConfig={{ enabled: false }}
+                compactor={freePositionCompactor}
+              >
+                {visuals.map((visual) => (
+                  <div key={visual.id} className="h-full">
+                    <SharedVisualCard
+                      visual={visual}
+                      data={visualsData[visual.id] || []}
+                    />
+                  </div>
+                ))}
+              </GridLayout>
+              <style>{`
+                .shared-insights-grid .react-grid-item {
+                  transition: none;
+                }
+                .shared-insights-grid .react-grid-placeholder {
+                  display: none !important;
+                }
+              `}</style>
+            </>
+          ) : visuals.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Este painel não possui visuais configurados.</p>
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );
