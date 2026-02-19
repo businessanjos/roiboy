@@ -1,26 +1,51 @@
 
-## Correcao definitiva do overflow no modal de Compartilhamento
 
-### Problema recorrente
+## Corrigir botao de copiar link no modal de Compartilhamento
 
-Cada tentativa anterior falhou por causa de uma regra CSS: quando voce define `overflow-x: hidden` em um elemento, o CSS automaticamente muda `overflow-y` de `visible` para `auto`. Isso explica porque:
+### Problema
 
-- `overflow-hidden` no DialogContent: cortava conteudo vertical (botao copiar, "Nenhuma solicitacao")
-- `overflow-x-hidden` no DialogContent: mesmo efeito, pois o DialogContent tem altura restrita pelo posicionamento fixo
-- Sem overflow: a URL vaza para fora do modal
+O `navigator.clipboard.writeText()` pode falhar silenciosamente em alguns contextos (iframe, modal com foco no overlay, contextos nao-HTTPS). A funcao `copyLink` nao trata erros e nao tem fallback.
 
 ### Solucao
 
-Aplicar `overflow-x-hidden` no div `space-y-4` **interno** (nao no DialogContent). Esse div nao tem altura fixa, entao o `overflow-y: auto` implicito nao corta nada -- ele simplesmente cresce com o conteudo.
-
-### Alteracoes
-
 **Arquivo**: `src/components/insights/ShareDashboardModal.tsx`
 
-1. **Linha 165**: Adicionar `overflow-x-hidden` ao wrapper `space-y-4`:
-   - `<div className="space-y-4">` para `<div className="space-y-4 overflow-x-hidden">`
+1. **Adicionar fallback para clipboard** na funcao `copyLink` (linhas 127-134):
+   - Envolver `navigator.clipboard.writeText()` em try/catch
+   - Adicionar fallback usando `document.execCommand('copy')` com um textarea temporario
+   - Adicionar `e.stopPropagation()` no onClick do botao para evitar que o clique propague para o Dialog e interfira
 
-2. **Linha 182**: Remover `w-full overflow-hidden` do container da URL (o pai ja cuida do overflow):
-   - `flex items-center gap-2 min-w-0 w-full overflow-hidden` para `flex items-center gap-2 min-w-0`
+2. **Atualizar o onClick do botao copiar** (linha 186):
+   - Adicionar `e.stopPropagation()` para prevenir propagacao de evento
 
-Resultado: a URL sera truncada corretamente, e o botao copiar, badge "Ativo", botao "Desativar" e texto "Nenhuma solicitacao de acesso ainda" ficarao todos visiveis dentro do modal.
+### Detalhes tecnicos
+
+Funcao `copyLink` atualizada:
+```typescript
+const copyLink = async () => {
+  if (!shareToken) return;
+  const url = `${window.location.origin}/shared/insights/${shareToken}`;
+  try {
+    await navigator.clipboard.writeText(url);
+  } catch {
+    // Fallback for contexts where clipboard API fails
+    const textarea = document.createElement("textarea");
+    textarea.value = url;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand("copy");
+    document.body.removeChild(textarea);
+  }
+  setCopied(true);
+  setTimeout(() => setCopied(false), 2000);
+  toast.success("Link copiado!");
+};
+```
+
+Botao atualizado:
+```tsx
+<Button variant="outline" size="icon" onClick={(e) => { e.stopPropagation(); copyLink(); }} className="shrink-0">
+```
+
