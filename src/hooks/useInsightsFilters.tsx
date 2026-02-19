@@ -165,10 +165,24 @@ export function InsightsFiltersProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const fallbackFilters: InsightsFilters = getDefaultFilters();
+
+const fallbackContext: InsightsFiltersContextType = {
+  filters: fallbackFilters,
+  setFilters: () => {},
+  setPreset: () => {},
+  setDateRange: () => {},
+  setUserId: () => {},
+  setStageId: () => {},
+  setProductId: () => {},
+  getDateRangeLabel: () => "Este Ano",
+  resetFilters: () => {},
+};
+
 export function useInsightsFilters() {
   const context = useContext(InsightsFiltersContext);
   if (!context) {
-    throw new Error("useInsightsFilters must be used within InsightsFiltersProvider");
+    return fallbackContext;
   }
   return context;
 }

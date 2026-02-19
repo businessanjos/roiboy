@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, AlertTriangle } from "lucide-react";
 import { ConfigurableChart } from "./ConfigurableChart";
 import { VisualConfig, ChartType } from "../visual-builder/types";
 import { evaluateFormula } from "@/lib/formula-evaluator";
@@ -22,9 +22,39 @@ interface SharedVisualCardProps {
   data: AggregatedDataPoint[];
 }
 
+// Simple error boundary for individual cards
+class CardErrorBoundary extends React.Component<
+  { children: React.ReactNode; title: string },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Card className="h-full flex flex-col">
+          <CardHeader className="pb-2 flex-shrink-0">
+            <CardTitle className="text-base truncate">{this.props.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+            <AlertTriangle className="h-10 w-10 mb-2 opacity-40 text-yellow-500" />
+            <p className="text-sm">Não foi possível exibir este visual</p>
+          </CardContent>
+        </Card>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export function SharedVisualCard({ visual, data }: SharedVisualCardProps) {
   const config = visual.config as VisualConfig | null;
   const chartType = (visual.chart_type || 'bar') as ChartType;
+  const title = visual.title || "Visual";
 
   const processedData = useMemo(() => {
     if (!data) return [];
@@ -45,7 +75,7 @@ export function SharedVisualCard({ visual, data }: SharedVisualCardProps) {
     return (
       <Card className="h-full flex flex-col">
         <CardHeader className="pb-2 flex-shrink-0">
-          <CardTitle className="text-base">{visual.title || "Visual"}</CardTitle>
+          <CardTitle className="text-base">{title}</CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
           <BarChart3 className="h-12 w-12 mb-2 opacity-50" />
@@ -59,7 +89,7 @@ export function SharedVisualCard({ visual, data }: SharedVisualCardProps) {
     return (
       <Card className="h-full flex flex-col">
         <CardHeader className="pb-2 flex-shrink-0">
-          <CardTitle className="text-base truncate">{visual.title || "Visual"}</CardTitle>
+          <CardTitle className="text-base truncate">{title}</CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
           <BarChart3 className="h-10 w-10 mb-2 opacity-40" />
@@ -70,21 +100,21 @@ export function SharedVisualCard({ visual, data }: SharedVisualCardProps) {
   }
 
   return (
-    <Card className="flex flex-col h-full">
-      <CardHeader className="pb-2 flex-shrink-0">
-        <CardTitle className="text-base truncate">
-          {visual.title || "Visual"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 min-h-0 overflow-auto">
-        <ConfigurableChart
-          type={chartType}
-          data={processedData}
-          formatting={config.formatting}
-          appearance={config.appearance}
-          visualConfig={config}
-        />
-      </CardContent>
-    </Card>
+    <CardErrorBoundary title={title}>
+      <Card className="flex flex-col h-full">
+        <CardHeader className="pb-2 flex-shrink-0">
+          <CardTitle className="text-base truncate">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 min-h-0 overflow-auto">
+          <ConfigurableChart
+            type={chartType}
+            data={processedData}
+            formatting={config.formatting}
+            appearance={config.appearance}
+            visualConfig={config}
+          />
+        </CardContent>
+      </Card>
+    </CardErrorBoundary>
   );
 }
