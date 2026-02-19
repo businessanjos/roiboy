@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Minus, User, Instagram, MapPin } from "lucide-react";
+import { Check, X, Minus, User, Instagram, MapPin, ExternalLink } from "lucide-react";
 import { CustomField, FieldOption } from "./CustomFieldsManager";
 import { formatLocalDate } from "@/lib/dateUtils";
 
@@ -166,6 +166,21 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
   if (field.field_type === "text") {
     if (!value) {
       return <span className={`text-muted-foreground ${textSize}`}>—</span>;
+    }
+    const isUrl = /^https?:\/\//i.test(value);
+    if (isUrl) {
+      return (
+        <a
+          href={value}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className={`inline-flex items-center gap-1 ${padding} rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-colors font-medium ${textSize} max-w-full min-w-0 overflow-hidden`}
+        >
+          <ExternalLink className="h-3 w-3 flex-shrink-0" />
+          <span className="truncate">{value.replace(/^https?:\/\//, '')}</span>
+        </a>
+      );
     }
     return (
       <span className={`${textSize} break-words whitespace-normal`}>
