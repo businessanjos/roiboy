@@ -162,7 +162,7 @@ export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboard
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-x-hidden">
           <p className="text-sm text-muted-foreground">
             Gere um link para compartilhar o painel <strong>"{dashboardName}"</strong> em modo somente leitura. O acesso requer sua aprovação.
           </p>
@@ -179,7 +179,7 @@ export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboard
           ) : (
             <>
               {/* Link display */}
-              <div className="flex items-center gap-2 min-w-0 w-full overflow-hidden">
+              <div className="flex items-center gap-2 min-w-0">
                 <div className="flex-1 bg-muted rounded-md px-3 py-2 text-sm font-mono truncate overflow-hidden min-w-0">
                   {shareUrl}
                 </div>
