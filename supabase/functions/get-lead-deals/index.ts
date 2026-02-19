@@ -60,6 +60,23 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Fetch product_id from deal_field_values (Item da Venda field)
+  const ITEM_VENDA_FIELD_ID = '033b91fb-3add-4c96-aec9-567fefbd0fb2';
+  const dealIds = (deals || []).map((d: any) => d.id);
+  
+  let productMap: Record<string, string | null> = {};
+  if (dealIds.length > 0) {
+    const { data: fieldValues } = await supabase
+      .from("deal_field_values")
+      .select("deal_id, value_text")
+      .eq("field_id", ITEM_VENDA_FIELD_ID)
+      .in("deal_id", dealIds);
+    
+    (fieldValues || []).forEach((fv: any) => {
+      productMap[fv.deal_id] = fv.value_text || null;
+    });
+  }
+
   const formattedDeals = (deals || []).map((deal: any) => ({
     id: deal.id,
     title: deal.title,
@@ -74,6 +91,7 @@ Deno.serve(async (req) => {
     responsible_user_name: deal.users?.name || null,
     created_at: deal.created_at,
     tags: deal.tags || [],
+    product_id: productMap[deal.id] || null,
   }));
 
   if (auth.apiKeyId) {
