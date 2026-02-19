@@ -5409,6 +5409,58 @@ export type Database = {
           },
         ]
       }
+      insights_dashboard_shares: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string
+          dashboard_id: string
+          id: string
+          is_active: boolean
+          share_token: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by: string
+          dashboard_id: string
+          id?: string
+          is_active?: boolean
+          share_token: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string
+          dashboard_id?: string
+          id?: string
+          is_active?: boolean
+          share_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insights_dashboard_shares_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insights_dashboard_shares_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insights_dashboard_shares_dashboard_id_fkey"
+            columns: ["dashboard_id"]
+            isOneToOne: false
+            referencedRelation: "insights_dashboards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insights_dashboards: {
         Row: {
           account_id: string
@@ -5507,6 +5559,51 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      insights_share_access_requests: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          share_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          share_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          share_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insights_share_access_requests_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insights_share_access_requests_share_id_fkey"
+            columns: ["share_id"]
+            isOneToOne: false
+            referencedRelation: "insights_dashboard_shares"
             referencedColumns: ["id"]
           },
         ]

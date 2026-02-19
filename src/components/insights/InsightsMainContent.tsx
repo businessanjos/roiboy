@@ -1,11 +1,13 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { BarChart3, Plus, Monitor, Maximize2, Minimize2, X } from "lucide-react";
+import { BarChart3, Plus, Monitor, Maximize2, Minimize2, X, Share2 } from "lucide-react";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { InsightsFilterBar } from "./InsightsFilterBar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddVisualModal } from "./AddVisualModal";
+import { ShareDashboardModal } from "./ShareDashboardModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
 
@@ -24,7 +26,10 @@ export function InsightsMainContent() {
     updateVisual,
   } = useInsightsDashboards();
 
+  const { currentUser } = useCurrentUser();
+
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusZoom, setFocusZoom] = useState(100);
@@ -94,6 +99,14 @@ export function InsightsMainContent() {
     const name = activeDashboard?.name?.toLowerCase() || '';
     return name.includes('conversas') || name.includes('whatsapp');
   }, [activeDashboard?.name]);
+
+  // Check if user can share (Admin or Gestor)
+  const canShare = useMemo(() => {
+    if (!currentUser) return false;
+    const role = currentUser.role;
+    const teamRole = currentUser.team_role_name;
+    return role === 'admin' || currentUser.is_also_admin || teamRole === 'Admin' || teamRole === 'Gestor';
+  }, [currentUser]);
 
   const hasVisuals = visuals && visuals.length > 0;
 
@@ -205,6 +218,14 @@ export function InsightsMainContent() {
     <div className="flex-1 overflow-auto">
       {focusModeOverlay}
       <AddVisualModal open={isBuilderOpen} onOpenChange={setIsBuilderOpen} />
+      {activeDashboard && (
+        <ShareDashboardModal
+          open={isShareOpen}
+          onOpenChange={setIsShareOpen}
+          dashboardId={activeDashboard.id}
+          dashboardName={activeDashboard.name}
+        />
+      )}
       <div className="p-4 md:p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -213,6 +234,12 @@ export function InsightsMainContent() {
             <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
           </div>
           <div className="flex items-center gap-2">
+            {canShare && (
+              <Button variant="outline" size="sm" onClick={() => setIsShareOpen(true)}>
+                <Share2 className="h-4 w-4 mr-2" />
+                Compartilhar
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
               <Monitor className="h-4 w-4 mr-2" />
               Modo Foco
