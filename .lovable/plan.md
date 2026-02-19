@@ -1,22 +1,33 @@
 
-## Corrigir layout achatado no painel compartilhado
+
+## Corrigir layout comprimido no painel compartilhado
 
 ### Problema
 
-O grid do painel compartilhado esta renderizando os visuais em uma coluna estreita e achatada por dois motivos:
+O grid do painel compartilhado renderiza todos os visuais em uma coluna estreita (~200px) em vez de ocupar a tela inteira. A causa raiz e a medicao manual de largura usando `offsetWidth` dentro de um `useEffect` com dependencia `[state]`. Quando o estado muda para "approved", a medicao ocorre antes do navegador completar o layout, resultando em um valor de largura incorreto. Alem disso, o `GridLayout` e renderizado no mesmo ciclo, criando um problema de timing.
 
-1. **Falta o `compactor`**: O `InsightsGrid` original usa `getCompactor(null, true, false)` para permitir posicionamento livre sem compactacao. O `SharedInsightsDashboard` nao tem essa configuracao, entao o `react-grid-layout` compacta todos os itens verticalmente, achatando o layout.
+### Solucao
 
-2. **Faltam estilos CSS**: O grid original tem estilos customizados para transicoes e handles de redimensionamento. Sem eles, o grid pode se comportar de forma inesperada.
+Substituir a medicao manual de largura (`useEffect` + `offsetWidth`) pelo hook `useContainerWidth` exportado pelo proprio `react-grid-layout`. Este hook usa `ResizeObserver` internamente, que e mais confiavel e reativo. Ele tambem fornece uma flag `mounted` que indica quando a primeira medicao foi feita, permitindo evitar renderizar o grid com largura incorreta.
 
 ### Alteracoes
 
 **Arquivo: `src/pages/SharedInsightsDashboard.tsx`**
 
-1. Importar `getCompactor` de `react-grid-layout/core`
-2. Criar a constante `freePositionCompactor` igual ao `InsightsGrid`
-3. Adicionar a prop `compactor={freePositionCompactor}` no `GridLayout`
-4. Adicionar estilos CSS inline para o grid (transicoes desabilitadas, placeholder oculto)
-5. Adicionar classe `shared-insights-grid` ao container para scoping dos estilos
+1. Importar `useContainerWidth` de `react-grid-layout`
+2. Remover o `useState` de `gridWidth` e o `useRef` de `containerRef`
+3. Remover o `useEffect` de medicao de largura
+4. Usar o hook `useContainerWidth`:
+   ```
+   const { width: gridWidth, containerRef, mounted } = useContainerWidth({ initialWidth: 1200 });
+   ```
+5. Condicionar a renderizacao do `GridLayout` a `mounted` ser `true`:
+   ```
+   {mounted && <GridLayout width={gridWidth} ... />}
+   ```
 
-Essas alteracoes alinham o comportamento do grid compartilhado com o grid original, garantindo que os visuais respeitem suas posicoes salvas e ocupem a tela inteira.
+Essa e a abordagem recomendada pela documentacao do react-grid-layout v2, usa `ResizeObserver` que funciona de forma reativa sem depender de timing de `useEffect`, e garante que o grid so renderize apos a largura real do container ser medida.
+
+### Resultado esperado
+
+O grid do painel compartilhado ocupara toda a largura disponivel da tela, com os visuais posicionados exatamente como no painel original do sistema.
