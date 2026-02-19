@@ -6,8 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, Loader2, Mail, Clock, ShieldCheck, ShieldX } from "lucide-react";
 import { SharedVisualCard } from "@/components/insights/visuals/SharedVisualCard";
 import GridLayout from "react-grid-layout";
+import { getCompactor } from "react-grid-layout/core";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+
+const freePositionCompactor = getCompactor(null, true, false);
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -240,7 +243,7 @@ export default function SharedInsightsDashboard() {
         </div>
 
         {visuals.length > 0 ? (
-          <div ref={containerRef}>
+          <div ref={containerRef} className="shared-insights-grid">
             <GridLayout
               className="layout"
               layout={gridLayout}
@@ -253,6 +256,7 @@ export default function SharedInsightsDashboard() {
               }}
               dragConfig={{ enabled: false }}
               resizeConfig={{ enabled: false }}
+              compactor={freePositionCompactor}
             >
               {visuals.map((visual) => (
                 <div key={visual.id} className="h-full">
@@ -263,6 +267,14 @@ export default function SharedInsightsDashboard() {
                 </div>
               ))}
             </GridLayout>
+            <style>{`
+              .shared-insights-grid .react-grid-item {
+                transition: none;
+              }
+              .shared-insights-grid .react-grid-placeholder {
+                display: none !important;
+              }
+            `}</style>
           </div>
         ) : (
           <div className="text-center py-16 text-muted-foreground">
