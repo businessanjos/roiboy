@@ -1,33 +1,27 @@
 
 
-## Criar Edge Function para renomear arquivo do negócio
+## Salvar link do contrato no campo personalizado
 
-### Problema
+### O que sera feito
 
-A API REST do banco requer um JWT válido + a chave anon no header `apikey`. A chave `roy_sk_...` é reconhecida apenas pelas Edge Functions customizadas, por isso retorna "No API key found in request!".
+Estender a Edge Function `update-deal-activity` para aceitar campos opcionais `deal_id` e `contract_url`. Quando presentes, a funcao fara um upsert na tabela `deal_field_values` para o campo "Link do contrato/invoice" (ID: `9b9acf49-d403-40ca-aea5-ff00d8c6f905`).
 
-### Solução
+Isso permite que o mesmo endpoint que renomeia o arquivo tambem salve o link no campo personalizado, ou que um node separado faca apenas o salvamento do link.
 
-Criar uma Edge Function `update-deal-activity` que aceita a autenticação `roy_sk_` (igual aos outros endpoints) e atualiza o `file_name` da atividade.
+### Alteracao
 
-### Edge Function: `supabase/functions/update-deal-activity/index.ts`
+**Arquivo**: `supabase/functions/update-deal-activity/index.ts`
 
-- **Método**: PATCH
-- **Autenticação**: `x-api-key` ou `Authorization: Bearer roy_sk_...`
-- **Body JSON**:
-  - `activity_id` (UUID da atividade retornada pelo node anterior)
-  - `file_name` (novo nome do arquivo)
-- **Lógica**:
-  1. Autentica via `authenticateRequestWithLegacy`
-  2. Valida `activity_id` e `file_name`
-  3. Atualiza o registro em `deal_activities` onde `id = activity_id` e `account_id` corresponde
-  4. Retorna sucesso
+- Aceitar campos opcionais no body: `deal_id` (UUID) e `contract_url` (string)
+- Se `deal_id` e `contract_url` estiverem presentes, fazer upsert em `deal_field_values`:
+  - `deal_id`: o ID do negocio
+  - `field_id`: `9b9acf49-d403-40ca-aea5-ff00d8c6f905`
+  - `account_id`: da autenticacao
+  - `value_text`: a URL do contrato
+- Os campos `activity_id`/`file_name` passam a ser opcionais (pode fazer so rename, so link, ou ambos)
+- Retornar o resultado incluindo `contract_url_saved: true` quando aplicavel
 
-### Configuração do config.toml
-
-Adicionar entrada para a nova função com `verify_jwt = false`.
-
-### Configuração no n8n (Atualiza Nome do Contrato Anexado)
+### Configuracao no n8n (Insere o Link do Contrato no Campo Personalizado)
 
 - **Method**: `PATCH`
 - **URL**: `https://mtzoavtbtqflufyccern.supabase.co/functions/v1/update-deal-activity`
@@ -35,9 +29,12 @@ Adicionar entrada para a nova função com `verify_jwt = false`.
   - `x-api-key`: sua chave de API
 - **Body Content Type**: `JSON`
 - **JSON**:
-```json
+
+```text
 {
-  "activity_id": "{{ $('Anexa Contrato no Negocio').item.json.activity_id }}",
-  "file_name": "{{ $node['Webhook1'].json.body.signers[0].name + ' - ' + $node['Webhook1'].json.body.name + '.pdf' }}"
+  "deal_id": "{{ $('Filtra os Negócios').item.json.id }}",
+  "contract_url": "{{ $('Anexa Contrato no Negocio').item.json.file_url }}"
 }
 ```
+
+Nota: `file_url` e retornado pela funcao `attach-deal-file` e contem a URL publica do arquivo anexado. Se o campo tiver outro nome no output do node, ajuste conforme necessario.
