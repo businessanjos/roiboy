@@ -55,6 +55,7 @@ const WhatsAppGroups = lazy(() => import("./pages/WhatsAppGroups"));
 const PublicMembersBook = lazy(() => import("./pages/PublicMembersBook"));
 const AIAgent = lazy(() => import("./pages/AIAgent"));
 const RoyZapp = lazy(() => import("./pages/RoyZapp"));
+const SharedInsightsDashboard = lazy(() => import("./pages/SharedInsightsDashboard"));
 const MentorAgenda = lazy(() => import("./pages/MentorAgenda"));
 const BillingPortal = lazy(() => import("./pages/BillingPortal"));
 const Sectors = lazy(() => import("./pages/Sectors"));
@@ -138,6 +139,7 @@ const App = () => (
                           <Route path="/privacidade" element={<PrivacyPolicy />} />
                           <Route path="/download" element={<Download />} />
                           <Route path="/members" element={<PublicMembersBook />} />
+                          <Route path="/shared/insights/:token" element={<SharedInsightsDashboard />} />
                           <Route element={<AppLayout />}>
                             <Route path="/setores" element={<Sectors />} />
                             <Route path="/dashboard" element={<Dashboard />} />
