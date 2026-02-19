@@ -72,7 +72,7 @@ export default function SharedInsightsDashboard() {
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [state]);
 
   const callEdge = useCallback(
     async (method: string, path: string, body?: any) => {
