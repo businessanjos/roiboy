@@ -1,44 +1,57 @@
 
 
-## Duas alteracoes necessarias
+## Correção: Respostas do formulário não aparecem
 
-### 1. Atualizar Edge Function `get-lead-deals`
+### Problema
 
-Atualmente o campo `product_id` retorna o valor bruto do campo personalizado (ex: `rykas_mentoring`). Precisa resolver esse valor para o UUID real do produto e incluir tambem o nome.
+Ao abrir as respostas de um formulário, a seção "Respostas do Formulário" aparece vazia. Isso ocorre porque a função `viewResponses` (que abre o dialog de respostas) busca os dados das respostas, mas **não carrega os campos customizados** (`customFields`) do formulário. Sem os campos carregados, o componente `FormResponseViewer` não consegue mapear e exibir nenhuma resposta.
 
-**Arquivo**: `supabase/functions/get-lead-deals/index.ts`
+### Causa raiz
 
-**Logica**:
-1. Apos buscar os `deal_field_values`, obter a definicao do campo customizado (`custom_fields`) para mapear option keys para labels
-2. Buscar na tabela `products` pelo nome correspondente a label
-3. Retornar `product_id` como UUID real e `product_name` como nome do produto
+No arquivo `src/pages/Forms.tsx`, a função `viewResponses` (linha 948) faz:
+1. Busca as respostas do formulário na tabela `form_responses`
+2. Mas **não chama** `fetchCustomFields(form.id)` para carregar as definições dos campos
 
-**Output por deal passara a ter**:
-- `product_id`: UUID real do produto (ex: `8d3e9bb6-054b-44b3-952f-5920e0ed8775`) ou null
-- `product_name`: nome do produto (ex: `Rykas Mentoring`) ou null
+O estado `customFields` fica vazio (ou com dados de outro formulário editado anteriormente), e o `FormResponseViewer` não tem como renderizar as respostas.
 
-### 2. Codigo JavaScript para o node "Filtrar" no n8n
+### Solução
 
-O codigo para o node Code do n8n que filtra e passa adiante somente o negocio mais recente cujo produto corresponda ao produto do contrato:
+Adicionar a chamada `await fetchCustomFields(form.id)` dentro da função `viewResponses`, logo antes ou junto da busca de respostas.
 
-```javascript
-// Recebe os deals do node anterior e o product_id do contrato
-const deals = $input.first().json.deals || [];
-const contractProductId = $('step3_find_product').first().json.product_id;
+### Alteração
 
-// Filtra deals que tem o mesmo product_id do contrato
-const matching = deals.filter(d => d.product_id && d.product_id === contractProductId);
+**Arquivo**: `src/pages/Forms.tsx`
 
-// Ordena por created_at decrescente e pega o mais recente
-matching.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+Na função `viewResponses` (linha ~948), adicionar `fetchCustomFields(form.id)` para que os campos sejam carregados junto com as respostas:
 
-if (matching.length > 0) {
-  return [{ json: matching[0] }];
-}
+```typescript
+const viewResponses = async (form: Form) => {
+  setSelectedForm(form);
+  setLoadingResponses(true);
+  setResponsesDialogOpen(true);
+  resetPreview();
 
-// Se nenhum deal corresponder, retorna vazio
-return [];
+  try {
+    // Buscar campos E respostas em paralelo
+    const [_, responsesResult] = await Promise.all([
+      fetchCustomFields(form.id),
+      supabase
+        .from("form_responses")
+        .select(`*, clients:client_id (id, full_name, phone_e164, avatar_url)`)
+        .eq("form_id", form.id)
+        .order("submitted_at", { ascending: false }),
+    ]);
+
+    if (responsesResult.error) throw responsesResult.error;
+    setResponses(responsesResult.data || []);
+  } catch (error: any) {
+    console.error("Error fetching responses:", error);
+    toast.error("Erro ao carregar respostas");
+  } finally {
+    setLoadingResponses(false);
+  }
+};
 ```
 
-> **Nota**: Ajuste `$('step3_find_product')` para o nome correto do node que contem o `product_id` do contrato. O codigo compara UUIDs diretamente, garantindo precisao maxima.
+Isso garante que os campos customizados estejam disponíveis quando o `FormResponseViewer` renderizar, permitindo exibir as respostas corretamente.
 
