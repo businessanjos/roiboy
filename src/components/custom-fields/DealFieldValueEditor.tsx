@@ -6,7 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
-import { Check, X, User, Instagram, MapPin, Pencil } from "lucide-react";
+import { Check, X, User, Instagram, MapPin, Pencil, ExternalLink, Trash2 } from "lucide-react";
 import { LocationAutocomplete, LocationValue } from "./LocationAutocomplete";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -348,11 +348,34 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
 
   // Text field
   if (field.field_type === "text") {
+    const isUrl = currentValue && /^https?:\/\//i.test(currentValue);
+    
     return (
       <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
-          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left max-w-32">
-            <FieldValueBadge field={field} value={currentValue} />
+          <button className="cursor-pointer hover:opacity-80 transition-opacity text-left max-w-32" onClick={(e) => {
+            // If it's a URL and the click was on the link, don't open popover
+            if (isUrl && (e.target as HTMLElement).closest('a')) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }}>
+            <div className="inline-flex items-center gap-1 max-w-full">
+              <FieldValueBadge field={field} value={currentValue} />
+              {isUrl && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    saveValue(null);
+                  }}
+                  className="flex-shrink-0 p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                  title="Remover link"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-64 p-3" align="start">
@@ -369,6 +392,11 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
               <Button size="sm" variant="outline" onClick={() => setOpen(false)}>
                 Cancelar
               </Button>
+              {currentValue && (
+                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => saveValue(null)} disabled={saving}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
+              )}
             </div>
           </div>
         </PopoverContent>
