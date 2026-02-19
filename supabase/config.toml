@@ -185,3 +185,6 @@ verify_jwt = false
 
 [functions.attach-deal-file]
 verify_jwt = false
+
+[functions.update-deal-activity]
+verify_jwt = false
