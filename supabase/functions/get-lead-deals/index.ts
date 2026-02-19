@@ -60,20 +60,99 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Fetch product_id from deal_field_values (Item da Venda field)
+  // Fetch product_id from deal_field_values (Item da Venda field) and resolve to real product UUID + name
   const ITEM_VENDA_FIELD_ID = '033b91fb-3add-4c96-aec9-567fefbd0fb2';
   const dealIds = (deals || []).map((d: any) => d.id);
   
-  let productMap: Record<string, string | null> = {};
+  let productMap: Record<string, { id: string | null; name: string | null }> = {};
   if (dealIds.length > 0) {
     const { data: fieldValues } = await supabase
       .from("deal_field_values")
       .select("deal_id, value_text")
       .eq("field_id", ITEM_VENDA_FIELD_ID)
       .in("deal_id", dealIds);
-    
+
+    // Collect unique raw values
+    const rawValues = new Set<string>();
     (fieldValues || []).forEach((fv: any) => {
-      productMap[fv.deal_id] = fv.value_text || null;
+      if (fv.value_text) rawValues.add(fv.value_text);
+    });
+
+    // Resolve raw values to product UUIDs and names
+    const UUID_PRODUCT_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const resolvedProducts: Record<string, { id: string; name: string }> = {};
+
+    // Split into direct UUIDs vs option keys
+    const directUuids = [...rawValues].filter(v => UUID_PRODUCT_REGEX.test(v));
+    const optionKeys = [...rawValues].filter(v => !UUID_PRODUCT_REGEX.test(v));
+
+    // Resolve direct UUIDs
+    if (directUuids.length > 0) {
+      const { data: products } = await supabase
+        .from("products")
+        .select("id, name")
+        .in("id", directUuids)
+        .eq("is_active", true);
+      (products || []).forEach((p: any) => {
+        resolvedProducts[p.id] = { id: p.id, name: p.name };
+      });
+    }
+
+    // Resolve option keys via custom_fields options -> product name match
+    if (optionKeys.length > 0) {
+      const { data: fieldDef } = await supabase
+        .from("custom_fields")
+        .select("options")
+        .eq("id", ITEM_VENDA_FIELD_ID)
+        .maybeSingle();
+
+      const options = (fieldDef?.options || []) as Array<{ value: string; label: string }>;
+      const keyToLabel: Record<string, string> = {};
+      options.forEach((o: any) => { keyToLabel[o.value] = o.label; });
+
+      // Get labels for our keys, clean "Ren. " prefix
+      const labelsToSearch: string[] = [];
+      const keyToCleanLabel: Record<string, string> = {};
+      for (const key of optionKeys) {
+        const label = keyToLabel[key];
+        if (label) {
+          const clean = label.replace(/^Ren\.?\s*/i, '').trim();
+          keyToCleanLabel[key] = clean;
+          labelsToSearch.push(clean);
+          if (clean !== label) labelsToSearch.push(label);
+        }
+      }
+
+      if (labelsToSearch.length > 0) {
+        const { data: products } = await supabase
+          .from("products")
+          .select("id, name")
+          .eq("is_active", true);
+
+        const productsByName: Record<string, { id: string; name: string }> = {};
+        (products || []).forEach((p: any) => {
+          productsByName[p.name.toLowerCase().trim()] = { id: p.id, name: p.name };
+        });
+
+        for (const key of optionKeys) {
+          const cleanLabel = keyToCleanLabel[key];
+          if (!cleanLabel) continue;
+          const match = productsByName[cleanLabel.toLowerCase().trim()];
+          if (match) {
+            resolvedProducts[key] = match;
+          }
+        }
+      }
+    }
+
+    // Build final map: deal_id -> { id, name }
+    (fieldValues || []).forEach((fv: any) => {
+      const raw = fv.value_text;
+      if (raw && resolvedProducts[raw]) {
+        productMap[fv.deal_id] = resolvedProducts[raw];
+      } else {
+        productMap[fv.deal_id] = { id: null, name: null };
+      }
     });
   }
 
@@ -91,7 +170,8 @@ Deno.serve(async (req) => {
     responsible_user_name: deal.users?.name || null,
     created_at: deal.created_at,
     tags: deal.tags || [],
-    product_id: productMap[deal.id] || null,
+    product_id: productMap[deal.id]?.id || null,
+    product_name: productMap[deal.id]?.name || null,
   }));
 
   if (auth.apiKeyId) {
