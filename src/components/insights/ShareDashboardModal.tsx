@@ -154,7 +154,7 @@ export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboard
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg overflow-x-hidden">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Link2 className="h-5 w-5" />
@@ -179,7 +179,7 @@ export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboard
           ) : (
             <>
               {/* Link display */}
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 w-full overflow-hidden">
                 <div className="flex-1 bg-muted rounded-md px-3 py-2 text-sm font-mono truncate overflow-hidden min-w-0">
                   {shareUrl}
                 </div>
