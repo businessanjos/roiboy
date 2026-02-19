@@ -952,17 +952,20 @@ export default function Forms() {
     resetPreview(); // Clear preview state when opening a new form
 
     try {
-      const { data, error } = await supabase
-        .from("form_responses")
-        .select(`
-          *,
-          clients:client_id (id, full_name, phone_e164, avatar_url)
-        `)
-        .eq("form_id", form.id)
-        .order("submitted_at", { ascending: false });
+      const [_, responsesResult] = await Promise.all([
+        fetchCustomFields(form.id),
+        supabase
+          .from("form_responses")
+          .select(`
+            *,
+            clients:client_id (id, full_name, phone_e164, avatar_url)
+          `)
+          .eq("form_id", form.id)
+          .order("submitted_at", { ascending: false }),
+      ]);
 
-      if (error) throw error;
-      setResponses(data || []);
+      if (responsesResult.error) throw responsesResult.error;
+      setResponses(responsesResult.data || []);
     } catch (error: any) {
       console.error("Error fetching responses:", error);
       toast.error("Erro ao carregar respostas");
