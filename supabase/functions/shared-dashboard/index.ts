@@ -6,6 +6,214 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+interface AggregatedDataPoint {
+  name: string;
+  value: number;
+  count?: number;
+  color?: string;
+}
+
+function formatDateGroup(dateStr: string, grouping: string, displayFormat: string): string {
+  const d = new Date(dateStr);
+  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  const fullMonths = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+  
+  if (grouping === 'year') return `${d.getFullYear()}`;
+  
+  if (grouping === 'month' || grouping === 'week') {
+    switch (displayFormat) {
+      case 'short': return months[d.getMonth()];
+      case 'full': return `${fullMonths[d.getMonth()]} ${d.getFullYear()}`;
+      case 'monthYear':
+      default:
+        return `${months[d.getMonth()]}/${String(d.getFullYear()).slice(-2)}`;
+    }
+  }
+  
+  // day
+  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+async function computeVisualData(
+  supabase: any,
+  visual: any,
+  accountId: string
+): Promise<AggregatedDataPoint[]> {
+  const config = visual.config;
+  if (!config) return [];
+
+  const { dataSource, measure, dimension, statusFilter, appearance } = config;
+  const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
+
+  try {
+    switch (dataSource) {
+      case 'deals':
+        return await computeDealsData(supabase, accountId, measure, dimension, statusFilter, dateDisplayFormat);
+      case 'leads':
+        return await computeLeadsData(supabase, accountId, measure, dimension, dateDisplayFormat);
+      case 'products':
+        return await computeProductsData(supabase, accountId, measure, dimension, dateDisplayFormat);
+      default:
+        return [];
+    }
+  } catch (err) {
+    console.error(`Error computing visual data for ${visual.id}:`, err);
+    return [];
+  }
+}
+
+async function computeDealsData(
+  supabase: any,
+  accountId: string,
+  measure: any,
+  dimension: any,
+  statusFilter: string | undefined,
+  dateDisplayFormat: string
+): Promise<AggregatedDataPoint[]> {
+  let query = supabase
+    .from('deals')
+    .select('id, value, status, source, lost_reason, created_at, won_at, lost_at, deal_stages!deals_stage_id_fkey(name), users!deals_responsible_user_id_fkey(name)')
+    .eq('account_id', accountId);
+
+  if (statusFilter) {
+    query = query.eq('status', statusFilter);
+  }
+
+  // Filter out nulls for date-specific status filters
+  if (statusFilter === 'won') query = query.not('won_at', 'is', null);
+  if (statusFilter === 'lost') query = query.not('lost_at', 'is', null);
+
+  const { data, error } = await query.limit(5000);
+  if (error || !data) return [];
+
+  return aggregateData(data, measure, dimension, dateDisplayFormat, statusFilter);
+}
+
+async function computeLeadsData(
+  supabase: any,
+  accountId: string,
+  measure: any,
+  dimension: any,
+  dateDisplayFormat: string
+): Promise<AggregatedDataPoint[]> {
+  let query = supabase
+    .from('leads')
+    .select('id, status, source, canal, created_at')
+    .eq('account_id', accountId);
+
+  const { data, error } = await query.limit(5000);
+  if (error || !data) return [];
+
+  return aggregateData(data, measure, dimension, dateDisplayFormat);
+}
+
+async function computeProductsData(
+  supabase: any,
+  accountId: string,
+  measure: any,
+  dimension: any,
+  dateDisplayFormat: string
+): Promise<AggregatedDataPoint[]> {
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, name, price, billing_period, is_active, created_at')
+    .eq('account_id', accountId)
+    .limit(5000);
+
+  if (error || !data) return [];
+
+  return aggregateData(data, measure, dimension, dateDisplayFormat);
+}
+
+function aggregateData(
+  data: any[],
+  measure: any,
+  dimension: any,
+  dateDisplayFormat: string,
+  statusFilter?: string
+): AggregatedDataPoint[] {
+  // Scorecard (global total)
+  if (dimension.field === '_total') {
+    let value = 0;
+    if (measure.aggregation === 'count') {
+      value = data.length;
+    } else if (measure.aggregation === 'sum') {
+      value = data.reduce((sum: number, item: any) => sum + (Number(item[measure.field]) || 0), 0);
+    } else if (measure.aggregation === 'avg') {
+      const vals = data.map((item: any) => Number(item[measure.field]) || 0);
+      value = vals.length > 0 ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : 0;
+    }
+    return [{ name: 'Total', value, count: data.length }];
+  }
+
+  // Determine the date field for grouping
+  let dateField = 'created_at';
+  if (dimension.type === 'date' && dimension.field) {
+    dateField = dimension.field;
+  } else if (statusFilter === 'won') {
+    dateField = 'won_at';
+  } else if (statusFilter === 'lost') {
+    dateField = 'lost_at';
+  }
+
+  // Group data
+  const groups = new Map<string, { sum: number; count: number }>();
+
+  for (const item of data) {
+    let groupKey: string;
+
+    if (dimension.type === 'date') {
+      const dateVal = item[dateField];
+      if (!dateVal) continue;
+      groupKey = formatDateGroup(dateVal, dimension.dateGrouping || 'month', dateDisplayFormat);
+    } else {
+      // Text dimension
+      switch (dimension.field) {
+        case 'stage_name':
+          groupKey = (item.deal_stages as any)?.name || 'Sem Etapa';
+          break;
+        case 'responsible_name':
+          groupKey = (item.users as any)?.name || 'Sem Responsável';
+          break;
+        case 'is_active':
+          groupKey = item.is_active ? 'Ativo' : 'Inativo';
+          break;
+        default:
+          groupKey = item[dimension.field] || 'Não informado';
+      }
+    }
+
+    if (!groups.has(groupKey)) groups.set(groupKey, { sum: 0, count: 0 });
+    const g = groups.get(groupKey)!;
+    g.sum += Number(item[measure.field]) || 0;
+    g.count++;
+  }
+
+  const result: AggregatedDataPoint[] = [];
+  for (const [name, { sum, count }] of groups) {
+    let value: number;
+    if (measure.aggregation === 'count') {
+      value = count;
+    } else if (measure.aggregation === 'sum') {
+      value = sum;
+    } else if (measure.aggregation === 'avg') {
+      value = count > 0 ? sum / count : 0;
+    } else {
+      value = count;
+    }
+    result.push({ name, value, count });
+  }
+
+  // Sort
+  if (dimension.type === 'date') {
+    result.sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    result.sort((a, b) => b.value - a.value);
+  }
+
+  return result;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -163,7 +371,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Approved — fetch dashboard + visuals
+      // Approved — fetch dashboard + visuals + compute data
       const { data: dashboard } = await supabaseAdmin
         .from("insights_dashboards")
         .select("*")
@@ -176,8 +384,16 @@ Deno.serve(async (req) => {
         .eq("dashboard_id", share.dashboard_id)
         .order("created_at");
 
+      // Pre-compute data for each visual server-side
+      const visualsData: Record<string, AggregatedDataPoint[]> = {};
+      if (visuals) {
+        for (const visual of visuals) {
+          visualsData[visual.id] = await computeVisualData(supabaseAdmin, visual, share.account_id);
+        }
+      }
+
       return new Response(
-        JSON.stringify({ status: "approved", dashboard, visuals }),
+        JSON.stringify({ status: "approved", dashboard, visuals, visualsData }),
         {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -190,6 +406,7 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
+    console.error("shared-dashboard error:", err);
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
