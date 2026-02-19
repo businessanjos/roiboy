@@ -1,40 +1,31 @@
 
 
-## Salvar link do contrato no campo personalizado
+## Tornar o campo "Link do contrato/invoice" clicavel e removivel
 
 ### O que sera feito
 
-Estender a Edge Function `update-deal-activity` para aceitar campos opcionais `deal_id` e `contract_url`. Quando presentes, a funcao fara um upsert na tabela `deal_field_values` para o campo "Link do contrato/invoice" (ID: `9b9acf49-d403-40ca-aea5-ff00d8c6f905`).
+Atualizar a exibicao de campos de texto (`text`) que contenham URLs para que sejam renderizados como links clicaveis, e adicionar um botao para limpar o valor do campo.
 
-Isso permite que o mesmo endpoint que renomeia o arquivo tambem salve o link no campo personalizado, ou que um node separado faca apenas o salvamento do link.
+### Alteracoes
 
-### Alteracao
+**1. `src/components/custom-fields/FieldValueBadge.tsx`**
 
-**Arquivo**: `supabase/functions/update-deal-activity/index.ts`
+No bloco do campo `text` (linhas ~142-150), detectar se o valor e uma URL (comecando com `http://` ou `https://`). Se for:
+- Renderizar como um link `<a>` com `target="_blank"` e icone de link externo
+- Estilizar com cor primaria e truncamento para URLs longas
+- Manter o comportamento atual para textos que nao sao URLs
 
-- Aceitar campos opcionais no body: `deal_id` (UUID) e `contract_url` (string)
-- Se `deal_id` e `contract_url` estiverem presentes, fazer upsert em `deal_field_values`:
-  - `deal_id`: o ID do negocio
-  - `field_id`: `9b9acf49-d403-40ca-aea5-ff00d8c6f905`
-  - `account_id`: da autenticacao
-  - `value_text`: a URL do contrato
-- Os campos `activity_id`/`file_name` passam a ser opcionais (pode fazer so rename, so link, ou ambos)
-- Retornar o resultado incluindo `contract_url_saved: true` quando aplicavel
+**2. `src/components/custom-fields/DealFieldValueEditor.tsx`**
 
-### Configuracao no n8n (Insere o Link do Contrato no Campo Personalizado)
+No bloco do campo `text` (linhas ~349-377), adicionar:
+- Um botao "Limpar" ao lado dos botoes "Salvar" e "Cancelar" que salva `null` como valor
+- Quando o valor atual for uma URL, exibir o link clicavel com um botao X para remover diretamente (sem precisar abrir o popover)
 
-- **Method**: `PATCH`
-- **URL**: `https://mtzoavtbtqflufyccern.supabase.co/functions/v1/update-deal-activity`
-- **Headers**:
-  - `x-api-key`: sua chave de API
-- **Body Content Type**: `JSON`
-- **JSON**:
+### Detalhes tecnicos
 
-```text
-{
-  "deal_id": "{{ $('Filtra os Negócios').item.json.id }}",
-  "contract_url": "{{ $('Anexa Contrato no Negocio').item.json.file_url }}"
-}
-```
+- A deteccao de URL usara um regex simples: `/^https?:\/\//i`
+- O link tera `rel="noopener noreferrer"` e `target="_blank"` por seguranca
+- O botao de remover chamara `saveValue(null)` para limpar o campo
+- O `e.stopPropagation()` sera usado nos links e botoes para evitar abrir o popover ao clicar
+- A URL sera truncada visualmente mas o link completo sera preservado no `href`
 
-Nota: `file_url` e retornado pela funcao `attach-deal-file` e contem a URL publica do arquivo anexado. Se o campo tiver outro nome no output do node, ajuste conforme necessario.
