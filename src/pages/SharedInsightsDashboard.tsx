@@ -153,7 +153,7 @@ export default function SharedInsightsDashboard() {
 
   if (state === "loading") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center w-full text-left">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -161,7 +161,7 @@ export default function SharedInsightsDashboard() {
 
   if (state === "error") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 w-full text-left">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <ShieldX className="h-12 w-12 text-destructive mx-auto mb-4" />
@@ -175,7 +175,7 @@ export default function SharedInsightsDashboard() {
 
   if (state === "email_form") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 w-full text-left">
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
             <div className="mx-auto w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
@@ -205,7 +205,7 @@ export default function SharedInsightsDashboard() {
 
   if (state === "pending") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 w-full text-left">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <Clock className="h-12 w-12 text-amber-500 mx-auto mb-4 animate-pulse" />
@@ -220,7 +220,7 @@ export default function SharedInsightsDashboard() {
 
   if (state === "rejected") {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 w-full text-left">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
             <ShieldX className="h-12 w-12 text-destructive mx-auto mb-4" />
@@ -234,7 +234,7 @@ export default function SharedInsightsDashboard() {
 
   // Approved — show dashboard with pre-computed data
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background w-full text-left">
       <div className="p-4 md:p-6 space-y-6">
         <div className="flex items-center gap-3 border-b pb-4">
           <BarChart3 className="h-6 w-6 text-primary" />
