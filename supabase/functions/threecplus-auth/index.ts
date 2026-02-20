@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     }
 
     // Validate token against 3C Plus API
-    const apiResponse = await fetch("https://app.3c.fluxoti.com/api/v1/user/me", {
+    const apiResponse = await fetch("https://app.3c.fluxoti.com/api/v1/me", {
       headers: {
         Authorization: `Bearer ${api_token.trim()}`,
         Accept: "application/json",
