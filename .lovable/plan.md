@@ -1,57 +1,80 @@
 
+## Corrigir bugs no fluxo de solicitacao de acesso
 
-## Melhorias no fluxo de solicitacoes de acesso
+### Problemas identificados
 
-### Resumo das mudancas
+Tres bugs interligados impedem o funcionamento correto:
 
-Tres melhorias no sistema de solicitacoes de acesso ao painel compartilhado:
+**Bug 1: Cleanup so roda no POST, mas visitante recusado nunca faz POST**
+- Quando o visitante abre a pagina, o frontend faz um GET com o email salvo no localStorage (linha 198)
+- O GET retorna `status: "rejected"` e o frontend mostra a tela "Acesso Recusado" permanentemente
+- O cleanup de 30 minutos so roda no handler POST (linha 428), entao a entrada recusada nunca e removida
 
-1. **Limpeza automatica a cada 30 minutos** - Solicitacoes pendentes e recusadas com mais de 30 minutos sao removidas automaticamente. Acessos aprovados permanecem.
-2. **Rate limit de 5 minutos por email** - Uma pessoa so pode solicitar acesso novamente apos 5 minutos da ultima solicitacao.
-3. **Contagem de tentativas** - Quando alguem solicita novamente (apos 5 min), a entrada existente e atualizada com um contador, sem duplicar na lista.
+**Bug 2: Tela de "Acesso Recusado" nao permite re-solicitar**
+- A tela rejeitada (linhas 344-355) nao tem nenhum botao para tentar novamente
+- O email fica salvo no localStorage, entao ao recarregar a pagina, o fluxo automatico repete o GET e mostra "Recusado" novamente
+- O usuario fica permanentemente bloqueado
 
-### Alteracoes tecnicas
+**Bug 3: Erros do POST (429 rate limit) sao ignorados silenciosamente**
+- `callEdge` retorna `res.json()` sem verificar o status HTTP (linha 162)
+- Em `handleSubmit`, o codigo checa `data.status` (linhas 226-230), mas respostas de erro tem `data.error` e nao `data.status`
+- Erros como "Aguarde 5 minutos" nunca sao exibidos ao usuario
 
-#### 1. Migracao de banco de dados
+### Solucao
 
-Adicionar coluna `request_count` (default 1) a tabela `insights_share_access_requests`:
+#### 1. Edge Function `supabase/functions/shared-dashboard/index.ts` - Cleanup tambem no GET
 
-```sql
-ALTER TABLE public.insights_share_access_requests
-  ADD COLUMN request_count integer NOT NULL DEFAULT 1;
+Adicionar a mesma logica de cleanup no handler GET, antes de verificar o status da solicitacao. Quando o GET encontrar um registro recusado ou pendente com mais de 30 minutos, deleta-lo e retornar `status: "not_found"` para que o frontend mostre o formulario novamente.
+
+```typescript
+// No GET handler, apos encontrar o share e antes de checar access:
+// Cleanup expired requests
+await supabaseAdmin
+  .from("insights_share_access_requests")
+  .delete()
+  .eq("share_id", share.id)
+  .in("status", ["pending", "rejected"])
+  .lt("created_at", new Date(Date.now() - 30 * 60 * 1000).toISOString());
 ```
 
-Remover a constraint UNIQUE(share_id, email) nao e necessario pois o comportamento sera de upsert (atualizar a linha existente ao inves de criar nova).
+#### 2. Frontend `SharedInsightsDashboard.tsx` - Botao "Tentar novamente" na tela rejeitada
 
-#### 2. Edge Function `shared-dashboard/index.ts` (POST handler)
+Adicionar um botao na tela de "Acesso Recusado" que limpa o email do localStorage e volta para o formulario:
 
-Antes de processar uma nova solicitacao:
-
-**Cleanup**: Deletar solicitacoes pendentes ou recusadas com `created_at` mais antigo que 30 minutos:
+```typescript
+if (state === "rejected") {
+  return (
+    // ... card existente ...
+    <Button variant="outline" onClick={() => {
+      localStorage.removeItem(`shared-dash-email-${token}`);
+      setState("email_form");
+    }}>
+      Solicitar novamente
+    </Button>
+  );
+}
 ```
-DELETE FROM insights_share_access_requests
-WHERE share_id = ? AND status IN ('pending', 'rejected')
-AND created_at < now() - interval '30 minutes'
+
+#### 3. Frontend `SharedInsightsDashboard.tsx` - Tratar erros do POST
+
+Em `handleSubmit`, verificar se a resposta contem `data.error` e exibir a mensagem ao usuario (incluindo o rate limit de 429):
+
+```typescript
+const data = await callEdge("POST", "", { share_token: token, email: email.trim() });
+if (data.error) {
+  setErrorMsg(data.error);
+  // Manter no formulario para o usuario tentar novamente
+  return;
+}
 ```
 
-**Rate limit**: Se ja existe uma solicitacao deste email para este share com `created_at` nos ultimos 5 minutos, retornar erro 429 com mensagem "Aguarde 5 minutos para solicitar novamente".
+Adicionar exibicao do `errorMsg` no formulario de email.
 
-**Re-solicitacao**: Se existe uma solicitacao antiga (> 5 min) pendente ou recusada, ao inves de criar nova, atualizar a existente: incrementar `request_count`, resetar `created_at` para `now()`, resetar `status` para `pending`. Se o status era `approved`, apenas retornar o status atual sem alterar.
+### Fluxo corrigido
 
-#### 3. Frontend `ShareDashboardModal.tsx`
-
-**fetchRequests**: Incluir `request_count` no select.
-
-**Interface AccessRequest**: Adicionar campo `request_count: number`.
-
-**Renderizacao**: Ao lado do email, se `request_count > 1`, exibir um texto sutil como "(3x)" indicando quantas vezes solicitou.
-
-### Fluxo esperado
-
-1. Visitante acessa link e insere email -> cria solicitacao (count=1)
-2. Visitante tenta novamente em 2 min -> recebe mensagem "Aguarde 5 minutos"
-3. Visitante tenta apos 5 min -> atualiza a mesma linha (count=2, created_at=now, status=pending)
-4. Dono do painel ve: "joao@email.com (2x) - Aguardando"
-5. Apos 30 min sem acao, solicitacoes pendentes/recusadas sao limpas automaticamente
-6. Solicitacoes aprovadas nunca sao limpas
-
+1. Visitante acessa link -> GET verifica status
+2. Se rejeitado ha mais de 30 min -> cleanup deleta a entrada -> retorna "not_found" -> mostra formulario
+3. Se rejeitado ha menos de 30 min -> mostra tela "Recusado" com botao "Solicitar novamente"
+4. Visitante clica "Solicitar novamente" -> volta ao formulario
+5. Visitante envia email (POST) -> cleanup roda -> rate limit checado -> se < 5 min, erro exibido no formulario
+6. Apos 5 min -> re-solicitacao aceita, contador incrementado
