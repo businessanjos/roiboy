@@ -191,3 +191,6 @@ verify_jwt = false
 
 [functions.threecplus-auth]
 verify_jwt = false
+
+[functions.threecplus-call]
+verify_jwt = false
