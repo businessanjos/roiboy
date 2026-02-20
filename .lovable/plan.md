@@ -1,36 +1,57 @@
 
 
-## Adicionar botao "Revogar" para acessos aprovados
+## Melhorias no fluxo de solicitacoes de acesso
 
-### Alteracoes
+### Resumo das mudancas
 
-#### 1. Frontend `src/components/insights/ShareDashboardModal.tsx`
+Tres melhorias no sistema de solicitacoes de acesso ao painel compartilhado:
 
-Na secao onde o status e "approved" (linha 269-271), substituir o Badge isolado por um grupo contendo o Badge + um botao sutil de revogar:
+1. **Limpeza automatica a cada 30 minutos** - Solicitacoes pendentes e recusadas com mais de 30 minutos sao removidas automaticamente. Acessos aprovados permanecem.
+2. **Rate limit de 5 minutos por email** - Uma pessoa so pode solicitar acesso novamente apos 5 minutos da ultima solicitacao.
+3. **Contagem de tentativas** - Quando alguem solicita novamente (apos 5 min), a entrada existente e atualizada com um contador, sem duplicar na lista.
 
-- Adicionar um pequeno botao `ghost` com icone `XCircle` ao lado do Badge "Liberado"
-- Ao clicar, chamar `handleAction(req.id, "reject")` -- a mesma funcao ja existente que atualiza o status via edge function `manage-share-access`
-- O botao tera estilo discreto (opacidade reduzida, aparecendo mais visivel no hover)
-- Mostrar spinner enquanto processa
+### Alteracoes tecnicas
 
-#### 2. Edge Function `supabase/functions/manage-share-access/index.ts`
+#### 1. Migracao de banco de dados
 
-Nenhuma alteracao necessaria. A funcao ja suporta a action `"reject"` para qualquer request independente do status atual, pois faz um simples `UPDATE ... SET status = 'rejected'`. Revogar um acesso aprovado e equivalente a rejeita-lo.
+Adicionar coluna `request_count` (default 1) a tabela `insights_share_access_requests`:
 
-### Resultado visual
-
-O item aprovado passara de:
-
-```
-joao.ferrari1982@gmail.com    [Liberado]
-Liberado
+```sql
+ALTER TABLE public.insights_share_access_requests
+  ADD COLUMN request_count integer NOT NULL DEFAULT 1;
 ```
 
-Para:
+Remover a constraint UNIQUE(share_id, email) nao e necessario pois o comportamento sera de upsert (atualizar a linha existente ao inves de criar nova).
 
+#### 2. Edge Function `shared-dashboard/index.ts` (POST handler)
+
+Antes de processar uma nova solicitacao:
+
+**Cleanup**: Deletar solicitacoes pendentes ou recusadas com `created_at` mais antigo que 30 minutos:
 ```
-joao.ferrari1982@gmail.com    [Liberado] (x)
-Liberado
+DELETE FROM insights_share_access_requests
+WHERE share_id = ? AND status IN ('pending', 'rejected')
+AND created_at < now() - interval '30 minutes'
 ```
 
-Onde `(x)` e um botao sutil que aparece com mais destaque no hover.
+**Rate limit**: Se ja existe uma solicitacao deste email para este share com `created_at` nos ultimos 5 minutos, retornar erro 429 com mensagem "Aguarde 5 minutos para solicitar novamente".
+
+**Re-solicitacao**: Se existe uma solicitacao antiga (> 5 min) pendente ou recusada, ao inves de criar nova, atualizar a existente: incrementar `request_count`, resetar `created_at` para `now()`, resetar `status` para `pending`. Se o status era `approved`, apenas retornar o status atual sem alterar.
+
+#### 3. Frontend `ShareDashboardModal.tsx`
+
+**fetchRequests**: Incluir `request_count` no select.
+
+**Interface AccessRequest**: Adicionar campo `request_count: number`.
+
+**Renderizacao**: Ao lado do email, se `request_count > 1`, exibir um texto sutil como "(3x)" indicando quantas vezes solicitou.
+
+### Fluxo esperado
+
+1. Visitante acessa link e insere email -> cria solicitacao (count=1)
+2. Visitante tenta novamente em 2 min -> recebe mensagem "Aguarde 5 minutos"
+3. Visitante tenta apos 5 min -> atualiza a mesma linha (count=2, created_at=now, status=pending)
+4. Dono do painel ve: "joao@email.com (2x) - Aguardando"
+5. Apos 30 min sem acao, solicitacoes pendentes/recusadas sao limpas automaticamente
+6. Solicitacoes aprovadas nunca sao limpas
+
