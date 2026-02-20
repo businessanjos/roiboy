@@ -34,6 +34,125 @@ function formatDateGroup(dateStr: string, grouping: string, displayFormat: strin
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+interface StackedResult {
+  data: Array<{ name: string; [key: string]: string | number }>;
+  seriesKeys: string[];
+}
+
+async function computeStackedVisualData(
+  supabase: any,
+  visual: any,
+  accountId: string
+): Promise<StackedResult> {
+  const config = visual.config;
+  if (!config) return { data: [], seriesKeys: [] };
+
+  const { measure, dimension, statusFilter } = config;
+  const dateGrouping = dimension?.dateGrouping || 'day';
+
+  try {
+    let query = supabase
+      .from('deals')
+      .select('id, value, status, created_at, won_at, lost_at, users!deals_responsible_user_id_fkey(name)')
+      .eq('account_id', accountId);
+
+    if (statusFilter) query = query.eq('status', statusFilter);
+
+    let dateField = 'created_at';
+    if (dimension?.field && dimension.field !== 'created_at') {
+      dateField = dimension.field;
+    } else if (statusFilter === 'won') {
+      dateField = 'won_at';
+    } else if (statusFilter === 'lost') {
+      dateField = 'lost_at';
+    }
+
+    if (dateField === 'won_at') query = query.not('won_at', 'is', null);
+    if (dateField === 'lost_at') query = query.not('lost_at', 'is', null);
+
+    const { data: deals, error } = await query.limit(5000);
+    if (error || !deals) return { data: [], seriesKeys: [] };
+
+    // Group by period key and seller
+    const periodMap = new Map<string, Map<string, number>>();
+    const allSellers = new Set<string>();
+
+    for (const deal of deals) {
+      const dateStr = (deal as any)[dateField];
+      if (!dateStr) continue;
+      const d = new Date(dateStr);
+
+      let periodKey: string;
+      switch (dateGrouping) {
+        case 'year': periodKey = `${d.getFullYear()}`; break;
+        case 'month': periodKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; break;
+        case 'week': {
+          const day = d.getDay();
+          const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+          const weekStart = new Date(d);
+          weekStart.setDate(diff);
+          periodKey = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
+          break;
+        }
+        default: periodKey = String(d.getDate()).padStart(2, '0');
+      }
+
+      const sellerName = (deal.users as any)?.name || 'Sem Responsável';
+      if (sellerName !== 'Sem Responsável') allSellers.add(sellerName);
+
+      if (!periodMap.has(periodKey)) periodMap.set(periodKey, new Map());
+      const sellerMap = periodMap.get(periodKey)!;
+      const currentVal = sellerMap.get(sellerName) || 0;
+      if (measure?.aggregation === 'count') {
+        sellerMap.set(sellerName, currentVal + 1);
+      } else {
+        sellerMap.set(sellerName, currentVal + (Number((deal as any).value) || 0));
+      }
+    }
+
+    const seriesKeys = Array.from(allSellers).sort();
+
+    // Generate all periods
+    const allPeriods: { key: string; label: string }[] = [];
+    if (dateGrouping === 'day') {
+      for (let d = 1; d <= 31; d++) {
+        const key = String(d).padStart(2, '0');
+        allPeriods.push({ key, label: key });
+      }
+    } else {
+      // Sort existing period keys
+      const sortedKeys = Array.from(periodMap.keys()).sort();
+      for (const key of sortedKeys) {
+        let label = key;
+        if (dateGrouping === 'month') {
+          const [y, m] = key.split('-');
+          const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+          label = `${months[parseInt(m, 10) - 1]}/${y.slice(-2)}`;
+        } else if (dateGrouping === 'week') {
+          const parts = key.split('-');
+          label = `Sem ${parts[2]}/${parts[1]}`;
+        }
+        allPeriods.push({ key, label });
+      }
+    }
+
+    const result: Array<{ name: string; [key: string]: string | number }> = [];
+    for (const period of allPeriods) {
+      const sellerMap = periodMap.get(period.key);
+      const point: { name: string; [key: string]: string | number } = { name: period.label };
+      for (const seller of seriesKeys) {
+        point[seller] = sellerMap?.get(seller) || 0;
+      }
+      result.push(point);
+    }
+
+    return { data: result, seriesKeys };
+  } catch (err) {
+    console.error(`Error computing stacked visual data for ${visual.id}:`, err);
+    return { data: [], seriesKeys: [] };
+  }
+}
+
 async function computeVisualData(
   supabase: any,
   visual: any,
@@ -386,14 +505,19 @@ Deno.serve(async (req) => {
 
       // Pre-compute data for each visual server-side
       const visualsData: Record<string, AggregatedDataPoint[]> = {};
+      const stackedVisualsData: Record<string, StackedResult> = {};
       if (visuals) {
         for (const visual of visuals) {
-          visualsData[visual.id] = await computeVisualData(supabaseAdmin, visual, share.account_id);
+          if (visual.chart_type === 'bar_stacked') {
+            stackedVisualsData[visual.id] = await computeStackedVisualData(supabaseAdmin, visual, share.account_id);
+          } else {
+            visualsData[visual.id] = await computeVisualData(supabaseAdmin, visual, share.account_id);
+          }
         }
       }
 
       return new Response(
-        JSON.stringify({ status: "approved", dashboard, visuals, visualsData }),
+        JSON.stringify({ status: "approved", dashboard, visuals, visualsData, stackedVisualsData }),
         {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
