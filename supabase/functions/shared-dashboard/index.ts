@@ -571,6 +571,14 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Cleanup expired pending/rejected requests (30 min)
+      await supabaseAdmin
+        .from("insights_share_access_requests")
+        .delete()
+        .eq("share_id", share.id)
+        .in("status", ["pending", "rejected"])
+        .lt("created_at", new Date(Date.now() - 30 * 60 * 1000).toISOString());
+
       // Check access
       const { data: accessReq } = await supabaseAdmin
         .from("insights_share_access_requests")
