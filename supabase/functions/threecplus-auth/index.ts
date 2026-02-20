@@ -108,8 +108,7 @@ Deno.serve(async (req) => {
           provider: "3cplus",
           access_token: api_token.trim(),
           user_email: userEmail,
-          user_name: userName,
-          account_id: userData.account_id,
+          metadata: { user_name: userName },
         },
         { onConflict: "user_id,provider" }
       );
