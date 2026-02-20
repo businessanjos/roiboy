@@ -1,80 +1,58 @@
 
-## Corrigir bugs no fluxo de solicitacao de acesso
 
-### Problemas identificados
+## Integrar 3C Plus - Login na aba Integracoes
 
-Tres bugs interligados impedem o funcionamento correto:
+### Resumo
 
-**Bug 1: Cleanup so roda no POST, mas visitante recusado nunca faz POST**
-- Quando o visitante abre a pagina, o frontend faz um GET com o email salvo no localStorage (linha 198)
-- O GET retorna `status: "rejected"` e o frontend mostra a tela "Acesso Recusado" permanentemente
-- O cleanup de 30 minutos so roda no handler POST (linha 428), entao a entrada recusada nunca e removida
+Adicionar uma nova aba "3C Plus" nas configuracoes de Integracoes do ROY, permitindo que o usuario faca login com seu token de API da 3C Plus. O sistema validara o token chamando a API da 3C Plus e armazenara as credenciais na tabela `user_integrations`.
 
-**Bug 2: Tela de "Acesso Recusado" nao permite re-solicitar**
-- A tela rejeitada (linhas 344-355) nao tem nenhum botao para tentar novamente
-- O email fica salvo no localStorage, entao ao recarregar a pagina, o fluxo automatico repete o GET e mostra "Recusado" novamente
-- O usuario fica permanentemente bloqueado
+### Como funciona a autenticacao da 3C Plus
 
-**Bug 3: Erros do POST (429 rate limit) sao ignorados silenciosamente**
-- `callEdge` retorna `res.json()` sem verificar o status HTTP (linha 162)
-- Em `handleSubmit`, o codigo checa `data.status` (linhas 226-230), mas respostas de erro tem `data.error` e nao `data.status`
-- Erros como "Aguarde 5 minutos" nunca sao exibidos ao usuario
+A 3C Plus utiliza autenticacao por API Token (nao OAuth). O usuario fornece seu token e o sistema valida chamando o endpoint `user/me` na API `https://app.3c.fluxoti.com/api/v1/`.
 
-### Solucao
+### Alteracoes tecnicas
 
-#### 1. Edge Function `supabase/functions/shared-dashboard/index.ts` - Cleanup tambem no GET
+#### 1. Edge Function `supabase/functions/3cplus-auth/index.ts` (nova)
 
-Adicionar a mesma logica de cleanup no handler GET, antes de verificar o status da solicitacao. Quando o GET encontrar um registro recusado ou pendente com mais de 30 minutos, deleta-lo e retornar `status: "not_found"` para que o frontend mostre o formulario novamente.
+Funcao que recebe o token do usuario, valida contra a API da 3C Plus e armazena na tabela `user_integrations`:
 
-```typescript
-// No GET handler, apos encontrar o share e antes de checar access:
-// Cleanup expired requests
-await supabaseAdmin
-  .from("insights_share_access_requests")
-  .delete()
-  .eq("share_id", share.id)
-  .in("status", ["pending", "rejected"])
-  .lt("created_at", new Date(Date.now() - 30 * 60 * 1000).toISOString());
+- Recebe `{ api_token }` no body + Authorization header do usuario logado
+- Chama `GET https://app.3c.fluxoti.com/api/v1/user/me` com o token para validar
+- Se valido, faz upsert em `user_integrations` com provider `3cplus`, armazenando o token e dados do usuario (nome, email)
+- Retorna os dados do usuario da 3C Plus
+
+#### 2. Frontend `src/components/integrations/IntegrationsContent.tsx`
+
+**Adicionar na lista de integracoes:**
+```
+{ id: "3cplus", name: "3C Plus", description: "Plataforma de telefonia cloud para call center", icon: Phone }
 ```
 
-#### 2. Frontend `SharedInsightsDashboard.tsx` - Botao "Tentar novamente" na tela rejeitada
+**Nova aba "3C Plus"** no TabsList, com icone `Phone` do lucide-react.
 
-Adicionar um botao na tela de "Acesso Recusado" que limpa o email do localStorage e volta para o formulario:
+**Conteudo da aba:**
+- Card com formulario de login contendo um campo para o API Token
+- Botao "Conectar" que chama a edge function `3cplus-auth`
+- Ao conectar com sucesso, exibe os dados do usuario 3C Plus (nome/email) com opcao de desconectar
+- Badge de status (Conectado/Desconectado) no header do card
 
-```typescript
-if (state === "rejected") {
-  return (
-    // ... card existente ...
-    <Button variant="outline" onClick={() => {
-      localStorage.removeItem(`shared-dash-email-${token}`);
-      setState("email_form");
-    }}>
-      Solicitar novamente
-    </Button>
-  );
-}
+**Logica de desconectar:** reutiliza a funcao `handleDisconnect` existente com provider `"3cplus"`.
+
+#### 3. Fluxo do usuario
+
+```text
+1. Usuario acessa Configuracoes > Integracoes > aba "3C Plus"
+2. Ve card "Conexao 3C Plus" com campo para API Token
+3. Cola seu token e clica "Conectar"
+4. Edge function valida o token na API da 3C Plus
+5. Se valido: salva em user_integrations, exibe "Conectado como [nome/email]"
+6. Se invalido: exibe erro "Token invalido"
+7. Para desconectar: botao "Desconectar" remove o registro
 ```
 
-#### 3. Frontend `SharedInsightsDashboard.tsx` - Tratar erros do POST
+### Arquivos envolvidos
 
-Em `handleSubmit`, verificar se a resposta contem `data.error` e exibir a mensagem ao usuario (incluindo o rate limit de 429):
+- **Novo:** `supabase/functions/3cplus-auth/index.ts` - Edge function de validacao
+- **Editar:** `src/components/integrations/IntegrationsContent.tsx` - Nova aba e formulario
+- **Editar:** `supabase/config.toml` - Registro da nova edge function (verify_jwt = false)
 
-```typescript
-const data = await callEdge("POST", "", { share_token: token, email: email.trim() });
-if (data.error) {
-  setErrorMsg(data.error);
-  // Manter no formulario para o usuario tentar novamente
-  return;
-}
-```
-
-Adicionar exibicao do `errorMsg` no formulario de email.
-
-### Fluxo corrigido
-
-1. Visitante acessa link -> GET verifica status
-2. Se rejeitado ha mais de 30 min -> cleanup deleta a entrada -> retorna "not_found" -> mostra formulario
-3. Se rejeitado ha menos de 30 min -> mostra tela "Recusado" com botao "Solicitar novamente"
-4. Visitante clica "Solicitar novamente" -> volta ao formulario
-5. Visitante envia email (POST) -> cleanup roda -> rate limit checado -> se < 5 min, erro exibido no formulario
-6. Apos 5 min -> re-solicitacao aceita, contador incrementado
