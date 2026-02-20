@@ -124,33 +124,60 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Step 2: Enter manual call mode
-    console.log("[threecplus-call] Entering manual call mode at:", baseDomain);
-    const enterRes = await fetch(
-      `${baseDomain}/api/v1/agent/manual_call/enter?api_token=${apiToken}`,
-      { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" } }
-    );
-    const enterText = await enterRes.text();
-    console.log("[threecplus-call] manual_call/enter response:", enterRes.status, enterText);
+    // Step 2: Enter manual call mode with retry (agent needs time to become idle after login)
+    let enterSuccess = false;
+    const maxRetries = 3;
+    const retryDelay = 2000;
 
-    // Step 3: Dial the number
-    console.log("[threecplus-call] Dialing phone:", cleanPhone);
-    const dialRes = await fetch(
-      `${baseDomain}/api/v1/agent/manual_call/dial?api_token=${apiToken}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ phone: cleanPhone }),
-      }
-    );
-    const dialText = await dialRes.text();
-    console.log("[threecplus-call] manual_call/dial response:", dialRes.status, dialText);
+    // Initial delay after campaign login
+    console.log("[threecplus-call] Waiting 2s for agent to become idle...");
+    await new Promise(r => setTimeout(r, retryDelay));
 
-    if (dialRes.ok) {
-      return new Response(
-        JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      console.log(`[threecplus-call] manual_call/enter attempt ${attempt}/${maxRetries}`);
+      const enterRes = await fetch(
+        `${baseDomain}/api/v1/agent/manual_call/enter?api_token=${apiToken}`,
+        { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" } }
       );
+      const enterText = await enterRes.text();
+      console.log(`[threecplus-call] manual_call/enter response: ${enterRes.status} ${enterText}`);
+
+      if (enterRes.ok || enterRes.status === 204) {
+        enterSuccess = true;
+        break;
+      }
+
+      // If 422 and agent not idle, wait and retry
+      if (enterRes.status === 422 && attempt < maxRetries) {
+        console.log(`[threecplus-call] Agent not idle yet, retrying in ${retryDelay}ms...`);
+        await new Promise(r => setTimeout(r, retryDelay));
+        continue;
+      }
+
+      // Other error or last attempt - break
+      break;
+    }
+
+    if (enterSuccess) {
+      // Step 3: Dial the number
+      console.log("[threecplus-call] Dialing phone:", cleanPhone);
+      const dialRes = await fetch(
+        `${baseDomain}/api/v1/agent/manual_call/dial?api_token=${apiToken}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ phone: cleanPhone }),
+        }
+      );
+      const dialText = await dialRes.text();
+      console.log("[threecplus-call] manual_call/dial response:", dialRes.status, dialText);
+
+      if (dialRes.ok || dialRes.status === 204) {
+        return new Response(
+          JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Fallback: try click2call (requires Supervisor token)
@@ -166,7 +193,7 @@ Deno.serve(async (req) => {
     const fallbackText = await fallbackRes.text();
     console.log("[threecplus-call] click2call fallback response:", fallbackRes.status, fallbackText);
 
-    if (fallbackRes.ok) {
+    if (fallbackRes.ok || fallbackRes.status === 204) {
       return new Response(
         JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
