@@ -188,3 +188,6 @@ verify_jwt = false
 
 [functions.update-deal-activity]
 verify_jwt = false
+
+[functions.threecplus-auth]
+verify_jwt = false

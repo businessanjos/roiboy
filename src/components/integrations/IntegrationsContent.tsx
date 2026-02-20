@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +39,7 @@ const integrations_list = [
   { id: "whatsapp", name: "WhatsApp", description: "Conexão WhatsApp via UAZAPI", icon: MessageSquare },
   { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video },
   { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar },
+  { id: "3cplus", name: "3C Plus", description: "Plataforma de telefonia cloud para call center", icon: Phone },
 ];
 
 export function IntegrationsContent() {
@@ -57,6 +58,10 @@ export function IntegrationsContent() {
   // Zoom config state
   const [zoomSecretToken, setZoomSecretToken] = useState("");
   const [savingZoomConfig, setSavingZoomConfig] = useState(false);
+
+  // 3C Plus state
+  const [threeCPlusToken, setThreeCPlusToken] = useState("");
+  const [connecting3CPlus, setConnecting3CPlus] = useState(false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   
@@ -210,7 +215,7 @@ export function IntegrationsContent() {
     } else {
       toast({
         title: "Desconectado",
-        description: `${provider === "google" ? "Google" : "Zoom"} desconectado com sucesso.`,
+        description: `${provider === "google" ? "Google" : provider === "zoom" ? "Zoom" : "3C Plus"} desconectado com sucesso.`,
       });
       fetchUserIntegrations();
     }
@@ -331,6 +336,32 @@ export function IntegrationsContent() {
   const googleIntegration = getIntegration("google");
   const googleUserIntegration = getUserIntegration("google");
   const zoomUserIntegration = getUserIntegration("zoom");
+  const threeCPlusUserIntegration = getUserIntegration("3cplus");
+
+  const handle3CPlusConnect = async () => {
+    if (!threeCPlusToken.trim()) {
+      toast({ title: "Erro", description: "Informe o token da API.", variant: "destructive" });
+      return;
+    }
+    setConnecting3CPlus(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("threecplus-auth", {
+        body: { api_token: threeCPlusToken.trim() },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "Erro", description: data.error, variant: "destructive" });
+      } else {
+        toast({ title: "Conectado!", description: `3C Plus conectado com sucesso.` });
+        setThreeCPlusToken("");
+        fetchUserIntegrations();
+      }
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message || "Falha ao conectar.", variant: "destructive" });
+    } finally {
+      setConnecting3CPlus(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -410,6 +441,10 @@ export function IntegrationsContent() {
             <TabsTrigger value="webhooks" className="gap-2 px-3 py-2">
               <Webhook className="h-4 w-4" />
               <span>Webhooks</span>
+            </TabsTrigger>
+            <TabsTrigger value="3cplus" className="gap-2 px-3 py-2">
+              <Phone className="h-4 w-4" />
+              <span>3C Plus</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -714,6 +749,88 @@ export function IntegrationsContent() {
         {/* Webhooks Tab */}
         <TabsContent value="webhooks" className="space-y-4">
           <WebhooksTab accountId={accountId} />
+        </TabsContent>
+
+        {/* 3C Plus Tab */}
+        <TabsContent value="3cplus" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Phone className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle>Conexão 3C Plus</CardTitle>
+                    <CardDescription>
+                      Conecte sua conta 3C Plus para integrar telefonia ao ROY
+                    </CardDescription>
+                  </div>
+                </div>
+                <Badge variant={threeCPlusUserIntegration ? "default" : "secondary"}>
+                  {threeCPlusUserIntegration ? (
+                    <><CheckCircle2 className="h-3 w-3 mr-1" /> Conectado</>
+                  ) : (
+                    <><XCircle className="h-3 w-3 mr-1" /> Desconectado</>
+                  )}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {threeCPlusUserIntegration ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <div className="flex-1">
+                      <p className="font-medium">Conectado como</p>
+                      <p className="text-sm text-muted-foreground">
+                        {threeCPlusUserIntegration.user_email || "Conta 3C Plus"}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDisconnect("3cplus")}
+                    >
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Desconectar
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Sua conta 3C Plus está conectada e pronta para uso.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Cole seu token de API da 3C Plus para conectar. Você pode encontrar seu token
+                    nas configurações da sua conta 3C Plus.
+                  </p>
+                  <div className="space-y-2">
+                    <Label htmlFor="3cplus-token">Token da API</Label>
+                    <Input
+                      id="3cplus-token"
+                      type="password"
+                      placeholder="Cole aqui seu token da API 3C Plus"
+                      value={threeCPlusToken}
+                      onChange={(e) => setThreeCPlusToken(e.target.value)}
+                      className="font-mono text-sm"
+                    />
+                  </div>
+                  <Button
+                    onClick={handle3CPlusConnect}
+                    disabled={connecting3CPlus || !threeCPlusToken.trim()}
+                  >
+                    {connecting3CPlus ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Conectando...</>
+                    ) : (
+                      <><ExternalLink className="h-4 w-4 mr-2" /> Conectar</>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
