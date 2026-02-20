@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ campaign_id }),
+          body: JSON.stringify({ campaign: campaign_id }),
         }
       );
       const loginText = await loginResponse.text();
