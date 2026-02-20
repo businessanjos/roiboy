@@ -1,56 +1,67 @@
 
 
-## Corrigir visual "Barras Empilhadas" no painel compartilhado
+## Adicionar barra de filtros ao painel compartilhado
 
-### Problema
+### Contexto
 
-O visual "Faturamento Diario por Vendedor" usa o tipo `bar_stacked`, que requer uma estrutura de dados diferente dos demais visuais. Enquanto visuais normais usam `AggregatedDataPoint[]` (pares nome/valor), o grafico de barras empilhadas precisa de `StackedDataPoint[]` (um objeto por periodo com propriedades dinamicas por vendedor) e um array `seriesKeys` (nomes dos vendedores).
+O painel compartilhado (link publico) atualmente mostra todos os dados sem possibilidade de filtragem. O painel interno do sistema possui uma barra de filtros com presets de data (Hoje, Esta Semana, Este Mes, etc.), filtro por vendedor e filtro por produto. Essa mesma capacidade precisa ser replicada na visualizacao publica.
 
-Atualmente:
-- A funcao backend que computa os dados (`shared-dashboard`) so sabe gerar `AggregatedDataPoint[]` simples
-- O componente `SharedVisualCard` nunca passa `stackedData` nem `stackedSeriesKeys` ao `ConfigurableChart`
-- O `ConfigurableChart` recebe arrays vazios para esses props e mostra "Sem dados para exibir"
+### Desafio tecnico
 
-### Solucao (3 arquivos)
+O componente `InsightsFilterBar` existente depende de:
+- `useInsightsFilters` (Context Provider que nao existe na rota publica)
+- `useQuery` com `supabase` direto (requer autenticacao/RLS)
+
+Portanto, nao e possivel reutilizar o componente diretamente. A solucao e:
+1. Retornar as opcoes de filtro (vendedores e produtos) junto com os dados do edge function
+2. Criar uma barra de filtros local no `SharedInsightsDashboard`
+3. Re-buscar dados do edge function quando os filtros mudam
+
+### Alteracoes
 
 #### 1. Edge Function `supabase/functions/shared-dashboard/index.ts`
 
-Adicionar uma nova funcao `computeStackedVisualData` que:
-- Busca negocios da tabela `deals` com join em `users` (vendedor)
-- Agrupa por periodo temporal (dia/semana/mes/ano) E por vendedor
-- Gera todos os periodos no intervalo (01-31 para diario)
-- Retorna `{ data: StackedDataPoint[], seriesKeys: string[] }`
+**Aceitar parametros de filtro no GET:**
+- `startDate` e `endDate` (ISO strings)
+- `userId` (UUID ou "all")
+- `productId` (UUID ou "all")
 
-No handler GET, para visuais do tipo `bar_stacked`:
-- Chamar `computeStackedVisualData` em vez de `computeVisualData`
-- Armazenar o resultado em um campo separado `stackedVisualsData` no JSON de resposta
+**Retornar opcoes de filtro:**
+- Buscar vendedores unicos da tabela `users` com `account_id`
+- Buscar produtos ativos da tabela `products` com `account_id`
+- Incluir no response: `filterOptions: { users: [{id, name}], products: [{id, name}] }`
+
+**Aplicar filtros nas queries:**
+- Em `computeDealsData` e `computeStackedVisualData`: filtrar por intervalo de data e por `responsible_user_id`
+- Em `computeLeadsData`: filtrar por intervalo de data
+- Em `computeProductsData`: filtrar conforme aplicavel
 
 #### 2. Frontend `src/pages/SharedInsightsDashboard.tsx`
 
-- Adicionar estado `stackedVisualsData` para armazenar dados empilhados por visual ID
-- Ao receber a resposta da API, extrair `stackedVisualsData` e salvar no estado
-- Passar os dados empilhados como props para `SharedVisualCard`
+**Estado local de filtros:**
+- `sharedFilters`: objeto com `preset`, `startDate`, `endDate`, `userId`, `productId`
+- Funcoes auxiliares para calcular datas a partir de presets (replicando a logica de `useInsightsFilters`)
 
-#### 3. Componente `src/components/insights/visuals/SharedVisualCard.tsx`
+**Componente de filtro inline:**
+- Renderizar uma barra de filtros similar a `InsightsFilterBar` diretamente no componente
+- Dropdown de presets de data (Hoje, Esta Semana, Este Mes, Mes Passado, Este Trimestre, Este Ano, Personalizado)
+- Dropdown de vendedores (populado com dados do edge function)
+- Dropdown de produtos (populado com dados do edge function)
 
-- Aceitar props opcionais `stackedData` e `stackedSeriesKeys`
-- Passar esses props para o `ConfigurableChart`
-- Ajustar a verificacao de "sem dados" para tambem considerar `stackedData`
+**Re-fetch ao mudar filtros:**
+- Quando qualquer filtro mudar, chamar o edge function novamente com os novos parametros
+- Mostrar indicador de loading durante o re-fetch
+- Atualizar `visualsData` e `stackedVisualsData` com os novos resultados
 
-### Detalhes tecnicos
+### Fluxo de dados
 
-A logica de agregacao empilhada no edge function replica a do hook `useStackedVisualData`:
-- Para agrupamento "day": intervalo fixo 01-31, agregando dias correspondentes
-- Para "month"/"week"/"year": gera todos os periodos no intervalo
-- Campo de data inteligente: usa `won_at` para status "won", `lost_at` para "lost", `created_at` para os demais
-- Agrupa por vendedor (`users.name`) via join
+1. Primeiro GET (acesso aprovado) retorna dados com filtros padrao (ano atual) + opcoes de filtro
+2. Usuario altera filtro na barra
+3. Novo GET com parametros de filtro envia request ao edge function
+4. Edge function computa dados filtrados e retorna
+5. Frontend atualiza os visuais com os novos dados
 
-Estrutura de dados gerada:
-```text
-data: [
-  { name: "01", "Darlan Ferreira": 142000, "Jonathan Marcato": 0, ... },
-  { name: "02", "Darlan Ferreira": 0, "Jonathan Marcato": 156000, ... },
-  ...
-]
-seriesKeys: ["Darlan Ferreira", "Everton Pieri", "Jonathan Marcato", "Vanessa Minelli"]
-```
+### Resultado esperado
+
+Visitantes com acesso aprovado verao uma barra de filtros abaixo do titulo do painel, identica visualmente a do sistema interno, permitindo alterar periodo, vendedor e produto. Os visuais serao recalculados server-side a cada mudanca de filtro.
+
