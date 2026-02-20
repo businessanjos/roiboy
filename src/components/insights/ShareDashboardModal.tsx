@@ -267,7 +267,22 @@ export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboard
                           </div>
                         )}
                         {req.status === "approved" && (
-                          <Badge variant="outline" className="text-green-600 border-green-200">Liberado</Badge>
+                          <div className="flex items-center gap-1 ml-2">
+                            <Badge variant="outline" className="text-green-600 border-green-200">Liberado</Badge>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-40 hover:opacity-100 text-destructive hover:text-destructive hover:bg-red-50"
+                              onClick={() => handleAction(req.id, "reject")}
+                              disabled={processingId === req.id}
+                            >
+                              {processingId === req.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <XCircle className="h-3 w-3" />
+                              )}
+                            </Button>
+                          </div>
                         )}
                         {req.status === "rejected" && (
                           <Badge variant="outline" className="text-destructive border-red-200">Recusado</Badge>
