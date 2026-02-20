@@ -48,7 +48,9 @@ interface StackedResult {
 
 function getDateFieldForVisual(config: any): string {
   const { dimension, statusFilter } = config || {};
-  if (dimension?.field && dimension.field !== 'created_at') return dimension.field;
+  if (dimension?.type === 'date' && dimension.field && dimension.field !== 'created_at') {
+    return dimension.field;
+  }
   if (statusFilter === 'won') return 'won_at';
   if (statusFilter === 'lost') return 'lost_at';
   return 'created_at';
