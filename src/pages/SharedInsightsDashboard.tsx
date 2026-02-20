@@ -55,6 +55,7 @@ export default function SharedInsightsDashboard() {
   const [dashboard, setDashboard] = useState<any>(null);
   const [visuals, setVisuals] = useState<any[]>([]);
   const [visualsData, setVisualsData] = useState<Record<string, AggregatedDataPoint[]>>({});
+  const [stackedVisualsData, setStackedVisualsData] = useState<Record<string, { data: any[]; seriesKeys: string[] }>>({});
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -98,11 +99,12 @@ export default function SharedInsightsDashboard() {
       const savedEmail = localStorage.getItem(`shared-dash-email-${token}`);
       if (savedEmail) {
         setEmail(savedEmail);
-        const statusData = await callEdge("GET", `?token=${token}&email=${encodeURIComponent(savedEmail)}`);
+         const statusData = await callEdge("GET", `?token=${token}&email=${encodeURIComponent(savedEmail)}`);
         if (statusData.status === "approved") {
           setDashboard(statusData.dashboard);
           setVisuals(statusData.visuals || []);
           setVisualsData(statusData.visualsData || {});
+          setStackedVisualsData(statusData.stackedVisualsData || {});
           setState("approved");
         } else if (statusData.status === "pending") { setState("pending"); }
         else if (statusData.status === "rejected") { setState("rejected"); }
@@ -123,6 +125,7 @@ export default function SharedInsightsDashboard() {
         setDashboard(fullData.dashboard);
         setVisuals(fullData.visuals || []);
         setVisualsData(fullData.visualsData || {});
+        setStackedVisualsData(fullData.stackedVisualsData || {});
         setState("approved");
       } else if (data.status === "rejected") { setState("rejected"); }
       else { setState("pending"); }
@@ -140,6 +143,7 @@ export default function SharedInsightsDashboard() {
         setDashboard(data.dashboard);
         setVisuals(data.visuals || []);
         setVisualsData(data.visualsData || {});
+        setStackedVisualsData(data.stackedVisualsData || {});
         setState("approved");
       } else if (data.status === "rejected") { setState("rejected"); }
     }, 5000);
@@ -269,6 +273,8 @@ export default function SharedInsightsDashboard() {
                     <SharedVisualCard
                       visual={visual}
                       data={visualsData[visual.id] || []}
+                      stackedData={stackedVisualsData[visual.id]?.data}
+                      stackedSeriesKeys={stackedVisualsData[visual.id]?.seriesKeys}
                     />
                   </div>
                 ))}

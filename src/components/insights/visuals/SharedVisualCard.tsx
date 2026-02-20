@@ -20,6 +20,8 @@ interface SharedVisualCardProps {
     config: unknown;
   };
   data: AggregatedDataPoint[];
+  stackedData?: Array<{ name: string; [key: string]: string | number }>;
+  stackedSeriesKeys?: string[];
 }
 
 // Simple error boundary for individual cards
@@ -51,7 +53,7 @@ class CardErrorBoundary extends React.Component<
   }
 }
 
-export function SharedVisualCard({ visual, data }: SharedVisualCardProps) {
+export function SharedVisualCard({ visual, data, stackedData, stackedSeriesKeys }: SharedVisualCardProps) {
   const config = visual.config as VisualConfig | null;
   const chartType = (visual.chart_type || 'bar') as ChartType;
   const title = visual.title || "Visual";
@@ -85,7 +87,9 @@ export function SharedVisualCard({ visual, data }: SharedVisualCardProps) {
     );
   }
 
-  if (data.length === 0 && chartType !== 'number' && chartType !== 'scorecard') {
+  const hasStackedData = stackedData && stackedData.length > 0 && stackedSeriesKeys && stackedSeriesKeys.length > 0;
+
+  if (data.length === 0 && !hasStackedData && chartType !== 'number' && chartType !== 'scorecard') {
     return (
       <Card className="h-full flex flex-col">
         <CardHeader className="pb-2 flex-shrink-0">
@@ -112,6 +116,8 @@ export function SharedVisualCard({ visual, data }: SharedVisualCardProps) {
             formatting={config.formatting}
             appearance={config.appearance}
             visualConfig={config}
+            stackedData={stackedData}
+            stackedSeriesKeys={stackedSeriesKeys}
           />
         </CardContent>
       </Card>
