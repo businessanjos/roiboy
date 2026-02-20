@@ -10,6 +10,8 @@ function getBaseDomain(domain: string | null): string {
   if (!domain) return "https://app.3c.fluxoti.com";
   let base = domain.trim();
   base = base.replace(/\/login\/?$/, "");
+  base = base.replace(/\/agent\/?.*$/, "");
+  base = base.replace(/\/supervisor\/?.*$/, "");
   base = base.replace(/\/$/, "");
   if (!base.startsWith("http")) base = "https://" + base;
   return base;

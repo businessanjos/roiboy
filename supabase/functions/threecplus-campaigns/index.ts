@@ -9,11 +9,10 @@ const corsHeaders = {
 function getBaseDomain(domain: string | null): string {
   if (!domain) return "https://app.3c.fluxoti.com";
   let base = domain.trim();
-  // Remove trailing /login or /login/
   base = base.replace(/\/login\/?$/, "");
-  // Remove trailing slash
+  base = base.replace(/\/agent\/?.*$/, "");
+  base = base.replace(/\/supervisor\/?.*$/, "");
   base = base.replace(/\/$/, "");
-  // Ensure https://
   if (!base.startsWith("http")) base = "https://" + base;
   return base;
 }
@@ -103,6 +102,18 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: false,
           error: `Erro ao buscar campanhas (status ${apiResponse.status}). Verifique se você está logado no 3C Plus.`,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Detect HTML response (wrong URL or auth redirect)
+    if (responseText.trim().startsWith("<!DOCTYPE") || responseText.trim().startsWith("<html")) {
+      console.error("[threecplus-campaigns] API returned HTML instead of JSON. Domain may be incorrect:", baseDomain);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Erro de configuração: o domínio do 3C Plus parece incorreto. Reconfigure a integração com apenas o domínio (ex: app.3c.fluxoti.com).",
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
