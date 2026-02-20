@@ -1,56 +1,57 @@
 
 
-## Corrigir timing da chamada manual - aguardar agente ficar ocioso
+## Corrigir construcao de URL da API do 3C Plus
 
 ### Causa raiz
 
-Os logs mostram claramente a sequencia de erros:
+Os logs revelam que a API do 3C Plus retorna **HTML** (pagina de login) em vez de JSON para alguns usuarios. Isso acontece porque o dominio salvo na integracao inclui caminhos extras como `/agent` ou `/agent/login`.
 
+Exemplo do log:
 ```
-Login response: 204                          (OK)
-manual_call/enter: 422 "Agente nao esta ocioso"   (falha - agente ainda nao esta idle)
-manual_call/dial: 422 "Agente nao esta em modo manual"  (falha - nao entrou no modo manual)
+Fetching campaigns from: https://anjosbusiness.3c.plus/agent
+URL final: https://anjosbusiness.3c.plus/agent/api/v1/agent/campaigns  (ERRADO)
+URL correta: https://anjosbusiness.3c.plus/api/v1/agent/campaigns
 ```
 
-Apos o `POST /agent/login`, o agente leva alguns instantes para transicionar para o estado "idle". O codigo atual tenta entrar no modo manual imediatamente, antes do agente estar pronto.
+A funcao `getBaseDomain()` remove `/login` do final, mas **nao remove `/agent`**, `/agent/login`, ou outros caminhos que os usuarios podem ter copiado da URL do navegador.
+
+Como a API retorna status 200 com HTML, o codigo interpreta como "sucesso" e tenta fazer parse do HTML como JSON, resultando em uma lista vazia de campanhas.
 
 ### Solucao
 
-Adicionar um mecanismo de **retry com delay** no `manual_call/enter`. Apos o login na campanha, o sistema deve:
-
-1. Aguardar 2 segundos antes da primeira tentativa
-2. Tentar `POST /agent/manual_call/enter` ate 3 vezes, com 2 segundos de intervalo entre cada tentativa
-3. Quando o enter for bem-sucedido, chamar `POST /agent/manual_call/dial` com o numero do telefone
-4. Se todas as tentativas falharem, tentar `/click2call` como fallback
+Atualizar a funcao `getBaseDomain()` em **ambas** as edge functions para remover qualquer caminho apos o dominio base, garantindo que apenas o dominio raiz seja usado para construir URLs da API.
 
 ### Alteracoes
 
-#### `supabase/functions/threecplus-call/index.ts`
+#### 1. `supabase/functions/threecplus-campaigns/index.ts`
 
-Reescrever a logica apos o login da campanha para incluir retry:
+Atualizar `getBaseDomain()` para remover caminhos extras:
 
 ```text
-Fluxo atual (falha por timing):
-  1. Login na campanha (204 OK)
-  2. manual_call/enter (422 - agente nao esta ocioso)
-  3. manual_call/dial (422 - nao esta em modo manual)
+Antes:
+  base = base.replace(/\/login\/?$/, "")
 
-Novo fluxo com retry:
-  1. Login na campanha (204 OK)
-  2. Aguardar 2 segundos
-  3. Tentar manual_call/enter (ate 3 tentativas com 2s de intervalo)
-  4. manual_call/dial com { phone: cleanPhone }
-  5. Se falhar: fallback para /click2call
+Depois:
+  base = base.replace(/\/login\/?$/, "")
+  base = base.replace(/\/agent\/?.*$/, "")  // Remove /agent e tudo depois
+  base = base.replace(/\/supervisor\/?.*$/, "")  // Remove /supervisor e tudo depois
 ```
 
-Implementacao do retry:
-- Usar um loop `for` com ate 3 iteracoes
-- Cada iteracao aguarda 2 segundos via `await new Promise(r => setTimeout(r, 2000))`
-- Se o status da resposta for 422 e contiver "ocioso" ou "idle", continua o loop
-- Se for 200/204 (sucesso), sai do loop e faz o dial
-- Se for outro erro, sai do loop e vai para fallback
+Tambem adicionar validacao para detectar quando a API retorna HTML em vez de JSON:
+
+```text
+// Verificar se a resposta e JSON antes de tentar parse
+if (responseText.trim().startsWith("<!DOCTYPE") || responseText.trim().startsWith("<html")) {
+  // Retornar erro claro indicando problema de URL/autenticacao
+}
+```
+
+#### 2. `supabase/functions/threecplus-call/index.ts`
+
+Aplicar a mesma correcao na funcao `getBaseDomain()` para manter consistencia.
 
 ### Arquivos envolvidos
 
-- **Editar:** `supabase/functions/threecplus-call/index.ts` - Adicionar retry com delay no manual_call/enter
+- **Editar:** `supabase/functions/threecplus-campaigns/index.ts` - Corrigir `getBaseDomain()` e adicionar validacao de resposta HTML
+- **Editar:** `supabase/functions/threecplus-call/index.ts` - Corrigir `getBaseDomain()` para consistencia
 
