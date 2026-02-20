@@ -1,38 +1,48 @@
 
 
-## Corrigir URL da API 3C Plus na Edge Function
+## Corrigir upsert na Edge Function threecplus-auth
 
 ### Causa raiz
 
-A URL do endpoint esta incorreta. O codigo atual chama:
+Os logs mostram o erro:
 
 ```
-https://app.3c.fluxoti.com/api/v1/user/me
+Could not find the 'account_id' column of 'user_integrations' in the schema cache
 ```
 
-Mas o endpoint correto (confirmado pelo SDK oficial da 3C Plus no GitHub) e:
+A edge function `threecplus-auth` tenta fazer upsert com os campos `account_id` e `user_name`, mas a tabela `user_integrations` nao possui essas colunas.
 
-```
-https://app.3c.fluxoti.com/api/v1/me
-```
-
-O `/user/` extra no caminho faz a API retornar 404 ("recurso nao encontrado"), que e exatamente o erro que voce esta vendo.
+Colunas existentes na tabela: `id`, `user_id`, `provider`, `access_token`, `refresh_token`, `expires_at`, `metadata`, `created_at`, `updated_at`, `user_email`.
 
 ### Correcao
 
-Alterar uma unica linha no arquivo `supabase/functions/threecplus-auth/index.ts`:
+Remover `account_id` e `user_name` do objeto de upsert na edge function. Opcionalmente, salvar o `user_name` no campo `metadata` (JSON) que ja existe na tabela.
 
-**Antes:**
-```
-fetch("https://app.3c.fluxoti.com/api/v1/user/me", { ... })
+### Alteracao no arquivo `supabase/functions/threecplus-auth/index.ts`
+
+O upsert atual:
+```typescript
+{
+  user_id: userData.id,
+  provider: "3cplus",
+  access_token: api_token.trim(),
+  user_email: userEmail,
+  user_name: userName,       // NAO EXISTE na tabela
+  account_id: userData.account_id,  // NAO EXISTE na tabela
+}
 ```
 
-**Depois:**
-```
-fetch("https://app.3c.fluxoti.com/api/v1/me", { ... })
+Corrigido:
+```typescript
+{
+  user_id: userData.id,
+  provider: "3cplus",
+  access_token: api_token.trim(),
+  user_email: userEmail,
+  metadata: { user_name: userName },
+}
 ```
 
 ### Arquivos envolvidos
 
-- **Editar:** `supabase/functions/threecplus-auth/index.ts` - Corrigir URL do endpoint (1 linha)
-
+- **Editar:** `supabase/functions/threecplus-auth/index.ts` - Remover campos inexistentes do upsert
