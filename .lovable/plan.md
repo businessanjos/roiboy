@@ -1,48 +1,36 @@
 
 
-## Corrigir upsert na Edge Function threecplus-auth
+## Corrigir check constraint na tabela user_integrations
 
 ### Causa raiz
 
-Os logs mostram o erro:
+A tabela `user_integrations` possui um CHECK constraint que restringe os valores da coluna `provider` a apenas `'google'` e `'zoom'`:
+
+```sql
+CHECK (provider = ANY (ARRAY['google', 'zoom']))
+```
+
+Quando a edge function tenta inserir um registro com `provider = '3cplus'`, o banco de dados rejeita a operacao com o erro:
 
 ```
-Could not find the 'account_id' column of 'user_integrations' in the schema cache
+new row for relation "user_integrations" violates check constraint "user_integrations_provider_check"
 ```
-
-A edge function `threecplus-auth` tenta fazer upsert com os campos `account_id` e `user_name`, mas a tabela `user_integrations` nao possui essas colunas.
-
-Colunas existentes na tabela: `id`, `user_id`, `provider`, `access_token`, `refresh_token`, `expires_at`, `metadata`, `created_at`, `updated_at`, `user_email`.
 
 ### Correcao
 
-Remover `account_id` e `user_name` do objeto de upsert na edge function. Opcionalmente, salvar o `user_name` no campo `metadata` (JSON) que ja existe na tabela.
+Executar uma migracao SQL para alterar o CHECK constraint, adicionando `'3cplus'` como valor permitido:
 
-### Alteracao no arquivo `supabase/functions/threecplus-auth/index.ts`
+```sql
+ALTER TABLE public.user_integrations
+  DROP CONSTRAINT user_integrations_provider_check;
 
-O upsert atual:
-```typescript
-{
-  user_id: userData.id,
-  provider: "3cplus",
-  access_token: api_token.trim(),
-  user_email: userEmail,
-  user_name: userName,       // NAO EXISTE na tabela
-  account_id: userData.account_id,  // NAO EXISTE na tabela
-}
-```
-
-Corrigido:
-```typescript
-{
-  user_id: userData.id,
-  provider: "3cplus",
-  access_token: api_token.trim(),
-  user_email: userEmail,
-  metadata: { user_name: userName },
-}
+ALTER TABLE public.user_integrations
+  ADD CONSTRAINT user_integrations_provider_check
+  CHECK (provider = ANY (ARRAY['google', 'zoom', '3cplus']));
 ```
 
 ### Arquivos envolvidos
 
-- **Editar:** `supabase/functions/threecplus-auth/index.ts` - Remover campos inexistentes do upsert
+- **Migracao SQL** - Alterar o CHECK constraint da tabela `user_integrations`
+- Nenhum arquivo de codigo precisa ser alterado; a edge function ja esta correta
+
