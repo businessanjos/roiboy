@@ -13,6 +13,13 @@ interface AggregatedDataPoint {
   color?: string;
 }
 
+interface FilterParams {
+  startDate?: string;
+  endDate?: string;
+  userId?: string;
+  productId?: string;
+}
+
 function formatDateGroup(dateStr: string, grouping: string, displayFormat: string): string {
   const d = new Date(dateStr);
   const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -39,10 +46,25 @@ interface StackedResult {
   seriesKeys: string[];
 }
 
+function getDateFieldForVisual(config: any): string {
+  const { dimension, statusFilter } = config || {};
+  if (dimension?.field && dimension.field !== 'created_at') return dimension.field;
+  if (statusFilter === 'won') return 'won_at';
+  if (statusFilter === 'lost') return 'lost_at';
+  return 'created_at';
+}
+
+function applyDateFilter(query: any, dateField: string, filters: FilterParams) {
+  if (filters.startDate) query = query.gte(dateField, filters.startDate);
+  if (filters.endDate) query = query.lte(dateField, filters.endDate);
+  return query;
+}
+
 async function computeStackedVisualData(
   supabase: any,
   visual: any,
-  accountId: string
+  accountId: string,
+  filters: FilterParams
 ): Promise<StackedResult> {
   const config = visual.config;
   if (!config) return { data: [], seriesKeys: [] };
@@ -53,22 +75,20 @@ async function computeStackedVisualData(
   try {
     let query = supabase
       .from('deals')
-      .select('id, value, status, created_at, won_at, lost_at, users!deals_responsible_user_id_fkey(name)')
+      .select('id, value, status, created_at, won_at, lost_at, users!deals_responsible_user_id_fkey(name), responsible_user_id')
       .eq('account_id', accountId);
 
     if (statusFilter) query = query.eq('status', statusFilter);
 
-    let dateField = 'created_at';
-    if (dimension?.field && dimension.field !== 'created_at') {
-      dateField = dimension.field;
-    } else if (statusFilter === 'won') {
-      dateField = 'won_at';
-    } else if (statusFilter === 'lost') {
-      dateField = 'lost_at';
-    }
-
+    const dateField = getDateFieldForVisual(config);
     if (dateField === 'won_at') query = query.not('won_at', 'is', null);
     if (dateField === 'lost_at') query = query.not('lost_at', 'is', null);
+
+    // Apply filters
+    query = applyDateFilter(query, dateField, filters);
+    if (filters.userId && filters.userId !== 'all') {
+      query = query.eq('responsible_user_id', filters.userId);
+    }
 
     const { data: deals, error } = await query.limit(5000);
     if (error || !deals) return { data: [], seriesKeys: [] };
@@ -120,7 +140,6 @@ async function computeStackedVisualData(
         allPeriods.push({ key, label: key });
       }
     } else {
-      // Sort existing period keys
       const sortedKeys = Array.from(periodMap.keys()).sort();
       for (const key of sortedKeys) {
         let label = key;
@@ -156,7 +175,8 @@ async function computeStackedVisualData(
 async function computeVisualData(
   supabase: any,
   visual: any,
-  accountId: string
+  accountId: string,
+  filters: FilterParams
 ): Promise<AggregatedDataPoint[]> {
   const config = visual.config;
   if (!config) return [];
@@ -167,11 +187,11 @@ async function computeVisualData(
   try {
     switch (dataSource) {
       case 'deals':
-        return await computeDealsData(supabase, accountId, measure, dimension, statusFilter, dateDisplayFormat);
+        return await computeDealsData(supabase, accountId, measure, dimension, statusFilter, dateDisplayFormat, filters);
       case 'leads':
-        return await computeLeadsData(supabase, accountId, measure, dimension, dateDisplayFormat);
+        return await computeLeadsData(supabase, accountId, measure, dimension, dateDisplayFormat, filters);
       case 'products':
-        return await computeProductsData(supabase, accountId, measure, dimension, dateDisplayFormat);
+        return await computeProductsData(supabase, accountId, measure, dimension, dateDisplayFormat, filters);
       default:
         return [];
     }
@@ -187,20 +207,24 @@ async function computeDealsData(
   measure: any,
   dimension: any,
   statusFilter: string | undefined,
-  dateDisplayFormat: string
+  dateDisplayFormat: string,
+  filters: FilterParams
 ): Promise<AggregatedDataPoint[]> {
   let query = supabase
     .from('deals')
-    .select('id, value, status, source, lost_reason, created_at, won_at, lost_at, deal_stages!deals_stage_id_fkey(name), users!deals_responsible_user_id_fkey(name)')
+    .select('id, value, status, source, lost_reason, created_at, won_at, lost_at, deal_stages!deals_stage_id_fkey(name), users!deals_responsible_user_id_fkey(name), responsible_user_id')
     .eq('account_id', accountId);
 
-  if (statusFilter) {
-    query = query.eq('status', statusFilter);
-  }
-
-  // Filter out nulls for date-specific status filters
+  if (statusFilter) query = query.eq('status', statusFilter);
   if (statusFilter === 'won') query = query.not('won_at', 'is', null);
   if (statusFilter === 'lost') query = query.not('lost_at', 'is', null);
+
+  // Apply filters
+  const dateField = getDateFieldForVisual({ dimension, statusFilter });
+  query = applyDateFilter(query, dateField, filters);
+  if (filters.userId && filters.userId !== 'all') {
+    query = query.eq('responsible_user_id', filters.userId);
+  }
 
   const { data, error } = await query.limit(5000);
   if (error || !data) return [];
@@ -213,12 +237,15 @@ async function computeLeadsData(
   accountId: string,
   measure: any,
   dimension: any,
-  dateDisplayFormat: string
+  dateDisplayFormat: string,
+  filters: FilterParams
 ): Promise<AggregatedDataPoint[]> {
   let query = supabase
     .from('leads')
     .select('id, status, source, canal, created_at')
     .eq('account_id', accountId);
+
+  query = applyDateFilter(query, 'created_at', filters);
 
   const { data, error } = await query.limit(5000);
   if (error || !data) return [];
@@ -231,14 +258,19 @@ async function computeProductsData(
   accountId: string,
   measure: any,
   dimension: any,
-  dateDisplayFormat: string
+  dateDisplayFormat: string,
+  filters: FilterParams
 ): Promise<AggregatedDataPoint[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('products')
     .select('id, name, price, billing_period, is_active, created_at')
-    .eq('account_id', accountId)
-    .limit(5000);
+    .eq('account_id', accountId);
 
+  if (filters.productId && filters.productId !== 'all') {
+    query = query.eq('id', filters.productId);
+  }
+
+  const { data, error } = await query.limit(5000);
   if (error || !data) return [];
 
   return aggregateData(data, measure, dimension, dateDisplayFormat);
@@ -331,6 +363,17 @@ function aggregateData(
   }
 
   return result;
+}
+
+async function fetchFilterOptions(supabase: any, accountId: string) {
+  const [usersRes, productsRes] = await Promise.all([
+    supabase.from('users').select('id, name').eq('account_id', accountId).order('name'),
+    supabase.from('products').select('id, name').eq('account_id', accountId).eq('is_active', true).order('name'),
+  ]);
+  return {
+    users: usersRes.data || [],
+    products: productsRes.data || [],
+  };
 }
 
 Deno.serve(async (req) => {
@@ -490,6 +533,14 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Extract filter params
+      const filterParams: FilterParams = {
+        startDate: url.searchParams.get("startDate") || undefined,
+        endDate: url.searchParams.get("endDate") || undefined,
+        userId: url.searchParams.get("userId") || undefined,
+        productId: url.searchParams.get("productId") || undefined,
+      };
+
       // Approved — fetch dashboard + visuals + compute data
       const { data: dashboard } = await supabaseAdmin
         .from("insights_dashboards")
@@ -497,11 +548,16 @@ Deno.serve(async (req) => {
         .eq("id", share.dashboard_id)
         .single();
 
-      const { data: visuals } = await supabaseAdmin
-        .from("insights_visuals")
-        .select("*")
-        .eq("dashboard_id", share.dashboard_id)
-        .order("created_at");
+      const [visualsRes, filterOptions] = await Promise.all([
+        supabaseAdmin
+          .from("insights_visuals")
+          .select("*")
+          .eq("dashboard_id", share.dashboard_id)
+          .order("created_at"),
+        fetchFilterOptions(supabaseAdmin, share.account_id),
+      ]);
+
+      const visuals = visualsRes.data;
 
       // Pre-compute data for each visual server-side
       const visualsData: Record<string, AggregatedDataPoint[]> = {};
@@ -509,15 +565,15 @@ Deno.serve(async (req) => {
       if (visuals) {
         for (const visual of visuals) {
           if (visual.chart_type === 'bar_stacked') {
-            stackedVisualsData[visual.id] = await computeStackedVisualData(supabaseAdmin, visual, share.account_id);
+            stackedVisualsData[visual.id] = await computeStackedVisualData(supabaseAdmin, visual, share.account_id, filterParams);
           } else {
-            visualsData[visual.id] = await computeVisualData(supabaseAdmin, visual, share.account_id);
+            visualsData[visual.id] = await computeVisualData(supabaseAdmin, visual, share.account_id, filterParams);
           }
         }
       }
 
       return new Response(
-        JSON.stringify({ status: "approved", dashboard, visuals, visualsData, stackedVisualsData }),
+        JSON.stringify({ status: "approved", dashboard, visuals, visualsData, stackedVisualsData, filterOptions }),
         {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },

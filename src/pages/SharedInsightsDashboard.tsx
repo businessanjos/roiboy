@@ -3,12 +3,28 @@ import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Loader2, Mail, Clock, ShieldCheck, ShieldX } from "lucide-react";
+import { BarChart3, Loader2, Mail, Clock, ShieldCheck, ShieldX, CalendarDays, ChevronDown, User, Filter, RotateCcw } from "lucide-react";
 import { SharedVisualCard } from "@/components/insights/visuals/SharedVisualCard";
 import GridLayout from "react-grid-layout";
 import { getCompactor } from "react-grid-layout/core";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format, startOfYear, endOfYear, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subMonths, startOfQuarter, endOfQuarter } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 const freePositionCompactor = getCompactor(null, true, false);
 
@@ -16,6 +32,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 type ViewState = "loading" | "email_form" | "pending" | "approved" | "rejected" | "error";
+type DatePreset = "today" | "week" | "month" | "last_month" | "quarter" | "year" | "custom";
 
 interface AggregatedDataPoint {
   name: string;
@@ -32,8 +49,59 @@ interface LayoutItem {
   h: number;
 }
 
+interface SharedFilters {
+  preset: DatePreset;
+  startDate: string;
+  endDate: string;
+  userId: string;
+  productId: string;
+}
+
+interface FilterOption {
+  id: string;
+  name: string;
+}
+
 const ROW_HEIGHT = 20;
 const COLS = 48;
+
+const PRESETS: { value: DatePreset; label: string }[] = [
+  { value: "today", label: "Hoje" },
+  { value: "week", label: "Esta Semana" },
+  { value: "month", label: "Este Mês" },
+  { value: "last_month", label: "Mês Passado" },
+  { value: "quarter", label: "Este Trimestre" },
+  { value: "year", label: "Este Ano" },
+];
+
+function getPresetDates(preset: DatePreset): { start: Date; end: Date } {
+  const now = new Date();
+  switch (preset) {
+    case "today": return { start: now, end: now };
+    case "week": return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+    case "month": return { start: startOfMonth(now), end: endOfMonth(now) };
+    case "last_month": { const lm = subMonths(now, 1); return { start: startOfMonth(lm), end: endOfMonth(lm) }; }
+    case "quarter": return { start: startOfQuarter(now), end: endOfQuarter(now) };
+    case "year":
+    default:
+      return { start: startOfYear(now), end: endOfYear(now) };
+  }
+}
+
+function getDefaultFilters(): SharedFilters {
+  const { start, end } = getPresetDates("year");
+  return {
+    preset: "year",
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+    userId: "all",
+    productId: "all",
+  };
+}
+
+function getPresetLabel(preset: DatePreset): string {
+  return PRESETS.find(p => p.value === preset)?.label || "Personalizado";
+}
 
 function visualToLayoutItem(visual: any, index: number): LayoutItem {
   const layout = visual.layout;
@@ -41,7 +109,6 @@ function visualToLayoutItem(visual: any, index: number): LayoutItem {
     if (layout.scale === 48) {
       return { i: visual.id, x: layout.x, y: layout.y, w: layout.w, h: layout.h };
     }
-    // Legacy 12-col migration
     return { i: visual.id, x: layout.x * 4, y: layout.y * 5, w: layout.w * 4, h: layout.h * 5 };
   }
   return { i: visual.id, x: (index % 2) * 26, y: Math.floor(index / 2) * 27, w: 24, h: 25 };
@@ -60,6 +127,14 @@ export default function SharedInsightsDashboard() {
   const [errorMsg, setErrorMsg] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const [gridWidth, setGridWidth] = useState(0);
+  const [filters, setFilters] = useState<SharedFilters>(getDefaultFilters);
+  const [filterOptions, setFilterOptions] = useState<{ users: FilterOption[]; products: FilterOption[] }>({ users: [], products: [] });
+  const [refreshing, setRefreshing] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [dateRange, setDateRangeLocal] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: new Date(filters.startDate),
+    to: new Date(filters.endDate),
+  });
 
   useEffect(() => {
     const el = containerRef.current;
@@ -89,6 +164,27 @@ export default function SharedInsightsDashboard() {
     []
   );
 
+  const buildFilterQuery = useCallback((baseEmail: string, filterState: SharedFilters) => {
+    let path = `?token=${token}&email=${encodeURIComponent(baseEmail)}`;
+    path += `&startDate=${filterState.startDate}&endDate=${filterState.endDate}`;
+    if (filterState.userId !== "all") path += `&userId=${filterState.userId}`;
+    if (filterState.productId !== "all") path += `&productId=${filterState.productId}`;
+    return path;
+  }, [token]);
+
+  const fetchApprovedData = useCallback(async (filterState: SharedFilters, emailAddr: string) => {
+    const path = buildFilterQuery(emailAddr, filterState);
+    const data = await callEdge("GET", path);
+    if (data.status === "approved") {
+      setDashboard(data.dashboard);
+      setVisuals(data.visuals || []);
+      setVisualsData(data.visualsData || {});
+      setStackedVisualsData(data.stackedVisualsData || {});
+      if (data.filterOptions) setFilterOptions(data.filterOptions);
+    }
+    return data;
+  }, [buildFilterQuery, callEdge]);
+
   useEffect(() => {
     if (!token) return;
     (async () => {
@@ -99,19 +195,26 @@ export default function SharedInsightsDashboard() {
       const savedEmail = localStorage.getItem(`shared-dash-email-${token}`);
       if (savedEmail) {
         setEmail(savedEmail);
-         const statusData = await callEdge("GET", `?token=${token}&email=${encodeURIComponent(savedEmail)}`);
-        if (statusData.status === "approved") {
-          setDashboard(statusData.dashboard);
-          setVisuals(statusData.visuals || []);
-          setVisualsData(statusData.visualsData || {});
-          setStackedVisualsData(statusData.stackedVisualsData || {});
-          setState("approved");
-        } else if (statusData.status === "pending") { setState("pending"); }
+        const statusData = await fetchApprovedData(getDefaultFilters(), savedEmail);
+        if (statusData.status === "approved") { setState("approved"); }
+        else if (statusData.status === "pending") { setState("pending"); }
         else if (statusData.status === "rejected") { setState("rejected"); }
         else { setState("email_form"); }
       } else { setState("email_form"); }
     })();
-  }, [token, callEdge]);
+  }, [token, callEdge, fetchApprovedData]);
+
+  // Re-fetch when filters change (only when approved)
+  useEffect(() => {
+    if (state !== "approved" || !token || !email) return;
+    let cancelled = false;
+    setRefreshing(true);
+    fetchApprovedData(filters, email).finally(() => {
+      if (!cancelled) setRefreshing(false);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.startDate, filters.endDate, filters.userId, filters.productId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,11 +224,7 @@ export default function SharedInsightsDashboard() {
       const data = await callEdge("POST", "", { share_token: token, email: email.trim() });
       localStorage.setItem(`shared-dash-email-${token}`, email.trim().toLowerCase());
       if (data.status === "approved") {
-        const fullData = await callEdge("GET", `?token=${token}&email=${encodeURIComponent(email.trim())}`);
-        setDashboard(fullData.dashboard);
-        setVisuals(fullData.visuals || []);
-        setVisualsData(fullData.visualsData || {});
-        setStackedVisualsData(fullData.stackedVisualsData || {});
+        const fullData = await fetchApprovedData(filters, email.trim());
         setState("approved");
       } else if (data.status === "rejected") { setState("rejected"); }
       else { setState("pending"); }
@@ -138,22 +237,42 @@ export default function SharedInsightsDashboard() {
   useEffect(() => {
     if (state !== "pending" || !token || !email) return;
     const interval = setInterval(async () => {
-      const data = await callEdge("GET", `?token=${token}&email=${encodeURIComponent(email)}`);
-      if (data.status === "approved") {
-        setDashboard(data.dashboard);
-        setVisuals(data.visuals || []);
-        setVisualsData(data.visualsData || {});
-        setStackedVisualsData(data.stackedVisualsData || {});
-        setState("approved");
-      } else if (data.status === "rejected") { setState("rejected"); }
+      const data = await fetchApprovedData(filters, email);
+      if (data.status === "approved") { setState("approved"); }
+      else if (data.status === "rejected") { setState("rejected"); }
     }, 5000);
     return () => clearInterval(interval);
-  }, [state, token, email, callEdge]);
+  }, [state, token, email, callEdge, fetchApprovedData, filters]);
 
   const gridLayout = useMemo(() =>
     visuals.map((v, i) => visualToLayoutItem(v, i)),
     [visuals]
   );
+
+  // Filter handlers
+  const handlePresetChange = (preset: DatePreset) => {
+    const { start, end } = getPresetDates(preset);
+    setFilters(prev => ({ ...prev, preset, startDate: start.toISOString(), endDate: end.toISOString() }));
+  };
+
+  const handleDateSelect = (range: { from?: Date; to?: Date } | undefined) => {
+    if (range) {
+      setDateRangeLocal({ from: range.from, to: range.to });
+      if (range.from && range.to) {
+        setFilters(prev => ({
+          ...prev,
+          preset: "custom",
+          startDate: range.from!.toISOString(),
+          endDate: range.to!.toISOString(),
+        }));
+        setDatePickerOpen(false);
+      }
+    }
+  };
+
+  const selectedUser = filterOptions.users.find(u => u.id === filters.userId);
+  const selectedProduct = filterOptions.products.find(p => p.id === filters.productId);
+  const hasActiveFilters = filters.userId !== "all" || filters.productId !== "all";
 
   if (state === "loading") {
     return (
@@ -249,6 +368,155 @@ export default function SharedInsightsDashboard() {
               <span>Visualização somente leitura</span>
             </div>
           </div>
+        </div>
+
+        {/* Filter Bar */}
+        <div className="flex flex-wrap items-center gap-2 p-4 bg-card border rounded-lg relative">
+          {refreshing && (
+            <div className="absolute top-2 right-2">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          )}
+
+          {/* Date Preset */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <CalendarDays className="h-4 w-4" />
+                {getPresetLabel(filters.preset)}
+                <ChevronDown className="h-3 w-3 opacity-50" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {PRESETS.map((preset) => (
+                <DropdownMenuItem
+                  key={preset.value}
+                  onClick={() => handlePresetChange(preset.value)}
+                  className={cn(filters.preset === preset.value && "bg-accent")}
+                >
+                  {preset.label}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setDatePickerOpen(true);
+                    }}
+                  >
+                    Personalizado...
+                  </DropdownMenuItem>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange.from}
+                    selected={dateRange}
+                    onSelect={handleDateSelect}
+                    numberOfMonths={2}
+                    locale={ptBR}
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Date Range Display */}
+          {filters.preset !== "custom" && (
+            <span className="text-sm text-muted-foreground hidden md:inline">
+              {format(new Date(filters.startDate), "dd/MM/yyyy", { locale: ptBR })} -{" "}
+              {format(new Date(filters.endDate), "dd/MM/yyyy", { locale: ptBR })}
+            </span>
+          )}
+
+          <div className="h-4 w-px bg-border mx-2 hidden md:block" />
+
+          {/* User Filter */}
+          {filterOptions.users.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={filters.userId !== "all" ? "secondary" : "outline"}
+                  size="sm"
+                  className="gap-2"
+                >
+                  <User className="h-4 w-4" />
+                  {selectedUser?.name || "Todos os Vendedores"}
+                  <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="max-h-64 overflow-auto">
+                <DropdownMenuItem
+                  onClick={() => setFilters(prev => ({ ...prev, userId: "all" }))}
+                  className={cn(filters.userId === "all" && "bg-accent")}
+                >
+                  Todos os Vendedores
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {filterOptions.users.map((user) => (
+                  <DropdownMenuItem
+                    key={user.id}
+                    onClick={() => setFilters(prev => ({ ...prev, userId: user.id }))}
+                    className={cn(filters.userId === user.id && "bg-accent")}
+                  >
+                    {user.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Product Filter */}
+          {filterOptions.products.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant={filters.productId !== "all" ? "secondary" : "outline"}
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Filter className="h-4 w-4" />
+                  {selectedProduct?.name || "Todos os Produtos"}
+                  <ChevronDown className="h-3 w-3 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="max-h-64 overflow-auto">
+                <DropdownMenuItem
+                  onClick={() => setFilters(prev => ({ ...prev, productId: "all" }))}
+                  className={cn(filters.productId === "all" && "bg-accent")}
+                >
+                  Todos os Produtos
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {filterOptions.products.map((product) => (
+                  <DropdownMenuItem
+                    key={product.id}
+                    onClick={() => setFilters(prev => ({ ...prev, productId: product.id }))}
+                    className={cn(filters.productId === product.id && "bg-accent")}
+                  >
+                    {product.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {/* Reset */}
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setFilters(prev => ({ ...prev, userId: "all", productId: "all" }))}
+              className="gap-2 text-muted-foreground"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Limpar filtros
+            </Button>
+          )}
         </div>
 
         <div ref={containerRef} className="shared-insights-grid">
