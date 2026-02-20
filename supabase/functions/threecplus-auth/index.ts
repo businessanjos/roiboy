@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { api_token } = await req.json();
+    const { api_token, domain } = await req.json();
 
     if (!api_token || typeof api_token !== "string" || api_token.trim().length === 0) {
       return new Response(JSON.stringify({ error: "Token da API é obrigatório" }), {
@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
           provider: "3cplus",
           access_token: api_token.trim(),
           user_email: userEmail,
-          metadata: { user_name: userName },
+          metadata: { user_name: userName, domain: domain || null },
         },
         { onConflict: "user_id,provider" }
       );
