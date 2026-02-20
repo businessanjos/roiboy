@@ -124,10 +124,38 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Step 2: Click-to-call
-    console.log("[threecplus-call] Initiating click2call for phone:", cleanPhone, "at:", baseDomain);
+    // Step 2: Enter manual call mode
+    console.log("[threecplus-call] Entering manual call mode at:", baseDomain);
+    const enterRes = await fetch(
+      `${baseDomain}/api/v1/agent/manual_call/enter?api_token=${apiToken}`,
+      { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" } }
+    );
+    const enterText = await enterRes.text();
+    console.log("[threecplus-call] manual_call/enter response:", enterRes.status, enterText);
 
-    const apiResponse = await fetch(
+    // Step 3: Dial the number
+    console.log("[threecplus-call] Dialing phone:", cleanPhone);
+    const dialRes = await fetch(
+      `${baseDomain}/api/v1/agent/manual_call/dial?api_token=${apiToken}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ phone: cleanPhone }),
+      }
+    );
+    const dialText = await dialRes.text();
+    console.log("[threecplus-call] manual_call/dial response:", dialRes.status, dialText);
+
+    if (dialRes.ok) {
+      return new Response(
+        JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fallback: try click2call (requires Supervisor token)
+    console.log("[threecplus-call] Manual call failed, trying click2call fallback");
+    const fallbackRes = await fetch(
       `${baseDomain}/api/v1/click2call?api_token=${apiToken}`,
       {
         method: "POST",
@@ -135,11 +163,10 @@ Deno.serve(async (req) => {
         body: JSON.stringify({ phone: cleanPhone }),
       }
     );
+    const fallbackText = await fallbackRes.text();
+    console.log("[threecplus-call] click2call fallback response:", fallbackRes.status, fallbackText);
 
-    const responseText = await apiResponse.text();
-    console.log("[threecplus-call] API response:", apiResponse.status, responseText);
-
-    if (apiResponse.ok) {
+    if (fallbackRes.ok) {
       return new Response(
         JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
