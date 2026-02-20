@@ -1,58 +1,39 @@
 
 
-## Integrar 3C Plus - Login na aba Integracoes
+## Corrigir tratamento de erro na integracao 3C Plus
 
-### Resumo
+### Problema
 
-Adicionar uma nova aba "3C Plus" nas configuracoes de Integracoes do ROY, permitindo que o usuario faca login com seu token de API da 3C Plus. O sistema validara o token chamando a API da 3C Plus e armazenara as credenciais na tabela `user_integrations`.
+A edge function `threecplus-auth` retorna HTTP 400 com mensagem descritiva quando o token e invalido (ex: "Token invalido. Verifique seu token da API 3C Plus."). Porem o `supabase.functions.invoke` lanca uma excecao generica para qualquer resposta non-2xx, e o frontend so mostra "Edge Function returned a non-2xx status code" ao inves da mensagem real.
 
-### Como funciona a autenticacao da 3C Plus
+### Solucao
 
-A 3C Plus utiliza autenticacao por API Token (nao OAuth). O usuario fornece seu token e o sistema valida chamando o endpoint `user/me` na API `https://app.3c.fluxoti.com/api/v1/`.
+Duas alteracoes:
 
-### Alteracoes tecnicas
+#### 1. Edge Function `supabase/functions/threecplus-auth/index.ts`
 
-#### 1. Edge Function `supabase/functions/3cplus-auth/index.ts` (nova)
+Retornar HTTP 200 para erros de validacao (token invalido, usuario nao encontrado), incluindo `success: false` e `error` no JSON. Reservar status non-2xx apenas para erros reais do servidor.
 
-Funcao que recebe o token do usuario, valida contra a API da 3C Plus e armazena na tabela `user_integrations`:
-
-- Recebe `{ api_token }` no body + Authorization header do usuario logado
-- Chama `GET https://app.3c.fluxoti.com/api/v1/user/me` com o token para validar
-- Se valido, faz upsert em `user_integrations` com provider `3cplus`, armazenando o token e dados do usuario (nome, email)
-- Retorna os dados do usuario da 3C Plus
+Mudancas especificas:
+- Quando a API 3C Plus retorna 401/403, retornar `{ success: false, error: "Token invalido..." }` com status 200
+- Quando a API retorna outro erro, retornar `{ success: false, error: "Erro ao validar..." }` com status 200
+- Adicionar logging para diagnosticar problemas com a API 3C Plus (logar o status e corpo da resposta)
+- Manter status 401/500 apenas para erros internos reais (auth do usuario ROY, erros do servidor)
 
 #### 2. Frontend `src/components/integrations/IntegrationsContent.tsx`
 
-**Adicionar na lista de integracoes:**
-```
-{ id: "3cplus", name: "3C Plus", description: "Plataforma de telefonia cloud para call center", icon: Phone }
-```
+Atualizar `handle3CPlusConnect` para tratar tanto `data.error` quanto excecoes do invoke:
 
-**Nova aba "3C Plus"** no TabsList, com icone `Phone` do lucide-react.
+- No catch, tentar extrair o corpo JSON da resposta de erro usando `err.context?.body` ou parse do erro
+- Exibir a mensagem descritiva ao usuario em vez da mensagem generica
 
-**Conteudo da aba:**
-- Card com formulario de login contendo um campo para o API Token
-- Botao "Conectar" que chama a edge function `3cplus-auth`
-- Ao conectar com sucesso, exibe os dados do usuario 3C Plus (nome/email) com opcao de desconectar
-- Badge de status (Conectado/Desconectado) no header do card
+### Sobre a conta admin
 
-**Logica de desconectar:** reutiliza a funcao `handleDisconnect` existente com provider `"3cplus"`.
+Adicionar uma nota no texto de ajuda do formulario mencionando que tokens de contas admin podem nao funcionar, orientando o usuario a usar um token de conta de operador/agente.
 
-#### 3. Fluxo do usuario
+### Resultado esperado
 
-```text
-1. Usuario acessa Configuracoes > Integracoes > aba "3C Plus"
-2. Ve card "Conexao 3C Plus" com campo para API Token
-3. Cola seu token e clica "Conectar"
-4. Edge function valida o token na API da 3C Plus
-5. Se valido: salva em user_integrations, exibe "Conectado como [nome/email]"
-6. Se invalido: exibe erro "Token invalido"
-7. Para desconectar: botao "Desconectar" remove o registro
-```
-
-### Arquivos envolvidos
-
-- **Novo:** `supabase/functions/3cplus-auth/index.ts` - Edge function de validacao
-- **Editar:** `src/components/integrations/IntegrationsContent.tsx` - Nova aba e formulario
-- **Editar:** `supabase/config.toml` - Registro da nova edge function (verify_jwt = false)
+1. Usuario insere token de conta admin -> ve "Token invalido. Verifique seu token da API 3C Plus." (mensagem clara)
+2. Usuario insere token incorreto -> ve mensagem descritiva de erro
+3. Usuario insere token valido de operador -> conecta com sucesso
 
