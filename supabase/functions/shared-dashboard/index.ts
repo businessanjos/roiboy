@@ -424,16 +424,74 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Cleanup: remove pending/rejected requests older than 30 minutes
+      await supabaseAdmin
+        .from("insights_share_access_requests")
+        .delete()
+        .eq("share_id", share.id)
+        .in("status", ["pending", "rejected"])
+        .lt("created_at", new Date(Date.now() - 30 * 60 * 1000).toISOString());
+
       // Check if request already exists
       const { data: existing } = await supabaseAdmin
         .from("insights_share_access_requests")
-        .select("id, status")
+        .select("id, status, created_at, request_count")
         .eq("share_id", share.id)
         .eq("email", email.toLowerCase())
         .single();
 
       if (existing) {
-        return new Response(JSON.stringify({ status: existing.status, request_id: existing.id }), {
+        // If approved, just return current status
+        if (existing.status === "approved") {
+          return new Response(JSON.stringify({ status: existing.status, request_id: existing.id }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Rate limit: check if last request was within 5 minutes
+        const minutesSinceLastRequest = (Date.now() - new Date(existing.created_at).getTime()) / (1000 * 60);
+        if (minutesSinceLastRequest < 5) {
+          const waitMinutes = Math.ceil(5 - minutesSinceLastRequest);
+          return new Response(JSON.stringify({ error: `Aguarde ${waitMinutes} minuto(s) para solicitar novamente` }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Re-request: update existing entry (increment count, reset timestamp, set pending)
+        const { data: updated, error: updateError } = await supabaseAdmin
+          .from("insights_share_access_requests")
+          .update({
+            request_count: (existing.request_count || 1) + 1,
+            created_at: new Date().toISOString(),
+            status: "pending",
+          })
+          .eq("id", existing.id)
+          .select("id, status")
+          .single();
+
+        if (updateError) {
+          return new Response(JSON.stringify({ error: "Erro ao atualizar solicitação" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Create notification for re-request
+        const dashboardName2 = (share as any).insights_dashboards?.name || "Painel";
+        await supabaseAdmin.from("notifications").insert({
+          account_id: share.account_id,
+          user_id: share.created_by,
+          type: "dashboard_share_request",
+          title: "Solicitação de acesso ao painel",
+          content: `${email} solicitou acesso novamente ao painel "${dashboardName2}"`,
+          link: `/insights/${share.dashboard_id}`,
+          source_type: "insights_share_request",
+          source_id: updated!.id,
+        });
+
+        return new Response(JSON.stringify({ status: "pending", request_id: updated!.id }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -442,7 +500,7 @@ Deno.serve(async (req) => {
       // Create access request
       const { data: request, error: reqError } = await supabaseAdmin
         .from("insights_share_access_requests")
-        .insert({ share_id: share.id, email: email.toLowerCase() })
+        .insert({ share_id: share.id, email: email.toLowerCase(), request_count: 1 })
         .select("id, status")
         .single();
 

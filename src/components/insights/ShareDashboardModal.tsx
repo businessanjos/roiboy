@@ -24,6 +24,7 @@ interface AccessRequest {
   email: string;
   status: string;
   created_at: string;
+  request_count: number;
 }
 
 export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboardName }: ShareDashboardModalProps) {
@@ -68,7 +69,7 @@ export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboard
     try {
       const { data } = await supabase
         .from("insights_share_access_requests")
-        .select("id, email, status, created_at")
+        .select("id, email, status, created_at, request_count")
         .eq("share_id", shareId)
         .order("created_at", { ascending: false });
       setRequests(data || []);
@@ -233,7 +234,12 @@ export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboard
                     {requests.map((req) => (
                       <div key={req.id} className="flex items-center justify-between rounded-md border px-3 py-2">
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{req.email}</p>
+                          <p className="text-sm font-medium truncate">
+                            {req.email}
+                            {req.request_count > 1 && (
+                              <span className="ml-1 text-xs text-muted-foreground font-normal">({req.request_count}x)</span>
+                            )}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {req.status === "pending" && "Aguardando"}
                             {req.status === "approved" && "Liberado"}

@@ -5568,6 +5568,7 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          request_count: number
           reviewed_at: string | null
           reviewed_by: string | null
           share_id: string
@@ -5577,6 +5578,7 @@ export type Database = {
           created_at?: string
           email: string
           id?: string
+          request_count?: number
           reviewed_at?: string | null
           reviewed_by?: string | null
           share_id: string
@@ -5586,6 +5588,7 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+          request_count?: number
           reviewed_at?: string | null
           reviewed_by?: string | null
           share_id?: string
