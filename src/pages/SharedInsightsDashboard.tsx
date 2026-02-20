@@ -222,15 +222,19 @@ export default function SharedInsightsDashboard() {
     setSubmitting(true);
     try {
       const data = await callEdge("POST", "", { share_token: token, email: email.trim() });
+      if (data.error) {
+        setErrorMsg(data.error);
+        setSubmitting(false);
+        return;
+      }
       localStorage.setItem(`shared-dash-email-${token}`, email.trim().toLowerCase());
       if (data.status === "approved") {
-        const fullData = await fetchApprovedData(filters, email.trim());
+        await fetchApprovedData(filters, email.trim());
         setState("approved");
       } else if (data.status === "rejected") { setState("rejected"); }
       else { setState("pending"); }
     } catch {
       setErrorMsg("Erro ao enviar solicitação");
-      setState("error");
     } finally { setSubmitting(false); }
   };
 
@@ -313,8 +317,11 @@ export default function SharedInsightsDashboard() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input type="email" placeholder="seu@email.com" className="pl-10" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <Input type="email" placeholder="seu@email.com" className="pl-10" value={email} onChange={(e) => { setEmail(e.target.value); setErrorMsg(""); }} required />
               </div>
+              {errorMsg && (
+                <p className="text-sm text-destructive text-center">{errorMsg}</p>
+              )}
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                 Solicitar Acesso
@@ -349,6 +356,18 @@ export default function SharedInsightsDashboard() {
             <ShieldX className="h-12 w-12 text-destructive mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">Acesso Recusado</h2>
             <p className="text-muted-foreground">O administrador do painel recusou sua solicitação de acesso.</p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => {
+                localStorage.removeItem(`shared-dash-email-${token}`);
+                setEmail("");
+                setErrorMsg("");
+                setState("email_form");
+              }}
+            >
+              Solicitar novamente
+            </Button>
           </CardContent>
         </Card>
       </div>
