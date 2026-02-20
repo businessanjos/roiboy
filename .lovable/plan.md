@@ -1,67 +1,59 @@
 
 
-## Adicionar barra de filtros ao painel compartilhado
+## Corrigir visuais com valores nulos apos mudanca de filtro
 
-### Contexto
+### Causa raiz
 
-O painel compartilhado (link publico) atualmente mostra todos os dados sem possibilidade de filtragem. O painel interno do sistema possui uma barra de filtros com presets de data (Hoje, Esta Semana, Este Mes, etc.), filtro por vendedor e filtro por produto. Essa mesma capacidade precisa ser replicada na visualizacao publica.
+O bug esta na funcao `getDateFieldForVisual` no edge function `shared-dashboard/index.ts` (linha 51):
 
-### Desafio tecnico
+```
+if (dimension?.field && dimension.field !== 'created_at') return dimension.field;
+```
 
-O componente `InsightsFilterBar` existente depende de:
-- `useInsightsFilters` (Context Provider que nao existe na rota publica)
-- `useQuery` com `supabase` direto (requer autenticacao/RLS)
+Scorecards usam `dimension.field = '_total'`. Como `'_total'` nao e `'created_at'`, a funcao retorna `'_total'` como campo de data. Em seguida, `applyDateFilter` aplica `.gte('_total', startDate)` -- filtrando por uma coluna que nao existe na tabela `deals`. Isso faz a query retornar zero resultados para todos os scorecards (Faturamento, Meta, Ticket Medio, Negocios Ganhos, Negocios) e qualquer outro visual com `dimension.field` nao-temporal (ex: `source`, `stage_name`, `responsible_name`).
 
-Portanto, nao e possivel reutilizar o componente diretamente. A solucao e:
-1. Retornar as opcoes de filtro (vendedores e produtos) junto com os dados do edge function
-2. Criar uma barra de filtros local no `SharedInsightsDashboard`
-3. Re-buscar dados do edge function quando os filtros mudam
+O visual "Faturamento por Canal" tambem e afetado pela mesma razao: seu `dimension.field` provavelmente e `source` (texto), que tambem e retornado incorretamente como campo de data.
 
-### Alteracoes
+Sem filtros, o problema nao aparece porque `startDate` e `endDate` sao `undefined`, entao `applyDateFilter` nao adiciona nenhuma clausula.
 
-#### 1. Edge Function `supabase/functions/shared-dashboard/index.ts`
+### Solucao
 
-**Aceitar parametros de filtro no GET:**
-- `startDate` e `endDate` (ISO strings)
-- `userId` (UUID ou "all")
-- `productId` (UUID ou "all")
+**Arquivo: `supabase/functions/shared-dashboard/index.ts`**
 
-**Retornar opcoes de filtro:**
-- Buscar vendedores unicos da tabela `users` com `account_id`
-- Buscar produtos ativos da tabela `products` com `account_id`
-- Incluir no response: `filterOptions: { users: [{id, name}], products: [{id, name}] }`
+Corrigir a funcao `getDateFieldForVisual` para ignorar campos que nao sao datas reais. Adicionar uma verificacao para excluir `_total` e campos de texto conhecidos:
 
-**Aplicar filtros nas queries:**
-- Em `computeDealsData` e `computeStackedVisualData`: filtrar por intervalo de data e por `responsible_user_id`
-- Em `computeLeadsData`: filtrar por intervalo de data
-- Em `computeProductsData`: filtrar conforme aplicavel
+```typescript
+function getDateFieldForVisual(config: any): string {
+  const { dimension, statusFilter } = config || {};
+  const dateFields = ['created_at', 'won_at', 'lost_at'];
+  if (dimension?.field && dateFields.includes(dimension.field)) return dimension.field;
+  if (statusFilter === 'won') return 'won_at';
+  if (statusFilter === 'lost') return 'lost_at';
+  return 'created_at';
+}
+```
 
-#### 2. Frontend `src/pages/SharedInsightsDashboard.tsx`
+Ou, de forma equivalente, verificar se `dimension.type === 'date'`:
 
-**Estado local de filtros:**
-- `sharedFilters`: objeto com `preset`, `startDate`, `endDate`, `userId`, `productId`
-- Funcoes auxiliares para calcular datas a partir de presets (replicando a logica de `useInsightsFilters`)
+```typescript
+function getDateFieldForVisual(config: any): string {
+  const { dimension, statusFilter } = config || {};
+  if (dimension?.type === 'date' && dimension.field && dimension.field !== 'created_at') {
+    return dimension.field;
+  }
+  if (statusFilter === 'won') return 'won_at';
+  if (statusFilter === 'lost') return 'lost_at';
+  return 'created_at';
+}
+```
 
-**Componente de filtro inline:**
-- Renderizar uma barra de filtros similar a `InsightsFilterBar` diretamente no componente
-- Dropdown de presets de data (Hoje, Esta Semana, Este Mes, Mes Passado, Este Trimestre, Este Ano, Personalizado)
-- Dropdown de vendedores (populado com dados do edge function)
-- Dropdown de produtos (populado com dados do edge function)
+A segunda abordagem e mais robusta pois verifica o tipo da dimensao em vez de manter uma lista fixa de campos validos.
 
-**Re-fetch ao mudar filtros:**
-- Quando qualquer filtro mudar, chamar o edge function novamente com os novos parametros
-- Mostrar indicador de loading durante o re-fetch
-- Atualizar `visualsData` e `stackedVisualsData` com os novos resultados
+### Impacto
 
-### Fluxo de dados
+Essa unica mudanca (1 linha) corrige todos os visuais afetados:
+- Scorecards (`dimension.field = '_total'`): filtro de data aplicado em `won_at` ou `created_at` conforme o `statusFilter`
+- Graficos por canal/etapa/responsavel (`dimension.field = 'source'`, `stage_name`, etc.): filtro de data aplicado no campo temporal correto
+- Visuais com dimensao temporal (`dimension.type = 'date'`): comportamento inalterado, continua usando o campo de data configurado
 
-1. Primeiro GET (acesso aprovado) retorna dados com filtros padrao (ano atual) + opcoes de filtro
-2. Usuario altera filtro na barra
-3. Novo GET com parametros de filtro envia request ao edge function
-4. Edge function computa dados filtrados e retorna
-5. Frontend atualiza os visuais com os novos dados
-
-### Resultado esperado
-
-Visitantes com acesso aprovado verao uma barra de filtros abaixo do titulo do painel, identica visualmente a do sistema interno, permitindo alterar periodo, vendedor e produto. Os visuais serao recalculados server-side a cada mudanca de filtro.
-
+Nao e necessaria nenhuma alteracao no frontend.
