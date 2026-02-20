@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
 
     const { data: integration, error: integrationError } = await supabaseAdmin
       .from("user_integrations")
-      .select("access_token")
+      .select("access_token, metadata")
       .eq("user_id", userData.id)
       .eq("provider", "3cplus")
       .maybeSingle();
@@ -115,13 +115,15 @@ Deno.serve(async (req) => {
       );
     }
 
-    // API call failed - return fallback info
+    // API call failed - return fallback info with custom domain if available
+    const meta = integration?.metadata as Record<string, unknown> | null;
+    const customDomain = meta?.domain as string | null;
     return new Response(
       JSON.stringify({
         success: false,
         error: "Não foi possível iniciar a chamada via API. Verifique se você está logado no 3C Plus.",
         code: "API_CALL_FAILED",
-        fallback_url: "https://app.3c.fluxoti.com",
+        fallback_url: customDomain || "https://app.3c.fluxoti.com",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

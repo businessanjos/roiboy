@@ -61,6 +61,7 @@ export function IntegrationsContent() {
 
   // 3C Plus state
   const [threeCPlusToken, setThreeCPlusToken] = useState("");
+  const [threeCPlusDomain, setThreeCPlusDomain] = useState("");
   const [connecting3CPlus, setConnecting3CPlus] = useState(false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -144,12 +145,20 @@ export function IntegrationsContent() {
     
     const { data, error } = await supabase
       .from("user_integrations")
-      .select("id, user_id, provider, user_email, expires_at, created_at");
+      .select("id, user_id, provider, user_email, expires_at, created_at, metadata");
     
     if (error) {
       console.error("Error fetching user integrations:", error);
     } else {
       setUserIntegrations(data || []);
+      // Populate 3C Plus domain from metadata
+      const threeCPlus = data?.find(i => i.provider === "3cplus");
+      if (threeCPlus?.metadata && typeof threeCPlus.metadata === "object" && !Array.isArray(threeCPlus.metadata)) {
+        const meta = threeCPlus.metadata as Record<string, unknown>;
+        if (meta.domain && typeof meta.domain === "string") {
+          setThreeCPlusDomain(meta.domain);
+        }
+      }
     }
   };
 
@@ -346,7 +355,7 @@ export function IntegrationsContent() {
     setConnecting3CPlus(true);
     try {
       const { data, error } = await supabase.functions.invoke("threecplus-auth", {
-        body: { api_token: threeCPlusToken.trim() },
+        body: { api_token: threeCPlusToken.trim(), domain: threeCPlusDomain.trim() || null },
       });
       if (error) throw error;
       if (data?.error) {
@@ -802,6 +811,32 @@ export function IntegrationsContent() {
                       Desconectar
                     </Button>
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="3cplus-domain-connected">Domínio</Label>
+                    <Input
+                      id="3cplus-domain-connected"
+                      type="url"
+                      placeholder="https://suaempresa.3c.plus/login"
+                      value={threeCPlusDomain}
+                      onChange={(e) => setThreeCPlusDomain(e.target.value)}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      URL de login do seu domínio 3C Plus. Usado como fallback quando a chamada via API não estiver disponível.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handle3CPlusConnect}
+                    disabled={connecting3CPlus}
+                  >
+                    {connecting3CPlus ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Salvando...</>
+                    ) : (
+                      "Salvar domínio"
+                    )}
+                  </Button>
                   <p className="text-sm text-muted-foreground">
                     Sua conta 3C Plus está conectada e pronta para uso.
                   </p>
@@ -825,6 +860,20 @@ export function IntegrationsContent() {
                       onChange={(e) => setThreeCPlusToken(e.target.value)}
                       className="font-mono text-sm"
                     />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="3cplus-domain">Domínio</Label>
+                    <Input
+                      id="3cplus-domain"
+                      type="url"
+                      placeholder="https://suaempresa.3c.plus/login"
+                      value={threeCPlusDomain}
+                      onChange={(e) => setThreeCPlusDomain(e.target.value)}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      URL de login do seu domínio 3C Plus (ex: https://anjosbusiness.3c.plus/login)
+                    </p>
                   </div>
                   <Button
                     onClick={handle3CPlusConnect}
