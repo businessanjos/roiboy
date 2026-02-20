@@ -357,7 +357,13 @@ export function IntegrationsContent() {
         fetchUserIntegrations();
       }
     } catch (err: any) {
-      toast({ title: "Erro", description: err.message || "Falha ao conectar.", variant: "destructive" });
+      let msg = "Falha ao conectar.";
+      try {
+        const body = err?.context?.body ? JSON.parse(err.context.body) : null;
+        if (body?.error) msg = body.error;
+      } catch {}
+      if (err.message && msg === "Falha ao conectar.") msg = err.message;
+      toast({ title: "Erro", description: msg, variant: "destructive" });
     } finally {
       setConnecting3CPlus(false);
     }
@@ -805,6 +811,9 @@ export function IntegrationsContent() {
                   <p className="text-sm text-muted-foreground">
                     Cole seu token de API da 3C Plus para conectar. Você pode encontrar seu token
                     nas configurações da sua conta 3C Plus.
+                  </p>
+                  <p className="text-xs text-muted-foreground/70">
+                    ⚠️ Tokens de contas admin podem não funcionar. Use o token de um usuário operador/agente.
                   </p>
                   <div className="space-y-2">
                     <Label htmlFor="3cplus-token">Token da API</Label>

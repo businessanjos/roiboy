@@ -71,15 +71,17 @@ Deno.serve(async (req) => {
 
     if (!apiResponse.ok) {
       const status = apiResponse.status;
-      await apiResponse.text(); // consume body
+      const body = await apiResponse.text();
+      console.error("3C Plus API error:", { status, body });
       return new Response(
         JSON.stringify({
+          success: false,
           error: status === 401 || status === 403
-            ? "Token inválido. Verifique seu token da API 3C Plus."
+            ? "Token inválido. Verifique seu token da API 3C Plus. Tokens de contas admin podem não funcionar — use um token de operador/agente."
             : `Erro ao validar token (status ${status}). Tente novamente.`,
         }),
         {
-          status: 400,
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
