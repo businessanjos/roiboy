@@ -1,39 +1,34 @@
 
-## Adicionar campo "Dominio" na integracao 3C Plus
 
-### Resumo
+## Corrigir botao "Salvar dominio" quando ja conectado
 
-Adicionar um campo de dominio personalizado na tela de configuracao do 3C Plus (Configuracoes > Integracoes > 3C Plus). O dominio sera salvo no campo `metadata` da tabela `user_integrations` e utilizado como URL de fallback quando a chamada via API falhar, em vez do dominio generico `https://app.3c.fluxoti.com`.
+### Causa raiz
+
+O botao "Salvar dominio" chama a mesma funcao `handle3CPlusConnect`, que exige o campo `threeCPlusToken` preenchido (linha 351). Quando o usuario ja esta conectado, o token foi apagado do estado local (linha 365: `setThreeCPlusToken("")`), entao a validacao falha com "Informe o token da API."
+
+### Correcao
+
+Criar uma funcao separada `handleSaveDomain` que atualiza apenas o campo `metadata` da integracao existente diretamente no banco, sem precisar revalidar o token na API 3C Plus.
 
 ### Alteracoes
 
-#### 1. Frontend - `src/components/integrations/IntegrationsContent.tsx`
+#### `src/components/integrations/IntegrationsContent.tsx`
 
-- Adicionar estado `threeCPlusDomain` para o campo de dominio
-- Adicionar campo de input "Dominio" na secao de configuracao do 3C Plus (tanto no formulario de conexao quanto na visualizacao de conectado)
-- Enviar o dominio junto com o token na chamada para `threecplus-auth`
-- Ao carregar a integracao existente, popular o campo de dominio a partir do `metadata`
-- Permitir editar o dominio mesmo depois de conectado
+1. Criar nova funcao `handleSaveDomain`:
+   - Buscar o `access_token` existente da integracao ja conectada (`threeCPlusUserIntegration.access_token`)
+   - Chamar `supabase.functions.invoke("threecplus-auth")` enviando o token existente + novo dominio
+   - OU atualizar diretamente via Supabase client o campo `metadata` da tabela `user_integrations` (mais simples e eficiente)
 
-O campo ficara abaixo do campo "Token da API" com placeholder `https://suaempresa.3c.plus/login` e uma descricao explicativa.
+   A abordagem mais simples: atualizar diretamente o metadata via Supabase client:
+   ```
+   await supabase
+     .from("user_integrations")
+     .update({ metadata: { ...existingMetadata, domain: newDomain } })
+     .eq("id", integrationId)
+   ```
 
-#### 2. Edge Function - `supabase/functions/threecplus-auth/index.ts`
+2. Alterar o botao "Salvar dominio" (linha 831) para chamar `handleSaveDomain` em vez de `handle3CPlusConnect`
 
-- Receber o campo `domain` no body da requisicao
-- Salvar o dominio no campo `metadata` junto com o `user_name`:
-  ```
-  metadata: { user_name: userName, domain: domain }
-  ```
+### Arquivos envolvidos
 
-#### 3. Edge Function - `supabase/functions/threecplus-call/index.ts`
-
-- Buscar tambem o campo `metadata` ao consultar a integracao do usuario
-- Usar o dominio do metadata como `fallback_url` quando a chamada API falhar, em vez do generico `https://app.3c.fluxoti.com`
-
-#### 4. Frontend - `src/components/sales/ThreeCPlusCallButton.tsx`
-
-- Usar o `fallback_url` retornado pela edge function (que agora contera o dominio personalizado do usuario)
-
-### Nenhuma migracao de banco necessaria
-
-O campo `metadata` (JSON) ja existe na tabela `user_integrations` e comporta dados adicionais sem alteracao de schema.
+- **Editar:** `src/components/integrations/IntegrationsContent.tsx` - Nova funcao e ajuste no onClick do botao
