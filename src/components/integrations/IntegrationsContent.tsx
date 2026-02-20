@@ -347,6 +347,25 @@ export function IntegrationsContent() {
   const zoomUserIntegration = getUserIntegration("zoom");
   const threeCPlusUserIntegration = getUserIntegration("3cplus");
 
+  const handleSaveDomain = async () => {
+    if (!threeCPlusUserIntegration) return;
+    setConnecting3CPlus(true);
+    try {
+      const existingMetadata = (threeCPlusUserIntegration as any).metadata || {};
+      const { error } = await supabase
+        .from("user_integrations")
+        .update({ metadata: { ...existingMetadata, domain: threeCPlusDomain.trim() || null } })
+        .eq("id", (threeCPlusUserIntegration as any).id);
+      if (error) throw error;
+      toast({ title: "Salvo!", description: "Domínio atualizado com sucesso." });
+      fetchUserIntegrations();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message || "Falha ao salvar domínio.", variant: "destructive" });
+    } finally {
+      setConnecting3CPlus(false);
+    }
+  };
+
   const handle3CPlusConnect = async () => {
     if (!threeCPlusToken.trim()) {
       toast({ title: "Erro", description: "Informe o token da API.", variant: "destructive" });
@@ -828,7 +847,7 @@ export function IntegrationsContent() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handle3CPlusConnect}
+                    onClick={handleSaveDomain}
                     disabled={connecting3CPlus}
                   >
                     {connecting3CPlus ? (
