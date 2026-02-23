@@ -44,20 +44,39 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
 
   const FATURAMENTO_FIELD_ID = 'ed5c7c0e-0740-4945-b982-70a593ffae0c';
   const ITEM_VENDA_FIELD_ID = '033b91fb-3add-4c96-aec9-567fefbd0fb2';
+  const CHUNK_SIZE = 200;
+
+  // Stabilize dependency to avoid unnecessary re-fetches
+  const dealIdsKey = useMemo(() => deals.map(d => d.id).sort().join(','), [deals]);
 
   useEffect(() => {
     if (deals.length === 0) return;
 
     const dealIds = deals.map(d => d.id);
 
+    // Split array into chunks to avoid URL length limits
+    const chunk = <T,>(arr: T[], size: number): T[][] => {
+      const chunks: T[][] = [];
+      for (let i = 0; i < arr.length; i += size) {
+        chunks.push(arr.slice(i, i + size));
+      }
+      return chunks;
+    };
+
     const fetchFieldMap = async (fieldId: string): Promise<Record<string, string>> => {
-      const [valuesRes, fieldRes] = await Promise.all([
-        supabase
-          .from("deal_field_values")
-          .select("deal_id, value_text")
-          .eq("field_id", fieldId)
-          .in("deal_id", dealIds)
-          .not("value_text", "is", null),
+      const idChunks = chunk(dealIds, CHUNK_SIZE);
+
+      const [chunkedResults, fieldRes] = await Promise.all([
+        Promise.all(
+          idChunks.map(ids =>
+            supabase
+              .from("deal_field_values")
+              .select("deal_id, value_text")
+              .eq("field_id", fieldId)
+              .in("deal_id", ids)
+              .not("value_text", "is", null)
+          )
+        ),
         supabase
           .from("custom_fields")
           .select("options")
@@ -73,33 +92,45 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
       }
 
       const map: Record<string, string> = {};
-      if (valuesRes.data) {
-        valuesRes.data.forEach(v => {
-          if (v.value_text) {
-            map[v.deal_id] = optionMap[v.value_text] || v.value_text;
-          }
-        });
+      for (const res of chunkedResults) {
+        if (res.error) {
+          console.error('[DealKanban] Error fetching field values:', res.error);
+          continue;
+        }
+        if (res.data) {
+          res.data.forEach(v => {
+            if (v.value_text) {
+              map[v.deal_id] = optionMap[v.value_text] || v.value_text;
+            }
+          });
+        }
       }
       return map;
     };
 
     const resolveProductUUIDs = async (map: Record<string, string>) => {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      const unresolvedUUIDs = Object.entries(map)
-        .filter(([, value]) => uuidRegex.test(value))
-        .map(([, value]) => value);
+      const unresolvedUUIDs = [...new Set(
+        Object.values(map).filter(value => uuidRegex.test(value))
+      )];
 
       if (unresolvedUUIDs.length === 0) return map;
 
-      const { data: products } = await supabase
-        .from("products")
-        .select("id, name")
-        .in("id", [...new Set(unresolvedUUIDs)]);
-
-      if (!products || products.length === 0) return map;
+      const idChunks = chunk(unresolvedUUIDs, CHUNK_SIZE);
+      const chunkedResults = await Promise.all(
+        idChunks.map(ids =>
+          supabase.from("products").select("id, name").in("id", ids)
+        )
+      );
 
       const productMap: Record<string, string> = {};
-      products.forEach(p => { productMap[p.id] = p.name; });
+      for (const res of chunkedResults) {
+        if (res.data) {
+          res.data.forEach(p => { productMap[p.id] = p.name; });
+        }
+      }
+
+      if (Object.keys(productMap).length === 0) return map;
 
       const resolved = { ...map };
       for (const [dealId, value] of Object.entries(resolved)) {
@@ -116,8 +147,10 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
     ]).then(([fatMap, itemMap]) => {
       setFaturamentoMap(fatMap);
       setItemVendaMap(itemMap);
+    }).catch(err => {
+      console.error('[DealKanban] Failed to fetch field maps:', err);
     });
-  }, [deals]);
+  }, [dealIdsKey]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
