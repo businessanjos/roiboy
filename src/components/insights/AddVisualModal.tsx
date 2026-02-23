@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight, Trophy, Phone, Gauge, Activity } from "lucide-react";
+import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight, Trophy, Phone, Gauge, Activity, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { VisualConfig, DEFAULT_APPEARANCE } from "./visual-builder/types";
@@ -20,7 +20,7 @@ interface AddVisualModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge" | "indicator";
+type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge" | "indicator" | "bubble_map";
 type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta";
 type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual" | "canal";
 
@@ -35,6 +35,7 @@ const CHART_TYPES = [
   { value: "call_commercial" as const, label: "Calls Comerciais", description: "Agendadas vs Concluídas por vendedor", icon: Phone },
   { value: "gauge" as const, label: "Conta-Giro", description: "Velocímetro de progresso mensal", icon: Gauge },
   { value: "indicator" as const, label: "Indicador", description: "Arco semicircular com valor e escala personalizada", icon: Activity },
+  { value: "bubble_map" as const, label: "Mapa de Bolhas", description: "Distribuição geográfica de faturamento por cidade", icon: MapPin },
 ];
 
 const METRICS = [
@@ -145,7 +146,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   const [indicatorMetric, setIndicatorMetric] = useState<Metric | null>(null);
 
   // Scorecards, rankings, call_commercial, gauge and indicator have only 2 steps
-  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge' || chartType === 'indicator') ? 2 : 3;
+  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge' || chartType === 'indicator' || chartType === 'bubble_map') ? 2 : 3;
 
   // Reset form when modal closes
   useEffect(() => {
@@ -171,6 +172,8 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   useEffect(() => {
     if (chartType === 'ranking') {
       setTitle("Ranking de Vendedores");
+    } else if (chartType === 'bubble_map') {
+      setTitle("Mapa de Faturamento por Cidade");
     } else if (chartType === 'call_commercial') {
       setTitle("Calls Comerciais");
     } else if (chartType === 'gauge') {
@@ -257,6 +260,34 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           chart_type: 'call_commercial',
           config,
           layout: { x: 0, y: 0, w: 6, h: 4 },
+        });
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Error creating visual:", error);
+      } finally {
+        setIsCreating(false);
+      }
+      return;
+    }
+
+    if (chartType === 'bubble_map') {
+      if (!canCreate) return;
+      setIsCreating(true);
+      try {
+        const config: VisualConfig = {
+          dataSource: 'deals',
+          measure: { field: 'value', aggregation: 'sum' },
+          dimension: { field: 'created_at', type: 'date', dateGrouping: 'month' },
+          formatting: { type: 'currency', decimals: 0 },
+          appearance: DEFAULT_APPEARANCE,
+          statusFilter: 'won',
+        };
+        await addVisual({
+          dashboard_id: activeDashboardId,
+          title: title.trim(),
+          chart_type: 'bubble_map',
+          config,
+          layout: { x: 0, y: 0, w: 12, h: 6 },
         });
         onOpenChange(false);
       } catch (error) {
@@ -495,7 +526,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           )}
 
           {/* Step 2: Title for Rankings/Call Commercial */}
-          {step === 2 && (chartType === 'ranking' || chartType === 'call_commercial') && (
+          {step === 2 && (chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'bubble_map') && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
                 {chartType === 'ranking'

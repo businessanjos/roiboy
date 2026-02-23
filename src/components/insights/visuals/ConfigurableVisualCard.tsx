@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings } from "lucide-react";
 import { useVisualData } from "@/hooks/useVisualData";
 import { useStackedVisualData } from "@/hooks/useStackedVisualData";
+import { useMapVisualData } from "@/hooks/useMapVisualData";
 import { ConfigurableChart } from "./ConfigurableChart";
 import { DrilldownDialog } from "./DrilldownDialog";
 import { VisualQuickSettings } from "./VisualQuickSettings";
@@ -37,10 +38,11 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
   // Days elapsed gauge doesn't need data from the database
   const isGaugeDaysElapsed = chartType === 'gauge' && config?.gaugeConfig?.subType === 'days_elapsed';
   const isStacked = chartType === 'bar_stacked' && !!config?.stackBy;
+  const isBubbleMap = chartType === 'bubble_map';
 
   const { data, isLoading, error } = useVisualData({
     config,
-    enabled: !!config && !isGaugeDaysElapsed && !isStacked,
+    enabled: !!config && !isGaugeDaysElapsed && !isStacked && !isBubbleMap,
   });
 
   const { data: stackedResult, isLoading: stackedLoading, error: stackedError } = useStackedVisualData({
@@ -48,8 +50,12 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
     enabled: !!config && isStacked,
   });
 
-  const effectiveLoading = isStacked ? stackedLoading : isLoading;
-  const effectiveError = isStacked ? stackedError : error;
+  const { data: mapData, isLoading: mapLoading, error: mapError } = useMapVisualData({
+    enabled: isBubbleMap,
+  });
+
+  const effectiveLoading = isBubbleMap ? mapLoading : (isStacked ? stackedLoading : isLoading);
+  const effectiveError = isBubbleMap ? mapError : (isStacked ? stackedError : error);
 
   // Apply custom formula if present
   const processedData = useMemo(() => {
@@ -195,7 +201,7 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
             data={processedData}
             formatting={config.formatting || { type: 'number' as FormatType, decimals: 0 }}
             appearance={config.appearance || DEFAULT_APPEARANCE}
-            visualConfig={config}
+            visualConfig={isBubbleMap ? { ...config, _mapData: mapData } as any : config}
             stackedData={stackedResult?.data}
             stackedSeriesKeys={stackedResult?.seriesKeys}
             onDrilldown={handleDrilldown}
