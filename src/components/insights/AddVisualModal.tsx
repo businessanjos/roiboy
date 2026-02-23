@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight, Trophy, Phone, Gauge } from "lucide-react";
+import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight, Trophy, Phone, Gauge, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { VisualConfig, DEFAULT_APPEARANCE } from "./visual-builder/types";
@@ -20,7 +20,7 @@ interface AddVisualModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge";
+type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge" | "indicator";
 type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta";
 type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual" | "canal";
 
@@ -34,6 +34,7 @@ const CHART_TYPES = [
   { value: "ranking" as const, label: "Ranking", description: "Tabela ordenada com medalhas e barras de progresso", icon: Trophy },
   { value: "call_commercial" as const, label: "Calls Comerciais", description: "Agendadas vs Concluídas por vendedor", icon: Phone },
   { value: "gauge" as const, label: "Conta-Giro", description: "Velocímetro de progresso mensal", icon: Gauge },
+  { value: "indicator" as const, label: "Indicador", description: "Arco semicircular com valor e escala personalizada", icon: Activity },
 ];
 
 const METRICS = [
@@ -137,9 +138,14 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   const [gaugeGoal, setGaugeGoal] = useState("");
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
   const [dateGrouping, setDateGrouping] = useState<'day' | 'week' | 'month' | 'year'>('month');
+  const [indicatorMin, setIndicatorMin] = useState("");
+  const [indicatorMax, setIndicatorMax] = useState("");
+  const [indicatorMinLabel, setIndicatorMinLabel] = useState("");
+  const [indicatorMaxLabel, setIndicatorMaxLabel] = useState("");
+  const [indicatorMetric, setIndicatorMetric] = useState<Metric | null>(null);
 
-  // Scorecards, rankings, call_commercial and gauge have only 2 steps
-  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge') ? 2 : 3;
+  // Scorecards, rankings, call_commercial, gauge and indicator have only 2 steps
+  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge' || chartType === 'indicator') ? 2 : 3;
 
   // Reset form when modal closes
   useEffect(() => {
@@ -153,6 +159,11 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       setGaugeGoal("");
       setMonthlyGoals({});
       setDateGrouping('month');
+      setIndicatorMin("");
+      setIndicatorMax("");
+      setIndicatorMinLabel("");
+      setIndicatorMaxLabel("");
+      setIndicatorMetric(null);
     }
   }, [open]);
 
@@ -164,6 +175,8 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       setTitle("Calls Comerciais");
     } else if (chartType === 'gauge') {
       setTitle(gaugeSubType === 'days_elapsed' ? 'Dias Corridos do Mês' : 'Faturamento x Meta');
+    } else if (chartType === 'indicator') {
+      setTitle(indicatorMetric ? `Indicador - ${METRIC_LABELS[indicatorMetric]}` : 'Indicador');
     } else if (chartType === 'scorecard' && metric) {
       setTitle(metric === 'meta' ? 'Meta' : METRIC_LABELS[metric]);
     } else if (metric && groupBy) {
@@ -173,13 +186,15 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       const generatedTitle = `${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}${seasonalitySuffix}`;
       setTitle(generatedTitle);
     }
-  }, [chartType, metric, groupBy, gaugeSubType, dateGrouping]);
+  }, [chartType, metric, groupBy, gaugeSubType, dateGrouping, indicatorMetric]);
 
   const canProceedStep1 = chartType !== null;
   const canProceedStep2 = metric !== null;
   
   // Validation for creating the visual
-  const canCreate = chartType === 'scorecard'
+  const canCreate = chartType === 'indicator'
+    ? indicatorMetric !== null && indicatorMin !== "" && indicatorMax !== "" && Number(indicatorMax) > Number(indicatorMin) && title.trim() !== "" && activeDashboardId !== null
+    : chartType === 'scorecard'
     ? metric !== null && title.trim() !== "" && activeDashboardId !== null
     : (chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge')
     ? title.trim() !== "" && activeDashboardId !== null
@@ -277,6 +292,47 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           chart_type: 'gauge',
           config,
           layout: { x: 0, y: 0, w: 6, h: 4 },
+        });
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Error creating visual:", error);
+      } finally {
+        setIsCreating(false);
+      }
+      return;
+    }
+
+    if (chartType === 'indicator') {
+      if (!canCreate || !indicatorMetric) return;
+      setIsCreating(true);
+      try {
+        const metricConfig = METRIC_TO_CONFIG[indicatorMetric];
+        const config: VisualConfig = {
+          dataSource: metricConfig.dataSource,
+          measure: {
+            field: metricConfig.measureField || '',
+            aggregation: metricConfig.aggregation,
+          },
+          dimension: { field: '_total', type: 'text' },
+          formatting: {
+            type: metricConfig.formatType,
+            decimals: metricConfig.formatType === 'currency' ? 1 : (metricConfig.formatType === 'percentage' ? 1 : 0),
+          },
+          appearance: DEFAULT_APPEARANCE,
+          statusFilter: metricConfig.statusFilter,
+          indicatorConfig: {
+            minValue: Number(indicatorMin),
+            maxValue: Number(indicatorMax),
+            ...(indicatorMinLabel.trim() && { minLabel: indicatorMinLabel.trim() }),
+            ...(indicatorMaxLabel.trim() && { maxLabel: indicatorMaxLabel.trim() }),
+          },
+        };
+        await addVisual({
+          dashboard_id: activeDashboardId,
+          title: title.trim(),
+          chart_type: 'indicator',
+          config,
+          layout: { x: 0, y: 0, w: 4, h: 4 },
         });
         onOpenChange(false);
       } catch (error) {
@@ -458,6 +514,96 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             </div>
           )}
 
+          {/* Step 2: Indicator configuration */}
+          {step === 2 && chartType === 'indicator' && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">Configure o indicador</p>
+              
+              <div className="space-y-2">
+                <Label>Métrica</Label>
+                <RadioGroup
+                  value={indicatorMetric || ""}
+                  onValueChange={(value) => setIndicatorMetric(value as Metric)}
+                  className="space-y-2"
+                >
+                  {METRICS.filter(m => m.value !== 'meta').map((m) => (
+                    <div
+                      key={m.value}
+                      className={cn(
+                        "flex items-center space-x-3 rounded-lg border p-3 cursor-pointer transition-colors",
+                        indicatorMetric === m.value
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:bg-muted/50"
+                      )}
+                      onClick={() => setIndicatorMetric(m.value)}
+                    >
+                      <RadioGroupItem value={m.value} id={`ind-${m.value}`} />
+                      <div className="flex-1">
+                        <Label htmlFor={`ind-${m.value}`} className="font-medium cursor-pointer text-sm">
+                          {m.label}
+                        </Label>
+                      </div>
+                    </div>
+                  ))}
+                </RadioGroup>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                <div className="space-y-1">
+                  <Label htmlFor="indicator-min">Valor Mínimo</Label>
+                  <Input
+                    id="indicator-min"
+                    type="number"
+                    value={indicatorMin}
+                    onChange={(e) => setIndicatorMin(e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="indicator-max">Valor Máximo</Label>
+                  <Input
+                    id="indicator-max"
+                    type="number"
+                    value={indicatorMax}
+                    onChange={(e) => setIndicatorMax(e.target.value)}
+                    placeholder="1000"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="indicator-min-label">Label Mín (opcional)</Label>
+                  <Input
+                    id="indicator-min-label"
+                    value={indicatorMinLabel}
+                    onChange={(e) => setIndicatorMinLabel(e.target.value)}
+                    placeholder="Ex: 0 Mil"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="indicator-max-label">Label Máx (opcional)</Label>
+                  <Input
+                    id="indicator-max-label"
+                    value={indicatorMaxLabel}
+                    onChange={(e) => setIndicatorMaxLabel(e.target.value)}
+                    placeholder="Ex: 1 Milhão"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t">
+                <Label htmlFor="visual-title-indicator">Título</Label>
+                <Input
+                  id="visual-title-indicator"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Ex: Indicador de Faturamento"
+                />
+              </div>
+            </div>
+          )}
+
           {/* Step 2: Gauge configuration */}
           {step === 2 && chartType === 'gauge' && (
             <div className="space-y-4">
@@ -515,7 +661,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             </div>
           )}
 
-          {step === 2 && chartType !== 'ranking' && chartType !== 'call_commercial' && chartType !== 'gauge' && (
+          {step === 2 && chartType !== 'ranking' && chartType !== 'call_commercial' && chartType !== 'gauge' && chartType !== 'indicator' && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">O que você quer medir?</p>
               <RadioGroup
