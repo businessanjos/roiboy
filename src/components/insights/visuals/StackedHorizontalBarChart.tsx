@@ -32,7 +32,7 @@ function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professiona
   return extended;
 }
 
-const CustomTooltip = ({ active, payload, label, formatting }: any) => {
+const CustomTooltip = ({ active, payload, label, formatting, singleSeries }: any) => {
   if (!active || !payload?.length) return null;
 
   const total = payload.reduce((sum: number, entry: any) => sum + (entry.value || 0), 0);
@@ -40,7 +40,7 @@ const CustomTooltip = ({ active, payload, label, formatting }: any) => {
   return (
     <div className="bg-popover border border-border rounded-lg shadow-lg p-3 text-sm">
       <p className="font-medium mb-1">{label}</p>
-      {payload.map((entry: any, index: number) => (
+      {!singleSeries && payload.map((entry: any, index: number) => (
         entry.value > 0 && (
           <div key={index} className="flex items-center gap-2">
             <span
@@ -54,8 +54,8 @@ const CustomTooltip = ({ active, payload, label, formatting }: any) => {
           </div>
         )
       ))}
-      <div className="border-t border-border mt-1 pt-1 font-medium">
-        Total: {formatValueCompact(total, formatting.type)}
+      <div className={`${singleSeries ? '' : 'border-t border-border mt-1 pt-1'} font-medium`}>
+        {singleSeries ? '' : 'Total: '}{formatValueCompact(total, formatting.type)}
       </div>
     </div>
   );
@@ -121,15 +121,17 @@ export function StackedHorizontalBarChart({
           type="category"
           tick={{ fontSize: Math.round(11 * m) }}
           className="text-muted-foreground"
-          width={30}
+          width={120}
           interval={0}
         />
-        <Tooltip content={<CustomTooltip formatting={formatting} />} />
-        <Legend
-          verticalAlign="top"
-          height={36}
-          wrapperStyle={{ fontSize: Math.round(12 * m) }}
-        />
+        <Tooltip content={<CustomTooltip formatting={formatting} singleSeries={seriesKeys.length <= 1} />} />
+        {seriesKeys.length > 1 && (
+          <Legend
+            verticalAlign="top"
+            height={36}
+            wrapperStyle={{ fontSize: Math.round(12 * m) }}
+          />
+        )}
         {seriesKeys.map((key, index) => (
           <Bar
             key={key}
