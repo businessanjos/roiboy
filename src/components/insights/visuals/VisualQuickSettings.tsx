@@ -71,6 +71,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   const isScorecard = visual.chart_type === 'scorecard';
   const isCallCommercial = visual.chart_type === 'call_commercial';
   const isGauge = visual.chart_type === 'gauge';
+  const isIndicator = visual.chart_type === 'indicator';
   const isGaugeRevenue = isGauge && config?.gaugeConfig?.subType === 'revenue_vs_goal';
   const isMetaScorecard = isScorecard && !!config?.gaugeConfig?.monthlyGoals;
   const showMonthlyGoals = isGaugeRevenue || isMetaScorecard;
@@ -311,7 +312,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
             </div>
           )}
           {/* Scorecard formatting options */}
-          {isScorecard && (
+          {(isScorecard || isIndicator) && (
             <div className="space-y-4">
               <Label className="text-base font-medium">Formatação do Valor</Label>
               
