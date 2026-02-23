@@ -73,7 +73,7 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
     if (!config) return null;
 
     const sourceLabel = DATA_SOURCE_OPTIONS.find(s => s.value === config.dataSource)?.label || config.dataSource;
-    const aggLabel = AGGREGATION_OPTIONS.find(a => a.value === config.measure.aggregation)?.label || config.measure.aggregation;
+    const aggLabel = config.measure ? (AGGREGATION_OPTIONS.find(a => a.value === config.measure.aggregation)?.label || config.measure.aggregation) : 'contagem';
 
     return (
       <div className="space-y-1 text-xs">
