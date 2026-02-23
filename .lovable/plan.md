@@ -1,57 +1,68 @@
 
+## Adicionar tipo de visual "Indicador" ao Insights
 
-## Corrigir construcao de URL da API do 3C Plus
+### O que sera feito
 
-### Causa raiz
+Adicionar um novo tipo de visualizacao chamado **"Indicador"** na aba Insights. Este visual exibe um valor numerico dentro de um arco semicircular simples (monocromático), com valores minimo e maximo configuráveis pelo usuario no momento da criacao. Diferente do "Conta-Giro" existente (que tem faixas coloridas e subtipo fixo), o Indicador e generico e trabalha com qualquer metrica.
 
-Os logs revelam que a API do 3C Plus retorna **HTML** (pagina de login) em vez de JSON para alguns usuarios. Isso acontece porque o dominio salvo na integracao inclui caminhos extras como `/agent` ou `/agent/login`.
+### Diferenca entre Indicador e Conta-Giro
 
-Exemplo do log:
-```
-Fetching campaigns from: https://anjosbusiness.3c.plus/agent
-URL final: https://anjosbusiness.3c.plus/agent/api/v1/agent/campaigns  (ERRADO)
-URL correta: https://anjosbusiness.3c.plus/api/v1/agent/campaigns
-```
+| Caracteristica | Conta-Giro (existente) | Indicador (novo) |
+|---|---|---|
+| Arco | Faixas coloridas (verde/amarelo/laranja/vermelho) | Arco unico monocromatico (cinza) |
+| Subtipos | Dias Corridos / Faturamento x Meta | Nenhum - generico |
+| Min/Max | Fixos (calculados automaticamente) | Configuráveis pelo usuario |
+| Fonte de dados | Fixa (deals) | Qualquer fonte (deals, leads, etc.) |
 
-A funcao `getBaseDomain()` remove `/login` do final, mas **nao remove `/agent`**, `/agent/login`, ou outros caminhos que os usuarios podem ter copiado da URL do navegador.
+### Alteracoes tecnicas
 
-Como a API retorna status 200 com HTML, o codigo interpreta como "sucesso" e tenta fazer parse do HTML como JSON, resultando em uma lista vazia de campanhas.
+#### 1. `src/components/insights/visual-builder/types.ts`
+- Adicionar `'indicator'` ao tipo `ChartType`
+- Adicionar opcao `{ value: 'indicator', label: 'Indicador' }` em `CHART_TYPE_OPTIONS`
+- Adicionar campo `indicatorConfig` opcional ao `VisualConfig`:
+  ```
+  indicatorConfig?: {
+    minValue: number;
+    maxValue: number;
+    minLabel?: string;
+    maxLabel?: string;
+  }
+  ```
 
-### Solucao
+#### 2. `src/components/insights/visual-builder/ChartTypeSelector.tsx`
+- Importar icone `Activity` do lucide-react
+- Adicionar mapeamento `indicator: Activity` no `ICON_MAP`
 
-Atualizar a funcao `getBaseDomain()` em **ambas** as edge functions para remover qualquer caminho apos o dominio base, garantindo que apenas o dominio raiz seja usado para construir URLs da API.
+#### 3. `src/components/insights/visual-builder/VisualBuilderSheet.tsx`
+- Adicionar estados `indicatorMin` e `indicatorMax` (strings para input)
+- Adicionar estados `indicatorMinLabel` e `indicatorMaxLabel` (strings opcionais)
+- No bloco condicional onde `isGauge` e tratado, adicionar um novo bloco `isIndicator` que mostra:
+  - Selecao de fonte de dados, medida, dimensao e formatacao (reutilizando componentes existentes)
+  - Inputs para "Valor Minimo" e "Valor Maximo"
+  - Inputs opcionais para labels do min/max
+- Atualizar `canCreate` para validar o tipo indicator
+- No `handleCreate`, montar o config com `indicatorConfig`
 
-### Alteracoes
+#### 4. `src/components/insights/visuals/ConfigurableIndicator.tsx` (novo arquivo)
+- Componente SVG com arco semicircular unico em cinza
+- Ponteiro (needle) indicando a posicao do valor
+- Valor numerico centralizado abaixo do arco
+- Labels de min e max nas extremidades
+- Props: `value`, `min`, `max`, `label`, `minLabel`, `maxLabel`, `formatValue`, `fontScale`
 
-#### 1. `supabase/functions/threecplus-campaigns/index.ts`
+#### 5. `src/components/insights/visuals/ConfigurableChart.tsx`
+- Importar `IndicatorFromConfig` do novo componente
+- Adicionar case `'indicator'` no switch que renderiza o componente correto
 
-Atualizar `getBaseDomain()` para remover caminhos extras:
+#### 6. `src/components/insights/visuals/index.ts`
+- Exportar o novo componente `ConfigurableIndicator`
 
-```text
-Antes:
-  base = base.replace(/\/login\/?$/, "")
+### Fluxo do usuario
 
-Depois:
-  base = base.replace(/\/login\/?$/, "")
-  base = base.replace(/\/agent\/?.*$/, "")  // Remove /agent e tudo depois
-  base = base.replace(/\/supervisor\/?.*$/, "")  // Remove /supervisor e tudo depois
-```
-
-Tambem adicionar validacao para detectar quando a API retorna HTML em vez de JSON:
-
-```text
-// Verificar se a resposta e JSON antes de tentar parse
-if (responseText.trim().startsWith("<!DOCTYPE") || responseText.trim().startsWith("<html")) {
-  // Retornar erro claro indicando problema de URL/autenticacao
-}
-```
-
-#### 2. `supabase/functions/threecplus-call/index.ts`
-
-Aplicar a mesma correcao na funcao `getBaseDomain()` para manter consistencia.
-
-### Arquivos envolvidos
-
-- **Editar:** `supabase/functions/threecplus-campaigns/index.ts` - Corrigir `getBaseDomain()` e adicionar validacao de resposta HTML
-- **Editar:** `supabase/functions/threecplus-call/index.ts` - Corrigir `getBaseDomain()` para consistencia
-
+1. O usuario clica em "Adicionar Visual"
+2. Seleciona o tipo "Indicador" no grid de tipos
+3. Configura fonte de dados, medida e dimensao (como qualquer outro grafico)
+4. Preenche o valor minimo e maximo desejados
+5. Opcionalmente define labels para min/max (ex: "0 Mil", "1 Milhao")
+6. Define o titulo e cria o visual
+7. O indicador exibe o valor agregado dos dados dentro do arco semicircular
