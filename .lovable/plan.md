@@ -1,41 +1,43 @@
 
 
-## Correcao definitiva: visuais com config incompleta causam tela branca
+## Exibir apenas o nome do mes no eixo X dos graficos empilhados
 
-### Causa raiz
+### Problema
 
-O visual "Qtde Leads MQL - Mes" foi inserido no banco de dados sem os campos `formatting` e `appearance` na coluna `config`. Quando o componente `ConfigurableVisualCard` passa `config.formatting` (que e `undefined`) para `ConfigurableChart`, e depois para `StackedHorizontalBarChart`, o codigo tenta acessar `formatting.type` e `appearance.colorPalette` diretamente -- causando `TypeError: Cannot read properties of undefined`.
+O hook `useStackedVisualData.ts` que gera os dados para graficos de barras empilhadas (como "Qtde Leads MQL - Mes") tem o formato de label de mes **hardcoded** como `'MMM/yy'` (ex: "Jan/26"). Ele ignora completamente a configuracao `appearance.dateDisplayFormat` que ja existe no sistema e suporta tres formatos:
 
-Esse mesmo padrao pode afetar qualquer visual futuro que tenha config incompleta.
+- `'short'` -> "Jan" (apenas mes)
+- `'monthYear'` -> "Jan/26" (mes + ano)
+- `'full'` -> "Janeiro 2026" (completo)
+
+O hook `useVisualData.ts` (usado por graficos nao-empilhados) ja implementa essa logica corretamente.
 
 ### Solucao
 
-Aplicar valores default em dois pontos para blindar contra configs incompletas:
+Ler `config.appearance?.dateDisplayFormat` dentro de `useStackedVisualData.ts` e aplicar o formato correto nos labels de mes, tanto na secao de Deals quanto na de Leads.
 
-#### 1. `src/components/insights/visuals/ConfigurableVisualCard.tsx`
+### Alteracoes
 
-Garantir que `formatting` e `appearance` sempre tenham valores validos antes de serem passados ao `ConfigurableChart`:
+**`src/hooks/useStackedVisualData.ts`**
 
-```typescript
-const safeFormatting = config.formatting || { type: 'number' as FormatType, decimals: 0 };
-const safeAppearance = config.appearance || DEFAULT_APPEARANCE;
-```
+1. Extrair `dateDisplayFormat` do config no inicio de cada funcao de fetch:
+   ```
+   const displayFormat = config.appearance?.dateDisplayFormat || 'monthYear';
+   ```
 
-Passar `safeFormatting` e `safeAppearance` no JSX em vez de `config.formatting` e `config.appearance`.
+2. Atualizar `getPeriodLabel` na secao de Deals (linha 144) para usar o formato dinamico em vez de `'MMM/yy'` fixo
 
-#### 2. `src/components/insights/visuals/StackedHorizontalBarChart.tsx`
+3. Atualizar a geracao de labels na secao de Leads (linha 342) para usar o mesmo formato dinamico
 
-Adicionar defaults defensivos no inicio do componente para caso os props cheguem incompletos:
+4. Os formatos de label para `month` serao:
+   - `'short'`: `format(d, 'MMM')` -> "Jan"
+   - `'full'`: `format(d, 'MMMM yyyy')` -> "Janeiro 2026"  
+   - `'monthYear'` (default): `format(d, 'MMM/yy')` -> "Jan/26"
 
-```typescript
-const safeFormatting = formatting || { type: 'number' as FormatType, decimals: 0 };
-const safeAppearance = appearance || DEFAULT_APPEARANCE;
-```
+Para que o visual "Qtde Leads MQL - Mes" exiba apenas o nome do mes, basta que sua config no banco tenha `appearance.dateDisplayFormat = 'short'`. Se o visual nao tiver essa config definida, sera necessario tambem atualizar o registro no banco.
 
-Usar `safeFormatting` e `safeAppearance` em todo o componente.
+### Nota sobre a config do visual
 
-### Por que esta solucao e definitiva
+Se o visual "Qtde Leads MQL - Mes" nao tiver `appearance.dateDisplayFormat` definido (como indicado pelo problema anterior de config incompleta), o default sera `'monthYear'`. Para que mostre apenas o mes, precisaremos **tambem** atualizar o registro no banco para incluir `dateDisplayFormat: 'short'` na appearance, ou alterar o default para `'short'` apenas neste caso.
 
-- Protege contra qualquer visual futuro inserido com config parcial
-- Resolve os dois erros nos logs: `Cannot read 'type'` (formatting) e `Cannot read 'aggregation'` (ja corrigido anteriormente)
-- Nao altera a logica de negocio -- apenas garante defaults seguros
+A abordagem mais limpa: atualizar o `DEFAULT_APPEARANCE.dateDisplayFormat` para continuar sendo `'monthYear'`, mas garantir que o visual especifico tenha a config correta no banco via SQL update.
