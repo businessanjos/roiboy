@@ -107,7 +107,7 @@ export function StackedHorizontalBarChart({
       <BarChart
         layout="vertical"
         data={data}
-        margin={{ top: 10, right: 30, left: 10, bottom: 10 }}
+        margin={{ top: 10, right: 30, left: 0, bottom: 10 }}
       >
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
         <XAxis
@@ -121,7 +121,7 @@ export function StackedHorizontalBarChart({
           type="category"
           tick={{ fontSize: Math.round(11 * m) }}
           className="text-muted-foreground"
-          width={120}
+          width={90}
           interval={0}
         />
         <Tooltip content={<CustomTooltip formatting={formatting} singleSeries={seriesKeys.length <= 1} />} />
