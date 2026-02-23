@@ -1,43 +1,43 @@
 
 
-## Exibir apenas o nome do mes no eixo X dos graficos empilhados
+## Corrigir orientacao do visual "Faturamento Diario por Vendedor"
 
-### Problema
+### Causa raiz
 
-O hook `useStackedVisualData.ts` que gera os dados para graficos de barras empilhadas (como "Qtde Leads MQL - Mes") tem o formato de label de mes **hardcoded** como `'MMM/yy'` (ex: "Jan/26"). Ele ignora completamente a configuracao `appearance.dateDisplayFormat` que ja existe no sistema e suporta tres formatos:
+O campo `chartOrientation` nao esta definido na config desse visual no banco de dados. O codigo em `ConfigurableChart.tsx` usa um fallback automatico:
 
-- `'short'` -> "Jan" (apenas mes)
-- `'monthYear'` -> "Jan/26" (mes + ano)
-- `'full'` -> "Janeiro 2026" (completo)
+```
+orientation = chartOrientation || (dimension.type === 'date' ? 'vertical' : 'horizontal')
+```
 
-O hook `useVisualData.ts` (usado por graficos nao-empilhados) ja implementa essa logica corretamente.
+Como a dimensao e do tipo `date`, o fallback sempre resulta em `'vertical'` (barras verticais), mas o visual deveria ser horizontal.
 
-### Solucao
+### Solucao em dois pontos
 
-Ler `config.appearance?.dateDisplayFormat` dentro de `useStackedVisualData.ts` e aplicar o formato correto nos labels de mes, tanto na secao de Deals quanto na de Leads.
+#### 1. Atualizar o registro no banco de dados
 
-### Alteracoes
+Definir `chartOrientation: 'horizontal'` na config do visual `14166e52-4ab3-4934-9a08-c0ca4f58d2eb`:
 
-**`src/hooks/useStackedVisualData.ts`**
+```sql
+UPDATE insights_visuals 
+SET config = jsonb_set(config, '{chartOrientation}', '"horizontal"') 
+WHERE id = '14166e52-4ab3-4934-9a08-c0ca4f58d2eb';
+```
 
-1. Extrair `dateDisplayFormat` do config no inicio de cada funcao de fetch:
-   ```
-   const displayFormat = config.appearance?.dateDisplayFormat || 'monthYear';
-   ```
+#### 2. Remover o fallback automatico que muda a orientacao
 
-2. Atualizar `getPeriodLabel` na secao de Deals (linha 144) para usar o formato dinamico em vez de `'MMM/yy'` fixo
+Em `ConfigurableChart.tsx`, o fallback `dimension.type === 'date' ? 'vertical' : 'horizontal'` e a causa raiz do problema -- ele muda a orientacao automaticamente com base no tipo de dimensao, ignorando a intencao do usuario. 
 
-3. Atualizar a geracao de labels na secao de Leads (linha 342) para usar o mesmo formato dinamico
+Alterar para que, quando `chartOrientation` nao estiver definido, o default seja sempre `'horizontal'` (o comportamento original do grafico empilhado):
 
-4. Os formatos de label para `month` serao:
-   - `'short'`: `format(d, 'MMM')` -> "Jan"
-   - `'full'`: `format(d, 'MMMM yyyy')` -> "Janeiro 2026"  
-   - `'monthYear'` (default): `format(d, 'MMM/yy')` -> "Jan/26"
+```typescript
+orientation={visualConfig?.chartOrientation || 'horizontal'}
+```
 
-Para que o visual "Qtde Leads MQL - Mes" exiba apenas o nome do mes, basta que sua config no banco tenha `appearance.dateDisplayFormat = 'short'`. Se o visual nao tiver essa config definida, sera necessario tambem atualizar o registro no banco.
+Isso garante que nenhum visual mude de orientacao sozinho. A orientacao so muda se for explicitamente configurada pelo usuario.
 
-### Nota sobre a config do visual
+### Resultado
 
-Se o visual "Qtde Leads MQL - Mes" nao tiver `appearance.dateDisplayFormat` definido (como indicado pelo problema anterior de config incompleta), o default sera `'monthYear'`. Para que mostre apenas o mes, precisaremos **tambem** atualizar o registro no banco para incluir `dateDisplayFormat: 'short'` na appearance, ou alterar o default para `'short'` apenas neste caso.
-
-A abordagem mais limpa: atualizar o `DEFAULT_APPEARANCE.dateDisplayFormat` para continuar sendo `'monthYear'`, mas garantir que o visual especifico tenha a config correta no banco via SQL update.
+- O visual "Faturamento Diario por Vendedor" volta a ser horizontal
+- Nenhum visual empilhado muda de orientacao inesperadamente no futuro
+- Quem quiser orientacao vertical precisa definir explicitamente `chartOrientation: 'vertical'`
