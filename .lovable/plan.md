@@ -1,37 +1,27 @@
 
-## Suportar fonte de dados "Leads" no grafico de Barras Empilhadas
 
-### Problema
+## Corrigir visual de Barras Empilhadas (Leads por Canal)
 
-O hook `useStackedVisualData` so possui a funcao `fetchStackedDealsData`, que sempre consulta a tabela `deals`. Quando o visual "Leads por Canal" e criado com tipo `bar_stacked` e `dataSource: 'leads'`, o sistema tenta buscar o campo `canal` na tabela `deals` (que nao existe la), resultando em erro e "Sem dados para exibir".
+### Problemas identificados
 
-### Solucao
+1. **Eixo Y cortado**: A largura do eixo Y esta definida como `width={30}` (linha 124), insuficiente para textos como "Trafego Pago" ou "Nao Informado". O componente `HorizontalBarChartView` (barras simples) usa `width={120}`.
 
-Adicionar uma funcao `fetchStackedLeadsData` ao hook `useStackedVisualData.ts` e rotear a chamada com base no `dataSource` da config.
+2. **Legenda desnecessaria**: O componente sempre renderiza `<Legend>` (linhas 128-132), mesmo quando so existe uma serie (ex: todos os leads tem status "Nao informado"), poluindo o visual.
+
+3. **Rotulos de dados redundantes**: A funcao `renderInsideLabel` exibe o valor formatado dentro das barras, mas o tooltip mostra "Trafego Pago > Nao Informado: 69" -- a redundancia vem do fato de que a serie (stackBy) so tem um valor ("Nao informado"), tornando a legenda e os rotulos por serie desnecessarios.
 
 ### Alteracoes
 
-#### `src/hooks/useStackedVisualData.ts`
+#### `src/components/insights/visuals/StackedHorizontalBarChart.tsx`
 
-1. **Rotear por dataSource no queryFn (linha 31):** Em vez de sempre chamar `fetchStackedDealsData`, verificar `config.dataSource`:
-   - Se `'leads'`, chamar `fetchStackedLeadsData`
-   - Se `'deals'`, chamar `fetchStackedDealsData` (comportamento atual)
+1. **Aumentar largura do eixo Y (linha 124):** Alterar `width={30}` para `width={120}` para acomodar textos longos sem corte.
 
-2. **Criar funcao `fetchStackedLeadsData`:**
-   - Consultar a tabela `leads` com campos `id, status, source, canal, created_at`
-   - Filtrar por `account_id` e `converted_to_client_id is null`
-   - Aplicar filtros de data usando `created_at`
-   - Aplicar filtro de lead field se configurado
-   - Agrupar por campo da dimensao (ex: `canal`) como eixo X
-   - Empilhar por `stackBy` (ex: `status` com valores Aberto/Ganho/Perdido)
-   - Retornar `{ data: StackedDataPoint[], seriesKeys: string[] }` no mesmo formato do deals
+2. **Condicionar a legenda:** Renderizar o `<Legend>` apenas quando houver mais de 1 serie (`seriesKeys.length > 1`). Quando so existe uma serie, a legenda e redundante.
 
-3. **Logica de agrupamento:**
-   - A dimensao do visual determina o eixo X (ex: `canal` = cada barra e um canal)
-   - O `stackBy` determina as series empilhadas (ex: `status` = cores diferentes por status)
-   - Para leads, a agregacao sera sempre `count`
-   - Diferente do deals (que agrupa por periodo temporal e empilha por vendedor), leads agrupara por campo categorico (canal, origem, etc.)
+3. **Melhorar tooltip:** Quando o nome da serie for igual a "Nao informado" e for a unica serie, exibir apenas o valor total sem listar a serie individualmente. Isso evita "Nao informado, Nao informado".
 
-### Resultado esperado
+### Resultado
 
-O visual "Leads por Canal" exibira barras horizontais empilhadas onde cada barra representa um canal (Trafego Pago, Organico, Recorrencia, etc.) e as cores dentro de cada barra representam os status (Aberto, Ganho, Perdido) -- identico ao exemplo mostrado na segunda imagem.
+- O texto do eixo Y ("Trafego Pago", "Nao Informado") sera exibido completo
+- A legenda no topo so aparecera quando houver multiplas series relevantes
+- O tooltip mostrara informacoes uteis sem redundancia
