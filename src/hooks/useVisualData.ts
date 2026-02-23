@@ -216,7 +216,7 @@ const LEAD_MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
 
 const LEAD_FATURAMENTO_FIELD_ID = 'e352a1ca-cfbc-435a-95f7-2f53b5cac041';
 
-async function enrichLeadsWithFaturamento(accountId: string, leads: any[]): Promise<any[]> {
+export async function enrichLeadsWithFaturamento(accountId: string, leads: any[]): Promise<any[]> {
   if (leads.length === 0) return leads;
 
   const leadIds = leads.map(l => l.id);
@@ -252,7 +252,7 @@ async function enrichLeadsWithFaturamento(accountId: string, leads: any[]): Prom
   }));
 }
 
-async function enrichLeadsWithMql(accountId: string, leads: any[]): Promise<any[]> {
+export async function enrichLeadsWithMql(accountId: string, leads: any[]): Promise<any[]> {
   if (leads.length === 0) return leads;
 
   const leadIds = leads.map(l => l.id);
