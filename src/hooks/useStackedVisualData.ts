@@ -46,6 +46,7 @@ async function fetchStackedDealsData(
   filters: any
 ): Promise<{ data: StackedDataPoint[]; seriesKeys: string[] }> {
   const { measure, dimension, statusFilter } = config;
+  const displayFormat = config.appearance?.dateDisplayFormat || 'monthYear';
 
   let query = supabase
     .from('deals')
@@ -223,6 +224,7 @@ async function fetchStackedLeadsData(
 ): Promise<{ data: StackedDataPoint[]; seriesKeys: string[] }> {
   const dimensionField = config.dimension.field || 'canal';
   const stackByField = config.stackBy || 'status';
+  const displayFormat = config.appearance?.dateDisplayFormat || 'monthYear';
 
   let query = supabase
     .from('leads')
