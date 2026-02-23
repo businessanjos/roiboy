@@ -345,7 +345,7 @@ async function fetchStackedLeadsData(
         case 'week':
           eachWeekOfInterval({ start: rangeStart, end: rangeEnd }, { weekStartsOn: 1 }).forEach(d => {
             const ws = startOfWeek(d, { weekStartsOn: 1 });
-            allPeriods.push({ key: format(ws, 'yyyy-MM-dd'), label: `Sem ${format(ws, 'dd/MM')}` });
+            allPeriods.push({ key: format(ws, 'yyyy-MM-dd'), label: `Sem ${format(ws, 'II')}` });
           });
           break;
       }

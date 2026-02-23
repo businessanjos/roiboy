@@ -51,6 +51,8 @@ export interface VisualConfig {
   hiddenCategories?: string[];
   // Stack by field for stacked bar charts (e.g., 'responsible_name')
   stackBy?: string;
+  // Override chart orientation for stacked charts
+  chartOrientation?: 'horizontal' | 'vertical';
   // Gauge configuration
   gaugeConfig?: {
     subType: GaugeSubType;
