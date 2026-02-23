@@ -21,7 +21,7 @@ import { ConfigurableCallCommercial } from "./ConfigurableCallCommercial";
 import { GaugeFromConfig } from "./ConfigurableGauge";
 import { IndicatorFromConfig } from "./ConfigurableIndicator";
 import { StackedHorizontalBarChart } from "./StackedHorizontalBarChart";
-import { formatValueCompact } from "@/lib/formula-evaluator";
+import { formatValueCompact, formatValueWithScale } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
 
 interface AggregatedDataPoint {
@@ -75,7 +75,7 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
         <IndicatorFromConfig
           data={data}
           visualConfig={visualConfig}
-          formatValue={(v) => formatValueCompact(v, formatting.type)}
+          formatValue={(v) => formatValueWithScale(v, formatting.type, formatting.decimals, (visualConfig as any)?.formatting?.displayScale || 'auto')}
         />
       );
     case 'bar':
