@@ -1,29 +1,38 @@
 
-
-## Corrigir crash do painel Comercial causado pelo Mapa de Bolhas
+## Corrigir o visual "Mapa de Faturamento por Cidade" que nao renderiza
 
 ### Causa raiz
 
-O erro `render2 is not a function` no `Context.Consumer` dentro do `MapContainerComponent` e um problema de incompatibilidade de versao: **react-leaflet v5 requer React 19**, mas o projeto usa **React 18**. A versao `^5.0.0` instalada nao e compativel.
+O erro `render2 is not a function` persiste mesmo apos o downgrade do `react-leaflet` para v4.2.1. O problema esta no cache de dependencias do Vite (`node_modules/.vite/deps/`) que continua servindo o bundle antigo da v5, e/ou na incompatibilidade persistente da biblioteca `react-leaflet` com o ambiente atual.
 
-### Solucao
+### Solucao: Substituir react-leaflet por Leaflet puro
 
-#### 1. Downgrade do react-leaflet para v4
+A abordagem mais robusta e **eliminar completamente a dependencia do `react-leaflet`** e usar a API imperativa do `leaflet` diretamente com `useRef` e `useEffect`. Isso contorna qualquer problema de compatibilidade com versoes do React, ja que o `leaflet` puro nao depende de nenhuma versao especifica do React.
 
-Alterar `package.json` para usar `react-leaflet` versao `^4.2.1`, que e a ultima versao compativel com React 18. A API dos componentes (`MapContainer`, `TileLayer`, `CircleMarker`, `Tooltip`) e identica entre v4 e v5, entao nenhuma mudanca de codigo e necessaria no componente.
+### Alteracoes
 
-#### 2. Adicionar Error Boundary no ConfigurableVisualCard
+#### 1. `src/components/insights/visuals/ConfigurableBubbleMap.tsx`
 
-Como camada extra de protecao, envolver a renderizacao de cada visual em um error boundary para que, caso qualquer visual individual falhe, ele nao derrube o dashboard inteiro -- apenas mostra uma mensagem de erro no card daquele visual.
+Reescrever o componente para usar Leaflet puro:
 
-### Arquivos alterados
+- Remover todos os imports de `react-leaflet` (`MapContainer`, `TileLayer`, `CircleMarker`, `Tooltip`)
+- Importar `L` (Leaflet) diretamente: `import L from "leaflet"`
+- Usar `useRef` para a div container do mapa
+- Usar `useEffect` para inicializar o mapa imperativa:
+  - Criar `L.map()` com centro no Brasil `[-14.2, -51.9]` e zoom 4
+  - Adicionar `L.tileLayer()` com tiles do OpenStreetMap
+  - Para cada ponto de dados, criar `L.circleMarker()` com raio proporcional ao faturamento
+  - Adicionar `bindTooltip()` para mostrar nome da cidade e valor formatado
+- Retornar cleanup function no `useEffect` para destruir o mapa ao desmontar
+- Manter toda a logica da tabela Top 10 inalterada
 
-- **package.json**: `react-leaflet` de `^5.0.0` para `^4.2.1`
-- **src/components/insights/visuals/ConfigurableVisualCard.tsx**: Adicionar um `ErrorBoundary` wrapper simples ao redor do conteudo do card
+#### 2. `package.json`
+
+Remover `react-leaflet` das dependencias, mantendo apenas `leaflet` e `@types/leaflet`.
 
 ### Resultado
 
-- O painel Comercial volta a funcionar normalmente
-- O mapa de bolhas renderiza corretamente com React 18
-- Futuros erros em visuais individuais nao derrubam o dashboard inteiro
-
+- O mapa renderiza corretamente sem depender de wrappers React
+- Zero risco de incompatibilidade de versao do React
+- Funcionalidade identica: bolhas proporcionais, tooltips, tabela Top 10
+- A biblioteca `leaflet` pura e estavel e nao tem requisitos de versao do React
