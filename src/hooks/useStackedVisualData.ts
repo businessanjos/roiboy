@@ -142,7 +142,7 @@ async function fetchStackedDealsData(
     switch (dateGrouping) {
       case 'year': return format(date, 'yyyy');
       case 'month': return format(date, 'MMM/yy');
-      case 'week': return `Sem ${format(date, 'dd/MM')}`;
+      case 'week': return `Sem ${format(date, 'II')}`;
       default:
         return format(date, 'dd');
     }
