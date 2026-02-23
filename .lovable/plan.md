@@ -1,50 +1,52 @@
 
 
-## Corrigir aba Fichas vazia e adicionar edicao de formularios
+## Corrigir eventos compartilhados sendo editados como individuais
 
-### Problema identificado
+### Diagnostico
 
-O formulario "Cadastro Empresarial" preenchido por Matheus Krey existe no banco de dados (ID: `7e826cad-...`), mas o campo `client_id` esta **NULL**. A query da aba Fichas filtra por `client_id`, entao o formulario nao aparece. Isso afeta 7 de 19 respostas na conta.
+O evento "Mentoria Individual Com Ever - ON-LINE" tem `client_id = NULL` no banco de dados. Isso significa que ele e um **evento compartilhado** vinculado a produtos, e nao um evento individual de um cliente. Esse evento aparece no perfil de **94 clientes** simultaneamente via vinculo de produto.
+
+O problema: na aba Agenda do cliente, eventos compartilhados e individuais aparecem na mesma lista, ambos com botao de editar (icone de lapis). Quando o usuario edita a data de um evento compartilhado pensando que e individual, a alteracao afeta **todos os 94 clientes** que veem esse evento.
 
 ### Causa raiz
 
-A Edge Function `submit-form-response` tenta vincular respostas ao cliente por telefone, mas a normalizacao de telefone falha silenciosamente em alguns cenarios (ex: formatos inesperados, espacos extras, ou a query nao retorna por timing). Quando o vinculo falha, a resposta e salva com `client_id = NULL` e fica "orfã".
+No componente `ClientAgenda.tsx`, o `fetchEvents` combina eventos individuais (`client_id = clientId`) com eventos compartilhados (`client_id = NULL`, vinculados via `event_products`) na mesma lista. O botao de editar (linha 600-607) permite editar ambos os tipos sem distincao. O `EventEditDialog` atualiza o registro do evento diretamente, afetando todos os clientes vinculados.
 
 ### Solucao em 3 partes
 
-#### 1. Vincular a resposta do Matheus Krey (e outras orfas) via migracao SQL
+#### 1. `src/components/client/ClientAgenda.tsx` - Distinguir visualmente e proteger eventos compartilhados
 
-Executar um UPDATE para vincular form_responses orfas aos clientes correspondentes pelo telefone normalizado:
+- Adicionar badge "Individual" (verde) ou "Compartilhado" (azul) em cada evento na tabela
+- Para eventos compartilhados (`client_id === null`), **remover o botao de editar** ou substitui-lo por um link "Ver na pagina de Eventos" que direciona para `/events/{id}`
+- Manter o botao de editar apenas para eventos individuais (`client_id !== null`)
 
-- Atualizar `client_id` na resposta `7e826cad-...` para `5dc0ec45-...` (Matheus Krey)
-- Executar um UPDATE generico para tentar vincular TODAS as respostas orfas que tem `client_phone` correspondente a um cliente existente na mesma conta
+Logica para determinar tipo:
+```text
+Se event.client_id != null → Individual (editavel)
+Se event.client_id == null → Compartilhado (somente leitura no perfil do cliente)
+```
 
-#### 2. Melhorar a Edge Function `submit-form-response`
+#### 2. `src/components/client/ClientAgenda.tsx` - Secao separada para eventos individuais
 
-Tornar a busca por telefone mais robusta:
+- Criar uma secao "Eventos Individuais" dedicada acima da "Agenda de Entregas"
+- Essa secao mostra APENAS eventos com `client_id` vinculado ao cliente atual
+- Esses eventos sao totalmente editaveis
+- A "Agenda de Entregas" continua mostrando eventos compartilhados (vinculados a produtos), mas sem opcao de editar data
 
-- Alem da busca exata por `phone_e164`, fazer uma busca secundaria comparando apenas os ultimos 8-9 digitos do telefone. Isso resolve problemas de formatacao e prefixo inconsistente
-- Adicionar logs mais detalhados para diagnosticar futuras falhas de vinculacao
-- Buscar tambem em `additional_phones` do cliente
+#### 3. `src/components/client/ClientAgenda.tsx` - Tabela de eventos individual com edicao
 
-#### 3. Adicionar funcionalidade de edicao na aba Fichas (`ClientFormResponses.tsx`)
-
-Implementar edicao inline dos formularios preenchidos:
-
-- Adicionar botao "Editar" em cada card de resposta expandido
-- Ao clicar em Editar, os campos de texto mudam para inputs editaveis (text, textarea, select conforme o tipo do campo)
-- Botoes "Salvar" e "Cancelar" aparecem
-- Ao salvar, atualizar o registro `form_responses.responses` no banco via Supabase
-- Manter o historico: adicionar campo `last_edited_at` e `last_edited_by` na tabela para rastreabilidade
+- Filtrar `events` em dois grupos: `individualEvents` (client_id != null) e `sharedEvents` (client_id == null)
+- Renderizar tabela dedicada para eventos individuais com acoes completas (editar, excluir)
+- Renderizar tabela de eventos compartilhados apenas com acoes de visualizacao e link para pagina do evento
 
 ### Arquivos alterados
 
-- **Migracao SQL**: UPDATE para vincular respostas orfas + adicionar colunas `last_edited_at` e `last_edited_by` na tabela `form_responses`
-- **`supabase/functions/submit-form-response/index.ts`**: Melhorar logica de normalizacao e busca por telefone
-- **`src/components/client/ClientFormResponses.tsx`**: Adicionar modo de edicao inline com formulario dinamico baseado no tipo de cada campo
+- **`src/components/client/ClientAgenda.tsx`**: Separar eventos individuais dos compartilhados, adicionar badges visuais, restringir edicao de eventos compartilhados
 
 ### Resultado esperado
 
-- A resposta do Matheus Krey (e outras orfas) aparece imediatamente na aba Fichas
-- Futuras respostas serao vinculadas corretamente mesmo com variacoes de formato de telefone
-- Usuarios podem editar respostas de formularios diretamente na aba Fichas
+- Eventos individuais criados via "Novo Evento Individual" ficam isolados por cliente e sao editaveis
+- Eventos compartilhados (vinculados a produtos) aparecem como somente leitura no perfil do cliente
+- O usuario consegue distinguir visualmente qual evento e individual vs compartilhado
+- Editar um evento compartilhado so e possivel na pagina principal de Eventos (`/events`), evitando mudancas acidentais que afetam dezenas de clientes
+
