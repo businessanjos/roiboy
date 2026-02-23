@@ -233,19 +233,53 @@ Deno.serve(async (req) => {
     // Try to find existing client by phone if not resolved yet
     if (!resolvedClientId && sanitizedPhone) {
       const normalizedPhone = normalizePhoneNumber(sanitizedPhone);
+      const phoneDigits = normalizedPhone.replace(/\D/g, '');
+      const lastDigits = phoneDigits.slice(-8);
 
-      const { data: existingClient } = await supabase
+      console.log(`[${clientIP}] Searching client by phone: normalized=${normalizedPhone}, lastDigits=${lastDigits}`);
+
+      // 1. Exact match on phone_e164
+      const { data: exactClient } = await supabase
         .from("clients")
         .select("id")
         .eq("account_id", form.account_id)
         .eq("phone_e164", normalizedPhone)
         .maybeSingle();
 
-      if (existingClient) {
-        resolvedClientId = existingClient.id;
-        console.log(`[${clientIP}] Found existing client by phone: ${resolvedClientId}`);
+      if (exactClient) {
+        resolvedClientId = exactClient.id;
+        console.log(`[${clientIP}] Found client by exact phone match: ${resolvedClientId}`);
       } else {
-        console.log(`[${clientIP}] No existing client found for phone ${normalizedPhone}, response will be unlinked`);
+        // 2. Fuzzy match: search clients whose phone ends with same 8 digits
+        const { data: allClients } = await supabase
+          .from("clients")
+          .select("id, phone_e164, additional_phones")
+          .eq("account_id", form.account_id);
+
+        if (allClients) {
+          const matchedClient = allClients.find(c => {
+            // Check primary phone
+            if (c.phone_e164) {
+              const cDigits = c.phone_e164.replace(/\D/g, '');
+              if (cDigits.slice(-8) === lastDigits) return true;
+            }
+            // Check additional_phones
+            if (c.additional_phones && Array.isArray(c.additional_phones)) {
+              return (c.additional_phones as string[]).some((p: string) => {
+                const pDigits = String(p).replace(/\D/g, '');
+                return pDigits.slice(-8) === lastDigits;
+              });
+            }
+            return false;
+          });
+
+          if (matchedClient) {
+            resolvedClientId = matchedClient.id;
+            console.log(`[${clientIP}] Found client by fuzzy phone match (last 8 digits): ${resolvedClientId}`);
+          } else {
+            console.log(`[${clientIP}] No client found for phone ${normalizedPhone} (last8=${lastDigits}), response will be unlinked`);
+          }
+        }
       }
     }
 
