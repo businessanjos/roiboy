@@ -1,36 +1,46 @@
 
 
-## Exibir valores inteiros reais em vez de arredondados nos visuais
+## Adicionar suporte a "Faturamento Atual" no visual de Leads empilhado
 
 ### Problema
 
-A funcao `formatValueCompact` abrevia valores grandes usando sufixos como "K" e "M" (ex: 3000 vira "3K"). Os visuais usam essa funcao tanto nos rotulos de dados dentro das barras quanto nos eixos e tooltips. O usuario quer ver o valor real inteiro (ex: "3.000" em vez de "3K").
+O campo "Faturamento Atual" e um campo personalizado armazenado na tabela `lead_field_values`, nao uma coluna nativa da tabela `leads`. O hook `useVisualData` (graficos simples) ja possui a logica de enriquecimento via `enrichLeadsWithFaturamento`, porem o hook `useStackedVisualData` (graficos empilhados) nao faz esse enriquecimento. Quando o visual usa `faturamento_atual` como dimensao, o codigo tenta ler `lead.faturamento_atual` diretamente, que nao existe, e tudo cai em "Nao informado".
 
 ### Alteracao
 
-#### `src/lib/formula-evaluator.ts`
+#### `src/hooks/useStackedVisualData.ts` -- funcao `fetchStackedLeadsData`
 
-Modificar a funcao `formatValueCompact` para retornar o valor inteiro formatado com separadores de milhar (padrao pt-BR) em vez de abreviar com K/M:
+Apos buscar todos os leads e aplicar os filtros (linha ~252), adicionar a logica de enriquecimento quando `dimensionField` ou `stackByField` forem `faturamento_atual` ou `mql`:
 
-- Remover a logica de abreviacao (`>= 1_000` retorna "K", `>= 1_000_000` retorna "M")
-- Usar `Intl.NumberFormat('pt-BR')` para formatar com pontos separadores de milhar
-- Manter o prefixo "R$" para currency e o sufixo "%" para percentage
-- Resultado: 3000 exibira "3.000" em vez de "3K"
+1. Importar as funcoes `enrichLeadsWithFaturamento` e `enrichLeadsWithMql` de `useVisualData.ts` (ou replicar a logica inline, dependendo de como estao exportadas).
 
-Isso afetara todos os visuais que usam `formatValueCompact`:
-- Barras empilhadas (StackedHorizontalBarChart) -- rotulos, eixo X, tooltip
-- Barras simples e horizontais (ConfigurableChart) -- rotulos, eixos
-- Graficos de linha (ConfigurableChart) -- rotulos, eixos
+2. Antes do loop de agrupamento (linha 258), verificar:
+   - Se `dimensionField === 'faturamento_atual'` ou `stackByField === 'faturamento_atual'`, chamar `enrichLeadsWithFaturamento` para injetar a propriedade `faturamento_atual` em cada lead.
+   - Se `dimensionField === 'mql'` ou `stackByField === 'mql'`, chamar `enrichLeadsWithMql` para injetar `_mql_label`.
+
+3. Ajustar o mapeamento de valor na linha 259 para usar `_mql_label` quando o campo for `mql` (consistente com `useVisualData`).
 
 ### Secao tecnica
 
-```text
-Antes:  formatValueCompact(3000, 'decimal') -> "3K"
-Depois: formatValueCompact(3000, 'decimal') -> "3.000"
+A funcao `enrichLeadsWithFaturamento` busca os valores do campo `e352a1ca-cfbc-435a-95f7-2f53b5cac041` na tabela `lead_field_values` e injeta `faturamento_atual` em cada lead. Atualmente essa funcao esta definida em `useVisualData.ts`. Para reutiliza-la:
 
-Antes:  formatValueCompact(1500000, 'currency') -> "R$1.5M"
-Depois: formatValueCompact(1500000, 'currency') -> "R$1.500.000"
+- Exportar `enrichLeadsWithFaturamento` e `enrichLeadsWithMql` de `useVisualData.ts`
+- Importar em `useStackedVisualData.ts`
+- Chamar antes do agrupamento
+
+```text
+fetchStackedLeadsData:
+  1. Buscar leads (existente)
+  2. Aplicar filtros (existente)
+  3. [NOVO] Se dimensionField ou stackByField == 'faturamento_atual':
+       allLeads = await enrichLeadsWithFaturamento(accountId, allLeads)
+  4. [NOVO] Se dimensionField ou stackByField == 'mql':
+       allLeads = await enrichLeadsWithMql(accountId, allLeads)
+  5. [AJUSTE] Na leitura do valor do campo mql, usar lead._mql_label
+  6. Agrupar e retornar (existente)
 ```
 
-Nota: para eixos de graficos com valores muito grandes, os numeros completos podem ocupar mais espaco. Isso e um tradeoff aceitavel pela precisao dos dados.
+### Resultado
 
+- O visual "Leads por Faturamento Atual" exibira as categorias reais (ex: "Entre 20 e 30 mil reais", "Acima de 50 mil reais") em vez de "Nao informado"
+- A mesma logica se aplica a qualquer visual empilhado que use campos personalizados como dimensao
