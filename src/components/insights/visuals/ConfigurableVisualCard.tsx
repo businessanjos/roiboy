@@ -78,8 +78,8 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
     return (
       <div className="space-y-1 text-xs">
         <p><strong>Fonte:</strong> {sourceLabel}</p>
-        <p><strong>Medida:</strong> {aggLabel} de {config.measure.field || 'registros'}</p>
-        <p><strong>Agrupado por:</strong> {config.dimension.field}</p>
+        <p><strong>Medida:</strong> {aggLabel} de {config.measure?.field || 'registros'}</p>
+        <p><strong>Agrupado por:</strong> {config.dimension?.field || '-'}</p>
         {config.customFormula && (
           <p><strong>Fórmula:</strong> {config.customFormula}</p>
         )}
