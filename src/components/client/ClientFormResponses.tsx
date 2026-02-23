@@ -3,11 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Loader2, FileText, ChevronDown, ChevronRight, Building2, Calendar, CheckCircle2 } from "lucide-react";
+import { Loader2, FileText, ChevronDown, ChevronRight, Building2, CheckCircle2, Pencil, Save, X } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { toast } from "sonner";
 
 interface ClientFormResponsesProps {
   clientId: string;
@@ -18,6 +22,8 @@ interface FormResponse {
   form_id: string;
   responses: Record<string, any>;
   submitted_at: string;
+  last_edited_at: string | null;
+  last_edited_by: string | null;
   forms: {
     id: string;
     title: string;
@@ -66,6 +72,10 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
   const [diagnostic, setDiagnostic] = useState<DiagnosticData | null>(null);
   const [expandedResponses, setExpandedResponses] = useState<Set<string>>(new Set());
   const [customFieldsMap, setCustomFieldsMap] = useState<Map<string, { name: string; field_type: string | null; options: any[] | null }>>(new Map());
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editValues, setEditValues] = useState<Record<string, any>>({});
+  const [saving, setSaving] = useState(false);
+  const { currentUser } = useCurrentUser();
 
   useEffect(() => {
     fetchData();
@@ -74,7 +84,6 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Primeiro, buscar o account_id do cliente
       const { data: clientData, error: clientError } = await supabase
         .from("clients")
         .select("account_id")
@@ -84,7 +93,6 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
       if (clientError) throw clientError;
       const accountId = clientData?.account_id;
 
-      // Buscar custom_fields para mapeamento de labels
       if (accountId) {
         const { data: fieldsData } = await supabase
           .from("custom_fields")
@@ -96,7 +104,6 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
         }
       }
 
-      // Fetch form responses
       const { data: responsesData, error: responsesError } = await supabase
         .from("form_responses")
         .select(`
@@ -104,6 +111,8 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
           form_id,
           responses,
           submitted_at,
+          last_edited_at,
+          last_edited_by,
           forms (
             id,
             title,
@@ -117,13 +126,14 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
       setFormResponses((responsesData || []).map(r => ({
         ...r,
         responses: (r.responses as Record<string, any>) || {},
+        last_edited_at: (r as any).last_edited_at || null,
+        last_edited_by: (r as any).last_edited_by || null,
         forms: r.forms ? {
           ...r.forms,
           fields: (r.forms.fields as any[]) || [],
         } : null,
       })));
 
-      // Fetch diagnostic
       const { data: diagnosticData, error: diagnosticError } = await supabase
         .from("client_diagnostics")
         .select("*")
@@ -156,6 +166,48 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
     });
   };
 
+  const startEditing = (response: FormResponse) => {
+    setEditingId(response.id);
+    setEditValues({ ...response.responses });
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditValues({});
+  };
+
+  const saveEditing = async (responseId: string) => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("form_responses")
+        .update({
+          responses: editValues,
+          last_edited_at: new Date().toISOString(),
+          last_edited_by: currentUser?.id || null,
+        } as any)
+        .eq("id", responseId);
+
+      if (error) throw error;
+
+      setFormResponses(prev =>
+        prev.map(r =>
+          r.id === responseId
+            ? { ...r, responses: editValues, last_edited_at: new Date().toISOString(), last_edited_by: currentUser?.id || null }
+            : r
+        )
+      );
+      setEditingId(null);
+      setEditValues({});
+      toast.success("Ficha atualizada com sucesso!");
+    } catch (error) {
+      console.error("Error saving:", error);
+      toast.error("Erro ao salvar alterações");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const getFieldLabel = (fieldId: string): string => {
     const field = customFieldsMap.get(fieldId);
     return field?.name || fieldId;
@@ -185,6 +237,48 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
     if (Array.isArray(value)) return value.join(", ");
     if (typeof value === "object") return JSON.stringify(value);
     return String(value);
+  };
+
+  const renderEditField = (fieldId: string, value: any) => {
+    const field = customFieldsMap.get(fieldId);
+    const fieldType = field?.field_type;
+
+    // Select/radio with options
+    if (field?.options && Array.isArray(field.options) && field.options.length > 0) {
+      return (
+        <select
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          value={editValues[fieldId] || ""}
+          onChange={(e) => setEditValues(prev => ({ ...prev, [fieldId]: e.target.value }))}
+        >
+          <option value="">Selecione...</option>
+          {field.options.map((opt: any) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label || opt.value}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    // Long text
+    if (fieldType === "textarea" || (typeof value === "string" && value.length > 100)) {
+      return (
+        <Textarea
+          value={editValues[fieldId] || ""}
+          onChange={(e) => setEditValues(prev => ({ ...prev, [fieldId]: e.target.value }))}
+          rows={3}
+        />
+      );
+    }
+
+    // Default: text input
+    return (
+      <Input
+        value={editValues[fieldId] || ""}
+        onChange={(e) => setEditValues(prev => ({ ...prev, [fieldId]: e.target.value }))}
+      />
+    );
   };
 
   const formatCurrency = (value: number) => 
@@ -219,6 +313,8 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
     { key: "has_digital_presence", label: "Presença digital" },
   ] as const;
 
+  const isEditing = (id: string) => editingId === id;
+
   return (
     <div className="space-y-4">
       {/* Form Responses */}
@@ -244,6 +340,11 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                       </CardTitle>
                       <CardDescription className="text-xs">
                         Preenchido em {format(new Date(response.submitted_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        {response.last_edited_at && (
+                          <span className="ml-2 text-muted-foreground">
+                            • Editado em {format(new Date(response.last_edited_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </span>
+                        )}
                       </CardDescription>
                     </div>
                   </div>
@@ -256,13 +357,53 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
             <CollapsibleContent>
               <CardContent className="pt-0 pb-4">
                 <div className="space-y-3 border-t pt-4">
+                  {/* Edit/Save buttons */}
+                  <div className="flex justify-end gap-2 mb-2">
+                    {isEditing(response.id) ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={cancelEditing}
+                          disabled={saving}
+                        >
+                          <X className="h-4 w-4 mr-1" />
+                          Cancelar
+                        </Button>
+                        <Button
+                          size="sm"
+                          onClick={() => saveEditing(response.id)}
+                          disabled={saving}
+                        >
+                          {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+                          Salvar
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startEditing(response);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4 mr-1" />
+                        Editar
+                      </Button>
+                    )}
+                  </div>
+
                   {Object.entries(response.responses).map(([fieldId, value]) => (
                     <div key={fieldId} className="grid grid-cols-3 gap-2 text-sm">
                       <span className="text-muted-foreground font-medium">
                         {getFieldLabel(fieldId)}
                       </span>
                       <span className="col-span-2">
-                        {formatValue(value, fieldId)}
+                        {isEditing(response.id)
+                          ? renderEditField(fieldId, value)
+                          : formatValue(value, fieldId)
+                        }
                       </span>
                     </div>
                   ))}

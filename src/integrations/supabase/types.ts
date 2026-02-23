@@ -5303,6 +5303,8 @@ export type Database = {
           created_at: string
           form_id: string
           id: string
+          last_edited_at: string | null
+          last_edited_by: string | null
           responses: Json
           submitted_at: string
         }
@@ -5314,6 +5316,8 @@ export type Database = {
           created_at?: string
           form_id: string
           id?: string
+          last_edited_at?: string | null
+          last_edited_by?: string | null
           responses?: Json
           submitted_at?: string
         }
@@ -5325,6 +5329,8 @@ export type Database = {
           created_at?: string
           form_id?: string
           id?: string
+          last_edited_at?: string | null
+          last_edited_by?: string | null
           responses?: Json
           submitted_at?: string
         }
@@ -5355,6 +5361,13 @@ export type Database = {
             columns: ["form_id"]
             isOneToOne: false
             referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_responses_last_edited_by_fkey"
+            columns: ["last_edited_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
