@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { MapContainer, TileLayer, CircleMarker, Tooltip as LeafletTooltip } from "react-leaflet";
+import { useMemo, useRef, useEffect } from "react";
+import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { MapDataPoint } from "@/hooks/useMapVisualData";
 import { MapPin } from "lucide-react";
@@ -13,9 +13,60 @@ function formatCurrency(value: number): string {
 }
 
 export function ConfigurableBubbleMap({ data }: ConfigurableBubbleMapProps) {
+  const mapRef = useRef<L.Map | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const maxRevenue = useMemo(() => Math.max(...data.map(d => d.revenue), 1), [data]);
   const totalRevenue = useMemo(() => data.reduce((sum, d) => sum + d.revenue, 0), [data]);
   const top10 = useMemo(() => data.slice(0, 10), [data]);
+
+  useEffect(() => {
+    if (!containerRef.current || data.length === 0) return;
+
+    // Destroy previous map instance
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
+    }
+
+    const map = L.map(containerRef.current, {
+      center: [-14.2, -51.9],
+      zoom: 4,
+      scrollWheelZoom: true,
+      zoomControl: true,
+    });
+    mapRef.current = map;
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>',
+    }).addTo(map);
+
+    const minRadius = 6;
+    const maxRadius = 35;
+
+    for (const point of data) {
+      const radius = minRadius + (point.revenue / maxRevenue) * (maxRadius - minRadius);
+      L.circleMarker([point.lat, point.lng], {
+        radius,
+        fillColor: 'hsl(217, 91%, 60%)',
+        fillOpacity: 0.55,
+        color: 'hsl(217, 91%, 45%)',
+        weight: 1.5,
+      })
+        .bindTooltip(
+          `<div style="font-size:12px"><b>${point.city}</b><br/>${formatCurrency(point.revenue)}<br/><span style="color:#888">${point.dealCount} ${point.dealCount === 1 ? 'negócio' : 'negócios'}</span></div>`,
+          { direction: "top", offset: [0, -radius] }
+        )
+        .addTo(map);
+    }
+
+    // Fix leaflet rendering in dynamic containers
+    setTimeout(() => map.invalidateSize(), 200);
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [data, maxRevenue]);
 
   if (data.length === 0) {
     return (
@@ -28,49 +79,11 @@ export function ConfigurableBubbleMap({ data }: ConfigurableBubbleMapProps) {
     );
   }
 
-  const minRadius = 6;
-  const maxRadius = 35;
-
   return (
     <div className="flex h-full gap-3">
       {/* Map */}
       <div className="flex-[3] min-h-[280px] rounded-lg overflow-hidden border border-border">
-        <MapContainer
-          center={[-14.2, -51.9]}
-          zoom={4}
-          style={{ height: "100%", width: "100%" }}
-          scrollWheelZoom={true}
-          zoomControl={true}
-        >
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          {data.map((point, index) => {
-            const radius = minRadius + (point.revenue / maxRevenue) * (maxRadius - minRadius);
-            return (
-              <CircleMarker
-                key={`${point.city}-${index}`}
-                center={[point.lat, point.lng]}
-                radius={radius}
-                pathOptions={{
-                  fillColor: 'hsl(217, 91%, 60%)',
-                  fillOpacity: 0.55,
-                  color: 'hsl(217, 91%, 45%)',
-                  weight: 1.5,
-                }}
-              >
-                <LeafletTooltip direction="top" offset={[0, -radius]}>
-                  <div className="text-xs">
-                    <p className="font-semibold">{point.city}</p>
-                    <p>{formatCurrency(point.revenue)}</p>
-                    <p className="text-muted-foreground">{point.dealCount} {point.dealCount === 1 ? 'negócio' : 'negócios'}</p>
-                  </div>
-                </LeafletTooltip>
-              </CircleMarker>
-            );
-          })}
-        </MapContainer>
+        <div ref={containerRef} style={{ height: "100%", width: "100%" }} />
       </div>
 
       {/* Top 10 Table */}
