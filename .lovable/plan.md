@@ -1,34 +1,41 @@
 
 
-## Criar visual "Qtde Leads MQL - Mes" com barras empilhadas verticais
+## Corrigir tags de "Item da Venda" nos cards do pipeline
 
-### Resumo
+### Problema identificado
 
-Inserir um novo visual no dashboard seguindo a mesma logica dos visuais "Qtde Leads MQL - Dia" e "Qtde Leads MQL - Semana", mas com sazonalidade mensal. Conforme a imagem de referencia, o grafico usa barras verticais empilhadas com labels de mes abreviado (jan, fev, mar...).
+Os cards de negocio no pipeline nao exibem as tags de "Item da Venda" (e possivelmente "Faturamento Atual"). O problema esta no componente `DealKanban.tsx` que faz a busca em lote dos valores desses campos usando `.in("deal_id", dealIds)` com **628 IDs de deals**. 
+
+Quando o array de IDs e muito grande, a query do Supabase pode falhar silenciosamente porque a URL da requisicao excede os limites permitidos (o filtro `.in()` e codificado como parametro GET na URL). O resultado e que `faturamentoMap` e `itemVendaMap` ficam vazios, e nenhuma tag aparece nos cards.
+
+### Solucao
+
+Particionar (chunk) os arrays de IDs em lotes menores antes de fazer as queries, garantindo que cada requisicao fique dentro dos limites seguros. Alem disso, adicionar tratamento de erro para evitar falhas silenciosas no futuro.
 
 ### Alteracoes
 
-#### 1. Inserir visual no banco de dados
+#### 1. `src/components/sales/DealKanban.tsx`
 
-Nenhuma alteracao de codigo e necessaria -- a logica de agrupamento mensal ja existe em `fetchStackedLeadsData` e o formato de label (`MMM/yy`) ja esta implementado. Basta inserir o registro na tabela `insights_visuals` com:
-
-- **Titulo**: "Qtde Leads MQL - Mes"
-- **Tipo**: `bar_stacked`
-- **Config**:
-  - `dataSource: 'leads'`
-  - `dimension: { field: 'created_at', type: 'date', dateGrouping: 'month' }`
-  - `stackBy: 'canal'`
-  - `chartOrientation: 'vertical'` (barras verticais como na imagem)
-  - Mesmo filtro MQL dos outros visuais
-  - Mesma aparencia (rotulos, paleta vibrante)
-- **Dashboard**: `e9fdb6c9-5ede-4c88-9c26-acb5870b18dd`
+- Criar uma funcao utilitaria `chunkedIn` que divide arrays grandes em lotes de ate 200 IDs e executa as queries em paralelo, combinando os resultados
+- Aplicar essa funcao dentro de `fetchFieldMap` para a query de `deal_field_values`
+- Aplicar tambem em `resolveProductUUIDs` para a query de `products`
+- Adicar `try/catch` ao redor do `Promise.all` para logar erros em vez de falhar silenciosamente
+- Estabilizar a dependencia do `useEffect` usando um hash/stringify dos IDs dos deals em vez do array `deals` inteiro, evitando re-execucoes desnecessarias
 
 ### Secao tecnica
 
-Nenhum arquivo precisa ser modificado. Toda a logica ja esta implementada:
-- Agrupamento mensal em `fetchStackedLeadsData` gera labels como `jan/25`, `fev/25`
-- Orientacao vertical via `chartOrientation: 'vertical'`
-- Filtro MQL e empilhamento por canal reutilizados
+```text
+Antes (falha com 628+ IDs):
+  supabase.from("deal_field_values").in("deal_id", [628 UUIDs])
+  -> URL muito longa -> falha silenciosa -> mapa vazio
 
-Apenas uma insercao no banco de dados e necessaria.
+Depois (chunks de 200):
+  supabase.from("deal_field_values").in("deal_id", [200 UUIDs])  // chunk 1
+  supabase.from("deal_field_values").in("deal_id", [200 UUIDs])  // chunk 2
+  supabase.from("deal_field_values").in("deal_id", [200 UUIDs])  // chunk 3
+  supabase.from("deal_field_values").in("deal_id", [28 UUIDs])   // chunk 4
+  -> Combinar resultados -> mapa completo
+```
+
+Nenhuma alteracao no `DealCard.tsx` e necessaria — ele ja renderiza `itemVendaLabel` corretamente quando o valor e passado.
 
