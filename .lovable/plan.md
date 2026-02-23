@@ -1,46 +1,57 @@
 
 
-## Adicionar suporte a "Faturamento Atual" no visual de Leads empilhado
+## Criar 3 visuais "Qtde Leads MQL" com granularidade Dia, Semana e Mes
 
-### Problema
+### Objetivo
 
-O campo "Faturamento Atual" e um campo personalizado armazenado na tabela `lead_field_values`, nao uma coluna nativa da tabela `leads`. O hook `useVisualData` (graficos simples) ja possui a logica de enriquecimento via `enrichLeadsWithFaturamento`, porem o hook `useStackedVisualData` (graficos empilhados) nao faz esse enriquecimento. Quando o visual usa `faturamento_atual` como dimensao, o codigo tenta ler `lead.faturamento_atual` diretamente, que nao existe, e tudo cai em "Nao informado".
+Adicionar ao painel "Leads" tres graficos de barras empilhadas que mostram a contagem de leads qualificados (MQL = "SIM - Acima de 30k"), segmentados pelo campo "Canal" (funil de origem), em tres granularidades temporais: dia, semana e mes.
 
-### Alteracao
+### Implementacao
 
-#### `src/hooks/useStackedVisualData.ts` -- funcao `fetchStackedLeadsData`
+Sera criado um script de inicializacao (ou bloco de codigo direto) que insere os 3 visuais no dashboard ativo via a funcao `addVisual` do hook `useInsightsDashboards`. Cada visual tera a seguinte configuracao base:
 
-Apos buscar todos os leads e aplicar os filtros (linha ~252), adicionar a logica de enriquecimento quando `dimensionField` ou `stackByField` forem `faturamento_atual` ou `mql`:
+- **Fonte de dados**: `leads`
+- **Tipo de grafico**: `bar_stacked`
+- **Medida**: Contagem (`aggregation: 'count'`)
+- **Dimensao**: Campo `created_at` (tipo `date`) com agrupamento variando entre `day`, `week` e `month`
+- **Empilhamento**: Campo `canal` (funil de origem do lead)
+- **Filtro MQL**: Campo `e4270e93-e9b9-4d9b-9589-d614ce335bcd` com valor selecionado `SIM - Acima de 30k`
 
-1. Importar as funcoes `enrichLeadsWithFaturamento` e `enrichLeadsWithMql` de `useVisualData.ts` (ou replicar a logica inline, dependendo de como estao exportadas).
+### Detalhes dos 3 visuais
 
-2. Antes do loop de agrupamento (linha 258), verificar:
-   - Se `dimensionField === 'faturamento_atual'` ou `stackByField === 'faturamento_atual'`, chamar `enrichLeadsWithFaturamento` para injetar a propriedade `faturamento_atual` em cada lead.
-   - Se `dimensionField === 'mql'` ou `stackByField === 'mql'`, chamar `enrichLeadsWithMql` para injetar `_mql_label`.
-
-3. Ajustar o mapeamento de valor na linha 259 para usar `_mql_label` quando o campo for `mql` (consistente com `useVisualData`).
+| Visual | Titulo | Agrupamento | Layout (w x h) |
+|--------|--------|-------------|-----------------|
+| 1 | Qtde Leads MQL - Dia | day | 16 x 8 |
+| 2 | Qtde Leads MQL - Semana | week | 16 x 8 |
+| 3 | Qtde Leads MQL - Mes | month | 16 x 8 |
 
 ### Secao tecnica
 
-A funcao `enrichLeadsWithFaturamento` busca os valores do campo `e352a1ca-cfbc-435a-95f7-2f53b5cac041` na tabela `lead_field_values` e injeta `faturamento_atual` em cada lead. Atualmente essa funcao esta definida em `useVisualData.ts`. Para reutiliza-la:
+Sera criado um componente utilitario (ou adicionada logica temporaria) que chama `addVisual` tres vezes com as configs abaixo. A abordagem mais limpa e criar uma pagina/botao auxiliar ou um script de seed, mas como o usuario quer os visuais criados diretamente, vou inserir via um efeito unico em um componente dedicado que executa uma vez e se auto-desativa.
 
-- Exportar `enrichLeadsWithFaturamento` e `enrichLeadsWithMql` de `useVisualData.ts`
-- Importar em `useStackedVisualData.ts`
-- Chamar antes do agrupamento
+**Alternativa escolhida**: Criar um componente `SeedMQLVisuals` que, ao ser montado, insere os 3 visuais no dashboard ativo e exibe um toast de confirmacao. Esse componente sera montado uma unica vez no `InsightsMainContent` condicionalmente, e removido apos uso.
+
+Configuracao de cada visual:
 
 ```text
-fetchStackedLeadsData:
-  1. Buscar leads (existente)
-  2. Aplicar filtros (existente)
-  3. [NOVO] Se dimensionField ou stackByField == 'faturamento_atual':
-       allLeads = await enrichLeadsWithFaturamento(accountId, allLeads)
-  4. [NOVO] Se dimensionField ou stackByField == 'mql':
-       allLeads = await enrichLeadsWithMql(accountId, allLeads)
-  5. [AJUSTE] Na leitura do valor do campo mql, usar lead._mql_label
-  6. Agrupar e retornar (existente)
+{
+  dataSource: 'leads',
+  measure: { field: '', aggregation: 'count' },
+  dimension: { field: 'created_at', type: 'date', dateGrouping: 'day' | 'week' | 'month' },
+  formatting: { type: 'decimal', decimals: 0 },
+  appearance: { showDataLabels: true, dateDisplayFormat: 'short', colorPalette: 'default', fillEmptyDates: true },
+  stackBy: 'canal',
+  leadFieldFilter: {
+    fieldId: 'e4270e93-e9b9-4d9b-9589-d614ce335bcd',
+    fieldName: 'MQL',
+    selectedValues: ['SIM - Acima de 30k']
+  }
+}
 ```
 
-### Resultado
+### Arquivos modificados
 
-- O visual "Leads por Faturamento Atual" exibira as categorias reais (ex: "Entre 20 e 30 mil reais", "Acima de 50 mil reais") em vez de "Nao informado"
-- A mesma logica se aplica a qualquer visual empilhado que use campos personalizados como dimensao
+1. **`src/components/insights/SeedMQLVisuals.tsx`** (novo): Componente que insere os 3 visuais ao montar
+2. **`src/components/insights/InsightsMainContent.tsx`**: Monta o `SeedMQLVisuals` uma unica vez, depois removemos o componente
+
+Apos a criacao dos visuais, o componente de seed sera removido do codigo para manter a base limpa.
