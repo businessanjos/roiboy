@@ -13,6 +13,7 @@ interface CurrentUser {
   zapp_signature: string | null;
   zapp_signature_enabled: boolean;
   team_role_name?: string;
+  team_role_id?: string | null;
 }
 
 interface CurrentUserContextType {
@@ -42,7 +43,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       // Then fetch the user profile using auth_user_id, including team role
       const { data, error } = await supabase
         .from("users")
-        .select("id, name, email, role, avatar_url, account_id, auth_user_id, is_also_admin, zapp_signature, zapp_signature_enabled, team_role:team_roles(name)")
+        .select("id, name, email, role, avatar_url, account_id, auth_user_id, is_also_admin, zapp_signature, zapp_signature_enabled, team_role_id, team_role:team_roles(name)")
         .eq("auth_user_id", authUser.id)
         .maybeSingle();
       
@@ -52,10 +53,24 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       
       if (data) {
         // Extract team role name from the joined data
-        const teamRoleName = (data as any).team_role?.name;
+        let teamRoleName = (data as any).team_role?.name;
+        const teamRoleId = (data as any).team_role_id;
+        
+        // Fallback: if JOIN failed but team_role_id exists, fetch name separately
+        if (!teamRoleName && teamRoleId) {
+          console.warn("team_role JOIN returned null, fetching separately for team_role_id:", teamRoleId);
+          const { data: roleData } = await supabase
+            .from("team_roles")
+            .select("name")
+            .eq("id", teamRoleId)
+            .maybeSingle();
+          teamRoleName = roleData?.name || undefined;
+        }
+        
         setCurrentUser({
           ...data,
           team_role_name: teamRoleName,
+          team_role_id: teamRoleId,
         } as CurrentUser);
       } else {
         setCurrentUser(null);

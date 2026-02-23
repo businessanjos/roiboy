@@ -99,9 +99,28 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
 
       if (permsError) {
         console.error("Error fetching permissions:", permsError);
-        setPermissions([]);
+      }
+      
+      const fetchedPerms = permsData?.map((p) => p.permission) || [];
+      
+      // Fallback: if role_permissions returned empty but user has a valid team_role_id,
+      // grant default permissions to avoid leaving the user with zero access
+      if (fetchedPerms.length === 0 && userData.team_role_id) {
+        console.warn("role_permissions returned empty for role_id:", userData.team_role_id, "- applying default permissions");
+        const defaultPermissions = [
+          PERMISSIONS.CLIENTS_VIEW,
+          PERMISSIONS.CLIENTS_EDIT,
+          PERMISSIONS.REPORTS_VIEW,
+          PERMISSIONS.EVENTS_VIEW,
+          PERMISSIONS.FORMS_VIEW,
+          PERMISSIONS.PRODUCTS_VIEW,
+          PERMISSIONS.TEAM_VIEW,
+          PERMISSIONS.SETTINGS_VIEW,
+          PERMISSIONS.ROYZAPP_ACCESS,
+        ];
+        setPermissions(defaultPermissions);
       } else {
-        setPermissions(permsData?.map((p) => p.permission) || []);
+        setPermissions(fetchedPerms);
       }
 
       setIsAdmin(false);
