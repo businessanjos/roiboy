@@ -144,6 +144,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const filteredNavItems = useMemo(() => {
     // Team role name for special access checks
     const teamRoleName = currentUser?.team_role_name;
+    const userRole = currentUser?.role;
     
     // Check if user has full access to the current sector based on their role
     const hasFullSectorAccess = () => {
@@ -157,12 +158,14 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       }
       
       // CX, CS, Consultor roles have full access to the operations sector
+      // Also allow mentor system role as bypass for operations
       if (currentSector.id === "operacoes") {
         return teamRoleName === "CX" || 
                teamRoleName === "CS" || 
                teamRoleName === "Consultor" ||
                teamRoleName === "Gestor" ||
-               teamRoleName === "Admin";
+               teamRoleName === "Admin" ||
+               userRole === "mentor";
       }
       
       // Vendedor, Closer, SDR roles have full access to the sales sector
