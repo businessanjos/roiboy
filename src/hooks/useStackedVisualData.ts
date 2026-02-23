@@ -263,6 +263,108 @@ async function fetchStackedLeadsData(
     allLeads = await enrichLeadsWithMql(accountId, allLeads);
   }
 
+  // Check if this is a temporal dimension
+  const isTemporalDimension = config.dimension.type === 'date';
+  const dateGrouping = config.dimension.dateGrouping || 'day';
+
+  if (isTemporalDimension) {
+    // Temporal grouping for leads (similar to deals logic)
+    const periodMap = new Map<string, Map<string, number>>();
+    const allSeries = new Set<string>();
+
+    const getFieldValue = (lead: any, field: string): string => {
+      if (field === 'mql') return lead._mql_label || 'Não informado';
+      return lead[field] || 'Não informado';
+    };
+
+    for (const lead of allLeads) {
+      const dateStr = lead.created_at;
+      if (!dateStr) continue;
+
+      const date = parseISO(dateStr);
+      let periodKey: string;
+
+      switch (dateGrouping) {
+        case 'year': periodKey = format(date, 'yyyy'); break;
+        case 'month': periodKey = format(date, 'yyyy-MM'); break;
+        case 'week': {
+          const weekStart = startOfWeek(date, { weekStartsOn: 1 });
+          periodKey = format(weekStart, 'yyyy-MM-dd');
+          break;
+        }
+        default: periodKey = format(date, 'dd'); break; // day of month
+      }
+
+      const seriesValue = getFieldValue(lead, stackByField);
+      allSeries.add(seriesValue);
+
+      if (!periodMap.has(periodKey)) periodMap.set(periodKey, new Map());
+      const seriesMap = periodMap.get(periodKey)!;
+      seriesMap.set(seriesValue, (seriesMap.get(seriesValue) || 0) + 1);
+    }
+
+    const seriesKeys = Array.from(allSeries).sort();
+
+    // Generate all periods
+    const allPeriods: { key: string; label: string }[] = [];
+
+    if (dateGrouping === 'day') {
+      for (let d = 1; d <= 31; d++) {
+        const key = String(d).padStart(2, '0');
+        allPeriods.push({ key, label: key });
+      }
+    } else {
+      // Determine range from filters
+      let rangeStart: Date;
+      let rangeEnd: Date;
+      if (filters.startDate && filters.endDate) {
+        rangeStart = parseISO(filters.startDate);
+        rangeEnd = parseISO(filters.endDate);
+      } else if (filters.startDate) {
+        rangeStart = parseISO(filters.startDate);
+        rangeEnd = endOfMonth(rangeStart);
+      } else if (filters.endDate) {
+        rangeEnd = parseISO(filters.endDate);
+        rangeStart = startOfMonth(rangeEnd);
+      } else {
+        rangeStart = startOfYear(new Date());
+        rangeEnd = endOfYear(new Date());
+      }
+
+      switch (dateGrouping) {
+        case 'year':
+          eachYearOfInterval({ start: rangeStart, end: rangeEnd }).forEach(d =>
+            allPeriods.push({ key: format(d, 'yyyy'), label: format(d, 'yyyy') })
+          );
+          break;
+        case 'month':
+          eachMonthOfInterval({ start: rangeStart, end: rangeEnd }).forEach(d =>
+            allPeriods.push({ key: format(d, 'yyyy-MM'), label: format(d, 'MMM/yy') })
+          );
+          break;
+        case 'week':
+          eachWeekOfInterval({ start: rangeStart, end: rangeEnd }, { weekStartsOn: 1 }).forEach(d => {
+            const ws = startOfWeek(d, { weekStartsOn: 1 });
+            allPeriods.push({ key: format(ws, 'yyyy-MM-dd'), label: `Sem ${format(ws, 'dd/MM')}` });
+          });
+          break;
+      }
+    }
+
+    const result: StackedDataPoint[] = [];
+    for (const period of allPeriods) {
+      const seriesMap = periodMap.get(period.key);
+      const point: StackedDataPoint = { name: period.label };
+      for (const s of seriesKeys) {
+        point[s] = seriesMap?.get(s) || 0;
+      }
+      result.push(point);
+    }
+
+    return { data: result, seriesKeys };
+  }
+
+  // Categorical grouping (existing logic)
   // Group by dimension field (X axis) and stack by field (series)
   const categoryMap = new Map<string, Map<string, number>>();
   const allSeries = new Set<string>();
