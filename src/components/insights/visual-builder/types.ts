@@ -2,7 +2,7 @@ export type DataSource = 'deals' | 'leads' | 'products' | 'tasks';
 export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate' | 'sales_cycle';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
-export type ChartType = 'bar' | 'bar_horizontal' | 'bar_stacked' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial' | 'gauge';
+export type ChartType = 'bar' | 'bar_horizontal' | 'bar_stacked' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial' | 'gauge' | 'indicator';
 export type GaugeSubType = 'days_elapsed' | 'revenue_vs_goal';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
 export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature';
@@ -55,6 +55,13 @@ export interface VisualConfig {
   gaugeConfig?: {
     subType: GaugeSubType;
     monthlyGoals?: Record<string, number>; // "YYYY-MM" -> value in R$
+  };
+  // Indicator configuration
+  indicatorConfig?: {
+    minValue: number;
+    maxValue: number;
+    minLabel?: string;
+    maxLabel?: string;
   };
   // Lead field filter
   leadFieldFilter?: {
@@ -112,6 +119,7 @@ export const CHART_TYPE_OPTIONS: { value: ChartType; label: string }[] = [
   { value: 'ranking', label: 'Ranking' },
   { value: 'call_commercial', label: 'Calls Comerciais' },
   { value: 'gauge', label: 'Conta-Giro' },
+  { value: 'indicator', label: 'Indicador' },
 ];
 
 // Date display format options

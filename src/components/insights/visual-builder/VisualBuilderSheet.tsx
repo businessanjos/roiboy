@@ -56,6 +56,12 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   const [gaugeSubType, setGaugeSubType] = useState<GaugeSubType>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState<string>('');
   
+  // Indicator state
+  const [indicatorMin, setIndicatorMin] = useState('0');
+  const [indicatorMax, setIndicatorMax] = useState('100');
+  const [indicatorMinLabel, setIndicatorMinLabel] = useState('');
+  const [indicatorMaxLabel, setIndicatorMaxLabel] = useState('');
+  
   // Appearance state
   const [showDataLabels, setShowDataLabels] = useState(DEFAULT_APPEARANCE.showDataLabels);
   const [dateDisplayFormat, setDateDisplayFormat] = useState<DateDisplayFormat>(DEFAULT_APPEARANCE.dateDisplayFormat);
@@ -76,6 +82,10 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
       setCustomFormula('');
       setGaugeSubType('days_elapsed');
       setGaugeGoal('');
+      setIndicatorMin('0');
+      setIndicatorMax('100');
+      setIndicatorMinLabel('');
+      setIndicatorMaxLabel('');
       // Reset appearance
       setShowDataLabels(DEFAULT_APPEARANCE.showDataLabels);
       setDateDisplayFormat(DEFAULT_APPEARANCE.dateDisplayFormat);
@@ -100,10 +110,13 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
 
   // Auto-generate title when selections change
   const isGauge = chartType === 'gauge';
+  const isIndicator = chartType === 'indicator';
   
   useEffect(() => {
     if (isGauge) {
       setTitle(gaugeSubType === 'days_elapsed' ? 'Dias Corridos do Mês' : 'Faturamento x Meta');
+    } else if (isIndicator && !title) {
+      setTitle('Indicador');
     } else if (dataSource && dimensionField) {
       const generatedTitle = generateVisualTitle(
         dataSource,
@@ -113,7 +126,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
       );
       setTitle(generatedTitle);
     }
-  }, [dataSource, measureField, aggregation, dimensionField, isGauge, gaugeSubType]);
+  }, [dataSource, measureField, aggregation, dimensionField, isGauge, isIndicator, gaugeSubType]);
 
   // Check if dimension is a date field
   const dimensionFields = dataSource ? DATA_SOURCE_FIELDS[dataSource].dimension : [];
@@ -126,6 +139,14 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   
   const canCreate = isGauge
     ? (isGaugeDaysElapsed || (isGaugeRevenue && dataSource === 'deals')) &&
+      title.trim() !== '' &&
+      activeDashboardId !== null
+    : isIndicator
+    ? dataSource !== null &&
+      dimensionField !== null &&
+      (aggregation === 'count' || measureField !== null) &&
+      indicatorMax !== '' &&
+      Number(indicatorMax) > Number(indicatorMin) &&
       title.trim() !== '' &&
       activeDashboardId !== null
     : dataSource !== null &&
@@ -171,6 +192,14 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
           },
           ...(customFormula.trim() && { customFormula: customFormula.trim() }),
           appearance: { showDataLabels, dateDisplayFormat, colorPalette, fillEmptyDates },
+          ...(isIndicator && {
+            indicatorConfig: {
+              minValue: Number(indicatorMin) || 0,
+              maxValue: Number(indicatorMax) || 100,
+              ...(indicatorMinLabel.trim() && { minLabel: indicatorMinLabel.trim() }),
+              ...(indicatorMaxLabel.trim() && { maxLabel: indicatorMaxLabel.trim() }),
+            },
+          }),
         };
       }
 
@@ -321,6 +350,56 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
                   onFillEmptyDatesChange={setFillEmptyDates}
                   isDimensionDate={isDimensionDate}
                 />
+
+                {isIndicator && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <Label className="text-base font-medium">Configuração do Indicador</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-sm">Valor Mínimo</Label>
+                          <Input
+                            type="number"
+                            value={indicatorMin}
+                            onChange={(e) => setIndicatorMin(e.target.value)}
+                            placeholder="0"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-sm">Valor Máximo</Label>
+                          <Input
+                            type="number"
+                            value={indicatorMax}
+                            onChange={(e) => setIndicatorMax(e.target.value)}
+                            placeholder="100"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-sm text-muted-foreground">Label Mín (opcional)</Label>
+                          <Input
+                            value={indicatorMinLabel}
+                            onChange={(e) => setIndicatorMinLabel(e.target.value)}
+                            placeholder="Ex: 0 Mil"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-sm text-muted-foreground">Label Máx (opcional)</Label>
+                          <Input
+                            value={indicatorMaxLabel}
+                            onChange={(e) => setIndicatorMaxLabel(e.target.value)}
+                            placeholder="Ex: 1 Milhão"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Define a escala do indicador. O valor agregado dos dados será posicionado entre o mínimo e o máximo.
+                      </p>
+                    </div>
+                  </>
+                )}
               </>
             )}
 
