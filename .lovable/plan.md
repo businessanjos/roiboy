@@ -1,41 +1,41 @@
 
 
-## Corrigir tags de "Item da Venda" nos cards do pipeline
+## Correcao definitiva: visuais com config incompleta causam tela branca
 
-### Problema identificado
+### Causa raiz
 
-Os cards de negocio no pipeline nao exibem as tags de "Item da Venda" (e possivelmente "Faturamento Atual"). O problema esta no componente `DealKanban.tsx` que faz a busca em lote dos valores desses campos usando `.in("deal_id", dealIds)` com **628 IDs de deals**. 
+O visual "Qtde Leads MQL - Mes" foi inserido no banco de dados sem os campos `formatting` e `appearance` na coluna `config`. Quando o componente `ConfigurableVisualCard` passa `config.formatting` (que e `undefined`) para `ConfigurableChart`, e depois para `StackedHorizontalBarChart`, o codigo tenta acessar `formatting.type` e `appearance.colorPalette` diretamente -- causando `TypeError: Cannot read properties of undefined`.
 
-Quando o array de IDs e muito grande, a query do Supabase pode falhar silenciosamente porque a URL da requisicao excede os limites permitidos (o filtro `.in()` e codificado como parametro GET na URL). O resultado e que `faturamentoMap` e `itemVendaMap` ficam vazios, e nenhuma tag aparece nos cards.
+Esse mesmo padrao pode afetar qualquer visual futuro que tenha config incompleta.
 
 ### Solucao
 
-Particionar (chunk) os arrays de IDs em lotes menores antes de fazer as queries, garantindo que cada requisicao fique dentro dos limites seguros. Alem disso, adicionar tratamento de erro para evitar falhas silenciosas no futuro.
+Aplicar valores default em dois pontos para blindar contra configs incompletas:
 
-### Alteracoes
+#### 1. `src/components/insights/visuals/ConfigurableVisualCard.tsx`
 
-#### 1. `src/components/sales/DealKanban.tsx`
+Garantir que `formatting` e `appearance` sempre tenham valores validos antes de serem passados ao `ConfigurableChart`:
 
-- Criar uma funcao utilitaria `chunkedIn` que divide arrays grandes em lotes de ate 200 IDs e executa as queries em paralelo, combinando os resultados
-- Aplicar essa funcao dentro de `fetchFieldMap` para a query de `deal_field_values`
-- Aplicar tambem em `resolveProductUUIDs` para a query de `products`
-- Adicar `try/catch` ao redor do `Promise.all` para logar erros em vez de falhar silenciosamente
-- Estabilizar a dependencia do `useEffect` usando um hash/stringify dos IDs dos deals em vez do array `deals` inteiro, evitando re-execucoes desnecessarias
-
-### Secao tecnica
-
-```text
-Antes (falha com 628+ IDs):
-  supabase.from("deal_field_values").in("deal_id", [628 UUIDs])
-  -> URL muito longa -> falha silenciosa -> mapa vazio
-
-Depois (chunks de 200):
-  supabase.from("deal_field_values").in("deal_id", [200 UUIDs])  // chunk 1
-  supabase.from("deal_field_values").in("deal_id", [200 UUIDs])  // chunk 2
-  supabase.from("deal_field_values").in("deal_id", [200 UUIDs])  // chunk 3
-  supabase.from("deal_field_values").in("deal_id", [28 UUIDs])   // chunk 4
-  -> Combinar resultados -> mapa completo
+```typescript
+const safeFormatting = config.formatting || { type: 'number' as FormatType, decimals: 0 };
+const safeAppearance = config.appearance || DEFAULT_APPEARANCE;
 ```
 
-Nenhuma alteracao no `DealCard.tsx` e necessaria — ele ja renderiza `itemVendaLabel` corretamente quando o valor e passado.
+Passar `safeFormatting` e `safeAppearance` no JSX em vez de `config.formatting` e `config.appearance`.
 
+#### 2. `src/components/insights/visuals/StackedHorizontalBarChart.tsx`
+
+Adicionar defaults defensivos no inicio do componente para caso os props cheguem incompletos:
+
+```typescript
+const safeFormatting = formatting || { type: 'number' as FormatType, decimals: 0 };
+const safeAppearance = appearance || DEFAULT_APPEARANCE;
+```
+
+Usar `safeFormatting` e `safeAppearance` em todo o componente.
+
+### Por que esta solucao e definitiva
+
+- Protege contra qualquer visual futuro inserido com config parcial
+- Resolve os dois erros nos logs: `Cannot read 'type'` (formatting) e `Cannot read 'aggregation'` (ja corrigido anteriormente)
+- Nao altera a logica de negocio -- apenas garante defaults seguros
