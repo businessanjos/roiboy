@@ -9,7 +9,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
-import { FormatType, AppearanceConfig, COLOR_PALETTES, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
+import { FormatType, AppearanceConfig, COLOR_PALETTES, FONT_SCALE_MULTIPLIERS, DEFAULT_APPEARANCE } from "../visual-builder/types";
 import { formatValueCompact } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
 
@@ -88,8 +88,10 @@ export function StackedHorizontalBarChart({
   appearance,
   orientation = 'horizontal',
 }: StackedHorizontalBarChartProps) {
-  const colors = getChartColors(appearance.colorPalette);
-  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
+  const safeFormatting = formatting || { type: 'number' as FormatType, decimals: 0 };
+  const safeAppearance = appearance || DEFAULT_APPEARANCE;
+  const colors = getChartColors(safeAppearance.colorPalette);
+  const m = FONT_SCALE_MULTIPLIERS[safeAppearance.fontScale || 'normal'];
 
   if (!data || data.length === 0 || seriesKeys.length === 0) {
     return (
@@ -120,7 +122,7 @@ export function StackedHorizontalBarChart({
             tick={{ fontSize: Math.round(11 * m) }}
             className="text-muted-foreground"
           />
-          <Tooltip content={<CustomTooltip formatting={formatting} singleSeries={seriesKeys.length <= 1} />} />
+          <Tooltip content={<CustomTooltip formatting={safeFormatting} singleSeries={seriesKeys.length <= 1} />} />
           {seriesKeys.length > 1 && (
             <Legend
               verticalAlign="top"
@@ -136,10 +138,10 @@ export function StackedHorizontalBarChart({
               fill={colors[index % colors.length]}
               radius={index === seriesKeys.length - 1 ? [4, 4, 0, 0] : undefined}
             >
-              {appearance.showDataLabels && (
+              {safeAppearance.showDataLabels && (
                 <LabelList
                   dataKey={key}
-                  content={(props: any) => renderInsideLabel(props, formatting, m)}
+                  content={(props: any) => renderInsideLabel(props, safeFormatting, m)}
                 />
               )}
             </Bar>
@@ -176,7 +178,7 @@ export function StackedHorizontalBarChart({
           width={90}
           interval={0}
         />
-        <Tooltip content={<CustomTooltip formatting={formatting} singleSeries={seriesKeys.length <= 1} />} />
+        <Tooltip content={<CustomTooltip formatting={safeFormatting} singleSeries={seriesKeys.length <= 1} />} />
         {seriesKeys.length > 1 && (
           <Legend
             verticalAlign="top"
@@ -192,10 +194,10 @@ export function StackedHorizontalBarChart({
             fill={colors[index % colors.length]}
             radius={index === seriesKeys.length - 1 ? [0, 4, 4, 0] : undefined}
           >
-            {appearance.showDataLabels && (
+            {safeAppearance.showDataLabels && (
               <LabelList
                 dataKey={key}
-                content={(props: any) => renderInsideLabel(props, formatting, m)}
+                content={(props: any) => renderInsideLabel(props, safeFormatting, m)}
               />
             )}
           </Bar>
