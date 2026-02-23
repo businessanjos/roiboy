@@ -6,6 +6,7 @@ import { VisualConfig } from "@/components/insights/visual-builder/types";
 import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek } from "date-fns";
 import { filterByLeadField } from "@/hooks/useLeadFieldFilter";
 import { filterByDealField } from "@/hooks/useDealFieldFilter";
+import { enrichLeadsWithFaturamento, enrichLeadsWithMql } from "@/hooks/useVisualData";
 
 export interface StackedDataPoint {
   name: string;
@@ -251,13 +252,29 @@ async function fetchStackedLeadsData(
     allLeads = await filterByLeadField(allLeads, accountId, leadFieldFilter, 'leads');
   }
 
+  // Enrich leads with custom field data if needed
+  const needsFaturamento = dimensionField === 'faturamento_atual' || stackByField === 'faturamento_atual';
+  const needsMql = dimensionField === 'mql' || stackByField === 'mql';
+
+  if (needsFaturamento) {
+    allLeads = await enrichLeadsWithFaturamento(accountId, allLeads);
+  }
+  if (needsMql) {
+    allLeads = await enrichLeadsWithMql(accountId, allLeads);
+  }
+
   // Group by dimension field (X axis) and stack by field (series)
   const categoryMap = new Map<string, Map<string, number>>();
   const allSeries = new Set<string>();
 
+  const getFieldValue = (lead: any, field: string): string => {
+    if (field === 'mql') return lead._mql_label || 'Não informado';
+    return lead[field] || 'Não informado';
+  };
+
   for (const lead of allLeads) {
-    const categoryValue = (lead as any)[dimensionField] || 'Não informado';
-    const seriesValue = (lead as any)[stackByField] || 'Não informado';
+    const categoryValue = getFieldValue(lead, dimensionField);
+    const seriesValue = getFieldValue(lead, stackByField);
 
     allSeries.add(seriesValue);
 
