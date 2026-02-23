@@ -413,14 +413,18 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     return typeMap[eventType] || typeMap.live;
   };
 
-  // Separate events by status
-  const upcomingEvents = events.filter(
+  // Separate individual vs shared events
+  const individualEvents = events.filter((e) => e.client_id !== null);
+  const sharedEvents = events.filter((e) => e.client_id === null);
+
+  // Separate shared events by status
+  const upcomingEvents = sharedEvents.filter(
     (e) => e.scheduled_at && (isFuture(new Date(e.scheduled_at)) || isToday(new Date(e.scheduled_at)))
   );
-  const pastEvents = events.filter(
+  const pastEvents = sharedEvents.filter(
     (e) => e.scheduled_at && isPast(new Date(e.scheduled_at)) && !isToday(new Date(e.scheduled_at))
   );
-  const materialsEvents = events.filter((e) => e.event_type === "material");
+  const materialsEvents = sharedEvents.filter((e) => e.event_type === "material");
 
   const handleEditEvent = (event: EventWithProducts) => {
     const eventData: EventData = {
@@ -522,6 +526,15 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{event.title}</span>
+                        {event.client_id !== null ? (
+                          <Badge className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30" variant="outline">
+                            Individual
+                          </Badge>
+                        ) : (
+                          <Badge className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30" variant="outline">
+                            Compartilhado
+                          </Badge>
+                        )}
                         {isTodayEvent && (
                           <Badge variant="default" className="text-xs">Hoje</Badge>
                         )}
@@ -597,14 +610,23 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                             </a>
                           </Button>
                         )}
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleEditEvent(event)}
-                          title="Editar evento"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        {event.client_id !== null ? (
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleEditEvent(event)}
+                            title="Editar evento"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/events`} title="Ver na página de Eventos">
+                              <LinkIcon className="h-3 w-3 mr-1" />
+                              Ver
+                            </Link>
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -696,14 +718,33 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         )}
       </div>
 
-      {/* SECTION 2: Delivery Schedule (product events) - READ ONLY */}
+      {/* SECTION 2: Individual Events - EDITABLE */}
+      <div className="border-t pt-6">
+        <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+          <Calendar className="h-4 w-4" />
+          Eventos Individuais
+        </h3>
+        {individualEvents.length > 0 ? (
+          <div className="space-y-6">
+            {renderEventTable(individualEvents, "Eventos deste Cliente", <Users className="h-4 w-4" />, true)}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-muted-foreground border rounded-lg bg-muted/10">
+            <Calendar className="h-8 w-8 mx-auto mb-2 opacity-30" />
+            <p className="text-sm">Nenhum evento individual criado para este cliente.</p>
+            <p className="text-xs mt-1">Clique em "Novo Evento Individual" para criar.</p>
+          </div>
+        )}
+      </div>
+
+      {/* SECTION 3: Delivery Schedule (shared/product events) - READ ONLY */}
       {clientProductIds.length > 0 && (
         <div className="border-t pt-6">
           <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
             <Package className="h-4 w-4" />
-            Agenda de Entregas
+            Agenda de Entregas (Compartilhados)
           </h3>
-          {events.length > 0 ? (
+          {sharedEvents.length > 0 ? (
             <div className="space-y-6">
               {renderEventTable(upcomingEvents, "Próximos Eventos", <Calendar className="h-4 w-4" />, true)}
               {renderEventTable(materialsEvents, "Materiais de Apoio", <FileText className="h-4 w-4" />, true)}
