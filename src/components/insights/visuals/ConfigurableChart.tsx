@@ -19,6 +19,7 @@ import { ConfigurableScorecard } from "./ConfigurableScorecard";
 import { ConfigurableRanking } from "./ConfigurableRanking";
 import { ConfigurableCallCommercial } from "./ConfigurableCallCommercial";
 import { GaugeFromConfig } from "./ConfigurableGauge";
+import { IndicatorFromConfig } from "./ConfigurableIndicator";
 import { StackedHorizontalBarChart } from "./StackedHorizontalBarChart";
 import { formatValueCompact } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
@@ -51,7 +52,7 @@ function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professiona
 export function ConfigurableChart({ type, data, formatting, appearance, visualConfig, stackedData, stackedSeriesKeys, onDrilldown }: ConfigurableChartProps) {
   const config = appearance || DEFAULT_APPEARANCE;
   
-  if (type !== 'gauge' && type !== 'bar_stacked' && (!data || data.length === 0)) {
+  if (type !== 'gauge' && type !== 'indicator' && type !== 'bar_stacked' && (!data || data.length === 0)) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
         Sem dados para exibir
@@ -69,6 +70,14 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
       return <ConfigurableCallCommercial data={data} formatting={formatting} hiddenUsers={visualConfig?.hiddenUsers} appearance={config} />;
     case 'gauge':
       return <GaugeFromConfig data={data} visualConfig={visualConfig} />;
+    case 'indicator':
+      return (
+        <IndicatorFromConfig
+          data={data}
+          visualConfig={visualConfig}
+          formatValue={(v) => formatValueCompact(v, formatting.type)}
+        />
+      );
     case 'bar':
       return <BarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'bar_horizontal':
