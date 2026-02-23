@@ -1,33 +1,37 @@
 
-
-## Adicionar opcao de formatacao nas configuracoes do Indicador
+## Suportar fonte de dados "Leads" no grafico de Barras Empilhadas
 
 ### Problema
 
-O visual "Indicador" exibe valores resumidos (ex: "3K" em vez de "3.000") e nao oferece opcoes de formatacao (Escala de Exibicao e Casas Decimais) nas configuracoes rapidas. Essas opcoes existem apenas para o tipo "Scorecard".
+O hook `useStackedVisualData` so possui a funcao `fetchStackedDealsData`, que sempre consulta a tabela `deals`. Quando o visual "Leads por Canal" e criado com tipo `bar_stacked` e `dataSource: 'leads'`, o sistema tenta buscar o campo `canal` na tabela `deals` (que nao existe la), resultando em erro e "Sem dados para exibir".
 
-### Causa
+### Solucao
 
-No arquivo `VisualQuickSettings.tsx`, a secao de formatacao e renderizada apenas quando `isScorecard` e verdadeiro (linha 314). O tipo `indicator` nao esta incluido nessa condicao.
-
-Alem disso, o componente `ConfigurableIndicator.tsx` usa um `formatValue` padrao que chama `toLocaleString('pt-BR')` sem considerar a escala de exibicao ou casas decimais configuradas.
+Adicionar uma funcao `fetchStackedLeadsData` ao hook `useStackedVisualData.ts` e rotear a chamada com base no `dataSource` da config.
 
 ### Alteracoes
 
-#### 1. `src/components/insights/visuals/VisualQuickSettings.tsx`
+#### `src/hooks/useStackedVisualData.ts`
 
-- Adicionar deteccao do tipo `indicator`: `const isIndicator = visual.chart_type === 'indicator';`
-- Alterar a condicao da secao de formatacao de `{isScorecard && (...)}` para `{(isScorecard || isIndicator) && (...)}`
-- Isso exibira os campos "Escala de Exibicao" e "Casas Decimais" tambem para o Indicador
+1. **Rotear por dataSource no queryFn (linha 31):** Em vez de sempre chamar `fetchStackedDealsData`, verificar `config.dataSource`:
+   - Se `'leads'`, chamar `fetchStackedLeadsData`
+   - Se `'deals'`, chamar `fetchStackedDealsData` (comportamento atual)
 
-#### 2. `src/components/insights/visuals/ConfigurableChart.tsx`
+2. **Criar funcao `fetchStackedLeadsData`:**
+   - Consultar a tabela `leads` com campos `id, status, source, canal, created_at`
+   - Filtrar por `account_id` e `converted_to_client_id is null`
+   - Aplicar filtros de data usando `created_at`
+   - Aplicar filtro de lead field se configurado
+   - Agrupar por campo da dimensao (ex: `canal`) como eixo X
+   - Empilhar por `stackBy` (ex: `status` com valores Aberto/Ganho/Perdido)
+   - Retornar `{ data: StackedDataPoint[], seriesKeys: string[] }` no mesmo formato do deals
 
-- No case `'indicator'`, passar uma funcao `formatValue` que utilize `formatValueWithScale` (a mesma funcao usada pelo Scorecard) respeitando `displayScale` e `decimals` da config do visual
+3. **Logica de agrupamento:**
+   - A dimensao do visual determina o eixo X (ex: `canal` = cada barra e um canal)
+   - O `stackBy` determina as series empilhadas (ex: `status` = cores diferentes por status)
+   - Para leads, a agregacao sera sempre `count`
+   - Diferente do deals (que agrupa por periodo temporal e empilha por vendedor), leads agrupara por campo categorico (canal, origem, etc.)
 
-#### 3. `src/components/insights/visuals/ConfigurableIndicator.tsx`
+### Resultado esperado
 
-- Nenhuma alteracao estrutural necessaria -- o componente ja aceita `formatValue` como prop. Basta garantir que o `ConfigurableChart` passe a funcao correta.
-
-### Resultado
-
-Ao abrir as configuracoes de um visual do tipo Indicador, o usuario vera a secao "Formatacao do Valor" com as opcoes de Escala de Exibicao (Valor Completo, Automatico, Milhares, Milhoes, Bilhoes) e Casas Decimais (0 a 4), identicas ao Scorecard. O valor exibido no arco respeitara essas configuracoes.
+O visual "Leads por Canal" exibira barras horizontais empilhadas onde cada barra representa um canal (Trafego Pago, Organico, Recorrencia, etc.) e as cores dentro de cada barra representam os status (Aberto, Ganho, Perdido) -- identico ao exemplo mostrado na segunda imagem.
