@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { VisualErrorBoundary } from "./VisualErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings } from "lucide-react";
 import { useVisualData } from "@/hooks/useVisualData";
@@ -145,82 +146,84 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
   };
 
   return (
-    <>
-      <Card className="flex flex-col h-full">
-        <CardHeader className="pb-2 flex-shrink-0">
-          <CardTitle className="text-base flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 min-w-0">
-              <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />
-              <span className="truncate">{visual.title || "Visual"}</span>
-            </div>
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button 
-                      onClick={() => handleDrilldown()}
-                      className="text-muted-foreground hover:text-foreground transition-colors p-1"
-                    >
-                      <Table className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Explorar Dados</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button 
-                      onClick={() => setSettingsOpen(true)}
-                      className="text-muted-foreground hover:text-foreground transition-colors p-1"
-                    >
-                      <Settings className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Ajustes do Visual</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
-                      <Info className="h-4 w-4" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="left" className="max-w-[250px]">
-                    {infoContent}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 min-h-0 overflow-auto">
-          <ConfigurableChart
-            type={chartType}
-            data={processedData}
-            formatting={config.formatting || { type: 'number' as FormatType, decimals: 0 }}
-            appearance={config.appearance || DEFAULT_APPEARANCE}
-            visualConfig={isBubbleMap ? { ...config, _mapData: mapData } as any : config}
-            stackedData={stackedResult?.data}
-            stackedSeriesKeys={stackedResult?.seriesKeys}
-            onDrilldown={handleDrilldown}
-          />
-        </CardContent>
-      </Card>
+    <VisualErrorBoundary title={visual.title || "Visual"}>
+      <>
+        <Card className="flex flex-col h-full">
+          <CardHeader className="pb-2 flex-shrink-0">
+            <CardTitle className="text-base flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />
+                <span className="truncate">{visual.title || "Visual"}</span>
+              </div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button 
+                        onClick={() => handleDrilldown()}
+                        className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                      >
+                        <Table className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Explorar Dados</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button 
+                        onClick={() => setSettingsOpen(true)}
+                        className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                      >
+                        <Settings className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Ajustes do Visual</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                        <Info className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="max-w-[250px]">
+                      {infoContent}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0 overflow-auto">
+            <ConfigurableChart
+              type={chartType}
+              data={processedData}
+              formatting={config.formatting || { type: 'number' as FormatType, decimals: 0 }}
+              appearance={config.appearance || DEFAULT_APPEARANCE}
+              visualConfig={isBubbleMap ? { ...config, _mapData: mapData } as any : config}
+              stackedData={stackedResult?.data}
+              stackedSeriesKeys={stackedResult?.seriesKeys}
+              onDrilldown={handleDrilldown}
+            />
+          </CardContent>
+        </Card>
 
-      <DrilldownDialog
-        open={drilldownOpen}
-        onOpenChange={setDrilldownOpen}
-        visual={visual}
-        groupName={drilldownGroup}
-      />
+        <DrilldownDialog
+          open={drilldownOpen}
+          onOpenChange={setDrilldownOpen}
+          visual={visual}
+          groupName={drilldownGroup}
+        />
 
-      <VisualQuickSettings
-        visual={visual}
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-      />
-    </>
+        <VisualQuickSettings
+          visual={visual}
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+        />
+      </>
+    </VisualErrorBoundary>
   );
 }
