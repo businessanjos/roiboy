@@ -28,11 +28,10 @@ export function useStackedVisualData({ config, enabled = true }: UseStackedVisua
         return { data: [], seriesKeys: [] };
       }
 
-      return fetchStackedDealsData(
-        currentUser.account_id,
-        config,
-        filters
-      );
+      if (config.dataSource === 'leads') {
+        return fetchStackedLeadsData(currentUser.account_id, config, filters);
+      }
+      return fetchStackedDealsData(currentUser.account_id, config, filters);
     },
     enabled: enabled && !!config && !!config.stackBy && !!currentUser?.account_id,
     staleTime: 120000,
@@ -212,6 +211,79 @@ async function fetchStackedDealsData(
 
     result.push(point);
   }
+
+  return { data: result, seriesKeys };
+}
+
+async function fetchStackedLeadsData(
+  accountId: string,
+  config: VisualConfig,
+  filters: any
+): Promise<{ data: StackedDataPoint[]; seriesKeys: string[] }> {
+  const dimensionField = config.dimension.field || 'canal';
+  const stackByField = config.stackBy || 'status';
+
+  let query = supabase
+    .from('leads')
+    .select('id, status, source, canal, created_at, responsible_user_id')
+    .eq('account_id', accountId)
+    .is('converted_to_client_id', null);
+
+  if (filters.startDate) query = query.gte('created_at', filters.startDate);
+  if (filters.endDate) query = query.lte('created_at', filters.endDate);
+  if (filters.userId && filters.userId !== 'all') query = query.eq('responsible_user_id', filters.userId);
+
+  // Paginate
+  let allLeads: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if (error) { console.error('Error fetching stacked leads:', error); return { data: [], seriesKeys: [] }; }
+    allLeads = allLeads.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  // Apply lead field filter if configured
+  const { leadFieldFilter } = config;
+  if (leadFieldFilter && leadFieldFilter.selectedValues && leadFieldFilter.selectedValues.length > 0) {
+    allLeads = await filterByLeadField(allLeads, accountId, leadFieldFilter, 'leads');
+  }
+
+  // Group by dimension field (X axis) and stack by field (series)
+  const categoryMap = new Map<string, Map<string, number>>();
+  const allSeries = new Set<string>();
+
+  for (const lead of allLeads) {
+    const categoryValue = (lead as any)[dimensionField] || 'Não informado';
+    const seriesValue = (lead as any)[stackByField] || 'Não informado';
+
+    allSeries.add(seriesValue);
+
+    if (!categoryMap.has(categoryValue)) categoryMap.set(categoryValue, new Map());
+    const seriesMap = categoryMap.get(categoryValue)!;
+    seriesMap.set(seriesValue, (seriesMap.get(seriesValue) || 0) + 1);
+  }
+
+  const seriesKeys = Array.from(allSeries).sort();
+
+  // Build data points
+  const result: StackedDataPoint[] = [];
+  for (const [category, seriesMap] of categoryMap) {
+    const point: StackedDataPoint = { name: category };
+    for (const key of seriesKeys) {
+      point[key] = seriesMap.get(key) || 0;
+    }
+    result.push(point);
+  }
+
+  // Sort by total count descending
+  result.sort((a, b) => {
+    const totalA = seriesKeys.reduce((sum, k) => sum + (Number(a[k]) || 0), 0);
+    const totalB = seriesKeys.reduce((sum, k) => sum + (Number(b[k]) || 0), 0);
+    return totalB - totalA;
+  });
 
   return { data: result, seriesKeys };
 }
