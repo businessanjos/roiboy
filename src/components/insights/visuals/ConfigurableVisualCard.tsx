@@ -7,7 +7,7 @@ import { useStackedVisualData } from "@/hooks/useStackedVisualData";
 import { ConfigurableChart } from "./ConfigurableChart";
 import { DrilldownDialog } from "./DrilldownDialog";
 import { VisualQuickSettings } from "./VisualQuickSettings";
-import { VisualConfig, ChartType, DATA_SOURCE_OPTIONS, AGGREGATION_OPTIONS } from "../visual-builder/types";
+import { VisualConfig, ChartType, DATA_SOURCE_OPTIONS, AGGREGATION_OPTIONS, FormatType, DEFAULT_APPEARANCE } from "../visual-builder/types";
 import { evaluateFormula } from "@/lib/formula-evaluator";
 import {
   Tooltip,
@@ -193,8 +193,8 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
           <ConfigurableChart
             type={chartType}
             data={processedData}
-            formatting={config.formatting}
-            appearance={config.appearance}
+            formatting={config.formatting || { type: 'number' as FormatType, decimals: 0 }}
+            appearance={config.appearance || DEFAULT_APPEARANCE}
             visualConfig={config}
             stackedData={stackedResult?.data}
             stackedSeriesKeys={stackedResult?.seriesKeys}
