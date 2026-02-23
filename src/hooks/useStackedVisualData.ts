@@ -142,7 +142,11 @@ async function fetchStackedDealsData(
   const getPeriodLabel = (date: Date): string => {
     switch (dateGrouping) {
       case 'year': return format(date, 'yyyy');
-      case 'month': return format(date, 'MMM/yy');
+      case 'month': {
+        if (displayFormat === 'short') return format(date, 'MMM');
+        if (displayFormat === 'full') return format(date, 'MMMM yyyy');
+        return format(date, 'MMM/yy');
+      }
       case 'week': return `Sem ${format(date, 'II')}`;
       default:
         return format(date, 'dd');
@@ -340,9 +344,10 @@ async function fetchStackedLeadsData(
           );
           break;
         case 'month':
-          eachMonthOfInterval({ start: rangeStart, end: rangeEnd }).forEach(d =>
-            allPeriods.push({ key: format(d, 'yyyy-MM'), label: format(d, 'MMM/yy') })
-          );
+          eachMonthOfInterval({ start: rangeStart, end: rangeEnd }).forEach(d => {
+            const label = displayFormat === 'short' ? format(d, 'MMM') : displayFormat === 'full' ? format(d, 'MMMM yyyy') : format(d, 'MMM/yy');
+            allPeriods.push({ key: format(d, 'yyyy-MM'), label });
+          });
           break;
         case 'week':
           eachWeekOfInterval({ start: rangeStart, end: rangeEnd }, { weekStartsOn: 1 }).forEach(d => {
