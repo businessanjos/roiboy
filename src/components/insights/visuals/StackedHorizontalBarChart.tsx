@@ -21,6 +21,7 @@ interface StackedHorizontalBarChartProps {
     decimals: number;
   };
   appearance: AppearanceConfig;
+  orientation?: 'horizontal' | 'vertical';
 }
 
 function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professional'): string[] {
@@ -85,6 +86,7 @@ export function StackedHorizontalBarChart({
   seriesKeys,
   formatting,
   appearance,
+  orientation = 'horizontal',
 }: StackedHorizontalBarChartProps) {
   const colors = getChartColors(appearance.colorPalette);
   const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
@@ -97,7 +99,57 @@ export function StackedHorizontalBarChart({
     );
   }
 
-  // Dynamic height based on number of days
+  const isVertical = orientation === 'vertical';
+
+  if (isVertical) {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={data}
+          margin={{ top: 10, right: 20, left: 0, bottom: 30 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+          <XAxis
+            dataKey="name"
+            tick={{ fontSize: Math.round(11 * m) }}
+            className="text-muted-foreground"
+            interval={0}
+          />
+          <YAxis
+            tickFormatter={(value) => formatValueCompact(value, formatting.type)}
+            tick={{ fontSize: Math.round(11 * m) }}
+            className="text-muted-foreground"
+          />
+          <Tooltip content={<CustomTooltip formatting={formatting} singleSeries={seriesKeys.length <= 1} />} />
+          {seriesKeys.length > 1 && (
+            <Legend
+              verticalAlign="top"
+              height={36}
+              wrapperStyle={{ fontSize: Math.round(12 * m) }}
+            />
+          )}
+          {seriesKeys.map((key, index) => (
+            <Bar
+              key={key}
+              dataKey={key}
+              stackId="stack"
+              fill={colors[index % colors.length]}
+              radius={index === seriesKeys.length - 1 ? [4, 4, 0, 0] : undefined}
+            >
+              {appearance.showDataLabels && (
+                <LabelList
+                  dataKey={key}
+                  content={(props: any) => renderInsideLabel(props, formatting, m)}
+                />
+              )}
+            </Bar>
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  }
+
+  // Horizontal layout (original)
   const barHeight = 32;
   const minHeight = 300;
   const calculatedHeight = Math.max(minHeight, data.length * barHeight + 80);

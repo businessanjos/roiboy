@@ -89,6 +89,7 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
           seriesKeys={stackedSeriesKeys || []}
           formatting={formatting}
           appearance={config}
+          orientation={visualConfig?.dimension?.type === 'date' ? 'vertical' : 'horizontal'}
         />
       );
     case 'line':
