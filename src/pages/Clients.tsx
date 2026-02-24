@@ -432,6 +432,7 @@ export default function Clients() {
           "Nome": client.full_name || "",
           "Telefone": client.phone_e164 || "",
           "Email": getEmail(client),
+          "Instagram": client.instagram || "",
           "CPF": client.cpf || "",
           "CNPJ": client.cnpj || "",
           "Empresa": client.company_name || "",

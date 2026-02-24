@@ -108,6 +108,7 @@ Deno.serve(async (req) => {
         emails,
         cpf,
         cnpj,
+        instagram,
         notes,
         client_products (
           product_id,
