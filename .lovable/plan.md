@@ -1,55 +1,53 @@
 
 
-## Adicionar coluna Etapa, abrir detalhes do negocio e criar tarefa de follow-up na pagina de Tarefas
+## Corrigir funcionalidades de Vendas na pagina de Tarefas que nao aparecem
 
-### Resumo das 3 alteracoes
+### Diagnostico
 
-1. **Coluna "Etapa do Funil"** na tabela de tarefas, mostrando a etapa atual do negocio vinculado, com opcao de ordenar e filtrar
-2. **Clicar na tarefa abre o painel de detalhes do negocio** (DealDetailSheet), igual ao pipeline
-3. **Ao concluir uma tarefa, abrir automaticamente o dialogo para criar a proxima tarefa** no mesmo negocio
+As tres funcionalidades (coluna Etapa, abrir detalhes do negocio, follow-up automatico) **estao no codigo**, mas estao condicionadas a `hasVendasAccess` -- que verifica se o usuario tem um registro na tabela `user_sector_access` com `sector_id = "vendas"`. O usuario "Joao Ferrari" esta navegando no setor Vendas (visivel no menu lateral), mas aparentemente nao possui esse registro de permissao explicito, entao `hasVendasAccess` retorna `false` e todas as funcionalidades ficam escondidas.
 
----
+### Causa raiz
 
-### Detalhes tecnicos
+O codigo usa `hasVendasAccess` (permissao de acesso ao setor) quando deveria usar `currentSector?.id === "vendas"` (setor atualmente selecionado). Sao conceitos diferentes:
 
-#### Arquivo: `src/pages/Tasks.tsx`
+```text
+hasVendasAccess = usuario TEM permissao no setor vendas (via tabela user_sector_access ou admin)
+currentSector   = setor que o usuario ESTA visualizando agora (via SectorContext)
+```
 
-**1. Coluna Etapa do Funil**
+O usuario pode estar no setor Vendas (selecionou manualmente ou foi redirecionado) sem ter um registro explicito em `user_sector_access`. As funcionalidades devem aparecer com base no setor ativo, nao na permissao.
 
-- Alterar a query Supabase para incluir `deal_stages` no join do deal:
-  ```
-  deals:deal_id (
-    id, title, client_id, lead_id, contact_name, contact_phone,
-    stage_id,
-    stage:deal_stages(id, name, color),
-    client:clients(...),
-    lead:leads(...)
-  )
-  ```
-- Atualizar a interface `Deal` local para incluir `stage_id` e `stage: { id, name, color } | null`
-- Adicionar coluna "Etapa" na `TaskTable` entre "Prazo" e "Contexto", exibindo badge colorido com o nome da etapa
-- Adicionar opcao de ordenacao `stage` no `SortOption` type
-- Adicionar filtro de etapa via `Select` no `FilterBar`, com lista de etapas obtidas via query a `deal_stages`
-- A coluna sera clicavel para ordenar (como Prioridade e Prazo)
+### Solucao
 
-**2. Clicar na tarefa abre DealDetailSheet**
+#### `src/pages/Tasks.tsx`
 
-- Importar `DealDetailSheet` e `useDeals` (para obter stages e deal handlers)
-- Adicionar estados: `selectedDealForDetail`, `isDealDetailOpen`
-- Ao clicar na row da tarefa (exceto nos dropdowns e checkbox), buscar o deal completo e abrir o `DealDetailSheet`
-- Passar os handlers necessarios (`onStageChange`, `onMarkAsWon`, `onMarkAsLost`, `onReopen`, `onEdit`)
-- Tarefas sem `deal_id` nao abrem o painel (apenas tarefas vinculadas a negocios)
+Substituir todas as referencias a `hasVendasAccess` por `isInVendasSector`, derivado do contexto do setor atual:
 
-**3. Follow-up automatico ao concluir tarefa**
+```text
+const isInVendasSector = currentSector?.id === "vendas";
+```
 
-- Modificar o handler do checkbox de conclusao: apos marcar como concluido com sucesso, abrir automaticamente o `TaskDialog` para criar nova tarefa
-- Pre-preencher `deal_id` da tarefa recem-concluida no novo dialogo
-- Usar o mesmo padrao do `DealActivitiesTab` (linhas 193-196): `setEditingTask(null); setTaskDialogOpen(true);`
-- Guardar o `deal_id` da tarefa concluida para passar ao `TaskDialog`
+Pontos de alteracao (todos no mesmo arquivo):
+
+1. **Coluna "Etapa" no header da tabela** (condicao `hasVendasAccess` na renderizacao do TableHead)
+2. **Celula "Etapa" em cada linha** (condicao `hasVendasAccess` na renderizacao do TableCell)
+3. **Coluna "Contexto" vs "Cliente"** (texto do header)
+4. **Links de Negocio e Lead nas linhas** (condicoes de exibicao)
+5. **Filtro de Etapa no FilterBar** (condicao de exibicao)
+6. **Filtro de setor nas tarefas** (logica de isolamento por setor)
+7. **colspan da mensagem "Nenhuma tarefa"** (ajuste de contagem de colunas)
+
+A variavel `hasVendasAccess` pode ser mantida se for usada em outros contextos (ex: permissao para editar), mas para **exibicao condicional de UI** o correto e usar o setor ativo.
+
+O clique na linha da tarefa (`handleTaskRowClick`) e o follow-up automatico (`handleToggleComplete`) nao estao gateados por `hasVendasAccess`, entao ja devem funcionar -- porem dependem de `task.deal_id` e `allDeals` do hook `useDeals`, que tambem precisam ser verificados para garantir que carregam dados corretamente no contexto vendas.
+
+### Arquivos alterados
+
+- **`src/pages/Tasks.tsx`**: Substituir `hasVendasAccess` por `currentSector?.id === "vendas"` em todas as condicoes de renderizacao de UI
 
 ### Resultado esperado
 
-- A tabela mostra a etapa do funil de cada tarefa com badge colorido
-- Filtrar e ordenar por etapa permite foco em fases especificas do pipeline
-- Clicar numa tarefa abre os detalhes completos do negocio, sem sair da pagina de Tarefas
-- Ao concluir uma tarefa, o sistema ja abre o formulario para agendar o proximo passo no mesmo negocio
+- A coluna "Etapa" aparece sempre que o usuario estiver no setor Vendas, independente de permissoes granulares
+- Clicar em uma tarefa com negocio vinculado abre o painel de detalhes do negocio
+- Marcar tarefa como concluida abre o dialogo de follow-up automaticamente
+
