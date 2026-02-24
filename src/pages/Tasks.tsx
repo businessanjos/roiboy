@@ -71,7 +71,6 @@ import { TaskKanban } from "@/components/tasks/TaskKanban";
 import { TaskStatusManager } from "@/components/tasks/TaskStatusManager";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useTaskStatuses } from "@/hooks/useTaskStatuses";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
 import { useDeals, Deal as FullDeal, DealStage } from "@/hooks/useDeals";
@@ -171,7 +170,7 @@ export default function Tasks() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
   const { currentSector } = useSector();
-  const { hasVendasAccess } = useSectorAccess();
+  const isInVendasSector = currentSector?.id === "vendas";
   const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
@@ -678,7 +677,7 @@ export default function Tasks() {
                 </TableHead>
 
                 {/* Etapa do Funil - Clicável */}
-                {hasVendasAccess && (
+                {isInVendasSector && (
                   <TableHead 
                     className="font-medium text-center min-w-[100px] cursor-pointer hover:bg-muted/80 select-none transition-colors"
                     onClick={() => handleColumnSort("stage")}
@@ -695,7 +694,7 @@ export default function Tasks() {
                 )}
                 
                 <TableHead className="font-medium min-w-[120px]">
-                  {hasVendasAccess ? "Contexto" : "Cliente"}
+                  {isInVendasSector ? "Contexto" : "Cliente"}
                 </TableHead>
                 
                 {/* Responsável - Clicável */}
@@ -719,7 +718,7 @@ export default function Tasks() {
             <TableBody>
               {tasks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={hasVendasAccess ? 9 : 8} className="text-center py-12">
+                  <TableCell colSpan={isInVendasSector ? 9 : 8} className="text-center py-12">
                     <div className="flex flex-col items-center text-muted-foreground">
                       <div className="p-4 rounded-full bg-muted/50 mb-4">
                         <ClipboardList className="h-10 w-10 opacity-50" />
@@ -897,7 +896,7 @@ export default function Tasks() {
                         </DropdownMenu>
                       </TableCell>
                       {/* Etapa do Funil */}
-                      {hasVendasAccess && (
+                      {isInVendasSector && (
                         <TableCell className="text-center">
                           {task.deals?.stage ? (
                             <span
@@ -916,7 +915,7 @@ export default function Tasks() {
                       )}
                       <TableCell>
                         <div className="flex flex-col gap-0.5">
-                          {hasVendasAccess && task.deals ? (
+                          {isInVendasSector && task.deals ? (
                             <Link 
                               to={`/pipeline?deal=${task.deal_id}`}
                               className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"
@@ -925,7 +924,7 @@ export default function Tasks() {
                               <span className="truncate max-w-[100px]">{task.deals.title}</span>
                             </Link>
                           ) : null}
-                          {hasVendasAccess && task.leads ? (
+                          {isInVendasSector && task.leads ? (
                             <Link 
                               to={`/leads?lead=${task.lead_id}`}
                               className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"
@@ -943,7 +942,7 @@ export default function Tasks() {
                               <span className="truncate max-w-[100px]">{task.clients.full_name}</span>
                             </Link>
                           ) : null}
-                          {(!hasVendasAccess || (!task.deals && !task.leads)) && !task.clients && (
+                          {(!isInVendasSector || (!task.deals && !task.leads)) && !task.clients && (
                             <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </div>
@@ -1261,7 +1260,7 @@ export default function Tasks() {
             </SelectContent>
           </Select>
         </FilterItem>
-        {hasVendasAccess && (
+        {isInVendasSector && (
           <FilterItem>
             <Select value={filterStage} onValueChange={setFilterStage}>
               <SelectTrigger className="w-full sm:w-[180px] h-10">
@@ -1299,7 +1298,7 @@ export default function Tasks() {
               <SelectItem value="priority">Prioridade</SelectItem>
               <SelectItem value="due_date">Data de entrega</SelectItem>
               <SelectItem value="created_at">Data de criação</SelectItem>
-              {hasVendasAccess && <SelectItem value="stage">Etapa do funil</SelectItem>}
+              {isInVendasSector && <SelectItem value="stage">Etapa do funil</SelectItem>}
             </SelectContent>
           </Select>
         </FilterItem>
@@ -1385,7 +1384,7 @@ export default function Tasks() {
       />
 
       {/* Deal Detail Sheet */}
-      {hasVendasAccess && (
+      {isInVendasSector && (
         <DealDetailSheet
           open={isDealDetailOpen}
           onOpenChange={setIsDealDetailOpen}
