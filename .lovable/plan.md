@@ -1,52 +1,55 @@
 
 
-## Corrigir bypass de campos obrigatorios ao mover negocio via DealDetailSheet
+## Adicionar coluna Etapa, abrir detalhes do negocio e criar tarefa de follow-up na pagina de Tarefas
 
-### Problema
+### Resumo das 3 alteracoes
 
-O `DealDetailSheet` (painel lateral de detalhes do negocio) permite alterar a etapa do negocio via um dropdown Select **sem validar campos obrigatorios**. A validacao so existe em 3 lugares:
+1. **Coluna "Etapa do Funil"** na tabela de tarefas, mostrando a etapa atual do negocio vinculado, com opcao de ordenar e filtrar
+2. **Clicar na tarefa abre o painel de detalhes do negocio** (DealDetailSheet), igual ao pipeline
+3. **Ao concluir uma tarefa, abrir automaticamente o dialogo para criar a proxima tarefa** no mesmo negocio
 
-1. `DealKanban.tsx` - drag-and-drop no pipeline
-2. `ZappDealDetailSheet.tsx` - painel no ROY Zapp
-3. `ZappCRMPanel.tsx` - CRM no ROY Zapp
+---
 
-Mas o `DealDetailSheet` e usado em **4 contextos** diferentes (SalesPipeline, Leads, LeadsTab, ClientDeals) e nenhum deles valida campos obrigatorios antes de mover.
+### Detalhes tecnicos
 
-### Causa raiz
+#### Arquivo: `src/pages/Tasks.tsx`
 
-A funcao `handleStageChange` no `DealDetailSheet` (linha 654) chama `onStageChange(deal.id, newStageId)` diretamente, sem passar pela validacao de `useRequiredFieldsValidation().validateDealMove()`.
+**1. Coluna Etapa do Funil**
 
-```text
-Fluxo atual (sem validacao):
-  Select dropdown → handleStageChange() → onStageChange() → moveDeal() → UPDATE direto
+- Alterar a query Supabase para incluir `deal_stages` no join do deal:
+  ```
+  deals:deal_id (
+    id, title, client_id, lead_id, contact_name, contact_phone,
+    stage_id,
+    stage:deal_stages(id, name, color),
+    client:clients(...),
+    lead:leads(...)
+  )
+  ```
+- Atualizar a interface `Deal` local para incluir `stage_id` e `stage: { id, name, color } | null`
+- Adicionar coluna "Etapa" na `TaskTable` entre "Prazo" e "Contexto", exibindo badge colorido com o nome da etapa
+- Adicionar opcao de ordenacao `stage` no `SortOption` type
+- Adicionar filtro de etapa via `Select` no `FilterBar`, com lista de etapas obtidas via query a `deal_stages`
+- A coluna sera clicavel para ordenar (como Prioridade e Prazo)
 
-Fluxo correto (com validacao):
-  Select dropdown → handleStageChange() → validateDealMove()
-    → Se campos faltando → abrir RequiredFieldsModal
-    → Se tudo preenchido → onStageChange() → moveDeal()
-```
+**2. Clicar na tarefa abre DealDetailSheet**
 
-### Solucao
+- Importar `DealDetailSheet` e `useDeals` (para obter stages e deal handlers)
+- Adicionar estados: `selectedDealForDetail`, `isDealDetailOpen`
+- Ao clicar na row da tarefa (exceto nos dropdowns e checkbox), buscar o deal completo e abrir o `DealDetailSheet`
+- Passar os handlers necessarios (`onStageChange`, `onMarkAsWon`, `onMarkAsLost`, `onReopen`, `onEdit`)
+- Tarefas sem `deal_id` nao abrem o painel (apenas tarefas vinculadas a negocios)
 
-#### `src/components/sales/DealDetailSheet.tsx`
+**3. Follow-up automatico ao concluir tarefa**
 
-1. Importar `useRequiredFieldsValidation` e `RequiredFieldsModal`
-2. Adicionar estado para o modal de campos obrigatorios
-3. Modificar `handleStageChange` para validar antes de mover:
-   - Chamar `validateDealMove(deal.id, newStageId, deal.account_id)`
-   - Se `canMoveToStage === false`, abrir o `RequiredFieldsModal` com os campos faltantes
-   - Se `canMoveToStage === true`, mover normalmente
-4. Adicionar o componente `RequiredFieldsModal` no JSX
-5. No callback `onComplete` do modal, executar o `onStageChange` e fechar o modal
-
-Isso centraliza a validacao no proprio componente, cobrindo automaticamente todos os 4 contextos onde ele e usado (SalesPipeline, Leads, LeadsTab, ClientDeals).
-
-### Arquivos alterados
-
-- **`src/components/sales/DealDetailSheet.tsx`**: Adicionar validacao de campos obrigatorios no `handleStageChange` e renderizar `RequiredFieldsModal`
+- Modificar o handler do checkbox de conclusao: apos marcar como concluido com sucesso, abrir automaticamente o `TaskDialog` para criar nova tarefa
+- Pre-preencher `deal_id` da tarefa recem-concluida no novo dialogo
+- Usar o mesmo padrao do `DealActivitiesTab` (linhas 193-196): `setEditingTask(null); setTaskDialogOpen(true);`
+- Guardar o `deal_id` da tarefa concluida para passar ao `TaskDialog`
 
 ### Resultado esperado
 
-- Nenhum usuario consegue mover um negocio de etapa sem preencher campos obrigatorios, independente de onde esteja (pipeline drag-and-drop, DealDetailSheet, ROY Zapp)
-- A experiencia e consistente: o mesmo modal de campos obrigatorios aparece em todos os contextos
-
+- A tabela mostra a etapa do funil de cada tarefa com badge colorido
+- Filtrar e ordenar por etapa permite foco em fases especificas do pipeline
+- Clicar numa tarefa abre os detalhes completos do negocio, sem sair da pagina de Tarefas
+- Ao concluir uma tarefa, o sistema ja abre o formulario para agendar o proximo passo no mesmo negocio
