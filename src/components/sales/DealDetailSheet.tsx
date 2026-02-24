@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
+import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
@@ -217,6 +219,11 @@ export function DealDetailSheet({
   const [changingStage, setChangingStage] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [requiredFieldsModalOpen, setRequiredFieldsModalOpen] = useState(false);
+  const [pendingStageId, setPendingStageId] = useState<string | null>(null);
+  const [missingFields, setMissingFields] = useState<CustomField[]>([]);
+  const [pendingStageName, setPendingStageName] = useState("");
+  const { validateDealMove } = useRequiredFieldsValidation();
   const [fieldsConfigOpen, setFieldsConfigOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
@@ -651,8 +658,22 @@ export function DealDetailSheet({
     }
   };
 
+
   const handleStageChange = async (newStageId: string) => {
     if (!deal || newStageId === deal.stage_id) return;
+    
+    // Validate required fields before moving
+    const result = await validateDealMove(deal.id, newStageId, deal.account_id);
+    
+    if (!result.canMoveToStage) {
+      const targetStage = stages.find(s => s.id === newStageId);
+      setPendingStageId(newStageId);
+      setMissingFields(result.missingFields);
+      setPendingStageName(targetStage?.name || "");
+      setRequiredFieldsModalOpen(true);
+      return;
+    }
+    
     setChangingStage(true);
     try {
       const success = await onStageChange(deal.id, newStageId);
@@ -661,6 +682,21 @@ export function DealDetailSheet({
       }
     } finally {
       setChangingStage(false);
+    }
+  };
+
+  const handleRequiredFieldsComplete = async () => {
+    if (!deal || !pendingStageId) return;
+    setChangingStage(true);
+    try {
+      const success = await onStageChange(deal.id, pendingStageId);
+      if (success) {
+        fetchActivities();
+      }
+    } finally {
+      setChangingStage(false);
+      setPendingStageId(null);
+      setMissingFields([]);
     }
   };
 
@@ -1460,6 +1496,20 @@ export function DealDetailSheet({
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        
+        {/* Required Fields Modal */}
+        {deal && (
+          <RequiredFieldsModal
+            open={requiredFieldsModalOpen}
+            onOpenChange={setRequiredFieldsModalOpen}
+            dealId={deal.id}
+            dealTitle={deal.title}
+            targetStageName={pendingStageName}
+            missingFields={missingFields}
+            accountId={deal.account_id}
+            onComplete={handleRequiredFieldsComplete}
+          />
+        )}
         
         {/* Merge Deal Dialog */}
         {deal && (
