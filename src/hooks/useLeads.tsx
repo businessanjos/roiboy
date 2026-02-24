@@ -112,7 +112,6 @@ export function useLeads() {
             responsible_user:users!leads_responsible_user_id_fkey(id, name, avatar_url)
           `)
           .eq('account_id', currentUser.account_id)
-          .is('converted_to_client_id', null)
           .order('created_at', { ascending: false })
           .range(page * pageSize, (page + 1) * pageSize - 1);
 
@@ -314,8 +313,8 @@ export function useLeads() {
 
       if (error) throw error;
 
-      // Remove from leads list
-      setLeads(prev => prev.filter(l => l.id !== leadId));
+      // Refresh to show updated status
+      await fetchLeads();
 
       return true;
     } catch (error: any) {

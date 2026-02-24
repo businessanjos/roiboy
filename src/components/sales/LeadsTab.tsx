@@ -98,6 +98,7 @@ const LEAD_STATUS = [
   { value: "contacted", label: "Contatado", color: "bg-amber-500" },
   { value: "qualified", label: "Qualificado", color: "bg-emerald-500" },
   { value: "unqualified", label: "Não Qualificado", color: "bg-gray-500" },
+  { value: "converted", label: "Convertido", color: "bg-purple-500" },
 ];
 
 // Interface for products
