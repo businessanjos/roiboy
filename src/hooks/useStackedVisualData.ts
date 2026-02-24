@@ -6,7 +6,7 @@ import { VisualConfig } from "@/components/insights/visual-builder/types";
 import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek } from "date-fns";
 import { filterByLeadField } from "@/hooks/useLeadFieldFilter";
 import { filterByDealField } from "@/hooks/useDealFieldFilter";
-import { enrichLeadsWithFaturamento, enrichLeadsWithMql } from "@/hooks/useVisualData";
+import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithCanal } from "@/hooks/useVisualData";
 
 export interface StackedDataPoint {
   name: string;
@@ -104,6 +104,12 @@ async function fetchStackedDealsData(
   // Apply deal field filter if configured
   if (dealFieldFilter && dealFieldFilter.selectedValues && dealFieldFilter.selectedValues.length > 0) {
     allDeals = await filterByDealField(allDeals, accountId, dealFieldFilter);
+  }
+
+  // Enrich deals with Canal de Venda if needed
+  const needsCanal = config.stackBy === 'canal' || config.dimension.field === 'canal';
+  if (needsCanal) {
+    allDeals = await enrichDealsWithCanal(accountId, allDeals);
   }
 
   const dateGrouping = config.dimension.dateGrouping || 'day';

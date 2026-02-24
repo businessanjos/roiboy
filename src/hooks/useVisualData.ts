@@ -364,6 +364,61 @@ async function enrichLeadsWithOwner(accountId: string, leads: any[]): Promise<an
   });
 }
 
+const DEAL_CANAL_FIELD_ID = '16ebda9f-cd3b-412c-bb06-0950001963c5';
+
+export async function enrichDealsWithCanal(accountId: string, deals: any[]): Promise<any[]> {
+  if (deals.length === 0) return deals;
+
+  // 1. Fetch the field definition to get option labels
+  const { data: fieldDef } = await supabase
+    .from('custom_fields')
+    .select('options')
+    .eq('id', DEAL_CANAL_FIELD_ID)
+    .single();
+
+  const optionLabels = new Map<string, string>();
+  if (fieldDef?.options && Array.isArray(fieldDef.options)) {
+    for (const opt of fieldDef.options as { value: string; label: string }[]) {
+      optionLabels.set(opt.value, opt.label);
+    }
+  }
+
+  // 2. Fetch canal values for all deals in batches
+  const dealIds = deals.map(d => d.id);
+  let allValues: any[] = [];
+  const batchSize = 500;
+
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batch = dealIds.slice(i, i + batchSize);
+    const { data, error } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, value_text')
+      .eq('field_id', DEAL_CANAL_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('deal_id', batch);
+
+    if (error) {
+      console.error('Error fetching deal canal values:', error);
+      continue;
+    }
+    allValues = allValues.concat(data || []);
+  }
+
+  // 3. Map deal_id -> label
+  const canalMap = new Map<string, string>();
+  for (const row of allValues) {
+    if (row.value_text) {
+      const label = optionLabels.get(row.value_text) || row.value_text;
+      canalMap.set(row.deal_id, label);
+    }
+  }
+
+  return deals.map(deal => ({
+    ...deal,
+    canal: canalMap.get(deal.id) || 'Não informado',
+  }));
+}
+
 async function enrichDealsWithMql(accountId: string, deals: any[]): Promise<any[]> {
   if (deals.length === 0) return deals;
 
@@ -509,6 +564,12 @@ async function fetchDealsData(
   // If grouping by MQL, fetch MQL field values and inject into deals
   if (dimension.field === 'mql') {
     const enrichedData = await enrichDealsWithMql(accountId, filteredData);
+    return aggregateData(enrichedData, measure, dimension, dateDisplayFormat);
+  }
+
+  // If grouping by Canal, fetch Canal de Venda custom field and inject into deals
+  if (dimension.field === 'canal') {
+    const enrichedData = await enrichDealsWithCanal(accountId, filteredData);
     return aggregateData(enrichedData, measure, dimension, dateDisplayFormat);
   }
 
