@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -69,10 +69,12 @@ import { toast } from "sonner";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import { TaskKanban } from "@/components/tasks/TaskKanban";
 import { TaskStatusManager } from "@/components/tasks/TaskStatusManager";
+import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useTaskStatuses } from "@/hooks/useTaskStatuses";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
+import { useDeals, Deal as FullDeal, DealStage } from "@/hooks/useDeals";
 import { useZappNavigation } from "@/hooks/useZappNavigation";
 import { useSector } from "@/contexts/SectorContext";
 import { cn } from "@/lib/utils";
@@ -98,6 +100,8 @@ interface Deal {
   lead_id: string | null;
   contact_name: string | null;
   contact_phone: string | null;
+  stage_id?: string | null;
+  stage?: { id: string; name: string; color: string } | null;
   client?: { id: string; full_name: string; phone_e164: string } | null;
   lead?: { id: string; full_name: string; phone: string | null } | null;
 }
@@ -136,7 +140,7 @@ interface Task {
   } | null;
 }
 
-type SortOption = "priority" | "due_date" | "created_at" | "responsible";
+type SortOption = "priority" | "due_date" | "created_at" | "responsible" | "stage";
 type SortDirection = "asc" | "desc";
 
 const PRIORITY_ORDER: Record<string, number> = {
@@ -185,10 +189,17 @@ export default function Tasks() {
   const [statusManagerOpen, setStatusManagerOpen] = useState(false);
   const [filterDateStart, setFilterDateStart] = usePersistedFilter<string>("tasks", "filterDateStart", "");
   const [filterDateEnd, setFilterDateEnd] = usePersistedFilter<string>("tasks", "filterDateEnd", "");
+  const [filterStage, setFilterStage] = usePersistedFilter<string>("tasks", "filterStage", "all");
+  const [followUpDealId, setFollowUpDealId] = useState<string | null>(null);
+  const [selectedDealForDetail, setSelectedDealForDetail] = useState<FullDeal | null>(null);
+  const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
 
   // Custom task statuses
   const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
   
+  // Deal stages and deal handlers for DealDetailSheet
+  const { deals: allDeals, stages: dealStages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
+
   // Activity types for filtering - filtered by current sector
   const { activityTypes } = useActivityTypes(currentSector?.id);
 
@@ -210,6 +221,8 @@ export default function Tasks() {
             lead_id,
             contact_name,
             contact_phone,
+            stage_id,
+            stage:deal_stages(id, name, color),
             client:clients(id, full_name, phone_e164),
             lead:leads(id, full_name, phone)
           ),
@@ -273,6 +286,14 @@ export default function Tasks() {
     } else {
       toast.success(newStatus === "done" ? "Tarefa concluída!" : "Tarefa reaberta");
       invalidateTasks();
+      
+      // Auto-open follow-up task dialog when completing a task with deal_id
+      if (newStatus === "done" && task.deal_id) {
+        setFollowUpDealId(task.deal_id);
+        setEditingTask(null);
+        setInitialStatus(undefined);
+        setDialogOpen(true);
+      }
     }
   }, [invalidateTasks]);
 
@@ -299,6 +320,9 @@ export default function Tasks() {
     const newStatus = customStatuses.find(s => s.id === newStatusId);
     const isCompleted = newStatus?.is_completed_status || false;
     
+    // Find the task to get deal_id for follow-up
+    const task = tasks.find(t => t.id === taskId);
+    
     const { error } = await supabase
       .from("internal_tasks")
       .update({
@@ -312,8 +336,16 @@ export default function Tasks() {
     } else {
       toast.success("Tarefa movida!");
       invalidateTasks();
+      
+      // Auto-open follow-up task dialog when completing a task with deal_id (via checkbox)
+      if (isCompleted && task?.deal_id) {
+        setFollowUpDealId(task.deal_id);
+        setEditingTask(null);
+        setInitialStatus(undefined);
+        setDialogOpen(true);
+      }
     }
-  }, [invalidateTasks, customStatuses]);
+  }, [invalidateTasks, customStatuses, tasks]);
 
   const handlePriorityChange = useCallback(async (taskId: string, newPriority: Task["priority"]) => {
     const { error } = await supabase
@@ -351,6 +383,7 @@ export default function Tasks() {
 
   const openNewTaskDialog = useCallback((status?: Task["status"]) => {
     setEditingTask(null);
+    setFollowUpDealId(null);
     setInitialStatus(status);
     setDialogOpen(true);
   }, []);
@@ -359,6 +392,16 @@ export default function Tasks() {
     setTaskToDelete(task);
     setDeleteDialogOpen(true);
   }, []);
+
+  // Open deal detail sheet when clicking a task row
+  const handleTaskRowClick = useCallback((task: Task) => {
+    if (!task.deal_id || !task.deals) return;
+    const fullDeal = allDeals.find(d => d.id === task.deal_id);
+    if (fullDeal) {
+      setSelectedDealForDetail(fullDeal);
+      setIsDealDetailOpen(true);
+    }
+  }, [allDeals]);
 
   // Handle column sort toggle
   const handleColumnSort = useCallback((column: SortOption) => {
@@ -475,8 +518,12 @@ export default function Tasks() {
       }
     }
 
-    return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd]);
+    // Stage filter
+    const matchesStage = filterStage === "all" || 
+      task.deals?.stage?.id === filterStage;
+
+    return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange && matchesStage;
+  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage]);
 
   // Final filtered tasks - applies tab filter on top of base filters
   const filteredTasks = useMemo(() => baseFilteredTasks.filter((task) => {
@@ -523,6 +570,12 @@ export default function Tasks() {
         const nameA = a.assigned_user?.name?.toLowerCase() || "zzz"; // Sem responsável vai pro final
         const nameB = b.assigned_user?.name?.toLowerCase() || "zzz";
         comparison = nameA.localeCompare(nameB, "pt-BR");
+      }
+      else if (sortBy === "stage") {
+        // Ordem alfabética pelo nome da etapa
+        const stageA = a.deals?.stage?.name?.toLowerCase() || "zzz";
+        const stageB = b.deals?.stage?.name?.toLowerCase() || "zzz";
+        comparison = stageA.localeCompare(stageB, "pt-BR");
       }
       else {
         // created_at - mais recente primeiro
@@ -623,6 +676,23 @@ export default function Tasks() {
                     )} />
                   </div>
                 </TableHead>
+
+                {/* Etapa do Funil - Clicável */}
+                {hasVendasAccess && (
+                  <TableHead 
+                    className="font-medium text-center min-w-[100px] cursor-pointer hover:bg-muted/80 select-none transition-colors"
+                    onClick={() => handleColumnSort("stage")}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      Etapa
+                      <ArrowUpDown className={cn(
+                        "h-3 w-3 transition-transform",
+                        sortBy === "stage" ? "text-primary" : "text-muted-foreground/50",
+                        sortBy === "stage" && sortDirection === "desc" && "rotate-180"
+                      )} />
+                    </div>
+                  </TableHead>
+                )}
                 
                 <TableHead className="font-medium min-w-[120px]">
                   {hasVendasAccess ? "Contexto" : "Cliente"}
@@ -649,7 +719,7 @@ export default function Tasks() {
             <TableBody>
               {tasks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-12">
+                  <TableCell colSpan={hasVendasAccess ? 9 : 8} className="text-center py-12">
                     <div className="flex flex-col items-center text-muted-foreground">
                       <div className="p-4 rounded-full bg-muted/50 mb-4">
                         <ClipboardList className="h-10 w-10 opacity-50" />
@@ -675,9 +745,15 @@ export default function Tasks() {
                     <TableRow 
                       key={task.id} 
                       className={cn(
-                        "hover:bg-muted/30",
+                        "hover:bg-muted/30 cursor-pointer",
                         isCompleted && "opacity-60"
                       )}
+                      onClick={(e) => {
+                        // Don't trigger row click on interactive elements
+                        const target = e.target as HTMLElement;
+                        if (target.closest('button, [role="checkbox"], [role="menuitem"], a, [data-radix-collection-item]')) return;
+                        handleTaskRowClick(task);
+                      }}
                     >
                       <TableCell className="text-center">
                         <Checkbox
@@ -820,6 +896,24 @@ export default function Tasks() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
+                      {/* Etapa do Funil */}
+                      {hasVendasAccess && (
+                        <TableCell className="text-center">
+                          {task.deals?.stage ? (
+                            <span
+                              className="inline-flex px-2 py-1 rounded-md text-xs font-medium"
+                              style={{
+                                backgroundColor: `${task.deals.stage.color}20`,
+                                color: task.deals.stage.color,
+                              }}
+                            >
+                              {task.deals.stage.name}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <div className="flex flex-col gap-0.5">
                           {hasVendasAccess && task.deals ? (
@@ -1102,12 +1196,13 @@ export default function Tasks() {
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder="Buscar por título, descrição ou cliente..."
-        filtersActive={filterUser !== "all" || filterActivityType !== "all" || filterDateStart !== "" || filterDateEnd !== ""}
+        filtersActive={filterUser !== "all" || filterActivityType !== "all" || filterDateStart !== "" || filterDateEnd !== "" || filterStage !== "all"}
         onClearFilters={() => {
           setFilterUser("all");
           setFilterActivityType("all");
           setFilterDateStart("");
           setFilterDateEnd("");
+          setFilterStage("all");
         }}
       >
         <FilterItem>
@@ -1166,6 +1261,32 @@ export default function Tasks() {
             </SelectContent>
           </Select>
         </FilterItem>
+        {hasVendasAccess && (
+          <FilterItem>
+            <Select value={filterStage} onValueChange={setFilterStage}>
+              <SelectTrigger className="w-full sm:w-[180px] h-10">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Etapa do Funil" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as etapas</SelectItem>
+                {dealStages.map((stage) => (
+                  <SelectItem key={stage.id} value={stage.id}>
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: stage.color }}
+                      />
+                      <span>{stage.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FilterItem>
+        )}
         <FilterItem>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
             <SelectTrigger className="w-full sm:w-[160px] h-10">
@@ -1178,6 +1299,7 @@ export default function Tasks() {
               <SelectItem value="priority">Prioridade</SelectItem>
               <SelectItem value="due_date">Data de entrega</SelectItem>
               <SelectItem value="created_at">Data de criação</SelectItem>
+              {hasVendasAccess && <SelectItem value="stage">Etapa do funil</SelectItem>}
             </SelectContent>
           </Select>
         </FilterItem>
@@ -1252,11 +1374,37 @@ export default function Tasks() {
       {/* Task Dialog */}
       <TaskDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setFollowUpDealId(null);
+        }}
         task={editingTask}
+        dealId={followUpDealId || undefined}
         initialStatus={initialStatus}
         onSuccess={invalidateTasks}
       />
+
+      {/* Deal Detail Sheet */}
+      {hasVendasAccess && (
+        <DealDetailSheet
+          open={isDealDetailOpen}
+          onOpenChange={setIsDealDetailOpen}
+          deal={selectedDealForDetail}
+          stages={dealStages}
+          allDeals={allDeals}
+          onEdit={() => {
+            setIsDealDetailOpen(false);
+            if (selectedDealForDetail) {
+              navigate(`/pipeline?deal=${selectedDealForDetail.id}`);
+            }
+          }}
+          onMarkAsWon={async (dealId) => { await markAsWon(dealId); }}
+          onMarkAsLost={async (dealId, reason) => { await markAsLost(dealId, reason); }}
+          onReopen={async (dealId) => { await reopenDeal(dealId); }}
+          onStageChange={async (dealId, stageId) => { return await moveDeal(dealId, stageId); }}
+          onDealUpdated={invalidateTasks}
+        />
+      )}
 
       {/* Delete Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
