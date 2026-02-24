@@ -1,20 +1,39 @@
 
-## Adicionar campo Instagram na exportacao de clientes
+
+## Manter Leads convertidos visiveis na listagem
 
 ### Problema
-O botao "Exportar" na aba Clientes do setor Operacoes gera CSV/XLSX sem o campo Instagram do cliente. Essa informacao existe no perfil do cliente (campo `instagram` na tabela `clients`) mas nao e buscada pela Edge Function `list-clients` nem mapeada na funcao de exportacao.
+
+Quando um Lead e convertido em Cliente (via negocio ganho), ele recebe `status = 'converted'` e `converted_to_client_id` preenchido. O hook `useLeads` filtra esses leads com `.is('converted_to_client_id', null)`, fazendo com que desaparecam da listagem. Alem disso, o `markAsConvertedToDeal` remove o lead do estado local com `setLeads(prev => prev.filter(...))`.
 
 ### Solucao
 
-Duas alteracoes simples:
+#### 1. `src/hooks/useLeads.tsx` - Remover filtro que esconde leads convertidos
 
-#### 1. Edge Function `supabase/functions/list-clients/index.ts`
-- Adicionar o campo `instagram` na query SELECT (junto dos outros campos como `emails`, `cpf`, `cnpj`, `notes`)
+- Remover a linha `.is('converted_to_client_id', null)` da query `fetchLeads`
+- Na funcao `markAsConvertedToDeal`, remover o `setLeads(prev => prev.filter(...))` e substituir por um `await fetchLeads()` para atualizar o estado com o lead agora marcado como "converted"
 
-#### 2. Pagina `src/pages/Clients.tsx`
-- Na funcao `exportClients`, adicionar a coluna **"Instagram"** no mapeamento de rows (linha ~449), extraindo `client.instagram || ""`
-- A coluna sera posicionada apos "Email" para manter a ordem logica dos dados de contato
+#### 2. `src/pages/Leads.tsx` - Adicionar status "Convertido" na UI
+
+- Adicionar `{ value: "converted", label: "Convertido", color: "bg-purple-500" }` ao array `LEAD_STATUS`
+- Isso faz com que leads convertidos exibam um badge roxo "Convertido" na listagem, diferenciando-os visualmente
+
+#### 3. `src/components/leads/LeadDetailSheet.tsx` - Adicionar status "Convertido"
+
+- Adicionar a mesma entrada ao array `LEAD_STATUS` local para que o detalhe do lead tambem exiba o status corretamente
+
+#### 4. `src/components/sales/LeadsTab.tsx` - Adicionar status "Convertido"
+
+- Adicionar a mesma entrada ao array `LEAD_STATUS` local da aba de Leads do setor Vendas
+
+### O que NAO sera alterado
+
+- As queries de deteccao de duplicados (`useLeadDuplicateDetection`) e visualizacoes analiticas (`useVisualData`, `useStackedVisualData`, `useVisualDrilldown`) continuarao filtrando leads convertidos, pois nesses contextos faz sentido nao misturar leads ativos com convertidos
+- A busca no RoyZapp tambem mantera o filtro, pois so interessa buscar leads nao convertidos para iniciar conversas
 
 ### Resultado esperado
-- O arquivo exportado (CSV e XLSX) tera uma coluna "Instagram" com o handle do cliente
-- Para clientes sem Instagram cadastrado, o campo vira vazio
+
+- Leads convertidos permanecem visiveis na listagem com badge roxo "Convertido"
+- O usuario pode clicar no lead convertido e ver seus detalhes, incluindo o vinculo com o cliente
+- O historico do lead e preservado e acessivel
+
