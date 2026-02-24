@@ -1,39 +1,56 @@
 
 
-## Manter Leads convertidos visiveis na listagem
+## Corrigir visual "Faturamento por Canal" para Negocios (Deals)
 
-### Problema
+### Diagnostico
 
-Quando um Lead e convertido em Cliente (via negocio ganho), ele recebe `status = 'converted'` e `converted_to_client_id` preenchido. O hook `useLeads` filtra esses leads com `.is('converted_to_client_id', null)`, fazendo com que desaparecam da listagem. Alem disso, o `markAsConvertedToDeal` remove o lead do estado local com `setLeads(prev => prev.filter(...))`.
+O visual "Faturamento por Canal" esta configurado com `dataSource: deals` e `dimension.field: canal`. Porem:
+
+1. A tabela `deals` **nao possui** coluna `canal` -- apenas a tabela `leads` possui
+2. O campo "Canal" mostrado no perfil do Lead (ex: "Organico") e um **campo personalizado** do Lead (ID: `3bcdcf47...`)
+3. Para Negocios, existe um campo personalizado separado chamado **"Canal de Venda"** (ID: `16ebda9f...`, `show_in_deals: true`) que ja possui 597 registros preenchidos (organico, trafego_pago, indicacao, etc.)
+4. O codigo em `getGroupKey` tenta ler `item.canal`, que e sempre `undefined` para deals, resultando em tudo agrupado como "Nao Informado"
 
 ### Solucao
 
-#### 1. `src/hooks/useLeads.tsx` - Remover filtro que esconde leads convertidos
+Enriquecer os deals com o campo personalizado "Canal de Venda" quando a dimensao `canal` for solicitada, similar ao que ja e feito para MQL.
 
-- Remover a linha `.is('converted_to_client_id', null)` da query `fetchLeads`
-- Na funcao `markAsConvertedToDeal`, remover o `setLeads(prev => prev.filter(...))` e substituir por um `await fetchLeads()` para atualizar o estado com o lead agora marcado como "converted"
+#### 1. `src/hooks/useVisualData.ts` - Adicionar enriquecimento de Canal de Venda
 
-#### 2. `src/pages/Leads.tsx` - Adicionar status "Convertido" na UI
+- Criar constante `DEAL_CANAL_FIELD_ID = '16ebda9f-cd3b-412c-bb06-0950001963c5'`
+- Criar mapa de opcoes para traduzir chaves (`organico`, `trafego_pago`, etc.) para labels amigaveis (`Organico`, `Trafego Pago`, etc.)
+- Criar funcao `enrichDealsWithCanal(accountId, deals)` que:
+  - Busca valores do campo "Canal de Venda" na tabela `deal_field_values`
+  - Mapeia cada deal com `deal.canal = label correspondente`
+- Na funcao `fetchDealsData`, antes de chamar `aggregateData`, adicionar verificacao: se `dimension.field === 'canal'`, enriquecer os deals com `enrichDealsWithCanal`
 
-- Adicionar `{ value: "converted", label: "Convertido", color: "bg-purple-500" }` ao array `LEAD_STATUS`
-- Isso faz com que leads convertidos exibam um badge roxo "Convertido" na listagem, diferenciando-os visualmente
+#### 2. `src/components/insights/visual-builder/types.ts` - Adicionar "Canal" como dimensao de Deals
 
-#### 3. `src/components/leads/LeadDetailSheet.tsx` - Adicionar status "Convertido"
+- Adicionar `{ value: 'canal', label: 'Canal', type: 'text' }` ao array `deals.dimension` para que novos visuais possam ser criados com essa dimensao
 
-- Adicionar a mesma entrada ao array `LEAD_STATUS` local para que o detalhe do lead tambem exiba o status corretamente
+#### 3. `src/hooks/useStackedVisualData.ts` - Suportar canal no stacked
 
-#### 4. `src/components/sales/LeadsTab.tsx` - Adicionar status "Convertido"
+- Na funcao `fetchStackedDealsData`, adicionar o mesmo enriquecimento quando `stackBy === 'canal'` ou `dimension.field === 'canal'` para que graficos empilhados tambem funcionem
 
-- Adicionar a mesma entrada ao array `LEAD_STATUS` local da aba de Leads do setor Vendas
+### Detalhe tecnico do mapeamento
 
-### O que NAO sera alterado
+O campo "Canal de Venda" possui estas opcoes:
+```text
+organico       -> Organico
+trafego_pago   -> Trafego Pago
+indicacao      -> Indicacao
+prospeccao_ativa -> Prospeccao Ativa
+eventos        -> Trafego Alheio
+carteira_esteira -> Carteira / Esteira
+social_seller  -> Social Seller
+recorrencia    -> Recorrencia
+```
 
-- As queries de deteccao de duplicados (`useLeadDuplicateDetection`) e visualizacoes analiticas (`useVisualData`, `useStackedVisualData`, `useVisualDrilldown`) continuarao filtrando leads convertidos, pois nesses contextos faz sentido nao misturar leads ativos com convertidos
-- A busca no RoyZapp tambem mantera o filtro, pois so interessa buscar leads nao convertidos para iniciar conversas
+O sistema buscara as opcoes do campo diretamente da tabela `custom_fields` para manter a consistencia com configuracoes futuras.
 
 ### Resultado esperado
 
-- Leads convertidos permanecem visiveis na listagem com badge roxo "Convertido"
-- O usuario pode clicar no lead convertido e ver seus detalhes, incluindo o vinculo com o cliente
-- O historico do lead e preservado e acessivel
+- O visual "Faturamento por Canal" exibira barras separadas por canal (Organico, Trafego Pago, etc.) com os valores corretos
+- Novos visuais de deals poderao ser agrupados por Canal
+- O visual existente funcionara sem necessidade de reconfiguracao
 
