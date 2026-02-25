@@ -21,8 +21,8 @@ interface AddVisualModalProps {
 }
 
 type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge" | "indicator" | "bubble_map";
-type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta";
-type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual" | "canal";
+type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta" | "tasks_count";
+type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual" | "canal" | "activity_type" | "status_task";
 
 const CHART_TYPES = [
   { value: "bar" as const, label: "Gráfico de Barras", description: "Comparar valores entre categorias", icon: BarChart3 },
@@ -47,6 +47,7 @@ const METRICS = [
   { value: "lost_reasons" as const, label: "Motivos de Perda", description: "Análise de deals perdidos" },
   { value: "leads_count" as const, label: "Total de Leads", description: "Contagem de todos os leads cadastrados" },
   { value: "sales_cycle" as const, label: "Ciclo de Vendas", description: "Média de dias entre primeiro contato e fechamento" },
+  { value: "tasks_count" as const, label: "Quantidade de Tarefas", description: "Contagem de tarefas por tipo, vendedor ou status" },
   { value: "meta" as const, label: "Meta", description: "Meta de faturamento configurada manualmente" },
 ];
 
@@ -58,11 +59,13 @@ const GROUP_BY_OPTIONS = [
   { value: "mql" as const, label: "Por MQL", description: "Classificação MQL do negócio" },
   { value: "faturamento_atual" as const, label: "Por Faturamento Atual", description: "Faixa de faturamento do lead" },
   { value: "canal" as const, label: "Por Canal", description: "Canal de aquisição do lead" },
+  { value: "activity_type" as const, label: "Por Tipo de Atividade", description: "Tipo da tarefa (call, reunião, etc.)" },
+  { value: "status_task" as const, label: "Por Status da Tarefa", description: "Pendente vs Concluída" },
 ];
 
 // Mapping from simplified selections to full VisualConfig
 const METRIC_TO_CONFIG: Record<Metric, { 
-  dataSource: 'deals' | 'leads'; 
+  dataSource: 'deals' | 'leads' | 'tasks'; 
   measureField: string | null; 
   aggregation: 'sum' | 'count' | 'avg' | 'conversion_rate' | 'sales_cycle'; 
   formatType: 'currency' | 'decimal' | 'percentage';
@@ -76,6 +79,7 @@ const METRIC_TO_CONFIG: Record<Metric, {
   lost_reasons: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal', statusFilter: 'lost' },
   leads_count: { dataSource: 'leads', measureField: null, aggregation: 'count', formatType: 'decimal' },
   sales_cycle: { dataSource: 'deals', measureField: null, aggregation: 'sales_cycle', formatType: 'decimal', statusFilter: 'won' },
+  tasks_count: { dataSource: 'tasks', measureField: null, aggregation: 'count', formatType: 'decimal' },
   meta: { dataSource: 'deals', measureField: 'meta', aggregation: 'sum', formatType: 'currency' },
 };
 
@@ -87,6 +91,8 @@ const GROUP_BY_TO_DIMENSION: Record<GroupBy, { field: string; type: 'date' | 'te
   mql: { field: 'mql', type: 'text' },
   faturamento_atual: { field: 'faturamento_atual', type: 'text' },
   canal: { field: 'canal', type: 'text' },
+  activity_type: { field: 'activity_type', type: 'text' },
+  status_task: { field: 'status', type: 'text' },
 };
 
 // Determines the correct date field based on the metric being measured
@@ -99,6 +105,8 @@ const getDateFieldForMetric = (metric: Metric): string => {
       return 'won_at';
     case 'lost_reasons': // Losses = LOST deals
       return 'lost_at';
+    case 'tasks_count':
+      return 'due_date';
     default:
       return 'created_at';
   }
@@ -113,6 +121,7 @@ const METRIC_LABELS: Record<Metric, string> = {
   lost_reasons: "Perdas",
   leads_count: "Leads",
   sales_cycle: "Ciclo de Vendas",
+  tasks_count: "Tarefas",
   meta: "Meta",
 };
 
@@ -124,6 +133,8 @@ const GROUP_LABELS: Record<GroupBy, string> = {
   mql: "por MQL",
   faturamento_atual: "por Faturamento Atual",
   canal: "por Canal",
+  activity_type: "por Tipo de Atividade",
+  status_task: "por Status",
 };
 
 export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
@@ -423,9 +434,13 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
         };
       } else {
         const baseDimensionConfig = GROUP_BY_TO_DIMENSION[groupBy!];
-        const dimensionField = baseDimensionConfig.type === 'date' 
+        let dimensionField = baseDimensionConfig.type === 'date' 
           ? getDateFieldForMetric(metric) 
           : baseDimensionConfig.field;
+        // For tasks, "user" maps to assigned_to instead of responsible_name
+        if (metric === 'tasks_count' && groupBy === 'user') {
+          dimensionField = 'assigned_to';
+        }
         const isTemporalGrouping = baseDimensionConfig.type === 'date';
 
         // Use the selected dateGrouping for temporal dimensions
@@ -779,7 +794,11 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
                   onValueChange={(value) => setGroupBy(value as GroupBy)}
                   className="space-y-2"
                 >
-                  {GROUP_BY_OPTIONS.map((g) => (
+                  {GROUP_BY_OPTIONS.filter((g) => {
+                    if (metric === 'tasks_count') return ['month', 'user', 'activity_type', 'status_task'].includes(g.value);
+                    if (metric === 'leads_count') return ['month', 'user', 'mql', 'faturamento_atual', 'canal'].includes(g.value);
+                    return ['month', 'user', 'stage', 'product'].includes(g.value);
+                  }).map((g) => (
                     <div
                       key={g.value}
                       className={cn(
