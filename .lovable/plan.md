@@ -1,101 +1,65 @@
 
 
-## Adicionar "Quantidade de Tarefas" como opcao de medicao no wizard de visuais
+## Corrigir busca de campanhas 3C Plus em domínios personalizados
 
-### Problema
+### Causa raiz
 
-A opcao de medicao por tarefas foi implementada no backend (`useVisualData.ts`) e nos tipos do visual builder (`types.ts`), mas o wizard principal de criacao de visuais (`AddVisualModal.tsx`) - que e o dialog de 3 passos usado pelos usuarios - nao foi atualizado. Por isso, "Tarefas" nao aparece na lista do Passo 2.
+O banco de dados mostra que o Jonathan Marcato configurou domínio `https://anjosbusiness.3c.plus/agent` na integração, enquanto você (ou o Darlan) não tem domínio configurado (usa o padrão `app.3c.fluxoti.com`). Ambos compartilham o **mesmo API Token**.
 
-### Solucao
+O problema é duplo:
+1. A função `threecplus-auth` valida o token **sempre** contra `app.3c.fluxoti.com` (hardcoded), mesmo quando o usuário informou um domínio diferente
+2. A função `threecplus-campaigns` busca campanhas no domínio configurado pelo usuário, que pode ser uma instância diferente do 3C Plus
 
-Atualizar o `AddVisualModal.tsx` para incluir a nova metrica de tarefas e seus agrupamentos validos.
+Resultado: o token é validado com sucesso em `app.3c.fluxoti.com`, mas as campanhas são buscadas em `anjosbusiness.3c.plus` — que pode retornar campanhas diferentes ou nenhuma.
 
-### Mudancas no arquivo `src/components/insights/AddVisualModal.tsx`
+### Solução
 
-#### 1. Adicionar `tasks_count` ao tipo `Metric` (linha 24)
+#### 1. Corrigir validação do token no `threecplus-auth` (usar domínio do usuário)
 
-```
-type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta" | "tasks_count";
-```
+**Arquivo:** `supabase/functions/threecplus-auth/index.ts`
 
-#### 2. Adicionar opcao na lista `METRICS` (linha 41-51)
+Alterar a validação do token (linha 65) para usar o domínio fornecido pelo usuário, em vez do hardcoded:
 
-Inserir apos `sales_cycle`:
+```typescript
+// ANTES (hardcoded):
+const apiResponse = await fetch("https://app.3c.fluxoti.com/api/v1/me", { ... });
 
-```
-{ value: "tasks_count", label: "Quantidade de Tarefas", description: "Contagem de tarefas por tipo, vendedor ou status" },
-```
-
-#### 3. Adicionar mapeamento em `METRIC_TO_CONFIG` (linha 64-80)
-
-```
-tasks_count: { dataSource: 'tasks', measureField: null, aggregation: 'count', formatType: 'decimal' },
+// DEPOIS (usa o domínio do usuário):
+const baseDomain = getBaseDomain(domain || null);
+const apiResponse = await fetch(`${baseDomain}/api/v1/me`, { ... });
 ```
 
-#### 4. Adicionar label em `METRIC_LABELS` (linha 107-117)
+Isso garante que o token seja validado contra a mesma instância onde será usado.
 
-```
-tasks_count: "Tarefas",
-```
+Adicionar a mesma função `getBaseDomain` que já existe em `threecplus-campaigns`.
 
-#### 5. Adicionar agrupamentos validos para tarefas no `GROUP_BY_OPTIONS` (linha 53-61)
+#### 2. Adicionar logs de diagnóstico na busca de campanhas
 
-Adicionar uma nova opcao:
+**Arquivo:** `supabase/functions/threecplus-campaigns/index.ts`
 
-```
-{ value: "activity_type" as const, label: "Por Tipo de Atividade", description: "Tipo da tarefa (call, reuniao, etc.)" },
-```
+Adicionar log com o `user_id` e `domain` usado para facilitar diagnóstico futuro:
 
-E atualizar o tipo `GroupBy` (linha 25) para incluir `activity_type` e `status_task`:
-
-```
-type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual" | "canal" | "activity_type" | "status_task";
+```typescript
+console.log("[threecplus-campaigns] User:", userData.id, "Domain:", baseDomain, "Token (last 6):", apiToken.slice(-6));
 ```
 
-Adicionar tambem:
+#### 3. Adicionar fallback de domínio na busca de campanhas
 
+**Arquivo:** `supabase/functions/threecplus-campaigns/index.ts`
+
+Se a busca no domínio customizado retornar 0 campanhas ou falhar, tentar novamente no domínio padrão (`app.3c.fluxoti.com`) como fallback — mas somente se o domínio for diferente do padrão:
+
+```typescript
+if (allCampaigns.length === 0 && baseDomain !== "https://app.3c.fluxoti.com") {
+  console.log("[threecplus-campaigns] No campaigns on custom domain, trying default...");
+  // Repetir busca em app.3c.fluxoti.com
+}
 ```
-{ value: "status_task" as const, label: "Por Status da Tarefa", description: "Pendente vs Concluída" },
-```
-
-#### 6. Adicionar mapeamento em `GROUP_BY_TO_DIMENSION` (linha 82-90)
-
-```
-activity_type: { field: 'activity_type', type: 'text' },
-status_task: { field: 'status', type: 'text' },
-```
-
-#### 7. Adicionar `GROUP_LABELS` para novos agrupamentos (linha 119-127)
-
-```
-activity_type: "por Tipo de Atividade",
-status_task: "por Status",
-```
-
-#### 8. Filtrar opcoes de agrupamento conforme a metrica selecionada (Passo 3, ~linha 782)
-
-No passo 3, filtrar as opcoes de `GROUP_BY_OPTIONS` para que:
-- Quando `metric === 'tasks_count'`: mostrar apenas `month`, `user`, `activity_type`, `status_task`
-- Quando `metric === 'leads_count'`: mostrar apenas `month`, `user`, `mql`, `faturamento_atual`, `canal`
-- Demais metricas (deals): mostrar `month`, `user`, `stage`, `product`
-
-Isso sera feito com um `filteredGroupByOptions` computado antes do render do Passo 3.
-
-#### 9. Ajustar `getDateFieldForMetric` para tasks
-
-Para `tasks_count`, o campo de data sera `due_date` (ja implementado no `useVisualData.ts`):
-
-```
-case 'tasks_count':
-  return 'due_date';
-```
-
-### Resultado
-
-O usuario vera "Quantidade de Tarefas" como opcao no Passo 2 do wizard, e no Passo 3 podera agrupar por Mes, Vendedor, Tipo de Atividade ou Status da Tarefa.
 
 ### Arquivos alterados
 
-| Arquivo | Alteracao |
+| Arquivo | Alteração |
 |---------|-----------|
-| `src/components/insights/AddVisualModal.tsx` | Adicionar metric `tasks_count`, novos GroupBy (`activity_type`, `status_task`), mapeamentos e filtragem de opcoes por metrica |
+| `supabase/functions/threecplus-auth/index.ts` | Usar domínio do usuário para validar token (em vez de hardcoded) + adicionar `getBaseDomain` |
+| `supabase/functions/threecplus-campaigns/index.ts` | Adicionar logs de diagnóstico + fallback para domínio padrão quando domínio customizado retorna 0 campanhas |
+
