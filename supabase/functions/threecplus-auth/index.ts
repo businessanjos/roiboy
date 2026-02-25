@@ -6,6 +6,17 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function getBaseDomain(domain: string | null): string {
+  if (!domain) return "https://app.3c.fluxoti.com";
+  let base = domain.trim();
+  base = base.replace(/\/login\/?$/, "");
+  base = base.replace(/\/agent\/?.*$/, "");
+  base = base.replace(/\/supervisor\/?.*$/, "");
+  base = base.replace(/\/$/, "");
+  if (!base.startsWith("http")) base = "https://" + base;
+  return base;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -61,8 +72,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Validate token against 3C Plus API
-    const apiResponse = await fetch("https://app.3c.fluxoti.com/api/v1/me", {
+    // Validate token against 3C Plus API using the user's domain
+    const baseDomain = getBaseDomain(domain || null);
+    console.log("[threecplus-auth] Validating token against domain:", baseDomain);
+
+    const apiResponse = await fetch(`${baseDomain}/api/v1/me`, {
       headers: {
         Authorization: `Bearer ${api_token.trim()}`,
         Accept: "application/json",
@@ -72,7 +86,7 @@ Deno.serve(async (req) => {
     if (!apiResponse.ok) {
       const status = apiResponse.status;
       const body = await apiResponse.text();
-      console.error("3C Plus API error:", { status, body });
+      console.error("3C Plus API error:", { status, body, domain: baseDomain });
       return new Response(
         JSON.stringify({
           success: false,

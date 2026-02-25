@@ -17,6 +17,59 @@ function getBaseDomain(domain: string | null): string {
   return base;
 }
 
+async function fetchCampaignsFromDomain(domain: string, apiToken: string): Promise<{ campaigns: any[]; error?: string }> {
+  let allCampaigns: any[] = [];
+  let currentPage = 1;
+  let hasMore = true;
+
+  while (hasMore) {
+    const apiResponse = await fetch(
+      `${domain}/api/v1/agent/campaigns?api_token=${apiToken}&per_page=100&page=${currentPage}`,
+      {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      }
+    );
+
+    const responseText = await apiResponse.text();
+    console.log(`[threecplus-campaigns] Page ${currentPage} from ${domain}:`, apiResponse.status, responseText.substring(0, 500));
+
+    if (!apiResponse.ok) {
+      return { campaigns: [], error: `Erro ao buscar campanhas (status ${apiResponse.status}).` };
+    }
+
+    // Detect HTML response
+    if (responseText.trim().startsWith("<!DOCTYPE") || responseText.trim().startsWith("<html")) {
+      console.error("[threecplus-campaigns] API returned HTML instead of JSON. Domain:", domain);
+      return { campaigns: [], error: "Erro de configuração: o domínio do 3C Plus parece incorreto." };
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(responseText);
+    } catch {
+      parsed = null;
+      hasMore = false;
+      break;
+    }
+
+    if (Array.isArray(parsed)) {
+      allCampaigns = parsed;
+      hasMore = false;
+    } else if (parsed?.data && Array.isArray(parsed.data)) {
+      allCampaigns.push(...parsed.data);
+      hasMore = parsed.current_page < parsed.last_page;
+      currentPage++;
+    } else {
+      hasMore = false;
+    }
+
+    if (currentPage > 10) break;
+  }
+
+  return { campaigns: allCampaigns };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -83,77 +136,35 @@ Deno.serve(async (req) => {
 
     const meta = integration.metadata as Record<string, unknown> | null;
     const baseDomain = getBaseDomain(meta?.domain as string | null);
+    const apiToken = integration.access_token;
 
-    console.log("[threecplus-campaigns] Fetching campaigns from:", baseDomain);
+    console.log("[threecplus-campaigns] User:", userData.id, "Domain:", baseDomain, "Token (last 6):", apiToken.slice(-6));
 
-    let allCampaigns: any[] = [];
-    let currentPage = 1;
-    let hasMore = true;
+    // Fetch campaigns from configured domain
+    let result = await fetchCampaignsFromDomain(baseDomain, apiToken);
 
-    while (hasMore) {
-      const apiResponse = await fetch(
-        `${baseDomain}/api/v1/agent/campaigns?api_token=${integration.access_token}&per_page=100&page=${currentPage}`,
-        {
-          method: "GET",
-          headers: { Accept: "application/json" },
-        }
-      );
-
-      const responseText = await apiResponse.text();
-      console.log(`[threecplus-campaigns] Page ${currentPage} response:`, apiResponse.status, responseText.substring(0, 500));
-
-      if (!apiResponse.ok) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: `Erro ao buscar campanhas (status ${apiResponse.status}). Verifique se você está logado no 3C Plus.`,
-          }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+    // Fallback: if custom domain returned 0 campaigns, try default domain
+    const defaultDomain = "https://app.3c.fluxoti.com";
+    if (result.campaigns.length === 0 && baseDomain !== defaultDomain) {
+      console.log("[threecplus-campaigns] No campaigns on custom domain, trying default:", defaultDomain);
+      const fallbackResult = await fetchCampaignsFromDomain(defaultDomain, apiToken);
+      if (fallbackResult.campaigns.length > 0) {
+        result = fallbackResult;
+        console.log(`[threecplus-campaigns] Fallback succeeded: ${fallbackResult.campaigns.length} campaigns from default domain`);
       }
-
-      // Detect HTML response (wrong URL or auth redirect)
-      if (responseText.trim().startsWith("<!DOCTYPE") || responseText.trim().startsWith("<html")) {
-        console.error("[threecplus-campaigns] API returned HTML instead of JSON. Domain may be incorrect:", baseDomain);
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: "Erro de configuração: o domínio do 3C Plus parece incorreto. Reconfigure a integração com apenas o domínio (ex: app.3c.fluxoti.com).",
-          }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      let parsed;
-      try {
-        parsed = JSON.parse(responseText);
-      } catch {
-        parsed = null;
-        hasMore = false;
-        break;
-      }
-
-      if (Array.isArray(parsed)) {
-        // API returned plain array (no pagination)
-        allCampaigns = parsed;
-        hasMore = false;
-      } else if (parsed?.data && Array.isArray(parsed.data)) {
-        // Paginated Laravel response
-        allCampaigns.push(...parsed.data);
-        hasMore = parsed.current_page < parsed.last_page;
-        currentPage++;
-      } else {
-        hasMore = false;
-      }
-
-      // Safety: max 10 pages
-      if (currentPage > 10) break;
     }
 
-    console.log(`[threecplus-campaigns] Total campaigns fetched: ${allCampaigns.length}`);
+    if (result.error && result.campaigns.length === 0) {
+      return new Response(
+        JSON.stringify({ success: false, error: result.error }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[threecplus-campaigns] Total campaigns fetched: ${result.campaigns.length}`);
 
     return new Response(
-      JSON.stringify({ success: true, campaigns: allCampaigns }),
+      JSON.stringify({ success: true, campaigns: result.campaigns }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
