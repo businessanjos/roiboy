@@ -43,6 +43,7 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
 
   const { data, isLoading, error } = useVisualData({
     config,
+    chartType,
     enabled: !!config && !isGaugeDaysElapsed && !isStacked && !isBubbleMap,
   });
 

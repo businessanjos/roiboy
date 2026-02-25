@@ -235,7 +235,11 @@ export const DATA_SOURCE_FIELDS: Record<DataSource, {
   tasks: {
     numeric: [],
     dimension: [
+      { value: 'activity_type', label: 'Tipo de Atividade', type: 'text' },
       { value: 'assigned_to', label: 'Vendedor', type: 'text' },
+      { value: 'status', label: 'Status (Pendente/Concluída)', type: 'text' },
+      { value: 'due_date', label: 'Data de Vencimento', type: 'date' },
+      { value: 'created_at', label: 'Data de Criação', type: 'date' },
     ],
   },
 };
