@@ -148,10 +148,11 @@ function BarChartView({
             <LabelList 
               dataKey="value" 
               position="top" 
-              content={({ x, y, value, index }) => {
+              content={({ x, y, value, index, width: barWidth }) => {
                 if (data.length > 10 && (typeof index !== 'number' || index % 2 !== 0)) return null;
+                const centerX = (x as number) + (barWidth as number) / 2;
                 return (
-                  <text x={x} y={(y as number) - 12} textAnchor="middle"
+                  <text x={centerX} y={(y as number) - 12} textAnchor="middle"
                     style={{ fontSize: Math.round(10 * m), fill: 'hsl(var(--foreground))' }}>
                     {formatValueCompact(value as number, formatting.type)}
                   </text>
