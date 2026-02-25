@@ -1,66 +1,80 @@
 
 
-## Investigacao: Campanhas 3C Plus ausentes (ex: "Prospecao Manual")
+## Adicionar medição por Tarefas nos visuais do Insights
 
-### Causa provavel
+### Contexto atual
 
-A Edge Function `threecplus-campaigns` busca as campanhas do agente no endpoint `/api/v1/agent/campaigns` da API do 3C Plus. O problema esta na **linha 130** do codigo:
+A fonte de dados "Tarefas" no visual builder esta limitada: so tem a dimensao "Vendedor" e nenhum campo numerico, e o fetch de dados (`fetchTasksCallCommercialData`) esta hardcoded para buscar apenas tarefas do tipo "Call Comercial". Isso impede que o usuario crie visuais para analisar tarefas por tipo de atividade, status, ou ao longo do tempo.
 
-```typescript
-const campaignList = Array.isArray(campaigns) ? campaigns : campaigns?.data || [];
+### O que sera feito
+
+Expandir a fonte de dados "Tarefas" para permitir analises completas, incluindo contagem de tarefas agrupadas por tipo de atividade, vendedor, status (pendente/concluida) e data.
+
+### Mudancas
+
+#### 1. Expandir campos disponiveis para Tarefas (`src/components/insights/visual-builder/types.ts`)
+
+Adicionar novas dimensoes e campos ao `DATA_SOURCE_FIELDS.tasks`:
+
 ```
-
-A API do 3C Plus retorna respostas **paginadas** no formato Laravel (ex: `{ data: [...], current_page: 1, last_page: 3, per_page: 15, total: 40 }`). O codigo atual so extrai `campaigns.data` da **primeira pagina**, ignorando as paginas seguintes. Usuarios com muitas campanhas (como o Jonathan Marcato com ~15+) podem ter campanhas como "Prospecao Manual" caindo na segunda pagina.
-
-### Solucao
-
-**Arquivo:** `supabase/functions/threecplus-campaigns/index.ts`
-
-1. Adicionar `per_page=100` como query parameter na chamada da API para maximizar resultados por pagina
-2. Implementar loop de paginacao para buscar TODAS as paginas caso existam mais de 100 campanhas
-3. Adicionar logs mais detalhados para diagnostico
-
-### Mudancas tecnicas
-
-```typescript
-// Substituir a chamada unica (linha 89-95) por um loop de paginacao:
-let allCampaigns: any[] = [];
-let currentPage = 1;
-let hasMore = true;
-
-while (hasMore) {
-  const apiResponse = await fetch(
-    `${baseDomain}/api/v1/agent/campaigns?api_token=${integration.access_token}&per_page=100&page=${currentPage}`,
-    { method: "GET", headers: { Accept: "application/json" } }
-  );
-  
-  // ... parse response ...
-  
-  const parsed = JSON.parse(responseText);
-  
-  if (Array.isArray(parsed)) {
-    // API returned plain array (no pagination)
-    allCampaigns = parsed;
-    hasMore = false;
-  } else if (parsed?.data && Array.isArray(parsed.data)) {
-    // Paginated response
-    allCampaigns.push(...parsed.data);
-    hasMore = parsed.current_page < parsed.last_page;
-    currentPage++;
-  } else {
-    hasMore = false;
-  }
-  
-  // Safety: max 10 pages
-  if (currentPage > 10) break;
+tasks: {
+  numeric: [],  // Mantém vazio - tarefas so suportam contagem
+  dimension: [
+    { value: 'activity_type', label: 'Tipo de Atividade', type: 'text' },
+    { value: 'assigned_to', label: 'Vendedor', type: 'text' },
+    { value: 'status', label: 'Status (Pendente/Concluída)', type: 'text' },
+    { value: 'due_date', label: 'Data de Vencimento', type: 'date' },
+    { value: 'created_at', label: 'Data de Criação', type: 'date' },
+  ],
 }
-
-return Response(JSON.stringify({ success: true, campaigns: allCampaigns }));
 ```
 
-### Resumo
+#### 2. Criar funcao generica de fetch de tarefas (`src/hooks/useVisualData.ts`)
+
+Criar uma nova funcao `fetchTasksData` que:
+- Busca tarefas da tabela `internal_tasks` com joins para `activity_types` (nome do tipo) e `users` (nome do vendedor)
+- Aplica filtros de data (startDate/endDate) no campo `due_date`
+- Aplica filtro de usuario se selecionado
+- Paginacao para buscar todos os registros (loop de 1000 em 1000)
+- Agrupa os dados pela dimensao escolhida:
+  - `activity_type`: agrupa pelo nome do tipo de atividade
+  - `assigned_to`: agrupa pelo nome do vendedor
+  - `status`: agrupa em "Pendente" vs "Concluída"
+  - `due_date` / `created_at`: agrupa por periodo (dia/semana/mes/ano)
+- Retorna contagem de tarefas por grupo
+
+#### 3. Atualizar o switch de dataSource (`src/hooks/useVisualData.ts`)
+
+Alterar o case `tasks` para usar a nova funcao generica quando o chart type nao for `call_commercial`, mantendo compatibilidade:
+
+```typescript
+case 'tasks':
+  result = await fetchTasksData(
+    currentUser.account_id, measure, dimension, filters, dateDisplayFormat
+  );
+  break;
+```
+
+A funcao `fetchTasksCallCommercialData` sera mantida intacta e continuara sendo usada pelo chart type `call_commercial` (que tem seu proprio fluxo de renderizacao).
+
+#### 4. Atualizar o drilldown de tarefas (`src/hooks/useVisualDrilldown.ts`)
+
+Atualizar a funcao `fetchTasksRecords` para suportar as novas dimensoes (activity_type, status, due_date, created_at) alem da existente (assigned_to), garantindo que o "Explorar Dados" funcione corretamente para os novos visuais.
+
+### Resultado esperado
+
+O usuario podera criar visuais como:
+- "Quantidade de Tarefas por Tipo de Atividade" (barra/pizza)
+- "Tarefas por Vendedor" (barra/ranking)
+- "Tarefas Pendentes vs Concluidas" (pizza/barra)
+- "Evolucao de Tarefas por Mes" (linha/barra)
+- Scorecards com total de tarefas
+
+### Arquivos alterados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `supabase/functions/threecplus-campaigns/index.ts` | Adicionar paginacao completa + `per_page=100` para garantir que TODAS as campanhas do usuario sejam retornadas |
+| `src/components/insights/visual-builder/types.ts` | Expandir dimensoes de tasks (activity_type, status, due_date, created_at) |
+| `src/hooks/useVisualData.ts` | Nova funcao `fetchTasksData` generica + atualizar switch case |
+| `src/hooks/useVisualDrilldown.ts` | Atualizar `fetchTasksRecords` para novas dimensoes |
 
