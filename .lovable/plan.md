@@ -1,80 +1,101 @@
 
 
-## Adicionar medição por Tarefas nos visuais do Insights
+## Adicionar "Quantidade de Tarefas" como opcao de medicao no wizard de visuais
 
-### Contexto atual
+### Problema
 
-A fonte de dados "Tarefas" no visual builder esta limitada: so tem a dimensao "Vendedor" e nenhum campo numerico, e o fetch de dados (`fetchTasksCallCommercialData`) esta hardcoded para buscar apenas tarefas do tipo "Call Comercial". Isso impede que o usuario crie visuais para analisar tarefas por tipo de atividade, status, ou ao longo do tempo.
+A opcao de medicao por tarefas foi implementada no backend (`useVisualData.ts`) e nos tipos do visual builder (`types.ts`), mas o wizard principal de criacao de visuais (`AddVisualModal.tsx`) - que e o dialog de 3 passos usado pelos usuarios - nao foi atualizado. Por isso, "Tarefas" nao aparece na lista do Passo 2.
 
-### O que sera feito
+### Solucao
 
-Expandir a fonte de dados "Tarefas" para permitir analises completas, incluindo contagem de tarefas agrupadas por tipo de atividade, vendedor, status (pendente/concluida) e data.
+Atualizar o `AddVisualModal.tsx` para incluir a nova metrica de tarefas e seus agrupamentos validos.
 
-### Mudancas
+### Mudancas no arquivo `src/components/insights/AddVisualModal.tsx`
 
-#### 1. Expandir campos disponiveis para Tarefas (`src/components/insights/visual-builder/types.ts`)
-
-Adicionar novas dimensoes e campos ao `DATA_SOURCE_FIELDS.tasks`:
+#### 1. Adicionar `tasks_count` ao tipo `Metric` (linha 24)
 
 ```
-tasks: {
-  numeric: [],  // Mantém vazio - tarefas so suportam contagem
-  dimension: [
-    { value: 'activity_type', label: 'Tipo de Atividade', type: 'text' },
-    { value: 'assigned_to', label: 'Vendedor', type: 'text' },
-    { value: 'status', label: 'Status (Pendente/Concluída)', type: 'text' },
-    { value: 'due_date', label: 'Data de Vencimento', type: 'date' },
-    { value: 'created_at', label: 'Data de Criação', type: 'date' },
-  ],
-}
+type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta" | "tasks_count";
 ```
 
-#### 2. Criar funcao generica de fetch de tarefas (`src/hooks/useVisualData.ts`)
+#### 2. Adicionar opcao na lista `METRICS` (linha 41-51)
 
-Criar uma nova funcao `fetchTasksData` que:
-- Busca tarefas da tabela `internal_tasks` com joins para `activity_types` (nome do tipo) e `users` (nome do vendedor)
-- Aplica filtros de data (startDate/endDate) no campo `due_date`
-- Aplica filtro de usuario se selecionado
-- Paginacao para buscar todos os registros (loop de 1000 em 1000)
-- Agrupa os dados pela dimensao escolhida:
-  - `activity_type`: agrupa pelo nome do tipo de atividade
-  - `assigned_to`: agrupa pelo nome do vendedor
-  - `status`: agrupa em "Pendente" vs "Concluída"
-  - `due_date` / `created_at`: agrupa por periodo (dia/semana/mes/ano)
-- Retorna contagem de tarefas por grupo
+Inserir apos `sales_cycle`:
 
-#### 3. Atualizar o switch de dataSource (`src/hooks/useVisualData.ts`)
-
-Alterar o case `tasks` para usar a nova funcao generica quando o chart type nao for `call_commercial`, mantendo compatibilidade:
-
-```typescript
-case 'tasks':
-  result = await fetchTasksData(
-    currentUser.account_id, measure, dimension, filters, dateDisplayFormat
-  );
-  break;
+```
+{ value: "tasks_count", label: "Quantidade de Tarefas", description: "Contagem de tarefas por tipo, vendedor ou status" },
 ```
 
-A funcao `fetchTasksCallCommercialData` sera mantida intacta e continuara sendo usada pelo chart type `call_commercial` (que tem seu proprio fluxo de renderizacao).
+#### 3. Adicionar mapeamento em `METRIC_TO_CONFIG` (linha 64-80)
 
-#### 4. Atualizar o drilldown de tarefas (`src/hooks/useVisualDrilldown.ts`)
+```
+tasks_count: { dataSource: 'tasks', measureField: null, aggregation: 'count', formatType: 'decimal' },
+```
 
-Atualizar a funcao `fetchTasksRecords` para suportar as novas dimensoes (activity_type, status, due_date, created_at) alem da existente (assigned_to), garantindo que o "Explorar Dados" funcione corretamente para os novos visuais.
+#### 4. Adicionar label em `METRIC_LABELS` (linha 107-117)
 
-### Resultado esperado
+```
+tasks_count: "Tarefas",
+```
 
-O usuario podera criar visuais como:
-- "Quantidade de Tarefas por Tipo de Atividade" (barra/pizza)
-- "Tarefas por Vendedor" (barra/ranking)
-- "Tarefas Pendentes vs Concluidas" (pizza/barra)
-- "Evolucao de Tarefas por Mes" (linha/barra)
-- Scorecards com total de tarefas
+#### 5. Adicionar agrupamentos validos para tarefas no `GROUP_BY_OPTIONS` (linha 53-61)
+
+Adicionar uma nova opcao:
+
+```
+{ value: "activity_type" as const, label: "Por Tipo de Atividade", description: "Tipo da tarefa (call, reuniao, etc.)" },
+```
+
+E atualizar o tipo `GroupBy` (linha 25) para incluir `activity_type` e `status_task`:
+
+```
+type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual" | "canal" | "activity_type" | "status_task";
+```
+
+Adicionar tambem:
+
+```
+{ value: "status_task" as const, label: "Por Status da Tarefa", description: "Pendente vs Concluída" },
+```
+
+#### 6. Adicionar mapeamento em `GROUP_BY_TO_DIMENSION` (linha 82-90)
+
+```
+activity_type: { field: 'activity_type', type: 'text' },
+status_task: { field: 'status', type: 'text' },
+```
+
+#### 7. Adicionar `GROUP_LABELS` para novos agrupamentos (linha 119-127)
+
+```
+activity_type: "por Tipo de Atividade",
+status_task: "por Status",
+```
+
+#### 8. Filtrar opcoes de agrupamento conforme a metrica selecionada (Passo 3, ~linha 782)
+
+No passo 3, filtrar as opcoes de `GROUP_BY_OPTIONS` para que:
+- Quando `metric === 'tasks_count'`: mostrar apenas `month`, `user`, `activity_type`, `status_task`
+- Quando `metric === 'leads_count'`: mostrar apenas `month`, `user`, `mql`, `faturamento_atual`, `canal`
+- Demais metricas (deals): mostrar `month`, `user`, `stage`, `product`
+
+Isso sera feito com um `filteredGroupByOptions` computado antes do render do Passo 3.
+
+#### 9. Ajustar `getDateFieldForMetric` para tasks
+
+Para `tasks_count`, o campo de data sera `due_date` (ja implementado no `useVisualData.ts`):
+
+```
+case 'tasks_count':
+  return 'due_date';
+```
+
+### Resultado
+
+O usuario vera "Quantidade de Tarefas" como opcao no Passo 2 do wizard, e no Passo 3 podera agrupar por Mes, Vendedor, Tipo de Atividade ou Status da Tarefa.
 
 ### Arquivos alterados
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/components/insights/visual-builder/types.ts` | Expandir dimensoes de tasks (activity_type, status, due_date, created_at) |
-| `src/hooks/useVisualData.ts` | Nova funcao `fetchTasksData` generica + atualizar switch case |
-| `src/hooks/useVisualDrilldown.ts` | Atualizar `fetchTasksRecords` para novas dimensoes |
-
+| `src/components/insights/AddVisualModal.tsx` | Adicionar metric `tasks_count`, novos GroupBy (`activity_type`, `status_task`), mapeamentos e filtragem de opcoes por metrica |
