@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -126,6 +126,19 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
   const [editingEvent, setEditingEvent] = useState<EventData | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  // Reset all state when clientId changes to prevent cross-client contamination
+  useEffect(() => {
+    setEvents([]);
+    setDeliveries([]);
+    setAttendances([]);
+    setParticipations([]);
+    setFeedbacks([]);
+    setEditingEvent(null);
+    setEditDialogOpen(false);
+    setCreateDialogOpen(false);
+    setLoading(true);
+  }, [clientId]);
 
   useEffect(() => {
     fetchAccountId();
