@@ -247,7 +247,7 @@ function LineChartView({
   
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
+      <LineChart data={data} margin={{ top: 20, right: 40, left: 10, bottom: 20 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis
           dataKey="name"
@@ -279,6 +279,7 @@ function LineChartView({
               position="top" 
               content={({ x, y, value, index }) => {
                 if (typeof index !== 'number' || index % 2 !== 0) return null;
+                if (!value || value === 0) return null;
                 return (
                   <text x={x} y={(y as number) - 8} textAnchor="middle"
                     style={{ fontSize: Math.round(10 * m), fill: 'hsl(var(--foreground))' }}>
