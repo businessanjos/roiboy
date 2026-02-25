@@ -2287,6 +2287,7 @@ export default function ClientDetail() {
             </CardHeader>
             <CardContent className="pt-4">
               <ClientAgenda 
+                key={id}
                 clientId={id!} 
                 clientProductIds={clientProducts.map(p => p.id)} 
               />
