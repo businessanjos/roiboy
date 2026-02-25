@@ -86,51 +86,74 @@ Deno.serve(async (req) => {
 
     console.log("[threecplus-campaigns] Fetching campaigns from:", baseDomain);
 
-    const apiResponse = await fetch(
-      `${baseDomain}/api/v1/agent/campaigns?api_token=${integration.access_token}`,
-      {
-        method: "GET",
-        headers: { Accept: "application/json" },
+    let allCampaigns: any[] = [];
+    let currentPage = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const apiResponse = await fetch(
+        `${baseDomain}/api/v1/agent/campaigns?api_token=${integration.access_token}&per_page=100&page=${currentPage}`,
+        {
+          method: "GET",
+          headers: { Accept: "application/json" },
+        }
+      );
+
+      const responseText = await apiResponse.text();
+      console.log(`[threecplus-campaigns] Page ${currentPage} response:`, apiResponse.status, responseText.substring(0, 500));
+
+      if (!apiResponse.ok) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Erro ao buscar campanhas (status ${apiResponse.status}). Verifique se você está logado no 3C Plus.`,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-    );
 
-    const responseText = await apiResponse.text();
-    console.log("[threecplus-campaigns] API response:", apiResponse.status, responseText);
+      // Detect HTML response (wrong URL or auth redirect)
+      if (responseText.trim().startsWith("<!DOCTYPE") || responseText.trim().startsWith("<html")) {
+        console.error("[threecplus-campaigns] API returned HTML instead of JSON. Domain may be incorrect:", baseDomain);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "Erro de configuração: o domínio do 3C Plus parece incorreto. Reconfigure a integração com apenas o domínio (ex: app.3c.fluxoti.com).",
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
-    if (!apiResponse.ok) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Erro ao buscar campanhas (status ${apiResponse.status}). Verifique se você está logado no 3C Plus.`,
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      let parsed;
+      try {
+        parsed = JSON.parse(responseText);
+      } catch {
+        parsed = null;
+        hasMore = false;
+        break;
+      }
+
+      if (Array.isArray(parsed)) {
+        // API returned plain array (no pagination)
+        allCampaigns = parsed;
+        hasMore = false;
+      } else if (parsed?.data && Array.isArray(parsed.data)) {
+        // Paginated Laravel response
+        allCampaigns.push(...parsed.data);
+        hasMore = parsed.current_page < parsed.last_page;
+        currentPage++;
+      } else {
+        hasMore = false;
+      }
+
+      // Safety: max 10 pages
+      if (currentPage > 10) break;
     }
 
-    // Detect HTML response (wrong URL or auth redirect)
-    if (responseText.trim().startsWith("<!DOCTYPE") || responseText.trim().startsWith("<html")) {
-      console.error("[threecplus-campaigns] API returned HTML instead of JSON. Domain may be incorrect:", baseDomain);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Erro de configuração: o domínio do 3C Plus parece incorreto. Reconfigure a integração com apenas o domínio (ex: app.3c.fluxoti.com).",
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    let campaigns;
-    try {
-      campaigns = JSON.parse(responseText);
-    } catch {
-      campaigns = [];
-    }
-
-    // Normalize: ensure it's an array
-    const campaignList = Array.isArray(campaigns) ? campaigns : campaigns?.data || [];
+    console.log(`[threecplus-campaigns] Total campaigns fetched: ${allCampaigns.length}`);
 
     return new Response(
-      JSON.stringify({ success: true, campaigns: campaignList }),
+      JSON.stringify({ success: true, campaigns: allCampaigns }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
