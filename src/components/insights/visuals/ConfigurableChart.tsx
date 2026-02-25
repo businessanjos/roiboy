@@ -148,8 +148,15 @@ function BarChartView({
             <LabelList 
               dataKey="value" 
               position="top" 
-              formatter={(value: number) => formatValueCompact(value, formatting.type)}
-              style={{ fontSize: Math.round(10 * m), fill: 'hsl(var(--foreground))' }}
+              content={({ x, y, value, index }) => {
+                if (data.length > 10 && (typeof index !== 'number' || index % 2 !== 0)) return null;
+                return (
+                  <text x={x} y={(y as number) - 12} textAnchor="middle"
+                    style={{ fontSize: Math.round(10 * m), fill: 'hsl(var(--foreground))' }}>
+                    {formatValueCompact(value as number, formatting.type)}
+                  </text>
+                );
+              }}
             />
           )}
           {data.map((entry, index) => (
@@ -266,12 +273,19 @@ function LineChartView({
           dot={{ fill: primaryColor, strokeWidth: 2 }}
           activeDot={{ r: 6, fill: primaryColor, onClick: (_, e: any) => onDrilldown?.(e?.payload?.name) }}
         >
-          {appearance.showDataLabels && data.length <= 15 && (
+          {appearance.showDataLabels && (
             <LabelList 
               dataKey="value" 
               position="top" 
-              formatter={(value: number) => formatValueCompact(value, formatting.type)}
-              style={{ fontSize: Math.round(10 * m), fill: 'hsl(var(--foreground))' }}
+              content={({ x, y, value, index }) => {
+                if (typeof index !== 'number' || index % 2 !== 0) return null;
+                return (
+                  <text x={x} y={(y as number) - 8} textAnchor="middle"
+                    style={{ fontSize: Math.round(10 * m), fill: 'hsl(var(--foreground))' }}>
+                    {formatValueCompact(value as number, formatting.type)}
+                  </text>
+                );
+              }}
             />
           )}
         </Line>
