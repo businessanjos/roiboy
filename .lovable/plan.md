@@ -1,30 +1,29 @@
 
 
-## Corrigir rotulos no grafico de linha
+## Corrigir rotulos de dados tortos no grafico de barras
 
-### Problemas identificados
+### Problema
 
-1. **Rotulos "R$0" exibidos**: Pontos com valor zero mostram "R$0" desnecessariamente, poluindo o grafico.
-2. **Ultimo valor cortado**: O rotulo do ultimo ponto (ex: "R$297.600") e cortado pela borda direita do container porque a margem direita e de apenas `10px` e o `textAnchor` e `"middle"`, fazendo metade do texto ultrapassar o limite.
+No grafico de barras "Faturamento por Canal", os rotulos de dados (R$3.628.400, R$2.010.203, etc.) estao desalinhados em relacao as barras. Isso acontece porque o `x` fornecido pelo Recharts no `content` do `LabelList` corresponde a borda esquerda da barra, mas o `textAnchor` esta como `"middle"`, fazendo o texto ficar deslocado para a esquerda.
 
 ### Solucao
 
-**Arquivo:** `src/components/insights/visuals/ConfigurableChart.tsx` - Funcao `LineChartView`
+**Arquivo:** `src/components/insights/visuals/ConfigurableChart.tsx` - Funcao `BarChartView`
 
-#### 1. Ocultar rotulos com valor zero
-Na funcao `content` do `LabelList`, adicionar uma condicao para retornar `null` quando o valor for `0` (ou falsy):
-
-```tsx
-if (typeof index !== 'number' || index % 2 !== 0) return null;
-if (!value || value === 0) return null; // Nao exibir zeros
-```
-
-#### 2. Aumentar margem direita para evitar corte
-Aumentar a margem direita do `LineChart` de `10` para `40`, dando espaco suficiente para o rotulo do ultimo ponto:
+Ajustar o calculo da posicao `x` no `content` do `LabelList` para centralizar o rotulo sobre a barra. O Recharts fornece `x` (borda esquerda) e `width` (largura da barra), entao o centro correto e `x + width / 2`:
 
 ```tsx
-<LineChart data={data} margin={{ top: 20, right: 40, left: 10, bottom: 20 }}>
+content={({ x, y, value, index, width: barWidth }) => {
+  if (data.length > 10 && (typeof index !== 'number' || index % 2 !== 0)) return null;
+  const centerX = (x as number) + (barWidth as number) / 2;
+  return (
+    <text x={centerX} y={(y as number) - 12} textAnchor="middle"
+      style={{ fontSize: Math.round(10 * m), fill: 'hsl(var(--foreground))' }}>
+      {formatValueCompact(value as number, formatting.type)}
+    </text>
+  );
+}}
 ```
 
-Essas duas mudancas sao simples e localizadas na mesma funcao.
+Isso centraliza cada rotulo perfeitamente acima da sua barra correspondente.
 
