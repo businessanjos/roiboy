@@ -610,16 +610,15 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                             </a>
                           </Button>
                         )}
-                        {event.client_id !== null ? (
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleEditEvent(event)}
-                            title="Editar evento"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        ) : (
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleEditEvent(event)}
+                          title="Editar evento"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        {event.client_id === null && (
                           <Button variant="ghost" size="sm" asChild>
                             <Link to={`/events`} title="Ver na página de Eventos">
                               <LinkIcon className="h-3 w-3 mr-1" />
