@@ -1,56 +1,50 @@
 
 
-## Corrigir visual "Faturamento por Canal" para Negocios (Deals)
+## Corrigir tarefas da Vanessa Minelli nao aparecendo na aba Tarefas
 
 ### Diagnostico
 
-O visual "Faturamento por Canal" esta configurado com `dataSource: deals` e `dimension.field: canal`. Porem:
+O problema esta na query que busca as tarefas na pagina `/tasks`. A query em `src/pages/Tasks.tsx` (linha 211-232) busca todas as tarefas ordenadas por `created_at desc` **sem definir um limite explicito**. O Supabase aplica automaticamente um limite padrao de **1000 linhas**.
 
-1. A tabela `deals` **nao possui** coluna `canal` -- apenas a tabela `leads` possui
-2. O campo "Canal" mostrado no perfil do Lead (ex: "Organico") e um **campo personalizado** do Lead (ID: `3bcdcf47...`)
-3. Para Negocios, existe um campo personalizado separado chamado **"Canal de Venda"** (ID: `16ebda9f...`, `show_in_deals: true`) que ja possui 597 registros preenchidos (organico, trafego_pago, indicacao, etc.)
-4. O codigo em `getGroupKey` tenta ler `item.canal`, que e sempre `undefined` para deals, resultando em tudo agrupado como "Nao Informado"
+A evidencia e clara: a aba "Todas" mostra exatamente **1000** -- que e o limite padrao do Supabase. Isso significa que a conta possui mais de 1000 tarefas no total. Como a query retorna apenas as 1000 mais recentes, as tarefas atribuidas a Vanessa Minelli podem estar alem desse corte, resultando em 0 tarefas apos o filtro por usuario ser aplicado no frontend.
 
 ### Solucao
 
-Enriquecer os deals com o campo personalizado "Canal de Venda" quando a dimensao `canal` for solicitada, similar ao que ja e feito para MQL.
+#### 1. `src/pages/Tasks.tsx` - Aplicar filtros no servidor e aumentar limite
 
-#### 1. `src/hooks/useVisualData.ts` - Adicionar enriquecimento de Canal de Venda
+Modificar a query para:
 
-- Criar constante `DEAL_CANAL_FIELD_ID = '16ebda9f-cd3b-412c-bb06-0950001963c5'`
-- Criar mapa de opcoes para traduzir chaves (`organico`, `trafego_pago`, etc.) para labels amigaveis (`Organico`, `Trafego Pago`, etc.)
-- Criar funcao `enrichDealsWithCanal(accountId, deals)` que:
-  - Busca valores do campo "Canal de Venda" na tabela `deal_field_values`
-  - Mapeia cada deal com `deal.canal = label correspondente`
-- Na funcao `fetchDealsData`, antes de chamar `aggregateData`, adicionar verificacao: se `dimension.field === 'canal'`, enriquecer os deals com `enrichDealsWithCanal`
+- **Adicionar filtro server-side de usuario** quando um usuario especifico esta selecionado (nao "all" nem "mine"), adicionando `.eq("assigned_to", filterUser)` diretamente na query do Supabase
+- **Adicionar filtro server-side "mine"** quando filterUser === "mine", usando `.eq("assigned_to", currentUser.id)`
+- **Incluir `filterUser` e `currentUser?.id` na queryKey** do React Query para que a query refaca o fetch quando o filtro de usuario mudar
+- **Adicionar `.limit(5000)`** como rede de seguranca para o caso "all" (sem filtro de usuario), garantindo que mais tarefas sejam carregadas
 
-#### 2. `src/components/insights/visual-builder/types.ts` - Adicionar "Canal" como dimensao de Deals
+Essa abordagem garante que quando o usuario seleciona "Vanessa Minelli" no filtro, o banco retorna especificamente as tarefas dela, sem ser limitado pelas 1000 mais recentes de toda a equipe.
 
-- Adicionar `{ value: 'canal', label: 'Canal', type: 'text' }` ao array `deals.dimension` para que novos visuais possam ser criados com essa dimensao
+#### 2. Corrigir badge "Todas" para mostrar contagem filtrada
 
-#### 3. `src/hooks/useStackedVisualData.ts` - Suportar canal no stacked
+Atualmente o badge do tab "Todas" mostra `tasks.length` (o total bruto retornado pela query), que pode ser confuso. Alterar para mostrar `baseFilteredTasks.length` para que reflita a quantidade real apos os filtros aplicados.
 
-- Na funcao `fetchStackedDealsData`, adicionar o mesmo enriquecimento quando `stackBy === 'canal'` ou `dimension.field === 'canal'` para que graficos empilhados tambem funcionem
+### Detalhes tecnicos
 
-### Detalhe tecnico do mapeamento
-
-O campo "Canal de Venda" possui estas opcoes:
 ```text
-organico       -> Organico
-trafego_pago   -> Trafego Pago
-indicacao      -> Indicacao
-prospeccao_ativa -> Prospeccao Ativa
-eventos        -> Trafego Alheio
-carteira_esteira -> Carteira / Esteira
-social_seller  -> Social Seller
-recorrencia    -> Recorrencia
+Antes:
+  queryKey: ["internal-tasks"]
+  query: supabase.from("internal_tasks").select(...).order(...)
+  → Retorna ate 1000 tarefas (limite padrao)
+
+Depois:
+  queryKey: ["internal-tasks", filterUser, currentUser?.id]
+  query: supabase.from("internal_tasks").select(...)
+    .eq("assigned_to", userId)  // quando filtro especifico
+    .order(...)
+    .limit(5000)                // rede de seguranca
+  → Retorna as tarefas corretas do usuario selecionado
 ```
 
-O sistema buscara as opcoes do campo diretamente da tabela `custom_fields` para manter a consistencia com configuracoes futuras.
+### Impacto
 
-### Resultado esperado
-
-- O visual "Faturamento por Canal" exibira barras separadas por canal (Organico, Trafego Pago, etc.) com os valores corretos
-- Novos visuais de deals poderao ser agrupados por Canal
-- O visual existente funcionara sem necessidade de reconfiguracao
+- A query do Kanban (linhas 1310-1322) tambem se beneficia, pois usa o mesmo array `tasks`
+- Os cards de estatisticas (Pendentes, Em andamento, Atrasadas, Concluidas) passarao a mostrar os valores corretos
+- Performance: a query com filtro de usuario sera mais rapida que buscar todas as 5000 tarefas
 
