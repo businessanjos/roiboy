@@ -206,9 +206,9 @@ export default function Tasks() {
 
   // Fetch tasks with React Query
   const { data: tasks = [], isLoading: loading } = useQuery({
-    queryKey: ["internal-tasks"],
+    queryKey: ["internal-tasks", filterUser, currentUser?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("internal_tasks")
         .select(`
           *,
@@ -228,8 +228,18 @@ export default function Tasks() {
           leads:lead_id (id, full_name),
           assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url),
           activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color, sector_id)
-        `)
-        .order("created_at", { ascending: false });
+        `);
+
+      // Apply server-side user filter to avoid hitting the 1000-row default limit
+      if (filterUser === "mine" && currentUser?.id) {
+        query = query.eq("assigned_to", currentUser.id);
+      } else if (filterUser !== "all" && filterUser) {
+        query = query.eq("assigned_to", filterUser);
+      }
+
+      const { data, error } = await query
+        .order("created_at", { ascending: false })
+        .limit(5000);
 
       if (error) throw error;
       return (data || []) as Task[];
@@ -1333,9 +1343,9 @@ export default function Tasks() {
               className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
               Todas
-              {tasks.length > 0 && (
+              {baseFilteredTasks.length > 0 && (
                 <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
-                  {tasks.length}
+                  {baseFilteredTasks.length}
                 </Badge>
               )}
             </TabsTrigger>
