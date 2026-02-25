@@ -1,18 +1,19 @@
 
 
-## Corrigir eixo Y cortado no grafico de barras verticais
+## Corrigir eixo Y cortado no grafico de linha (LineChartView)
 
 ### Problema
 
-O eixo Y do `BarChartView` tem largura fixa de `60px` e margem esquerda de `0`, insuficientes para exibir valores formatados como "R$3.628.400". Com fontes maiores, o problema piora ainda mais, pois os textos "atravessam" o limite esquerdo do card e ficam ocultos.
+O `LineChartView` tem exatamente o mesmo problema que acabamos de corrigir no `BarChartView`: o `YAxis` tem largura fixa de `60px` e margem esquerda de `0`, insuficientes para valores como "R$880.000". Os rotulos do eixo Y ficam cortados na borda esquerda do container.
 
 ### Solucao
 
-**Arquivo:** `src/components/insights/visuals/ConfigurableChart.tsx` - Funcao `BarChartView`
+**Arquivo:** `src/components/insights/visuals/ConfigurableChart.tsx` - Funcao `LineChartView`
 
-1. **Aumentar largura do YAxis** de `60` para um valor dinamico baseado no multiplicador de fonte: `Math.round(80 * m)` -- isso garante espaco suficiente para valores em reais com separadores de milhar e acompanha o tamanho da fonte selecionado.
+Duas alteracoes identicas as que fizemos no `BarChartView`:
 
-2. **Ajustar margem esquerda do BarChart** de `0` para `10`, evitando que o texto do eixo Y fique colado na borda do container.
+1. **Margem esquerda do LineChart**: de `0` para `10`
+2. **Largura do YAxis**: de `60` fixo para `Math.round(80 * m)` (dinamico com a escala de fonte)
 
-Essas duas alteracoes garantem que os rotulos do eixo Y fiquem sempre visiveis independentemente do tamanho da fonte ou da magnitude dos valores.
+O multiplicador `m` ja esta calculado corretamente nessa funcao (linha 239), entao basta aplicar nos dois locais.
 
