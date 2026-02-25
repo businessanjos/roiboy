@@ -286,23 +286,10 @@ async function fetchTasksRecords(
   filters: any,
   groupName?: string
 ): Promise<DrilldownRecord[]> {
-  // Fetch activity types for Call Comercial
-  const { data: activityTypes } = await supabase
-    .from('activity_types')
-    .select('id, name')
-    .eq('account_id', accountId)
-    .in('name', ['Call Comercial Agendada', 'Call Comercial Concluída']);
-
-  if (!activityTypes || activityTypes.length === 0) return [];
-
-  const typeIds = activityTypes.map(at => at.id);
-
   let baseQuery = supabase
     .from('internal_tasks')
     .select('id, title, activity_type_id, completed_at, assigned_to, due_date, created_at, users!internal_tasks_assigned_to_fkey(name), activity_types!internal_tasks_activity_type_id_fkey(name)')
-    .eq('account_id', accountId)
-    .in('activity_type_id', typeIds)
-    .not('assigned_to', 'is', null);
+    .eq('account_id', accountId);
 
   if (filters.startDate) {
     const startDate = filters.startDate.split('T')[0];
@@ -321,22 +308,36 @@ async function fetchTasksRecords(
 
   while (true) {
     const { data, error } = await baseQuery.order('due_date', { ascending: false }).range(from, from + pageSize - 1);
-
-    if (error) {
-      console.error('Error fetching tasks drilldown:', error);
-      return [];
-    }
-
+    if (error) { console.error('Error fetching tasks drilldown:', error); return []; }
     allData = allData.concat(data || []);
     if (!data || data.length < pageSize) break;
     from += pageSize;
   }
 
-  // Filter by group name (user name) if provided
-  if (groupName) {
+  // Filter by group name if provided
+  if (groupName && config.dimension) {
     allData = allData.filter((task: any) => {
-      const userName = (task.users as any)?.name;
-      return userName === groupName;
+      let taskGroup: string;
+      switch (config.dimension.field) {
+        case 'activity_type':
+          taskGroup = (task.activity_types as any)?.name || 'Sem Tipo';
+          break;
+        case 'assigned_to':
+          taskGroup = (task.users as any)?.name || 'Sem Responsável';
+          break;
+        case 'status':
+          taskGroup = task.completed_at ? 'Concluída' : 'Pendente';
+          break;
+        case 'due_date':
+        case 'created_at': {
+          const dateVal = task[config.dimension.field];
+          taskGroup = dateVal ? formatDateGroup(dateVal, config.dimension.dateGrouping || 'month') : 'Sem Data';
+          break;
+        }
+        default:
+          taskGroup = (task.users as any)?.name || '';
+      }
+      return taskGroup === groupName;
     });
   }
 

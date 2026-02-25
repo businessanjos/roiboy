@@ -17,10 +17,11 @@ export interface AggregatedDataPoint {
 
 interface UseVisualDataParams {
   config: VisualConfig | null;
+  chartType?: string;
   enabled?: boolean;
 }
 
-export function useVisualData({ config, enabled = true }: UseVisualDataParams) {
+export function useVisualData({ config, chartType, enabled = true }: UseVisualDataParams) {
   const { currentUser } = useCurrentUser();
   const { filters } = useInsightsFilters();
 
@@ -49,7 +50,11 @@ export function useVisualData({ config, enabled = true }: UseVisualDataParams) {
           result = await fetchProductsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
           break;
         case 'tasks':
-          result = await fetchTasksCallCommercialData(currentUser.account_id, filters);
+          if (chartType === 'call_commercial') {
+            result = await fetchTasksCallCommercialData(currentUser.account_id, filters);
+          } else {
+            result = await fetchTasksData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
+          }
           break;
         default:
           result = [];
@@ -1191,7 +1196,96 @@ function fillMissingDates(
   });
 }
 
-// Fetch tasks data for Call Comercial visual
+// Generic task data fetcher supporting all dimensions
+async function fetchTasksData(
+  accountId: string,
+  measure: VisualConfig['measure'],
+  dimension: VisualConfig['dimension'],
+  filters: any,
+  dateDisplayFormat: DateDisplayFormat
+): Promise<AggregatedDataPoint[]> {
+  let baseQuery = supabase
+    .from('internal_tasks')
+    .select('id, title, activity_type_id, completed_at, assigned_to, due_date, created_at, users!internal_tasks_assigned_to_fkey(name), activity_types!internal_tasks_activity_type_id_fkey(name)')
+    .eq('account_id', accountId);
+
+  // Apply date filters on due_date
+  if (filters.startDate) {
+    const startDate = filters.startDate.split('T')[0];
+    baseQuery = baseQuery.gte('due_date', startDate);
+  }
+  if (filters.endDate) {
+    const endDate = filters.endDate.split('T')[0];
+    baseQuery = baseQuery.lte('due_date', endDate);
+  }
+  if (filters.userId && filters.userId !== 'all') {
+    baseQuery = baseQuery.eq('assigned_to', filters.userId);
+  }
+
+  // Paginate
+  let allTasks: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+
+  while (true) {
+    const { data, error } = await baseQuery.order('due_date', { ascending: false }).range(from, from + pageSize - 1);
+    if (error) { console.error('Error fetching tasks:', error); return []; }
+    allTasks = allTasks.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  // Scorecard (global total)
+  if (dimension.field === '_total') {
+    return [{ name: 'Total', value: allTasks.length, count: allTasks.length }];
+  }
+
+  // Group by dimension
+  const groups = new Map<string, number>();
+
+  for (const task of allTasks) {
+    let groupKey: string;
+
+    switch (dimension.field) {
+      case 'activity_type':
+        groupKey = (task.activity_types as any)?.name || 'Sem Tipo';
+        break;
+      case 'assigned_to':
+        groupKey = (task.users as any)?.name || 'Sem Responsável';
+        break;
+      case 'status':
+        groupKey = task.completed_at ? 'Concluída' : 'Pendente';
+        break;
+      case 'due_date':
+      case 'created_at': {
+        const dateVal = task[dimension.field];
+        if (!dateVal) { groupKey = 'Sem Data'; break; }
+        groupKey = formatDateGroup(dateVal, dimension.dateGrouping || 'month', dateDisplayFormat);
+        break;
+      }
+      default:
+        groupKey = 'Outros';
+    }
+
+    groups.set(groupKey, (groups.get(groupKey) || 0) + 1);
+  }
+
+  const result: AggregatedDataPoint[] = Array.from(groups.entries()).map(([name, count]) => ({
+    name,
+    value: count,
+    count,
+  }));
+
+  if (dimension.type === 'date') {
+    result.sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    result.sort((a, b) => b.value - a.value);
+  }
+
+  return result;
+}
+
+// Fetch tasks data for Call Comercial visual (legacy, used by call_commercial chart type)
 async function fetchTasksCallCommercialData(
   accountId: string,
   filters: any
@@ -1213,7 +1307,6 @@ async function fetchTasksCallCommercialData(
 
   if (!agendadaType && !concluidaType) return [];
 
-  // Fetch tasks for both types with user info
   const typeIds = [agendadaType?.id, concluidaType?.id].filter(Boolean) as string[];
 
   let baseQuery = supabase
@@ -1223,7 +1316,6 @@ async function fetchTasksCallCommercialData(
     .in('activity_type_id', typeIds)
     .not('assigned_to', 'is', null);
 
-  // Apply date filters on due_date
   if (filters.startDate) {
     const startDate = filters.startDate.split('T')[0];
     baseQuery = baseQuery.gte('due_date', startDate);
@@ -1232,58 +1324,35 @@ async function fetchTasksCallCommercialData(
     const endDate = filters.endDate.split('T')[0];
     baseQuery = baseQuery.lte('due_date', endDate);
   }
-  // Apply user filter
   if (filters.userId && filters.userId !== 'all') baseQuery = baseQuery.eq('assigned_to', filters.userId);
 
-  // Paginate to fetch ALL records
   let allTasks: any[] = [];
   let from = 0;
   const pageSize = 1000;
 
   while (true) {
     const { data, error: tasksError } = await baseQuery.order('due_date', { ascending: false }).range(from, from + pageSize - 1);
-
-    if (tasksError) {
-      console.error('Error fetching tasks:', tasksError);
-      return [];
-    }
-
+    if (tasksError) { console.error('Error fetching tasks:', tasksError); return []; }
     allTasks = allTasks.concat(data || []);
     if (!data || data.length < pageSize) break;
     from += pageSize;
   }
 
-  // Group by user
   const userMap = new Map<string, { scheduled: number; completed: number }>();
 
   for (const task of allTasks) {
     const userName = (task.users as any)?.name;
     if (!userName) continue;
-
-    if (!userMap.has(userName)) {
-      userMap.set(userName, { scheduled: 0, completed: 0 });
-    }
-
+    if (!userMap.has(userName)) userMap.set(userName, { scheduled: 0, completed: 0 });
     const entry = userMap.get(userName)!;
-
-    if (task.activity_type_id === agendadaType?.id && !task.completed_at) {
-      entry.scheduled++;
-    } else if (task.activity_type_id === concluidaType?.id && task.completed_at) {
-      entry.completed++;
-    }
+    if (task.activity_type_id === agendadaType?.id && !task.completed_at) entry.scheduled++;
+    else if (task.activity_type_id === concluidaType?.id && task.completed_at) entry.completed++;
   }
 
-  // Convert to AggregatedDataPoint format
   const result: AggregatedDataPoint[] = [];
   for (const [name, { scheduled, completed }] of userMap) {
-    result.push({
-      name,
-      value: scheduled,  // agendadas em aberto
-      count: completed,   // concluídas
-    });
+    result.push({ name, value: scheduled, count: completed });
   }
-
-  // Sort by total (completed) descending
   result.sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
 
   return result;
