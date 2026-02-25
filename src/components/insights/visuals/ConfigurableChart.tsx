@@ -240,7 +240,7 @@ function LineChartView({
   
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={data} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
+      <LineChart data={data} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis
           dataKey="name"
@@ -255,7 +255,7 @@ function LineChartView({
           tickFormatter={(value) => formatValueCompact(value, formatting.type)}
           tick={{ fontSize: Math.round(11 * m) }}
           className="text-muted-foreground"
-          width={60}
+          width={Math.round(80 * m)}
         />
         <Tooltip content={<ChartTooltip formatting={formatting} showCount />} />
         <Line
