@@ -1,36 +1,30 @@
 
 
-## Intercalar rotulos de dados no grafico de linha
+## Corrigir rotulos no grafico de linha
 
-### Ideia
+### Problemas identificados
 
-Em vez de ocultar todos os rotulos quando ha muitos pontos, vamos **intercalar** a exibicao: mostrar no 1o ponto, ocultar no 2o, mostrar no 3o, e assim por diante. Isso mantem a informacao visual sem sobreposicao.
+1. **Rotulos "R$0" exibidos**: Pontos com valor zero mostram "R$0" desnecessariamente, poluindo o grafico.
+2. **Ultimo valor cortado**: O rotulo do ultimo ponto (ex: "R$297.600") e cortado pela borda direita do container porque a margem direita e de apenas `10px` e o `textAnchor` e `"middle"`, fazendo metade do texto ultrapassar o limite.
 
 ### Solucao
 
 **Arquivo:** `src/components/insights/visuals/ConfigurableChart.tsx` - Funcao `LineChartView`
 
-Substituir a condicao `data.length <= 15` por um `formatter` customizado no `LabelList` que retorna o valor formatado apenas para indices pares (0, 2, 4...) e retorna string vazia para indices impares (1, 3, 5...).
-
-Como o `LabelList` do Recharts nao passa o indice diretamente ao `formatter`, a abordagem sera usar um `content` customizado (render prop) no `LabelList` que recebe o `index` e decide se renderiza ou nao.
-
-### Detalhe tecnico
+#### 1. Ocultar rotulos com valor zero
+Na funcao `content` do `LabelList`, adicionar uma condicao para retornar `null` quando o valor for `0` (ou falsy):
 
 ```tsx
-<LabelList
-  dataKey="value"
-  position="top"
-  content={({ x, y, value, index }) => {
-    if (typeof index !== 'number' || index % 2 !== 0) return null;
-    return (
-      <text x={x} y={(y as number) - 8} textAnchor="middle"
-        style={{ fontSize: Math.round(10 * m), fill: 'hsl(var(--foreground))' }}>
-        {formatValueCompact(value as number, formatting.type)}
-      </text>
-    );
-  }}
-/>
+if (typeof index !== 'number' || index % 2 !== 0) return null;
+if (!value || value === 0) return null; // Nao exibir zeros
 ```
 
-Isso tambem sera aplicado ao `BarChartView` para manter consistencia, intercalando os rotulos quando `data.length > 10`.
+#### 2. Aumentar margem direita para evitar corte
+Aumentar a margem direita do `LineChart` de `10` para `40`, dando espaco suficiente para o rotulo do ultimo ponto:
+
+```tsx
+<LineChart data={data} margin={{ top: 20, right: 40, left: 10, bottom: 20 }}>
+```
+
+Essas duas mudancas sao simples e localizadas na mesma funcao.
 
