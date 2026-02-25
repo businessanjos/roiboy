@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
     // Fetch form to get account_id, title and validate
     const { data: form, error: formError } = await supabase
       .from("forms")
-      .select("id, account_id, is_active, require_client_info, title")
+      .select("id, account_id, is_active, require_client_info, title, fields")
       .eq("id", formId)
       .eq("is_active", true)
       .maybeSingle();
@@ -321,6 +321,66 @@ Deno.serve(async (req) => {
         client_id: resolvedClientId 
       }
     });
+
+    // Save responses to custom field values if client is linked and form has fields
+    if (resolvedClientId && form.fields && Array.isArray(form.fields) && form.fields.length > 0) {
+      try {
+        const { data: fieldDefs } = await supabase
+          .from("custom_fields")
+          .select("id, field_type")
+          .in("id", form.fields)
+          .eq("is_active", true);
+
+        if (fieldDefs && fieldDefs.length > 0) {
+          const upserts = [];
+          for (const fieldDef of fieldDefs) {
+            const value = sanitizedResponses[fieldDef.id];
+            if (value === undefined || value === null || value === "") continue;
+
+            const row: Record<string, unknown> = {
+              account_id: form.account_id,
+              client_id: resolvedClientId,
+              field_id: fieldDef.id,
+            };
+
+            switch (fieldDef.field_type) {
+              case "boolean":
+                row.value_boolean = Boolean(value);
+                break;
+              case "number":
+              case "currency":
+              case "rating":
+                row.value_number = Number(value) || null;
+                break;
+              case "date":
+                row.value_date = value;
+                break;
+              case "multi_select":
+                row.value_json = value;
+                break;
+              default:
+                row.value_text = String(value);
+            }
+
+            upserts.push(row);
+          }
+
+          if (upserts.length > 0) {
+            const { error: upsertError } = await supabase
+              .from("client_field_values")
+              .upsert(upserts, { onConflict: "client_id,field_id" });
+
+            if (upsertError) {
+              console.warn(`[${clientIP}] Error saving field values:`, upsertError);
+            } else {
+              console.log(`[${clientIP}] Saved ${upserts.length} field values for client ${resolvedClientId}`);
+            }
+          }
+        }
+      } catch (fieldErr) {
+        console.warn(`[${clientIP}] Error processing field values:`, fieldErr);
+      }
+    }
 
     // Mark form send as responded if client linked
     if (resolvedClientId) {
