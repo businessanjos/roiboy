@@ -249,7 +249,7 @@ function LineChartView({
           angle={-45}
           textAnchor="end"
           height={60}
-          interval={0}
+          interval="preserveStartEnd"
         />
         <YAxis
           tickFormatter={(value) => formatValueCompact(value, formatting.type)}
@@ -266,7 +266,7 @@ function LineChartView({
           dot={{ fill: primaryColor, strokeWidth: 2 }}
           activeDot={{ r: 6, fill: primaryColor, onClick: (_, e: any) => onDrilldown?.(e?.payload?.name) }}
         >
-          {appearance.showDataLabels && (
+          {appearance.showDataLabels && data.length <= 15 && (
             <LabelList 
               dataKey="value" 
               position="top" 
