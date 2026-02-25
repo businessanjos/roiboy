@@ -116,6 +116,7 @@ function BarChartView({
   onDrilldown?: (groupName?: string) => void;
 }) {
   const colors = getChartColors(appearance.colorPalette);
+  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
   
   return (
     <ResponsiveContainer width="100%" height="100%">
@@ -123,7 +124,7 @@ function BarChartView({
         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
         <XAxis
           dataKey="name"
-          tick={{ fontSize: 10 }}
+          tick={{ fontSize: Math.round(10 * m) }}
           className="text-muted-foreground"
           angle={-35}
           textAnchor="end"
@@ -132,7 +133,7 @@ function BarChartView({
         />
         <YAxis
           tickFormatter={(value) => formatValueCompact(value, formatting.type)}
-          tick={{ fontSize: 11 }}
+          tick={{ fontSize: Math.round(11 * m) }}
           className="text-muted-foreground"
           width={60}
         />
@@ -148,7 +149,7 @@ function BarChartView({
               dataKey="value" 
               position="top" 
               formatter={(value: number) => formatValueCompact(value, formatting.type)}
-              style={{ fontSize: 10, fill: 'hsl(var(--foreground))' }}
+              style={{ fontSize: Math.round(10 * m), fill: 'hsl(var(--foreground))' }}
             />
           )}
           {data.map((entry, index) => (
