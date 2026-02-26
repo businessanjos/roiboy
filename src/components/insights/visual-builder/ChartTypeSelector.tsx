@@ -1,4 +1,4 @@
-import { BarChart3, LineChart, PieChart, Hash, Trophy, Phone, Gauge, Activity, MapPin } from "lucide-react";
+import { BarChart3, LineChart, PieChart, Hash, Trophy, Phone, Gauge, Activity, MapPin, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { ChartType, CHART_TYPE_OPTIONS } from "./types";
@@ -21,6 +21,7 @@ const ICON_MAP: Record<ChartType, React.ElementType> = {
   gauge: Gauge,
   indicator: Activity,
   bubble_map: MapPin,
+  funnel: Filter,
 };
 
 export function ChartTypeSelector({ value, onChange }: ChartTypeSelectorProps) {

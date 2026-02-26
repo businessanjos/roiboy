@@ -71,6 +71,23 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
         );
       }
 
+      // For funnel with stage_name, sort by pipeline display_order
+      if (chartType === 'funnel' && dimension.field === 'stage_name' && result.length > 0) {
+        const { data: stages } = await supabase
+          .from('deal_stages')
+          .select('name, display_order')
+          .eq('account_id', currentUser.account_id)
+          .order('display_order', { ascending: true });
+
+        if (stages && stages.length > 0) {
+          const orderMap = new Map(stages.map(s => [s.name, s.display_order]));
+          result.sort((a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
+        }
+      } else if (chartType === 'funnel' && dimension.type !== 'date') {
+        // For non-stage funnels, sort descending by value (largest first)
+        result.sort((a, b) => b.value - a.value);
+      }
+
       return result;
     },
     enabled: enabled && !!config && !!currentUser?.account_id,
