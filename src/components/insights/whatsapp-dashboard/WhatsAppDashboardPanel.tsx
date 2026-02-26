@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Clock, Filter, TrendingUp, Zap, Monitor, Maximize2, Minimize2, X } from "lucide-react";
+import { Clock, Filter, TrendingUp, Zap, Monitor, Maximize2, Minimize2, X, Plus, EyeOff, RotateCcw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWhatsAppDashboardData } from "@/hooks/useWhatsAppDashboardData";
@@ -15,16 +15,54 @@ import { TimeSavedCard } from "./TimeSavedCard";
 import { InsightsFilterBar } from "../InsightsFilterBar";
 import { CollapsibleSection } from "./CollapsibleSection";
 import { ZoomControls } from "@/components/ui/zoom-controls";
+import { InsightsGrid } from "../grid/InsightsGrid";
+import type { InsightsVisual } from "@/hooks/useInsightsDashboards";
 
-export function WhatsAppDashboardPanel() {
+type SectionId = 'pipeline' | 'funnel_time' | 'conversion' | 'leads' | 'engagement' | 'time_saved';
+
+interface WhatsAppDashboardPanelProps {
+  onAddVisual?: () => void;
+  visuals?: InsightsVisual[];
+  onLayoutChange?: (layouts: Array<{ id: string; layout: any }>) => void;
+  isLoadingVisuals?: boolean;
+}
+
+export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChange, isLoadingVisuals }: WhatsAppDashboardPanelProps) {
   const { data, isLoading } = useWhatsAppDashboardData();
 
   const [hiddenFunnelStages, setHiddenFunnelStages] = useState<Set<string>>(new Set());
+  const [hiddenSections, setHiddenSections] = useState<Set<SectionId>>(new Set());
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusZoom, setFocusZoom] = useState(100);
   const focusModeRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+
+  const hasCustomVisuals = visuals.length > 0;
+  const hasHiddenSections = hiddenSections.size > 0;
+
+  const toggleSection = (id: SectionId) => {
+    setHiddenSections(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const restoreAllSections = () => setHiddenSections(new Set());
+
+  const hideButton = (id: SectionId) => (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+      onClick={(e) => { e.stopPropagation(); toggleSection(id); }}
+      title="Ocultar seção"
+    >
+      <EyeOff className="h-4 w-4" />
+    </Button>
+  );
 
   // ESC listener
   useEffect(() => {
@@ -77,132 +115,131 @@ export function WhatsAppDashboardPanel() {
     cumulativeCounts[i] = stages[i].count + belowTotal;
   }
 
-  // Calculate stage to stage conversion rates using cumulative values
   const stageConversions = stages.length >= 2 
     ? stages.slice(0, 2).map((stage, index) => {
         if (index === 0) {
           const fromCumulative = cumulativeCounts[0] || 0;
           const toCumulative = cumulativeCounts[1] || 0;
           const rate = fromCumulative > 0 ? Math.round((toCumulative / fromCumulative) * 100) : 0;
-          return {
-            from: stages[0].name,
-            to: stages[1]?.name || '',
-            rate,
-            fromCount: fromCumulative,
-            toCount: toCumulative,
-          };
+          return { from: stages[0].name, to: stages[1]?.name || '', rate, fromCount: fromCumulative, toCount: toCumulative };
         } else {
           const fromCumulative = cumulativeCounts[1] || 0;
           const toCumulative = cumulativeCounts[2] || 0;
           const rate = fromCumulative > 0 ? Math.round((toCumulative / fromCumulative) * 100) : 0;
-          return {
-            from: stages[1].name,
-            to: stages[2]?.name || '',
-            rate,
-            fromCount: fromCumulative,
-            toCount: toCumulative,
-          };
+          return { from: stages[1].name, to: stages[2]?.name || '', rate, fromCount: fromCumulative, toCount: toCumulative };
         }
       })
     : [];
 
+  const sectionVisible = (id: SectionId) => !hiddenSections.has(id);
+
   const dashboardContent = (
     <>
-      {/* Pipeline Section */}
-      <PipelineCards 
-        stages={data?.stageDistribution || []} 
-        isLoading={isLoading}
-      />
+      {sectionVisible('pipeline') && (
+        <CollapsibleSection
+          title="Pipeline de Conversão"
+          subtitle="Distribuição por etapa"
+          icon={<Filter className="h-5 w-5 text-primary" />}
+          rightContent={hideButton('pipeline')}
+        >
+          <PipelineCards stages={data?.stageDistribution || []} isLoading={isLoading} />
+        </CollapsibleSection>
+      )}
 
-      {/* Funnel & Time per Stage */}
-      <CollapsibleSection
-        title="Funil e Tempo"
-        subtitle="Análise de velocidade e eficiência"
-        icon={<Filter className="h-5 w-5 text-primary" />}
-      >
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          <div className="lg:col-span-3">
-            <SalesFunnelChart 
-              stages={data?.stageDistribution || []} 
-              isLoading={isLoading}
-              hiddenStages={hiddenFunnelStages}
-              onHiddenStagesChange={setHiddenFunnelStages}
-            />
+      {sectionVisible('funnel_time') && (
+        <CollapsibleSection
+          title="Funil e Tempo"
+          subtitle="Análise de velocidade e eficiência"
+          icon={<Filter className="h-5 w-5 text-primary" />}
+          rightContent={hideButton('funnel_time')}
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div className="lg:col-span-3">
+              <SalesFunnelChart 
+                stages={data?.stageDistribution || []} 
+                isLoading={isLoading}
+                hiddenStages={hiddenFunnelStages}
+                onHiddenStagesChange={setHiddenFunnelStages}
+              />
+            </div>
+            <div className="lg:col-span-2">
+              <TimePerStageCard 
+                transitions={data?.avgTimePerTransition || []}
+                totalCycleDays={data?.totalCycleDays || 0}
+                isLoading={isLoading}
+              />
+            </div>
           </div>
-          <div className="lg:col-span-2">
-            <TimePerStageCard 
-              transitions={data?.avgTimePerTransition || []}
-              totalCycleDays={data?.totalCycleDays || 0}
-              isLoading={isLoading}
-            />
-          </div>
-        </div>
-      </CollapsibleSection>
+        </CollapsibleSection>
+      )}
 
-      {/* Conversion Score Cards */}
-      <CollapsibleSection
-        title="Taxas de Conversão"
-        subtitle="Indicadores de performance do funil"
-        icon={<TrendingUp className="h-5 w-5 text-primary" />}
-      >
-        <ConversionScoreCards 
-          overallConversion={data?.overallConversion || 0}
-          stageConversions={stageConversions}
-          wonDeals={data?.wonDeals || 0}
-          totalDeals={data?.totalDeals || 0}
-          isLoading={isLoading}
-        />
-      </CollapsibleSection>
+      {sectionVisible('conversion') && (
+        <CollapsibleSection
+          title="Taxas de Conversão"
+          subtitle="Indicadores de performance do funil"
+          icon={<TrendingUp className="h-5 w-5 text-primary" />}
+          rightContent={hideButton('conversion')}
+        >
+          <ConversionScoreCards 
+            overallConversion={data?.overallConversion || 0}
+            stageConversions={stageConversions}
+            wonDeals={data?.wonDeals || 0}
+            totalDeals={data?.totalDeals || 0}
+            isLoading={isLoading}
+          />
+        </CollapsibleSection>
+      )}
 
-      {/* Leads Section */}
-      <LeadsByDayChart 
-        data={data?.leadsByDay || []} 
-        isLoading={isLoading}
-      />
+      {sectionVisible('leads') && (
+        <CollapsibleSection
+          title="Leads por Dia"
+          subtitle="Volume de novos leads"
+          icon={<TrendingUp className="h-5 w-5 text-primary" />}
+          rightContent={hideButton('leads')}
+        >
+          <LeadsByDayChart data={data?.leadsByDay || []} isLoading={isLoading} />
+        </CollapsibleSection>
+      )}
 
-      {/* WhatsApp Engagement Section */}
-      <CollapsibleSection
-        title="Análise de Engajamento"
-        subtitle="Padrões de resposta por período e dia"
-        icon={<Clock className="h-5 w-5 text-primary" />}
-      >
-        <Card>
-          <CardContent className="pt-4 space-y-6">
-            <EngagementByPeriodCards 
-              data={data?.engagementByPeriod || []}
-              isLoading={isLoading}
-            />
-            <EngagementByDayCards 
-              data={data?.engagementByDayOfWeek || []}
-              isLoading={isLoading}
-            />
-          </CardContent>
-        </Card>
-      </CollapsibleSection>
+      {sectionVisible('engagement') && (
+        <CollapsibleSection
+          title="Análise de Engajamento"
+          subtitle="Padrões de resposta por período e dia"
+          icon={<Clock className="h-5 w-5 text-primary" />}
+          rightContent={hideButton('engagement')}
+        >
+          <Card>
+            <CardContent className="pt-4 space-y-6">
+              <EngagementByPeriodCards data={data?.engagementByPeriod || []} isLoading={isLoading} />
+              <EngagementByDayCards data={data?.engagementByDayOfWeek || []} isLoading={isLoading} />
+            </CardContent>
+          </Card>
+        </CollapsibleSection>
+      )}
 
-      {/* Time Saved Card */}
-      <CollapsibleSection
-        title="Tempo Economizado"
-        subtitle="Impacto da automação"
-        icon={<Zap className="h-5 w-5 text-primary" />}
-      >
-        <TimeSavedCard 
-          totalMessages={data?.totalMessages || 0}
-          isLoading={isLoading}
-        />
-      </CollapsibleSection>
+      {sectionVisible('time_saved') && (
+        <CollapsibleSection
+          title="Tempo Economizado"
+          subtitle="Impacto da automação"
+          icon={<Zap className="h-5 w-5 text-primary" />}
+          rightContent={hideButton('time_saved')}
+        >
+          <TimeSavedCard totalMessages={data?.totalMessages || 0} isLoading={isLoading} />
+        </CollapsibleSection>
+      )}
+
+      {/* Custom visuals grid */}
+      {hasCustomVisuals && onLayoutChange && (
+        <InsightsGrid visuals={visuals} onLayoutChange={onLayoutChange} />
+      )}
     </>
   );
 
   // Focus mode overlay
   const focusModeOverlay = isFocusMode
     ? createPortal(
-        <div
-          ref={focusModeRef}
-          className="fixed inset-0 z-[9999] bg-background overflow-auto"
-        >
+        <div ref={focusModeRef} className="fixed inset-0 z-[9999] bg-background overflow-auto">
           <div className="p-6 space-y-6">
-            {/* Focus Mode Header */}
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-3xl font-bold">Dashboard Operacional - WhatsApp</h1>
@@ -211,24 +248,16 @@ export function WhatsAppDashboardPanel() {
               <div className="flex items-center gap-3">
                 <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} />
                 <Button variant="outline" size="icon" onClick={toggleFullscreen}>
-                  {isFullscreen ? (
-                    <Minimize2 className="h-4 w-4" />
-                  ) : (
-                    <Maximize2 className="h-4 w-4" />
-                  )}
+                  {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                 </Button>
                 <Button variant="outline" size="icon" onClick={() => setIsFocusMode(false)}>
                   <X className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-
             <div ref={contentRef} style={{ zoom: focusZoom / 100 }}>
-            {/* Filters */}
-            <InsightsFilterBar />
-
-            {/* Dashboard Content */}
-            {dashboardContent}
+              <InsightsFilterBar />
+              {dashboardContent}
             </div>
           </div>
         </div>,
@@ -237,7 +266,7 @@ export function WhatsAppDashboardPanel() {
     : null;
 
   return (
-    <div className="flex-1 overflow-auto">
+    <>
       {focusModeOverlay}
       <div className="p-4 md:p-6 space-y-6">
         {/* Header */}
@@ -246,10 +275,24 @@ export function WhatsAppDashboardPanel() {
             <h1 className="text-2xl font-bold">Dashboard Operacional - WhatsApp</h1>
             <p className="text-sm text-muted-foreground">Métricas de agendamento e eficiência operacional</p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
-            <Monitor className="h-4 w-4 mr-2" />
-            Modo Foco
-          </Button>
+          <div className="flex items-center gap-2">
+            {hasHiddenSections && (
+              <Button variant="ghost" size="sm" onClick={restoreAllSections}>
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Restaurar seções
+              </Button>
+            )}
+            <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
+              <Monitor className="h-4 w-4 mr-2" />
+              Modo Foco
+            </Button>
+            {onAddVisual && (
+              <Button size="sm" onClick={onAddVisual} disabled={isLoadingVisuals}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Visual
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Filters */}
@@ -258,6 +301,6 @@ export function WhatsAppDashboardPanel() {
         {/* Dashboard Content */}
         {dashboardContent}
       </div>
-    </div>
+    </>
   );
 }
