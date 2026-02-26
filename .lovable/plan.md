@@ -1,37 +1,62 @@
 
-## Corrigir filtro de categorias ocultas para graficos empilhados (bar_stacked)
+
+## Simplificar fluxo de criacao do Funil
 
 ### Problema
 
-O visual "Leads por Faturamento Atual" e do tipo `bar_stacked`. O filtro `hiddenCategories` so e aplicado ao `processedData`, que filtra dados vindos do `useVisualData`. Porem, para graficos empilhados, o `useVisualData` esta desabilitado -- os dados vem do `useStackedVisualData` e sao passados diretamente ao `ConfigurableChart` sem nenhuma filtragem por `hiddenCategories`.
-
-Resultado: desmarcar "Nao informado" nas configuracoes salva corretamente no banco (confirmado via query), mas o filtro nunca e aplicado aos dados exibidos.
+O funil atualmente passa pelos mesmos 3 passos dos outros visuais (tipo -> metrica -> agrupamento), oferecendo opcoes que nao fazem sentido para ele, como "Valor Total (R$)" ou "Ticket Medio". O funil mede **processos sequenciais** -- quantos itens passaram por cada etapa -- nao metricas financeiras.
 
 ### Solucao
 
-**Arquivo:** `src/components/insights/visuals/ConfigurableVisualCard.tsx`
+Transformar o funil em um visual de 2 passos (como ranking, gauge, etc.) com um fluxo dedicado:
 
-Adicionar um memo que filtra `stackedResult.data` removendo entradas cujo `name` esteja em `hiddenCategories`, analogo ao que ja e feito para `processedData`. Os `seriesKeys` permanecem inalterados (series internas nao sao afetadas).
+- **Passo 1**: Selecionar tipo de visual (Funil)
+- **Passo 2**: Escolher qual processo medir + titulo
 
-```typescript
-const processedStackedData = useMemo(() => {
-  if (!stackedResult?.data) return undefined;
-  if (!config?.hiddenCategories?.length) return stackedResult;
-  return {
-    data: stackedResult.data.filter(
-      (item) => !config.hiddenCategories!.includes(item.name)
-    ),
-    seriesKeys: stackedResult.seriesKeys,
-  };
-}, [stackedResult, config?.hiddenCategories]);
-```
+No passo 2, o usuario escolhe entre processos disponiveis:
 
-E atualizar as referencias de `stackedResult` para `processedStackedData` nas props do `ConfigurableChart` (linhas 208-209).
+| Processo | Descricao | Config gerada |
+|----------|-----------|---------------|
+| Etapas de Vendas | Quantos negocios estao/passaram por cada etapa do pipeline | dataSource: deals, aggregation: count, dimension: stage_name |
+| Etapas de Tarefas | Quantas tarefas por status (Pendente, Em Andamento, Concluida) | dataSource: tasks, aggregation: count, dimension: status |
 
-### Impacto
+Cada processo gera automaticamente a configuracao correta sem o usuario precisar escolher metrica ou agrupamento.
 
-Corrige o filtro de categorias ocultas para TODOS os visuais do tipo `bar_stacked`, nao apenas este. Nenhum outro arquivo precisa ser alterado.
+### Arquivo alterado
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/components/insights/visuals/ConfigurableVisualCard.tsx` | Adicionar memo para filtrar stackedData por hiddenCategories e usar o resultado filtrado na renderizacao |
+| `src/components/insights/AddVisualModal.tsx` | Adicionar fluxo dedicado de 2 passos para o funil com selecao de processo |
+
+### Detalhes tecnicos
+
+**1. totalSteps** -- Incluir `'funnel'` na lista de chart types com 2 passos (junto com ranking, gauge, etc.)
+
+**2. Novo estado** -- `funnelProcess` com tipo `'deal_stages' | 'task_status'`
+
+**3. Passo 2 do funil** -- Renderizar opcoes de processo (cards selecionaveis como os do gauge):
+- "Etapas de Vendas" -- Progresso dos negocios pelo pipeline de vendas
+- "Etapas de Tarefas" -- Distribuicao das tarefas por status
+
+**4. handleCreate para funnel** -- Gerar config fixa baseada no processo escolhido:
+
+```text
+deal_stages:
+  dataSource: 'deals'
+  measure: { field: '', aggregation: 'count' }
+  dimension: { field: 'stage_name', type: 'text' }
+  formatting: { type: 'decimal', decimals: 0 }
+  titulo auto: "Funil de Vendas"
+
+task_status:
+  dataSource: 'tasks'
+  measure: { field: '', aggregation: 'count' }
+  dimension: { field: 'status', type: 'text' }
+  formatting: { type: 'decimal', decimals: 0 }
+  titulo auto: "Funil de Tarefas"
+```
+
+**5. canCreate para funnel** -- `funnelProcess !== null && title.trim() !== '' && activeDashboardId !== null`
+
+**6. Auto-generate title** -- Atualizar o useEffect de titulo para gerar "Funil de Vendas" ou "Funil de Tarefas" conforme o processo selecionado
+
