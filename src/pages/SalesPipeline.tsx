@@ -24,6 +24,7 @@ import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsMana
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { PipelineFilterButton } from "@/components/sales/PipelineFilterButton";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
+import { PipelineExportDialog } from "@/components/sales/PipelineExportDialog";
 import { ActiveFilter, applyFilterToDeals } from "@/hooks/usePipelineFilters";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,6 +53,7 @@ import {
   Target,
   Search,
   Calendar,
+  Download,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -96,6 +98,7 @@ export default function SalesPipeline() {
   const [isNewDealOpen, setIsNewDealOpen] = useState(false);
   const [isStagesManagerOpen, setIsStagesManagerOpen] = useState(false);
   const [isFieldsDialogOpen, setIsFieldsDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeTab, setActiveTab] = useState('open');
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
@@ -722,6 +725,14 @@ export default function SalesPipeline() {
                     Campos
                   </Button>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsExportDialogOpen(true)}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportar
+                </Button>
                 <div className="flex items-center border rounded-lg overflow-hidden">
                   <Button
                     variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
@@ -986,6 +997,14 @@ export default function SalesPipeline() {
         open={isFieldsDialogOpen}
         onOpenChange={setIsFieldsDialogOpen}
         sectorContext="deals"
+      />
+
+      {/* Export Dialog */}
+      <PipelineExportDialog
+        open={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
+        stages={stages}
+        salesUsers={salesUsers}
       />
 
       {/* Required Fields Modal for Won/Lost outcomes */}
