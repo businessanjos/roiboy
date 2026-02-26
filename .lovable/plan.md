@@ -1,26 +1,51 @@
 
+## Adicionar etapa "Ganhos" ao Funil de Vendas
 
-## Remover "Funil de Vendas" do painel Conversas/WhatsApp
+### Objetivo
 
-### Alteracoes
+Inserir automaticamente uma ultima barra no funil de "Etapas de Vendas" mostrando quantos negocios foram efetivamente convertidos em vendas (status = 'won'), completando a visao do processo de ponta a ponta.
 
-**Arquivo:** `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`
+### Solucao
 
-1. Remover o import de `SalesFunnelChart`
-2. Remover o import de `Filter` (usado apenas no icone da secao "Funil e Tempo")
-3. Remover o state `hiddenFunnelStages` (usado apenas pelo SalesFunnelChart)
-4. Na secao "Funil e Tempo", remover o grid 60/40 e o `SalesFunnelChart`, mantendo apenas o `TimePerStageCard` em largura total
-5. Renomear a secao de "Funil e Tempo" para "Tempo por Etapa" ja que o funil foi removido
+**Arquivo:** `src/hooks/useVisualData.ts`
 
-A secao ficara assim:
+Apos a ordenacao do funil por `display_order` (linha 87), consultar a contagem de negocios ganhos e adicionar um item "Ganhos" ao final do array `result`:
 
 ```text
-<CollapsibleSection title="Tempo por Etapa" subtitle="Analise de velocidade e eficiencia" icon={<Clock .../>}>
-  <TimePerStageCard ... />
-</CollapsibleSection>
+// Apos o sort por display_order, buscar deals ganhos
+const { count: wonCount } = await supabase
+  .from('deals')
+  .select('id', { count: 'exact', head: true })
+  .eq('account_id', currentUser.account_id)
+  .eq('status', 'won')
+  // Aplicar mesmos filtros de data se existirem
+
+result.push({
+  name: 'Ganhos',
+  value: wonCount || 0,
+  color: '#10b981'  // Verde esmeralda (mesmo do SalesFunnelChart)
+});
 ```
+
+**Arquivo:** `src/components/insights/visuals/ConfigurableFunnel.tsx`
+
+Adicionar destaque visual para a barra "Ganhos" com um emoji de trofeu e anel verde (ring), similar ao tratamento de "Venda" no `SalesFunnelChart`:
+
+```text
+// Na barra "Ganhos":
+- Adicionar ring-2 ring-emerald-400 ring-offset-2
+- Prefixar nome com emoji trofeu
+- Mostrar valor bruto (nao cumulativo) para esta etapa
+```
+
+### Detalhes
+
+- A etapa "Ganhos" nao participa da contagem cumulativa -- ela mostra o valor bruto de negocios ganhos
+- Sua largura no funil e calculada proporcionalmente ao total cumulativo da primeira etapa
+- Os filtros de data do painel de insights serao aplicados a contagem de ganhos
+- A cor verde (#10b981) e fixa, independente da paleta escolhida
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx` | Remover SalesFunnelChart e simplificar secao |
-
+| `src/hooks/useVisualData.ts` | Buscar contagem de deals ganhos e adicionar ao resultado do funil |
+| `src/components/insights/visuals/ConfigurableFunnel.tsx` | Destacar visualmente a barra "Ganhos" com trofeu e anel verde |
