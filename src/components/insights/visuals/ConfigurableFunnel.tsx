@@ -30,18 +30,23 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
     );
   }
 
-  // Build cumulative counts from bottom to top
-  const cumulativeCounts: number[] = new Array(data.length);
-  for (let i = data.length - 1; i >= 0; i--) {
-    const below = i < data.length - 1 ? cumulativeCounts[i + 1] : 0;
-    cumulativeCounts[i] = data[i].value + below;
+  // Separate "Ganhos" from regular stages
+  const isGanhos = (name: string) => name === 'Ganhos';
+  const regularData = data.filter(d => !isGanhos(d.name));
+  const ganhosItem = data.find(d => isGanhos(d.name));
+
+  // Build cumulative counts from bottom to top (excluding Ganhos)
+  const cumulativeCounts: number[] = new Array(regularData.length);
+  for (let i = regularData.length - 1; i >= 0; i--) {
+    const below = i < regularData.length - 1 ? cumulativeCounts[i + 1] : 0;
+    cumulativeCounts[i] = regularData[i].value + below;
   }
 
   const maxValue = cumulativeCounts[0] || 1;
 
   return (
     <div className="flex flex-col items-center justify-center gap-1.5 h-full w-full px-4 py-2 overflow-hidden">
-      {data.map((item, index) => {
+      {regularData.map((item, index) => {
         const cumValue = cumulativeCounts[index];
         const widthPct = Math.max((cumValue / maxValue) * 100, 15);
         const prevCum = index > 0 ? cumulativeCounts[index - 1] : cumValue;
@@ -77,6 +82,32 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
           </div>
         );
       })}
+      {ganhosItem && (
+        <div className="flex flex-col items-center w-full" style={{ gap: '2px' }}>
+          <div
+            className="h-10 rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-emerald-400 ring-offset-2"
+            style={{
+              width: `${Math.max((ganhosItem.value / maxValue) * 100, 15)}%`,
+              minWidth: '180px',
+              backgroundColor: '#10b981',
+            }}
+          >
+            <span className="text-sm font-medium text-white flex items-center gap-1.5" style={{ fontSize: Math.round(13 * m) }}>
+              🏆 {ganhosItem.name}
+            </span>
+            <div className="flex items-center gap-2 ml-2 shrink-0">
+              <span className="text-sm font-bold text-white" style={{ fontSize: Math.round(13 * m) }}>
+                {formatValueCompact(ganhosItem.value, formatting.type)}
+              </span>
+              {cumulativeCounts.length > 0 && cumulativeCounts[cumulativeCounts.length - 1] > 0 && (
+                <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded text-white">
+                  {Math.round((ganhosItem.value / cumulativeCounts[cumulativeCounts.length - 1]) * 100)}%
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

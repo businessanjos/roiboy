@@ -85,6 +85,30 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           const orderMap = new Map(stages.map(s => [s.name, s.display_order]));
           result.sort((a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
         }
+
+        // Append "Ganhos" (won deals) as last funnel stage
+        let wonQuery = supabase
+          .from('deals')
+          .select('id', { count: 'exact', head: true })
+          .eq('account_id', currentUser.account_id)
+          .eq('status', 'won');
+
+        if (filters.startDate) {
+          wonQuery = wonQuery.gte('won_at', filters.startDate);
+        }
+        if (filters.endDate) {
+          wonQuery = wonQuery.lte('won_at', filters.endDate);
+        }
+        if (filters.userId && filters.userId !== 'all') {
+          wonQuery = wonQuery.eq('responsible_user_id', filters.userId);
+        }
+
+        const { count: wonCount } = await wonQuery;
+        result.push({
+          name: 'Ganhos',
+          value: wonCount || 0,
+          color: '#10b981',
+        });
       } else if (chartType === 'funnel' && dimension.type !== 'date') {
         // For non-stage funnels, sort descending by value (largest first)
         result.sort((a, b) => b.value - a.value);
