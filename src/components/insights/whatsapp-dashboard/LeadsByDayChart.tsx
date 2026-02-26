@@ -7,6 +7,7 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
+  LabelList,
 } from "recharts";
 import { TrendingUp } from "lucide-react";
 import { CollapsibleSection } from "./CollapsibleSection";
@@ -81,6 +82,7 @@ export function LeadsByDayChart({ data, isLoading }: LeadsByDayChartProps) {
   const chartData = data.map(d => ({
     label: d.label,
     ...d.sources,
+    _total: d.count,
   }));
 
   const totalLeads = data.reduce((sum, d) => sum + d.count, 0);
@@ -156,7 +158,17 @@ export function LeadsByDayChart({ data, isLoading }: LeadsByDayChartProps) {
                   stackId="sources"
                   fill={getSourceColor(source, index)}
                   radius={[0, 0, 0, 0]}
-                />
+                >
+                  {index === sourcesArray.length - 1 && (
+                    <LabelList
+                      dataKey="_total"
+                      position="top"
+                      fontSize={10}
+                      fill="hsl(var(--muted-foreground))"
+                      formatter={(value: number) => (value > 0 ? value : '')}
+                    />
+                  )}
+                </Bar>
               ))}
             </BarChart>
           </ResponsiveContainer>

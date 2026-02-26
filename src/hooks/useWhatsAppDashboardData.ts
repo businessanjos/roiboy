@@ -435,24 +435,36 @@ export function useWhatsAppDashboardData() {
       const totalCycleDays = avgTimePerTransition.reduce((sum, t) => sum + t.avgDays, 0);
 
       // 5. WhatsApp engagement by period (vendas sector)
-      // Use a more efficient query approach with nested select
-      const { data: messagesData } = await supabase
-        .from('zapp_messages')
-        .select(`
-          direction,
-          sent_at,
-          zapp_conversations!inner(
-            integration_id,
-            integrations!inner(
-              account_id,
-              sector_id
+      // Paginate to fetch ALL messages (Supabase default limit is 1000)
+      let allMessages: any[] = [];
+      let msgPage = 0;
+      const MSG_PAGE_SIZE = 1000;
+      let hasMoreMessages = true;
+
+      while (hasMoreMessages) {
+        const { data: batch } = await supabase
+          .from('zapp_messages')
+          .select(`
+            direction,
+            sent_at,
+            zapp_conversations!inner(
+              integration_id,
+              integrations!inner(
+                account_id,
+                sector_id
+              )
             )
-          )
-        `)
-        .eq('zapp_conversations.integrations.account_id', accountId)
-        .eq('zapp_conversations.integrations.sector_id', 'vendas')
-        .gte('sent_at', filters.startDate)
-        .lte('sent_at', filters.endDate);
+          `)
+          .eq('zapp_conversations.integrations.account_id', accountId)
+          .eq('zapp_conversations.integrations.sector_id', 'vendas')
+          .gte('sent_at', filters.startDate)
+          .lte('sent_at', filters.endDate)
+          .range(msgPage * MSG_PAGE_SIZE, (msgPage + 1) * MSG_PAGE_SIZE - 1);
+
+        allMessages = allMessages.concat(batch || []);
+        hasMoreMessages = (batch?.length || 0) === MSG_PAGE_SIZE;
+        msgPage++;
+      }
 
       let engagementByPeriod: EngagementByPeriod[] = [
         { period: 'Manhã', inbound: 0, outbound: 0, total: 0, responseRate: 0 },
@@ -472,7 +484,7 @@ export function useWhatsAppDashboardData() {
       let totalInbound = 0;
       let totalOutbound = 0;
 
-      (messagesData || []).forEach(msg => {
+      (allMessages || []).forEach(msg => {
         // Convert to Brasília timezone for consistent analysis
         const brasiliaDate = toBrasiliaTime(new Date(msg.sent_at));
         const hour = brasiliaDate.getHours();
