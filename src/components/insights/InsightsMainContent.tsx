@@ -161,9 +161,19 @@ export function InsightsMainContent() {
     );
   }
 
-  // If it's a WhatsApp dashboard and has no custom visuals, show the special panel
-  if (isWhatsAppDashboard && !hasVisuals && !isLoadingVisuals) {
-    return <WhatsAppDashboardPanel />;
+  // If it's a WhatsApp dashboard, show the special panel (with coexisting custom visuals)
+  if (isWhatsAppDashboard && !isLoadingVisuals) {
+    return (
+      <div className="flex-1 overflow-auto">
+        <AddVisualModal open={isBuilderOpen} onOpenChange={setIsBuilderOpen} />
+        <WhatsAppDashboardPanel
+          onAddVisual={() => setIsBuilderOpen(true)}
+          visuals={visuals || []}
+          onLayoutChange={handleLayoutChange}
+          isLoadingVisuals={isLoadingVisuals}
+        />
+      </div>
+    );
   }
 
   // Focus mode overlay
