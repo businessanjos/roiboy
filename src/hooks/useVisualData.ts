@@ -26,7 +26,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
   const { filters } = useInsightsFilters();
 
   return useQuery({
-    queryKey: ['visual-data', config, filters, currentUser?.account_id],
+    queryKey: ['visual-data', config, chartType, filters, currentUser?.account_id],
     queryFn: async (): Promise<AggregatedDataPoint[]> => {
       if (!config || !currentUser?.account_id) return [];
 
@@ -73,11 +73,13 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
       // For funnel with stage_name, sort by pipeline display_order
       if (chartType === 'funnel' && dimension.field === 'stage_name' && result.length > 0) {
-        const { data: stages } = await supabase
+        const { data: stages, error: stagesError } = await supabase
           .from('deal_stages')
           .select('name, display_order')
           .eq('account_id', currentUser.account_id)
           .order('display_order', { ascending: true });
+
+        if (stagesError) console.error('Error fetching stages order:', stagesError);
 
         if (stages && stages.length > 0) {
           const orderMap = new Map(stages.map(s => [s.name, s.display_order]));
@@ -560,12 +562,22 @@ async function fetchDealsData(
     query = query.eq('stage_id', filters.stageId);
   }
 
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Error fetching deals:', error);
-    return [];
+  // Paginate to fetch all deals (Supabase limits to 1000 per request)
+  let allRawDeals: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if (error) {
+      console.error('Error fetching deals:', error);
+      return [];
+    }
+    allRawDeals = allRawDeals.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
   }
+
+  const data = allRawDeals;
 
   // Apply lead field filter if configured
   let filteredData = data || [];
