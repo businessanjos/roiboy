@@ -30,14 +30,23 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
     );
   }
 
-  const maxValue = data[0]?.value || 1;
+  // Build cumulative counts from bottom to top
+  const cumulativeCounts: number[] = new Array(data.length);
+  for (let i = data.length - 1; i >= 0; i--) {
+    const below = i < data.length - 1 ? cumulativeCounts[i + 1] : 0;
+    cumulativeCounts[i] = data[i].value + below;
+  }
+
+  const maxValue = cumulativeCounts[0] || 1;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-1.5 h-full w-full px-4 py-2 overflow-auto">
+    <div className="flex flex-col items-center justify-center gap-1.5 h-full w-full px-4 py-2 overflow-hidden">
       {data.map((item, index) => {
-        const widthPct = Math.max((item.value / maxValue) * 100, 15);
-        const conversionPct = index > 0 && data[index - 1].value > 0
-          ? Math.round((item.value / data[index - 1].value) * 100)
+        const cumValue = cumulativeCounts[index];
+        const widthPct = Math.max((cumValue / maxValue) * 100, 15);
+        const prevCum = index > 0 ? cumulativeCounts[index - 1] : cumValue;
+        const conversionPct = index > 0 && prevCum > 0
+          ? Math.round((cumValue / prevCum) * 100)
           : null;
         const bgColor = item.color || colors[index % colors.length];
 
@@ -56,7 +65,7 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
               </span>
               <div className="flex items-center gap-2 ml-2 shrink-0">
                 <span className="text-sm font-bold text-white" style={{ fontSize: Math.round(13 * m) }}>
-                  {formatValueCompact(item.value, formatting.type)}
+                  {formatValueCompact(cumValue, formatting.type)}
                 </span>
                 {conversionPct !== null && (
                   <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded text-white">
