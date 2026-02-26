@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWhatsAppDashboardData } from "@/hooks/useWhatsAppDashboardData";
 import { PipelineCards } from "./PipelineCards";
-import { SalesFunnelChart } from "./SalesFunnelChart";
+
 import { ConversionScoreCards } from "./ConversionScoreCards";
 import { LeadsByDayChart } from "./LeadsByDayChart";
 import { TimePerStageCard } from "./TimePerStageCard";
@@ -30,7 +30,7 @@ interface WhatsAppDashboardPanelProps {
 export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChange, isLoadingVisuals }: WhatsAppDashboardPanelProps) {
   const { data, isLoading } = useWhatsAppDashboardData();
 
-  const [hiddenFunnelStages, setHiddenFunnelStages] = useState<Set<string>>(new Set());
+  
   const [hiddenSections, setHiddenSections] = useState<Set<SectionId>>(new Set());
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -155,12 +155,9 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
         >
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-3">
-              <SalesFunnelChart 
-                stages={data?.stageDistribution || []} 
-                isLoading={isLoading}
-                hiddenStages={hiddenFunnelStages}
-                onHiddenStagesChange={setHiddenFunnelStages}
-              />
+              <div className="h-full min-h-[400px] rounded-lg border-2 border-dashed border-muted-foreground/20 flex items-center justify-center text-muted-foreground text-sm">
+                Espaço disponível para visual customizado
+              </div>
             </div>
             <div className="lg:col-span-2">
               <TimePerStageCard 
