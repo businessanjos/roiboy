@@ -52,6 +52,8 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
         case 'tasks':
           if (chartType === 'call_commercial') {
             result = await fetchTasksCallCommercialData(currentUser.account_id, filters);
+          } else if (chartType === 'funnel') {
+            result = await fetchTasksFunnelData(currentUser.account_id, filters);
           } else {
             result = await fetchTasksData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
           }
@@ -109,6 +111,8 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           value: wonCount || 0,
           color: '#10b981',
         });
+      } else if (chartType === 'funnel' && dataSource === 'tasks') {
+        // Task funnel: order is already fixed by TASK_FUNNEL_ORDER, skip sorting
       } else if (chartType === 'funnel' && dimension.type !== 'date') {
         // For non-stage funnels, sort descending by value (largest first)
         result.sort((a, b) => b.value - a.value);
@@ -1247,6 +1251,71 @@ function fillMissingDates(
     value: 0,
     count: 0,
   });
+}
+
+const TASK_FUNNEL_ORDER = [
+  'Primeiro Contato Realizado',
+  'Ligação Atendida',
+  'Ligação não atendida',
+  'No-Show',
+  'Call Comercial Agendada',
+  'Call Comercial Concluída',
+  'Proposta de Fechamento',
+  'Follow Up',
+];
+
+// Fetch completed tasks grouped by activity type in fixed funnel order
+async function fetchTasksFunnelData(
+  accountId: string,
+  filters: any
+): Promise<AggregatedDataPoint[]> {
+  let baseQuery = supabase
+    .from('internal_tasks')
+    .select('id, activity_type_id, completed_at, assigned_to, due_date, activity_types!internal_tasks_activity_type_id_fkey(name)')
+    .eq('account_id', accountId)
+    .not('completed_at', 'is', null);
+
+  if (filters.startDate) {
+    baseQuery = baseQuery.gte('due_date', filters.startDate.split('T')[0]);
+  }
+  if (filters.endDate) {
+    baseQuery = baseQuery.lte('due_date', filters.endDate.split('T')[0]);
+  }
+  if (filters.userId && filters.userId !== 'all') {
+    baseQuery = baseQuery.eq('assigned_to', filters.userId);
+  }
+
+  // Paginate
+  let allTasks: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await baseQuery.range(from, from + pageSize - 1);
+    if (error) { console.error('Error fetching tasks funnel:', error); return []; }
+    allTasks = allTasks.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  // Group by activity type name
+  const counts = new Map<string, number>();
+  for (const task of allTasks) {
+    const typeName = (task.activity_types as any)?.name;
+    if (!typeName) continue;
+    counts.set(typeName, (counts.get(typeName) || 0) + 1);
+  }
+
+  // Build result in fixed order, only including types from TASK_FUNNEL_ORDER
+  const result: AggregatedDataPoint[] = [];
+  for (const name of TASK_FUNNEL_ORDER) {
+    // Case-insensitive match
+    const matchedKey = Array.from(counts.keys()).find(
+      k => k.toLowerCase() === name.toLowerCase()
+    );
+    result.push({ name, value: matchedKey ? counts.get(matchedKey)! : 0 });
+  }
+
+  return result;
 }
 
 // Generic task data fetcher supporting all dimensions
