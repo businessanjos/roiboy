@@ -1,35 +1,18 @@
 
 
-## Corrigir posicionamento livre dos visuais customizados no painel WhatsApp
+## Aumentar espaço vertical na seção "Funil e Tempo"
 
-### Problema
+### Alteração
 
-O wrapper do `InsightsGrid` usa `position: relative`, o que faz ele ocupar espaco no fluxo do documento e empurrar as secoes built-in para baixo quando o visual e arrastado. O visual precisa flutuar sobre o conteudo sem afetar o layout das secoes abaixo.
+**Arquivo:** `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx` (linha 167)
 
-### Solucao
+Aumentar o `min-h-[400px]` do placeholder para `min-h-[500px]`, dando mais espaço vertical entre o título "Funil e Tempo" e a seção "Taxas de Conversão" abaixo.
 
-Mudar o wrapper do `InsightsGrid` de `relative z-10` para `absolute inset-0 z-10 pointer-events-none`, tornando-o uma camada flutuante que nao interfere no fluxo das secoes built-in. Os itens do grid precisam ter `pointer-events-auto` para continuarem interativos.
+### Detalhe técnico
 
-### Alteracoes
+| Arquivo | Linha | De | Para |
+|---|---|---|---|
+| `WhatsAppDashboardPanel.tsx` | 167 | `min-h-[400px]` | `min-h-[500px]` |
 
-**Arquivo:** `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`
-
-- Alterar o wrapper do `InsightsGrid` de `relative z-10` para `absolute inset-0 z-10 pointer-events-none`
-- Isso faz o grid flutuar como overlay sem empurrar o conteudo
-
-**Arquivo:** `src/components/insights/grid/InsightsGrid.tsx`
-
-- Adicionar `pointer-events-auto` ao container do grid para que os visuais continuem clicaveis e arrastaveis
-- Garantir que o container do grid mede a largura corretamente mesmo com posicionamento absoluto (usar o pai como referencia)
-
-### Resultado
-
-- Visuais customizados flutuam livremente sobre qualquer area do dashboard
-- Secoes built-in nao sao empurradas ou deslocadas
-- Comportamento identico aos outros paineis de Insights
-
-| Arquivo | Alteracao |
-|---|---|
-| `WhatsAppDashboardPanel.tsx` | Wrapper do grid: `absolute inset-0 z-10 pointer-events-none` |
-| `InsightsGrid.tsx` | Container do grid: adicionar `pointer-events-auto` |
+Isso aumenta a área disponível para o visual customizado e cria mais respiro visual entre as seções.
 
