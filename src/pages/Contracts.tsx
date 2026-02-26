@@ -1361,7 +1361,8 @@ export default function Contracts() {
       if (error?.code === '23505' && error?.message?.includes('phone_e164')) {
         toast.error("Este telefone já está cadastrado para outro cliente. Use 'Selecionar existente'.");
       } else {
-        toast.error("Erro ao salvar contrato");
+        const msg = error?.message || "Erro desconhecido";
+        toast.error(`Erro ao salvar contrato: ${msg}`);
       }
     } finally {
       setSaving(false);
