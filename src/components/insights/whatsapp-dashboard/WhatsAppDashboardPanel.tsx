@@ -137,7 +137,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
     <div className="relative">
       {/* Custom visuals grid - overlay layer for free positioning */}
       {hasCustomVisuals && onLayoutChange && (
-        <div className="relative z-10">
+        <div className="absolute inset-0 z-10 pointer-events-none">
           <InsightsGrid visuals={visuals} onLayoutChange={onLayoutChange} />
         </div>
       )}

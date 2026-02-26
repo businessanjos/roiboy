@@ -154,7 +154,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
   }
 
   return (
-    <div ref={containerRef} className="insights-grid">
+    <div ref={containerRef} className="insights-grid pointer-events-auto">
       <GridLayout
         className="layout"
         layout={localLayout}
