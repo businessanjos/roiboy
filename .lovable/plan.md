@@ -1,40 +1,53 @@
 
 
-## Remover Funil de Vendas e deixar espaco livre
+## Corrigir posicionamento do grid de visuais customizados no painel WhatsApp
 
-### Objetivo
+### Problema
 
-Remover o componente `SalesFunnelChart` da secao "Funil e Tempo" no painel WhatsApp, mantendo o espaco de 3 colunas (60%) vazio e disponivel para o usuario inserir um visual customizado manualmente.
+O `InsightsGrid` (grid de visuais customizados) e renderizado **apos** todas as secoes built-in do dashboard, como um bloco separado no final da pagina. Isso faz com que os visuais so possam existir abaixo de todo o conteudo fixo -- nao e possivel arrasta-los para o espaco vazio na secao "Funil e Tempo".
 
-### Alteracao
+### Solucao
+
+Transformar o layout do dashboard em um container `relative` e renderizar o `InsightsGrid` como uma camada sobreposta (`relative` com `z-index`) **acima** das secoes built-in. Assim os visuais customizados podem ser posicionados livremente em qualquer area do dashboard, incluindo sobre o placeholder vazio.
+
+### Alteracoes
 
 **Arquivo:** `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`
 
-Na secao "Funil e Tempo" (linhas 156-172), substituir o `SalesFunnelChart` por um placeholder vazio que mantem o mesmo espaco visual:
+1. Envolver o `dashboardContent` em um `div` com `position: relative`
+2. Mover o `InsightsGrid` para DENTRO desse container, renderizado ANTES das secoes built-in
+3. As secoes built-in continuam fluindo normalmente como conteudo estatico
+4. O `InsightsGrid` usa `position: relative` com `z-index` superior, permitindo que visuais fiquem sobre qualquer area do dashboard
 
 ```text
-<div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-  <div className="lg:col-span-3">
-    <!-- Remover SalesFunnelChart -->
-    <!-- Manter div vazia com altura minima e borda tracejada -->
-    <div className="h-full min-h-[400px] rounded-lg border-2 border-dashed border-muted-foreground/20 
-         flex items-center justify-center text-muted-foreground text-sm">
-      Espaco disponivel para visual customizado
+// Estrutura proposta:
+<div className="relative">
+  {/* Grid de visuais customizados - camada superior, posicionamento livre */}
+  {hasCustomVisuals && onLayoutChange && (
+    <div className="relative z-10">
+      <InsightsGrid visuals={visuals} onLayoutChange={onLayoutChange} />
     </div>
-  </div>
-  <div className="lg:col-span-2">
-    <TimePerStageCard ... />  <!-- Mantido -->
+  )}
+
+  {/* Secoes built-in - fluxo normal */}
+  <div className="space-y-6">
+    {sectionVisible('pipeline') && ... }
+    {sectionVisible('funnel_time') && ... }
+    ...
   </div>
 </div>
 ```
 
+5. Aplicar a mesma estrutura no conteudo do Modo Foco para manter consistencia
+
 ### Resultado
 
-- O espaco de 60% onde ficava o funil fica vazio com uma indicacao visual discreta (borda tracejada)
-- O `TimePerStageCard` continua no lado direito sem alteracoes
-- O usuario pode usar o botao "Adicionar Visual" para preencher o espaco com um visual customizado
+- Visuais customizados podem ser posicionados livremente sobre qualquer area do dashboard
+- O usuario pode arrastar um visual para cima do espaco vazio na secao "Funil e Tempo"
+- As secoes built-in continuam funcionando normalmente por baixo
+- O Modo Foco tambem reflete essa estrutura
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx` | Substituir SalesFunnelChart por placeholder vazio |
+| `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx` | Mover InsightsGrid para o topo do container com z-index, envolver conteudo em container relativo |
 
