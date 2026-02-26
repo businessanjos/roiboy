@@ -1,45 +1,70 @@
 
 
-## Corrigir mensagem de erro genérica na criação de contrato
+## Adicionar Visual de Funil ao Dashboard de Insights
 
-### Problema identificado
+### Resumo
 
-A usuária Jéssica Marcato está tentando criar um novo contrato com um novo cliente, mas recebe apenas "Erro ao salvar contrato" sem nenhum detalhe. O problema está no bloco `catch` genérico do `Contracts.tsx` (linha 1364) que captura exceções não tratadas sem exibir a mensagem real do erro:
+Adicionar um novo tipo de visualizacao "Funil" ao sistema de Insights, que exibe barras horizontais decrescentes representando a progressao sequencial de itens atraves de etapas ordenadas. O funil mostra quantos itens passaram por cada etapa e a taxa de conversao entre etapas consecutivas.
 
-```typescript
-// Linha 1364 - SEM detalhes do erro
-toast.error("Erro ao salvar contrato");
-```
+### Como funciona
 
-Enquanto os handlers específicos (criação de cliente na linha 1214, criação de contrato na linha 1327) incluem `error.message`, o catch genérico esconde a causa real. Isso impede o diagnóstico do problema.
+O funil recebe os mesmos dados agregados que outros graficos (`AggregatedDataPoint[]`), mas os renderiza como barras horizontais centralizadas, cada uma menor que a anterior, com percentuais de conversao entre etapas. Para negocios agrupados por etapa (`stage_name`), as barras sao ordenadas pelo `display_order` da etapa no pipeline. Para outras dimensoes, os dados sao exibidos na ordem decrescente de valor.
 
-### Solução
+### Arquivos alterados
 
-**Arquivo:** `src/pages/Contracts.tsx`
-
-Alterar o bloco catch genérico (linha 1357-1365) para:
-
-1. Incluir `error.message` no toast de erro para que a mensagem real seja visível ao usuário e facilite o diagnóstico
-2. Manter o tratamento especial para violação de telefone duplicado
-
-```typescript
-} catch (error: any) {
-  console.error("Error saving contract:", error);
-  
-  if (error?.code === '23505' && error?.message?.includes('phone_e164')) {
-    toast.error("Este telefone já está cadastrado para outro cliente. Use 'Selecionar existente'.");
-  } else {
-    const msg = error?.message || "Erro desconhecido";
-    toast.error(`Erro ao salvar contrato: ${msg}`);
-  }
-}
-```
-
-Isso permitirá identificar imediatamente qual é o erro real que a Jéssica está enfrentando (pode ser RLS, constraint de validação, campo obrigatório faltando, etc.) sem necessidade de acessar logs do servidor.
-
-### Arquivo alterado
-
-| Arquivo | Alteração |
+| Arquivo | Alteracao |
 |---------|-----------|
-| `src/pages/Contracts.tsx` | Incluir `error.message` no toast genérico de erro para tornar a mensagem descritiva |
+| `src/components/insights/visual-builder/types.ts` | Adicionar `'funnel'` ao tipo `ChartType` e ao array `CHART_TYPE_OPTIONS` |
+| `src/components/insights/visual-builder/ChartTypeSelector.tsx` | Adicionar icone do funil ao `ICON_MAP` |
+| `src/components/insights/visuals/ConfigurableFunnel.tsx` | **Novo** - Componente de renderizacao do funil |
+| `src/components/insights/visuals/ConfigurableChart.tsx` | Adicionar case `'funnel'` ao switch de renderizacao |
+| `src/components/insights/visuals/index.ts` | Exportar `ConfigurableFunnel` |
+| `src/components/insights/AddVisualModal.tsx` | Adicionar "Funil" como opcao de chart type e configurar fluxo de criacao |
+| `src/hooks/useVisualData.ts` | Para funil com `stage_name`, buscar `display_order` das etapas e ordenar dados pela ordem do pipeline |
 
+### Detalhes tecnicos
+
+**1. Tipo `ChartType` (types.ts)**
+- Adicionar `'funnel'` ao union type
+- Adicionar `{ value: 'funnel', label: 'Funil' }` ao array `CHART_TYPE_OPTIONS`
+
+**2. Componente `ConfigurableFunnel.tsx`**
+- Recebe `data: AggregatedDataPoint[]`, `formatting`, e `appearance`
+- Renderiza barras horizontais centralizadas com largura proporcional ao valor
+- A primeira barra (maior valor) ocupa 100% da largura
+- Cada barra mostra: nome da etapa, contagem, e percentual de conversao em relacao a etapa anterior
+- Usa cores do `appearance.colorPalette` ou cores individuais de cada data point (como as cores das etapas do funil)
+- Layout visual identico ao `SalesFunnelChart` existente (barras centralizadas, badges de percentual)
+
+**3. Fluxo no AddVisualModal**
+- O funil segue o fluxo padrao de 3 passos: Tipo -> Metrica -> Agrupamento
+- Funciona com qualquer metrica (deals_count, revenue, leads_count, etc.)
+- Funciona com qualquer agrupamento (por etapa, por vendedor, por mes, etc.)
+- Quando agrupado por etapa do funil, os dados sao automaticamente ordenados pelo `display_order`
+
+**4. Ordenacao especial para etapas (useVisualData.ts)**
+- Quando o `chartType` for `'funnel'` e a dimensao for `stage_name`, buscar `display_order` das `deal_stages` e ordenar o resultado pela ordem do pipeline em vez de ordenar por valor
+- Para outras dimensoes, manter a ordenacao padrao por valor decrescente (que ja faz sentido para funil)
+
+**5. Logica de renderizacao do funil**
+```text
++------------------------------------------+
+| Etapa 1 (maior)              811         |
++------------------------------------------+
+   +-----------------------------------+
+   | Etapa 2                749  92%   |
+   +-----------------------------------+
+      +----------------------------+
+      | Etapa 3           445  59% |
+      +----------------------------+
+         +---------------------+
+         | Etapa 4    350  79% |
+         +---------------------+
+            +----------------+
+            | Etapa 5   66   |
+            +----------------+
+```
+
+- Cada barra tem largura proporcional: `max(valor / maxValor * 100, 15)%`
+- Conversao calculada: `(valorAtual / valorAnterior) * 100`
+- Cores: usa a cor da etapa se disponivel, senao usa a paleta de cores selecionada
