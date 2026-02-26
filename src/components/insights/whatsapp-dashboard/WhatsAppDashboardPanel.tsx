@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Clock, Filter, TrendingUp, Zap, Monitor, Maximize2, Minimize2, X } from "lucide-react";
+import { Clock, TrendingUp, Zap, Monitor, Maximize2, Minimize2, X } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWhatsAppDashboardData } from "@/hooks/useWhatsAppDashboardData";
 import { PipelineCards } from "./PipelineCards";
-import { SalesFunnelChart } from "./SalesFunnelChart";
+
 import { ConversionScoreCards } from "./ConversionScoreCards";
 import { LeadsByDayChart } from "./LeadsByDayChart";
 import { TimePerStageCard } from "./TimePerStageCard";
@@ -19,7 +19,7 @@ import { ZoomControls } from "@/components/ui/zoom-controls";
 export function WhatsAppDashboardPanel() {
   const { data, isLoading } = useWhatsAppDashboardData();
 
-  const [hiddenFunnelStages, setHiddenFunnelStages] = useState<Set<string>>(new Set());
+  
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusZoom, setFocusZoom] = useState(100);
@@ -116,27 +116,15 @@ export function WhatsAppDashboardPanel() {
 
       {/* Funnel & Time per Stage */}
       <CollapsibleSection
-        title="Funil e Tempo"
+        title="Tempo por Etapa"
         subtitle="Análise de velocidade e eficiência"
-        icon={<Filter className="h-5 w-5 text-primary" />}
+        icon={<Clock className="h-5 w-5 text-primary" />}
       >
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          <div className="lg:col-span-3">
-            <SalesFunnelChart 
-              stages={data?.stageDistribution || []} 
-              isLoading={isLoading}
-              hiddenStages={hiddenFunnelStages}
-              onHiddenStagesChange={setHiddenFunnelStages}
-            />
-          </div>
-          <div className="lg:col-span-2">
-            <TimePerStageCard 
-              transitions={data?.avgTimePerTransition || []}
-              totalCycleDays={data?.totalCycleDays || 0}
-              isLoading={isLoading}
-            />
-          </div>
-        </div>
+        <TimePerStageCard 
+          transitions={data?.avgTimePerTransition || []}
+          totalCycleDays={data?.totalCycleDays || 0}
+          isLoading={isLoading}
+        />
       </CollapsibleSection>
 
       {/* Conversion Score Cards */}
