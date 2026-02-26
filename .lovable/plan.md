@@ -1,58 +1,51 @@
 
+## Adicionar etapa "Ganhos" ao Funil de Vendas
 
-## Corrigir Ordenacao e Valores do Funil de Vendas
+### Objetivo
 
-### Problemas Identificados
-
-1. **Ordem embaralhada**: A funcao `aggregateData` ordena os resultados por valor decrescente (linha 1018 de useVisualData.ts). Apesar do funil ter logica para reordenar por `display_order` do pipeline (linhas 74-84), o `chartType` nao esta incluido no `queryKey` do React Query (linha 29), fazendo com que dados em cache de antes da correcao sejam servidos sem a ordenacao correta.
-
-2. **Dados incompletos**: A query de deals nao faz paginacao. Se existem mais de 1000 negocios, o Supabase retorna apenas os 1000 primeiros, distorcendo a contagem por etapa.
+Inserir automaticamente uma ultima barra no funil de "Etapas de Vendas" mostrando quantos negocios foram efetivamente convertidos em vendas (status = 'won'), completando a visao do processo de ponta a ponta.
 
 ### Solucao
 
 **Arquivo:** `src/hooks/useVisualData.ts`
 
-Tres alteracoes:
-
-**1. Adicionar `chartType` ao queryKey** para garantir que mudancas no tipo de grafico invalidem o cache:
+Apos a ordenacao do funil por `display_order` (linha 87), consultar a contagem de negocios ganhos e adicionar um item "Ganhos" ao final do array `result`:
 
 ```text
-queryKey: ['visual-data', config, chartType, filters, currentUser?.account_id]
+// Apos o sort por display_order, buscar deals ganhos
+const { count: wonCount } = await supabase
+  .from('deals')
+  .select('id', { count: 'exact', head: true })
+  .eq('account_id', currentUser.account_id)
+  .eq('status', 'won')
+  // Aplicar mesmos filtros de data se existirem
+
+result.push({
+  name: 'Ganhos',
+  value: wonCount || 0,
+  color: '#10b981'  // Verde esmeralda (mesmo do SalesFunnelChart)
+});
 ```
 
-**2. Paginar a query de deals em `fetchDealsData`** para garantir que todos os negocios sejam incluidos na contagem, igual ja e feito em `useMapVisualData`:
+**Arquivo:** `src/components/insights/visuals/ConfigurableFunnel.tsx`
+
+Adicionar destaque visual para a barra "Ganhos" com um emoji de trofeu e anel verde (ring), similar ao tratamento de "Venda" no `SalesFunnelChart`:
 
 ```text
-// Em vez de uma unica query, paginar em blocos de 1000
-let allDeals = [];
-let from = 0;
-const pageSize = 1000;
-while (true) {
-  const { data, error } = await query.range(from, from + pageSize - 1);
-  if (error) return [];
-  allDeals = allDeals.concat(data || []);
-  if (!data || data.length < pageSize) break;
-  from += pageSize;
-}
+// Na barra "Ganhos":
+- Adicionar ring-2 ring-emerald-400 ring-offset-2
+- Prefixar nome com emoji trofeu
+- Mostrar valor bruto (nao cumulativo) para esta etapa
 ```
 
-**3. Garantir resiliencia na ordenacao do funil** -- caso a query de `deal_stages` falhe, manter a ordem original dos dados em vez de deixar a ordenacao por valor:
+### Detalhes
 
-```text
-// Adicionar log de erro se a query falhar
-const { data: stages, error: stagesError } = await supabase...
-if (stagesError) console.error('Error fetching stages order:', stagesError);
-```
-
-### Resumo de impacto
+- A etapa "Ganhos" nao participa da contagem cumulativa -- ela mostra o valor bruto de negocios ganhos
+- Sua largura no funil e calculada proporcionalmente ao total cumulativo da primeira etapa
+- Os filtros de data do painel de insights serao aplicados a contagem de ganhos
+- A cor verde (#10b981) e fixa, independente da paleta escolhida
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/hooks/useVisualData.ts` | Adicionar chartType ao queryKey, paginar query de deals, melhorar resiliencia do sort |
-
-### Resultado esperado
-
-- A primeira barra do funil sera sempre "Chegou Lead" (primeira etapa do pipeline) com o maior valor cumulativo
-- Todas as etapas seguem a ordem exata do pipeline
-- Todos os negocios sao contados, sem limite de 1000 registros
-
+| `src/hooks/useVisualData.ts` | Buscar contagem de deals ganhos e adicionar ao resultado do funil |
+| `src/components/insights/visuals/ConfigurableFunnel.tsx` | Destacar visualmente a barra "Ganhos" com trofeu e anel verde |
