@@ -59,6 +59,18 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
   const effectiveLoading = isBubbleMap ? mapLoading : (isStacked ? stackedLoading : isLoading);
   const effectiveError = isBubbleMap ? mapError : (isStacked ? stackedError : error);
 
+  // Filter stacked data by hidden categories
+  const processedStackedData = useMemo(() => {
+    if (!stackedResult?.data) return undefined;
+    if (!config?.hiddenCategories?.length) return stackedResult;
+    return {
+      data: stackedResult.data.filter(
+        (item) => !config.hiddenCategories!.includes(item.name)
+      ),
+      seriesKeys: stackedResult.seriesKeys,
+    };
+  }, [stackedResult, config?.hiddenCategories]);
+
   // Apply custom formula if present
   const processedData = useMemo(() => {
     if (!data) return [];
@@ -205,8 +217,8 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
               formatting={config.formatting || { type: 'number' as FormatType, decimals: 0 }}
               appearance={config.appearance || DEFAULT_APPEARANCE}
               visualConfig={isBubbleMap ? { ...config, _mapData: mapData } as any : config}
-              stackedData={stackedResult?.data}
-              stackedSeriesKeys={stackedResult?.seriesKeys}
+              stackedData={processedStackedData?.data}
+              stackedSeriesKeys={processedStackedData?.seriesKeys}
               onDrilldown={handleDrilldown}
             />
           </CardContent>
