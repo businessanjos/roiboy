@@ -1,51 +1,46 @@
 
-## Adicionar etapa "Ganhos" ao Funil de Vendas
+
+## Adicionar botao "Adicionar Visual" e opcao de ocultar secoes no painel Conversas/WhatsApp
 
 ### Objetivo
 
-Inserir automaticamente uma ultima barra no funil de "Etapas de Vendas" mostrando quantos negocios foram efetivamente convertidos em vendas (status = 'won'), completando a visao do processo de ponta a ponta.
+Tornar o painel Conversas/WhatsApp tao flexivel quanto os demais paineis, permitindo adicionar visuais customizados e ocultar secoes built-in que nao sejam relevantes.
 
-### Solucao
+### Alteracoes
 
-**Arquivo:** `src/hooks/useVisualData.ts`
+**1. InsightsMainContent.tsx -- Permitir coexistencia de WhatsApp panel + visuais customizados**
 
-Apos a ordenacao do funil por `display_order` (linha 87), consultar a contagem de negocios ganhos e adicionar um item "Ganhos" ao final do array `result`:
+- Remover a condicao `!hasVisuals` da linha 165 que faz o WhatsApp panel desaparecer quando visuais customizados existem.
+- Sempre renderizar o `WhatsAppDashboardPanel` para dashboards de Conversas/WhatsApp.
+- Passar props para o WhatsApp panel: `onAddVisual`, `visuals`, `onLayoutChange`, `isLoadingVisuals`.
+- Manter o `AddVisualModal` montado para o WhatsApp panel poder abri-lo.
 
-```text
-// Apos o sort por display_order, buscar deals ganhos
-const { count: wonCount } = await supabase
-  .from('deals')
-  .select('id', { count: 'exact', head: true })
-  .eq('account_id', currentUser.account_id)
-  .eq('status', 'won')
-  // Aplicar mesmos filtros de data se existirem
+**2. WhatsAppDashboardPanel.tsx -- Adicionar botao e sistema de ocultar secoes**
 
-result.push({
-  name: 'Ganhos',
-  value: wonCount || 0,
-  color: '#10b981'  // Verde esmeralda (mesmo do SalesFunnelChart)
-});
-```
+- Receber novas props: `onAddVisual`, `visuals`, `onLayoutChange`, `isLoadingVisuals`.
+- Adicionar botao "Adicionar Visual" no header, ao lado do "Modo Foco".
+- Criar estado `hiddenSections` (Set de strings) para controlar quais secoes estao ocultas.
+- Adicionar icone de "olho" (EyeOff) em cada `CollapsibleSection` via prop `rightContent`, permitindo ocultar a secao.
+- Secoes ocultas nao serao renderizadas no dashboard.
+- Adicionar botao "Restaurar secoes" que aparece quando alguma secao esta oculta.
+- Renderizar `InsightsGrid` com visuais customizados apos as secoes built-in.
+- Incluir visuais customizados tambem no Modo Foco.
 
-**Arquivo:** `src/components/insights/visuals/ConfigurableFunnel.tsx`
+### Secoes com opcao de ocultar
 
-Adicionar destaque visual para a barra "Ganhos" com um emoji de trofeu e anel verde (ring), similar ao tratamento de "Venda" no `SalesFunnelChart`:
+| ID | Secao |
+|---|---|
+| `pipeline` | Pipeline de Conversao |
+| `funnel_time` | Funil e Tempo |
+| `conversion` | Taxas de Conversao |
+| `leads` | Leads por Dia |
+| `engagement` | Analise de Engajamento |
+| `time_saved` | Tempo Economizado |
 
-```text
-// Na barra "Ganhos":
-- Adicionar ring-2 ring-emerald-400 ring-offset-2
-- Prefixar nome com emoji trofeu
-- Mostrar valor bruto (nao cumulativo) para esta etapa
-```
-
-### Detalhes
-
-- A etapa "Ganhos" nao participa da contagem cumulativa -- ela mostra o valor bruto de negocios ganhos
-- Sua largura no funil e calculada proporcionalmente ao total cumulativo da primeira etapa
-- Os filtros de data do painel de insights serao aplicados a contagem de ganhos
-- A cor verde (#10b981) e fixa, independente da paleta escolhida
+### Resumo de arquivos
 
 | Arquivo | Alteracao |
-|---------|-----------|
-| `src/hooks/useVisualData.ts` | Buscar contagem de deals ganhos e adicionar ao resultado do funil |
-| `src/components/insights/visuals/ConfigurableFunnel.tsx` | Destacar visualmente a barra "Ganhos" com trofeu e anel verde |
+|---|---|
+| `src/components/insights/InsightsMainContent.tsx` | Remover condicao exclusiva, passar props ao WhatsApp panel, montar AddVisualModal |
+| `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx` | Adicionar botao "Adicionar Visual", sistema de ocultar secoes, renderizar InsightsGrid |
+
