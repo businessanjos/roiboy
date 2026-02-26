@@ -1,46 +1,40 @@
 
 
-## Adicionar botao "Adicionar Visual" e opcao de ocultar secoes no painel Conversas/WhatsApp
+## Remover Funil de Vendas e deixar espaco livre
 
 ### Objetivo
 
-Tornar o painel Conversas/WhatsApp tao flexivel quanto os demais paineis, permitindo adicionar visuais customizados e ocultar secoes built-in que nao sejam relevantes.
+Remover o componente `SalesFunnelChart` da secao "Funil e Tempo" no painel WhatsApp, mantendo o espaco de 3 colunas (60%) vazio e disponivel para o usuario inserir um visual customizado manualmente.
 
-### Alteracoes
+### Alteracao
 
-**1. InsightsMainContent.tsx -- Permitir coexistencia de WhatsApp panel + visuais customizados**
+**Arquivo:** `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`
 
-- Remover a condicao `!hasVisuals` da linha 165 que faz o WhatsApp panel desaparecer quando visuais customizados existem.
-- Sempre renderizar o `WhatsAppDashboardPanel` para dashboards de Conversas/WhatsApp.
-- Passar props para o WhatsApp panel: `onAddVisual`, `visuals`, `onLayoutChange`, `isLoadingVisuals`.
-- Manter o `AddVisualModal` montado para o WhatsApp panel poder abri-lo.
+Na secao "Funil e Tempo" (linhas 156-172), substituir o `SalesFunnelChart` por um placeholder vazio que mantem o mesmo espaco visual:
 
-**2. WhatsAppDashboardPanel.tsx -- Adicionar botao e sistema de ocultar secoes**
+```text
+<div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+  <div className="lg:col-span-3">
+    <!-- Remover SalesFunnelChart -->
+    <!-- Manter div vazia com altura minima e borda tracejada -->
+    <div className="h-full min-h-[400px] rounded-lg border-2 border-dashed border-muted-foreground/20 
+         flex items-center justify-center text-muted-foreground text-sm">
+      Espaco disponivel para visual customizado
+    </div>
+  </div>
+  <div className="lg:col-span-2">
+    <TimePerStageCard ... />  <!-- Mantido -->
+  </div>
+</div>
+```
 
-- Receber novas props: `onAddVisual`, `visuals`, `onLayoutChange`, `isLoadingVisuals`.
-- Adicionar botao "Adicionar Visual" no header, ao lado do "Modo Foco".
-- Criar estado `hiddenSections` (Set de strings) para controlar quais secoes estao ocultas.
-- Adicionar icone de "olho" (EyeOff) em cada `CollapsibleSection` via prop `rightContent`, permitindo ocultar a secao.
-- Secoes ocultas nao serao renderizadas no dashboard.
-- Adicionar botao "Restaurar secoes" que aparece quando alguma secao esta oculta.
-- Renderizar `InsightsGrid` com visuais customizados apos as secoes built-in.
-- Incluir visuais customizados tambem no Modo Foco.
+### Resultado
 
-### Secoes com opcao de ocultar
-
-| ID | Secao |
-|---|---|
-| `pipeline` | Pipeline de Conversao |
-| `funnel_time` | Funil e Tempo |
-| `conversion` | Taxas de Conversao |
-| `leads` | Leads por Dia |
-| `engagement` | Analise de Engajamento |
-| `time_saved` | Tempo Economizado |
-
-### Resumo de arquivos
+- O espaco de 60% onde ficava o funil fica vazio com uma indicacao visual discreta (borda tracejada)
+- O `TimePerStageCard` continua no lado direito sem alteracoes
+- O usuario pode usar o botao "Adicionar Visual" para preencher o espaco com um visual customizado
 
 | Arquivo | Alteracao |
 |---|---|
-| `src/components/insights/InsightsMainContent.tsx` | Remover condicao exclusiva, passar props ao WhatsApp panel, montar AddVisualModal |
-| `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx` | Adicionar botao "Adicionar Visual", sistema de ocultar secoes, renderizar InsightsGrid |
+| `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx` | Substituir SalesFunnelChart por placeholder vazio |
 
