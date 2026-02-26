@@ -1,62 +1,42 @@
 
 
-## Simplificar fluxo de criacao do Funil
+## Corrigir Visual de Funil: Remover Scrollbar e Implementar Contagem Cumulativa
 
-### Problema
+### Problemas Identificados
 
-O funil atualmente passa pelos mesmos 3 passos dos outros visuais (tipo -> metrica -> agrupamento), oferecendo opcoes que nao fazem sentido para ele, como "Valor Total (R$)" ou "Ticket Medio". O funil mede **processos sequenciais** -- quantos itens passaram por cada etapa -- nao metricas financeiras.
+1. **Scrollbar indesejada**: O container do funil usa `overflow-auto`, criando uma barra de rolagem desnecessaria.
+
+2. **Logica de contagem errada**: O funil mostra apenas os negocios que estao **atualmente** em cada etapa. O correto e mostrar contagem cumulativa -- "Chegou Lead" deve incluir TODOS os negocios (pois todos passaram por la), "Contato Realizado" deve incluir todos que estao nessa etapa ou em qualquer etapa posterior, e assim por diante. Isso e exatamente como o `SalesFunnelChart` do dashboard WhatsApp ja funciona.
 
 ### Solucao
 
-Transformar o funil em um visual de 2 passos (como ranking, gauge, etc.) com um fluxo dedicado:
+**Arquivo:** `src/components/insights/visuals/ConfigurableFunnel.tsx`
 
-- **Passo 1**: Selecionar tipo de visual (Funil)
-- **Passo 2**: Escolher qual processo medir + titulo
+Duas alteracoes:
 
-No passo 2, o usuario escolhe entre processos disponiveis:
+1. Trocar `overflow-auto` por `overflow-hidden` no container principal para eliminar a scrollbar.
 
-| Processo | Descricao | Config gerada |
-|----------|-----------|---------------|
-| Etapas de Vendas | Quantos negocios estao/passaram por cada etapa do pipeline | dataSource: deals, aggregation: count, dimension: stage_name |
-| Etapas de Tarefas | Quantas tarefas por status (Pendente, Em Andamento, Concluida) | dataSource: tasks, aggregation: count, dimension: status |
+2. Implementar contagem cumulativa de baixo para cima antes de renderizar:
+   - A ultima etapa mostra seu valor bruto
+   - Cada etapa acima soma seu valor com a soma de todas as etapas abaixo
+   - A primeira etapa (topo) sempre tera o maior valor, garantindo a forma de funil
+   - A conversao entre etapas e calculada sobre os valores cumulativos
 
-Cada processo gera automaticamente a configuracao correta sem o usuario precisar escolher metrica ou agrupamento.
+```text
+Exemplo com dados brutos ordenados por pipeline:
+  Chegou Lead:        10 negocios nessa etapa
+  Contato Realizado:  8 negocios nessa etapa
+  Reuniao Agendada:   5 negocios nessa etapa
+  Proposta Enviada:   3 negocios nessa etapa
 
-### Arquivo alterado
+Resultado cumulativo (de baixo pra cima):
+  Chegou Lead:        26 (10+8+5+3) -- todos passaram por aqui
+  Contato Realizado:  16 (8+5+3)    -- 62% de conversao
+  Reuniao Agendada:   8 (5+3)       -- 50% de conversao
+  Proposta Enviada:   3             -- 38% de conversao
+```
 
 | Arquivo | Alteracao |
 |---------|-----------|
-| `src/components/insights/AddVisualModal.tsx` | Adicionar fluxo dedicado de 2 passos para o funil com selecao de processo |
-
-### Detalhes tecnicos
-
-**1. totalSteps** -- Incluir `'funnel'` na lista de chart types com 2 passos (junto com ranking, gauge, etc.)
-
-**2. Novo estado** -- `funnelProcess` com tipo `'deal_stages' | 'task_status'`
-
-**3. Passo 2 do funil** -- Renderizar opcoes de processo (cards selecionaveis como os do gauge):
-- "Etapas de Vendas" -- Progresso dos negocios pelo pipeline de vendas
-- "Etapas de Tarefas" -- Distribuicao das tarefas por status
-
-**4. handleCreate para funnel** -- Gerar config fixa baseada no processo escolhido:
-
-```text
-deal_stages:
-  dataSource: 'deals'
-  measure: { field: '', aggregation: 'count' }
-  dimension: { field: 'stage_name', type: 'text' }
-  formatting: { type: 'decimal', decimals: 0 }
-  titulo auto: "Funil de Vendas"
-
-task_status:
-  dataSource: 'tasks'
-  measure: { field: '', aggregation: 'count' }
-  dimension: { field: 'status', type: 'text' }
-  formatting: { type: 'decimal', decimals: 0 }
-  titulo auto: "Funil de Tarefas"
-```
-
-**5. canCreate para funnel** -- `funnelProcess !== null && title.trim() !== '' && activeDashboardId !== null`
-
-**6. Auto-generate title** -- Atualizar o useEffect de titulo para gerar "Funil de Vendas" ou "Funil de Tarefas" conforme o processo selecionado
+| `src/components/insights/visuals/ConfigurableFunnel.tsx` | Remover overflow-auto, adicionar logica de contagem cumulativa |
 
