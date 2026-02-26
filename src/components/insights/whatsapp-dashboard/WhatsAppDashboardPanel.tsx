@@ -134,102 +134,107 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
   const sectionVisible = (id: SectionId) => !hiddenSections.has(id);
 
   const dashboardContent = (
-    <>
-      {sectionVisible('pipeline') && (
-        <CollapsibleSection
-          title="Pipeline de Conversão"
-          subtitle="Distribuição por etapa"
-          icon={<Filter className="h-5 w-5 text-primary" />}
-          rightContent={hideButton('pipeline')}
-        >
-          <PipelineCards stages={data?.stageDistribution || []} isLoading={isLoading} />
-        </CollapsibleSection>
+    <div className="relative">
+      {/* Custom visuals grid - overlay layer for free positioning */}
+      {hasCustomVisuals && onLayoutChange && (
+        <div className="relative z-10">
+          <InsightsGrid visuals={visuals} onLayoutChange={onLayoutChange} />
+        </div>
       )}
 
-      {sectionVisible('funnel_time') && (
-        <CollapsibleSection
-          title="Funil e Tempo"
-          subtitle="Análise de velocidade e eficiência"
-          icon={<Filter className="h-5 w-5 text-primary" />}
-          rightContent={hideButton('funnel_time')}
-        >
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <div className="lg:col-span-3">
-              <div className="h-full min-h-[400px] rounded-lg border-2 border-dashed border-muted-foreground/20 flex items-center justify-center text-muted-foreground text-sm">
-                Espaço disponível para visual customizado
+      {/* Built-in sections - normal flow */}
+      <div className="space-y-6">
+        {sectionVisible('pipeline') && (
+          <CollapsibleSection
+            title="Pipeline de Conversão"
+            subtitle="Distribuição por etapa"
+            icon={<Filter className="h-5 w-5 text-primary" />}
+            rightContent={hideButton('pipeline')}
+          >
+            <PipelineCards stages={data?.stageDistribution || []} isLoading={isLoading} />
+          </CollapsibleSection>
+        )}
+
+        {sectionVisible('funnel_time') && (
+          <CollapsibleSection
+            title="Funil e Tempo"
+            subtitle="Análise de velocidade e eficiência"
+            icon={<Filter className="h-5 w-5 text-primary" />}
+            rightContent={hideButton('funnel_time')}
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+              <div className="lg:col-span-3">
+                <div className="h-full min-h-[400px] rounded-lg border-2 border-dashed border-muted-foreground/20 flex items-center justify-center text-muted-foreground text-sm">
+                  Espaço disponível para visual customizado
+                </div>
+              </div>
+              <div className="lg:col-span-2">
+                <TimePerStageCard 
+                  transitions={data?.avgTimePerTransition || []}
+                  totalCycleDays={data?.totalCycleDays || 0}
+                  isLoading={isLoading}
+                />
               </div>
             </div>
-            <div className="lg:col-span-2">
-              <TimePerStageCard 
-                transitions={data?.avgTimePerTransition || []}
-                totalCycleDays={data?.totalCycleDays || 0}
-                isLoading={isLoading}
-              />
-            </div>
-          </div>
-        </CollapsibleSection>
-      )}
+          </CollapsibleSection>
+        )}
 
-      {sectionVisible('conversion') && (
-        <CollapsibleSection
-          title="Taxas de Conversão"
-          subtitle="Indicadores de performance do funil"
-          icon={<TrendingUp className="h-5 w-5 text-primary" />}
-          rightContent={hideButton('conversion')}
-        >
-          <ConversionScoreCards 
-            overallConversion={data?.overallConversion || 0}
-            stageConversions={stageConversions}
-            wonDeals={data?.wonDeals || 0}
-            totalDeals={data?.totalDeals || 0}
-            isLoading={isLoading}
-          />
-        </CollapsibleSection>
-      )}
+        {sectionVisible('conversion') && (
+          <CollapsibleSection
+            title="Taxas de Conversão"
+            subtitle="Indicadores de performance do funil"
+            icon={<TrendingUp className="h-5 w-5 text-primary" />}
+            rightContent={hideButton('conversion')}
+          >
+            <ConversionScoreCards 
+              overallConversion={data?.overallConversion || 0}
+              stageConversions={stageConversions}
+              wonDeals={data?.wonDeals || 0}
+              totalDeals={data?.totalDeals || 0}
+              isLoading={isLoading}
+            />
+          </CollapsibleSection>
+        )}
 
-      {sectionVisible('leads') && (
-        <CollapsibleSection
-          title="Leads por Dia"
-          subtitle="Volume de novos leads"
-          icon={<TrendingUp className="h-5 w-5 text-primary" />}
-          rightContent={hideButton('leads')}
-        >
-          <LeadsByDayChart data={data?.leadsByDay || []} isLoading={isLoading} />
-        </CollapsibleSection>
-      )}
+        {sectionVisible('leads') && (
+          <CollapsibleSection
+            title="Leads por Dia"
+            subtitle="Volume de novos leads"
+            icon={<TrendingUp className="h-5 w-5 text-primary" />}
+            rightContent={hideButton('leads')}
+          >
+            <LeadsByDayChart data={data?.leadsByDay || []} isLoading={isLoading} />
+          </CollapsibleSection>
+        )}
 
-      {sectionVisible('engagement') && (
-        <CollapsibleSection
-          title="Análise de Engajamento"
-          subtitle="Padrões de resposta por período e dia"
-          icon={<Clock className="h-5 w-5 text-primary" />}
-          rightContent={hideButton('engagement')}
-        >
-          <Card>
-            <CardContent className="pt-4 space-y-6">
-              <EngagementByPeriodCards data={data?.engagementByPeriod || []} isLoading={isLoading} />
-              <EngagementByDayCards data={data?.engagementByDayOfWeek || []} isLoading={isLoading} />
-            </CardContent>
-          </Card>
-        </CollapsibleSection>
-      )}
+        {sectionVisible('engagement') && (
+          <CollapsibleSection
+            title="Análise de Engajamento"
+            subtitle="Padrões de resposta por período e dia"
+            icon={<Clock className="h-5 w-5 text-primary" />}
+            rightContent={hideButton('engagement')}
+          >
+            <Card>
+              <CardContent className="pt-4 space-y-6">
+                <EngagementByPeriodCards data={data?.engagementByPeriod || []} isLoading={isLoading} />
+                <EngagementByDayCards data={data?.engagementByDayOfWeek || []} isLoading={isLoading} />
+              </CardContent>
+            </Card>
+          </CollapsibleSection>
+        )}
 
-      {sectionVisible('time_saved') && (
-        <CollapsibleSection
-          title="Tempo Economizado"
-          subtitle="Impacto da automação"
-          icon={<Zap className="h-5 w-5 text-primary" />}
-          rightContent={hideButton('time_saved')}
-        >
-          <TimeSavedCard totalMessages={data?.totalMessages || 0} isLoading={isLoading} />
-        </CollapsibleSection>
-      )}
-
-      {/* Custom visuals grid */}
-      {hasCustomVisuals && onLayoutChange && (
-        <InsightsGrid visuals={visuals} onLayoutChange={onLayoutChange} />
-      )}
-    </>
+        {sectionVisible('time_saved') && (
+          <CollapsibleSection
+            title="Tempo Economizado"
+            subtitle="Impacto da automação"
+            icon={<Zap className="h-5 w-5 text-primary" />}
+            rightContent={hideButton('time_saved')}
+          >
+            <TimeSavedCard totalMessages={data?.totalMessages || 0} isLoading={isLoading} />
+          </CollapsibleSection>
+        )}
+      </div>
+    </div>
   );
 
   // Focus mode overlay
