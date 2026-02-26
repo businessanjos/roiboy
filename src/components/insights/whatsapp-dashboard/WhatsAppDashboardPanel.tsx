@@ -164,7 +164,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
           >
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
               <div className="lg:col-span-3">
-                <div className="h-full min-h-[400px] rounded-lg border-2 border-dashed border-muted-foreground/20 flex items-center justify-center text-muted-foreground text-sm">
+                <div className="h-full min-h-[500px] rounded-lg border-2 border-dashed border-muted-foreground/20 flex items-center justify-center text-muted-foreground text-sm">
                   Espaço disponível para visual customizado
                 </div>
               </div>
