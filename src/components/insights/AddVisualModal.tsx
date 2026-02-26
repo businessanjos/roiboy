@@ -400,7 +400,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
         const config: VisualConfig = {
           dataSource: isSales ? 'deals' : 'tasks',
           measure: { field: '', aggregation: 'count' },
-          dimension: { field: isSales ? 'stage_name' : 'status', type: 'text' },
+          dimension: { field: isSales ? 'stage_name' : 'activity_type', type: 'text' },
           formatting: { type: 'decimal', decimals: 0 },
           appearance: DEFAULT_APPEARANCE,
         };
