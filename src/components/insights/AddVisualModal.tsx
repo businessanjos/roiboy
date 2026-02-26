@@ -156,9 +156,10 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   const [indicatorMinLabel, setIndicatorMinLabel] = useState("");
   const [indicatorMaxLabel, setIndicatorMaxLabel] = useState("");
   const [indicatorMetric, setIndicatorMetric] = useState<Metric | null>(null);
+  const [funnelProcess, setFunnelProcess] = useState<'deal_stages' | 'task_status' | null>(null);
 
-  // Scorecards, rankings, call_commercial, gauge and indicator have only 2 steps
-  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge' || chartType === 'indicator' || chartType === 'bubble_map') ? 2 : 3;
+  // Scorecards, rankings, call_commercial, gauge, indicator, bubble_map and funnel have only 2 steps
+  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge' || chartType === 'indicator' || chartType === 'bubble_map' || chartType === 'funnel') ? 2 : 3;
 
   // Reset form when modal closes
   useEffect(() => {
@@ -177,6 +178,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       setIndicatorMinLabel("");
       setIndicatorMaxLabel("");
       setIndicatorMetric(null);
+      setFunnelProcess(null);
     }
   }, [open]);
 
@@ -192,6 +194,8 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       setTitle(gaugeSubType === 'days_elapsed' ? 'Dias Corridos do Mês' : 'Faturamento x Meta');
     } else if (chartType === 'indicator') {
       setTitle(indicatorMetric ? `Indicador - ${METRIC_LABELS[indicatorMetric]}` : 'Indicador');
+    } else if (chartType === 'funnel') {
+      setTitle(funnelProcess === 'deal_stages' ? 'Funil de Vendas' : funnelProcess === 'task_status' ? 'Funil de Tarefas' : 'Funil');
     } else if (chartType === 'scorecard' && metric) {
       setTitle(metric === 'meta' ? 'Meta' : METRIC_LABELS[metric]);
     } else if (metric && groupBy) {
@@ -201,7 +205,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       const generatedTitle = `${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}${seasonalitySuffix}`;
       setTitle(generatedTitle);
     }
-  }, [chartType, metric, groupBy, gaugeSubType, dateGrouping, indicatorMetric]);
+  }, [chartType, metric, groupBy, gaugeSubType, dateGrouping, indicatorMetric, funnelProcess]);
 
   const canProceedStep1 = chartType !== null;
   const canProceedStep2 = metric !== null;
@@ -211,6 +215,8 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
     ? indicatorMetric !== null && indicatorMin !== "" && indicatorMax !== "" && Number(indicatorMax) > Number(indicatorMin) && title.trim() !== "" && activeDashboardId !== null
     : chartType === 'scorecard'
     ? metric !== null && title.trim() !== "" && activeDashboardId !== null
+    : chartType === 'funnel'
+    ? funnelProcess !== null && title.trim() !== "" && activeDashboardId !== null
     : (chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge')
     ? title.trim() !== "" && activeDashboardId !== null
     : groupBy !== null && title.trim() !== "" && activeDashboardId !== null;
@@ -376,6 +382,34 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           chart_type: 'indicator',
           config,
           layout: { x: 0, y: 0, w: 4, h: 4 },
+        });
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Error creating visual:", error);
+      } finally {
+        setIsCreating(false);
+      }
+      return;
+    }
+
+    if (chartType === 'funnel') {
+      if (!canCreate || !funnelProcess) return;
+      setIsCreating(true);
+      try {
+        const isSales = funnelProcess === 'deal_stages';
+        const config: VisualConfig = {
+          dataSource: isSales ? 'deals' : 'tasks',
+          measure: { field: '', aggregation: 'count' },
+          dimension: { field: isSales ? 'stage_name' : 'status', type: 'text' },
+          formatting: { type: 'decimal', decimals: 0 },
+          appearance: DEFAULT_APPEARANCE,
+        };
+        await addVisual({
+          dashboard_id: activeDashboardId,
+          title: title.trim(),
+          chart_type: 'funnel',
+          config,
+          layout: { x: 0, y: 0, w: 6, h: 5 },
         });
         onOpenChange(false);
       } catch (error) {
@@ -708,7 +742,48 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             </div>
           )}
 
-          {step === 2 && chartType !== 'ranking' && chartType !== 'call_commercial' && chartType !== 'gauge' && chartType !== 'indicator' && (
+          {/* Step 2: Funnel process selection */}
+          {step === 2 && chartType === 'funnel' && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">Qual processo você quer medir?</p>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { value: 'deal_stages' as const, label: 'Etapas de Vendas', description: 'Progressão dos negócios pelo pipeline de vendas' },
+                  { value: 'task_status' as const, label: 'Etapas de Tarefas', description: 'Distribuição das tarefas por status' },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setFunnelProcess(opt.value)}
+                    className={cn(
+                      "relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all",
+                      funnelProcess === opt.value
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50 hover:bg-muted/50"
+                    )}
+                  >
+                    {funnelProcess === opt.value && (
+                      <Check className="absolute top-2 right-2 h-4 w-4 text-primary" />
+                    )}
+                    <Filter className={cn("h-7 w-7", funnelProcess === opt.value ? "text-primary" : "text-muted-foreground")} />
+                    <span className="font-medium text-sm">{opt.label}</span>
+                    <span className="text-xs text-muted-foreground text-center leading-tight">{opt.description}</span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="space-y-2 pt-2 border-t">
+                <Label htmlFor="visual-title-funnel">Título</Label>
+                <Input
+                  id="visual-title-funnel"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Ex: Funil de Vendas"
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 2 && chartType !== 'ranking' && chartType !== 'call_commercial' && chartType !== 'gauge' && chartType !== 'indicator' && chartType !== 'funnel' && chartType !== 'bubble_map' && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">O que você quer medir?</p>
               <RadioGroup
