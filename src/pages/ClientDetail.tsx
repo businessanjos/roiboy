@@ -680,98 +680,74 @@ export default function ClientDetail() {
         mls_level: clientData.mls_level || null,
       });
 
-      // Fetch client products
-      const { data: clientProductsData } = await supabase
-        .from("client_products")
-        .select(`
-          product_id,
-          products (
-            id,
-            name
-          )
-        `)
-        .eq("client_id", id);
+      // Fetch all independent data in parallel
+      const [
+        clientProductsResult,
+        activeContractResult,
+        scoreResult,
+        vnpsResult,
+        roiResult,
+        riskResult,
+        recResult,
+        messagesResult,
+        followupsResult,
+        lifeEventsResult,
+        formResponsesResult,
+        attendanceResult,
+        subscriptionsResult,
+        allRiskResult,
+      ] = await Promise.all([
+        supabase.from("client_products").select("product_id, products(id, name)").eq("client_id", id),
+        supabase.from("client_contracts").select("start_date, end_date").eq("client_id", id).eq("status", "active").order("start_date", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("score_snapshots").select("*").eq("client_id", id).order("computed_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("vnps_snapshots").select("*").eq("client_id", id).order("computed_at", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("roi_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
+        supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
+        supabase.from("recommendations").select("*").eq("client_id", id).order("created_at", { ascending: false }),
+        supabase.from("message_events").select("*").eq("client_id", id).order("sent_at", { ascending: false }).limit(200),
+        supabase.from("client_followups").select("*, users(name, avatar_url)").eq("client_id", id).order("created_at", { ascending: false }),
+        supabase.from("client_life_events").select("*").eq("client_id", id).order("created_at", { ascending: false }).limit(100),
+        supabase.from("form_responses").select("*, forms(title)").eq("client_id", id).order("submitted_at", { ascending: false }).limit(100),
+        supabase.from("attendance").select("*, events(title, address, scheduled_at)").eq("client_id", id).not("event_id", "is", null).order("join_time", { ascending: false }).limit(100),
+        supabase.from("client_subscriptions").select("*").eq("client_id", id).order("created_at", { ascending: false }).limit(100),
+        supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }).limit(100),
+      ]);
 
-      const products = (clientProductsData || [])
+      // Process client products
+      const products = (clientProductsResult.data || [])
         .map((cp: any) => cp.products)
         .filter(Boolean) as ClientProduct[];
       setClientProducts(products);
 
-      // Fetch active contract from client_contracts table
-      const { data: activeContractData } = await supabase
-        .from("client_contracts")
-        .select("start_date, end_date")
-        .eq("client_id", id)
-        .eq("status", "active")
-        .order("start_date", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      setActiveContract(activeContractData || null);
-      const { data: scoreData } = await supabase
-        .from("score_snapshots")
-        .select("*")
-        .eq("client_id", id)
-        .order("computed_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Process active contract
+      setActiveContract(activeContractResult.data || null);
 
-      if (scoreData) {
-        setScore(scoreData as ScoreSnapshot);
+      // Process score
+      if (scoreResult.data) {
+        setScore(scoreResult.data as ScoreSnapshot);
       }
 
-      // Fetch latest V-NPS
-      const { data: vnpsData } = await supabase
-        .from("vnps_snapshots")
-        .select("*")
-        .eq("client_id", id)
-        .order("computed_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (vnpsData) {
-        setVnps(vnpsData as VNPSSnapshot);
+      // Process V-NPS
+      if (vnpsResult.data) {
+        setVnps(vnpsResult.data as VNPSSnapshot);
       }
 
-      // Fetch ROI events
-      const { data: roiData } = await supabase
-        .from("roi_events")
-        .select("*")
-        .eq("client_id", id)
-        .order("happened_at", { ascending: false });
+      // Process ROI events
+      const roiData = roiResult.data || [];
+      setRoiEvents(roiData as RoiEvent[]);
 
-      setRoiEvents((roiData || []) as RoiEvent[]);
+      // Process risk events
+      setRiskEvents(riskResult.data || []);
 
-      // Fetch risk events (all for the Risks tab)
-      const { data: riskData } = await supabase
-        .from("risk_events")
-        .select("*")
-        .eq("client_id", id)
-        .order("happened_at", { ascending: false });
-
-      setRiskEvents(riskData || []);
-
-      // Fetch recommendations
-      const { data: recData } = await supabase
-        .from("recommendations")
-        .select("*")
-        .eq("client_id", id)
-        .order("created_at", { ascending: false });
-
-      setRecommendations((recData || []) as Recommendation[]);
+      // Process recommendations
+      const recData = recResult.data || [];
+      setRecommendations(recData as Recommendation[]);
 
       // Build timeline
       const timelineItems: TimelineEvent[] = [];
 
       // Add messages
-      const { data: messagesData } = await supabase
-        .from("message_events")
-        .select("*")
-        .eq("client_id", id)
-        .order("sent_at", { ascending: false })
-        .limit(200);
-
-      (messagesData || []).forEach((msg: any) => {
+      (messagesResult.data || []).forEach((msg: any) => {
         const isGroup = msg.is_group === true;
         timelineItems.push({
           id: msg.id,
@@ -791,7 +767,7 @@ export default function ClientDetail() {
       });
 
       // Add ROI events
-      (roiData || []).forEach((roi: any) => {
+      roiData.forEach((roi: any) => {
         timelineItems.push({
           id: roi.id,
           type: "roi",
@@ -808,15 +784,8 @@ export default function ClientDetail() {
         });
       });
 
-      // Add risk events (fetch all, not just 3)
-      const { data: allRiskData } = await supabase
-        .from("risk_events")
-        .select("*")
-        .eq("client_id", id)
-        .order("happened_at", { ascending: false })
-        .limit(100);
-
-      (allRiskData || []).forEach((risk: any) => {
+      // Add risk events
+      (allRiskResult.data || []).forEach((risk: any) => {
         timelineItems.push({
           id: risk.id,
           type: "risk",
@@ -828,7 +797,7 @@ export default function ClientDetail() {
       });
 
       // Add recommendations
-      (recData || []).forEach((rec: any) => {
+      recData.forEach((rec: any) => {
         timelineItems.push({
           id: rec.id,
           type: "recommendation",
@@ -839,17 +808,8 @@ export default function ClientDetail() {
         });
       });
 
-      // Add followups - notes as comments, files/images as followups
-      const { data: followupsData } = await supabase
-        .from("client_followups")
-        .select(`
-          *,
-          users (name, avatar_url)
-        `)
-        .eq("client_id", id)
-        .order("created_at", { ascending: false });
-
-      (followupsData || []).forEach((followup: any) => {
+      // Add followups
+      (followupsResult.data || []).forEach((followup: any) => {
         const isNote = followup.type === "note";
         const isFinancialNote = followup.type === "financial_note";
         const isSalesNote = followup.type === "sales_note";
@@ -872,15 +832,8 @@ export default function ClientDetail() {
         });
       });
 
-      // Add life events (Momentos CX)
-      const { data: lifeEventsData } = await supabase
-        .from("client_life_events")
-        .select("*")
-        .eq("client_id", id)
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      (lifeEventsData || []).forEach((event: any) => {
+      // Add life events
+      (lifeEventsResult.data || []).forEach((event: any) => {
         timelineItems.push({
           id: event.id,
           type: "life_event",
@@ -896,17 +849,7 @@ export default function ClientDetail() {
       });
 
       // Add form responses
-      const { data: formResponsesData } = await supabase
-        .from("form_responses")
-        .select(`
-          *,
-          forms (title)
-        `)
-        .eq("client_id", id)
-        .order("submitted_at", { ascending: false })
-        .limit(100);
-
-      (formResponsesData || []).forEach((response: any) => {
+      (formResponsesResult.data || []).forEach((response: any) => {
         const responseCount = Object.keys(response.responses || {}).length;
         timelineItems.push({
           id: response.id,
@@ -921,19 +864,8 @@ export default function ClientDetail() {
         });
       });
 
-      // Add attendance records (event check-ins)
-      const { data: attendanceData } = await supabase
-        .from("attendance")
-        .select(`
-          *,
-          events (title, address, scheduled_at)
-        `)
-        .eq("client_id", id)
-        .not("event_id", "is", null)
-        .order("join_time", { ascending: false })
-        .limit(100);
-
-      (attendanceData || []).forEach((att: any) => {
+      // Add attendance records
+      (attendanceResult.data || []).forEach((att: any) => {
         timelineItems.push({
           id: att.id,
           type: "attendance",
@@ -947,15 +879,8 @@ export default function ClientDetail() {
         });
       });
 
-      // Add financial events (subscriptions)
-      const { data: subscriptionsData } = await supabase
-        .from("client_subscriptions")
-        .select("*")
-        .eq("client_id", id)
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      (subscriptionsData || []).forEach((sub: any) => {
+      // Add subscriptions
+      (subscriptionsResult.data || []).forEach((sub: any) => {
         timelineItems.push({
           id: sub.id,
           type: "financial",
