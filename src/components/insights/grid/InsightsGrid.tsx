@@ -97,24 +97,17 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
     // Intentionally NOT syncing when only layout data changes from props
   }, [visuals]);
 
-  // Update container width on mount and resize
+  // Update container width on mount and any size change (resize, zoom, fullscreen)
   useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setWidth(containerRef.current.offsetWidth);
+    if (!containerRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setWidth(entry.contentRect.width);
       }
-    };
-
-    updateWidth();
-
-    if (readOnly) {
-      document.addEventListener("fullscreenchange", updateWidth);
-      return () => document.removeEventListener("fullscreenchange", updateWidth);
-    } else {
-      window.addEventListener("resize", updateWidth);
-      return () => window.removeEventListener("resize", updateWidth);
-    }
-  }, [readOnly]);
+    });
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, []);
 
   // Keep local layout in sync continuously during drag/resize (prevents snap-back)
   // Skip the first call which is the automatic mount event from react-grid-layout
