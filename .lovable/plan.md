@@ -1,47 +1,32 @@
 
 
-## Fixar visuais customizados no espaço reservado da seção "Funil e Tempo"
+## Corrigir adaptacao do grid ao zoom no modo foco
 
 ### Problema
 
-Atualmente o `InsightsGrid` com os visuais customizados (como o Funil de Vendas) e renderizado apos todas as secoes nativas, aparecendo no final do dashboard. O usuario quer que ele fique dentro do espaco reservado (placeholder com borda tracejada) na secao "Funil e Tempo".
+O `InsightsGrid` mede a largura do seu container via `offsetWidth` e escuta apenas `window.resize` para recalcular. Quando o zoom CSS muda no modo foco, nenhum evento de resize e disparado, entao o grid mantem a largura original e nao se adapta ao novo nivel de zoom.
 
 ### Solucao
 
-Mover a renderizacao do `InsightsGrid` de depois de todas as secoes para dentro do placeholder da secao "Funil e Tempo" (o `div` com `min-h-[500px]` e borda tracejada).
+Substituir o listener de `window.resize` no `InsightsGrid` por um `ResizeObserver` no container. O `ResizeObserver` detecta mudancas de tamanho do container independentemente da causa (resize da janela, zoom CSS, fullscreen, etc.), tornando o grid responsivo a todas essas situacoes.
 
 ### Alteracao
 
-**Arquivo:** `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`
+**Arquivo:** `src/components/insights/grid/InsightsGrid.tsx`
 
-1. **Linhas 159-162**: Substituir o placeholder estatico pela renderizacao condicional:
-   - Se houver visuais customizados, renderizar o `InsightsGrid` nesse espaco
-   - Se nao houver, manter o placeholder com texto "Espaco disponivel para visual customizado"
-
-2. **Linhas 230-233**: Remover o bloco do `InsightsGrid` que esta no final do dashboard (apos todas as secoes)
-
-### Estrutura resultante
+**Linhas 100-117**: Substituir o `useEffect` atual que usa `window.addEventListener("resize")` e `document.addEventListener("fullscreenchange")` por um unico `ResizeObserver` no `containerRef`:
 
 ```text
-<CollapsibleSection title="Funil e Tempo">
-  <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-    <div className="lg:col-span-3">
-      {hasCustomVisuals ? (
-        <div className="h-full min-h-[500px]">
-          <InsightsGrid visuals={visuals} onLayoutChange={onLayoutChange} />
-        </div>
-      ) : (
-        <div className="placeholder...">
-          Espaco disponivel para visual customizado
-        </div>
-      )}
-    </div>
-    <div className="lg:col-span-2">
-      <TimePerStageCard ... />
-    </div>
-  </div>
-</CollapsibleSection>
+useEffect(() => {
+  if (!containerRef.current) return;
+  const ro = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      setWidth(entry.contentRect.width);
+    }
+  });
+  ro.observe(containerRef.current);
+  return () => ro.disconnect();
+}, []);
 ```
 
-Isso garante que o funil customizado fique sempre fixo ao lado do "Tempo por Etapa", independente de filtros, modo foco ou tela cheia.
-
+Isso elimina a necessidade de tratar `readOnly` separadamente e garante que o grid recalcule sua largura automaticamente quando o zoom muda, quando entra em fullscreen, ou quando a janela e redimensionada.
