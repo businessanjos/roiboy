@@ -207,7 +207,7 @@ export function PipelineExportDialog({
         const { data: batch, error } = await supabase
           .from("deals")
           .select(
-            `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, responsible_user_id, lead_id, product_id,
+            `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, responsible_user_id, lead_id,
             leads(full_name, phone, email)`
           )
           .eq("account_id", currentUser.account_id)
@@ -259,7 +259,11 @@ export function PipelineExportDialog({
         filtered = filtered.filter((d) => d.stage_id === filterStage);
       }
       if (filterProduct !== "all") {
-        filtered = filtered.filter((d) => d.product_id === filterProduct);
+        filtered = filtered.filter((d) => {
+          const fvs = fieldValuesByDeal[d.id] || [];
+          const itemVendaFv = fvs.find((fv: any) => fv.field_id === '033b91fb-3add-4c96-aec9-567fefbd0fb2');
+          return itemVendaFv?.value_text === filterProduct;
+        });
       }
 
       // Custom field filters (MQL, Faturamento, Canal)
@@ -364,12 +368,8 @@ export function PipelineExportDialog({
           const fv = fvs.find((v: any) => v.field_id === cf.id);
           if (!fv) {
             // Special case: product_id for "Item da Venda" type fields
-            if (cf.name.toLowerCase().includes("item") && deal.product_id) {
-              row.push(productsMap[deal.product_id] || deal.product_id);
-            } else {
-              row.push("");
-            }
-            return;
+             row.push("");
+             return;
           }
 
           let rawValue: any;
