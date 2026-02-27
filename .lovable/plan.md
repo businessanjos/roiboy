@@ -1,32 +1,50 @@
 
 
-## Corrigir erro na exportação do Pipeline
+## Corrigir posicionamento do Funil de Vendas no Dashboard WhatsApp
 
 ### Problema
 
-A query de exportação em `PipelineExportDialog.tsx` (linha 210) solicita a coluna `product_id` na tabela `deals`, mas essa coluna nao existe no schema. O `product_id` e um campo virtual armazenado na tabela `deal_field_values`, nao diretamente em `deals`. Isso causa erro na query do Supabase e impede a exportacao.
+Os visuais customizados (incluindo o Funil de Vendas) sao renderizados como uma camada de sobreposicao absoluta (`absolute inset-0 z-10 pointer-events-none`) sobre as secoes do dashboard WhatsApp. Isso causa dois problemas:
+
+1. **Ao filtrar**: o conteudo abaixo muda de altura, alterando o sistema de coordenadas do overlay e deslocando o visual
+2. **No modo foco/tela cheia**: o container muda de dimensoes, causando o mesmo deslocamento
+
+Em contraste, os dashboards regulares (InsightsMainContent) renderizam o InsightsGrid em fluxo normal do documento, sem posicionamento absoluto.
 
 ### Solucao
 
-Remover `product_id` da query principal de deals e, em vez disso, resolver o "Item da Venda" exclusivamente a partir dos `deal_field_values` ja buscados na etapa 2.
+Mudar a renderizacao dos visuais customizados de overlay absoluto para fluxo normal do documento, igual aos dashboards regulares. O InsightsGrid sera renderizado apos as secoes nativas, dentro do fluxo normal.
 
 ### Alteracao
 
-**Arquivo:** `src/components/sales/PipelineExportDialog.tsx`
+**Arquivo:** `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`
 
-1. **Linha 210**: Remover `product_id` do select da query de deals:
-   - De: `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, responsible_user_id, lead_id, product_id, leads(...)`
-   - Para: `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, responsible_user_id, lead_id, leads(...)`
+1. **Remover o overlay absoluto** (linhas 139-143): Eliminar o bloco `<div className="absolute inset-0 z-10 pointer-events-none">` que envolve o InsightsGrid
 
-2. **Linha 263** (filtro por produto): Ajustar o filtro `filterProduct` para buscar o product_id nos `deal_field_values` em vez de `deal.product_id`. Usar o campo customizado "Item da Venda" (ID `033b91fb-3add-4c96-aec9-567fefbd0fb2`) para filtrar.
+2. **Mover o InsightsGrid para dentro do fluxo normal**: Renderizar o InsightsGrid apos as secoes nativas (apos o fechamento do `<div className="space-y-6">`), dentro do container `relative`, sem posicionamento absoluto
 
-3. **Linha 367** (resolucao do nome do produto no custom field): Remover referencia a `deal.product_id` que nao existe mais. Resolver o valor do campo "Item da Venda" diretamente do `deal_field_values`.
+3. **Resultado**: O grid ficara no fluxo do documento, mantendo posicao estavel independente de filtros, modo foco ou tela cheia
 
 ### Detalhe tecnico
 
 | Local | De | Para |
 |---|---|---|
-| Select query (L210) | inclui `product_id` | remove `product_id` |
-| Filtro de produto (L261-263) | `d.product_id === filterProduct` | busca no `deal_field_values` pelo field_id do item da venda |
-| Custom field "Item" (L367) | fallback para `deal.product_id` | busca valor do field_value correspondente |
+| Linhas 139-143 | `<div className="absolute inset-0 z-10 pointer-events-none">` com InsightsGrid | Removido |
+| Apos linha 236 (fim do space-y-6) | Nada | InsightsGrid em fluxo normal, sem wrapper absoluto |
+
+A estrutura final do `dashboardContent` sera:
+
+```text
+<div className="relative">
+  <div className="space-y-6">
+    {/* secoes nativas: pipeline, funnel_time, conversion, etc */}
+  </div>
+  {/* InsightsGrid em fluxo normal - sem overlay */}
+  {hasCustomVisuals && onLayoutChange && (
+    <InsightsGrid visuals={visuals} onLayoutChange={onLayoutChange} />
+  )}
+</div>
+```
+
+Isso garante que os visuais customizados se comportem exatamente como nos dashboards regulares: posicao fixa, sem deslocamento ao filtrar ou ao usar modo foco/tela cheia.
 
