@@ -1008,7 +1008,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
       onCommentAdded?.();
     } catch (error: any) {
       console.error("Error sending file:", error);
-      toast.error("Erro ao enviar arquivo");
+      toast.error(error?.message || "Erro ao enviar arquivo");
     } finally {
       setUploading(false);
     }

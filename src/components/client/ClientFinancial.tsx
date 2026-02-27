@@ -505,7 +505,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
       toast.success(type === "image" ? "Imagem enviada!" : "Arquivo enviado!");
     } catch (error: any) {
       console.error("Error uploading file:", error);
-      toast.error("Erro ao enviar arquivo");
+      toast.error(error?.message || "Erro ao enviar arquivo");
     } finally {
       setUploading(false);
       if (imageInputRef.current) imageInputRef.current.value = "";
