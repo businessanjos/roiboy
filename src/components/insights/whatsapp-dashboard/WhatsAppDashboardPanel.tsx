@@ -135,13 +135,6 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
 
   const dashboardContent = (
     <div className="relative">
-      {/* Custom visuals grid - overlay layer for free positioning */}
-      {hasCustomVisuals && onLayoutChange && (
-        <div className="absolute inset-0 z-10 pointer-events-none">
-          <InsightsGrid visuals={visuals} onLayoutChange={onLayoutChange} />
-        </div>
-      )}
-
       {/* Built-in sections - normal flow */}
       <div className="space-y-6">
         {sectionVisible('pipeline') && (
@@ -234,6 +227,10 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
           </CollapsibleSection>
         )}
       </div>
+      {/* Custom visuals grid - normal flow */}
+      {hasCustomVisuals && onLayoutChange && (
+        <InsightsGrid visuals={visuals} onLayoutChange={onLayoutChange} />
+      )}
     </div>
   );
 
