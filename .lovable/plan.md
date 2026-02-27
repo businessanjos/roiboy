@@ -1,84 +1,32 @@
 
 
-## Corrigir o Funil de Tarefas para exibir tipos de atividade na ordem correta
+## Corrigir erro na exportação do Pipeline
 
 ### Problema
 
-O visual "Funil de Tarefas" atualmente agrupa por status (Concluída/Pendente) em vez de exibir os tipos de atividade na ordem sequencial do processo comercial. Deveria mostrar apenas tarefas concluídas, agrupadas por tipo de atividade, na ordem fixa definida.
+A query de exportação em `PipelineExportDialog.tsx` (linha 210) solicita a coluna `product_id` na tabela `deals`, mas essa coluna nao existe no schema. O `product_id` e um campo virtual armazenado na tabela `deal_field_values`, nao diretamente em `deals`. Isso causa erro na query do Supabase e impede a exportacao.
 
-### Ordem fixa dos tipos de atividade
+### Solucao
 
-1. Primeiro Contato Realizado
-2. Ligacao Atendida
-3. Ligacao Nao Atendida
-4. No-Show
-5. Call Comercial Agendada
-6. Call Comercial Concluida
-7. Proposta de Fechamento
-8. Follow Up
+Remover `product_id` da query principal de deals e, em vez disso, resolver o "Item da Venda" exclusivamente a partir dos `deal_field_values` ja buscados na etapa 2.
 
-### Logica cumulativa
+### Alteracao
 
-O componente `ConfigurableFunnel` ja implementa soma cumulativa de baixo para cima. Os dados precisam apenas conter a contagem bruta de tarefas concluidas por tipo -- o funil cuida do resto.
+**Arquivo:** `src/components/sales/PipelineExportDialog.tsx`
 
-### Alteracoes
+1. **Linha 210**: Remover `product_id` do select da query de deals:
+   - De: `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, responsible_user_id, lead_id, product_id, leads(...)`
+   - Para: `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, responsible_user_id, lead_id, leads(...)`
 
-**Arquivo 1: `src/hooks/useVisualData.ts`**
+2. **Linha 263** (filtro por produto): Ajustar o filtro `filterProduct` para buscar o product_id nos `deal_field_values` em vez de `deal.product_id`. Usar o campo customizado "Item da Venda" (ID `033b91fb-3add-4c96-aec9-567fefbd0fb2`) para filtrar.
 
-Adicionar tratamento especial para funnel de tarefas (apos linha 112):
+3. **Linha 367** (resolucao do nome do produto no custom field): Remover referencia a `deal.product_id` que nao existe mais. Resolver o valor do campo "Item da Venda" diretamente do `deal_field_values`.
 
-- Quando `chartType === 'funnel'` e `dataSource === 'tasks'`, interceptar o resultado
-- Filtrar apenas tarefas com `completed_at` (concluidas)
-- Reagrupar por `activity_type` (nome do tipo de atividade)
-- Ordenar segundo a ordem fixa definida acima
-- Remover tipos que nao estao na lista fixa
+### Detalhe tecnico
 
-Isso sera feito adicionando um bloco condicional apos o bloco existente de funnel de deals (linha ~112), que:
-1. Re-processa os dados ja buscados pela `fetchTasksData` -- mas na verdade, como precisamos filtrar por `completed_at`, sera melhor buscar os dados com filtro direto
-2. Cria uma funcao `fetchTasksFunnelData` dedicada que:
-   - Busca tarefas com `completed_at` nao nulo (`.not('completed_at', 'is', null)`)
-   - Agrupa por nome do tipo de atividade
-   - Retorna na ordem fixa
-
-**Arquivo 2: `src/components/insights/AddVisualModal.tsx`**
-
-Atualizar a configuracao de criacao do funnel de tarefas (linha 403):
-
-- Mudar `dimension.field` de `'status'` para `'activity_type'`
-- Isso garante que novos funis de tarefas ja sejam criados com a dimensao correta
-
-### Detalhes tecnicos
-
-Nova funcao em `useVisualData.ts`:
-
-```text
-TASK_FUNNEL_ORDER = [
-  'Primeiro Contato Realizado',
-  'Ligação Atendida', 
-  'Ligação não atendida',
-  'No-Show',
-  'Call Comercial Agendada',
-  'Call Comercial Concluída',
-  'Proposta de Fechamento',
-  'Follow Up'
-]
-
-fetchTasksFunnelData(accountId, filters):
-  1. Buscar tarefas com completed_at IS NOT NULL
-  2. Agrupar por activity_type name
-  3. Filtrar apenas tipos presentes em TASK_FUNNEL_ORDER
-  4. Ordenar pela posicao no array
-  5. Retornar AggregatedDataPoint[]
-```
-
-No bloco de switch de `dataSource === 'tasks'` (linha 52-57):
-- Adicionar condicao: se `chartType === 'funnel'`, chamar `fetchTasksFunnelData` em vez de `fetchTasksData`
-
-No bloco pos-processamento (linha 112-114):
-- Adicionar condicao para `chartType === 'funnel' && dataSource === 'tasks'` para pular o sort descrescente por valor (a ordem ja esta fixa)
-
-| Arquivo | Alteracao |
-|---|---|
-| `src/hooks/useVisualData.ts` | Nova funcao `fetchTasksFunnelData` + condicional no switch de tasks |
-| `src/components/insights/AddVisualModal.tsx` | Dimension field de `status` para `activity_type` no funnel de tarefas |
+| Local | De | Para |
+|---|---|---|
+| Select query (L210) | inclui `product_id` | remove `product_id` |
+| Filtro de produto (L261-263) | `d.product_id === filterProduct` | busca no `deal_field_values` pelo field_id do item da venda |
+| Custom field "Item" (L367) | fallback para `deal.product_id` | busca valor do field_value correspondente |
 
