@@ -103,13 +103,13 @@ export function FinancialQuickNoteInput({
       const filePath = `${currentUser.account_id}/financial/${clientId}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from("client-files")
+        .from("client-followups")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage
-        .from("client-files")
+        .from("client-followups")
         .getPublicUrl(filePath);
 
       const { error: insertError } = await supabase
@@ -130,7 +130,7 @@ export function FinancialQuickNoteInput({
       onNoteAdded?.();
     } catch (error) {
       console.error("Error uploading file:", error);
-      toast.error("Erro ao fazer upload do arquivo");
+      toast.error((error as any)?.message || "Erro ao fazer upload do arquivo");
     } finally {
       setUploading(false);
       // Reset input

@@ -526,7 +526,7 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
       fetchFollowups();
     } catch (error: any) {
       console.error("Error uploading file:", error);
-      toast.error("Erro ao enviar arquivo");
+      toast.error(error?.message || "Erro ao enviar arquivo");
     } finally {
       setUploading(false);
       // Reset input
@@ -655,7 +655,7 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
       }
     } catch (error: any) {
       console.error("Error in bulk upload:", error);
-      toast.error("Erro ao enviar arquivos");
+      toast.error(error?.message || "Erro ao enviar arquivos");
     } finally {
       setUploading(false);
     }
