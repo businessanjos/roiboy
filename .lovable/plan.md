@@ -1,40 +1,37 @@
 
 
-## Diagnóstico: Permissões da função "Financeiro"
+## Corrigir: Seletor de etapas nao aparece ao editar campos fora do Pipeline
 
-### O que foi encontrado
+### Problema
 
-Consultei diretamente o banco de dados e verifiquei as permissões atuais da função "Financeiro" atribuída à Rosane Cervati:
+Quando um campo personalizado e editado a partir da pagina de Clientes (ou qualquer lugar fora do Pipeline de Vendas), o seletor de etapas obrigatorias nao aparece, mesmo que o campo esteja marcado como obrigatorio. Isso acontece porque o seletor so e exibido quando `sectorContext === "deals"`, e a pagina de Clientes abre o gerenciador com `sectorContext = "clients"` (padrao).
 
-| Permissão | Status |
+### Causa raiz
+
+No `CustomFieldsManager.tsx`:
+- **Linha 320**: `dealStages` so e buscado quando `sectorContext === "deals"`
+- **Linha 741**: O seletor de etapas so renderiza quando `sectorContext === "deals" && dealStages.length > 0`
+- A pagina de Clientes (e Settings) nao passa `sectorContext="deals"`, entao o seletor nunca aparece
+
+### Solucao
+
+Modificar a logica para buscar e exibir as etapas do pipeline sempre que o campo sendo editado tenha `show_in_deals: true`, independentemente do `sectorContext` de onde o gerenciador foi aberto.
+
+### Alteracoes tecnicas
+
+**Arquivo:** `src/components/custom-fields/CustomFieldsManager.tsx`
+
+1. **Buscar deal stages sempre** - Alterar o `useEffect` (linha 318-334) para buscar etapas do pipeline independente do `sectorContext`, removendo a condicao `sectorContext === "deals"`. Isso garante que `dealStages` esteja sempre disponivel
+
+2. **Mostrar seletor baseado no campo, nao no contexto** - Alterar a condicao de renderizacao (linha 741) de `sectorContext === "deals"` para verificar se o campo sendo editado tem `show_in_deals: true` (usando `editingField?.show_in_deals`). Isso faz o seletor aparecer quando relevante
+
+3. **Ajustar logica de edicao** - Na funcao `handleEditField` (linha 450), remover a condicao `sectorContext === "deals"` para buscar `required_stages` sempre que o campo tem `show_in_deals`
+
+4. **Ajustar logica de salvamento** - Na construcao do payload (linha 563), trocar `sectorContext === "deals"` por verificar se o campo tem `show_in_deals`, para salvar `required_stages` corretamente
+
+| Local no codigo | Mudanca |
 |---|---|
-| clients.view (Ver clientes) | Ativa |
-| clients.edit (Editar clientes) | Ativa |
-| clients.delete (Excluir clientes) | **NAO CONFIGURADA** |
-| products.view (Ver produtos) | Ativa |
-| royzapp.access (Acessar ROY zAPP) | Ativa |
-
-### Problema identificado
-
-A função "Financeiro" **já possui** permissão para acessar o ROY zAPP e criar/editar clientes. Porém, falta a permissão `clients.delete` (Excluir clientes) que você mencionou querer garantir.
-
-Quanto ao cadastro de clientes no ROY zAPP: o código **não bloqueia** a criação de clientes com base em permissões — qualquer usuário autenticado com acesso ao ROY zAPP pode cadastrar clientes. Se a Rosane não conseguiu, pode ter sido por outro motivo (erro de rede, campo obrigatório vazio, telefone duplicado, etc.).
-
-### O que será feito
-
-1. **Adicionar `clients.delete` à função "Financeiro"** via migração SQL para garantir que a Rosane possa também excluir clientes
-
-2. **Verificar se há algum bloqueio no fluxo de cadastro** do ROY zAPP que possa ter impedido a operação (ex: validação de telefone duplicado, erro silencioso)
-
-### Detalhe técnico
-
-Uma migração SQL será criada para inserir a permissão faltante:
-
-```sql
-INSERT INTO role_permissions (role_id, permission)
-VALUES ('552c27a6-2121-4b7e-97ae-52017dd907ae', 'clients.delete')
-ON CONFLICT (role_id, permission) DO NOTHING;
-```
-
-Nenhuma alteração de código é necessária — o fluxo de cadastro no ROY zAPP já funciona sem verificação de permissões específicas.
-
+| useEffect dealStages (L318-334) | Remover condicao `sectorContext === "deals"` |
+| handleEditField (L450) | Trocar `sectorContext === "deals"` por `field.show_in_deals` |
+| Payload de save (L563) | Trocar `sectorContext === "deals"` por verificacao de `show_in_deals` |
+| Renderizacao do seletor (L741) | Trocar `sectorContext === "deals"` por `editingField?.show_in_deals` |
