@@ -76,6 +76,9 @@ interface ZappMessageInputProps {
   // Image preview props
   imagePreview?: { file: File; url: string } | null;
   onSetImagePreview?: (preview: { file: File; url: string } | null) => void;
+  // File preview props (video/document)
+  filePreview?: { file: File; url: string } | null;
+  onSetFilePreview?: (preview: { file: File; url: string } | null) => void;
   onMessageChange: (value: string) => void;
   onSendMessage: () => void;
   onKeyPress: (e: React.KeyboardEvent) => void;
@@ -93,7 +96,6 @@ interface ZappMessageInputProps {
   onMentionInsert?: (mention: MentionData) => void;
   onToggleSignature?: () => void;
   onOpenPlaybook?: () => void;
-  onFileDrop?: (file: File) => void;
 }
 
 const formatRecordingDuration = (seconds: number): string => {
@@ -121,6 +123,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   sectorId,
   imagePreview,
   onSetImagePreview,
+  filePreview,
+  onSetFilePreview,
   onMessageChange,
   onSendMessage,
   onKeyPress,
@@ -138,7 +142,6 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   onMentionInsert,
   onToggleSignature,
   onOpenPlaybook,
-  onFileDrop,
 }: ZappMessageInputProps) {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -195,8 +198,9 @@ export const ZappMessageInput = memo(function ZappMessageInput({
     if (file.type.startsWith('image/') && onSetImagePreview) {
       const previewUrl = URL.createObjectURL(file);
       onSetImagePreview({ file, url: previewUrl });
-    } else if (onFileDrop) {
-      onFileDrop(file);
+    } else if (onSetFilePreview) {
+      const previewUrl = URL.createObjectURL(file);
+      onSetFilePreview({ file, url: previewUrl });
     }
   };
 
@@ -218,6 +222,15 @@ export const ZappMessageInput = memo(function ZappMessageInput({
     }
     onSetImagePreview?.(null);
   };
+
+  const discardFilePreview = () => {
+    if (filePreview) {
+      URL.revokeObjectURL(filePreview.url);
+    }
+    onSetFilePreview?.(null);
+  };
+
+  const isVideo = filePreview?.file.type.startsWith('video/');
 
   return (
     <>
@@ -495,6 +508,54 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                   size="icon"
                   className="text-destructive hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
                   onClick={discardImagePreview}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Descartar</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+                  onClick={onSendMessage}
+                  disabled={uploadingMedia}
+                >
+                  {uploadingMedia ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Send className="h-5 w-5" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Enviar</TooltipContent>
+            </Tooltip>
+          </div>
+        ) : filePreview ? (
+          // File preview UI (video/document)
+          <div className="flex items-center gap-2 flex-1 bg-zapp-input rounded-lg px-3 py-2">
+            <div className="h-12 w-12 rounded bg-zapp-hover flex items-center justify-center flex-shrink-0">
+              {isVideo ? (
+                <Play className="h-6 w-6 text-zapp-accent" />
+              ) : (
+                <FileText className="h-6 w-6 text-[#7f66ff]" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-zapp-text truncate">{filePreview.file.name}</p>
+              <p className="text-xs text-zapp-text-muted">
+                {isVideo ? "Vídeo pronto para envio" : "Documento pronto para envio"}
+              </p>
+            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-destructive hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+                  onClick={discardFilePreview}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>

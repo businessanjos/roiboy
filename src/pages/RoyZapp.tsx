@@ -587,6 +587,7 @@ export default function RoyZapp() {
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [audioPreview, setAudioPreview] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
   const [imagePreview, setImagePreview] = useState<{ file: File; url: string; caption?: string } | null>(null);
+  const [filePreview, setFilePreview] = useState<{ file: File; url: string } | null>(null);
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [showFormatting, setShowFormatting] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
@@ -1633,6 +1634,16 @@ export default function RoyZapp() {
       
       // Send media message with caption
       await sendMediaMessage(file, "image", caption);
+      return;
+    }
+
+    // If there's a file preview (video/document), send it
+    if (filePreview && selectedConversation) {
+      const file = filePreview.file;
+      const mediaType: "image" | "video" | "document" = file.type.startsWith('video/') ? 'video' : 'document';
+      URL.revokeObjectURL(filePreview.url);
+      setFilePreview(null);
+      await sendMediaMessage(file, mediaType);
       return;
     }
     
@@ -4408,13 +4419,14 @@ export default function RoyZapp() {
             }
           }}
           onOpenPlaybook={() => setPlaybookDialogOpen(true)}
-          onFileDrop={(file: File) => {
-            if (file.size > 50 * 1024 * 1024) {
+          filePreview={filePreview}
+          onSetFilePreview={(preview) => {
+            if (preview && preview.file.size > 50 * 1024 * 1024) {
               toast.error("Arquivo muito grande. Máximo 50MB.");
+              URL.revokeObjectURL(preview.url);
               return;
             }
-            const mediaType: "image" | "video" | "document" = file.type.startsWith('video/') ? 'video' : 'document';
-            sendMediaMessage(file, mediaType);
+            setFilePreview(preview);
           }}
         />
         )}
