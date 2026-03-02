@@ -1,50 +1,46 @@
 
-## Adicionar preview de arquivo antes do envio no drag-and-drop
+## Corrigir erro "Erro ao carregar leads" ao abrir o Pipeline
 
-### Problema
+### Problema identificado
 
-Ao arrastar e soltar um video ou documento na barra de mensagem, o arquivo e enviado imediatamente sem mostrar um preview para confirmacao do usuario. O comportamento esperado e o mesmo das imagens: mostrar um preview e aguardar o usuario confirmar (Enter ou botao enviar).
+O erro "TypeError: Failed to fetch" ocorre porque o hook `useLeads()` e chamado imediatamente ao montar a pagina do Pipeline, mesmo quando o usuario esta na aba "Pipeline" e nao na aba "Prospecao".
 
-### Abordagem
+Com 672+ negocios abertos, o Pipeline ja dispara centenas de requisicoes simultaneas (uma query `internal_tasks` por card de negocio via `useDealActivityStatus`). Quando o `useLeads` tenta buscar todos os leads ao mesmo tempo, o navegador atinge o limite de conexoes simultaneas (6 por dominio), e algumas requisicoes falham com "Failed to fetch".
 
-Reutilizar o mesmo padrao ja existente para preview de imagens, expandindo para suportar qualquer tipo de arquivo (video, documento).
+### Causa raiz
 
-### Alteracoes
+- Linha 90 de `SalesPipeline.tsx`: `const { leads, loading: leadsLoading, refetch: refetchLeads } = useLeads();`
+- Este hook busca TODOS os leads com paginacao (lotes de 1000) imediatamente no mount
+- O unico uso dos dados de `leads` na aba Pipeline e mostrar o contador no badge: `leads.length`
+- A aba `LeadsTab` provavelmente tem sua propria busca de dados independente
 
-**1. `src/components/royzapp/ZappMessageInput.tsx`**
+### Solucao
 
-- Adicionar nova prop `filePreview?: { file: File; url: string } | null` e `onSetFilePreview?: (preview: { file: File; url: string } | null) => void`
-- No `handleDrop`, ao invez de chamar `onFileDrop` diretamente, chamar `onSetFilePreview` para mostrar o preview
-- Adicionar UI de preview de arquivo (similar ao de imagem):
-  - Videos: mostrar thumbnail com icone de play e nome do arquivo
-  - Documentos: mostrar icone de documento e nome do arquivo
-- Adicionar funcao `discardFilePreview` para descartar
-- Botoes de descartar e enviar no preview (igual ao de imagem)
+Adiar o carregamento dos leads ate que o usuario realmente acesse a aba "Prospecao", ou ate que o carregamento principal do pipeline termine.
 
-**2. `src/components/royzapp/ZappChatView.tsx`**
+**Alteracao em `src/pages/SalesPipeline.tsx`:**
 
-- Propagar as novas props `filePreview` e `onSetFilePreview` para o `ZappMessageInput`
+1. Remover a chamada eageer do `useLeads()` no topo do componente
+2. Carregar leads apenas quando `mainTab === 'prospeccao'` ou apos o pipeline terminar de carregar
+3. Para o badge de contagem na aba Prospecao, fazer uma query leve separada (apenas count) ou mostrar o badge somente apos os leads serem carregados
 
-**3. `src/pages/RoyZapp.tsx`**
+**Alteracao em `src/hooks/useLeads.tsx`:**
 
-- Adicionar estado `filePreview` com `useState`
-- Implementar `onSetFilePreview` handler
-- Remover o envio imediato do `onFileDrop` e substituir por setar o preview
-- No `handleSendMessage` (ou equivalente), verificar se ha `filePreview` ativo e enviar o arquivo com deteccao de tipo (video/document) antes de limpar o preview
-- Validar tamanho (50MB) ao setar o preview, nao no envio
+1. Adicionar um parametro `enabled` opcional ao hook para controlar quando a busca e executada
+2. Quando `enabled` for `false`, nao disparar o fetch automatico
 
-### UI do preview de arquivo
+### Detalhes tecnicos
 
 ```text
-+----------------------------------------------+
-| [icone]  nome_do_arquivo.mp4      [X] [Enviar]|
-|          Video pronto para envio              |
-+----------------------------------------------+
+Antes:  useLeads() -> fetch imediato de todos os leads (competindo com 672+ queries de tasks)
+Depois: useLeads({ enabled: mainTab === 'prospeccao' || !loading }) -> fetch adiado
 ```
 
-Para videos: icone de Play, texto "Video pronto para envio"
-Para documentos: icone de FileText, texto "Documento pronto para envio"
+Alternativa mais simples: usar uma query de contagem leve (`select('id', { count: 'exact', head: true })`) para o badge, e carregar os dados completos apenas na aba Prospecao.
 
 ### Resultado
 
-Todos os tipos de arquivo arrastados e soltos mostrarao um preview com confirmacao antes do envio, consistente com o comportamento das imagens.
+- O Pipeline abrira sem disparar a busca pesada de leads
+- O erro "Failed to fetch" sera eliminado pois as requisicoes nao competirao entre si
+- A contagem do badge sera carregada com uma query leve
+- Os dados completos dos leads serao buscados apenas quando necessario
