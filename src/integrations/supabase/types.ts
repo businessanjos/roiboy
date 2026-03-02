@@ -7431,6 +7431,7 @@ export type Database = {
           app_key: string
           app_secret: string
           created_at: string
+          default_bank_account_code: string | null
           default_category_code: string | null
           default_service_code: string | null
           field_mappings: Json | null
@@ -7443,6 +7444,7 @@ export type Database = {
           app_key?: string
           app_secret?: string
           created_at?: string
+          default_bank_account_code?: string | null
           default_category_code?: string | null
           default_service_code?: string | null
           field_mappings?: Json | null
@@ -7455,6 +7457,7 @@ export type Database = {
           app_key?: string
           app_secret?: string
           created_at?: string
+          default_bank_account_code?: string | null
           default_category_code?: string | null
           default_service_code?: string | null
           field_mappings?: Json | null

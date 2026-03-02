@@ -26,6 +26,7 @@ export function OmieIntegrationTab() {
   const [isEnabled, setIsEnabled] = useState(false);
   const [defaultServiceCode, setDefaultServiceCode] = useState("");
   const [defaultCategoryCode, setDefaultCategoryCode] = useState("");
+  const [defaultBankAccountCode, setDefaultBankAccountCode] = useState("");
   const [fieldMappings, setFieldMappings] = useState<Record<string, FieldMapping>>({
     cliente: { source: "client.cpf_cnpj" },
     vendedor: { source: "deal.responsible" },
@@ -58,6 +59,7 @@ export function OmieIntegrationTab() {
       setIsEnabled(data.is_enabled || false);
       setDefaultServiceCode(data.default_service_code || "");
       setDefaultCategoryCode(data.default_category_code || "");
+      setDefaultBankAccountCode(data.default_bank_account_code || "");
       if (data.field_mappings && typeof data.field_mappings === "object" && !Array.isArray(data.field_mappings)) {
         setFieldMappings(data.field_mappings as unknown as Record<string, FieldMapping>);
       }
@@ -76,6 +78,7 @@ export function OmieIntegrationTab() {
       is_enabled: isEnabled,
       default_service_code: defaultServiceCode,
       default_category_code: defaultCategoryCode,
+      default_bank_account_code: defaultBankAccountCode,
       field_mappings: fieldMappings as unknown as Record<string, any>,
       updated_at: new Date().toISOString(),
     };
@@ -198,6 +201,17 @@ export function OmieIntegrationTab() {
               className="max-w-xs"
             />
             <p className="text-xs text-muted-foreground">Código da categoria financeira usada na OS (obrigatório).</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Conta Corrente (nCodCC)</Label>
+            <Input
+              value={defaultBankAccountCode}
+              onChange={(e) => setDefaultBankAccountCode(e.target.value)}
+              placeholder="Ex: 11850365"
+              className="max-w-xs"
+            />
+            <p className="text-xs text-muted-foreground">Código numérico da conta corrente cadastrada no Omie (Finanças {'>'} Contas Correntes). Obrigatório.</p>
           </div>
 
           <div className="flex items-center gap-3">
