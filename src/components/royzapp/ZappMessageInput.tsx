@@ -11,6 +11,7 @@ import {
   Mic,
   PenLine,
   Play,
+  Paperclip,
   Plus,
   Send,
   Smile,
@@ -92,6 +93,7 @@ interface ZappMessageInputProps {
   onMentionInsert?: (mention: MentionData) => void;
   onToggleSignature?: () => void;
   onOpenPlaybook?: () => void;
+  onFileDrop?: (file: File) => void;
 }
 
 const formatRecordingDuration = (seconds: number): string => {
@@ -136,6 +138,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   onMentionInsert,
   onToggleSignature,
   onOpenPlaybook,
+  onFileDrop,
 }: ZappMessageInputProps) {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -186,12 +189,14 @@ export const ZappMessageInput = memo(function ZappMessageInput({
     e.stopPropagation();
     setIsDragging(false);
     
-    if (!onSetImagePreview) return;
-    
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
+    if (!file) return;
+
+    if (file.type.startsWith('image/') && onSetImagePreview) {
       const previewUrl = URL.createObjectURL(file);
       onSetImagePreview({ file, url: previewUrl });
+    } else if (onFileDrop) {
+      onFileDrop(file);
     }
   };
 
@@ -322,8 +327,8 @@ export const ZappMessageInput = memo(function ZappMessageInput({
         {isDragging && (
           <div className="absolute inset-0 bg-zapp-accent/10 border-2 border-dashed border-zapp-accent rounded-lg flex items-center justify-center z-50 pointer-events-none">
             <div className="flex items-center gap-2 text-zapp-accent font-medium">
-              <ImageIcon className="h-5 w-5" />
-              <span className="hidden sm:inline">Solte a imagem aqui</span>
+              <Paperclip className="h-5 w-5" />
+              <span className="hidden sm:inline">Solte o arquivo aqui</span>
             </div>
           </div>
         )}

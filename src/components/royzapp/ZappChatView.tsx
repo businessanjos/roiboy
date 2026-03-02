@@ -89,6 +89,7 @@ interface ZappChatViewProps {
   onToggleSignature?: () => void;
   // Playbook
   onOpenPlaybook?: () => void;
+  onFileDrop?: (file: File) => void;
 }
 
 export function ZappChatView({
@@ -158,6 +159,7 @@ export function ZappChatView({
   hasSignature,
   onToggleSignature,
   onOpenPlaybook,
+  onFileDrop,
   onToggleSuggestions,
 }: ZappChatViewProps) {
   // Memoize last 10 messages to prevent infinite re-renders
@@ -327,6 +329,7 @@ export function ZappChatView({
         hasSignature={hasSignature}
         onToggleSignature={onToggleSignature}
         onOpenPlaybook={onOpenPlaybook}
+        onFileDrop={onFileDrop}
       />
     </div>
   );
