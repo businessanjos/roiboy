@@ -118,6 +118,19 @@ export function useSubscriptionStatus(): SubscriptionStatus {
     }
 
     checkSubscription();
+
+    // Safety timeout - fail open after 8s
+    const safetyTimeout = setTimeout(() => {
+      setStatus(prev => {
+        if (prev.isLoading) {
+          console.warn("[useSubscriptionStatus] Safety timeout: forcing isLoading to false after 8s");
+          return { ...prev, isLoading: false, hasAccess: true };
+        }
+        return prev;
+      });
+    }, 8000);
+
+    return () => clearTimeout(safetyTimeout);
   }, [user, authLoading]);
 
   return status;

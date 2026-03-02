@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Outlet, Navigate } from "react-router-dom";
 import { Sidebar, MobileHeader } from "./Sidebar";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,12 +10,26 @@ import { TrialBanner } from "@/components/subscription/TrialBanner";
 import { GlobalAgentChat } from "@/components/admin/GlobalAgentChat";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
   const { isLoading: subLoading, hasAccess, isTrialExpired } = useSubscriptionStatus();
   const { open: searchOpen, setOpen: setSearchOpen } = useGlobalSearch();
   const { helpOpen, setHelpOpen } = useKeyboardShortcuts();
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
+
+  const isLoading = authLoading || subLoading;
+
+  // Show retry button after 12s of loading
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingTimeout(false);
+      return;
+    }
+    const timer = setTimeout(() => setLoadingTimeout(true), 12000);
+    return () => clearTimeout(timer);
+  }, [isLoading]);
 
   // Check if user is super admin or has admin role
   const { data: isAdmin = false } = useQuery({
@@ -38,8 +53,17 @@ export function AppLayout() {
     enabled: !!user?.id,
   });
 
-  if (authLoading || subLoading) {
-    return <LoadingScreen message="Carregando..." />;
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen gap-4">
+        <LoadingScreen message="Carregando..." />
+        {loadingTimeout && (
+          <Button variant="outline" onClick={() => window.location.reload()}>
+            Tentar novamente
+          </Button>
+        )}
+      </div>
+    );
   }
 
   if (!user) {
