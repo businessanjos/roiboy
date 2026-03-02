@@ -317,7 +317,7 @@ export function CustomFieldsManager({
   // Fetch deal stages when sector context is "deals"
   useEffect(() => {
     const fetchDealStages = async () => {
-      if (sectorContext === "deals" && currentUser?.account_id) {
+      if (currentUser?.account_id) {
         const { data } = await supabase
           .from("deal_stages")
           .select("id, name")
@@ -447,7 +447,7 @@ export function CustomFieldsManager({
     setShowInClients(field.show_in_clients !== false);
     
     // Fetch required_stages for this field
-    if (sectorContext === "deals" && field.id) {
+    if (field.show_in_deals && field.id) {
       const { data } = await supabase
         .from("custom_fields")
         .select("required_stages")
@@ -560,7 +560,7 @@ export function CustomFieldsManager({
         show_in_leads: editingField?.show_in_leads ?? (sectorContext === "leads"),
         display_order: editingField?.display_order ?? fields.length,
         // Add required_stages for deals context
-        required_stages: isRequired && sectorContext === "deals" ? requiredStages : null,
+        required_stages: isRequired && (editingField?.show_in_deals ?? sectorContext === "deals") ? requiredStages : null,
       };
 
       if (editingField) {
@@ -738,7 +738,7 @@ export function CustomFieldsManager({
           </div>
 
           {/* Stage selector for required fields - only for deals context */}
-          {isRequired && sectorContext === "deals" && dealStages.length > 0 && (
+          {isRequired && (editingField?.show_in_deals ?? sectorContext === "deals") && dealStages.length > 0 && (
             <div className="space-y-2 pl-3 border-l-2 border-primary/20 ml-1">
               <Label className="text-sm text-muted-foreground">Obrigatório em quais etapas?</Label>
               <div className="space-y-2">
