@@ -1,40 +1,38 @@
 
 
-## Anexar campos "Instagram" e "Informação para Operação" na Timeline do Cliente ao ganhar negócio
+## Correcao: Seletor de etapas nao aparece para alguns usuarios
 
-### Situação Atual
+### Problema
 
-O código já possui um STEP 4.6 no fluxo `handleMarkAsWon` que transfere TODOS os campos personalizados do negócio como uma única nota genérica "Dados da Negociação" na timeline do cliente. Porém, esses dados ficam agrupados em um único bloco de texto, o que pode dificultar a visibilidade.
+O `fetchDealStages` roda em um `useEffect` que depende de `currentUser?.account_id`. Porem, quando o dialogo do gerenciador abre (`managerOpen`), somente os campos sao re-buscados (linha 337-341), **mas as etapas do pipeline NAO sao re-buscadas**. Isso causa uma condicao de corrida:
 
-### O que será feito
+1. Componente monta, `currentUser` ainda e null, effect nao faz nada
+2. `currentUser` carrega, effect roda e busca stages
+3. Mas se o usuario abrir o dialogo de edicao ANTES do fetch completar, `dealStages` esta vazio
+4. A condicao `dealStages.length > 0` na linha 741 esconde o seletor de etapas
 
-Adicionar um novo passo no fluxo `handleMarkAsWon` (STEP 4.7) que cria entradas **individuais e destacadas** na timeline do cliente para os campos "Instagram" e "Informação para Operação", quando preenchidos no negócio.
+Adicionalmente, nao ha tratamento de erro no fetch - se a query falhar silenciosamente, `dealStages` permanece vazio.
 
-### Alterações técnicas
+### Solucao
 
-**Arquivo:** `src/pages/SalesPipeline.tsx`
+Fazer com que as etapas do pipeline sejam buscadas de forma confiavel, tanto no mount quanto ao abrir o dialogo de edicao.
 
-Após o STEP 4.6 (linha 529), inserir um novo bloco que:
+### Alteracoes tecnicas
 
-1. Busca os campos personalizados "Instagram" e "Informação para Operação" pelo nome na tabela `custom_fields`
-2. Para cada campo encontrado, busca o valor na tabela `deal_field_values` para o deal em questão
-3. Se o valor existir, cria uma entrada individual na tabela `client_followups` com:
-   - **Instagram**: titulo "📸 Instagram do Negócio", conteúdo com o handle
-   - **Informação para Operação**: titulo "📌 Informação para Operação", conteúdo com o texto
+**Arquivo:** `src/components/custom-fields/CustomFieldsManager.tsx`
 
-Ambos serão do tipo "note" e ficarão visíveis como entradas separadas na timeline, facilitando a consulta pela equipe de Operações.
+1. **Extrair `fetchDealStages` para funcao reutilizavel** - Mover a logica de busca de etapas para fora do `useEffect`, tornando-a uma funcao async acessivel (similar ao `fetchFields`)
 
-### Lógica do novo passo
+2. **Buscar stages quando o manager abre** - No `useEffect` que roda quando `managerOpen` muda (linha 337-341), tambem chamar `fetchDealStages` junto com `fetchFields`
 
-```text
-STEP 4.7: Transfer specific fields to client timeline
-  1. Query custom_fields WHERE name IN ('Instagram', 'Informação para Operação')
-     AND account_id = current AND show_in_deals = true
-  2. For each field found:
-     a. Query deal_field_values WHERE deal_id AND field_id
-     b. Extract value based on field_type (value_text for both)
-     c. If value exists, INSERT into client_followups as individual note
-```
+3. **Buscar stages dentro do `openEditDialog`** - Antes de processar `required_stages`, garantir que `dealStages` esteja carregado, buscando novamente se estiver vazio
 
-Nenhuma migração de banco necessária - utiliza tabelas existentes (`custom_fields`, `deal_field_values`, `client_followups`).
+4. **Adicionar tratamento de erro** - Adicionar `try/catch` e `console.error` no fetch de stages para diagnosticar problemas futuros
+
+| Mudanca | Motivo |
+|---|---|
+| Extrair fetchDealStages como funcao | Reutilizacao em multiplos pontos |
+| Chamar no useEffect do managerOpen | Garantir stages ao abrir dialogo |
+| Chamar dentro de openEditDialog | Garantir stages antes de processar required_stages |
+| Adicionar error handling | Diagnostico de falhas silenciosas |
 
