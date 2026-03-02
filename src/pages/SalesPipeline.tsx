@@ -528,6 +528,53 @@ export default function SalesPipeline() {
         }
       }
 
+      // STEP 4.7: Transfer Instagram and Informação para Operação individually to client timeline
+      if (clientId && currentUser?.account_id) {
+        try {
+          // Find the specific custom fields by name
+          const { data: specificFields } = await supabase
+            .from("custom_fields")
+            .select("id, name, field_type")
+            .eq("account_id", currentUser.account_id)
+            .eq("show_in_deals", true)
+            .eq("is_active", true)
+            .in("name", ["Instagram", "Informação para Operação"]);
+
+          if (specificFields && specificFields.length > 0) {
+            for (const field of specificFields) {
+              const { data: fieldValue } = await supabase
+                .from("deal_field_values")
+                .select("value_text")
+                .eq("deal_id", dealId)
+                .eq("field_id", field.id)
+                .maybeSingle();
+
+              const value = fieldValue?.value_text;
+              if (value && value.trim()) {
+                const isInstagram = field.name === "Instagram";
+                const title = isInstagram ? "📸 Instagram do Negócio" : "📌 Informação para Operação";
+
+                await supabase
+                  .from("client_followups")
+                  .insert({
+                    account_id: currentUser.account_id,
+                    client_id: clientId,
+                    user_id: currentUser.id,
+                    type: "note",
+                    title,
+                    content: value.trim(),
+                  });
+
+                console.log(`[MarkAsWon] ${field.name} transferred to client timeline`);
+              }
+            }
+          }
+        } catch (specificFieldsError) {
+          console.error("[MarkAsWon] Error transferring specific fields:", specificFieldsError);
+          // Non-blocking
+        }
+      }
+
       // STEP 5: Create contract BEFORE marking as won
       let contractCreated = false;
       if (clientId && currentUser?.account_id) {
