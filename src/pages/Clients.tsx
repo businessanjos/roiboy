@@ -330,6 +330,9 @@ export default function Clients() {
   const { duplicates, checkDuplicates, clearDuplicates, loading: checkingDuplicates } = useDuplicateDetection();
   const [dismissedDuplicates, setDismissedDuplicates] = useState(false);
 
+  // Required badges collapse state
+  const [showRequiredBadges, setShowRequiredBadges] = useState(false);
+
   // Merge client state
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
   const [clientToMerge, setClientToMerge] = useState<any | null>(null);
@@ -1703,27 +1706,62 @@ export default function Clients() {
                             value={progressPercent} 
                             className={`h-1.5 ${Object.keys(formErrors).length > 0 && filledCount < totalCount ? "[&>div]:bg-destructive" : ""}`}
                           />
-                          <div className="flex flex-wrap gap-1.5 mt-1">
-                            {requiredChecks.map((check, idx) => (
-                              <span 
-                                key={idx}
-                                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs transition-colors ${
-                                  check.filled 
-                                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
-                                    : Object.keys(formErrors).length > 0
-                                      ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-shake"
-                                      : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                }`}
+                          {requiredChecks.length <= 10 ? (
+                            <div className="flex flex-wrap gap-1.5 mt-1">
+                              {requiredChecks.map((check, idx) => (
+                                <span 
+                                  key={idx}
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs transition-colors ${
+                                    check.filled 
+                                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
+                                      : Object.keys(formErrors).length > 0
+                                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-shake"
+                                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                  }`}
+                                >
+                                  {check.filled ? (
+                                    <Check className="h-2.5 w-2.5" />
+                                  ) : (
+                                    <AlertCircle className="h-2.5 w-2.5" />
+                                  )}
+                                  {check.label}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="mt-1">
+                              <button
+                                type="button"
+                                onClick={() => setShowRequiredBadges(!showRequiredBadges)}
+                                className="text-[10px] sm:text-xs text-muted-foreground hover:text-foreground transition-colors underline"
                               >
-                                {check.filled ? (
-                                  <Check className="h-2.5 w-2.5" />
-                                ) : (
-                                  <AlertCircle className="h-2.5 w-2.5" />
-                                )}
-                                {check.label}
-                              </span>
-                            ))}
-                          </div>
+                                {showRequiredBadges ? "Ocultar campos" : `Ver ${requiredChecks.length} campos`}
+                              </button>
+                              {showRequiredBadges && (
+                                <div className="flex flex-wrap gap-1.5 mt-1.5 max-h-[80px] overflow-y-auto">
+                                  {requiredChecks.map((check, idx) => (
+                                    <span 
+                                      key={idx}
+                                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs transition-colors ${
+                                        check.filled 
+                                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
+                                          : Object.keys(formErrors).length > 0
+                                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-shake"
+                                            : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                    }`}
+                                    >
+                                      {check.filled ? (
+                                        <Check className="h-2.5 w-2.5" />
+                                      ) : (
+                                        <AlertCircle className="h-2.5 w-2.5" />
+                                      )}
+                                      {check.label}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </DialogHeader>
