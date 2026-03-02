@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -87,7 +87,6 @@ export default function SalesPipeline() {
     reorderStages,
   } = useDeals();
   
-  const { leads, loading: leadsLoading, refetch: refetchLeads } = useLeads();
   const { users: salesUsers } = useSectorUsers({ sectorId: "vendas" });
   const { isAdmin } = usePermissions();
   const { validateDealOutcome } = useRequiredFieldsValidation();
@@ -102,6 +101,25 @@ export default function SalesPipeline() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeTab, setActiveTab] = useState('open');
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
+
+  // Defer full leads loading until prospeccao tab is active
+  const { leads, loading: leadsLoading, refetch: refetchLeads } = useLeads({ enabled: mainTab === 'prospeccao' });
+  
+  // Lightweight count query for badge (doesn't fetch all data)
+  const [leadsCount, setLeadsCount] = useState<number | null>(null);
+  const leadsCountFetched = useRef(false);
+  useEffect(() => {
+    if (leadsCountFetched.current || !currentUser?.account_id) return;
+    leadsCountFetched.current = true;
+    supabase
+      .from('leads')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', currentUser.account_id)
+      .then(({ count }) => {
+        setLeadsCount(count ?? 0);
+      });
+  }, [currentUser?.account_id]);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
@@ -813,7 +831,7 @@ export default function SalesPipeline() {
             <TabsTrigger value="prospeccao" className="gap-2">
               <Users className="h-4 w-4" />
               Prospecção
-              <Badge variant="secondary">{leads.length}</Badge>
+              <Badge variant="secondary">{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
             </TabsTrigger>
             <TabsTrigger value="pipeline" className="gap-2">
               <Target className="h-4 w-4" />
