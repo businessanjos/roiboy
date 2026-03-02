@@ -1,37 +1,29 @@
 
+## Adicionar campo "Conta Corrente Omie" (nCodCC) na integração
 
-## Corrigir erro persistente na criacao de OS no Omie
+### Problema
 
-### Diagnostico
+A API do Omie exige o campo `nCodCC` (codigo da Conta Corrente cadastrada no Omie) para criar uma OS. Esse campo foi removido anteriormente porque estava com valor `0` (invalido). Agora precisamos permitir que o usuario configure o valor correto.
 
-Apos investigacao profunda, identifiquei **tres problemas** na Edge Function `create-omie-os`:
+### Onde encontrar o nCodCC no Omie
 
-1. **`nCodCC: 0` invalido** - A documentacao oficial do Omie mostra que `nCodCC` deve ser um codigo de conta corrente real (ex: `11850365`). Enviar `0` pode causar a rejeicao do bloco inteiro de `InformacoesAdicionais`, fazendo com que o Omie ignore o `cCodCateg` mesmo estando presente no payload.
-
-2. **Logs de erro quebrados** - O `req.clone().json()` no bloco catch falha silenciosamente, pois o body do request ja foi consumido. Por isso a tabela `omie_integration_logs` esta vazia (0 registros), impossibilitando o debug pelo usuario.
-
-3. **Falta de log do payload** - Nao ha `console.log` do payload antes de enviar para a API, dificultando o debug nos logs da funcao.
+No painel do Omie, acesse: **Finanças > Contas Correntes**. Cada conta listada possui um codigo numerico (ex: `11850365`). Esse e o valor que deve ser inserido no campo de configuracao.
 
 ### Alteracoes
 
-**Arquivo: `supabase/functions/create-omie-os/index.ts`**
+**1. Migrar banco de dados** - Adicionar coluna `default_bank_account_code` na tabela `omie_settings`:
+```sql
+ALTER TABLE public.omie_settings ADD COLUMN default_bank_account_code text DEFAULT '';
+```
 
-1. **Salvar o body do request no inicio** para uso posterior no catch:
-   - Extrair `deal_id` e `account_id` em variavel antes do try/catch
+**2. Arquivo: `src/components/integrations/OmieIntegrationTab.tsx`**
+- Adicionar estado `defaultBankAccountCode`
+- Carregar e salvar o novo campo
+- Adicionar campo de input na UI abaixo do "Codigo da Categoria":
+  - Label: "Conta Corrente (nCodCC)"
+  - Placeholder: "Ex: 11850365"
+  - Descricao: "Codigo numerico da conta corrente cadastrada no Omie (Financas > Contas Correntes). Obrigatorio."
 
-2. **Remover `nCodCC: 0`** do payload `InformacoesAdicionais`:
-   - O campo so deve ser enviado se o usuario configurar um codigo de conta corrente real
-   - Sem ele, o Omie usa a conta padrao
-
-3. **Adicionar console.log do payload** antes de chamar a API:
-   - `console.log('OS Payload:', JSON.stringify(osPayload))`
-
-4. **Corrigir o logging de erro** no catch:
-   - Usar as variaveis `deal_id` e `account_id` salvas antes do try, em vez de tentar re-ler o body do request
-
-### Resultado esperado
-
-- O `cCodCateg` sera reconhecido pela API do Omie sem interferencia do `nCodCC` invalido
-- Os logs de integracao serao registrados corretamente na tabela para debug futuro
-- O payload exato sera visivel nos logs da funcao para qualquer depuracao
-
+**3. Arquivo: `supabase/functions/create-omie-os/index.ts`**
+- Adicionar validacao: se `default_bank_account_code` estiver vazio, lancar erro amigavel
+- Adicionar `nCodCC: Number(settings.default_bank_account_code)` dentro de `InformacoesAdicionais` no payload da OS
