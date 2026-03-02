@@ -164,7 +164,12 @@ serve(async (req) => {
       throw new Error(`Cliente não encontrado no Omie. Busca por: ${clientCpfCnpj || client?.full_name || 'N/A'}`);
     }
 
-    // 6. Build OS payload
+    // 6. Validate required fields
+    if (!settings.default_category_code) {
+      throw new Error('Código da Categoria não configurado nas configurações do Omie.');
+    }
+
+    // 7. Build OS payload
     const vendedor = resolveFieldValue(
       fieldMappings.vendedor || { source: 'deal.responsible' },
       deal, client, dealFieldValues || [], responsibleUserName
@@ -191,7 +196,7 @@ serve(async (req) => {
       },
       InformacoesAdicionais: {
         cDadosAdicNF: descricao || `Negócio: ${deal.title}`,
-        cCodCateg: '',
+        cCodCateg: settings.default_category_code,
         nCodCC: 0,
       },
       ServicosPrestados: [
