@@ -1,46 +1,113 @@
 
-## Corrigir erro "Erro ao carregar leads" ao abrir o Pipeline
+## Integracao Omie - Ordem de Servico automatica ao ganhar negocio
 
-### Problema identificado
+### Visao Geral
 
-O erro "TypeError: Failed to fetch" ocorre porque o hook `useLeads()` e chamado imediatamente ao montar a pagina do Pipeline, mesmo quando o usuario esta na aba "Pipeline" e nao na aba "Prospecao".
+Criar uma integracao completa entre o ROY APP e o ERP Omie que, ao marcar um negocio como "Ganho" no Pipeline, dispare automaticamente a criacao de uma Ordem de Servico (OS) no Omie. Inclui interface de configuracao, mapeamento visual de campos, e logs de execucao.
 
-Com 672+ negocios abertos, o Pipeline ja dispara centenas de requisicoes simultaneas (uma query `internal_tasks` por card de negocio via `useDealActivityStatus`). Quando o `useLeads` tenta buscar todos os leads ao mesmo tempo, o navegador atinge o limite de conexoes simultaneas (6 por dominio), e algumas requisicoes falham com "Failed to fetch".
+### 1. Banco de Dados - Novas Tabelas
 
-### Causa raiz
+**Tabela `omie_settings`** - Armazena configuracao por conta
+- `id` UUID PK
+- `account_id` UUID FK accounts
+- `app_key` TEXT (encriptada)
+- `app_secret` TEXT (encriptada)
+- `is_enabled` BOOLEAN default false
+- `field_mappings` JSONB (mapeamento de campos OS -> fonte no ROY)
+- `default_service_code` TEXT (codigo do servico padrao na OS)
+- `created_at`, `updated_at` TIMESTAMPS
 
-- Linha 90 de `SalesPipeline.tsx`: `const { leads, loading: leadsLoading, refetch: refetchLeads } = useLeads();`
-- Este hook busca TODOS os leads com paginacao (lotes de 1000) imediatamente no mount
-- O unico uso dos dados de `leads` na aba Pipeline e mostrar o contador no badge: `leads.length`
-- A aba `LeadsTab` provavelmente tem sua propria busca de dados independente
+**Tabela `omie_integration_logs`** - Historico das ultimas tentativas
+- `id` UUID PK
+- `account_id` UUID FK accounts
+- `deal_id` UUID FK deals
+- `action` TEXT ('create_os')
+- `status` TEXT ('success', 'error')
+- `omie_os_id` TEXT (ID da OS retornado pela Omie)
+- `request_payload` JSONB
+- `response_payload` JSONB
+- `error_message` TEXT
+- `created_at` TIMESTAMP
 
-### Solucao
+RLS: ambas tabelas acessiveis apenas por membros da mesma account.
 
-Adiar o carregamento dos leads ate que o usuario realmente acesse a aba "Prospecao", ou ate que o carregamento principal do pipeline termine.
+### 2. Edge Function `create-omie-os`
 
-**Alteracao em `src/pages/SalesPipeline.tsx`:**
+Nova edge function que:
+1. Recebe `deal_id` e `account_id`
+2. Busca configuracoes em `omie_settings`
+3. Busca dados do negocio, cliente, campos personalizados
+4. Busca/cria cliente no Omie via CPF/CNPJ ou nome
+5. Monta payload da OS usando os field_mappings configurados
+6. Chama API Omie `POST /servicos/os/` metodo `IncluirOS`
+7. Salva resultado em `omie_integration_logs`
+8. Retorna sucesso/erro
 
-1. Remover a chamada eageer do `useLeads()` no topo do componente
-2. Carregar leads apenas quando `mainTab === 'prospeccao'` ou apos o pipeline terminar de carregar
-3. Para o badge de contagem na aba Prospecao, fazer uma query leve separada (apenas count) ou mostrar o badge somente apos os leads serem carregados
+### 3. Interface - Aba Omie nas Integracoes
 
-**Alteracao em `src/hooks/useLeads.tsx`:**
+**Arquivo: `src/components/integrations/OmieIntegrationTab.tsx`**
 
-1. Adicionar um parametro `enabled` opcional ao hook para controlar quando a busca e executada
-2. Quando `enabled` for `false`, nao disparar o fetch automatico
+Novo componente com as seguintes secoes:
 
-### Detalhes tecnicos
+**A) Configuracao de Credenciais**
+- Campos APP_KEY e APP_SECRET (tipo password)
+- Botao "Testar Conexao" (chama ListarClientes com pagina 1 registros 1)
+- Toggle "Ativar Automacao" (habilita/desabilita o trigger no handleMarkAsWon)
+- Botao "Salvar"
+
+**B) Mapeamento Visual de Campos da OS**
+- Interface visual similar a tela de criacao de OS do Omie (referencia da imagem)
+- Campos da OS exibidos (Cliente, Vendedor, Descricao, Valor, etc.)
+- Cada campo e clicavel e abre um dropdown com opcoes de origem dos dados:
+  - Campos fixos do negocio (titulo, valor, descricao, responsavel)
+  - Campos do cliente (nome, CPF/CNPJ, telefone)
+  - Campos personalizados do negocio (dinamico, buscados da tabela custom_fields)
+- O mapeamento e salvo em `omie_settings.field_mappings` como JSONB
+
+**C) Logs de Integracao**
+- Tabela com as ultimas 10 tentativas
+- Colunas: Data, Negocio, Status (badge verde/vermelho), ID da OS
+- Botao para expandir e ver detalhes do payload/erro
+
+### 4. Trigger no Pipeline
+
+**Arquivo: `src/pages/SalesPipeline.tsx`**
+
+No `handleMarkAsWon`, apos o STEP 6 (markAsWon), adicionar novo STEP 7:
 
 ```text
-Antes:  useLeads() -> fetch imediato de todos os leads (competindo com 672+ queries de tasks)
-Depois: useLeads({ enabled: mainTab === 'prospeccao' || !loading }) -> fetch adiado
+STEP 7: Omie OS Integration
+1. Buscar omie_settings para a account
+2. Se is_enabled === true:
+   a. Chamar edge function create-omie-os
+   b. Exibir toast de sucesso/erro (nao bloqueia o fluxo)
 ```
 
-Alternativa mais simples: usar uma query de contagem leve (`select('id', { count: 'exact', head: true })`) para o badge, e carregar os dados completos apenas na aba Prospecao.
+A chamada e nao-bloqueante (fire-and-forget com toast) para nao impactar a experiencia do usuario.
 
-### Resultado
+### 5. Adicionar aba no IntegrationsContent
 
-- O Pipeline abrira sem disparar a busca pesada de leads
-- O erro "Failed to fetch" sera eliminado pois as requisicoes nao competirao entre si
-- A contagem do badge sera carregada com uma query leve
-- Os dados completos dos leads serao buscados apenas quando necessario
+**Arquivo: `src/components/integrations/IntegrationsContent.tsx`**
+
+- Adicionar item "Omie" na lista de integracoes e nas tabs
+- Usar icone de Building ou FileSpreadsheet
+- Renderizar `OmieIntegrationTab` no conteudo da tab
+
+### Arquivos a criar/modificar
+
+| Arquivo | Acao |
+|---------|------|
+| Migration SQL | Criar tabelas `omie_settings` e `omie_integration_logs` |
+| `supabase/functions/create-omie-os/index.ts` | Nova edge function |
+| `src/components/integrations/OmieIntegrationTab.tsx` | Novo componente principal |
+| `src/components/integrations/OmieFieldMapper.tsx` | Novo componente de mapeamento visual |
+| `src/components/integrations/OmieLogsTable.tsx` | Novo componente de logs |
+| `src/components/integrations/IntegrationsContent.tsx` | Adicionar tab Omie |
+| `src/pages/SalesPipeline.tsx` | Adicionar STEP 7 no handleMarkAsWon |
+
+### Seguranca
+
+- APP_KEY e APP_SECRET salvos no banco (nao em secrets do Supabase) para ser por-conta
+- Acesso controlado por RLS (account_id)
+- Edge function usa service_role para ler as credenciais
+- Logs nao expoe secrets, apenas payloads sanitizados
