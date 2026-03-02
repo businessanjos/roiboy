@@ -818,15 +818,7 @@ export default function Clients() {
     if (newClientData.cpf && !validateCPF(newClientData.cpf)) errors.cpf = "CPF inválido";
     if (newClientData.cnpj && !validateCNPJ(newClientData.cnpj)) errors.cnpj = "CNPJ inválido";
     
-    // Validate required custom fields
-    requiredFields.forEach(field => {
-      const value = newClientFieldValues[field.id];
-      const isEmpty = value === null || value === undefined || value === "" || 
-                      (Array.isArray(value) && value.length === 0);
-      if (isEmpty) {
-        errors[`field_${field.id}`] = `${field.name} é obrigatório`;
-      }
-    });
+    // Custom fields are NOT validated during creation - they are filled later
     
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -1664,12 +1656,6 @@ export default function Clients() {
                 const requiredChecks = [
                   { label: "Nome", filled: !!newClientData.full_name.trim() },
                   { label: "Telefone", filled: /^\+[1-9]\d{1,14}$/.test(newClientData.phone_e164) },
-                  ...requiredFields.map(field => {
-                    const value = newClientFieldValues[field.id];
-                    const filled = value !== null && value !== undefined && value !== "" && 
-                                   !(Array.isArray(value) && value.length === 0);
-                    return { label: field.name, filled };
-                  })
                 ];
                 const filledCount = requiredChecks.filter(c => c.filled).length;
                 const totalCount = requiredChecks.length;
@@ -1875,179 +1861,7 @@ export default function Clients() {
                           )}
                         </div>
 
-                        {/* Required Custom Fields */}
-                        {requiredFields.length > 0 && (
-                          <div className="space-y-2">
-                            <Label className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
-                              <Layers className="h-3.5 w-3.5" />
-                              Campos Obrigatórios
-                            </Label>
-                            <div className={`border rounded-lg p-3 space-y-3 transition-colors bg-muted/20 ${
-                              Object.keys(formErrors).some(k => k.startsWith('field_')) 
-                                ? "border-destructive/50 bg-destructive/5" 
-                                : ""
-                            }`}>
-                              {requiredFields.map((field) => {
-                                const value = newClientFieldValues[field.id];
-                                const hasError = formErrors[`field_${field.id}`];
-                                
-                                return (
-                                  <div key={field.id} data-error={!!hasError} className={`space-y-1.5 ${hasError ? "animate-shake" : ""}`}>
-                                    <Label className={`text-sm font-medium flex items-center gap-1.5 ${hasError ? "text-destructive" : ""}`}>
-                                      {hasError && <AlertCircle className="h-3 w-3" />}
-                                      {field.name} *
-                                    </Label>
-                              
-                              {/* Boolean */}
-                              {field.field_type === "boolean" && (
-                                <div className="flex items-center gap-2">
-                                  <Switch
-                                    checked={value === true}
-                                    onCheckedChange={(checked) => 
-                                      setNewClientFieldValues(prev => ({ ...prev, [field.id]: checked }))
-                                    }
-                                  />
-                                  <span className="text-sm text-muted-foreground">
-                                    {value === true ? "Sim" : value === false ? "Não" : "Não definido"}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {/* Select */}
-                              {field.field_type === "select" && (
-                                <Select
-                                  value={value || ""}
-                                  onValueChange={(v) => 
-                                    setNewClientFieldValues(prev => ({ ...prev, [field.id]: v }))
-                                  }
-                                >
-                                  <SelectTrigger className={hasError ? "border-destructive" : ""}>
-                                    <SelectValue placeholder="Selecione..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {field.options.map((opt) => (
-                                      <SelectItem key={opt.value} value={opt.value}>
-                                        {opt.label}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              )}
-                              
-                              {/* Multi-select */}
-                              {field.field_type === "multi_select" && (
-                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                                  {field.options.map((opt) => {
-                                    const selectedValues = Array.isArray(value) ? value : [];
-                                    const isSelected = selectedValues.includes(opt.value);
-                                    return (
-                                      <label
-                                        key={opt.value}
-                                        className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md border cursor-pointer transition-colors ${
-                                          isSelected 
-                                            ? "bg-primary text-primary-foreground border-primary" 
-                                            : "hover:bg-muted border-input"
-                                        }`}
-                                      >
-                                        <Checkbox
-                                          checked={isSelected}
-                                          onCheckedChange={() => {
-                                            const newValues = isSelected
-                                              ? selectedValues.filter(v => v !== opt.value)
-                                              : [...selectedValues, opt.value];
-                                            setNewClientFieldValues(prev => ({ ...prev, [field.id]: newValues }));
-                                          }}
-                                          className="hidden"
-                                        />
-                                        <span className="text-xs sm:text-sm">{opt.label}</span>
-                                      </label>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                              
-                              {/* User */}
-                              {field.field_type === "user" && (
-                                <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                                  {teamUsers.map((user) => {
-                                    const selectedUsers = Array.isArray(value) ? value : [];
-                                    const isSelected = selectedUsers.includes(user.id);
-                                    return (
-                                      <label
-                                        key={user.id}
-                                        className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md border cursor-pointer transition-colors ${
-                                          isSelected 
-                                            ? "bg-primary text-primary-foreground border-primary" 
-                                            : "hover:bg-muted border-input"
-                                        }`}
-                                      >
-                                        <Checkbox
-                                          checked={isSelected}
-                                          onCheckedChange={() => {
-                                            const newValues = isSelected
-                                              ? selectedUsers.filter(id => id !== user.id)
-                                              : [...selectedUsers, user.id];
-                                            setNewClientFieldValues(prev => ({ ...prev, [field.id]: newValues }));
-                                          }}
-                                          className="hidden"
-                                        />
-                                        <User className="h-3 w-3" />
-                                        <span className="text-xs sm:text-sm">{user.name}</span>
-                                      </label>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                              
-                              {/* Number / Currency */}
-                              {(field.field_type === "number" || field.field_type === "currency") && (
-                                <Input
-                                  type="number"
-                                  value={value ?? ""}
-                                  onChange={(e) => 
-                                    setNewClientFieldValues(prev => ({ 
-                                      ...prev, 
-                                      [field.id]: e.target.value ? parseFloat(e.target.value) : null 
-                                    }))
-                                  }
-                                  placeholder={field.field_type === "currency" ? "R$ 0,00" : "0"}
-                                  className={hasError ? "border-destructive" : ""}
-                                />
-                              )}
-                              
-                              {/* Date */}
-                              {field.field_type === "date" && (
-                                <Input
-                                  type="date"
-                                  value={value || ""}
-                                  onChange={(e) => 
-                                    setNewClientFieldValues(prev => ({ ...prev, [field.id]: e.target.value || null }))
-                                  }
-                                  className={hasError ? "border-destructive" : ""}
-                                />
-                              )}
-                              
-                              {/* Text */}
-                              {field.field_type === "text" && (
-                                <Input
-                                  value={value || ""}
-                                  onChange={(e) => 
-                                    setNewClientFieldValues(prev => ({ ...prev, [field.id]: e.target.value || null }))
-                                  }
-                                  placeholder="Digite..."
-                                  className={hasError ? "border-destructive" : ""}
-                                />
-                              )}
-                              
-                              {hasError && (
-                                <p className="text-xs text-destructive">{hasError}</p>
-                              )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
+                        {/* Custom fields removed from creation dialog - filled later in client profile */}
                       </div>
                     </ScrollArea>
                     <DialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-4 border-t border-border/50">
