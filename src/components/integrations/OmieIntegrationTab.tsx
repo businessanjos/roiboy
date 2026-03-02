@@ -110,20 +110,16 @@ export function OmieIntegrationTab() {
     setTestResult(null);
 
     try {
-      const response = await fetch("https://app.omie.com.br/api/v1/geral/clientes/", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          call: "ListarClientes",
-          app_key: appKey,
-          app_secret: appSecret,
-          param: [{ pagina: 1, registros_por_pagina: 1 }],
-        }),
+      const { data, error } = await supabase.functions.invoke("test-omie-connection", {
+        body: { app_key: appKey, app_secret: appSecret },
       });
-      const result = await response.json();
-      if (result.faultstring) {
+
+      if (error) {
         setTestResult("error");
-        toast({ title: "Falha na conexão", description: result.faultstring, variant: "destructive" });
+        toast({ title: "Erro de rede", description: error.message, variant: "destructive" });
+      } else if (!data?.success) {
+        setTestResult("error");
+        toast({ title: "Falha na conexão", description: data?.error || "Erro desconhecido", variant: "destructive" });
       } else {
         setTestResult("success");
         toast({ title: "Conexão OK!", description: "Credenciais válidas." });
