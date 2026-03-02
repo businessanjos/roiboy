@@ -1,20 +1,40 @@
 
 
-## Corrigir overflow do dialog de campos personalizados
+## Anexar campos "Instagram" e "Informação para Operação" na Timeline do Cliente ao ganhar negócio
 
-### Problema
+### Situação Atual
 
-O dialog de edição de campos personalizados (`CustomFieldsManager.tsx`) não possui limitação de altura nem barra de rolagem. Quando um campo tem muitas opções (como o caso mostrado na imagem com 20+ opções de select), o conteúdo ultrapassa os limites da tela e fica inacessível.
+O código já possui um STEP 4.6 no fluxo `handleMarkAsWon` que transfere TODOS os campos personalizados do negócio como uma única nota genérica "Dados da Negociação" na timeline do cliente. Porém, esses dados ficam agrupados em um único bloco de texto, o que pode dificultar a visibilidade.
 
-### Solução
+### O que será feito
 
-Adicionar `max-h-[85vh] overflow-y-auto` ao `DialogContent` do editor de campos na linha 631 do arquivo `CustomFieldsManager.tsx`.
+Adicionar um novo passo no fluxo `handleMarkAsWon` (STEP 4.7) que cria entradas **individuais e destacadas** na timeline do cliente para os campos "Instagram" e "Informação para Operação", quando preenchidos no negócio.
 
-Isso limita a altura do dialog a 85% da viewport e adiciona uma barra de rolagem vertical quando o conteúdo excede esse limite.
+### Alterações técnicas
 
-### Alteração técnica
+**Arquivo:** `src/pages/SalesPipeline.tsx`
 
-**Arquivo:** `src/components/custom-fields/CustomFieldsManager.tsx`
+Após o STEP 4.6 (linha 529), inserir um novo bloco que:
 
-- **Linha 631**: Alterar de `className="max-w-lg"` para `className="max-w-lg max-h-[85vh] overflow-y-auto"`
+1. Busca os campos personalizados "Instagram" e "Informação para Operação" pelo nome na tabela `custom_fields`
+2. Para cada campo encontrado, busca o valor na tabela `deal_field_values` para o deal em questão
+3. Se o valor existir, cria uma entrada individual na tabela `client_followups` com:
+   - **Instagram**: titulo "📸 Instagram do Negócio", conteúdo com o handle
+   - **Informação para Operação**: titulo "📌 Informação para Operação", conteúdo com o texto
+
+Ambos serão do tipo "note" e ficarão visíveis como entradas separadas na timeline, facilitando a consulta pela equipe de Operações.
+
+### Lógica do novo passo
+
+```text
+STEP 4.7: Transfer specific fields to client timeline
+  1. Query custom_fields WHERE name IN ('Instagram', 'Informação para Operação')
+     AND account_id = current AND show_in_deals = true
+  2. For each field found:
+     a. Query deal_field_values WHERE deal_id AND field_id
+     b. Extract value based on field_type (value_text for both)
+     c. If value exists, INSERT into client_followups as individual note
+```
+
+Nenhuma migração de banco necessária - utiliza tabelas existentes (`custom_fields`, `deal_field_values`, `client_followups`).
 
