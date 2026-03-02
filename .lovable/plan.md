@@ -1,53 +1,45 @@
 
 
-## Corrigir erro na criacao de OS no Omie - campo invalido no payload
+## Corrigir campo invalido no payload InformacoesAdicionais da API Omie
 
 ### Problema
 
-A Edge Function `create-omie-os` esta sendo chamada corretamente ao marcar um negocio como ganho, porem a API do Omie retorna erro:
-
+A API do Omie retorna o erro:
 ```
-ERROR: Tag [CCODPARWORKE] nao faz parte da estrutura do tipo complexo [Cabecalho]!
+Tag [CDADOSADICIONAIS] nao faz parte da estrutura do tipo complexo [InformacoesAdicionais]!
 ```
 
-O campo `cCodParworke` na linha 187 do payload nao existe na API do Omie. Provavelmente era para ser `cCodParc` (codigo do parceiro), mas como esta vazio e nao e obrigatorio, o mais seguro e remover.
+Segundo a documentacao oficial do Omie, o campo correto dentro de `InformacoesAdicionais` e `cDadosAdicNF`, nao `cDadosAdicionais`.
 
-### Alteracoes
+### Alteracao
 
 **Arquivo: `supabase/functions/create-omie-os/index.ts`**
 
-1. Remover o campo `cCodParworke: ''` do objeto `Cabecalho` (linha 187)
-2. Remover o campo `cNumOS: ''` (linha 189) - campos vazios podem causar erros na API do Omie; o numero da OS e gerado automaticamente pelo Omie
+Na linha 193, trocar:
+```text
+cDadosAdicionais: descricao || `Negocio: ${deal.title}`,
+```
+Por:
+```text
+cDadosAdicNF: descricao || `Negocio: ${deal.title}`,
+```
 
-O `Cabecalho` ficara assim:
+### Referencia
+
+Payload correto conforme documentacao oficial do Omie (https://ajuda.omie.com.br/pt-BR/articles/6891433):
 
 ```text
-Cabecalho: {
-  cCodIntOS: `ROY-${deal_id.substring(0, 8)}`,
-  cEtapa: '10',
-  dDtPrevisao: '02/03/2026',
-  nCodCli: 12345,
-  nQtdeParc: 1,
+"InformacoesAdicionais": {
+    "cCidPrestServ": "SAO PAULO (SP)",
+    "cCodCateg": "1.01.02",
+    "cDadosAdicNF": "OS incluida via API",
+    "nCodCC": 3731356020
 }
 ```
 
-Tambem precisa adicionar as configuracoes de `verify_jwt = false` para ambas as funcoes no `config.toml`:
+### Impacto
 
-**Arquivo: `supabase/config.toml`**
+- Correcao de uma unica linha
+- Nenhuma mudanca no frontend
+- Retrocompativel
 
-Adicionar:
-```text
-[functions.create-omie-os]
-verify_jwt = false
-
-[functions.test-omie-connection]
-verify_jwt = false
-```
-
-Embora a funcao esteja sendo chamada com sucesso agora (o JWT do usuario autenticado esta passando), seguir o padrao do projeto garante consistencia e evita problemas futuros.
-
-### Resumo
-
-- Causa raiz: campo `cCodParworke` invalido no payload enviado a API do Omie
-- Correcao: remover campos invalidos/vazios do payload
-- Bonus: adicionar configuracao de JWT no config.toml para seguir o padrao do projeto
