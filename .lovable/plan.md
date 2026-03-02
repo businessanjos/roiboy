@@ -1,42 +1,37 @@
 
 
-## Corrigir campo obrigatorio cCodCateg na criacao de OS do Omie
+## Corrigir erro persistente na criacao de OS no Omie
 
-### Problema
+### Diagnostico
 
-A API do Omie retorna o erro:
-```
-É obrigatório informar o código da Categoria, tag [cCodCateg], na inclusão!
-```
+Apos investigacao profunda, identifiquei **tres problemas** na Edge Function `create-omie-os`:
 
-O campo `cCodCateg` dentro de `InformacoesAdicionais` esta sendo enviado como string vazia, mas e obrigatorio na API do Omie para inclusao de OS.
+1. **`nCodCC: 0` invalido** - A documentacao oficial do Omie mostra que `nCodCC` deve ser um codigo de conta corrente real (ex: `11850365`). Enviar `0` pode causar a rejeicao do bloco inteiro de `InformacoesAdicionais`, fazendo com que o Omie ignore o `cCodCateg` mesmo estando presente no payload.
 
-### Solucao
+2. **Logs de erro quebrados** - O `req.clone().json()` no bloco catch falha silenciosamente, pois o body do request ja foi consumido. Por isso a tabela `omie_integration_logs` esta vazia (0 registros), impossibilitando o debug pelo usuario.
 
-Adicionar um campo de configuracao "Codigo da Categoria" na tela de configuracoes do Omie (similar ao "Codigo do Servico Padrao" que ja existe), salvar no banco e usar no payload da Edge Function.
+3. **Falta de log do payload** - Nao ha `console.log` do payload antes de enviar para a API, dificultando o debug nos logs da funcao.
 
 ### Alteracoes
 
-**1. Migrar banco de dados** - Adicionar coluna `default_category_code` na tabela `omie_settings`:
-```sql
-ALTER TABLE omie_settings ADD COLUMN default_category_code text DEFAULT '';
-```
+**Arquivo: `supabase/functions/create-omie-os/index.ts`**
 
-**2. Arquivo: `src/components/integrations/OmieIntegrationTab.tsx`**
-- Adicionar estado `defaultCategoryCode`
-- Carregar o valor de `data.default_category_code` no `loadSettings`
-- Incluir `default_category_code` no payload do `handleSave`
-- Adicionar campo de input na UI, abaixo do "Codigo do Servico Padrao":
-  - Label: "Codigo da Categoria"
-  - Placeholder: "Ex: 1.01.02"
-  - Descricao: "Codigo da categoria financeira usada na OS (obrigatorio)."
+1. **Salvar o body do request no inicio** para uso posterior no catch:
+   - Extrair `deal_id` e `account_id` em variavel antes do try/catch
 
-**3. Arquivo: `supabase/functions/create-omie-os/index.ts`**
-- Na linha 194, trocar `cCodCateg: ''` por `cCodCateg: settings.default_category_code || ''`
-- Adicionar validacao antes de chamar a API: se `default_category_code` estiver vazio, lancar erro amigavel: "Codigo da Categoria nao configurado nas configuracoes do Omie."
+2. **Remover `nCodCC: 0`** do payload `InformacoesAdicionais`:
+   - O campo so deve ser enviado se o usuario configurar um codigo de conta corrente real
+   - Sem ele, o Omie usa a conta padrao
 
-### Resultado
+3. **Adicionar console.log do payload** antes de chamar a API:
+   - `console.log('OS Payload:', JSON.stringify(osPayload))`
 
-- O usuario configura o codigo da categoria uma unica vez nas configuracoes
-- A Edge Function valida antes de chamar a API, evitando erros silenciosos
-- O campo e exibido ao lado do campo de servico que ja existe, mantendo consistencia visual
+4. **Corrigir o logging de erro** no catch:
+   - Usar as variaveis `deal_id` e `account_id` salvas antes do try, em vez de tentar re-ler o body do request
+
+### Resultado esperado
+
+- O `cCodCateg` sera reconhecido pela API do Omie sem interferencia do `nCodCC` invalido
+- Os logs de integracao serao registrados corretamente na tabela para debug futuro
+- O payload exato sera visivel nos logs da funcao para qualquer depuracao
+
