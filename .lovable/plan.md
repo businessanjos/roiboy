@@ -1,48 +1,44 @@
 
 
-## Corrigir tela de carregamento infinita
+## Adicionar tag de etapa do negocio nas conversas do ROY zAPP
 
-### Problema Identificado
+### Objetivo
 
-A tela de carregamento infinita acontece porque os hooks de autenticacao e assinatura (`useAuth`, `useSubscriptionStatus`, `useCurrentUser`) fazem chamadas de rede ao backend SEM nenhum mecanismo de timeout. Se qualquer chamada travar (rede lenta, instabilidade do servidor), o estado `loading` nunca muda para `false` e a tela fica presa no "Carregando..." para sempre.
+Exibir ao lado da tag do vendedor responsavel uma badge indicando em qual etapa do pipeline o negocio mais recente do lead se encontra, com a cor correspondente da etapa.
 
-Alem disso, o hook `useAuth` usa um `initializedRef` que, em certas condicoes de remontagem do componente, pode impedir a re-inicializacao da sessao.
+### Abordagem
 
-### Solucao
-
-Adicionar timeouts de seguranca em 3 pontos criticos, garantindo que a tela de carregamento nunca fique presa por mais de 10 segundos:
+A estrategia e similar a como `clientProducts` ja funciona: apos buscar os assignments, coletar todos os `lead_id`s, fazer uma query batch para buscar o negocio mais recente de cada lead com sua etapa, e passar esse mapa como prop ate o `ZappConversationItem`.
 
 ### Alteracoes tecnicas
 
-**1. `src/hooks/useAuth.tsx` - Adicionar timeout de seguranca**
+**1. `src/hooks/useZappData.tsx` - Buscar etapas dos negocios por lead**
 
-- Adicionar um `setTimeout` de 10 segundos dentro do `useEffect` de inicializacao
-- Se `loading` ainda for `true` apos 10s, forcar `setLoading(false)` com log de aviso
-- Limpar o timeout no cleanup do effect
-- Remover o `initializedRef` que pode causar problemas de re-inicializacao, substituindo por logica mais segura com a flag `mounted`
+- Adicionar um novo estado `leadDealStages` do tipo `Record<string, { stageName: string; stageColor: string }>`
+- Dentro de `fetchAssignmentsOnly`, apos a busca de `clientProducts` (linhas 220-246), coletar todos os `lead_id`s das conversas
+- Fazer uma query na tabela `deals` filtrando por esses `lead_id`s, status `open`, ordenando por `created_at desc`, e buscando `stage:deal_stages(name, color)`
+- Agrupar por `lead_id` pegando apenas o primeiro resultado (negocio mais recente)
+- Armazenar no estado `leadDealStages`
+- Expor `leadDealStages` no retorno do hook (linha 1030)
 
-**2. `src/hooks/useSubscriptionStatus.tsx` - Adicionar timeout de seguranca**
+**2. `src/pages/RoyZapp.tsx` - Passar dados para o painel**
 
-- Adicionar um `setTimeout` de 8 segundos dentro do `useEffect` de verificacao
-- Se `isLoading` ainda for `true` apos 8s, forcar `setStatus` com `isLoading: false` e `hasAccess: true` (fail open)
-- Isso evita que chamadas sequenciais ao backend (super_admin check, user query, account query) travem a tela
+- Extrair `leadDealStages` do retorno de `useZappData`
+- Passar como prop para `ZappConversationPanel`
 
-**3. `src/hooks/useCurrentUser.tsx` - Adicionar timeout de seguranca**
+**3. `src/components/royzapp/ZappConversationPanel.tsx` - Repassar para items**
 
-- Adicionar um `setTimeout` de 10 segundos dentro do `useEffect` do `fetchUser`
-- Se `loading` ainda for `true` apos 10s, forcar `setLoading(false)`
-- Isso garante que paginas que dependem de `currentUser` (como Clients) nao fiquem presas
+- Adicionar `leadDealStages` na interface de props
+- Passar para cada `ZappConversationItem`
 
-**4. `src/components/layout/AppLayout.tsx` - Adicionar timeout com botao de retry**
+**4. `src/components/royzapp/ZappConversationItem.tsx` - Renderizar a badge**
 
-- Adicionar um estado `loadingTimeout` que ativa apos 12 segundos
-- Quando ativado, exibir um botao "Tentar novamente" abaixo da mensagem de carregamento
-- O botao recarrega a pagina (`window.location.reload()`)
-- Isso da ao usuario uma saida mesmo se todos os outros timeouts falharem
+- Adicionar prop `leadDealStages`
+- Extrair o `lead_id` da conversa via `assignment.zapp_conversation?.lead_id`
+- Renderizar uma badge ao lado da badge do agente (linha ~338), com o nome da etapa e a cor correspondente, usando um icone de funil (TrendingUp ou similar do lucide)
+- Atualizar a funcao de comparacao do `memo` para incluir `leadDealStages`
 
 ### Resultado esperado
 
-- Carregamento normal: sem mudanca visivel (tudo resolve em 1-3s)
-- Rede lenta: apos 10s, o app para de esperar e tenta mostrar o conteudo (fail open)
-- Falha total: apos 12s, aparece um botao "Tentar novamente" para o usuario recarregar
+Cada conversa vinculada a um lead com negocio ativo mostrara uma tag colorida com o nome da etapa (ex: "Qualificacao", "Proposta", etc.) ao lado da tag do vendedor, permitindo que a equipe identifique rapidamente o estagio do funil de cada contato sem sair do chat.
 
