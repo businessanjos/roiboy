@@ -117,9 +117,6 @@ export function OmieFieldMapper({ fieldMappings, onChange }: OmieFieldMapperProp
                 <SelectValue placeholder="Selecione a origem dos dados..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="" disabled>
-                  Selecione...
-                </SelectItem>
                 {/* Fixed sources grouped */}
                 {["Negócio", "Cliente"].map((group) => (
                   <div key={group}>
