@@ -4408,6 +4408,14 @@ export default function RoyZapp() {
             }
           }}
           onOpenPlaybook={() => setPlaybookDialogOpen(true)}
+          onFileDrop={(file: File) => {
+            if (file.size > 50 * 1024 * 1024) {
+              toast.error("Arquivo muito grande. Máximo 50MB.");
+              return;
+            }
+            const mediaType: "image" | "video" | "document" = file.type.startsWith('video/') ? 'video' : 'document';
+            sendMediaMessage(file, mediaType);
+          }}
         />
         )}
       </div>
