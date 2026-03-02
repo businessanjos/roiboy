@@ -1457,6 +1457,34 @@ serve(async (req) => {
               } else {
                 insertedMessageDbId = insertedMsg?.id || null;
                 console.log(`Zapp message saved! Media: ${mediaType || 'none'}, LazyDownload: ${encryptedMediaUrl ? 'pending' : 'no'}`);
+                
+                // PUSH NOTIFICATION: Send to all subscribed users in the account
+                if (direction === "inbound") {
+                  try {
+                    const pushUrl = `${supabaseUrl}/functions/v1/send-push`;
+                    const pushBody = {
+                      account_id: accountId,
+                      title: contactName || "Nova mensagem",
+                      body: mediaType && mediaType !== "text" 
+                        ? `${mediaType === "audio" ? "🎤 Áudio" : mediaType === "image" ? "📷 Imagem" : mediaType === "video" ? "🎬 Vídeo" : mediaType === "document" ? "📄 Documento" : "📎 Mídia"}${content ? ": " + content.substring(0, 80) : ""}`
+                        : (content || "Nova mensagem").substring(0, 120),
+                      url: "/royzapp",
+                      tag: `zapp-${zappConversationId}-${Date.now()}`,
+                    };
+                    // Fire-and-forget: don't await to keep webhook fast
+                    fetch(pushUrl, {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${supabaseKey}`,
+                      },
+                      body: JSON.stringify(pushBody),
+                    }).catch(e => console.error("[PUSH] Error sending push:", e));
+                    console.log(`[PUSH] Triggered push notification for account ${accountId}`);
+                  } catch (pushErr) {
+                    console.error("[PUSH] Failed to trigger push:", pushErr);
+                  }
+                }
               }
             }
 

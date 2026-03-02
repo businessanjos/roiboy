@@ -229,10 +229,10 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { user_id, title, body, url, tag } = await req.json();
+    const { user_id, account_id, title, body, url, tag } = await req.json();
 
-    if (!user_id || !title) {
-      return new Response(JSON.stringify({ error: "user_id and title are required" }), {
+    if ((!user_id && !account_id) || !title) {
+      return new Response(JSON.stringify({ error: "user_id or account_id, and title are required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -252,11 +252,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get all subscriptions for this user
-    const { data: subscriptions } = await supabaseAdmin
+    // Get subscriptions: by user_id or by account_id (all users in account)
+    let subscriptionsQuery = supabaseAdmin
       .from("push_subscriptions")
-      .select("endpoint, p256dh, auth")
-      .eq("user_id", user_id);
+      .select("endpoint, p256dh, auth, user_id");
+    
+    if (user_id) {
+      subscriptionsQuery = subscriptionsQuery.eq("user_id", user_id);
+    } else if (account_id) {
+      subscriptionsQuery = subscriptionsQuery.eq("account_id", account_id);
+    }
+    
+    const { data: subscriptions } = await subscriptionsQuery;
 
     if (!subscriptions || subscriptions.length === 0) {
       return new Response(JSON.stringify({ sent: 0, message: "No push subscriptions for this user" }), {
