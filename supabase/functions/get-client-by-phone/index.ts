@@ -42,12 +42,22 @@ serve(async (req) => {
       );
     }
 
-    // Validate phone format
-    if (phone.length > MAX_PHONE_LENGTH || !phone.match(/^\+[1-9]\d{6,14}$/)) {
+    // Validate phone format (relaxed: min 8 digits after +)
+    if (phone.length > 20 || !phone.match(/^\+[1-9]\d{7,}$/)) {
       return new Response(JSON.stringify({ error: "Invalid phone format" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    // Generate phone variants for flexible matching
+    const phoneVariants: string[] = [phone];
+    if (phone.startsWith("+55")) {
+      // Has country code -> also try without it
+      phoneVariants.push("+" + phone.slice(3));
+    } else {
+      // Missing country code -> also try with +55
+      phoneVariants.push("+55" + phone.slice(1));
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -62,14 +72,14 @@ serve(async (req) => {
     }
 
     console.log(
-      `get-client-by-phone: auth_method=${auth.method}, phone=${phone}`
+      `get-client-by-phone: auth_method=${auth.method}, phone=${phone}, variants=${phoneVariants.join(",")}`
     );
 
     // Find client by phone - scoped to authenticated account
     const { data: client, error: clientError } = await supabase
       .from("clients")
       .select("id, full_name, phone_e164, status, tags")
-      .eq("phone_e164", phone)
+      .in("phone_e164", phoneVariants)
       .eq("account_id", auth.accountId)
       .maybeSingle();
 
@@ -89,7 +99,7 @@ serve(async (req) => {
       const { data: lead, error: leadError } = await supabase
         .from("leads")
         .select("id, full_name, phone, status, tags, email, instagram, source")
-        .eq("phone", phone)
+        .in("phone", phoneVariants)
         .eq("account_id", auth.accountId)
         .maybeSingle();
 
@@ -97,27 +107,32 @@ serve(async (req) => {
         console.error("Lead search error:", leadError.code);
       }
 
-      // Se não encontrou por phone principal, buscar em additional_phones
+      // Se não encontrou por phone principal, buscar em additional_phones com todas as variantes
       let foundLead = lead;
       if (!foundLead) {
-        const { data: leadByAdditional } = await supabase
-          .from("leads")
-          .select("id, full_name, phone, status, tags, email, instagram, source")
-          .eq("account_id", auth.accountId)
-          .contains("additional_phones", JSON.stringify([{ number: phone }]));
+        for (const variant of phoneVariants) {
+          // Tentar formato objeto { number: variant }
+          const { data: leadByAdditional } = await supabase
+            .from("leads")
+            .select("id, full_name, phone, status, tags, email, instagram, source")
+            .eq("account_id", auth.accountId)
+            .contains("additional_phones", JSON.stringify([{ number: variant }]));
 
-        if (leadByAdditional && leadByAdditional.length > 0) {
-          foundLead = leadByAdditional[0];
-        } else {
+          if (leadByAdditional && leadByAdditional.length > 0) {
+            foundLead = leadByAdditional[0];
+            break;
+          }
+
           // Tentar formato legado (array de strings)
           const { data: leadByLegacy } = await supabase
             .from("leads")
             .select("id, full_name, phone, status, tags, email, instagram, source")
             .eq("account_id", auth.accountId)
-            .contains("additional_phones", JSON.stringify([phone]));
+            .contains("additional_phones", JSON.stringify([variant]));
 
           if (leadByLegacy && leadByLegacy.length > 0) {
             foundLead = leadByLegacy[0];
+            break;
           }
         }
       }
