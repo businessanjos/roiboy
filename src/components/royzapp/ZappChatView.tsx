@@ -36,6 +36,8 @@ interface ZappChatViewProps {
   // Image preview props
   imagePreview?: { file: File; url: string } | null;
   onSetImagePreview?: (preview: { file: File; url: string } | null) => void;
+  filePreview?: { file: File; url: string } | null;
+  onSetFilePreview?: (preview: { file: File; url: string } | null) => void;
   // AI Settings
   spellingEnabled?: boolean;
   suggestionsEnabled?: boolean;
@@ -89,7 +91,6 @@ interface ZappChatViewProps {
   onToggleSignature?: () => void;
   // Playbook
   onOpenPlaybook?: () => void;
-  onFileDrop?: (file: File) => void;
 }
 
 export function ZappChatView({
@@ -112,6 +113,8 @@ export function ZappChatView({
   sectorId,
   imagePreview,
   onSetImagePreview,
+  filePreview,
+  onSetFilePreview,
   spellingEnabled = true,
   suggestionsEnabled = true,
   autoLearningEnabled = true,
@@ -159,7 +162,6 @@ export function ZappChatView({
   hasSignature,
   onToggleSignature,
   onOpenPlaybook,
-  onFileDrop,
   onToggleSuggestions,
 }: ZappChatViewProps) {
   // Memoize last 10 messages to prevent infinite re-renders
@@ -310,6 +312,8 @@ export function ZappChatView({
         sectorId={sectorId}
         imagePreview={imagePreview}
         onSetImagePreview={onSetImagePreview}
+        filePreview={filePreview}
+        onSetFilePreview={onSetFilePreview}
         onMessageChange={onMessageChange}
         onSendMessage={onSendMessage}
         onKeyPress={onKeyPress}
@@ -329,7 +333,6 @@ export function ZappChatView({
         hasSignature={hasSignature}
         onToggleSignature={onToggleSignature}
         onOpenPlaybook={onOpenPlaybook}
-        onFileDrop={onFileDrop}
       />
     </div>
   );
