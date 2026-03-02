@@ -95,8 +95,11 @@ serve(async (req) => {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+  // Parse body early so we have deal_id/account_id available in catch block
+  const body = await req.json();
+  const { deal_id, account_id } = body;
+
   try {
-    const { deal_id, account_id } = await req.json();
     if (!deal_id || !account_id) throw new Error('deal_id and account_id are required');
 
     // 1. Get Omie settings
@@ -197,7 +200,6 @@ serve(async (req) => {
       InformacoesAdicionais: {
         cDadosAdicNF: descricao || `Negócio: ${deal.title}`,
         cCodCateg: settings.default_category_code,
-        nCodCC: 0,
       },
       ServicosPrestados: [
         {
@@ -214,6 +216,7 @@ serve(async (req) => {
     };
 
     // 7. Call Omie API to create OS
+    console.log('OS Payload:', JSON.stringify(osPayload));
     const result = await callOmieApi(appKey, appSecret, 'servicos/os', 'IncluirOS', osPayload);
 
     const omieOsId = result.nCodOS || result.cCodIntOS || result.cNumOS || '';
@@ -238,15 +241,16 @@ serve(async (req) => {
 
     // Log error
     try {
-      const body = await req.clone().json().catch(() => ({}));
       await supabase.from('omie_integration_logs').insert({
-        account_id: body.account_id,
-        deal_id: body.deal_id,
+        account_id,
+        deal_id,
         action: 'create_os',
         status: 'error',
         error_message: error.message,
       });
-    } catch {}
+    } catch (logErr) {
+      console.error('Failed to log error:', logErr);
+    }
 
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
