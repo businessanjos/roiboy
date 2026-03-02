@@ -87,7 +87,8 @@ interface UpdateLeadData extends Partial<CreateLeadData> {
   converted_at?: string;
 }
 
-export function useLeads() {
+export function useLeads(options?: { enabled?: boolean }) {
+  const enabled = options?.enabled ?? true;
   const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -148,8 +149,10 @@ export function useLeads() {
   }, [currentUser?.account_id, toast]);
 
   useEffect(() => {
-    fetchLeads();
-  }, [fetchLeads]);
+    if (enabled) {
+      fetchLeads();
+    }
+  }, [fetchLeads, enabled]);
 
   const createLead = async (data: CreateLeadData): Promise<Lead | null> => {
     if (!currentUser?.account_id) return null;
