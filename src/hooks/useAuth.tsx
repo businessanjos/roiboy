@@ -18,14 +18,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const initializedRef = useRef(false);
 
   useEffect(() => {
-    // Prevent double initialization in strict mode
-    if (initializedRef.current) return;
-    initializedRef.current = true;
-
     let mounted = true;
+
+    // Safety timeout - force loading to false after 10s
+    const safetyTimeout = setTimeout(() => {
+      if (mounted && loading) {
+        console.warn("[useAuth] Safety timeout: forcing loading to false after 10s");
+        setLoading(false);
+      }
+    }, 10000);
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -73,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       mounted = false;
+      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, []);

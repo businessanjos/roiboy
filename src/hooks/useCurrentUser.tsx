@@ -93,6 +93,17 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchUser();
 
+    // Safety timeout - force loading to false after 10s
+    const safetyTimeout = setTimeout(() => {
+      setLoading(prev => {
+        if (prev) {
+          console.warn("[useCurrentUser] Safety timeout: forcing loading to false after 10s");
+          return false;
+        }
+        return prev;
+      });
+    }, 10000);
+
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN") {
@@ -102,7 +113,10 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(safetyTimeout);
+      subscription.unsubscribe();
+    };
   }, [fetchUser]);
 
   return (
