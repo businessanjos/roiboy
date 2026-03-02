@@ -1,113 +1,50 @@
 
-## Integracao Omie - Ordem de Servico automatica ao ganhar negocio
 
-### Visao Geral
+## Corrigir erro "Failed to fetch" ao testar conexao Omie
 
-Criar uma integracao completa entre o ROY APP e o ERP Omie que, ao marcar um negocio como "Ganho" no Pipeline, dispare automaticamente a criacao de uma Ordem de Servico (OS) no Omie. Inclui interface de configuracao, mapeamento visual de campos, e logs de execucao.
+### Problema
 
-### 1. Banco de Dados - Novas Tabelas
+O botao "Testar Conexao" faz uma chamada direta do navegador para `https://app.omie.com.br/api/v1/geral/clientes/`. A API do Omie nao permite requisicoes cross-origin (CORS), entao o navegador bloqueia a resposta e retorna "Failed to fetch".
 
-**Tabela `omie_settings`** - Armazena configuracao por conta
-- `id` UUID PK
-- `account_id` UUID FK accounts
-- `app_key` TEXT (encriptada)
-- `app_secret` TEXT (encriptada)
-- `is_enabled` BOOLEAN default false
-- `field_mappings` JSONB (mapeamento de campos OS -> fonte no ROY)
-- `default_service_code` TEXT (codigo do servico padrao na OS)
-- `created_at`, `updated_at` TIMESTAMPS
+### Solucao
 
-**Tabela `omie_integration_logs`** - Historico das ultimas tentativas
-- `id` UUID PK
-- `account_id` UUID FK accounts
-- `deal_id` UUID FK deals
-- `action` TEXT ('create_os')
-- `status` TEXT ('success', 'error')
-- `omie_os_id` TEXT (ID da OS retornado pela Omie)
-- `request_payload` JSONB
-- `response_payload` JSONB
-- `error_message` TEXT
-- `created_at` TIMESTAMP
+Criar uma Edge Function `test-omie-connection` que atua como proxy para a chamada de teste, e alterar o frontend para usar essa funcao em vez de chamar a API do Omie diretamente.
 
-RLS: ambas tabelas acessiveis apenas por membros da mesma account.
+### Alteracoes
 
-### 2. Edge Function `create-omie-os`
+**1. Nova Edge Function: `supabase/functions/test-omie-connection/index.ts`**
 
-Nova edge function que:
-1. Recebe `deal_id` e `account_id`
-2. Busca configuracoes em `omie_settings`
-3. Busca dados do negocio, cliente, campos personalizados
-4. Busca/cria cliente no Omie via CPF/CNPJ ou nome
-5. Monta payload da OS usando os field_mappings configurados
-6. Chama API Omie `POST /servicos/os/` metodo `IncluirOS`
-7. Salva resultado em `omie_integration_logs`
-8. Retorna sucesso/erro
+- Recebe `app_key` e `app_secret` no body
+- Faz a chamada `ListarClientes` (pagina 1, 1 registro) para a API do Omie do lado servidor (sem restricao CORS)
+- Retorna sucesso ou erro com a mensagem do Omie
+- Inclui headers CORS corretos para o frontend
 
-### 3. Interface - Aba Omie nas Integracoes
+**2. Alterar `src/components/integrations/OmieIntegrationTab.tsx`**
 
-**Arquivo: `src/components/integrations/OmieIntegrationTab.tsx`**
+- Na funcao `handleTestConnection`, substituir o `fetch` direto para `app.omie.com.br` por uma chamada via `supabase.functions.invoke('test-omie-connection', { body: { app_key, app_secret } })`
+- Manter a mesma logica de exibicao de toast de sucesso/erro
 
-Novo componente com as seguintes secoes:
+### Detalhes tecnicos
 
-**A) Configuracao de Credenciais**
-- Campos APP_KEY e APP_SECRET (tipo password)
-- Botao "Testar Conexao" (chama ListarClientes com pagina 1 registros 1)
-- Toggle "Ativar Automacao" (habilita/desabilita o trigger no handleMarkAsWon)
-- Botao "Salvar"
-
-**B) Mapeamento Visual de Campos da OS**
-- Interface visual similar a tela de criacao de OS do Omie (referencia da imagem)
-- Campos da OS exibidos (Cliente, Vendedor, Descricao, Valor, etc.)
-- Cada campo e clicavel e abre um dropdown com opcoes de origem dos dados:
-  - Campos fixos do negocio (titulo, valor, descricao, responsavel)
-  - Campos do cliente (nome, CPF/CNPJ, telefone)
-  - Campos personalizados do negocio (dinamico, buscados da tabela custom_fields)
-- O mapeamento e salvo em `omie_settings.field_mappings` como JSONB
-
-**C) Logs de Integracao**
-- Tabela com as ultimas 10 tentativas
-- Colunas: Data, Negocio, Status (badge verde/vermelho), ID da OS
-- Botao para expandir e ver detalhes do payload/erro
-
-### 4. Trigger no Pipeline
-
-**Arquivo: `src/pages/SalesPipeline.tsx`**
-
-No `handleMarkAsWon`, apos o STEP 6 (markAsWon), adicionar novo STEP 7:
+A Edge Function tera esta estrutura simplificada:
 
 ```text
-STEP 7: Omie OS Integration
-1. Buscar omie_settings para a account
-2. Se is_enabled === true:
-   a. Chamar edge function create-omie-os
-   b. Exibir toast de sucesso/erro (nao bloqueia o fluxo)
+POST /test-omie-connection
+Body: { app_key: string, app_secret: string }
+
+1. Chama POST https://app.omie.com.br/api/v1/geral/clientes/
+   com ListarClientes, pagina 1, registros 1
+2. Se retornar faultstring -> { success: false, error: faultstring }
+3. Se retornar dados -> { success: true }
+4. Se erro de rede -> { success: false, error: mensagem }
 ```
 
-A chamada e nao-bloqueante (fire-and-forget com toast) para nao impactar a experiencia do usuario.
+No frontend, a chamada muda de:
+```text
+fetch("https://app.omie.com.br/api/v1/geral/clientes/", ...)
+```
+Para:
+```text
+supabase.functions.invoke("test-omie-connection", { body: { app_key, app_secret } })
+```
 
-### 5. Adicionar aba no IntegrationsContent
-
-**Arquivo: `src/components/integrations/IntegrationsContent.tsx`**
-
-- Adicionar item "Omie" na lista de integracoes e nas tabs
-- Usar icone de Building ou FileSpreadsheet
-- Renderizar `OmieIntegrationTab` no conteudo da tab
-
-### Arquivos a criar/modificar
-
-| Arquivo | Acao |
-|---------|------|
-| Migration SQL | Criar tabelas `omie_settings` e `omie_integration_logs` |
-| `supabase/functions/create-omie-os/index.ts` | Nova edge function |
-| `src/components/integrations/OmieIntegrationTab.tsx` | Novo componente principal |
-| `src/components/integrations/OmieFieldMapper.tsx` | Novo componente de mapeamento visual |
-| `src/components/integrations/OmieLogsTable.tsx` | Novo componente de logs |
-| `src/components/integrations/IntegrationsContent.tsx` | Adicionar tab Omie |
-| `src/pages/SalesPipeline.tsx` | Adicionar STEP 7 no handleMarkAsWon |
-
-### Seguranca
-
-- APP_KEY e APP_SECRET salvos no banco (nao em secrets do Supabase) para ser por-conta
-- Acesso controlado por RLS (account_id)
-- Edge function usa service_role para ler as credenciais
-- Logs nao expoe secrets, apenas payloads sanitizados
