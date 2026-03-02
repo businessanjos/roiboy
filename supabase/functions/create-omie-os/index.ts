@@ -184,9 +184,7 @@ serve(async (req) => {
     const osPayload = {
       Cabecalho: {
         cCodIntOS: `ROY-${deal_id.substring(0, 8)}`,
-        cCodParworke: '',
         cEtapa: '10', // OS aberta
-        cNumOS: '',
         dDtPrevisao: new Date().toISOString().split('T')[0].split('-').reverse().join('/'),
         nCodCli: omieClient.codigo_cliente_omie,
         nQtdeParc: 1,
