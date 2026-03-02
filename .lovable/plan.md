@@ -1,38 +1,31 @@
 
+## Corrigir dialog "Novo Cliente" - badges de campos obrigatorios ocupando toda a tela
 
-## Correcao: Seletor de etapas nao aparece para alguns usuarios
+### Problema Identificado
 
-### Problema
-
-O `fetchDealStages` roda em um `useEffect` que depende de `currentUser?.account_id`. Porem, quando o dialogo do gerenciador abre (`managerOpen`), somente os campos sao re-buscados (linha 337-341), **mas as etapas do pipeline NAO sao re-buscadas**. Isso causa uma condicao de corrida:
-
-1. Componente monta, `currentUser` ainda e null, effect nao faz nada
-2. `currentUser` carrega, effect roda e busca stages
-3. Mas se o usuario abrir o dialogo de edicao ANTES do fetch completar, `dealStages` esta vazio
-4. A condicao `dealStages.length > 0` na linha 741 esconde o seletor de etapas
-
-Adicionalmente, nao ha tratamento de erro no fetch - se a query falhar silenciosamente, `dealStages` permanece vazio.
+O dialog "Novo Cliente" exibe 169 badges de campos obrigatorios no `DialogHeader` (linhas 1706-1726 de `Clients.tsx`). Esses badges estao **fora** do `ScrollArea` (que comeca na linha 1730), entao quando ha muitos campos obrigatorios, eles ocupam toda a area visivel do dialog e empurram o formulario real (nome, telefone, avatar, etc.) para fora da tela. A usuaria Rosane so consegue ver os badges e nao consegue acessar os campos de entrada.
 
 ### Solucao
 
-Fazer com que as etapas do pipeline sejam buscadas de forma confiavel, tanto no mount quanto ao abrir o dialogo de edicao.
+Duas alteracoes na area de badges de progresso:
 
-### Alteracoes tecnicas
+1. **Limitar a altura dos badges com scroll proprio** - Envolver a lista de badges (linhas 1706-1726) em um container com `max-h-[80px] overflow-y-auto` quando houver mais de 10 campos. Isso garante que os badges nao ocupem mais que ~80px de altura, com rolagem interna para ver todos.
 
-**Arquivo:** `src/components/custom-fields/CustomFieldsManager.tsx`
+2. **Tornar os badges colapsaveis** - Quando houver mais de 10 campos obrigatorios, mostrar apenas a barra de progresso com contagem por padrao, e um botao "Ver campos" para expandir/colapsar a lista de badges. Isso mantem o dialog limpo para contas com muitos campos.
 
-1. **Extrair `fetchDealStages` para funcao reutilizavel** - Mover a logica de busca de etapas para fora do `useEffect`, tornando-a uma funcao async acessivel (similar ao `fetchFields`)
+### Alteracao tecnica
 
-2. **Buscar stages quando o manager abre** - No `useEffect` que roda quando `managerOpen` muda (linha 337-341), tambem chamar `fetchDealStages` junto com `fetchFields`
+**Arquivo:** `src/pages/Clients.tsx`
 
-3. **Buscar stages dentro do `openEditDialog`** - Antes de processar `required_stages`, garantir que `dealStages` esteja carregado, buscando novamente se estiver vazio
+Na secao de badges (linhas 1706-1726), substituir a renderizacao direta por uma versao condicional:
 
-4. **Adicionar tratamento de erro** - Adicionar `try/catch` e `console.error` no fetch de stages para diagnosticar problemas futuros
+- Se `requiredChecks.length <= 10`: manter badges visiveis normalmente (comportamento atual)
+- Se `requiredChecks.length > 10`: esconder badges por padrao, mostrar apenas a barra de progresso e um link "Ver X campos" que ao clicar expande um container com `max-h-[80px] overflow-y-auto` mostrando todos os badges
 
-| Mudanca | Motivo |
-|---|---|
-| Extrair fetchDealStages como funcao | Reutilizacao em multiplos pontos |
-| Chamar no useEffect do managerOpen | Garantir stages ao abrir dialogo |
-| Chamar dentro de openEditDialog | Garantir stages antes de processar required_stages |
-| Adicionar error handling | Diagnostico de falhas silenciosas |
+Sera necessario adicionar um estado `showRequiredBadges` (useState boolean) para controlar a visibilidade.
 
+### Resultado esperado
+
+- Contas com poucos campos obrigatorios: sem mudanca visual
+- Contas com muitos campos (como a Rosane com 169): dialog abre mostrando a barra de progresso compacta, formulario visivel e acessivel imediatamente
+- Badges podem ser expandidos opcionalmente para conferir quais campos faltam
