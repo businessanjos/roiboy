@@ -1,38 +1,53 @@
 
 
-## Normalizar telefone com variantes de codigo de pais na Edge Function
+## Corrigir erro na criacao de OS no Omie - campo invalido no payload
 
 ### Problema
 
-O n8n envia o telefone como `47991329879` (sem codigo de pais). A funcao `get-client-by-phone` normaliza para `+47991329879` (adiciona apenas o `+`), mas no banco o lead esta salvo como `+5547991329879`. O match falha porque os formatos nao coincidem.
+A Edge Function `create-omie-os` esta sendo chamada corretamente ao marcar um negocio como ganho, porem a API do Omie retorna erro:
 
-### Solucao
+```
+ERROR: Tag [CCODPARWORKE] nao faz parte da estrutura do tipo complexo [Cabecalho]!
+```
 
-Alterar a Edge Function `get-client-by-phone` para gerar variantes do telefone e buscar por todas elas. Se o numero recebido nao comeca com `+55`, criar tambem a variante com `+55` prefixado. Se comeca com `+55`, criar tambem a variante sem o `+55`.
+O campo `cCodParworke` na linha 187 do payload nao existe na API do Omie. Provavelmente era para ser `cCodParc` (codigo do parceiro), mas como esta vazio e nao e obrigatorio, o mais seguro e remover.
 
 ### Alteracoes
 
-**Arquivo: `supabase/functions/get-client-by-phone/index.ts`**
+**Arquivo: `supabase/functions/create-omie-os/index.ts`**
 
-1. Apos a normalizacao do telefone (linha 28-33), gerar um array de variantes:
+1. Remover o campo `cCodParworke: ''` do objeto `Cabecalho` (linha 187)
+2. Remover o campo `cNumOS: ''` (linha 189) - campos vazios podem causar erros na API do Omie; o numero da OS e gerado automaticamente pelo Omie
+
+O `Cabecalho` ficara assim:
 
 ```text
-Exemplo: input "47991329879"
-  -> normalizado: "+47991329879" (logica atual)
-  -> variantes: ["+47991329879", "+5547991329879"]
-
-Exemplo: input "+5547991329879"
-  -> variantes: ["+5547991329879", "+47991329879"]
+Cabecalho: {
+  cCodIntOS: `ROY-${deal_id.substring(0, 8)}`,
+  cEtapa: '10',
+  dDtPrevisao: '02/03/2026',
+  nCodCli: 12345,
+  nQtdeParc: 1,
+}
 ```
 
-2. Relaxar a validacao de formato (linha 46) para aceitar numeros sem codigo de pais (minimo 8 digitos apos o +), ja que a funcao vai tentar multiplas variantes.
+Tambem precisa adicionar as configuracoes de `verify_jwt = false` para ambas as funcoes no `config.toml`:
 
-3. Nas buscas de clients (linha 69-74) e leads (linha 89-94), trocar `.eq("phone_e164", phone)` / `.eq("phone", phone)` por `.in("phone_e164", phoneVariants)` / `.in("phone", phoneVariants)`.
+**Arquivo: `supabase/config.toml`**
 
-4. Nas buscas de additional_phones (linhas 103-122), tentar todas as variantes tambem.
+Adicionar:
+```text
+[functions.create-omie-os]
+verify_jwt = false
 
-### Impacto
+[functions.test-omie-connection]
+verify_jwt = false
+```
 
-- Nenhuma mudanca no frontend
-- Retrocompativel: quem ja envia `+5547...` continua funcionando
-- O n8n pode enviar `47991329879` ou `+5547991329879` e ambos encontram o lead
+Embora a funcao esteja sendo chamada com sucesso agora (o JWT do usuario autenticado esta passando), seguir o padrao do projeto garante consistencia e evita problemas futuros.
+
+### Resumo
+
+- Causa raiz: campo `cCodParworke` invalido no payload enviado a API do Omie
+- Correcao: remover campos invalidos/vazios do payload
+- Bonus: adicionar configuracao de JWT no config.toml para seguir o padrao do projeto
