@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
