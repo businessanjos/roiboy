@@ -628,7 +628,7 @@ export function CustomFieldsManager({
           Novo Campo
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editingField ? "Editar campo" : "Adicionar campo"}</DialogTitle>
         </DialogHeader>
