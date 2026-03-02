@@ -314,29 +314,45 @@ export function CustomFieldsManager({
     }
   }, [currentUser?.account_id]);
 
-  // Fetch deal stages when sector context is "deals"
-  useEffect(() => {
-    const fetchDealStages = async () => {
-      if (currentUser?.account_id) {
-        const { data } = await supabase
-          .from("deal_stages")
-          .select("id, name")
-          .eq("account_id", currentUser.account_id)
-          .eq("is_active", true)
-          .order("display_order");
-        
-        if (data) {
-          setDealStages(data);
-        }
+  // Reusable function to fetch deal stages
+  const fetchDealStages = async (): Promise<{id: string, name: string}[]> => {
+    if (!currentUser?.account_id) return [];
+    try {
+      const { data, error } = await supabase
+        .from("deal_stages")
+        .select("id, name")
+        .eq("account_id", currentUser.account_id)
+        .eq("is_active", true)
+        .order("display_order");
+      
+      if (error) {
+        console.error("[CustomFieldsManager] Error fetching deal stages:", error);
+        return dealStages; // keep existing
       }
-    };
-    fetchDealStages();
+      
+      if (data) {
+        setDealStages(data);
+        return data;
+      }
+      return [];
+    } catch (err) {
+      console.error("[CustomFieldsManager] Exception fetching deal stages:", err);
+      return dealStages;
+    }
+  };
+
+  // Fetch deal stages on mount
+  useEffect(() => {
+    if (currentUser?.account_id) {
+      fetchDealStages();
+    }
   }, [sectorContext, currentUser?.account_id]);
 
-  // Refetch fields when dialog opens
+  // Refetch fields AND stages when dialog opens
   useEffect(() => {
     if (managerOpen && currentUser?.account_id) {
       fetchFields();
+      fetchDealStages();
     }
   }, [managerOpen]);
   
@@ -448,6 +464,12 @@ export function CustomFieldsManager({
     
     // Fetch required_stages for this field
     if (field.show_in_deals && field.id) {
+      // Ensure deal stages are loaded before processing required_stages
+      let currentStages = dealStages;
+      if (currentStages.length === 0) {
+        currentStages = await fetchDealStages();
+      }
+
       const { data } = await supabase
         .from("custom_fields")
         .select("required_stages")
@@ -459,7 +481,7 @@ export function CustomFieldsManager({
         // Legacy: convert "all" to all individual stage IDs
         if (stages.includes("all")) {
           const outcomes = stages.filter(s => s === "won" || s === "lost");
-          const allStageIds = dealStages.map(s => s.id);
+          const allStageIds = currentStages.map(s => s.id);
           setRequiredStages([...allStageIds, ...outcomes]);
         } else {
           setRequiredStages(stages);
