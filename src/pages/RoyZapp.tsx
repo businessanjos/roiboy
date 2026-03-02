@@ -151,6 +151,7 @@ export default function RoyZapp() {
     loading,
     availableProducts,
     clientProducts,
+    leadDealStages,
     currentAgent,
     whatsappConnected,
     whatsappConnecting,
@@ -4129,6 +4130,7 @@ export default function RoyZapp() {
           availableProducts={availableProducts}
           availableUsersCount={availableUsers.length}
           clientProducts={clientProducts}
+          leadDealStages={leadDealStages}
           activeConversations={activeConversations}
           myConversations={myConversations}
           myUnreadCount={myUnreadCount}
