@@ -1,39 +1,35 @@
 
 
-## Corrigir envio de video como documento no Playbook
+## Permitir arrastar e soltar qualquer tipo de arquivo no campo de mensagem
 
 ### Problema
 
-Quando um video e enviado pelo Playbook, ele chega ao WhatsApp como um documento para download em vez de ser exibido como video reproduzivel. Isso acontece por dois motivos:
-
-1. No handler do Playbook (linha 4694), videos sao enviados com tipo `'document'` hardcoded, independente do tipo real
-2. A funcao `sendMediaMessage` so aceita `"image" | "document"` como tipos, nao tem suporte a `"video"`
-
-O resultado e que a UAZAPI recebe `type: "document"` e envia o arquivo como anexo, nao como midia reproduzivel.
+O drag-and-drop no campo de mensagem do ROY zAPP aceita apenas imagens. Videos, PDFs, documentos e outros arquivos sao rejeitados silenciosamente ao serem soltos na area de input.
 
 ### Alteracoes
 
-Todas no arquivo `src/pages/RoyZapp.tsx`:
+**1. `src/components/royzapp/ZappMessageInput.tsx`**
 
-**1. Expandir `sendMediaMessage` para suportar tipo "video" (linha 1962)**
+- Adicionar nova prop `onFileDrop?: (file: File) => void` na interface `ZappMessageInputProps`
+- Modificar `handleDrop` para aceitar qualquer arquivo:
+  - Imagens: manter comportamento atual (preview via `onSetImagePreview`)
+  - Qualquer outro tipo (video, documento, etc): chamar `onFileDrop(file)`
+- Atualizar o texto e icone do overlay de drop: trocar "Solte a imagem aqui" por "Solte o arquivo aqui" e usar icone generico (`Paperclip` ou `FileText`)
 
-- Alterar a assinatura de `mediaType: "image" | "document"` para `mediaType: "image" | "document" | "video"`
-- Atualizar a mensagem optimistica para tratar video (preview com emoji de camera de video)
-- Atualizar o preview da conversa para videos: `"🎬 Video"` em vez de `"📎 arquivo.mp4"`
-- Atualizar o toast de sucesso para videos
+**2. `src/pages/RoyZapp.tsx`**
 
-**2. Corrigir o handler do Playbook para enviar videos com o tipo correto (linha 4694)**
+- Criar funcao `handleFileDrop` que recebe um `File`, valida tamanho (max 50MB), detecta tipo automaticamente (image/video/document) e chama `sendMediaMessage`
+- Passar `onFileDrop={handleFileDrop}` para o `ZappMessageInput`
 
-- Mudar `sendMediaMessage(file, 'document', ...)` para `sendMediaMessage(file, 'video', ...)` quando `item.content_type === 'video'`
-- Manter `'document'` apenas para itens de tipo documento
+### Logica de deteccao de tipo no drop
 
-**3. Corrigir deteccao de tipo no file select (linhas 2088-2098)**
-
-- Adicionar logica para detectar videos pelo MIME type do arquivo (`file.type.startsWith('video/')`) e enviar como `"video"` automaticamente, em vez de sempre enviar como `"document"`
+```text
+file.type.startsWith('image/')  -> preview de imagem (comportamento atual)
+file.type.startsWith('video/')  -> sendMediaMessage(file, 'video')
+qualquer outro                  -> sendMediaMessage(file, 'document')
+```
 
 ### Resultado
 
-- Videos enviados pelo Playbook chegarao ao WhatsApp como midia reproduzivel
-- Videos enviados por upload direto tambem serao detectados e enviados corretamente
-- No ROY zAPP, o video aparecera com player de video (ja suportado pelo ZappMessageBubble, linha 497)
-- Documentos continuarao sendo enviados como documentos normalmente
+Usuarios poderao arrastar e soltar qualquer tipo de arquivo (videos, PDFs, documentos, etc.) diretamente no campo de mensagem para envio rapido, sem precisar usar o botao de anexo.
+
