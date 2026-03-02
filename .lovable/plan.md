@@ -1,45 +1,42 @@
 
 
-## Corrigir campo invalido no payload InformacoesAdicionais da API Omie
+## Corrigir campo obrigatorio cCodCateg na criacao de OS do Omie
 
 ### Problema
 
 A API do Omie retorna o erro:
 ```
-Tag [CDADOSADICIONAIS] nao faz parte da estrutura do tipo complexo [InformacoesAdicionais]!
+É obrigatório informar o código da Categoria, tag [cCodCateg], na inclusão!
 ```
 
-Segundo a documentacao oficial do Omie, o campo correto dentro de `InformacoesAdicionais` e `cDadosAdicNF`, nao `cDadosAdicionais`.
+O campo `cCodCateg` dentro de `InformacoesAdicionais` esta sendo enviado como string vazia, mas e obrigatorio na API do Omie para inclusao de OS.
 
-### Alteracao
+### Solucao
 
-**Arquivo: `supabase/functions/create-omie-os/index.ts`**
+Adicionar um campo de configuracao "Codigo da Categoria" na tela de configuracoes do Omie (similar ao "Codigo do Servico Padrao" que ja existe), salvar no banco e usar no payload da Edge Function.
 
-Na linha 193, trocar:
-```text
-cDadosAdicionais: descricao || `Negocio: ${deal.title}`,
-```
-Por:
-```text
-cDadosAdicNF: descricao || `Negocio: ${deal.title}`,
+### Alteracoes
+
+**1. Migrar banco de dados** - Adicionar coluna `default_category_code` na tabela `omie_settings`:
+```sql
+ALTER TABLE omie_settings ADD COLUMN default_category_code text DEFAULT '';
 ```
 
-### Referencia
+**2. Arquivo: `src/components/integrations/OmieIntegrationTab.tsx`**
+- Adicionar estado `defaultCategoryCode`
+- Carregar o valor de `data.default_category_code` no `loadSettings`
+- Incluir `default_category_code` no payload do `handleSave`
+- Adicionar campo de input na UI, abaixo do "Codigo do Servico Padrao":
+  - Label: "Codigo da Categoria"
+  - Placeholder: "Ex: 1.01.02"
+  - Descricao: "Codigo da categoria financeira usada na OS (obrigatorio)."
 
-Payload correto conforme documentacao oficial do Omie (https://ajuda.omie.com.br/pt-BR/articles/6891433):
+**3. Arquivo: `supabase/functions/create-omie-os/index.ts`**
+- Na linha 194, trocar `cCodCateg: ''` por `cCodCateg: settings.default_category_code || ''`
+- Adicionar validacao antes de chamar a API: se `default_category_code` estiver vazio, lancar erro amigavel: "Codigo da Categoria nao configurado nas configuracoes do Omie."
 
-```text
-"InformacoesAdicionais": {
-    "cCidPrestServ": "SAO PAULO (SP)",
-    "cCodCateg": "1.01.02",
-    "cDadosAdicNF": "OS incluida via API",
-    "nCodCC": 3731356020
-}
-```
+### Resultado
 
-### Impacto
-
-- Correcao de uma unica linha
-- Nenhuma mudanca no frontend
-- Retrocompativel
-
+- O usuario configura o codigo da categoria uma unica vez nas configuracoes
+- A Edge Function valida antes de chamar a API, evitando erros silenciosos
+- O campo e exibido ao lado do campo de servico que ja existe, mantendo consistencia visual
