@@ -1,28 +1,39 @@
 
-## Remover campos obrigatorios do dialog de criacao de cliente
+
+## Corrigir envio de video como documento no Playbook
 
 ### Problema
 
-O dialog "Novo Cliente" exige o preenchimento de 169 campos personalizados marcados como obrigatorios antes de permitir salvar o cadastro. Esses campos sao informacoes que devem ser preenchidas posteriormente (via formulario ou manualmente no perfil do cliente), e nao devem bloquear a criacao do cadastro.
+Quando um video e enviado pelo Playbook, ele chega ao WhatsApp como um documento para download em vez de ser exibido como video reproduzivel. Isso acontece por dois motivos:
+
+1. No handler do Playbook (linha 4694), videos sao enviados com tipo `'document'` hardcoded, independente do tipo real
+2. A funcao `sendMediaMessage` so aceita `"image" | "document"` como tipos, nao tem suporte a `"video"`
+
+O resultado e que a UAZAPI recebe `type: "document"` e envia o arquivo como anexo, nao como midia reproduzivel.
 
 ### Alteracoes
 
-Todas no arquivo `src/pages/Clients.tsx`:
+Todas no arquivo `src/pages/RoyZapp.tsx`:
 
-**1. Remover validacao de campos personalizados no salvamento (linhas 821-829)**
+**1. Expandir `sendMediaMessage` para suportar tipo "video" (linha 1962)**
 
-Remover o bloco `requiredFields.forEach(...)` que adiciona erros para campos personalizados nao preenchidos. Manter apenas as validacoes basicas (nome, telefone, CPF, CNPJ).
+- Alterar a assinatura de `mediaType: "image" | "document"` para `mediaType: "image" | "document" | "video"`
+- Atualizar a mensagem optimistica para tratar video (preview com emoji de camera de video)
+- Atualizar o preview da conversa para videos: `"🎬 Video"` em vez de `"📎 arquivo.mp4"`
+- Atualizar o toast de sucesso para videos
 
-**2. Simplificar o indicador de progresso (linhas 1662-1760)**
+**2. Corrigir o handler do Playbook para enviar videos com o tipo correto (linha 4694)**
 
-Remover os campos personalizados do calculo de `requiredChecks`, mantendo apenas Nome e Telefone. Isso reduz o contador de "0/169" para "0/2" e elimina a lista massiva de badges.
+- Mudar `sendMediaMessage(file, 'document', ...)` para `sendMediaMessage(file, 'video', ...)` quando `item.content_type === 'video'`
+- Manter `'document'` apenas para itens de tipo documento
 
-**3. Remover a secao "Campos Obrigatorios" do formulario (linhas 1878-2050)**
+**3. Corrigir deteccao de tipo no file select (linhas 2088-2098)**
 
-Remover completamente o bloco que renderiza os inputs dos campos personalizados obrigatorios (select, multi_select, boolean, text, number, date, user) dentro do dialog de criacao.
+- Adicionar logica para detectar videos pelo MIME type do arquivo (`file.type.startsWith('video/')`) e enviar como `"video"` automaticamente, em vez de sempre enviar como `"document"`
 
 ### Resultado
 
-- O dialog de criacao fica limpo e rapido, exigindo apenas nome e telefone
-- Os campos personalizados continuam existindo no perfil do cliente para preenchimento posterior
-- Nenhuma alteracao na estrutura do banco de dados
+- Videos enviados pelo Playbook chegarao ao WhatsApp como midia reproduzivel
+- Videos enviados por upload direto tambem serao detectados e enviados corretamente
+- No ROY zAPP, o video aparecera com player de video (ja suportado pelo ZappMessageBubble, linha 497)
+- Documentos continuarao sendo enviados como documentos normalmente
