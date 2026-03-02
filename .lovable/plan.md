@@ -1,44 +1,28 @@
 
+## Remover campos obrigatorios do dialog de criacao de cliente
 
-## Adicionar tag de etapa do negocio nas conversas do ROY zAPP
+### Problema
 
-### Objetivo
+O dialog "Novo Cliente" exige o preenchimento de 169 campos personalizados marcados como obrigatorios antes de permitir salvar o cadastro. Esses campos sao informacoes que devem ser preenchidas posteriormente (via formulario ou manualmente no perfil do cliente), e nao devem bloquear a criacao do cadastro.
 
-Exibir ao lado da tag do vendedor responsavel uma badge indicando em qual etapa do pipeline o negocio mais recente do lead se encontra, com a cor correspondente da etapa.
+### Alteracoes
 
-### Abordagem
+Todas no arquivo `src/pages/Clients.tsx`:
 
-A estrategia e similar a como `clientProducts` ja funciona: apos buscar os assignments, coletar todos os `lead_id`s, fazer uma query batch para buscar o negocio mais recente de cada lead com sua etapa, e passar esse mapa como prop ate o `ZappConversationItem`.
+**1. Remover validacao de campos personalizados no salvamento (linhas 821-829)**
 
-### Alteracoes tecnicas
+Remover o bloco `requiredFields.forEach(...)` que adiciona erros para campos personalizados nao preenchidos. Manter apenas as validacoes basicas (nome, telefone, CPF, CNPJ).
 
-**1. `src/hooks/useZappData.tsx` - Buscar etapas dos negocios por lead**
+**2. Simplificar o indicador de progresso (linhas 1662-1760)**
 
-- Adicionar um novo estado `leadDealStages` do tipo `Record<string, { stageName: string; stageColor: string }>`
-- Dentro de `fetchAssignmentsOnly`, apos a busca de `clientProducts` (linhas 220-246), coletar todos os `lead_id`s das conversas
-- Fazer uma query na tabela `deals` filtrando por esses `lead_id`s, status `open`, ordenando por `created_at desc`, e buscando `stage:deal_stages(name, color)`
-- Agrupar por `lead_id` pegando apenas o primeiro resultado (negocio mais recente)
-- Armazenar no estado `leadDealStages`
-- Expor `leadDealStages` no retorno do hook (linha 1030)
+Remover os campos personalizados do calculo de `requiredChecks`, mantendo apenas Nome e Telefone. Isso reduz o contador de "0/169" para "0/2" e elimina a lista massiva de badges.
 
-**2. `src/pages/RoyZapp.tsx` - Passar dados para o painel**
+**3. Remover a secao "Campos Obrigatorios" do formulario (linhas 1878-2050)**
 
-- Extrair `leadDealStages` do retorno de `useZappData`
-- Passar como prop para `ZappConversationPanel`
+Remover completamente o bloco que renderiza os inputs dos campos personalizados obrigatorios (select, multi_select, boolean, text, number, date, user) dentro do dialog de criacao.
 
-**3. `src/components/royzapp/ZappConversationPanel.tsx` - Repassar para items**
+### Resultado
 
-- Adicionar `leadDealStages` na interface de props
-- Passar para cada `ZappConversationItem`
-
-**4. `src/components/royzapp/ZappConversationItem.tsx` - Renderizar a badge**
-
-- Adicionar prop `leadDealStages`
-- Extrair o `lead_id` da conversa via `assignment.zapp_conversation?.lead_id`
-- Renderizar uma badge ao lado da badge do agente (linha ~338), com o nome da etapa e a cor correspondente, usando um icone de funil (TrendingUp ou similar do lucide)
-- Atualizar a funcao de comparacao do `memo` para incluir `leadDealStages`
-
-### Resultado esperado
-
-Cada conversa vinculada a um lead com negocio ativo mostrara uma tag colorida com o nome da etapa (ex: "Qualificacao", "Proposta", etc.) ao lado da tag do vendedor, permitindo que a equipe identifique rapidamente o estagio do funil de cada contato sem sair do chat.
-
+- O dialog de criacao fica limpo e rapido, exigindo apenas nome e telefone
+- Os campos personalizados continuam existindo no perfil do cliente para preenchimento posterior
+- Nenhuma alteracao na estrutura do banco de dados
