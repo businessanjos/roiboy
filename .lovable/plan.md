@@ -1,82 +1,66 @@
 
-## Corrigir carregamento da pagina de cliente e lista de clientes
+## Corrigir envio de mensagens em grupos no ROY zAPP
 
-### Problemas identificados
+### Problema identificado
 
-#### Problema 1: Lista de clientes nao carrega (pagina Clientes)
+O envio de mensagens em grupos falha porque o edge function `uazapi-manager` usa o campo `groupJid` para enviar mensagens a grupos via a API UAZAPI GO v2. Porem, a API usa o campo `number` para **ambos** os casos (contatos individuais e grupos). O campo `groupJid` nao e reconhecido pela API, fazendo com que a mensagem seja silenciosamente ignorada ou retorne erro.
 
-O `useEffect` principal em `Clients.tsx` (linha 737) depende apenas de `currentSector?.id`. Quando o componente monta, `currentUser` pode ainda estar carregando (null). A funcao `fetchClients` (linha 496-501) verifica `currentUser?.account_id` e `currentUser?.id` -- se sao null, retorna imediatamente com `setLoading(false)`. Quando `currentUser` finalmente carrega, **nada dispara uma nova chamada** porque `currentUser` nao esta nas dependencias do useEffect.
+### Causa raiz
 
-Resultado: a pagina mostra estado vazio ou loading e nunca busca os dados.
+No arquivo `supabase/functions/uazapi-manager/index.ts`:
 
-**Correcao**: Adicionar `currentUser?.account_id` como dependencia do useEffect principal (linha 737-742).
+- **Linha 156** (`send_to_group`): Envia `{ groupJid: jid, text: message }` - campo incorreto
+- **Linha 166-169** (`send_media_to_group`): Envia `{ groupJid: jid, type: ..., file: ..., text: ... }` - campo incorreto
 
-#### Problema 2: Pagina de detalhe do cliente demora muito para carregar
+A API UAZAPI GO v2 espera `number` contendo o JID do grupo (ex: `120363425290252094@g.us`), exatamente como faz para contatos individuais.
 
-O `fetchData` em `ClientDetail.tsx` (linhas 583-997) faz **10+ queries sequenciais** ao banco de dados: client, products, contract, score, vnps, roi_events, risk_events, recommendations, messages, followups, life_events, form_responses, attendance, subscriptions. Cada query espera a anterior terminar.
+### Correcao
 
-Em conexoes mais lentas ou com dados volumosos, isso causa lentidao extrema ou timeout aparente (a pagina fica presa no loading por muitos segundos).
+**Arquivo:** `supabase/functions/uazapi-manager/index.ts`
 
-**Correcao**: Agrupar as queries independentes em blocos paralelos usando `Promise.all()`. Apos buscar o client (necessario primeiro), executar todas as demais queries simultaneamente.
+#### Alteracao 1 - send_to_group (linhas 152-160)
 
-### Alteracoes
-
-#### Arquivo 1: `src/pages/Clients.tsx`
-
-**Linha 737-742**: Adicionar `currentUser?.account_id` ao array de dependencias:
+Trocar `groupJid` por `number` no body da requisicao:
 
 ```typescript
-useEffect(() => {
-  fetchClients();
-  fetchProducts();
-  fetchCustomFields();
-}, [currentSector?.id, currentUser?.account_id]);
+} else if (action === "send_to_group") {
+  const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
+  
+  const groupBody: Record<string, unknown> = { number: jid, text: message };
+  if (payload.quoted_message_id) groupBody.replyid = payload.quoted_message_id;
+  if (payload.mentions) groupBody.mentions = payload.mentions;
+  
+  result = await uazapiInstance("/send/text", "POST", token!, groupBody);
 ```
 
-#### Arquivo 2: `src/pages/ClientDetail.tsx`
+#### Alteracao 2 - send_media_to_group (linhas 162-175)
 
-**Linhas 700-975**: Refatorar o bloco de queries sequenciais para usar `Promise.all`. Apos obter o `clientData` (que precisa ser primeiro), executar todas as queries restantes em paralelo:
+Trocar `groupJid` por `number` no body da requisicao de midia:
 
 ```typescript
-// Depois de buscar e validar clientData...
-
-// Fetch all independent data in parallel
-const [
-  clientProductsResult,
-  activeContractResult,
-  scoreResult,
-  vnpsResult,
-  roiResult,
-  riskResult,
-  recResult,
-  messagesResult,
-  followupsResult,
-  lifeEventsResult,
-  formResponsesResult,
-  attendanceResult,
-  subscriptionsResult,
-  allRiskResult,
-] = await Promise.all([
-  supabase.from("client_products").select("product_id, products(id, name)").eq("client_id", id),
-  supabase.from("client_contracts").select("start_date, end_date").eq("client_id", id).eq("status", "active").order("start_date", { ascending: false }).limit(1).maybeSingle(),
-  supabase.from("score_snapshots").select("*").eq("client_id", id).order("computed_at", { ascending: false }).limit(1).maybeSingle(),
-  supabase.from("vnps_snapshots").select("*").eq("client_id", id).order("computed_at", { ascending: false }).limit(1).maybeSingle(),
-  supabase.from("roi_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
-  supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
-  supabase.from("recommendations").select("*").eq("client_id", id).order("created_at", { ascending: false }),
-  supabase.from("message_events").select("*").eq("client_id", id).order("sent_at", { ascending: false }).limit(200),
-  supabase.from("client_followups").select("*, users(name, avatar_url)").eq("client_id", id).order("created_at", { ascending: false }),
-  supabase.from("client_life_events").select("*").eq("client_id", id).order("created_at", { ascending: false }).limit(100),
-  supabase.from("form_responses").select("*, forms(title)").eq("client_id", id).order("submitted_at", { ascending: false }).limit(100),
-  supabase.from("attendance").select("*, events(title, address, scheduled_at)").eq("client_id", id).not("event_id", "is", null).order("join_time", { ascending: false }).limit(100),
-  supabase.from("client_subscriptions").select("*").eq("client_id", id).order("created_at", { ascending: false }).limit(100),
-  supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }).limit(100),
-]);
+} else if (action === "send_media_to_group") {
+  const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
+  
+  const mediaBody: Record<string, unknown> = { 
+    number: jid, 
+    type: payload.media_type || "image",
+    file: payload.media_url,
+    text: payload.caption || ""
+  };
+  if (payload.quoted_message_id) mediaBody.replyid = payload.quoted_message_id;
+  if (payload.file_name) mediaBody.fileName = payload.file_name;
+  
+  result = await uazapiInstance("/send/media", "POST", token!, mediaBody);
 ```
 
-Depois, processar os resultados de cada query da mesma forma que ja e feito, usando `.data` de cada resultado. Isso muda a execucao de ~14 queries sequenciais para 1 query + 13 queries paralelas, reduzindo drasticamente o tempo de carregamento.
+### Impacto
 
-### Impacto esperado
+- Mensagens de texto em grupos voltarao a ser entregues
+- Mensagens de midia (imagens, audio, arquivos) em grupos voltarao a ser entregues
+- Nenhuma alteracao necessaria no frontend (RoyZapp.tsx) - o problema e exclusivamente no edge function
 
-- **Lista de clientes**: Carregara corretamente mesmo quando `currentUser` demora para inicializar
-- **Detalhe do cliente**: Tempo de carregamento reduzido de ~14x latencia de rede sequencial para ~2x (1 sequencial + 1 lote paralelo)
+### Arquivo afetado
+
+| Arquivo | Alteracao |
+|---|---|
+| `supabase/functions/uazapi-manager/index.ts` | Trocar `groupJid` por `number` em 2 blocos |
