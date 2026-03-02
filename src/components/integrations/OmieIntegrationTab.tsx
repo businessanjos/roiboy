@@ -25,6 +25,7 @@ export function OmieIntegrationTab() {
   const [appSecret, setAppSecret] = useState("");
   const [isEnabled, setIsEnabled] = useState(false);
   const [defaultServiceCode, setDefaultServiceCode] = useState("");
+  const [defaultCategoryCode, setDefaultCategoryCode] = useState("");
   const [fieldMappings, setFieldMappings] = useState<Record<string, FieldMapping>>({
     cliente: { source: "client.cpf_cnpj" },
     vendedor: { source: "deal.responsible" },
@@ -56,6 +57,7 @@ export function OmieIntegrationTab() {
       setAppSecret(data.app_secret || "");
       setIsEnabled(data.is_enabled || false);
       setDefaultServiceCode(data.default_service_code || "");
+      setDefaultCategoryCode(data.default_category_code || "");
       if (data.field_mappings && typeof data.field_mappings === "object" && !Array.isArray(data.field_mappings)) {
         setFieldMappings(data.field_mappings as unknown as Record<string, FieldMapping>);
       }
@@ -73,6 +75,7 @@ export function OmieIntegrationTab() {
       app_secret: appSecret,
       is_enabled: isEnabled,
       default_service_code: defaultServiceCode,
+      default_category_code: defaultCategoryCode,
       field_mappings: fieldMappings as unknown as Record<string, any>,
       updated_at: new Date().toISOString(),
     };
@@ -184,6 +187,17 @@ export function OmieIntegrationTab() {
               className="max-w-xs"
             />
             <p className="text-xs text-muted-foreground">Código do serviço municipal usado na OS.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Código da Categoria</Label>
+            <Input
+              value={defaultCategoryCode}
+              onChange={(e) => setDefaultCategoryCode(e.target.value)}
+              placeholder="Ex: 1.01.02"
+              className="max-w-xs"
+            />
+            <p className="text-xs text-muted-foreground">Código da categoria financeira usada na OS (obrigatório).</p>
           </div>
 
           <div className="flex items-center gap-3">

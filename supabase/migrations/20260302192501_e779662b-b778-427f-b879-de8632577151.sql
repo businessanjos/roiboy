@@ -1,0 +1,1 @@
+ALTER TABLE public.omie_settings ADD COLUMN default_category_code text DEFAULT '';
