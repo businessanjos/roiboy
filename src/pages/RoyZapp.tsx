@@ -1958,8 +1958,8 @@ export default function RoyZapp() {
     })();
   };
 
-  // Send media message (image/document)
-  const sendMediaMessage = async (file: File, mediaType: "image" | "document", caption?: string) => {
+  // Send media message (image/document/video)
+  const sendMediaMessage = async (file: File, mediaType: "image" | "document" | "video", caption?: string) => {
     if (!selectedConversation || uploadingMedia) return;
     
     const contactInfo = getContactInfo(selectedConversation);
@@ -1979,7 +1979,7 @@ export default function RoyZapp() {
     // Create optimistic message
     const optimisticMessage: Message = {
       id: tempMessageId,
-      content: caption || (mediaType === "image" ? "" : file.name),
+      content: caption || (mediaType === "image" ? "" : mediaType === "video" ? "" : file.name),
       is_from_client: false,
       created_at: now,
       message_type: mediaType,
@@ -2049,7 +2049,7 @@ export default function RoyZapp() {
           account_id: currentUser!.account_id,
           zapp_conversation_id: selectedConversation.zapp_conversation_id,
           direction: "outbound",
-          content: caption || (mediaType === "image" ? "" : file.name),
+          content: caption || (mediaType === "image" ? "" : mediaType === "video" ? "" : file.name),
           message_type: mediaType,
           media_url: mediaUrl,
           media_type: mediaType,
@@ -2069,12 +2069,12 @@ export default function RoyZapp() {
         // Update conversation last message
         await supabase.from("zapp_conversations").update({
           last_message_at: now,
-          last_message_preview: mediaType === "image" ? "📷 Imagem" : `📎 ${file.name}`,
+          last_message_preview: mediaType === "image" ? "📷 Imagem" : mediaType === "video" ? "🎬 Vídeo" : `📎 ${file.name}`,
           unread_count: 0,
         }).eq("id", selectedConversation.zapp_conversation_id);
       }
       
-      toast.success(mediaType === "image" ? "Imagem enviada!" : "Arquivo enviado!");
+      toast.success(mediaType === "image" ? "Imagem enviada!" : mediaType === "video" ? "Vídeo enviado!" : "Arquivo enviado!");
     } catch (error: any) {
       console.error("Error sending media:", error);
       // Remove optimistic message on error
@@ -2094,7 +2094,9 @@ export default function RoyZapp() {
         toast.error("Arquivo muito grande. Máximo 50MB.");
         return;
       }
-      sendMediaMessage(file, mediaType);
+      // Auto-detect video files
+      const resolvedType: "image" | "document" | "video" = file.type.startsWith('video/') ? 'video' : mediaType;
+      sendMediaMessage(file, resolvedType);
     }
     // Reset input
     e.target.value = "";
@@ -4691,7 +4693,7 @@ export default function RoyZapp() {
               const mimeType = blob.type || (item.content_type === 'video' ? 'video/mp4' : 'application/octet-stream');
               const file = new File([blob], fileName, { type: mimeType });
               
-              await sendMediaMessage(file, 'document', item.media_caption || undefined);
+              await sendMediaMessage(file, item.content_type === 'video' ? 'video' : 'document', item.media_caption || undefined);
             } catch (error) {
               console.error(`Error sending playbook ${item.content_type}:`, error);
               toast.error(`Erro ao enviar ${item.content_type === 'video' ? 'vídeo' : 'documento'} do playbook`);
