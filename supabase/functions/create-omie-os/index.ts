@@ -171,6 +171,9 @@ serve(async (req) => {
     if (!settings.default_category_code) {
       throw new Error('Código da Categoria não configurado nas configurações do Omie.');
     }
+    if (!settings.default_bank_account_code) {
+      throw new Error('Conta Corrente (nCodCC) não configurada nas configurações do Omie.');
+    }
 
     // 7. Build OS payload
     const vendedor = resolveFieldValue(
@@ -200,6 +203,7 @@ serve(async (req) => {
       InformacoesAdicionais: {
         cDadosAdicNF: descricao || `Negócio: ${deal.title}`,
         cCodCateg: settings.default_category_code,
+        nCodCC: Number(settings.default_bank_account_code),
       },
       ServicosPrestados: [
         {
