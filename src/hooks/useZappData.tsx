@@ -84,6 +84,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
   const [loading, setLoading] = useState(true);
   const [availableProducts, setAvailableProducts] = useState<{ id: string; name: string; color: string | null }[]>([]);
   const [clientProducts, setClientProducts] = useState<Record<string, { id: string; name: string; color?: string }[]>>({});
+  const [leadDealStages, setLeadDealStages] = useState<Record<string, { stageName: string; stageColor: string }>>({});
   
   // WhatsApp connection state
   const [whatsappConnected, setWhatsappConnected] = useState(false);
@@ -242,6 +243,33 @@ export function useZappData(options: UseZappDataOptions = {}) {
             }
           });
           setClientProducts(prev => ({ ...prev, ...productsMap }));
+        }
+      }
+
+      // Fetch deal stages for leads
+      const leadIds = (assignmentsData || [])
+        .map((a: ConversationAssignment) => a.zapp_conversation?.lead_id)
+        .filter((id: string | null | undefined): id is string => !!id);
+
+      if (leadIds.length > 0) {
+        const { data: dealsData } = await supabase
+          .from("deals")
+          .select("lead_id, stage:deal_stages(name, color)")
+          .in("lead_id", leadIds)
+          .eq("status", "open")
+          .order("created_at", { ascending: false });
+
+        if (dealsData) {
+          const stagesMap: Record<string, { stageName: string; stageColor: string }> = {};
+          dealsData.forEach((deal: any) => {
+            if (deal.lead_id && deal.stage && !stagesMap[deal.lead_id]) {
+              stagesMap[deal.lead_id] = {
+                stageName: deal.stage.name,
+                stageColor: deal.stage.color,
+              };
+            }
+          });
+          setLeadDealStages(prev => ({ ...prev, ...stagesMap }));
         }
       }
     } catch (error) {
@@ -1040,6 +1068,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
     loading,
     availableProducts,
     clientProducts,
+    leadDealStages,
     currentAgent,
     sectorId,
     

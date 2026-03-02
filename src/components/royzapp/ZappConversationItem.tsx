@@ -16,6 +16,7 @@ import {
   Trash2,
   Clock,
   X,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,7 @@ interface ZappConversationItemProps {
   isSelected: boolean;
   currentAgentId: string | null;
   clientProducts: Record<string, { id: string; name: string; color?: string }[]>;
+  leadDealStages?: Record<string, { stageName: string; stageColor: string }>;
   onSelect: (assignment: ConversationAssignment) => void;
   onMarkAsRead: (zappConvId: string) => void;
   onMarkAsUnread: (zappConvId: string) => void;
@@ -85,6 +87,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
   isSelected,
   currentAgentId,
   clientProducts,
+  leadDealStages,
   onSelect,
   onMarkAsRead,
   onMarkAsUnread,
@@ -106,6 +109,8 @@ export const ZappConversationItem = memo(function ZappConversationItem({
 
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const products = clientId ? clientProducts[clientId] : undefined;
+  const leadId = assignment.zapp_conversation?.lead_id;
+  const dealStage = leadId ? leadDealStages?.[leadId] : undefined;
 
   return (
     <div
@@ -335,8 +340,21 @@ export const ZappConversationItem = memo(function ZappConversationItem({
                 ? "Você" 
                 : getAgentName(assignment.agent_id) || "Atendente"}
             </Badge>
-          )}
-          {/* Conversation Tags */}
+           )}
+           {dealStage && (
+             <Badge 
+               variant="secondary" 
+               className="border-0 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1"
+               style={{ 
+                 backgroundColor: `${dealStage.stageColor}20`,
+                 color: dealStage.stageColor
+               }}
+             >
+               <TrendingUp className="h-2.5 w-2.5" />
+               {dealStage.stageName}
+             </Badge>
+           )}
+           {/* Conversation Tags */}
           {assignment.conversation_tags && assignment.conversation_tags.length > 0 && (
             <>
               {assignment.conversation_tags.slice(0, 3).map((ct) => 
@@ -405,6 +423,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
     prevProps.assignment.zapp_conversation?.is_archived === nextProps.assignment.zapp_conversation?.is_archived &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.currentAgentId === nextProps.currentAgentId &&
-    prevTags === nextTags
+    prevTags === nextTags &&
+    prevProps.leadDealStages === nextProps.leadDealStages
   );
 });
