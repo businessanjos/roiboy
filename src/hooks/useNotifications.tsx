@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -25,6 +25,7 @@ interface NotificationsContextType {
   unreadCount: number;
   loading: boolean;
   notificationPermission: NotificationPermission | "unsupported";
+  pushSubscribed: boolean;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   refetch: () => Promise<void>;
@@ -33,18 +34,89 @@ interface NotificationsContextType {
 
 const NotificationsContext = createContext<NotificationsContextType | null>(null);
 
-// Check if browser supports notifications
 const supportsNotifications = () => "Notification" in window;
+const supportsPush = () => "PushManager" in window && "serviceWorker" in navigator;
 
-// Show browser push notification
+// Register service worker and subscribe to push
+async function subscribeToPush(): Promise<boolean> {
+  if (!supportsPush()) return false;
+
+  try {
+    // Register service worker
+    const registration = await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.ready;
+
+    // Get VAPID public key from server
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    
+    const vapidResponse = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/push-subscribe`,
+      {
+        method: "GET",
+        headers: { "apikey": anonKey },
+      }
+    );
+
+    if (!vapidResponse.ok) {
+      console.error("Failed to get VAPID key");
+      return false;
+    }
+
+    const { publicKey } = await vapidResponse.json();
+
+    // Convert base64url to Uint8Array for applicationServerKey
+    const urlBase64 = publicKey.replace(/-/g, "+").replace(/_/g, "/");
+    const pad = urlBase64.length % 4 === 0 ? "" : "=".repeat(4 - (urlBase64.length % 4));
+    const raw = atob(urlBase64 + pad);
+    const applicationServerKey = Uint8Array.from(raw, (c) => c.charCodeAt(0));
+
+    // Subscribe to push
+    const pm = (registration as any).pushManager;
+    let subscription = await pm.getSubscription();
+
+    if (!subscription) {
+      subscription = await pm.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+    }
+
+    // Send subscription to server
+    const session = await supabase.auth.getSession();
+    const token = session.data.session?.access_token;
+
+    if (!token) return false;
+
+    const saveResponse = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/push-subscribe`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+          "apikey": anonKey,
+        },
+        body: JSON.stringify({ subscription: subscription.toJSON() }),
+      }
+    );
+
+    return saveResponse.ok;
+  } catch (error) {
+    console.error("Push subscription error:", error);
+    return false;
+  }
+}
+
+// Show browser notification (fallback for when SW is not available)
 const showBrowserNotification = (title: string, body: string, link?: string | null) => {
   if (!supportsNotifications() || Notification.permission !== "granted") return;
 
   const notification = new Notification(title, {
     body,
-    icon: "/favicon.ico",
-    badge: "/favicon.ico",
-    tag: `roy-${Date.now()}`, // Unique tag to allow multiple notifications
+    icon: "/roy-logo.png",
+    badge: "/roy-logo.png",
+    tag: `roy-${Date.now()}`,
   });
 
   if (link) {
@@ -55,7 +127,6 @@ const showBrowserNotification = (title: string, body: string, link?: string | nu
     };
   }
 
-  // Auto close after 5 seconds
   setTimeout(() => notification.close(), 5000);
 };
 
@@ -63,6 +134,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const pushSubscribeAttempted = useRef(false);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | "unsupported">(
     supportsNotifications() ? Notification.permission : "unsupported"
   );
@@ -76,20 +149,42 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     try {
       const permission = await Notification.requestPermission();
       setNotificationPermission(permission);
-      
+
       if (permission === "granted") {
-        toast.success("Notificações ativadas!");
+        // Try to subscribe to push after permission granted
+        const subscribed = await subscribeToPush();
+        setPushSubscribed(subscribed);
+        
+        if (subscribed) {
+          toast.success("Notificações push ativadas! Você receberá notificações mesmo com a tela bloqueada.");
+        } else {
+          toast.success("Notificações ativadas!");
+        }
       } else if (permission === "denied") {
-        toast.error("Permissão de notificações negada");
+        toast.error("Permissão de notificações negada. Vá em Configurações do navegador para reativar.");
       }
     } catch (error) {
       console.error("Error requesting notification permission:", error);
     }
   }, []);
 
+  // Auto-subscribe to push if permission is already granted
+  useEffect(() => {
+    if (
+      notificationPermission === "granted" &&
+      supportsPush() &&
+      currentUserId &&
+      !pushSubscribeAttempted.current
+    ) {
+      pushSubscribeAttempted.current = true;
+      subscribeToPush().then((subscribed) => {
+        setPushSubscribed(subscribed);
+      });
+    }
+  }, [notificationPermission, currentUserId]);
+
   const fetchNotifications = async () => {
     try {
-      // Get current auth user
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) return;
 
@@ -124,7 +219,6 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchNotifications();
 
-    // Real-time subscription
     const channel = supabase
       .channel("notifications-realtime")
       .on(
@@ -136,10 +230,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         },
         async (payload) => {
           const newNotification = payload.new as Notification;
-          
-          // Check if this notification is for current user
+
           if (newNotification.user_id === currentUserId) {
-            // Fetch the complete notification with user data
             const { data } = await supabase
               .from("notifications")
               .select(`
@@ -151,17 +243,45 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
             if (data) {
               setNotifications((prev) => [data, ...prev]);
-              
-              // Show toast notification (in-app)
+
               toast.info(data.title, {
                 description: data.content || undefined,
-                action: data.link ? {
-                  label: "Ver",
-                  onClick: () => window.location.href = data.link!,
-                } : undefined,
+                action: data.link
+                  ? {
+                      label: "Ver",
+                      onClick: () => (window.location.href = data.link!),
+                    }
+                  : undefined,
               });
 
-              // Show browser push notification
+              // Send push notification via edge function (server-side)
+              // This ensures it works even when the app is in the background
+              try {
+                const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+                const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+                
+                await fetch(
+                  `https://${projectId}.supabase.co/functions/v1/send-push`,
+                  {
+                    method: "POST",
+                    headers: {
+                      "Content-Type": "application/json",
+                      "apikey": anonKey,
+                    },
+                    body: JSON.stringify({
+                      user_id: data.user_id,
+                      title: data.title,
+                      body: data.content || "Nova notificação",
+                      url: data.link || "/notifications",
+                      tag: `notification-${data.id}`,
+                    }),
+                  }
+                );
+              } catch (pushError) {
+                console.error("Error sending push:", pushError);
+              }
+
+              // Fallback: show browser notification directly
               showBrowserNotification(
                 data.title,
                 data.content || "Nova notificação",
@@ -220,6 +340,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         unreadCount,
         loading,
         notificationPermission,
+        pushSubscribed,
         markAsRead,
         markAllAsRead,
         refetch: fetchNotifications,

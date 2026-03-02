@@ -24,6 +24,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
     unreadCount, 
     loading, 
     notificationPermission,
+    pushSubscribed,
     markAsRead, 
     markAllAsRead,
     requestNotificationPermission,
@@ -70,13 +71,19 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
               className="gap-2"
             >
               <BellRing className="h-4 w-4" />
-              Ativar push
+              Ativar notificações
             </Button>
+          )}
+          {notificationPermission === "denied" && (
+            <Badge variant="destructive" className="gap-1">
+              <BellRing className="h-3 w-3" />
+              Bloqueado
+            </Badge>
           )}
           {notificationPermission === "granted" && (
             <Badge variant="secondary" className="gap-1">
               <BellRing className="h-3 w-3" />
-              Push ativo
+              {pushSubscribed ? "Push ativo ✓" : "Notificações ativas"}
             </Badge>
           )}
         </div>

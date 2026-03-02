@@ -200,3 +200,9 @@ verify_jwt = false
 
 [functions.test-omie-connection]
 verify_jwt = false
+
+[functions.push-subscribe]
+verify_jwt = false
+
+[functions.send-push]
+verify_jwt = false
