@@ -1,31 +1,48 @@
 
-## Corrigir dialog "Novo Cliente" - badges de campos obrigatorios ocupando toda a tela
+
+## Corrigir tela de carregamento infinita
 
 ### Problema Identificado
 
-O dialog "Novo Cliente" exibe 169 badges de campos obrigatorios no `DialogHeader` (linhas 1706-1726 de `Clients.tsx`). Esses badges estao **fora** do `ScrollArea` (que comeca na linha 1730), entao quando ha muitos campos obrigatorios, eles ocupam toda a area visivel do dialog e empurram o formulario real (nome, telefone, avatar, etc.) para fora da tela. A usuaria Rosane so consegue ver os badges e nao consegue acessar os campos de entrada.
+A tela de carregamento infinita acontece porque os hooks de autenticacao e assinatura (`useAuth`, `useSubscriptionStatus`, `useCurrentUser`) fazem chamadas de rede ao backend SEM nenhum mecanismo de timeout. Se qualquer chamada travar (rede lenta, instabilidade do servidor), o estado `loading` nunca muda para `false` e a tela fica presa no "Carregando..." para sempre.
+
+Alem disso, o hook `useAuth` usa um `initializedRef` que, em certas condicoes de remontagem do componente, pode impedir a re-inicializacao da sessao.
 
 ### Solucao
 
-Duas alteracoes na area de badges de progresso:
+Adicionar timeouts de seguranca em 3 pontos criticos, garantindo que a tela de carregamento nunca fique presa por mais de 10 segundos:
 
-1. **Limitar a altura dos badges com scroll proprio** - Envolver a lista de badges (linhas 1706-1726) em um container com `max-h-[80px] overflow-y-auto` quando houver mais de 10 campos. Isso garante que os badges nao ocupem mais que ~80px de altura, com rolagem interna para ver todos.
+### Alteracoes tecnicas
 
-2. **Tornar os badges colapsaveis** - Quando houver mais de 10 campos obrigatorios, mostrar apenas a barra de progresso com contagem por padrao, e um botao "Ver campos" para expandir/colapsar a lista de badges. Isso mantem o dialog limpo para contas com muitos campos.
+**1. `src/hooks/useAuth.tsx` - Adicionar timeout de seguranca**
 
-### Alteracao tecnica
+- Adicionar um `setTimeout` de 10 segundos dentro do `useEffect` de inicializacao
+- Se `loading` ainda for `true` apos 10s, forcar `setLoading(false)` com log de aviso
+- Limpar o timeout no cleanup do effect
+- Remover o `initializedRef` que pode causar problemas de re-inicializacao, substituindo por logica mais segura com a flag `mounted`
 
-**Arquivo:** `src/pages/Clients.tsx`
+**2. `src/hooks/useSubscriptionStatus.tsx` - Adicionar timeout de seguranca**
 
-Na secao de badges (linhas 1706-1726), substituir a renderizacao direta por uma versao condicional:
+- Adicionar um `setTimeout` de 8 segundos dentro do `useEffect` de verificacao
+- Se `isLoading` ainda for `true` apos 8s, forcar `setStatus` com `isLoading: false` e `hasAccess: true` (fail open)
+- Isso evita que chamadas sequenciais ao backend (super_admin check, user query, account query) travem a tela
 
-- Se `requiredChecks.length <= 10`: manter badges visiveis normalmente (comportamento atual)
-- Se `requiredChecks.length > 10`: esconder badges por padrao, mostrar apenas a barra de progresso e um link "Ver X campos" que ao clicar expande um container com `max-h-[80px] overflow-y-auto` mostrando todos os badges
+**3. `src/hooks/useCurrentUser.tsx` - Adicionar timeout de seguranca**
 
-Sera necessario adicionar um estado `showRequiredBadges` (useState boolean) para controlar a visibilidade.
+- Adicionar um `setTimeout` de 10 segundos dentro do `useEffect` do `fetchUser`
+- Se `loading` ainda for `true` apos 10s, forcar `setLoading(false)`
+- Isso garante que paginas que dependem de `currentUser` (como Clients) nao fiquem presas
+
+**4. `src/components/layout/AppLayout.tsx` - Adicionar timeout com botao de retry**
+
+- Adicionar um estado `loadingTimeout` que ativa apos 12 segundos
+- Quando ativado, exibir um botao "Tentar novamente" abaixo da mensagem de carregamento
+- O botao recarrega a pagina (`window.location.reload()`)
+- Isso da ao usuario uma saida mesmo se todos os outros timeouts falharem
 
 ### Resultado esperado
 
-- Contas com poucos campos obrigatorios: sem mudanca visual
-- Contas com muitos campos (como a Rosane com 169): dialog abre mostrando a barra de progresso compacta, formulario visivel e acessivel imediatamente
-- Badges podem ser expandidos opcionalmente para conferir quais campos faltam
+- Carregamento normal: sem mudanca visivel (tudo resolve em 1-3s)
+- Rede lenta: apos 10s, o app para de esperar e tenta mostrar o conteudo (fail open)
+- Falha total: apos 12s, aparece um botao "Tentar novamente" para o usuario recarregar
+
