@@ -190,7 +190,7 @@ serve(async (req) => {
         nQtdeParc: 1,
       },
       InformacoesAdicionais: {
-        cDadosAdicionais: descricao || `Negócio: ${deal.title}`,
+        cDadosAdicNF: descricao || `Negócio: ${deal.title}`,
         cCodCateg: '',
         nCodCC: 0,
       },
