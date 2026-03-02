@@ -455,12 +455,20 @@ export function CustomFieldsManager({
         .single();
       
       if (data?.required_stages && Array.isArray(data.required_stages)) {
-        setRequiredStages(data.required_stages as string[]);
+        const stages = data.required_stages as string[];
+        // Legacy: convert "all" to all individual stage IDs
+        if (stages.includes("all")) {
+          const outcomes = stages.filter(s => s === "won" || s === "lost");
+          const allStageIds = dealStages.map(s => s.id);
+          setRequiredStages([...allStageIds, ...outcomes]);
+        } else {
+          setRequiredStages(stages);
+        }
       } else {
-        setRequiredStages(["all"]);
+        setRequiredStages([]);
       }
     } else {
-      setRequiredStages(["all"]);
+      setRequiredStages([]);
     }
     
     setDialogOpen(true);
@@ -724,7 +732,7 @@ export function CustomFieldsManager({
             <Switch checked={isRequired} onCheckedChange={(checked) => {
               setIsRequired(checked);
               if (!checked) {
-                setRequiredStages(["all"]);
+                setRequiredStages([]);
               }
             }} />
           </div>
@@ -734,21 +742,22 @@ export function CustomFieldsManager({
             <div className="space-y-2 pl-3 border-l-2 border-primary/20 ml-1">
               <Label className="text-sm text-muted-foreground">Obrigatório em quais etapas?</Label>
               <div className="space-y-2">
-                {/* "All stages" option */}
+                {/* "All stages" toggle - selects/deselects all individual stages */}
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     id="stage-all"
-                    checked={requiredStages.includes("all")}
+                    checked={dealStages.length > 0 && dealStages.every(s => requiredStages.includes(s.id))}
                     onChange={(e) => {
                       if (e.target.checked) {
-                        // Keep won/lost if already selected, add "all"
+                        // Select all individual stage IDs, keep won/lost
                         setRequiredStages(prev => {
                           const outcomes = prev.filter(s => s === "won" || s === "lost");
-                          return ["all", ...outcomes];
+                          const allStageIds = dealStages.map(s => s.id);
+                          return [...allStageIds, ...outcomes];
                         });
                       } else {
-                        // Remove all but keep won/lost
+                        // Remove all stage IDs, keep won/lost
                         setRequiredStages(prev => prev.filter(s => s === "won" || s === "lost"));
                       }
                     }}
@@ -759,8 +768,8 @@ export function CustomFieldsManager({
                   </label>
                 </div>
                 
-                {/* Individual stages (only shown when "all" is not selected) */}
-                {!requiredStages.includes("all") && dealStages.map(stage => (
+                {/* Individual stages - always visible */}
+                {dealStages.map(stage => (
                   <div key={stage.id} className="flex items-center gap-2 pl-4">
                     <input
                       type="checkbox"
