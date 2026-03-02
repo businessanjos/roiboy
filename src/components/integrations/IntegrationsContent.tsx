@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone, Building } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,7 @@ import {
 import { WhatsAppIntegrationCard } from "@/components/integrations/WhatsAppIntegrationCard";
 import { WhatsAppSectorManager } from "@/components/integrations/WhatsAppSectorManager";
 import { WebhooksTab } from "./webhooks/WebhooksTab";
+import { OmieIntegrationTab } from "./OmieIntegrationTab";
 
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -40,6 +41,7 @@ const integrations_list = [
   { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video },
   { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar },
   { id: "3cplus", name: "3C Plus", description: "Plataforma de telefonia cloud para call center", icon: Phone },
+  { id: "omie", name: "Omie", description: "Integração com ERP Omie para Ordens de Serviço", icon: Building },
 ];
 
 export function IntegrationsContent() {
@@ -480,6 +482,10 @@ export function IntegrationsContent() {
               <Phone className="h-4 w-4" />
               <span>3C Plus</span>
             </TabsTrigger>
+            <TabsTrigger value="omie" className="gap-2 px-3 py-2">
+              <Building className="h-4 w-4" />
+              <span>Omie</span>
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -908,6 +914,11 @@ export function IntegrationsContent() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Omie Tab */}
+        <TabsContent value="omie" className="space-y-4">
+          <OmieIntegrationTab />
         </TabsContent>
       </Tabs>
     </div>
