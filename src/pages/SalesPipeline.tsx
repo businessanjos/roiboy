@@ -663,6 +663,32 @@ export default function SalesPipeline() {
       // STEP 6: NOW mark as won (only after all validations passed)
       await markAsWon(dealId);
       
+      // STEP 7: Omie OS Integration (non-blocking fire-and-forget)
+      if (currentUser?.account_id) {
+        try {
+          const { data: omieSettings } = await supabase
+            .from('omie_settings')
+            .select('is_enabled')
+            .eq('account_id', currentUser.account_id)
+            .maybeSingle();
+          
+          if (omieSettings?.is_enabled) {
+            supabase.functions.invoke('create-omie-os', {
+              body: { deal_id: dealId, account_id: currentUser.account_id },
+            }).then(({ data, error }) => {
+              if (error || data?.error) {
+                toast.error(`Omie OS: ${error?.message || data?.error || 'Erro desconhecido'}`);
+              } else {
+                toast.success(`OS criada no Omie! ID: ${data?.omie_os_id || 'OK'}`);
+              }
+            });
+          }
+        } catch (omieErr) {
+          console.error("[MarkAsWon] Omie integration error:", omieErr);
+          // Non-blocking
+        }
+      }
+      
       setIsDetailOpen(false);
       setSelectedDeal(null);
       

@@ -7371,6 +7371,104 @@ export type Database = {
           },
         ]
       }
+      omie_integration_logs: {
+        Row: {
+          account_id: string
+          action: string
+          created_at: string
+          deal_id: string | null
+          error_message: string | null
+          id: string
+          omie_os_id: string | null
+          request_payload: Json | null
+          response_payload: Json | null
+          status: string
+        }
+        Insert: {
+          account_id: string
+          action?: string
+          created_at?: string
+          deal_id?: string | null
+          error_message?: string | null
+          id?: string
+          omie_os_id?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string
+        }
+        Update: {
+          account_id?: string
+          action?: string
+          created_at?: string
+          deal_id?: string | null
+          error_message?: string | null
+          id?: string
+          omie_os_id?: string | null
+          request_payload?: Json | null
+          response_payload?: Json | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "omie_integration_logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "omie_integration_logs_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      omie_settings: {
+        Row: {
+          account_id: string
+          app_key: string
+          app_secret: string
+          created_at: string
+          default_service_code: string | null
+          field_mappings: Json | null
+          id: string
+          is_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          app_key?: string
+          app_secret?: string
+          created_at?: string
+          default_service_code?: string | null
+          field_mappings?: Json | null
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          app_key?: string
+          app_secret?: string
+          created_at?: string
+          default_service_code?: string | null
+          field_mappings?: Json | null
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "omie_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pipeline_filters: {
         Row: {
           account_id: string
