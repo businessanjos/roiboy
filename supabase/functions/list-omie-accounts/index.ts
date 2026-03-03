@@ -25,7 +25,7 @@ serve(async (req) => {
         call: "ListarContasCorrentes",
         app_key,
         app_secret,
-        param: [{ pagina: 1, registros_por_pagina: 50, apenas_importacao_api: "N" }],
+        param: [{ pagina: 1, registros_por_pagina: 50 }],
       }),
     });
 
