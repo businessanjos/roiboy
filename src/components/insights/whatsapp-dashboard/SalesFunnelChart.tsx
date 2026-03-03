@@ -145,33 +145,36 @@ export function SalesFunnelChart({ stages, isLoading, hiddenStages: externalHidd
         </Popover>
       </CardHeader>
       <CardContent className="space-y-1.5">
-        {stagesWithMetrics.map((stage, index) => (
-          <div key={stage.name} className="flex flex-col items-center gap-0.5">
-            <div
-              className={`h-10 rounded-md flex items-center justify-between px-4 transition-all ${stage.isVendaStage ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`}
-              style={{
-                width: `${stage.widthPct}%`,
-                minWidth: '180px',
-                backgroundColor: stage.color,
-              }}
-            >
-              <span className="text-sm font-medium text-white flex items-center gap-1.5">
-                {stage.isVendaStage && '🏆'}
-                {stage.name}
+        {stagesWithMetrics.map((stage, index) => {
+          const overallPct = Math.round((stage.cumulativeCount / maxCumulative) * 100);
+          const stagePct = index === 0 ? 100 : stage.conversionFromPrev;
+          return (
+            <div key={stage.name} className="flex items-center w-full gap-1.5">
+              <span className="text-xs font-semibold text-muted-foreground w-10 text-right shrink-0">
+                {stagePct}%
               </span>
-              <div className="flex items-center gap-2 ml-2">
-                <span className="text-sm font-bold text-white">
+              <div
+                className={`h-10 rounded-md flex items-center justify-between px-4 transition-all flex-1 ${stage.isVendaStage ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`}
+                style={{
+                  width: `${stage.widthPct}%`,
+                  minWidth: '140px',
+                  backgroundColor: stage.color,
+                }}
+              >
+                <span className="text-sm font-medium text-white flex items-center gap-1.5">
+                  {stage.isVendaStage && '🏆'}
+                  {stage.name}
+                </span>
+                <span className="text-sm font-bold text-white ml-2 shrink-0">
                   {stage.isVendaStage ? stage.count : stage.cumulativeCount}
                 </span>
-                {index > 0 && (
-                  <span className="text-xs bg-white/20 px-1.5 py-0.5 rounded text-white">
-                    {stage.conversionFromPrev}%
-                  </span>
-                )}
               </div>
+              <span className="text-xs font-semibold text-muted-foreground w-10 shrink-0">
+                {stage.isVendaStage ? Math.round((stage.count / maxCumulative) * 100) : overallPct}%
+              </span>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
   );
