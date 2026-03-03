@@ -1,29 +1,41 @@
 
-## Adicionar campo "Conta Corrente Omie" (nCodCC) na integração
 
-### Problema
+## Diagnóstico: Bug de Fuso Horário nas Datas de Tarefas
 
-A API do Omie exige o campo `nCodCC` (codigo da Conta Corrente cadastrada no Omie) para criar uma OS. Esse campo foi removido anteriormente porque estava com valor `0` (invalido). Agora precisamos permitir que o usuario configure o valor correto.
+### Causa Raiz Confirmada
 
-### Onde encontrar o nCodCC no Omie
+O problema está na **exibição**, não no armazenamento. Os dados no banco estão **corretos** — as tarefas marcadas para 03/03 têm `due_date = '2026-03-03'` no banco.
 
-No painel do Omie, acesse: **Finanças > Contas Correntes**. Cada conta listada possui um codigo numerico (ex: `11850365`). Esse e o valor que deve ser inserido no campo de configuracao.
+O bug ocorre porque o código usa `new Date("2026-03-03")`, que o JavaScript interpreta como **UTC meia-noite**. No fuso horário do Brasil (UTC-3), isso vira **02/03 às 21:00**, fazendo a data aparecer como dia 02 em vez de dia 03.
 
-### Alteracoes
+O projeto já possui a função `parseLocalDate()` em `src/lib/dateUtils.ts` que resolve exatamente esse problema, mas ela **não está sendo usada consistentemente**.
 
-**1. Migrar banco de dados** - Adicionar coluna `default_bank_account_code` na tabela `omie_settings`:
-```sql
-ALTER TABLE public.omie_settings ADD COLUMN default_bank_account_code text DEFAULT '';
+### Arquivos Afetados (Tarefas)
+
+Os seguintes arquivos usam `new Date(task.due_date)` incorretamente e precisam ser corrigidos para usar `parseLocalDate()`:
+
+1. **`src/pages/Tasks.tsx`** — 3 ocorrências (linhas 447, 570, 636):
+   - `getDueDateInfo()` — exibe a data na tabela
+   - `getDuePriority()` — ordena por data
+   - Cálculo de overdue count
+
+2. **`src/components/sales/DealActivitiesTab.tsx`** — provável ocorrência similar
+3. **`src/components/sales/DealActivitiesDialog.tsx`** — provável ocorrência similar
+4. **`src/hooks/useDealActivityStatus.ts`** — já usa `new Date(t.due_date + "T00:00:00")` como workaround (funciona, mas inconsistente)
+5. **`src/components/marketing/tasks/MarketingTaskRow.tsx`** — usa `new Date(task.due_date)` na linha do `dueDate`
+6. **`src/components/marketing/tasks/MarketingTaskDialog.tsx`** — usa `new Date(existingTask.due_date)`
+
+### Correção
+
+Substituir todas as ocorrências de `new Date(task.due_date)` por `parseLocalDate(task.due_date)` nos componentes de tarefas listados, garantindo que datas no formato `YYYY-MM-DD` sejam interpretadas como **horário local** e não UTC.
+
+A função `parseLocalDate` já existe e faz exatamente isso:
+```typescript
+// new Date("2026-03-03") → UTC midnight → 02/03 21:00 BRT ❌
+// parseLocalDate("2026-03-03") → local midnight → 03/03 00:00 BRT ✅
 ```
 
-**2. Arquivo: `src/components/integrations/OmieIntegrationTab.tsx`**
-- Adicionar estado `defaultBankAccountCode`
-- Carregar e salvar o novo campo
-- Adicionar campo de input na UI abaixo do "Codigo da Categoria":
-  - Label: "Conta Corrente (nCodCC)"
-  - Placeholder: "Ex: 11850365"
-  - Descricao: "Codigo numerico da conta corrente cadastrada no Omie (Financas > Contas Correntes). Obrigatorio."
+### Escopo da Correção
 
-**3. Arquivo: `supabase/functions/create-omie-os/index.ts`**
-- Adicionar validacao: se `default_bank_account_code` estiver vazio, lancar erro amigavel
-- Adicionar `nCodCC: Number(settings.default_bank_account_code)` dentro de `InformacoesAdicionais` no payload da OS
+Focarei nos componentes de **tarefas** que o usuário reportou. Os componentes financeiros (`FinancialBoletosPage`, `CashFlow`, etc.) provavelmente têm o mesmo bug, mas serão tratados separadamente se necessário.
+
