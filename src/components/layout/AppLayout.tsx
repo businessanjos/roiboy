@@ -11,6 +11,8 @@ import { GlobalAgentChat } from "@/components/admin/GlobalAgentChat";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { PlanLimitsProvider } from "@/hooks/usePlanLimits";
+import { NotificationsProvider } from "@/hooks/useNotifications";
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
@@ -27,7 +29,7 @@ export function AppLayout() {
       setLoadingTimeout(false);
       return;
     }
-    const timer = setTimeout(() => setLoadingTimeout(true), 12000);
+    const timer = setTimeout(() => setLoadingTimeout(true), 6000);
     return () => clearTimeout(timer);
   }, [isLoading]);
 
@@ -76,24 +78,28 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
-      <TrialBanner />
-      <MobileHeader />
-      <div className="flex flex-row flex-1 w-full min-h-0 overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-auto">
-          <Outlet />
-        </main>
-      </div>
-      
-      {/* Global Search Dialog */}
-      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
-      
-      {/* Keyboard Shortcuts Help */}
-      <KeyboardShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
+    <PlanLimitsProvider>
+      <NotificationsProvider>
+        <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
+          <TrialBanner />
+          <MobileHeader />
+          <div className="flex flex-row flex-1 w-full min-h-0 overflow-hidden">
+            <Sidebar />
+            <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-auto">
+              <Outlet />
+            </main>
+          </div>
+          
+          {/* Global Search Dialog */}
+          <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
+          
+          {/* Keyboard Shortcuts Help */}
+          <KeyboardShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
 
-      {/* Chat com agentes de IA - temporariamente oculto */}
-      {/* {isAdmin && <GlobalAgentChat />} */}
-    </div>
+          {/* Chat com agentes de IA - temporariamente oculto */}
+          {/* {isAdmin && <GlobalAgentChat />} */}
+        </div>
+      </NotificationsProvider>
+    </PlanLimitsProvider>
   );
 }

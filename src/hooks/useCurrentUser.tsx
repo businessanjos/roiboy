@@ -49,6 +49,10 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       
       if (error) {
         console.error("Error fetching user profile:", error);
+        // Don't wait for timeout - set loading false immediately on error
+        setCurrentUser(null);
+        setLoading(false);
+        return;
       }
       
       if (data) {
@@ -59,12 +63,16 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
         // Fallback: if JOIN failed but team_role_id exists, fetch name separately
         if (!teamRoleName && teamRoleId) {
           console.warn("team_role JOIN returned null, fetching separately for team_role_id:", teamRoleId);
-          const { data: roleData } = await supabase
-            .from("team_roles")
-            .select("name")
-            .eq("id", teamRoleId)
-            .maybeSingle();
-          teamRoleName = roleData?.name || undefined;
+          try {
+            const { data: roleData } = await supabase
+              .from("team_roles")
+              .select("name")
+              .eq("id", teamRoleId)
+              .maybeSingle();
+            teamRoleName = roleData?.name || undefined;
+          } catch {
+            // Non-critical, continue without team role name
+          }
         }
         
         setCurrentUser({
@@ -77,6 +85,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       }
     } catch (error) {
       console.error("Error fetching current user:", error);
+      setCurrentUser(null);
     } finally {
       setLoading(false);
     }
@@ -93,16 +102,16 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchUser();
 
-    // Safety timeout - force loading to false after 10s
+    // Safety timeout - force loading to false after 5s
     const safetyTimeout = setTimeout(() => {
       setLoading(prev => {
         if (prev) {
-          console.warn("[useCurrentUser] Safety timeout: forcing loading to false after 10s");
+          console.warn("[useCurrentUser] Safety timeout: forcing loading to false after 5s");
           return false;
         }
         return prev;
       });
-    }, 10000);
+    }, 5000);
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
