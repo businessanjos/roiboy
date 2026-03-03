@@ -1,31 +1,30 @@
 
-## Corrigir formato de funil — remover espaço vazio após as barras
+
+## Bug: "Ganhos" no funil ignora filtros de campos personalizados
 
 ### Problema
-Os retângulos vermelhos no print mostram espaço vazio à direita de cada barra. O wrapper `flex-1` faz o container ocupar 100% da largura, e a barra fica menor dentro dele. A porcentagem da direita fica na borda direita da tela, não logo após a barra.
+O funil busca os dados das etapas regulares via `fetchDealsData`, que aplica os filtros `leadFieldFilter` e `dealFieldFilter` (Canal, Origem da Venda, etc.). Porém, a contagem de "Ganhos" (linhas 91-113 de `useVisualData.ts`) é uma query **separada** que conta diretamente na tabela `deals` com `status = 'won'`, aplicando apenas filtros de data e usuário — **ignorando completamente** os filtros de campos personalizados do Lead e do Negócio.
+
+Isso explica por que "Ganhos" mostra 78 enquanto a etapa anterior (Follow Up) mostra apenas 17.
 
 ### Solução
-Mover o `width: widthPct%` para o **row inteiro** (o `div` que contém label esquerda + barra + label direita), em vez de no wrapper interno. A barra dentro do row usa `flex-1` para preencher o espaço entre os dois labels. Assim cada linha tem largura proporcional, criando o formato de funil.
+Em vez de fazer uma query separada para "Ganhos", reutilizar os deals já filtrados (`filteredData`) que passaram por `filterByLeadField` e `filterByDealField`, e contar quantos têm `status === 'won'`.
 
-Layout:
-```text
-|<---------- widthPct% ---------->|
-[%]  ████████ Nome  Valor ████████  [%]
+### Alteração — `src/hooks/useVisualData.ts`
 
-|<------- widthPct% ------->|
-[%]  ██████ Nome  Valor ██████  [%]
+**Bloco do funil (linhas ~77-113)**: Após o sort por `display_order`, em vez de fazer uma nova query ao banco para contar won deals, calcular a contagem diretamente dos deals já filtrados:
 
-|<---- widthPct% ---->|
-[%]  ████ Nome  Valor ████  [%]
+```typescript
+// Instead of a separate won query:
+const wonCount = filteredData.filter(d => d.status === 'won').length;
+result.push({
+  name: 'Ganhos',
+  value: wonCount,
+  color: '#10b981',
+});
 ```
 
-### Arquivos
+Isso exige mover a lógica de append "Ganhos" para **depois** da aplicação dos filtros dentro de `fetchDealsData`, ou passar os filtros para o bloco do funil no hook principal. A abordagem mais limpa é fazer `fetchDealsData` retornar a contagem de won como parte do resultado quando `chartType === 'funnel'`, já que ela já tem acesso ao `filteredData` completo.
 
-1. **`ConfigurableFunnel.tsx`**
-   - Row div: remover `w-full`, adicionar `style={{ width: widthPct% }}`
-   - Remover wrapper `flex-1` intermediário
-   - Barra colorida: usar `flex-1` e remover `width` inline
-   - Mesmo para seção Ganhos
+**Mudança concreta**: No `fetchDealsData`, quando chamado para funil com `stage_name`, após filtrar e agregar, anexar "Ganhos" contando `filteredData.filter(d => d.status === 'won').length`. Remover a query separada de won do hook principal (linhas 91-113).
 
-2. **`SalesFunnelChart.tsx`**
-   - Mesma lógica aplicada ao funil do WhatsApp
