@@ -1,22 +1,31 @@
 
-
-## Corrigir formato de funil — barras devem afunilar
+## Corrigir formato de funil — remover espaço vazio após as barras
 
 ### Problema
-As barras estão com `flex-1` que as estica para 100% da largura, ignorando o `width` calculado. O funil precisa ser largo no topo e afunilar conforme desce.
+Os retângulos vermelhos no print mostram espaço vazio à direita de cada barra. O wrapper `flex-1` faz o container ocupar 100% da largura, e a barra fica menor dentro dele. A porcentagem da direita fica na borda direita da tela, não logo após a barra.
 
 ### Solução
-Nos dois arquivos de funil, remover `flex-1` das barras e usar um container wrapper que ocupa o espaço restante, com a barra dentro dimensionada pela porcentagem cumulativa.
+Mover o `width: widthPct%` para o **row inteiro** (o `div` que contém label esquerda + barra + label direita), em vez de no wrapper interno. A barra dentro do row usa `flex-1` para preencher o espaço entre os dois labels. Assim cada linha tem largura proporcional, criando o formato de funil.
 
 Layout:
 ```text
-[%]  [=================container================]  [%]
-     [████████ barra (widthPct%) ████████]
+|<---------- widthPct% ---------->|
+[%]  ████████ Nome  Valor ████████  [%]
+
+|<------- widthPct% ------->|
+[%]  ██████ Nome  Valor ██████  [%]
+
+|<---- widthPct% ---->|
+[%]  ████ Nome  Valor ████  [%]
 ```
 
 ### Arquivos
 
-1. **`ConfigurableFunnel.tsx`** — Remover `flex-1` da barra, envolver num `div flex-1` container, a barra dentro usa `width: widthPct%` sem flex-1.
+1. **`ConfigurableFunnel.tsx`**
+   - Row div: remover `w-full`, adicionar `style={{ width: widthPct% }}`
+   - Remover wrapper `flex-1` intermediário
+   - Barra colorida: usar `flex-1` e remover `width` inline
+   - Mesmo para seção Ganhos
 
-2. **`SalesFunnelChart.tsx`** — Mesmo ajuste.
-
+2. **`SalesFunnelChart.tsx`**
+   - Mesma lógica aplicada ao funil do WhatsApp
