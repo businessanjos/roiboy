@@ -1,28 +1,37 @@
 
 
-## Correção: Campo `cTribServ` obrigatório na API do Omie
+## Correção: Campo `cCodServLC116` obrigatório na API do Omie
 
 ### Problema
-A API do Omie exige o campo `cTribServ` (Tipo de Tributação do Serviço) no bloco `ServicosPrestados`. Atualmente ele está hardcoded como string vazia `''`, causando o erro: *"É obrigatório o Tipo de Tributação de serviço, tag [cTribServ], na inclusão!"*
+O erro **"É obrigatório o Código do Serviço LC116, tag [cCodServLC116], na inclusão!"** indica que a API do Omie exige o campo `cCodServLC116` (código do serviço conforme a Lei Complementar 116) no bloco `ServicosPrestados`. Atualmente o payload envia apenas `cCodServMun` (código municipal), mas falta o `cCodServLC116`.
 
-### Solução
-De acordo com a documentação oficial do Omie, o valor mais comum para `cTribServ` é `"01"` (tributação no município). Os valores possíveis são códigos como `01`, `02`, `03`, etc.
+### O que é o cCodServLC116?
+É o código padronizado nacional do serviço (ex: `14.01`, `17.01`). Em muitos casos é o mesmo valor do código municipal, mas é um campo separado e obrigatório.
 
-A melhor abordagem é adicionar um campo de configuração na tela de integração para que o usuário escolha o tipo de tributação, com valor padrão `"01"`.
+### Correção
 
-### Implementação
+1. **Edge Function `create-omie-os`** — Adicionar o campo `cCodServLC116` no bloco `ServicosPrestados`, usando o mesmo valor de `default_service_code` das configurações:
 
-1. **Migração do banco** — Adicionar coluna `default_tax_type` na tabela `omie_settings` com valor padrão `'01'`.
+```typescript
+ServicosPrestados: [
+  {
+    cCodServLC116: settings.default_service_code || '',  // NOVO
+    cCodServMun: settings.default_service_code || '',
+    cDescServ: deal.title,
+    cTribServ: settings.default_tax_type || '01',
+    nQtde: 1,
+    nValUnit: valor,
+  },
+],
+```
 
-2. **Edge Function `create-omie-os`** — Usar `settings.default_tax_type || '01'` em vez de `''` no campo `cTribServ` do payload.
+2. **Validação** — Adicionar validação antes da chamada à API para garantir que o código do serviço foi preenchido:
 
-3. **UI `OmieIntegrationTab`** — Adicionar um campo `Select` com as opções de tributação mais comuns:
-   - `01` — Tributação no Município
-   - `02` — Tributação Fora do Município  
-   - `03` — Isenção
-   - `04` — Imune
-   - `05` — Exigibilidade Suspensa por Decisão Judicial
-   - `06` — Exigibilidade Suspensa por Procedimento Administrativo
+```typescript
+if (!settings.default_service_code) {
+  throw new Error('Código do Serviço não configurado nas configurações do Omie.');
+}
+```
 
-   Salvar o valor selecionado na coluna `default_tax_type`.
+Mudança pontual, apenas na edge function. Sem alteração de banco ou UI.
 
