@@ -1,30 +1,22 @@
 
-
-## Bug: "Ganhos" no funil ignora filtros de campos personalizados
+## Alinhar barras do funil ao centro
 
 ### Problema
-O funil busca os dados das etapas regulares via `fetchDealsData`, que aplica os filtros `leadFieldFilter` e `dealFieldFilter` (Canal, Origem da Venda, etc.). Porém, a contagem de "Ganhos" (linhas 91-113 de `useVisualData.ts`) é uma query **separada** que conta diretamente na tabela `deals` com `status = 'won'`, aplicando apenas filtros de data e usuário — **ignorando completamente** os filtros de campos personalizados do Lead e do Negócio.
-
-Isso explica por que "Ganhos" mostra 78 enquanto a etapa anterior (Follow Up) mostra apenas 17.
+As barras estão desalinhadas porque o `width: widthPct%` está aplicado ao **row inteiro** (que inclui labels), e `items-center` no container centra o row. Como os labels têm largura fixa mas o row muda de tamanho, o centro visual das barras coloridas não coincide perfeitamente entre etapas.
 
 ### Solução
-Em vez de fazer uma query separada para "Ganhos", reutilizar os deals já filtrados (`filteredData`) que passaram por `filterByLeadField` e `filterByDealField`, e contar quantos têm `status === 'won'`.
+Fazer cada row ocupar 100% da largura e centralizar a barra colorida dentro dele. A barra terá `width: widthPct%` e `mx-auto` (ou `justify-center` no row). Os labels de porcentagem ficam posicionados com largura absoluta fora da barra.
 
-### Alteração — `src/hooks/useVisualData.ts`
-
-**Bloco do funil (linhas ~77-113)**: Após o sort por `display_order`, em vez de fazer uma nova query ao banco para contar won deals, calcular a contagem diretamente dos deals já filtrados:
-
-```typescript
-// Instead of a separate won query:
-const wonCount = filteredData.filter(d => d.status === 'won').length;
-result.push({
-  name: 'Ganhos',
-  value: wonCount,
-  color: '#10b981',
-});
+Layout proposto:
+```text
+|<================ 100% row =================>|
+         [%] ██████ bar (80%) ██████ [%]
+           [%] ████ bar (60%) ████ [%]
+              [%] ██ bar (40%) ██ [%]
 ```
 
-Isso exige mover a lógica de append "Ganhos" para **depois** da aplicação dos filtros dentro de `fetchDealsData`, ou passar os filtros para o bloco do funil no hook principal. A abordagem mais limpa é fazer `fetchDealsData` retornar a contagem de won como parte do resultado quando `chartType === 'funnel'`, já que ela já tem acesso ao `filteredData` completo.
+Cada row terá `w-full flex justify-center items-center`. Dentro, um sub-container com `width: widthPct%` contendo `[label] [bar flex-1] [label]`. Isso garante que o ponto central de cada barra esteja sempre no mesmo eixo vertical.
 
-**Mudança concreta**: No `fetchDealsData`, quando chamado para funil com `stage_name`, após filtrar e agregar, anexar "Ganhos" contando `filteredData.filter(d => d.status === 'won').length`. Remover a query separada de won do hook principal (linhas 91-113).
-
+### Arquivos
+1. **`ConfigurableFunnel.tsx`** — Remover width do row, mover para sub-container centralizado
+2. **`SalesFunnelChart.tsx`** — Mesma correção
