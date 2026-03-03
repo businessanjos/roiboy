@@ -175,7 +175,10 @@ serve(async (req) => {
       throw new Error('Conta Corrente (nCodCC) não configurada nas configurações do Omie.');
     }
     if (!settings.default_service_code) {
-      throw new Error('Código do Serviço não configurado nas configurações do Omie.');
+      throw new Error('Código do Serviço Municipal não configurado nas configurações do Omie.');
+    }
+    if (!settings.default_service_lc116_code) {
+      throw new Error('Código do Serviço LC116 não configurado nas configurações do Omie.');
     }
 
     // 7. Build OS payload
@@ -210,7 +213,7 @@ serve(async (req) => {
       },
       ServicosPrestados: [
         {
-          cCodServLC116: settings.default_service_code || '',
+          cCodServLC116: settings.default_service_lc116_code || '',
           cCodServMun: settings.default_service_code || '',
           cDescServ: deal.title,
           cTribServ: settings.default_tax_type || '01',
