@@ -7434,6 +7434,7 @@ export type Database = {
           default_bank_account_code: string | null
           default_category_code: string | null
           default_service_code: string | null
+          default_service_lc116_code: string | null
           default_tax_type: string
           field_mappings: Json | null
           id: string
@@ -7448,6 +7449,7 @@ export type Database = {
           default_bank_account_code?: string | null
           default_category_code?: string | null
           default_service_code?: string | null
+          default_service_lc116_code?: string | null
           default_tax_type?: string
           field_mappings?: Json | null
           id?: string
@@ -7462,6 +7464,7 @@ export type Database = {
           default_bank_account_code?: string | null
           default_category_code?: string | null
           default_service_code?: string | null
+          default_service_lc116_code?: string | null
           default_tax_type?: string
           field_mappings?: Json | null
           id?: string

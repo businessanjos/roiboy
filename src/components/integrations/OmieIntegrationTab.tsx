@@ -26,6 +26,7 @@ export function OmieIntegrationTab() {
   const [appSecret, setAppSecret] = useState("");
   const [isEnabled, setIsEnabled] = useState(false);
   const [defaultServiceCode, setDefaultServiceCode] = useState("");
+  const [defaultServiceLc116Code, setDefaultServiceLc116Code] = useState("");
   const [defaultCategoryCode, setDefaultCategoryCode] = useState("");
   const [defaultBankAccountCode, setDefaultBankAccountCode] = useState("");
   const [defaultTaxType, setDefaultTaxType] = useState("01");
@@ -62,6 +63,7 @@ export function OmieIntegrationTab() {
       setAppSecret(data.app_secret || "");
       setIsEnabled(data.is_enabled || false);
       setDefaultServiceCode(data.default_service_code || "");
+      setDefaultServiceLc116Code(data.default_service_lc116_code || "");
       setDefaultCategoryCode(data.default_category_code || "");
       setDefaultBankAccountCode(data.default_bank_account_code || "");
       setDefaultTaxType(data.default_tax_type || "01");
@@ -82,6 +84,7 @@ export function OmieIntegrationTab() {
       app_secret: appSecret,
       is_enabled: isEnabled,
       default_service_code: defaultServiceCode,
+      default_service_lc116_code: defaultServiceLc116Code,
       default_category_code: defaultCategoryCode,
       default_bank_account_code: defaultBankAccountCode,
       default_tax_type: defaultTaxType,
@@ -214,14 +217,25 @@ export function OmieIntegrationTab() {
           </div>
 
           <div className="space-y-2">
-            <Label>Código do Serviço Padrão (Município)</Label>
+            <Label>Código Municipal do Serviço (cCodServMun)</Label>
             <Input
               value={defaultServiceCode}
               onChange={(e) => setDefaultServiceCode(e.target.value)}
-              placeholder="Ex: 14.01"
+              placeholder="Ex: 8599604"
               className="max-w-xs"
             />
             <p className="text-xs text-muted-foreground">Código do serviço municipal usado na OS.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Código do Serviço LC116 (cCodServLC116)</Label>
+            <Input
+              value={defaultServiceLc116Code}
+              onChange={(e) => setDefaultServiceLc116Code(e.target.value)}
+              placeholder="Ex: 14.01"
+              className="max-w-xs"
+            />
+            <p className="text-xs text-muted-foreground">Código padronizado nacional do serviço (Lei Complementar 116). Formato: XX.XX</p>
           </div>
 
           <div className="space-y-2">

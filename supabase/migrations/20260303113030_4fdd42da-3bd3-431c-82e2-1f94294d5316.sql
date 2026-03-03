@@ -1,0 +1,1 @@
+ALTER TABLE public.omie_settings ADD COLUMN IF NOT EXISTS default_service_lc116_code text;
