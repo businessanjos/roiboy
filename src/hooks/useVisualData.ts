@@ -88,27 +88,21 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           result.sort((a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
         }
 
-        // Append "Ganhos" (won deals) as last funnel stage
-        let wonQuery = supabase
-          .from('deals')
-          .select('id', { count: 'exact', head: true })
-          .eq('account_id', currentUser.account_id)
-          .eq('status', 'won');
-
-        if (filters.startDate) {
-          wonQuery = wonQuery.gte('won_at', filters.startDate);
-        }
-        if (filters.endDate) {
-          wonQuery = wonQuery.lte('won_at', filters.endDate);
-        }
-        if (filters.userId && filters.userId !== 'all') {
-          wonQuery = wonQuery.eq('responsible_user_id', filters.userId);
-        }
-
-        const { count: wonCount } = await wonQuery;
+        // Append "Ganhos" (won deals) using the same filters as regular stages
+        const wonResult = await fetchDealsData(
+          currentUser.account_id,
+          { field: 'value', aggregation: 'count' },
+          { field: '_total', type: 'text' },
+          { ...filters, startDate: filters.startDate, endDate: filters.endDate },
+          dateDisplayFormat,
+          'won',
+          leadFieldFilter,
+          dealFieldFilter
+        );
+        const wonCount = wonResult.length > 0 ? wonResult[0].value : 0;
         result.push({
           name: 'Ganhos',
-          value: wonCount || 0,
+          value: wonCount,
           color: '#10b981',
         });
       } else if (chartType === 'funnel' && dataSource === 'tasks') {
