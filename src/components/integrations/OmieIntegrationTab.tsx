@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { OmieFieldMapper } from "./OmieFieldMapper";
 import { OmieLogsTable } from "./OmieLogsTable";
-import { Loader2, CheckCircle2, XCircle, Settings, Zap } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, Settings, Zap, RefreshCw } from "lucide-react";
 
 interface FieldMapping {
   source: string;
@@ -38,6 +39,8 @@ export function OmieIntegrationTab() {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
   const [settingsId, setSettingsId] = useState<string | null>(null);
+  const [bankAccounts, setBankAccounts] = useState<{ nCodCC: number; descricao: string }[]>([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
 
   useEffect(() => {
     if (!currentUser?.account_id) return;
@@ -107,6 +110,32 @@ export function OmieIntegrationTab() {
     }
   };
 
+  const handleLoadBankAccounts = async () => {
+    if (!appKey || !appSecret) {
+      toast({ title: "Preencha as credenciais", description: "Insira APP_KEY e APP_SECRET primeiro.", variant: "destructive" });
+      return;
+    }
+    setLoadingAccounts(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("list-omie-accounts", {
+        body: { app_key: appKey, app_secret: appSecret },
+      });
+      if (error || !data?.success) {
+        toast({ title: "Erro ao buscar contas", description: data?.error || error?.message || "Erro desconhecido", variant: "destructive" });
+      } else {
+        setBankAccounts(data.accounts || []);
+        if (data.accounts?.length === 0) {
+          toast({ title: "Nenhuma conta encontrada", description: "Não foram encontradas contas correntes no Omie.", variant: "destructive" });
+        } else {
+          toast({ title: "Contas carregadas", description: `${data.accounts.length} conta(s) corrente(s) encontrada(s).` });
+        }
+      }
+    } catch (err: any) {
+      toast({ title: "Erro de rede", description: err.message, variant: "destructive" });
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
   const handleTestConnection = async () => {
     if (!appKey || !appSecret) {
       toast({ title: "Preencha as credenciais", description: "Insira APP_KEY e APP_SECRET para testar.", variant: "destructive" });
@@ -205,13 +234,44 @@ export function OmieIntegrationTab() {
 
           <div className="space-y-2">
             <Label>Conta Corrente (nCodCC)</Label>
-            <Input
-              value={defaultBankAccountCode}
-              onChange={(e) => setDefaultBankAccountCode(e.target.value)}
-              placeholder="Ex: 11850365"
-              className="max-w-xs"
-            />
-            <p className="text-xs text-muted-foreground">Código numérico da conta corrente cadastrada no Omie (Finanças {'>'} Contas Correntes). Obrigatório.</p>
+            <div className="flex gap-2 max-w-md">
+              <Select
+                value={defaultBankAccountCode}
+                onValueChange={setDefaultBankAccountCode}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder={defaultBankAccountCode || "Selecione uma conta corrente"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {bankAccounts.map((acc) => (
+                    <SelectItem key={acc.nCodCC} value={String(acc.nCodCC)}>
+                      {acc.descricao} ({acc.nCodCC})
+                    </SelectItem>
+                  ))}
+                  {bankAccounts.length === 0 && (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      Clique em "Buscar Contas" para carregar
+                    </div>
+                  )}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleLoadBankAccounts}
+                disabled={loadingAccounts || !appKey || !appSecret}
+                className="shrink-0"
+              >
+                {loadingAccounts ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                )}
+                Buscar Contas
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Conta corrente cadastrada no Omie (Finanças {'>'} Contas Correntes). Obrigatório.</p>
           </div>
 
           <div className="flex items-center gap-3">
