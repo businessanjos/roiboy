@@ -7434,6 +7434,7 @@ export type Database = {
           default_bank_account_code: string | null
           default_category_code: string | null
           default_service_code: string | null
+          default_tax_type: string
           field_mappings: Json | null
           id: string
           is_enabled: boolean
@@ -7447,6 +7448,7 @@ export type Database = {
           default_bank_account_code?: string | null
           default_category_code?: string | null
           default_service_code?: string | null
+          default_tax_type?: string
           field_mappings?: Json | null
           id?: string
           is_enabled?: boolean
@@ -7460,6 +7462,7 @@ export type Database = {
           default_bank_account_code?: string | null
           default_category_code?: string | null
           default_service_code?: string | null
+          default_tax_type?: string
           field_mappings?: Json | null
           id?: string
           is_enabled?: boolean
