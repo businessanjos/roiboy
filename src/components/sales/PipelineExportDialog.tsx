@@ -209,8 +209,9 @@ export function PipelineExportDialog({
         const { data: batch, error } = await supabase
           .from("deals")
           .select(
-            `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, responsible_user_id, lead_id,
-            leads(full_name, phone, email)`
+            `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, responsible_user_id, lead_id, client_id,
+            leads(full_name, phone, email),
+            clients!deals_client_id_fkey(full_name, phone_e164, emails)`
           )
           .eq("account_id", currentUser.account_id)
           .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
@@ -326,15 +327,21 @@ export function PipelineExportDialog({
       const rows = filtered.map((deal) => {
         const row: string[] = [];
         const lead = deal.leads;
+        const client = deal.clients;
         const fvs = fieldValuesByDeal[deal.id] || [];
+
+        const contactName = lead?.full_name || client?.full_name || "";
+        const contactPhone = lead?.phone || client?.phone_e164 || "";
+        const contactEmail = lead?.email || 
+          (Array.isArray(client?.emails) && client.emails.length > 0 ? client.emails[0] : "") || "";
 
         if (selectedFixed.has("title")) row.push(deal.title || "");
         if (selectedFixed.has("lead_name"))
-          row.push(lead?.full_name || "");
+          row.push(contactName);
         if (selectedFixed.has("lead_phone"))
-          row.push(lead?.phone || "");
+          row.push(contactPhone);
         if (selectedFixed.has("lead_email"))
-          row.push(lead?.email || "");
+          row.push(contactEmail);
         if (selectedFixed.has("stage"))
           row.push(stagesMap[deal.stage_id] || "");
         if (selectedFixed.has("responsible"))
