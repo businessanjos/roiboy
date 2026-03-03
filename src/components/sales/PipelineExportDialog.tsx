@@ -628,23 +628,25 @@ export function PipelineExportDialog({
                   </div>
                 )}
                 {/* Período */}
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">De</Label>
-                  <input
-                    type="date"
-                    value={filterDateFrom}
-                    onChange={(e) => setFilterDateFrom(e.target.value)}
-                    className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Até</Label>
-                  <input
-                    type="date"
-                    value={filterDateTo}
-                    onChange={(e) => setFilterDateTo(e.target.value)}
-                    className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  />
+                <div className="col-span-2 grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">De</Label>
+                    <input
+                      type="date"
+                      value={filterDateFrom}
+                      onChange={(e) => setFilterDateFrom(e.target.value)}
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-muted-foreground">Até</Label>
+                    <input
+                      type="date"
+                      value={filterDateTo}
+                      onChange={(e) => setFilterDateTo(e.target.value)}
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
