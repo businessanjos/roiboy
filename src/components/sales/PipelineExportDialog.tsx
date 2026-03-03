@@ -76,6 +76,8 @@ export function PipelineExportDialog({
   const [filterMql, setFilterMql] = useState("all");
   const [filterFaturamento, setFilterFaturamento] = useState("all");
   const [filterCanal, setFilterCanal] = useState("all");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
 
   // Products list
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
@@ -289,6 +291,20 @@ export function PipelineExportDialog({
       filtered = applyCustomFieldFilter(filtered, mqlField, filterMql);
       filtered = applyCustomFieldFilter(filtered, faturamentoField, filterFaturamento);
       filtered = applyCustomFieldFilter(filtered, canalField, filterCanal);
+
+      // Date range filter
+      if (filterDateFrom) {
+        filtered = filtered.filter((d) => {
+          const dateStr = (d.created_at || "").split("T")[0];
+          return dateStr >= filterDateFrom;
+        });
+      }
+      if (filterDateTo) {
+        filtered = filtered.filter((d) => {
+          const dateStr = (d.created_at || "").split("T")[0];
+          return dateStr <= filterDateTo;
+        });
+      }
 
       if (filtered.length === 0) {
         toast.warning("Nenhum negócio encontrado com os filtros selecionados.");
@@ -611,6 +627,25 @@ export function PipelineExportDialog({
                     </Select>
                   </div>
                 )}
+                {/* Período */}
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">De</Label>
+                  <input
+                    type="date"
+                    value={filterDateFrom}
+                    onChange={(e) => setFilterDateFrom(e.target.value)}
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Até</Label>
+                  <input
+                    type="date"
+                    value={filterDateTo}
+                    onChange={(e) => setFilterDateTo(e.target.value)}
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-xs shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  />
+                </div>
               </div>
             </div>
 
