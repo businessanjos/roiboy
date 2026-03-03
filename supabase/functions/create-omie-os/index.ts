@@ -57,6 +57,30 @@ async function findOmieClientByName(appKey: string, appSecret: string, name: str
   }
 }
 
+async function findOmieVendedorByName(appKey: string, appSecret: string, name: string): Promise<number | null> {
+  try {
+    if (!name) return null;
+    const result = await callOmieApi(appKey, appSecret, 'geral/vendedores', 'ListarVendedores', {
+      pagina: 1,
+      registros_por_pagina: 50,
+    });
+    const vendedores = result.cadastro || [];
+    // Busca case-insensitive pelo nome
+    const nameLower = name.toLowerCase().trim();
+    const found = vendedores.find((v: any) => {
+      const vName = (v.nome || '').toLowerCase().trim();
+      return vName === nameLower || vName.includes(nameLower) || nameLower.includes(vName);
+    });
+    return found?.codigo || null;
+  } catch {
+    return null;
+  }
+}
+
+function isUUID(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
 function resolveFieldValue(
   fieldMapping: { source: string; customFieldId?: string },
   deal: any,
@@ -190,16 +214,35 @@ serve(async (req) => {
       deal, client, dealFieldValues || [], responsibleUserName
     );
     
-    const descricao = resolveFieldValue(
+    let descricao = resolveFieldValue(
       fieldMappings.descricao || { source: 'deal.description' },
       deal, client, dealFieldValues || [], responsibleUserName
     );
+
+    // Se descricao é um UUID, resolver o nome do produto
+    if (descricao && isUUID(descricao)) {
+      const { data: product } = await supabase
+        .from('products')
+        .select('name')
+        .eq('id', descricao)
+        .single();
+      if (product?.name) {
+        descricao = product.name;
+      }
+    }
 
     const valorStr = resolveFieldValue(
       fieldMappings.valor || { source: 'deal.value' },
       deal, client, dealFieldValues || [], responsibleUserName
     );
     const valor = parseFloat(valorStr) || 0;
+
+    // Buscar código do vendedor no Omie pelo nome do responsável
+    let nCodVend: number | null = null;
+    if (vendedor) {
+      nCodVend = await findOmieVendedorByName(appKey, appSecret, vendedor);
+      console.log(`Vendedor "${vendedor}" -> nCodVend: ${nCodVend}`);
+    }
 
     const osPayload = {
       Cabecalho: {
@@ -208,6 +251,7 @@ serve(async (req) => {
         dDtPrevisao: new Date().toISOString().split('T')[0].split('-').reverse().join('/'),
         nCodCli: omieClient.codigo_cliente_omie,
         nQtdeParc: 1,
+        ...(nCodVend ? { nCodVend } : {}),
       },
       InformacoesAdicionais: {
         cDadosAdicNF: descricao || `Negócio: ${deal.title}`,
