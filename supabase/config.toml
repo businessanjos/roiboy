@@ -206,3 +206,6 @@ verify_jwt = false
 
 [functions.send-push]
 verify_jwt = false
+
+[functions.list-omie-accounts]
+verify_jwt = false
