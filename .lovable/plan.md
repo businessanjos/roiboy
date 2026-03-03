@@ -1,33 +1,57 @@
 
 
-## Variáveis do Playbook não substituídas em legendas de mídia
+## Exportação incompleta de negócios — Dados de contato faltando
 
 ### Problema identificado
 
-Quando um item do Playbook é do tipo **imagem, vídeo ou documento** com uma legenda (`media_caption`) que contém variáveis como `{{primeiro_nome}}`, o sistema envia a legenda **sem processar as variáveis**.
+A exportação busca dados de contato **apenas** da tabela `leads` (via `leads(full_name, phone, email)` no join). Porém, existem **39 negócios** que não possuem `lead_id` — eles estão vinculados apenas a um `client_id` (ex: renovações, carteira). Para esses negócios, nome, telefone e email ficam vazios.
 
-O `replaceVariables` só é chamado para `text_content` (itens de texto puro). Para itens de mídia, o `media_caption` é enviado diretamente, sem substituição.
+**Exemplo concreto**: O negócio "[CARTEIRA - EP] Jhulia Gabrielly Marcon Padilha" não tem `lead_id`, mas tem `client_id` apontando para a cliente "Jhulia Padilha" com telefone `+554196196728`. A exportação atual ignora completamente esses dados.
 
-**Código atual (RoyZapp.tsx, linhas 4682-4716):**
-- Imagem: `caption: item.media_caption` → sem `replaceVariables`
-- Vídeo/Documento: `item.media_caption` → sem `replaceVariables`
+### Solução
 
-### Correção
+Alterar a query de exportação para também buscar dados da tabela `clients` e usar como fallback quando o lead não existe.
 
-No callback `onUseItem` do `PlaybookDialog` em `RoyZapp.tsx`, aplicar `replaceVariables` no `media_caption` antes de usá-lo:
+### Alterações — `src/components/sales/PipelineExportDialog.tsx`
 
-1. **Extrair as variáveis** uma vez no início do callback (usando o mesmo `extractPlaybookVariables` já disponível)
-2. **Para imagens (linha ~4683)**: processar `item.media_caption` com `replaceVariables` antes de passar para `setImagePreview`
-3. **Para vídeos/documentos (linha ~4716)**: processar `item.media_caption` com `replaceVariables` antes de passar para `sendMediaMessage`
+**1. Query: incluir join com clients (linha ~211-213)**
 
-Também preciso importar/usar o `replaceVariables` do hook `usePlaybook` no escopo do callback. Como o callback já recebe `processedText` (texto processado pelo PlaybookDialog), a solução mais limpa é fazer o `PlaybookDialog` processar TAMBÉM o `media_caption` e passá-lo como parâmetro adicional no `onUseItem`.
+Adicionar `clients(full_name, phone_e164, emails)` ao select da query, junto com o join de leads já existente.
 
-### Alterações
+```typescript
+.select(
+  `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, responsible_user_id, lead_id, client_id,
+  leads(full_name, phone, email),
+  clients!deals_client_id_fkey(full_name, phone_e164, emails)`
+)
+```
 
-**Arquivo: `src/components/sales/PlaybookDialog.tsx`**
-- No `handleUseItem`, processar também `item.media_caption` com `replaceVariables`
-- Alterar a interface do `onUseItem` para aceitar um terceiro parâmetro: `processedCaption`
+**2. Resolução com fallback (linhas ~328-337)**
 
-**Arquivo: `src/pages/RoyZapp.tsx`**
-- No callback `onUseItem`, usar `processedCaption` ao invés de `item.media_caption` para imagens, vídeos e documentos
+Ao montar cada linha, usar dados do lead quando disponível, e fazer fallback para dados do client:
+
+```typescript
+const lead = deal.leads;
+const client = deal.clients;
+
+// Nome: lead > client
+const contactName = lead?.full_name || client?.full_name || "";
+
+// Telefone: lead > client
+const contactPhone = lead?.phone || client?.phone_e164 || "";
+
+// Email: lead > client (clients usa array emails)
+const contactEmail = lead?.email || 
+  (Array.isArray(client?.emails) && client.emails.length > 0 ? client.emails[0] : "") || "";
+```
+
+**3. Usar as variáveis resolvidas nos campos fixos**
+
+Substituir as referências diretas `lead?.full_name`, `lead?.phone`, `lead?.email` pelas variáveis com fallback.
+
+### Resultado esperado
+
+- Todos os 840 negócios terão dados de contato preenchidos (quando disponíveis no sistema)
+- Negócios vinculados apenas a clientes (renovações, carteira) terão nome, telefone e email do cliente
+- Nenhuma mudança na interface visual — apenas a lógica de exportação é corrigida
 
