@@ -174,6 +174,9 @@ serve(async (req) => {
     if (!settings.default_bank_account_code) {
       throw new Error('Conta Corrente (nCodCC) não configurada nas configurações do Omie.');
     }
+    if (!settings.default_service_code) {
+      throw new Error('Código do Serviço não configurado nas configurações do Omie.');
+    }
 
     // 7. Build OS payload
     const vendedor = resolveFieldValue(
@@ -207,6 +210,7 @@ serve(async (req) => {
       },
       ServicosPrestados: [
         {
+          cCodServLC116: settings.default_service_code || '',
           cCodServMun: settings.default_service_code || '',
           cDescServ: deal.title,
           cTribServ: settings.default_tax_type || '01',
