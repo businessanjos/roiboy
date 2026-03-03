@@ -28,6 +28,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SalesRepMetrics } from "@/hooks/useSalesTeamMetrics";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseLocalDate } from "@/lib/dateUtils";
 
 interface SalesRepDetailSheetProps {
   open: boolean;
@@ -387,7 +388,7 @@ export const SalesRepDetailSheet = forwardRef<HTMLDivElement, SalesRepDetailShee
                                 {task.due_date && (
                                   <span className="text-[10px] text-muted-foreground flex items-center gap-1">
                                     <Calendar className="h-3 w-3" />
-                                    {format(new Date(task.due_date), "dd/MM", { locale: ptBR })}
+                                    {format(parseLocalDate(task.due_date) || new Date(), "dd/MM", { locale: ptBR })}
                                   </span>
                                 )}
                               </div>

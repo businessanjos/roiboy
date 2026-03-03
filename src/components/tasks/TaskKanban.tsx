@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { parseLocalDate } from "@/lib/dateUtils";
 import {
   DndContext,
   DragEndEvent,
@@ -120,10 +121,10 @@ function getIconComponent(iconName: string): React.ElementType {
 
 function getDueDateInfo(task: Task, statuses: CustomTaskStatus[]) {
   if (!task.due_date) return null;
-  const dueDate = new Date(task.due_date);
+  const dueDate = parseLocalDate(task.due_date);
+  if (!dueDate) return null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  dueDate.setHours(0, 0, 0, 0);
   
   const daysDiff = differenceInDays(dueDate, today);
   

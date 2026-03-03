@@ -1,5 +1,6 @@
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,7 @@ const statusConfig = {
 };
 
 export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTaskRowProps) {
-  const dueDate = task.due_date ? new Date(task.due_date) : null;
+  const dueDate = task.due_date ? parseLocalDate(task.due_date) : null;
   
   const getDueDateDisplay = () => {
     if (!dueDate) return null;

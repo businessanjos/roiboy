@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { parseLocalDate } from "@/lib/dateUtils";
 import {
   Dialog,
   DialogContent,
@@ -96,7 +97,7 @@ export function MarketingTaskDialog({
         setDescription(existingTask.description || "");
         setSectionId(existingTask.section_id || undefined);
         setAssigneeId(existingTask.assignee_id || undefined);
-        setDueDate(existingTask.due_date ? new Date(existingTask.due_date) : undefined);
+        setDueDate(existingTask.due_date ? (parseLocalDate(existingTask.due_date) || undefined) : undefined);
         setPriority(existingTask.priority);
         setStatus(existingTask.status);
         setMediaAttachments(existingTask.media_attachments || []);
