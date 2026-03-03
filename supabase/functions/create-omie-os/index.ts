@@ -208,7 +208,6 @@ serve(async (req) => {
         dDtPrevisao: new Date().toISOString().split('T')[0].split('-').reverse().join('/'),
         nCodCli: omieClient.codigo_cliente_omie,
         nQtdeParc: 1,
-        cVendedor: vendedor,
       },
       InformacoesAdicionais: {
         cDadosAdicNF: descricao || `Negócio: ${deal.title}`,
