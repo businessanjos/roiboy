@@ -30,6 +30,8 @@ export function OmieIntegrationTab() {
   const [defaultCategoryCode, setDefaultCategoryCode] = useState("");
   const [defaultBankAccountCode, setDefaultBankAccountCode] = useState("");
   const [defaultTaxType, setDefaultTaxType] = useState("01");
+  const [defaultRetemISS, setDefaultRetemISS] = useState("N");
+  const [defaultCity, setDefaultCity] = useState("");
   const [fieldMappings, setFieldMappings] = useState<Record<string, FieldMapping>>({
     cliente: { source: "client.cpf_cnpj" },
     vendedor: { source: "deal.responsible" },
@@ -67,6 +69,8 @@ export function OmieIntegrationTab() {
       setDefaultCategoryCode(data.default_category_code || "");
       setDefaultBankAccountCode(data.default_bank_account_code || "");
       setDefaultTaxType(data.default_tax_type || "01");
+      setDefaultRetemISS(data.default_retem_iss || "N");
+      setDefaultCity(data.default_city || "");
       if (data.field_mappings && typeof data.field_mappings === "object" && !Array.isArray(data.field_mappings)) {
         setFieldMappings(data.field_mappings as unknown as Record<string, FieldMapping>);
       }
@@ -88,6 +92,8 @@ export function OmieIntegrationTab() {
       default_category_code: defaultCategoryCode,
       default_bank_account_code: defaultBankAccountCode,
       default_tax_type: defaultTaxType,
+      default_retem_iss: defaultRetemISS,
+      default_city: defaultCity,
       field_mappings: fieldMappings as unknown as Record<string, any>,
       updated_at: new Date().toISOString(),
     };
@@ -307,6 +313,31 @@ export function OmieIntegrationTab() {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">Tipo de tributação do serviço usado na OS (obrigatório).</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Retenção de ISS (cRetemISS)</Label>
+            <Select value={defaultRetemISS} onValueChange={setDefaultRetemISS}>
+              <SelectTrigger className="max-w-xs">
+                <SelectValue placeholder="Selecione" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="N">Não — ISS não retido</SelectItem>
+                <SelectItem value="S">Sim — ISS retido pelo tomador</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Define se o ISS será retido pelo tomador do serviço (obrigatório).</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Cidade de Prestação do Serviço (cCidPrestServ)</Label>
+            <Input
+              value={defaultCity}
+              onChange={(e) => setDefaultCity(e.target.value)}
+              placeholder="Ex: SAO PAULO (SP)"
+              className="max-w-xs"
+            />
+            <p className="text-xs text-muted-foreground">Cidade onde o serviço é prestado, no formato CIDADE (UF). Recomendado.</p>
           </div>
 
           <div className="flex items-center gap-3">

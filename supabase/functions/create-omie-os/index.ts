@@ -210,6 +210,7 @@ serve(async (req) => {
         cDadosAdicNF: descricao || `Negócio: ${deal.title}`,
         cCodCateg: settings.default_category_code,
         nCodCC: Number(settings.default_bank_account_code),
+        ...(settings.default_city ? { cCidPrestServ: settings.default_city } : {}),
       },
       ServicosPrestados: [
         {
@@ -217,6 +218,7 @@ serve(async (req) => {
           cCodServMun: settings.default_service_code || '',
           cDescServ: deal.title,
           cTribServ: settings.default_tax_type || '01',
+          cRetemISS: settings.default_retem_iss || 'N',
           nQtde: 1,
           nValUnit: valor,
         },

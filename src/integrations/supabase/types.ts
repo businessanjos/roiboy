@@ -7433,6 +7433,8 @@ export type Database = {
           created_at: string
           default_bank_account_code: string | null
           default_category_code: string | null
+          default_city: string | null
+          default_retem_iss: string
           default_service_code: string | null
           default_service_lc116_code: string | null
           default_tax_type: string
@@ -7448,6 +7450,8 @@ export type Database = {
           created_at?: string
           default_bank_account_code?: string | null
           default_category_code?: string | null
+          default_city?: string | null
+          default_retem_iss?: string
           default_service_code?: string | null
           default_service_lc116_code?: string | null
           default_tax_type?: string
@@ -7463,6 +7467,8 @@ export type Database = {
           created_at?: string
           default_bank_account_code?: string | null
           default_category_code?: string | null
+          default_city?: string | null
+          default_retem_iss?: string
           default_service_code?: string | null
           default_service_lc116_code?: string | null
           default_tax_type?: string
