@@ -208,6 +208,7 @@ serve(async (req) => {
         dDtPrevisao: new Date().toISOString().split('T')[0].split('-').reverse().join('/'),
         nCodCli: omieClient.codigo_cliente_omie,
         nQtdeParc: 1,
+        cVendedor: vendedor,
       },
       InformacoesAdicionais: {
         cDadosAdicNF: descricao || `Negócio: ${deal.title}`,
@@ -219,7 +220,7 @@ serve(async (req) => {
         {
           cCodServLC116: settings.default_service_lc116_code || '',
           cCodServMun: settings.default_service_code || '',
-          cDescServ: deal.title,
+          cDescServ: descricao || deal.title,
           cTribServ: settings.default_tax_type || '01',
           cRetemISS: settings.default_retem_iss || 'N',
           nQtde: 1,
