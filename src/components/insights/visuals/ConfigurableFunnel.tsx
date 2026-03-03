@@ -59,24 +59,26 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
         const stagePct = conversionPct !== null ? conversionPct : 100;
 
         return (
-          <div key={item.name} className="flex items-center gap-1.5" style={{ width: `${widthPct}%`, minWidth: '200px' }}>
-            <span className="text-xs font-semibold text-muted-foreground w-10 text-right shrink-0" style={{ fontSize: Math.round(11 * m) }}>
-              {stagePct}%
-            </span>
-            <div
-              className="h-10 rounded-md flex items-center justify-between px-4 transition-all flex-1"
-              style={{ backgroundColor: bgColor }}
-            >
-              <span className="text-sm font-medium text-white truncate" style={{ fontSize: Math.round(13 * m) }}>
-                {item.name}
+          <div key={item.name} className="w-full flex justify-center items-center">
+            <div className="flex items-center gap-1.5" style={{ width: `${widthPct}%`, minWidth: '200px' }}>
+              <span className="text-xs font-semibold text-muted-foreground w-10 text-right shrink-0" style={{ fontSize: Math.round(11 * m) }}>
+                {stagePct}%
               </span>
-              <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.round(13 * m) }}>
-                {formatValueCompact(cumValue, formatting.type)}
+              <div
+                className="h-10 rounded-md flex items-center justify-between px-4 transition-all flex-1"
+                style={{ backgroundColor: bgColor }}
+              >
+                <span className="text-sm font-medium text-white truncate" style={{ fontSize: Math.round(13 * m) }}>
+                  {item.name}
+                </span>
+                <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.round(13 * m) }}>
+                  {formatValueCompact(cumValue, formatting.type)}
+                </span>
+              </div>
+              <span className="text-xs font-semibold text-muted-foreground w-10 shrink-0" style={{ fontSize: Math.round(11 * m) }}>
+                {overallPct}%
               </span>
             </div>
-            <span className="text-xs font-semibold text-muted-foreground w-10 shrink-0" style={{ fontSize: Math.round(11 * m) }}>
-              {overallPct}%
-            </span>
           </div>
         );
       })}
@@ -86,24 +88,26 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
         const ganhosOverallPct = Math.round((ganhosItem.value / maxValue) * 100);
         const ganhosWidthPct = Math.max((ganhosItem.value / maxValue) * 100, 15);
         return (
-          <div className="flex items-center gap-1.5" style={{ width: `${ganhosWidthPct}%`, minWidth: '200px' }}>
-            <span className="text-xs font-semibold text-muted-foreground w-10 text-right shrink-0" style={{ fontSize: Math.round(11 * m) }}>
-              {ganhosStagePct}%
-            </span>
-            <div
-              className="h-10 rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-emerald-400 ring-offset-2 flex-1"
-              style={{ backgroundColor: '#10b981' }}
-            >
-              <span className="text-sm font-medium text-white flex items-center gap-1.5" style={{ fontSize: Math.round(13 * m) }}>
-                🏆 {ganhosItem.name}
+          <div className="w-full flex justify-center items-center">
+            <div className="flex items-center gap-1.5" style={{ width: `${ganhosWidthPct}%`, minWidth: '200px' }}>
+              <span className="text-xs font-semibold text-muted-foreground w-10 text-right shrink-0" style={{ fontSize: Math.round(11 * m) }}>
+                {ganhosStagePct}%
               </span>
-              <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.round(13 * m) }}>
-                {formatValueCompact(ganhosItem.value, formatting.type)}
+              <div
+                className="h-10 rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-emerald-400 ring-offset-2 flex-1"
+                style={{ backgroundColor: '#10b981' }}
+              >
+                <span className="text-sm font-medium text-white flex items-center gap-1.5" style={{ fontSize: Math.round(13 * m) }}>
+                  🏆 {ganhosItem.name}
+                </span>
+                <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.round(13 * m) }}>
+                  {formatValueCompact(ganhosItem.value, formatting.type)}
+                </span>
+              </div>
+              <span className="text-xs font-semibold text-muted-foreground w-10 shrink-0" style={{ fontSize: Math.round(11 * m) }}>
+                {ganhosOverallPct}%
               </span>
             </div>
-            <span className="text-xs font-semibold text-muted-foreground w-10 shrink-0" style={{ fontSize: Math.round(11 * m) }}>
-              {ganhosOverallPct}%
-            </span>
           </div>
         );
       })()}
