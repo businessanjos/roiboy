@@ -91,6 +91,110 @@ Deno.serve(async (req) => {
       `Listing clients for account ${accountId}, auth_method: ${auth.method}, search: "${search}", limit: ${limit}, offset: ${offset}`
     );
 
+    const emptyResponse = (teamUsers: any[] = []) =>
+      new Response(
+        JSON.stringify({ clients: [], total: 0, limit, offset, team_users: teamUsers }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+
+    // Pre-filter by VNPS class if needed (must happen before main query pagination)
+    let vnpsFilterClientIds: string[] | null = null;
+    if (vnpsClass && vnpsClass !== "all") {
+      const { data: allMetrics } = await supabase
+        .from("client_latest_metrics")
+        .select("client_id, vnps");
+
+      if (vnpsClass === "none") {
+        // Clients WITHOUT any VNPS data
+        const clientsWithVnps = new Set(
+          (allMetrics || []).filter((m: any) => m.vnps).map((m: any) => m.client_id)
+        );
+        // We need all account clients to find those without VNPS
+        const { data: allAccountClients } = await supabase
+          .from("clients")
+          .select("id")
+          .eq("account_id", accountId);
+        vnpsFilterClientIds = (allAccountClients || [])
+          .filter((c: any) => !clientsWithVnps.has(c.id))
+          .map((c: any) => c.id);
+      } else {
+        vnpsFilterClientIds = (allMetrics || [])
+          .filter((m: any) => m.vnps?.vnps_class === vnpsClass)
+          .map((m: any) => m.client_id);
+      }
+
+      if (vnpsFilterClientIds.length === 0) {
+        if (auth.method === "api_key" && auth.apiKeyId) {
+          await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
+        }
+        return emptyResponse();
+      }
+    }
+
+    // Pre-filter by product if needed
+    let productFilterClientIds: string[] | null = null;
+    if (productId && productId !== "all") {
+      const { data: clientProducts } = await supabase
+        .from("client_products")
+        .select("client_id")
+        .eq("account_id", accountId)
+        .eq("product_id", productId);
+
+      productFilterClientIds = clientProducts?.map((cp) => cp.client_id) || [];
+      if (productFilterClientIds.length === 0) {
+        if (auth.method === "api_key" && auth.apiKeyId) {
+          await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
+        }
+        return emptyResponse();
+      }
+    }
+
+    // Pre-filter by contract status if needed
+    let statusContractClientIds: string[] | null = null;
+    const statusBasedFilters = ["active", "cancelled", "suspended", "pending"];
+
+    if (statusBasedFilters.includes(contractFilter)) {
+      const { data: statusContracts } = await supabase
+        .from("client_contracts")
+        .select("client_id")
+        .eq("account_id", accountId)
+        .eq("status", contractFilter);
+
+      statusContractClientIds = [
+        ...new Set(statusContracts?.map((c) => c.client_id) || []),
+      ];
+
+      if (statusContractClientIds.length === 0) {
+        if (auth.method === "api_key" && auth.apiKeyId) {
+          await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
+        }
+        return emptyResponse();
+      }
+    }
+
+    // Intersect all pre-filter ID sets to build a single .in() filter
+    let preFilterIds: string[] | null = null;
+    const idSets = [vnpsFilterClientIds, productFilterClientIds, statusContractClientIds].filter(
+      (s): s is string[] => s !== null
+    );
+
+    if (idSets.length > 0) {
+      // Intersect all sets
+      let intersection = new Set(idSets[0]);
+      for (let i = 1; i < idSets.length; i++) {
+        const nextSet = new Set(idSets[i]);
+        intersection = new Set([...intersection].filter((id) => nextSet.has(id)));
+      }
+      preFilterIds = [...intersection];
+
+      if (preFilterIds.length === 0) {
+        if (auth.method === "api_key" && auth.apiKeyId) {
+          await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
+        }
+        return emptyResponse();
+      }
+    }
+
     // Build main query for clients with products
     let query = supabase
       .from("clients")
@@ -143,7 +247,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Add status filter if provided
+    // Add status filter if provided (legacy param)
     if (statusFilter) {
       query = query.eq("status", statusFilter);
     }
@@ -164,74 +268,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Add product filter
-    let productFilterClientIds: string[] | null = null;
-    if (productId && productId !== "all") {
-      const { data: clientProducts } = await supabase
-        .from("client_products")
-        .select("client_id")
-        .eq("account_id", accountId)
-        .eq("product_id", productId);
-
-      productFilterClientIds = clientProducts?.map((cp) => cp.client_id) || [];
-      if (productFilterClientIds.length > 0) {
-        query = query.in("id", productFilterClientIds);
-      } else {
-        // Log usage before returning
-        if (auth.method === "api_key" && auth.apiKeyId) {
-          await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
-        }
-        return new Response(
-          JSON.stringify({
-            clients: [],
-            total: 0,
-            limit,
-            offset,
-            team_users: [],
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-    }
-
-    // Add contract status filter
-    let statusContractClientIds: string[] | null = null;
-    const statusBasedFilters = ["active", "cancelled", "suspended"];
-
-    if (statusBasedFilters.includes(contractFilter)) {
-      const { data: statusContracts } = await supabase
-        .from("client_contracts")
-        .select("client_id")
-        .eq("account_id", accountId)
-        .eq("status", contractFilter);
-
-      statusContractClientIds = [
-        ...new Set(statusContracts?.map((c) => c.client_id) || []),
-      ];
-
-      if (statusContractClientIds.length === 0) {
-        if (auth.method === "api_key" && auth.apiKeyId) {
-          await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
-        }
-        return new Response(
-          JSON.stringify({
-            clients: [],
-            total: 0,
-            limit,
-            offset,
-            team_users: [],
-          }),
-          {
-            status: 200,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      query = query.in("id", statusContractClientIds);
+    // Apply pre-computed ID filter (intersection of VNPS + product + contract filters)
+    if (preFilterIds && preFilterIds.length > 0) {
+      query = query.in("id", preFilterIds);
     }
 
     const { data: clients, error: clientsError, count } = await query;
@@ -398,25 +437,12 @@ Deno.serve(async (req) => {
       }).map(({ _relevance, ...client }) => client);
     }
 
-    // Apply server-side V-NPS filter
+    // Apply remaining post-query filters (date-based contract filters and no_contract)
     let filteredClients = sortedClients;
-    if (vnpsClass && vnpsClass !== "all") {
-      if (vnpsClass === "none") {
-        filteredClients = filteredClients.filter((c) => !c.vnps);
-      } else {
-        filteredClients = filteredClients.filter(
-          (c) => c.vnps?.vnps_class === vnpsClass
-        );
-      }
-    }
 
-    // Apply server-side contract filter
-    const statusBasedContractFilters = ["active", "cancelled", "suspended"];
-    if (
-      contractFilter &&
-      contractFilter !== "all" &&
-      !statusBasedContractFilters.includes(contractFilter)
-    ) {
+    // Date-based contract filters (not handled by SQL pre-filter)
+    const dateBasedContractFilters = ["expired", "urgent", "warning", "ok", "none"];
+    if (contractFilter && dateBasedContractFilters.includes(contractFilter)) {
       if (contractFilter === "none") {
         filteredClients = filteredClients.filter((c) => !c.contract);
       } else {
@@ -453,6 +479,14 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Use count from SQL when no post-query filters were applied, otherwise use filtered length
+    const hasPostQueryFilters =
+      (contractFilter && dateBasedContractFilters.includes(contractFilter)) ||
+      clientStatus === "no_contract" ||
+      userRole === "operation";
+
+    const totalCount = hasPostQueryFilters ? filteredClients.length : (count || 0);
+
     console.log(
       `Found ${count} clients, returning ${filteredClients.length} enriched`
     );
@@ -465,7 +499,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         clients: filteredClients,
-        total: userRole === "operation" ? filteredClients.length : count,
+        total: totalCount,
         limit,
         offset,
         team_users: teamUsersResult.data || [],
