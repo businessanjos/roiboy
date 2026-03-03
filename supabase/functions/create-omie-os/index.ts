@@ -144,11 +144,17 @@ serve(async (req) => {
 
     const client = deal.client;
 
-    // 5. Find client in Omie (always uses deal's linked client, not mappable)
+    // 5. Find client in Omie
     let omieClient: any = null;
     
-    // Try by CPF/CNPJ first - always from the deal's client directly
-    const clientCpfCnpj = client?.cnpj || client?.cpf || '';
+    // Try CPF/CNPJ from deal custom field first (field "CPF ou CNPJ")
+    const CPF_CNPJ_FIELD_ID = 'de5d8543-287e-4ad9-917a-813d48d0d3eb';
+    const cpfCnpjFromDeal = (dealFieldValues || []).find(
+      (v: any) => v.field_id === CPF_CNPJ_FIELD_ID
+    )?.value_text || '';
+
+    // Fallback to client record fields
+    const clientCpfCnpj = cpfCnpjFromDeal || client?.cnpj || client?.cpf || '';
     
     if (clientCpfCnpj) {
       omieClient = await findOmieClientByCpfCnpj(appKey, appSecret, clientCpfCnpj);
