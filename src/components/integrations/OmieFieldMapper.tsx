@@ -18,7 +18,7 @@ interface OmieFieldMapperProps {
 }
 
 const OS_FIELDS = [
-  { key: "cliente", label: "Cliente", description: "Identificação do cliente no Omie (CPF/CNPJ)" },
+  
   { key: "vendedor", label: "Vendedor", description: "Nome do vendedor na OS" },
   { key: "descricao", label: "Descrição / Observações", description: "Texto descritivo da OS" },
   { key: "valor", label: "Valor Unitário", description: "Valor do serviço" },

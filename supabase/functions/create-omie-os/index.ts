@@ -144,14 +144,11 @@ serve(async (req) => {
 
     const client = deal.client;
 
-    // 5. Find client in Omie
+    // 5. Find client in Omie (always uses deal's linked client, not mappable)
     let omieClient: any = null;
     
-    // Try by CPF/CNPJ first
-    const clientCpfCnpj = resolveFieldValue(
-      fieldMappings.cliente || { source: 'client.cpf_cnpj' },
-      deal, client, dealFieldValues || [], responsibleUserName
-    );
+    // Try by CPF/CNPJ first - always from the deal's client directly
+    const clientCpfCnpj = client?.cnpj || client?.cpf || '';
     
     if (clientCpfCnpj) {
       omieClient = await findOmieClientByCpfCnpj(appKey, appSecret, clientCpfCnpj);
