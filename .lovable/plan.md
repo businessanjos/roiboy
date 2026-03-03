@@ -1,35 +1,16 @@
 
 
-## Corrigir Vendedor e Descrição na OS do Omie
+## Remover campo `cVendedor` do payload da OS
 
-### Problemas identificados
+### Problema
+A API do Omie para Ordens de Serviço (`IncluirOS`) **não aceita** a tag `cVendedor` no objeto `Cabecalho`. Esse campo existe apenas na API de Pedidos de Venda. A documentação oficial confirma que os campos válidos do `Cabecalho` são: `cCodIntOS`, `cCodParc`, `cEtapa`, `dDtPrevisao`, `nCodCli`, `nQtdeParc`.
 
-1. **Vendedor não aparece na OS**: O valor do vendedor é resolvido corretamente (linha 188), mas **nunca é inserido no payload da OS**. Ele só aparece no campo `cObsOS` (observações). A API do Omie espera o campo `cVendedor` dentro de `Cabecalho` para preencher o campo "Vendedor" na OS.
+### Solução
+Remover a linha `cVendedor: vendedor` do objeto `Cabecalho` no payload. O nome do vendedor já é incluído no campo `Observacoes.cObsOS`, que é o local correto para essa informação em OS.
 
-2. **Descrição Detalhada usa título do negócio**: Na linha 222, `cDescServ` está hardcoded como `deal.title` ao invés de usar o valor resolvido pelo mapeamento (`descricao`). Mesmo que o usuário configure "Descrição" para buscar de "Item da Venda" (campo personalizado), o código ignora isso e sempre coloca o título do negócio.
+### Alteração
+**`supabase/functions/create-omie-os/index.ts` (linha 211)**
+- Remover: `cVendedor: vendedor,`
 
-### Alterações — `supabase/functions/create-omie-os/index.ts`
-
-**Correção 1 — Adicionar vendedor ao Cabecalho (linha 209)**:
-```typescript
-Cabecalho: {
-  cCodIntOS: `ROY-${deal_id.substring(0, 8)}`,
-  cEtapa: '10',
-  dDtPrevisao: ...,
-  nCodCli: omieClient.codigo_cliente_omie,
-  nQtdeParc: 1,
-  cVendedor: vendedor,  // ← NOVO
-},
-```
-
-**Correção 2 — Usar descrição mapeada em cDescServ (linha 222)**:
-```typescript
-// Antes:
-cDescServ: deal.title,
-
-// Depois:
-cDescServ: descricao || deal.title,
-```
-
-Isso garante que `cDescServ` use o valor configurado no mapeamento (ex: "Item da Venda"), com fallback para o título do negócio caso o mapeamento esteja vazio.
+Apenas 1 linha removida. O restante do payload permanece inalterado.
 
