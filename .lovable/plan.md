@@ -1,37 +1,24 @@
 
 
-## Correção: Campo `cCodServLC116` obrigatório na API do Omie
+## Correção: Código LC116 vs Código Municipal do Serviço
 
 ### Problema
-O erro **"É obrigatório o Código do Serviço LC116, tag [cCodServLC116], na inclusão!"** indica que a API do Omie exige o campo `cCodServLC116` (código do serviço conforme a Lei Complementar 116) no bloco `ServicosPrestados`. Atualmente o payload envia apenas `cCodServMun` (código municipal), mas falta o `cCodServLC116`.
+O erro **"Código da LC116 não cadastrada para o Código [8599604]"** indica que o valor `8599604` configurado como "Código do Serviço" é um código **CNAE** ou **municipal**, mas **não** é um código válido da **Lei Complementar 116** (LC116).
 
-### O que é o cCodServLC116?
-É o código padronizado nacional do serviço (ex: `14.01`, `17.01`). Em muitos casos é o mesmo valor do código municipal, mas é um campo separado e obrigatório.
+A API do Omie exige dois códigos distintos no bloco `ServicosPrestados`:
+- `cCodServLC116` — código padronizado nacional (formato: `XX.XX`, ex: `14.01`, `17.01`)
+- `cCodServMun` — código municipal do serviço (pode ser numérico como `8599604`)
+
+Atualmente, ambos os campos usam o mesmo valor (`default_service_code`), o que causa o erro quando o código municipal não é um código LC116 válido.
 
 ### Correção
 
-1. **Edge Function `create-omie-os`** — Adicionar o campo `cCodServLC116` no bloco `ServicosPrestados`, usando o mesmo valor de `default_service_code` das configurações:
+1. **Banco de dados** — Adicionar coluna `default_service_lc116_code` na tabela `omie_settings` para armazenar o código LC116 separadamente.
 
-```typescript
-ServicosPrestados: [
-  {
-    cCodServLC116: settings.default_service_code || '',  // NOVO
-    cCodServMun: settings.default_service_code || '',
-    cDescServ: deal.title,
-    cTribServ: settings.default_tax_type || '01',
-    nQtde: 1,
-    nValUnit: valor,
-  },
-],
-```
+2. **Edge Function `create-omie-os`** — Usar `default_service_lc116_code` para `cCodServLC116` e `default_service_code` para `cCodServMun`.
 
-2. **Validação** — Adicionar validação antes da chamada à API para garantir que o código do serviço foi preenchido:
+3. **UI `OmieIntegrationTab`** — Adicionar campo separado para o "Código do Serviço LC116" com placeholder indicando o formato esperado (ex: `14.01`), mantendo o campo existente como "Código Municipal do Serviço".
 
-```typescript
-if (!settings.default_service_code) {
-  throw new Error('Código do Serviço não configurado nas configurações do Omie.');
-}
-```
-
-Mudança pontual, apenas na edge function. Sem alteração de banco ou UI.
+### Resultado
+O usuário poderá configurar ambos os códigos independentemente, resolvendo a incompatibilidade de formato.
 
