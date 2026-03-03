@@ -7,9 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { CurrentUserProvider } from "@/hooks/useCurrentUser";
-import { NotificationsProvider } from "@/hooks/useNotifications";
 import { PermissionsProvider } from "@/hooks/usePermissions";
-import { PlanLimitsProvider } from "@/hooks/usePlanLimits";
 import { ImpersonationProvider } from "@/hooks/useImpersonation";
 import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 import { SectorProvider } from "@/contexts/SectorContext";
@@ -113,8 +111,6 @@ const App = () => (
         <CurrentUserProvider>
           <ImpersonationProvider>
             <PermissionsProvider>
-              <PlanLimitsProvider>
-                <NotificationsProvider>
                   <TooltipProvider>
                     <Toaster />
                     <Sonner />
@@ -208,8 +204,6 @@ const App = () => (
                     </SectorProvider>
                   </BrowserRouter>
                   </TooltipProvider>
-                </NotificationsProvider>
-              </PlanLimitsProvider>
             </PermissionsProvider>
           </ImpersonationProvider>
         </CurrentUserProvider>

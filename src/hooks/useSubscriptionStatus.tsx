@@ -36,10 +36,13 @@ export function useSubscriptionStatus(): SubscriptionStatus {
 
     async function checkSubscription() {
       try {
-        // Check if user is super admin first
-        const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", { _user_id: user!.id });
+        // Run super admin check and user query in parallel
+        const [superAdminResult, userResult] = await Promise.all([
+          supabase.rpc("is_super_admin", { _user_id: user!.id }),
+          supabase.from("users").select("account_id").eq("auth_user_id", user!.id).maybeSingle(),
+        ]);
         
-        if (isSuperAdmin === true) {
+        if (superAdminResult.data === true) {
           setStatus({
             isLoading: false,
             hasAccess: true,
@@ -52,13 +55,7 @@ export function useSubscriptionStatus(): SubscriptionStatus {
           return;
         }
 
-        const { data: userData } = await supabase
-          .from("users")
-          .select("account_id")
-          .eq("auth_user_id", user!.id)
-          .maybeSingle();
-
-        if (!userData?.account_id) {
+        if (!userResult.data?.account_id) {
           setStatus(prev => ({ ...prev, isLoading: false, hasAccess: false }));
           return;
         }
@@ -66,7 +63,7 @@ export function useSubscriptionStatus(): SubscriptionStatus {
         const { data: account } = await supabase
           .from("accounts")
           .select("subscription_status, trial_ends_at, plan_id, payment_method_configured")
-          .eq("id", userData.account_id)
+          .eq("id", userResult.data.account_id)
           .maybeSingle();
 
         if (!account) {
@@ -119,16 +116,16 @@ export function useSubscriptionStatus(): SubscriptionStatus {
 
     checkSubscription();
 
-    // Safety timeout - fail open after 8s
+    // Safety timeout - fail open after 5s
     const safetyTimeout = setTimeout(() => {
       setStatus(prev => {
         if (prev.isLoading) {
-          console.warn("[useSubscriptionStatus] Safety timeout: forcing isLoading to false after 8s");
+          console.warn("[useSubscriptionStatus] Safety timeout: forcing isLoading to false after 5s");
           return { ...prev, isLoading: false, hasAccess: true };
         }
         return prev;
       });
-    }, 8000);
+    }, 5000);
 
     return () => clearTimeout(safetyTimeout);
   }, [user, authLoading]);

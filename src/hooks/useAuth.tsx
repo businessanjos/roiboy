@@ -22,13 +22,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    // Safety timeout - force loading to false after 10s
+    // Safety timeout - force loading to false after 5s
     const safetyTimeout = setTimeout(() => {
-      if (mounted && loading) {
-        console.warn("[useAuth] Safety timeout: forcing loading to false after 10s");
-        setLoading(false);
+      if (mounted) {
+        setLoading(prev => {
+          if (prev) {
+            console.warn("[useAuth] Safety timeout: forcing loading to false after 5s");
+            return false;
+          }
+          return prev;
+        });
       }
-    }, 10000);
+    }, 5000);
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
