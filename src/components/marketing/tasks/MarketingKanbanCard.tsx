@@ -2,6 +2,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { format, isToday, isTomorrow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { CalendarIcon, GripVertical, CheckCircle2, Circle, ListTodo, Paperclip } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,7 @@ export function MarketingKanbanCard({
     transition,
   };
 
-  const dueDate = task.due_date ? new Date(task.due_date) : null;
+  const dueDate = task.due_date ? parseLocalDate(task.due_date) : null;
   const isPastDue = dueDate && isPast(dueDate) && !isToday(dueDate) && !task.is_completed;
   const isDueToday = dueDate && isToday(dueDate);
   const isDueTomorrow = dueDate && isTomorrow(dueDate);

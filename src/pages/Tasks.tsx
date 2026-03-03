@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -444,10 +445,10 @@ export default function Tasks() {
 
   const getDueDateInfo = useCallback((task: Task) => {
     if (!task.due_date) return null;
-    const dueDate = new Date(task.due_date);
+    const dueDate = parseLocalDate(task.due_date);
+    if (!dueDate) return null;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    dueDate.setHours(0, 0, 0, 0);
     
     const daysDiff = differenceInDays(dueDate, today);
     const taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
@@ -567,8 +568,8 @@ export default function Tasks() {
         
         const getDuePriority = (task: Task) => {
           if (!task.due_date) return Infinity; // Sem prazo vai pro final
-          const dueDate = new Date(task.due_date);
-          dueDate.setHours(0, 0, 0, 0);
+          const dueDate = parseLocalDate(task.due_date);
+          if (!dueDate) return Infinity;
           return differenceInDays(dueDate, today);
         };
         
@@ -633,8 +634,8 @@ export default function Tasks() {
     const overdueCount = baseFilteredTasks.filter(t => {
       const isTaskCompleted = t.completed_at !== null || completedStatusIds.includes(t.custom_status_id || '');
       if (!t.due_date || isTaskCompleted) return false;
-      const dueDate = new Date(t.due_date);
-      dueDate.setHours(0, 0, 0, 0);
+      const dueDate = parseLocalDate(t.due_date);
+      if (!dueDate) return false;
       return dueDate < today;
     }).length;
 

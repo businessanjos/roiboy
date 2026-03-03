@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, isBefore } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
 
 export interface ActivityStatus {
   pendingCount: number;
@@ -31,7 +32,8 @@ const fetchActivityStatus = async (dealId: string): Promise<ActivityStatus> => {
   const today = startOfDay(new Date());
   const hasOverdue = pending.some((t: any) => {
     if (!t.due_date) return false;
-    const dueDate = startOfDay(new Date(t.due_date + "T00:00:00"));
+    const dueDate = parseLocalDate(t.due_date);
+    if (!dueDate) return false;
     return isBefore(dueDate, today);
   });
 
