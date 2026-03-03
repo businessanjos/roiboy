@@ -28,6 +28,7 @@ export function OmieIntegrationTab() {
   const [defaultServiceCode, setDefaultServiceCode] = useState("");
   const [defaultCategoryCode, setDefaultCategoryCode] = useState("");
   const [defaultBankAccountCode, setDefaultBankAccountCode] = useState("");
+  const [defaultTaxType, setDefaultTaxType] = useState("01");
   const [fieldMappings, setFieldMappings] = useState<Record<string, FieldMapping>>({
     cliente: { source: "client.cpf_cnpj" },
     vendedor: { source: "deal.responsible" },
@@ -63,6 +64,7 @@ export function OmieIntegrationTab() {
       setDefaultServiceCode(data.default_service_code || "");
       setDefaultCategoryCode(data.default_category_code || "");
       setDefaultBankAccountCode(data.default_bank_account_code || "");
+      setDefaultTaxType(data.default_tax_type || "01");
       if (data.field_mappings && typeof data.field_mappings === "object" && !Array.isArray(data.field_mappings)) {
         setFieldMappings(data.field_mappings as unknown as Record<string, FieldMapping>);
       }
@@ -82,6 +84,7 @@ export function OmieIntegrationTab() {
       default_service_code: defaultServiceCode,
       default_category_code: defaultCategoryCode,
       default_bank_account_code: defaultBankAccountCode,
+      default_tax_type: defaultTaxType,
       field_mappings: fieldMappings as unknown as Record<string, any>,
       updated_at: new Date().toISOString(),
     };
@@ -272,6 +275,24 @@ export function OmieIntegrationTab() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">Conta corrente cadastrada no Omie (Finanças {'>'} Contas Correntes). Obrigatório.</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Tipo de Tributação do Serviço (cTribServ)</Label>
+            <Select value={defaultTaxType} onValueChange={setDefaultTaxType}>
+              <SelectTrigger className="max-w-xs">
+                <SelectValue placeholder="Selecione o tipo de tributação" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="01">01 — Tributação no Município</SelectItem>
+                <SelectItem value="02">02 — Tributação Fora do Município</SelectItem>
+                <SelectItem value="03">03 — Isenção</SelectItem>
+                <SelectItem value="04">04 — Imune</SelectItem>
+                <SelectItem value="05">05 — Exigibilidade Suspensa por Decisão Judicial</SelectItem>
+                <SelectItem value="06">06 — Exigibilidade Suspensa por Procedimento Administrativo</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">Tipo de tributação do serviço usado na OS (obrigatório).</p>
           </div>
 
           <div className="flex items-center gap-3">

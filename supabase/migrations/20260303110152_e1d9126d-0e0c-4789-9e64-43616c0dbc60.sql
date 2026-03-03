@@ -1,0 +1,1 @@
+ALTER TABLE public.omie_settings ADD COLUMN default_tax_type text NOT NULL DEFAULT '01';

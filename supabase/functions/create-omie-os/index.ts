@@ -209,7 +209,7 @@ serve(async (req) => {
         {
           cCodServMun: settings.default_service_code || '',
           cDescServ: deal.title,
-          cTribServ: '',
+          cTribServ: settings.default_tax_type || '01',
           nQtde: 1,
           nValUnit: valor,
         },
