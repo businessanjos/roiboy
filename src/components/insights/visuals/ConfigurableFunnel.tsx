@@ -65,13 +65,13 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
                 {stagePct}%
               </span>
               <div
-                className="h-10 rounded-md flex items-center justify-between px-4 transition-all flex-1"
+                className="h-10 rounded-md flex items-center justify-between px-4 transition-all flex-1 min-w-0 overflow-hidden"
                 style={{ backgroundColor: bgColor }}
               >
-                <span className="text-sm font-medium text-white truncate" style={{ fontSize: Math.round(13 * m) }}>
+                <span className="text-sm font-medium text-white truncate whitespace-nowrap" style={{ fontSize: Math.max(10, Math.round(13 * m * Math.min(1, widthPct / 40))) }}>
                   {item.name}
                 </span>
-                <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.round(13 * m) }}>
+                <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.max(10, Math.round(13 * m * Math.min(1, widthPct / 40))) }}>
                   {formatValueCompact(cumValue, formatting.type)}
                 </span>
               </div>
@@ -94,13 +94,13 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
                 {ganhosStagePct}%
               </span>
               <div
-                className="h-10 rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-emerald-400 ring-offset-2 flex-1"
+                className="h-10 rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-emerald-400 ring-offset-2 flex-1 min-w-0 overflow-hidden"
                 style={{ backgroundColor: '#10b981' }}
               >
-                <span className="text-sm font-medium text-white flex items-center gap-1.5" style={{ fontSize: Math.round(13 * m) }}>
+                <span className="text-sm font-medium text-white flex items-center gap-1.5 truncate whitespace-nowrap" style={{ fontSize: Math.max(10, Math.round(13 * m * Math.min(1, ganhosWidthPct / 40))) }}>
                   🏆 {ganhosItem.name}
                 </span>
-                <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.round(13 * m) }}>
+                <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.max(10, Math.round(13 * m * Math.min(1, ganhosWidthPct / 40))) }}>
                   {formatValueCompact(ganhosItem.value, formatting.type)}
                 </span>
               </div>
