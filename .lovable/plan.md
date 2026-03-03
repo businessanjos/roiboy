@@ -1,24 +1,32 @@
 
 
-## Correção: Código LC116 vs Código Municipal do Serviço
+## Correção definitiva: campos obrigatórios da API Omie IncluirOS
 
-### Problema
-O erro **"Código da LC116 não cadastrada para o Código [8599604]"** indica que o valor `8599604` configurado como "Código do Serviço" é um código **CNAE** ou **municipal**, mas **não** é um código válido da **Lei Complementar 116** (LC116).
+### Diagnóstico
+Consultei a **documentação oficial do Omie** para o método `IncluirOS`. O campo `cRetemISS` (retenção de ISS: "S" ou "N") é obrigatório no bloco `ServicosPrestados`, e nosso payload não o inclui.
 
-A API do Omie exige dois códigos distintos no bloco `ServicosPrestados`:
-- `cCodServLC116` — código padronizado nacional (formato: `XX.XX`, ex: `14.01`, `17.01`)
-- `cCodServMun` — código municipal do serviço (pode ser numérico como `8599604`)
+Além disso, o campo `cCidPrestServ` (cidade de prestação do serviço, ex: "SAO PAULO (SP)") aparece em todos os exemplos oficiais no bloco `InformacoesAdicionais`. Vou adicioná-lo também para prevenir futuros erros.
 
-Atualmente, ambos os campos usam o mesmo valor (`default_service_code`), o que causa o erro quando o código municipal não é um código LC116 válido.
+### Campos obrigatórios do `ServicosPrestados` (documentação oficial):
+| Campo | Status | Nosso payload |
+|-------|--------|--------------|
+| `cCodServLC116` | OK | Já incluído |
+| `cCodServMun` | OK | Já incluído |
+| `cDescServ` | OK | Já incluído |
+| `cTribServ` | OK | Já incluído |
+| **`cRetemISS`** | **FALTANDO** | Adicionar |
+| `nQtde` | OK | Já incluído |
+| `nValUnit` | OK | Já incluído |
 
 ### Correção
 
-1. **Banco de dados** — Adicionar coluna `default_service_lc116_code` na tabela `omie_settings` para armazenar o código LC116 separadamente.
+1. **Edge Function `create-omie-os`** — Adicionar `cRetemISS: "N"` (padrão: não retém ISS) usando valor configurável das settings. Adicionar também `cCidPrestServ` nas `InformacoesAdicionais`.
 
-2. **Edge Function `create-omie-os`** — Usar `default_service_lc116_code` para `cCodServLC116` e `default_service_code` para `cCodServMun`.
+2. **Banco de dados** — Adicionar colunas `default_retem_iss` (text, default "N") e `default_city` (text) na tabela `omie_settings`.
 
-3. **UI `OmieIntegrationTab`** — Adicionar campo separado para o "Código do Serviço LC116" com placeholder indicando o formato esperado (ex: `14.01`), mantendo o campo existente como "Código Municipal do Serviço".
+3. **UI `OmieIntegrationTab`** — Adicionar:
+   - Seletor de Retenção de ISS (Sim/Não)
+   - Campo de Cidade de Prestação do Serviço (ex: "SAO PAULO (SP)")
 
-### Resultado
-O usuário poderá configurar ambos os códigos independentemente, resolvendo a incompatibilidade de formato.
+Isso cobre **todos os campos obrigatórios** da documentação oficial, evitando novos erros por campos faltantes.
 
