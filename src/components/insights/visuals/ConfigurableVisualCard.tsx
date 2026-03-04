@@ -213,12 +213,12 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 min-h-0 overflow-auto">
-            <ConfigurableChart
+           <ConfigurableChart
               type={effectiveChartType}
               data={processedData}
               formatting={config.formatting || { type: 'number' as FormatType, decimals: 0 }}
               appearance={config.appearance || DEFAULT_APPEARANCE}
-              visualConfig={isBubbleMap ? { ...config, _mapData: mapData } as any : config}
+              visualConfig={isBubbleMap ? { ...config, _mapData: mapData } as any : (isStacked && effectiveChartType === 'bar_stacked' && !config.chartOrientation ? { ...config, chartOrientation: chartType === 'bar' ? 'vertical' : 'horizontal' } : config)}
               stackedData={processedStackedData?.data}
               stackedSeriesKeys={processedStackedData?.seriesKeys}
               onDrilldown={handleDrilldown}
