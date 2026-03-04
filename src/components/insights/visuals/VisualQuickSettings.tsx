@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { AppearanceSection } from "../visual-builder/AppearanceSection";
 import { LeadFieldFilterSection } from "./LeadFieldFilterSection";
 import { DealFieldFilterSection } from "./DealFieldFilterSection";
+import { getColumnsForDataSource } from "./ConfigurableTable";
 import { 
   VisualConfig, 
   DateDisplayFormat, 
@@ -72,10 +73,11 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   const isCallCommercial = visual.chart_type === 'call_commercial';
   const isGauge = visual.chart_type === 'gauge';
   const isIndicator = visual.chart_type === 'indicator';
+  const isDataTable = visual.chart_type === 'data_table';
   const isGaugeRevenue = isGauge && config?.gaugeConfig?.subType === 'revenue_vs_goal';
   const isMetaScorecard = isScorecard && !!config?.gaugeConfig?.monthlyGoals;
   const showMonthlyGoals = isGaugeRevenue || isMetaScorecard;
-  const showCategoryFilter = !isScorecard && !isCallCommercial && !isGauge;
+  const showCategoryFilter = !isScorecard && !isCallCommercial && !isGauge && !isDataTable;
 
   // Fetch visual data to extract unique categories
   const { data: visualData } = useVisualData({
@@ -119,6 +121,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   );
   const [accountUsers, setAccountUsers] = useState<{ name: string }[]>([]);
   const [title, setTitle] = useState(visual.title || "");
+  const [tableColumns, setTableColumns] = useState<string[]>(config?.tableConfig?.columns ?? []);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
@@ -154,6 +157,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
       setDealFilterFieldId(config?.dealFieldFilter?.fieldId ?? '');
       setDealFilterFieldName(config?.dealFieldFilter?.fieldName ?? '');
       setDealFilterValues(config?.dealFieldFilter?.selectedValues ?? []);
+      setTableColumns(config?.tableConfig?.columns ?? []);
       
       // Initialize monthly goals
       if (config?.gaugeConfig?.monthlyGoals) {
@@ -229,6 +233,9 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
           fieldName: dealFilterFieldName,
           selectedValues: dealFilterValues,
         } : undefined,
+        ...(isDataTable && tableColumns.length > 0 && {
+          tableConfig: { columns: tableColumns },
+        }),
         ...(showMonthlyGoals && {
           gaugeConfig: {
             ...config.gaugeConfig,
@@ -405,6 +412,36 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
                       />
                       <label htmlFor={`cat-${category}`} className="text-sm cursor-pointer">
                         {category}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+              <Separator />
+            </div>
+          )}
+          {/* Table columns selector */}
+          {isDataTable && config?.dataSource && (
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Colunas da Tabela</Label>
+              <div className="space-y-2">
+                {getColumnsForDataSource(config.dataSource).map((col) => {
+                  const isChecked = tableColumns.includes(col.key);
+                  return (
+                    <div key={col.key} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`tcol-${col.key}`}
+                        checked={isChecked}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setTableColumns(prev => [...prev, col.key]);
+                          } else {
+                            setTableColumns(prev => prev.filter(k => k !== col.key));
+                          }
+                        }}
+                      />
+                      <label htmlFor={`tcol-${col.key}`} className="text-sm cursor-pointer">
+                        {col.label}
                       </label>
                     </div>
                   );

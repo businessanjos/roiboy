@@ -40,11 +40,12 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
   const isGaugeDaysElapsed = chartType === 'gauge' && config?.gaugeConfig?.subType === 'days_elapsed';
   const isStacked = chartType === 'bar_stacked' && !!config?.stackBy;
   const isBubbleMap = chartType === 'bubble_map';
+  const isDataTable = chartType === 'data_table';
 
   const { data, isLoading, error } = useVisualData({
     config,
     chartType,
-    enabled: !!config && !isGaugeDaysElapsed && !isStacked && !isBubbleMap,
+    enabled: !!config && !isGaugeDaysElapsed && !isStacked && !isBubbleMap && !isDataTable,
   });
 
   const { data: stackedResult, isLoading: stackedLoading, error: stackedError } = useStackedVisualData({

@@ -23,6 +23,7 @@ import { IndicatorFromConfig } from "./ConfigurableIndicator";
 import { StackedHorizontalBarChart } from "./StackedHorizontalBarChart";
 import { ConfigurableBubbleMap } from "./ConfigurableBubbleMap";
 import { ConfigurableFunnel } from "./ConfigurableFunnel";
+import { ConfigurableTable } from "./ConfigurableTable";
 import { formatValueCompact, formatValueWithScale } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
 
@@ -54,7 +55,7 @@ function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professiona
 export function ConfigurableChart({ type, data, formatting, appearance, visualConfig, stackedData, stackedSeriesKeys, onDrilldown }: ConfigurableChartProps) {
   const config = appearance || DEFAULT_APPEARANCE;
   
-  if (type !== 'gauge' && type !== 'indicator' && type !== 'bar_stacked' && type !== 'bubble_map' && type !== 'funnel' && (!data || data.length === 0)) {
+  if (type !== 'gauge' && type !== 'indicator' && type !== 'bar_stacked' && type !== 'bubble_map' && type !== 'funnel' && type !== 'data_table' && (!data || data.length === 0)) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
         Sem dados para exibir
@@ -102,6 +103,8 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
       return <PieChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'funnel':
       return <ConfigurableFunnel data={data} formatting={formatting} appearance={config} />;
+    case 'data_table':
+      return <ConfigurableTable config={visualConfig!} />;
     default:
       return <BarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
   }
