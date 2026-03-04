@@ -1,60 +1,47 @@
 
 
-## Problema: Funil perde etapas ao filtrar por período
+## Problema
 
-### Causa raiz
+O funil mostra "Ganhos: 1" mas todas as etapas anteriores aparecem com 0. Isso é logicamente impossível — se um negócio foi ganho, ele obrigatoriamente passou por todas as etapas anteriores.
 
-No `useVisualData.ts`, o funil de vendas (`chartType === 'funnel'`, `dimension.field === 'stage_name'`) busca deals filtrados por `created_at` no período selecionado. A função `aggregateData` só cria entradas para etapas que têm pelo menos 1 deal no resultado. **Etapas sem deals no período simplesmente desaparecem do funil.**
+## Causa raiz
 
-Exemplo: se no mês atual só existem deals nas etapas "Oportunidade", "Diagnóstico" e "Contrato", as etapas "Prospecção" e "Proposta" somem completamente — mesmo que deals ganhos tenham obrigatoriamente passado por elas.
+Nos componentes `ConfigurableFunnel.tsx` e `SalesFunnelChart.tsx`, a lógica de contagem cumulativa (de baixo para cima) **exclui "Ganhos"** da base do acumulador. A última etapa regular começa com base `0`, então se nenhuma etapa regular tem deals no período, os valores ficam todos zerados — mesmo que exista 1 deal ganho.
 
-### Solução
+```text
+Lógica atual (base = 0):
+Follow Up:    0 + 0 = 0
+Proposta:     0 + 0 = 0
+...todas = 0
+Ganhos:       1  (isolado, não propaga)
 
-Após a agregação e ordenação por `display_order`, garantir que **todas as etapas do pipeline** apareçam no funil, preenchendo com `value: 0` as que não tiveram deals no período.
-
-### Alteração — `src/hooks/useVisualData.ts` (linhas ~76-89)
-
-Após o sort por `display_order`, inserir lógica que:
-
-1. Compara as etapas retornadas com a lista completa de `deal_stages` (que já foi buscada na linha 78)
-2. Para cada etapa do pipeline que não está no resultado, insere um `AggregatedDataPoint` com `value: 0` na posição correta
-3. Preserva a cor da etapa vinda de `deal_stages`
-
-```typescript
-// After sorting by display_order (line 88)
-if (stages && stages.length > 0) {
-  const orderMap = new Map(stages.map(s => [s.name, s.display_order]));
-  result.sort((a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
-
-  // Ensure ALL pipeline stages appear, even with 0 deals
-  const existingNames = new Set(result.map(r => r.name));
-  const stageColors = await supabase
-    .from('deal_stages')
-    .select('name, color')
-    .eq('account_id', currentUser.account_id);
-  
-  const colorMap = new Map((stageColors.data || []).map(s => [s.name, s.color]));
-  
-  for (const stage of stages) {
-    if (!existingNames.has(stage.name)) {
-      result.push({
-        name: stage.name,
-        value: 0,
-        count: 0,
-        color: colorMap.get(stage.name) || '#6366f1',
-      });
-    }
-  }
-  // Re-sort after adding missing stages
-  result.sort((a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
-}
+Lógica correta (base = Ganhos):
+Follow Up:    0 + 1 = 1
+Proposta:     0 + 1 = 1
+...todas ≥ 1
+Ganhos:       1
 ```
 
-Otimização: como já temos o `stages` da query anterior (linha 78), podemos buscar `color` na mesma query original, evitando uma query extra. Basta alterar o select de `'name, display_order'` para `'name, display_order, color'`.
+## Alterações
 
-### Resultado esperado
+### 1. `src/components/insights/visuals/ConfigurableFunnel.tsx` — linha 41
 
-- Todas as etapas do pipeline sempre aparecem no funil, independentemente do filtro de data
-- Etapas sem deals no período aparecem com valor 0, mantendo a visualização completa do funil
-- A etapa "Ganhos" continua sendo adicionada ao final como já é feito
+Trocar a base `0` pelo valor de Ganhos:
+
+```typescript
+// DE:
+const below = i < regularData.length - 1 ? cumulativeCounts[i + 1] : 0;
+
+// PARA:
+const below = i < regularData.length - 1 ? cumulativeCounts[i + 1] : (ganhosItem?.value || 0);
+```
+
+### 2. `src/components/insights/whatsapp-dashboard/SalesFunnelChart.tsx` — linha 85
+
+Mesma correção no funil do WhatsApp Dashboard. A etapa "Venda" (equivalente a Ganhos) já é a última em `visibleStages`, então aqui o acumulador base (`belowTotal`) já inclui "Venda" na cadeia. **Porém**, como "Venda" é incluída inline em `allStagesWithVenda`, ela já participa do loop cumulativo — este componente não tem o mesmo bug. Nenhuma alteração necessária aqui.
+
+## Resultado esperado
+
+- Se existe 1 deal ganho, **todas** as etapas anteriores mostram no mínimo 1 no valor cumulativo
+- O funil mantém forma de afunilamento correta mesmo com filtros de data restritivos
 
