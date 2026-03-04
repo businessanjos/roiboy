@@ -1,35 +1,27 @@
 
 
-## Correção: Campos de segmentação não aparecem no dropdown
+## Correção: Segmentação por campo personalizado não renderiza dados
 
 ### Causa raiz
 
-A query em `VisualQuickSettings.tsx` filtra por `.eq('entity', 'deal')` e `.eq('entity', 'lead')`, mas a tabela `custom_fields` **não tem** uma coluna `entity`. O sistema usa flags booleanas: `show_in_deals` e `show_in_leads`.
+Quando o usuário ativa segmentação por campo personalizado em um gráfico de barras (`bar`):
+
+1. `ConfigurableVisualCard` detecta `isStacked = true` e busca dados via `useStackedVisualData` (desabilitando `useVisualData`)
+2. Porém o `chartType` continua como `'bar'` (não muda para `'bar_stacked'`)
+3. `ConfigurableChart` recebe `type='bar'` e renderiza `BarChartView` com `data` vazio (pois `useVisualData` foi desabilitado)
+4. Os `stackedData` são passados como prop mas ignorados — só são usados no `case 'bar_stacked'`
 
 ### Solução
 
-Alterar as duas queries no `useEffect` (linhas 212-227) para usar os filtros corretos:
+Em `ConfigurableVisualCard`, quando o visual tem segmentação por campo personalizado ativa (`isStacked = true`), forçar o `chartType` efetivo para `'bar_stacked'` antes de passá-lo ao `ConfigurableChart`. Isso garante que o componente correto (`StackedHorizontalBarChart`) seja usado para renderizar os dados segmentados.
 
 ```typescript
-// Deals
-supabase
-  .from('custom_fields')
-  .select('id, name')
-  .eq('account_id', currentUser.account_id)
-  .eq('show_in_deals', true)
-  .eq('is_active', true)
-  .order('display_order'),
-
-// Leads
-supabase
-  .from('custom_fields')
-  .select('id, name')
-  .eq('account_id', currentUser.account_id)
-  .eq('show_in_leads', true)
-  .eq('is_active', true)
-  .order('display_order'),
+// ConfigurableVisualCard.tsx
+const effectiveChartType = isStacked && chartType === 'bar' ? 'bar_stacked' : chartType;
 ```
 
+E usar `effectiveChartType` no lugar de `chartType` ao renderizar `ConfigurableChart`.
+
 ### Arquivo afetado
-- `src/components/insights/visuals/VisualQuickSettings.tsx` — corrigir filtros da query de campos personalizados
+- `src/components/insights/visuals/ConfigurableVisualCard.tsx` — mapear chartType para `bar_stacked` quando segmentação está ativa
 
