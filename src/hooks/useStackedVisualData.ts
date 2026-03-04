@@ -13,6 +13,119 @@ export interface StackedDataPoint {
   [key: string]: string | number;
 }
 
+/**
+ * Enrich records with a custom field label for stacking/segmentation.
+ * Fetches deal_field_values or lead_field_values, resolves labels, and injects `_custom_stack_label`.
+ */
+async function enrichWithCustomField(
+  records: any[],
+  accountId: string,
+  fieldId: string,
+  source: 'lead' | 'deal',
+  dataSource: 'deals' | 'leads'
+): Promise<any[]> {
+  if (records.length === 0) return records;
+
+  // Get field definition
+  const { data: fieldDef } = await supabase
+    .from('custom_fields')
+    .select('options, field_type')
+    .eq('id', fieldId)
+    .maybeSingle();
+
+  const fieldType = fieldDef?.field_type || '';
+  const isMultiSelect = fieldType === 'multi_select';
+
+  // Build value->label map for select/multi_select fields
+  const valueToLabel = new Map<string, string>();
+  if (fieldDef?.options && Array.isArray(fieldDef.options)) {
+    for (const opt of fieldDef.options as any[]) {
+      if (opt.value && opt.label) {
+        valueToLabel.set(opt.value, opt.label);
+      }
+    }
+  }
+
+  // Determine which table and id column to query
+  const table = source === 'deal' ? 'deal_field_values' : 'lead_field_values';
+  const idColumn = source === 'deal' ? 'deal_id' : 'lead_id'; // column in field_values table
+
+  // Determine record IDs to query — if source matches dataSource, use record.id directly
+  // If source=lead but dataSource=deals, use record.lead_id
+  // If source=deal but dataSource=leads, we can't easily resolve (skip)
+  let recordIdMap: Map<string, string[]>; // fieldValueEntityId -> [recordIds]
+  
+  if (source === 'deal' && dataSource === 'deals') {
+    recordIdMap = new Map();
+    for (const r of records) {
+      recordIdMap.set(r.id, [r.id]);
+    }
+  } else if (source === 'lead' && dataSource === 'leads') {
+    recordIdMap = new Map();
+    for (const r of records) {
+      recordIdMap.set(r.id, [r.id]);
+    }
+  } else if (source === 'lead' && dataSource === 'deals') {
+    // Query lead_field_values using deal.lead_id
+    recordIdMap = new Map();
+    for (const r of records) {
+      if (r.lead_id) {
+        const existing = recordIdMap.get(r.lead_id) || [];
+        existing.push(r.id);
+        recordIdMap.set(r.lead_id, existing);
+      }
+    }
+  } else {
+    // source=deal, dataSource=leads — not supported easily
+    return records;
+  }
+
+  const entityIds = Array.from(recordIdMap.keys());
+  if (entityIds.length === 0) return records;
+
+  // Fetch field values in batches
+  const selectColumns = isMultiSelect ? `${idColumn}, value_json` : `${idColumn}, value_text`;
+  let allValues: any[] = [];
+  const batchSize = 500;
+  for (let i = 0; i < entityIds.length; i += batchSize) {
+    const batch = entityIds.slice(i, i + batchSize);
+    const { data, error } = await (supabase
+      .from(table as any)
+      .select(selectColumns)
+      .eq('field_id', fieldId)
+      .eq('account_id', accountId)
+      .in(idColumn, batch) as any);
+    if (error) { console.error('Error fetching custom field values for enrichment:', error); continue; }
+    allValues = allValues.concat(data || []);
+  }
+
+  // Build entityId -> label map
+  const entityLabelMap = new Map<string, string>();
+  for (const row of allValues) {
+    const entityId = row[idColumn];
+    let label: string;
+    if (isMultiSelect && row.value_json && Array.isArray(row.value_json)) {
+      label = row.value_json.map((v: string) => valueToLabel.get(v) || v).join(', ');
+    } else if (row.value_text) {
+      label = valueToLabel.get(row.value_text) || row.value_text;
+    } else {
+      continue;
+    }
+    entityLabelMap.set(entityId, label);
+  }
+
+  // Inject _custom_stack_label into records
+  return records.map(r => {
+    let entityId: string;
+    if (source === 'lead' && dataSource === 'deals') {
+      entityId = r.lead_id;
+    } else {
+      entityId = r.id;
+    }
+    return { ...r, _custom_stack_label: entityLabelMap.get(entityId) || 'Não informado' };
+  });
+}
+
 interface UseStackedVisualDataParams {
   config: VisualConfig | null;
   enabled?: boolean;
@@ -25,7 +138,7 @@ export function useStackedVisualData({ config, enabled = true }: UseStackedVisua
   return useQuery({
     queryKey: ['stacked-visual-data', config, filters, currentUser?.account_id],
     queryFn: async (): Promise<{ data: StackedDataPoint[]; seriesKeys: string[] }> => {
-      if (!config || !currentUser?.account_id || !config.stackBy) {
+      if (!config || !currentUser?.account_id || (!config.stackBy && !config.stackByCustomField)) {
         return { data: [], seriesKeys: [] };
       }
 
@@ -34,7 +147,7 @@ export function useStackedVisualData({ config, enabled = true }: UseStackedVisua
       }
       return fetchStackedDealsData(currentUser.account_id, config, filters);
     },
-    enabled: enabled && !!config && !!config.stackBy && !!currentUser?.account_id,
+    enabled: enabled && !!config && (!!config.stackBy || !!config.stackByCustomField) && !!currentUser?.account_id,
     staleTime: 120000,
     refetchOnWindowFocus: false,
   });
@@ -113,6 +226,16 @@ async function fetchStackedDealsData(
     allDeals = await enrichDealsWithCanal(accountId, allDeals);
   }
 
+  // Enrich with custom field for stacking if configured
+  if (config.stackByCustomField) {
+    allDeals = await enrichWithCustomField(
+      allDeals, accountId,
+      config.stackByCustomField.fieldId,
+      config.stackByCustomField.source,
+      'deals'
+    );
+  }
+
   const dateGrouping = config.dimension.dateGrouping || 'day';
 
   // Determine the full date range from filters
@@ -180,9 +303,16 @@ async function fetchStackedDealsData(
       }
   }
 
-  // Group by period key and by seller
+  // Group by period key and by series value
   const periodMap = new Map<string, Map<string, number>>();
-  const allSellers = new Set<string>();
+  const allSeries = new Set<string>();
+
+  const getSeriesValue = (record: any): string => {
+    if (config.stackByCustomField) {
+      return record._custom_stack_label || 'Não informado';
+    }
+    return (record.users as any)?.name || 'Sem Responsável';
+  };
 
   for (const deal of allDeals) {
     const dateStr = (deal as any)[dateField];
@@ -190,36 +320,38 @@ async function fetchStackedDealsData(
 
     const date = parseISO(dateStr);
     const periodKey = getPeriodKey(date);
-    const sellerName = (deal.users as any)?.name || 'Sem Responsável';
+    const seriesValue = getSeriesValue(deal);
 
-    allSellers.add(sellerName);
+    allSeries.add(seriesValue);
 
     if (!periodMap.has(periodKey)) periodMap.set(periodKey, new Map());
-    const sellerMap = periodMap.get(periodKey)!;
+    const seriesMap = periodMap.get(periodKey)!;
 
-    const currentVal = sellerMap.get(sellerName) || 0;
+    const currentVal = seriesMap.get(seriesValue) || 0;
 
     if (measure.aggregation === 'count') {
-      sellerMap.set(sellerName, currentVal + 1);
+      seriesMap.set(seriesValue, currentVal + 1);
     } else {
-      sellerMap.set(sellerName, currentVal + (deal.value || 0));
+      seriesMap.set(seriesValue, currentVal + (deal.value || 0));
     }
   }
 
-  // Remove "Sem Responsável" from sellers
-  allSellers.delete('Sem Responsável');
+  // Remove "Sem Responsável" / "Não informado" cleanup
+  if (!config.stackByCustomField) {
+    allSeries.delete('Sem Responsável');
+  }
 
-  const seriesKeys = Array.from(allSellers).sort();
+  const seriesKeys = Array.from(allSeries).sort() as string[];
 
   // Build data points for ALL periods in the range
   const result: StackedDataPoint[] = [];
 
   for (const period of allPeriods) {
-    const sellerMap = periodMap.get(period.key);
+    const seriesMap = periodMap.get(period.key);
     const point: StackedDataPoint = { name: period.label };
 
-    for (const seller of seriesKeys) {
-      point[seller] = sellerMap?.get(seller) || 0;
+    for (const key of seriesKeys) {
+      point[key] = seriesMap?.get(key) || 0;
     }
 
     result.push(point);
@@ -276,19 +408,30 @@ async function fetchStackedLeadsData(
     allLeads = await enrichLeadsWithMql(accountId, allLeads);
   }
 
+  // Enrich with custom field for stacking if configured
+  if (config.stackByCustomField) {
+    allLeads = await enrichWithCustomField(
+      allLeads, accountId,
+      config.stackByCustomField.fieldId,
+      config.stackByCustomField.source,
+      'leads'
+    );
+  }
+
   // Check if this is a temporal dimension
   const isTemporalDimension = config.dimension.type === 'date';
   const dateGrouping = config.dimension.dateGrouping || 'day';
+
+  const getFieldValue = (lead: any, field: string): string => {
+    if (config.stackByCustomField) return lead._custom_stack_label || 'Não informado';
+    if (field === 'mql') return lead._mql_label || 'Não informado';
+    return lead[field] || 'Não informado';
+  };
 
   if (isTemporalDimension) {
     // Temporal grouping for leads (similar to deals logic)
     const periodMap = new Map<string, Map<string, number>>();
     const allSeries = new Set<string>();
-
-    const getFieldValue = (lead: any, field: string): string => {
-      if (field === 'mql') return lead._mql_label || 'Não informado';
-      return lead[field] || 'Não informado';
-    };
 
     for (const lead of allLeads) {
       const dateStr = lead.created_at;
@@ -381,25 +524,20 @@ async function fetchStackedLeadsData(
   // Categorical grouping (existing logic)
   // Group by dimension field (X axis) and stack by field (series)
   const categoryMap = new Map<string, Map<string, number>>();
-  const allSeries = new Set<string>();
-
-  const getFieldValue = (lead: any, field: string): string => {
-    if (field === 'mql') return lead._mql_label || 'Não informado';
-    return lead[field] || 'Não informado';
-  };
+  const allSeriesCat = new Set<string>();
 
   for (const lead of allLeads) {
     const categoryValue = getFieldValue(lead, dimensionField);
     const seriesValue = getFieldValue(lead, stackByField);
 
-    allSeries.add(seriesValue);
+    allSeriesCat.add(seriesValue);
 
     if (!categoryMap.has(categoryValue)) categoryMap.set(categoryValue, new Map());
     const seriesMap = categoryMap.get(categoryValue)!;
     seriesMap.set(seriesValue, (seriesMap.get(seriesValue) || 0) + 1);
   }
 
-  const seriesKeys = Array.from(allSeries).sort();
+  const seriesKeys = Array.from(allSeriesCat).sort();
 
   // Build data points
   const result: StackedDataPoint[] = [];
