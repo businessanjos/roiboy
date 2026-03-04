@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
-import { VisualConfig, DateGrouping, DateDisplayFormat } from "@/components/insights/visual-builder/types";
+import { VisualConfig, DateGrouping, DateDisplayFormat, FieldFilter, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
 import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval, eachDayOfInterval, eachYearOfInterval, startOfMonth, startOfYear, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { filterByLeadField } from "@/hooks/useLeadFieldFilter";
-import { filterByDealField } from "@/hooks/useDealFieldFilter";
+import { filterByLeadField, filterByLeadFields } from "@/hooks/useLeadFieldFilter";
+import { filterByDealField, filterByDealFields } from "@/hooks/useDealFieldFilter";
 
 export interface AggregatedDataPoint {
   name: string;
@@ -30,9 +30,13 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
     queryFn: async (): Promise<AggregatedDataPoint[]> => {
       if (!config || !currentUser?.account_id) return [];
 
-      const { dataSource, measure, dimension, appearance, statusFilter, leadFieldFilter, dealFieldFilter } = config;
+      const { dataSource, measure, dimension, appearance, statusFilter } = config;
       const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
       const fillEmptyDates = appearance?.fillEmptyDates || false;
+
+      // Normalize filters (supports both legacy single and new multi-filter)
+      const leadFilters = getLeadFilters(config);
+      const dealFilters = getDealFilters(config);
 
       // Infer status filter for legacy scorecards without explicit statusFilter
       const effectiveStatusFilter = statusFilter ?? inferStatusFilter(measure, dimension);
@@ -41,10 +45,10 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
       switch (dataSource) {
         case 'deals':
-          result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFieldFilter, dealFieldFilter);
+          result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters);
           break;
         case 'leads':
-          result = await fetchLeadsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, leadFieldFilter);
+          result = await fetchLeadsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, leadFilters);
           break;
         case 'products':
           result = await fetchProductsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
@@ -111,8 +115,8 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           { ...filters, startDate: filters.startDate, endDate: filters.endDate },
           dateDisplayFormat,
           'won',
-          leadFieldFilter,
-          dealFieldFilter
+           leadFilters,
+           dealFilters
         );
         const wonCount = wonResult.length > 0 ? wonResult[0].value : 0;
         result.push({
@@ -522,8 +526,8 @@ async function fetchDealsData(
   filters: any,
   dateDisplayFormat: DateDisplayFormat,
   statusFilter?: 'won' | 'lost' | 'open',
-  leadFieldFilter?: VisualConfig['leadFieldFilter'],
-  dealFieldFilter?: VisualConfig['dealFieldFilter']
+  leadFilters?: FieldFilter[],
+  dealFilters?: FieldFilter[]
 ): Promise<AggregatedDataPoint[]> {
   // Special handling for sales cycle calculation
   if (measure.aggregation === 'sales_cycle') {
@@ -618,15 +622,15 @@ async function fetchDealsData(
 
   const data = allRawDeals;
 
-  // Apply lead field filter if configured
+  // Apply lead field filters if configured (AND logic)
   let filteredData = data || [];
-  if (leadFieldFilter && leadFieldFilter.selectedValues && leadFieldFilter.selectedValues.length > 0) {
-    filteredData = await filterByLeadField(filteredData, accountId, leadFieldFilter, 'deals');
+  if (leadFilters && leadFilters.length > 0) {
+    filteredData = await filterByLeadFields(filteredData, accountId, leadFilters, 'deals');
   }
 
-  // Apply deal field filter if configured
-  if (dealFieldFilter && dealFieldFilter.selectedValues && dealFieldFilter.selectedValues.length > 0) {
-    filteredData = await filterByDealField(filteredData, accountId, dealFieldFilter);
+  // Apply deal field filters if configured (AND logic)
+  if (dealFilters && dealFilters.length > 0) {
+    filteredData = await filterByDealFields(filteredData, accountId, dealFilters);
   }
 
   // If dimension is _total, return global aggregation (for Scorecards)
@@ -884,10 +888,10 @@ async function fetchLeadsData(
   dimension: VisualConfig['dimension'],
   filters: any,
   dateDisplayFormat: DateDisplayFormat,
-  leadFieldFilter?: VisualConfig['leadFieldFilter']
+  leadFilters?: FieldFilter[]
 ): Promise<AggregatedDataPoint[]> {
   // Determine if we need lead field filtering
-  const hasLeadFilter = leadFieldFilter && leadFieldFilter.selectedValues && leadFieldFilter.selectedValues.length > 0;
+  const hasLeadFilter = leadFilters && leadFilters.length > 0;
 
   // For scorecard total count WITHOUT lead filter, use server-side count
   if (dimension.field === '_total' && !hasLeadFilter) {
@@ -945,9 +949,9 @@ async function fetchLeadsData(
     from += pageSize;
   }
 
-  // Apply lead field filter if configured
+  // Apply lead field filters if configured (AND logic)
   if (hasLeadFilter) {
-    allData = await filterByLeadField(allData, accountId, leadFieldFilter!, 'leads');
+    allData = await filterByLeadFields(allData, accountId, leadFilters!, 'leads');
   }
 
   // For scorecard total with filter, return count after filtering

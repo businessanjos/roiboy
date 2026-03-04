@@ -9,8 +9,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { FieldFilter } from "@/components/insights/visual-builder/types";
 
 // Known lead field UUIDs
 const LEAD_FIELDS = [
@@ -20,27 +23,29 @@ const LEAD_FIELDS = [
 ];
 
 interface LeadFieldFilterSectionProps {
-  selectedFieldId: string;
-  selectedFieldName: string;
-  selectedValues: string[];
-  onFieldChange: (fieldId: string, fieldName: string) => void;
-  onSelectedValuesChange: (values: string[]) => void;
+  filters: FieldFilter[];
+  onFiltersChange: (filters: FieldFilter[]) => void;
 }
 
-export function LeadFieldFilterSection({
-  selectedFieldId,
-  selectedFieldName,
-  selectedValues,
-  onFieldChange,
-  onSelectedValuesChange,
-}: LeadFieldFilterSectionProps) {
+function SingleLeadFilter({
+  filter,
+  index,
+  usedFieldIds,
+  onUpdate,
+  onRemove,
+}: {
+  filter: FieldFilter;
+  index: number;
+  usedFieldIds: Set<string>;
+  onUpdate: (index: number, filter: FieldFilter) => void;
+  onRemove: (index: number) => void;
+}) {
   const { currentUser } = useCurrentUser();
   const [fieldOptions, setFieldOptions] = useState<string[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
 
-  // Fetch options when field changes
   useEffect(() => {
-    if (!selectedFieldId || !currentUser?.account_id) {
+    if (!filter.fieldId || !currentUser?.account_id) {
       setFieldOptions([]);
       return;
     }
@@ -48,23 +53,20 @@ export function LeadFieldFilterSection({
     const fetchOptions = async () => {
       setLoadingOptions(true);
       try {
-        // First try to get options from custom_fields definition
         const { data: fieldDef } = await supabase
           .from('custom_fields')
           .select('options')
-          .eq('id', selectedFieldId)
+          .eq('id', filter.fieldId)
           .maybeSingle();
 
         if (fieldDef?.options && Array.isArray(fieldDef.options) && fieldDef.options.length > 0) {
-          // Use labels from field options
           const labels = fieldDef.options.map((opt: any) => opt.label).filter(Boolean);
           setFieldOptions(labels);
         } else {
-          // Fetch unique values from lead_field_values
           const { data: values } = await supabase
             .from('lead_field_values')
             .select('value_text')
-            .eq('field_id', selectedFieldId)
+            .eq('field_id', filter.fieldId)
             .eq('account_id', currentUser.account_id)
             .not('value_text', 'is', null);
 
@@ -81,43 +83,47 @@ export function LeadFieldFilterSection({
     };
 
     fetchOptions();
-  }, [selectedFieldId, currentUser?.account_id]);
+  }, [filter.fieldId, currentUser?.account_id]);
 
   const handleFieldSelect = (value: string) => {
     if (value === 'none') {
-      onFieldChange('', '');
-      onSelectedValuesChange([]);
+      onRemove(index);
       return;
     }
     const field = LEAD_FIELDS.find(f => f.id === value);
     if (field) {
-      onFieldChange(field.id, field.name);
-      onSelectedValuesChange([]);
+      onUpdate(index, { fieldId: field.id, fieldName: field.name, selectedValues: [] });
     }
   };
 
   const handleToggleValue = (value: string, checked: boolean) => {
-    if (checked) {
-      onSelectedValuesChange([...selectedValues, value]);
-    } else {
-      onSelectedValuesChange(selectedValues.filter(v => v !== value));
-    }
+    const newValues = checked
+      ? [...filter.selectedValues, value]
+      : filter.selectedValues.filter(v => v !== value);
+    onUpdate(index, { ...filter, selectedValues: newValues });
   };
 
-  return (
-    <div className="space-y-3">
-      <Label className="text-base font-medium">Filtro por Lead</Label>
-      <p className="text-xs text-muted-foreground">
-        Filtre os dados do visual por um campo específico do Lead.
-      </p>
+  const availableFields = LEAD_FIELDS.filter(
+    f => f.id === filter.fieldId || !usedFieldIds.has(f.id)
+  );
 
-      <Select value={selectedFieldId || 'none'} onValueChange={handleFieldSelect}>
-        <SelectTrigger>
+  return (
+    <div className="space-y-2 p-3 border rounded-lg relative">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-1 right-1 h-6 w-6"
+        onClick={() => onRemove(index)}
+      >
+        <X className="h-3 w-3" />
+      </Button>
+
+      <Select value={filter.fieldId || 'none'} onValueChange={handleFieldSelect}>
+        <SelectTrigger className="pr-8">
           <SelectValue placeholder="Selecione um campo" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="none">Nenhum filtro</SelectItem>
-          {LEAD_FIELDS.map(field => (
+          {availableFields.map(field => (
             <SelectItem key={field.id} value={field.id}>
               {field.name}
             </SelectItem>
@@ -125,32 +131,76 @@ export function LeadFieldFilterSection({
         </SelectContent>
       </Select>
 
-      {selectedFieldId && fieldOptions.length > 0 && (
-        <div className="space-y-2 max-h-[200px] overflow-y-auto">
+      {filter.fieldId && fieldOptions.length > 0 && (
+        <div className="space-y-1 max-h-[150px] overflow-y-auto">
           {loadingOptions ? (
             <p className="text-xs text-muted-foreground">Carregando opções...</p>
           ) : (
-            fieldOptions.map(option => {
-              const isChecked = selectedValues.includes(option);
-              return (
-                <div key={option} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`lead-filter-${option}`}
-                    checked={isChecked}
-                    onCheckedChange={(checked) => handleToggleValue(option, !!checked)}
-                  />
-                  <label htmlFor={`lead-filter-${option}`} className="text-sm cursor-pointer">
-                    {option}
-                  </label>
-                </div>
-              );
-            })
+            fieldOptions.map(option => (
+              <div key={option} className="flex items-center gap-2">
+                <Checkbox
+                  id={`lead-filter-${index}-${option}`}
+                  checked={filter.selectedValues.includes(option)}
+                  onCheckedChange={(checked) => handleToggleValue(option, !!checked)}
+                />
+                <label htmlFor={`lead-filter-${index}-${option}`} className="text-sm cursor-pointer">
+                  {option}
+                </label>
+              </div>
+            ))
           )}
         </div>
       )}
 
-      {selectedFieldId && !loadingOptions && fieldOptions.length === 0 && (
-        <p className="text-xs text-muted-foreground">Nenhuma opção encontrada para este campo.</p>
+      {filter.fieldId && !loadingOptions && fieldOptions.length === 0 && (
+        <p className="text-xs text-muted-foreground">Nenhuma opção encontrada.</p>
+      )}
+    </div>
+  );
+}
+
+export function LeadFieldFilterSection({ filters, onFiltersChange }: LeadFieldFilterSectionProps) {
+  const usedFieldIds = new Set(filters.map(f => f.fieldId).filter(Boolean));
+
+  const handleUpdate = (index: number, filter: FieldFilter) => {
+    const newFilters = [...filters];
+    newFilters[index] = filter;
+    onFiltersChange(newFilters);
+  };
+
+  const handleRemove = (index: number) => {
+    onFiltersChange(filters.filter((_, i) => i !== index));
+  };
+
+  const handleAdd = () => {
+    onFiltersChange([...filters, { fieldId: '', fieldName: '', selectedValues: [] }]);
+  };
+
+  const canAddMore = usedFieldIds.size < LEAD_FIELDS.length;
+
+  return (
+    <div className="space-y-3">
+      <Label className="text-base font-medium">Filtro por Lead</Label>
+      <p className="text-xs text-muted-foreground">
+        Filtre os dados por campos do Lead. Múltiplos filtros usam lógica AND.
+      </p>
+
+      {filters.map((filter, index) => (
+        <SingleLeadFilter
+          key={index}
+          filter={filter}
+          index={index}
+          usedFieldIds={usedFieldIds}
+          onUpdate={handleUpdate}
+          onRemove={handleRemove}
+        />
+      ))}
+
+      {canAddMore && (
+        <Button variant="outline" size="sm" className="w-full" onClick={handleAdd}>
+          <Plus className="h-3 w-3 mr-1" />
+          Adicionar filtro de Lead
+        </Button>
       )}
 
       <Separator />

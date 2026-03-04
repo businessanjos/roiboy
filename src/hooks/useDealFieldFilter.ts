@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { VisualConfig } from "@/components/insights/visual-builder/types";
+import { VisualConfig, FieldFilter } from "@/components/insights/visual-builder/types";
 
 /**
  * Filters deal records by deal custom field values.
@@ -104,4 +104,22 @@ export async function filterByDealField<T extends { id: string }>(
   }
 
   return records.filter(r => matchingDealIds.has(r.id));
+}
+
+/**
+ * Apply multiple deal field filters sequentially (AND logic).
+ * Each filter reduces the result set further.
+ */
+export async function filterByDealFields<T extends { id: string }>(
+  records: T[],
+  accountId: string,
+  filters: FieldFilter[]
+): Promise<T[]> {
+  let result = records;
+  for (const filter of filters) {
+    if (filter.selectedValues?.length > 0) {
+      result = await filterByDealField(result, accountId, filter);
+    }
+  }
+  return result;
 }

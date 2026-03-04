@@ -2,11 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
-import { VisualConfig } from "@/components/insights/visual-builder/types";
+import { VisualConfig, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
 import { format, parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { filterByLeadField } from "@/hooks/useLeadFieldFilter";
-import { filterByDealField } from "@/hooks/useDealFieldFilter";
+import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
+import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 
 export interface DrilldownRecord {
   id: string;
@@ -127,17 +127,19 @@ async function fetchDealsRecords(
 
   let filteredData = data || [];
 
-  // Apply leadFieldFilter if configured (deals have lead_id)
-  if (config.leadFieldFilter?.fieldId && config.leadFieldFilter?.selectedValues?.length) {
-    filteredData = await filterByLeadField(
+  // Apply lead field filters if configured (AND logic)
+  const leadFilters = getLeadFilters(config);
+  if (leadFilters.length > 0) {
+    filteredData = await filterByLeadFields(
       filteredData.map((d: any) => ({ ...d, lead_id: d.lead_id })),
-      accountId, config.leadFieldFilter, 'deals'
+      accountId, leadFilters, 'deals'
     ) as any[];
   }
 
-  // Apply dealFieldFilter if configured
-  if (config.dealFieldFilter?.fieldId && config.dealFieldFilter?.selectedValues?.length) {
-    filteredData = await filterByDealField(filteredData, accountId, config.dealFieldFilter) as any[];
+  // Apply deal field filters if configured (AND logic)
+  const dealFilters = getDealFilters(config);
+  if (dealFilters.length > 0) {
+    filteredData = await filterByDealFields(filteredData, accountId, dealFilters) as any[];
   }
 
   // Apply hiddenCategories filter
@@ -213,9 +215,10 @@ async function fetchLeadsRecords(
 
   let filteredData = allData;
 
-  // Apply leadFieldFilter if configured
-  if (config.leadFieldFilter?.fieldId && config.leadFieldFilter?.selectedValues?.length) {
-    filteredData = await filterByLeadField(filteredData, accountId, config.leadFieldFilter, 'leads');
+  // Apply lead field filters if configured (AND logic)
+  const leadFilters = getLeadFilters(config);
+  if (leadFilters.length > 0) {
+    filteredData = await filterByLeadFields(filteredData, accountId, leadFilters, 'leads');
   }
 
   // Apply hiddenCategories filter
