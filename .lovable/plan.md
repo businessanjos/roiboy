@@ -1,23 +1,41 @@
 
-
-## Correção: Ocultar rótulos que não cabem nos segmentos
+## Correção: Exportação de negócios com campos personalizados incompletos
 
 ### Problema
-A função `renderInsideLabel` só verifica `width < 50` para barras horizontais. No modo vertical, o espaço relevante é a `height` do segmento, e mesmo para horizontal, 50px pode ser insuficiente para textos longos. Resultado: rótulos espremidos e ilegíveis.
+A função `resolveLabel` no `PipelineExportDialog.tsx` só trata corretamente `select`, `multi_select`, `boolean` e `currency`. Campos como `location`, `user`, `multi_instagram` e `instagram` caem no caso default (`String(rawValue ?? "")`), que:
+- Para `location`: produz `[object Object]` ou string vazia (JSON object com `formatted_address`, `city`, `state`)
+- Para `user`: produz IDs de usuário em vez de nomes
+- Para `multi_instagram`: pode não formatar corretamente o array
+
+Além disso, o campo "Item da Venda" (product) armazena um `value_text` com o ID do produto, mas não é resolvido para o nome do produto.
 
 ### Solução
-Atualizar `renderInsideLabel` em `StackedHorizontalBarChart.tsx` para verificar **ambas** as dimensões — tanto `width` quanto `height` — garantindo que o rótulo só apareça se houver espaço suficiente:
+Atualizar `resolveLabel` para tratar todos os tipos de campo corretamente, usando a mesma lógica já provada em `formatFieldValueForTimeline` (do `dealToClientContractMapping.ts`):
 
 ```typescript
-const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMultiplier: number) => {
-  const { x, y, width, height, value } = props;
-  const minWidth = 40 * fontMultiplier;
-  const minHeight = 18 * fontMultiplier;
-  if (!value || value === 0 || width < minWidth || height < minHeight) return null;
-  // ... render text
+const resolveLabel = (field: CustomFieldDef, rawValue: any): string => {
+  if (rawValue == null) return "";
+  switch (field.field_type) {
+    case "select": // resolve option label
+    case "multi_select": // resolve option labels, join
+    case "boolean": // Sim/Não
+    case "currency": // R$ format
+    case "location": // formatted_address ou city, state
+    case "user": // resolve user names from usersMap
+    case "multi_instagram": // join array
+    case "instagram": // direct text
+    case "text": // direct text
+    case "number": // to string
+    case "date": // already formatted before reaching here
+  }
 };
 ```
 
-### Arquivo afetado
-- `src/components/insights/visuals/StackedHorizontalBarChart.tsx` — linha 67
+Tratamentos específicos:
+1. **location**: Extrair `formatted_address` ou `city, state` do objeto JSON
+2. **user**: Resolver IDs de usuário para nomes via `usersMap`
+3. **multi_instagram**: Join do array com ", "
+4. **Item da Venda**: Resolver ID do produto para nome via `productsMap`
 
+### Arquivo afetado
+- `src/components/sales/PipelineExportDialog.tsx` — função `resolveLabel` (linhas 168-191)
