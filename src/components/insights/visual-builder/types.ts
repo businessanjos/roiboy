@@ -81,6 +81,12 @@ export interface VisualConfig {
   leadFieldFilters?: FieldFilter[];
   // Multiple deal field filters (AND logic)
   dealFieldFilters?: FieldFilter[];
+  // Custom field breakdown/segmentation for stacked charts
+  stackByCustomField?: {
+    fieldId: string;
+    fieldName: string;
+    source: 'lead' | 'deal';
+  };
   // Table configuration
   tableConfig?: {
     columns: string[];
