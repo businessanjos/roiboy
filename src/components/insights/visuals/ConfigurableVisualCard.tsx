@@ -39,6 +39,7 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
   // Days elapsed gauge doesn't need data from the database
   const isGaugeDaysElapsed = chartType === 'gauge' && config?.gaugeConfig?.subType === 'days_elapsed';
   const isStacked = (chartType === 'bar_stacked' && !!config?.stackBy) || !!config?.stackByCustomField;
+  const effectiveChartType = isStacked && (chartType === 'bar' || chartType === 'bar_horizontal') ? 'bar_stacked' : chartType;
   const isBubbleMap = chartType === 'bubble_map';
   const isDataTable = chartType === 'data_table';
 
@@ -213,7 +214,7 @@ export function ConfigurableVisualCard({ visual }: ConfigurableVisualCardProps) 
           </CardHeader>
           <CardContent className="flex-1 min-h-0 overflow-auto">
             <ConfigurableChart
-              type={chartType}
+              type={effectiveChartType}
               data={processedData}
               formatting={config.formatting || { type: 'number' as FormatType, decimals: 0 }}
               appearance={config.appearance || DEFAULT_APPEARANCE}
