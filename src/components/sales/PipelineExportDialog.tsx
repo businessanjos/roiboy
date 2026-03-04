@@ -201,13 +201,14 @@ export function PipelineExportDialog({
       // 2. Fetch all deal_field_values in chunks
       const dealIds = allDeals.map((d) => d.id);
       let allFieldValues: any[] = [];
-      const CHUNK = 200;
+      const CHUNK = 50;
       for (let i = 0; i < dealIds.length; i += CHUNK) {
         const chunk = dealIds.slice(i, i + CHUNK);
         const { data } = await supabase
           .from("deal_field_values")
           .select("deal_id, field_id, value_text, value_number, value_boolean, value_date, value_json")
-          .in("deal_id", chunk);
+          .in("deal_id", chunk)
+          .limit(10000);
         allFieldValues = allFieldValues.concat(data || []);
       }
 
