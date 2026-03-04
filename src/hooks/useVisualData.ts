@@ -74,10 +74,10 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
       }
 
       // For funnel with stage_name, sort by pipeline display_order
-      if (chartType === 'funnel' && dimension.field === 'stage_name' && result.length > 0) {
+      if (chartType === 'funnel' && dimension.field === 'stage_name') {
         const { data: stages, error: stagesError } = await supabase
           .from('deal_stages')
-          .select('name, display_order')
+          .select('name, display_order, color')
           .eq('account_id', currentUser.account_id)
           .order('display_order', { ascending: true });
 
@@ -85,6 +85,21 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
         if (stages && stages.length > 0) {
           const orderMap = new Map(stages.map(s => [s.name, s.display_order]));
+          result.sort((a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
+
+          // Ensure ALL pipeline stages appear, even with 0 deals
+          const existingNames = new Set(result.map(r => r.name));
+          for (const stage of stages) {
+            if (!existingNames.has(stage.name)) {
+              result.push({
+                name: stage.name,
+                value: 0,
+                count: 0,
+                color: stage.color || '#6366f1',
+              });
+            }
+          }
+          // Re-sort after adding missing stages
           result.sort((a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
         }
 
