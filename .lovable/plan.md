@@ -1,41 +1,32 @@
 
-## Correção: Exportação de negócios com campos personalizados incompletos
 
-### Problema
-A função `resolveLabel` no `PipelineExportDialog.tsx` só trata corretamente `select`, `multi_select`, `boolean` e `currency`. Campos como `location`, `user`, `multi_instagram` e `instagram` caem no caso default (`String(rawValue ?? "")`), que:
-- Para `location`: produz `[object Object]` ou string vazia (JSON object com `formatted_address`, `city`, `state`)
-- Para `user`: produz IDs de usuário em vez de nomes
-- Para `multi_instagram`: pode não formatar corretamente o array
+## Correção: Dados faltando na exportação do pipeline
 
-Além disso, o campo "Item da Venda" (product) armazena um `value_text` com o ID do produto, mas não é resolvido para o nome do produto.
+### Causa raiz
+
+Na linha 207, a query `deal_field_values` busca valores em chunks de 200 deals, mas **sem especificar `.limit()`**. O Supabase aplica um limite padrão de **1000 linhas por query**.
+
+Com ~15-20 campos personalizados por negócio, cada chunk de 200 deals gera 3000-4000 linhas de field values. Apenas os primeiros 1000 são retornados — o restante é **silenciosamente descartado**, resultando em campos vazios na exportação.
 
 ### Solução
-Atualizar `resolveLabel` para tratar todos os tipos de campo corretamente, usando a mesma lógica já provada em `formatFieldValueForTimeline` (do `dealToClientContractMapping.ts`):
+
+Duas mudanças em `src/components/sales/PipelineExportDialog.tsx`:
+
+1. **Reduzir o tamanho do chunk** de 200 para 50 deals por iteração
+2. **Adicionar `.limit(10000)`** na query para garantir que todos os valores sejam retornados
 
 ```typescript
-const resolveLabel = (field: CustomFieldDef, rawValue: any): string => {
-  if (rawValue == null) return "";
-  switch (field.field_type) {
-    case "select": // resolve option label
-    case "multi_select": // resolve option labels, join
-    case "boolean": // Sim/Não
-    case "currency": // R$ format
-    case "location": // formatted_address ou city, state
-    case "user": // resolve user names from usersMap
-    case "multi_instagram": // join array
-    case "instagram": // direct text
-    case "text": // direct text
-    case "number": // to string
-    case "date": // already formatted before reaching here
-  }
-};
+// Linha 204: mudar CHUNK de 200 para 50
+const CHUNK = 50;
+
+// Linha 207-210: adicionar .limit(10000)
+const { data } = await supabase
+  .from("deal_field_values")
+  .select("deal_id, field_id, value_text, value_number, value_boolean, value_date, value_json")
+  .in("deal_id", chunk)
+  .limit(10000);
 ```
 
-Tratamentos específicos:
-1. **location**: Extrair `formatted_address` ou `city, state` do objeto JSON
-2. **user**: Resolver IDs de usuário para nomes via `usersMap`
-3. **multi_instagram**: Join do array com ", "
-4. **Item da Venda**: Resolver ID do produto para nome via `productsMap`
-
 ### Arquivo afetado
-- `src/components/sales/PipelineExportDialog.tsx` — função `resolveLabel` (linhas 168-191)
+- `src/components/sales/PipelineExportDialog.tsx` — linhas 204-210
+
