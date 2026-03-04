@@ -405,6 +405,7 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
           clientId,
           clientName,
           linkPath: `/clients/${clientId}#comment-${newFollowup.id}`,
+          sectorId: "operacoes",
         });
       }
 
@@ -458,6 +459,7 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
           clientId,
           clientName,
           linkPath: `/clients/${clientId}#comment-${newFollowup.id}`,
+          sectorId: "operacoes",
         });
       }
 

@@ -7277,6 +7277,7 @@ export type Database = {
           id: string
           is_read: boolean
           link: string | null
+          sector_id: string | null
           source_id: string | null
           source_type: string | null
           title: string
@@ -7291,6 +7292,7 @@ export type Database = {
           id?: string
           is_read?: boolean
           link?: string | null
+          sector_id?: string | null
           source_id?: string | null
           source_type?: string | null
           title: string
@@ -7305,6 +7307,7 @@ export type Database = {
           id?: string
           is_read?: boolean
           link?: string | null
+          sector_id?: string | null
           source_id?: string | null
           source_type?: string | null
           title?: string
@@ -7763,6 +7766,7 @@ export type Database = {
           created_at: string
           id: string
           notify_mentions: boolean
+          notify_sectors: Json | null
           notify_system_alerts: boolean
           notify_task_assigned: boolean
           notify_zapp_messages: boolean
@@ -7774,6 +7778,7 @@ export type Database = {
           created_at?: string
           id?: string
           notify_mentions?: boolean
+          notify_sectors?: Json | null
           notify_system_alerts?: boolean
           notify_task_assigned?: boolean
           notify_zapp_messages?: boolean
@@ -7785,6 +7790,7 @@ export type Database = {
           created_at?: string
           id?: string
           notify_mentions?: boolean
+          notify_sectors?: Json | null
           notify_system_alerts?: boolean
           notify_task_assigned?: boolean
           notify_zapp_messages?: boolean

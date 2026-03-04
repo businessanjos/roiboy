@@ -181,6 +181,7 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
           clientId,
           clientName,
           linkPath: `/clients/${clientId}?tab=vendas#comment-${newFollowup.id}`,
+          sectorId: "vendas",
         });
       }
 
