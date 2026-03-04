@@ -16,6 +16,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
+import { PushNotificationPreferences } from "@/components/notifications/PushNotificationPreferences";
 
 const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) {
   const navigate = useNavigate();
@@ -88,6 +89,11 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
           )}
         </div>
       </div>
+
+      {/* Push notification preferences */}
+      {notificationPermission === "granted" && (
+        <PushNotificationPreferences />
+      )}
 
       {unreadCount > 0 && (
         <div className="flex justify-end">
