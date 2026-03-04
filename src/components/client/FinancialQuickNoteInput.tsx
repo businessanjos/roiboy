@@ -66,6 +66,7 @@ export function FinancialQuickNoteInput({
           clientId,
           clientName,
           linkPath: `/clients/${clientId}?tab=financeiro#comment-${newFollowup.id}`,
+          sectorId: "financeiro",
         });
       }
 

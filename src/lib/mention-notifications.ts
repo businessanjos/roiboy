@@ -18,6 +18,7 @@ interface CreateMentionNotificationsParams {
   clientId: string;
   clientName?: string;
   linkPath: string;
+  sectorId?: string;
 }
 
 /**
@@ -32,6 +33,7 @@ export async function createMentionNotifications({
   clientId,
   clientName,
   linkPath,
+  sectorId,
 }: CreateMentionNotificationsParams) {
   if (!currentUser.account_id || mentionedUsers.length === 0) return;
 
@@ -51,6 +53,7 @@ export async function createMentionNotifications({
       triggered_by_user_id: currentUser.id,
       source_type: "client_followup",
       source_id: followupId,
+      sector_id: sectorId || null,
     }));
 
     const { error } = await supabase.from("notifications").insert(notificationsToCreate);

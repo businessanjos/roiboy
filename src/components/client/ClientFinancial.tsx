@@ -444,6 +444,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
           clientId,
           clientName,
           linkPath: `/clients/${clientId}?tab=financeiro#comment-${newFollowup.id}`,
+          sectorId: "financeiro",
         });
       }
 
