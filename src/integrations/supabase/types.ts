@@ -7757,6 +7757,57 @@ export type Database = {
           },
         ]
       }
+      push_notification_preferences: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          notify_mentions: boolean
+          notify_system_alerts: boolean
+          notify_task_assigned: boolean
+          notify_zapp_messages: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          notify_mentions?: boolean
+          notify_system_alerts?: boolean
+          notify_task_assigned?: boolean
+          notify_zapp_messages?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          notify_mentions?: boolean
+          notify_system_alerts?: boolean
+          notify_task_assigned?: boolean
+          notify_zapp_messages?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_notification_preferences_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_notification_preferences_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       push_subscriptions: {
         Row: {
           account_id: string
