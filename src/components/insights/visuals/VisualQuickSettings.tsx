@@ -214,14 +214,14 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
           .from('custom_fields' as any)
           .select('id, name')
           .eq('account_id', currentUser.account_id)
-          .eq('entity', 'deal')
+          .eq('show_in_deals', true)
           .eq('is_active', true)
           .order('display_order'),
         supabase
           .from('custom_fields' as any)
           .select('id, name')
           .eq('account_id', currentUser.account_id)
-          .eq('entity', 'lead')
+          .eq('show_in_leads', true)
           .eq('is_active', true)
           .order('display_order'),
       ]);
