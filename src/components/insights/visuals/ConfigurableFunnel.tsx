@@ -38,7 +38,7 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
   // Build cumulative counts from bottom to top (excluding Ganhos)
   const cumulativeCounts: number[] = new Array(regularData.length);
   for (let i = regularData.length - 1; i >= 0; i--) {
-    const below = i < regularData.length - 1 ? cumulativeCounts[i + 1] : 0;
+    const below = i < regularData.length - 1 ? cumulativeCounts[i + 1] : (ganhosItem?.value || 0);
     cumulativeCounts[i] = regularData[i].value + below;
   }
 
