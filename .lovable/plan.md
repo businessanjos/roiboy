@@ -1,98 +1,101 @@
 
 
-## Múltiplos Filtros por Lead e Negócio Simultâneos
+## Segmentação por Campo Personalizado (Breakdown/Legenda)
 
-### Problema atual
-Cada visual suporta apenas **um** filtro por lead e **um** filtro por negócio. O usuário precisa filtrar por múltiplos campos personalizados simultaneamente (ex: Canal = "Outbound" **E** MQL = "Sim").
+### O que será feito
 
-### Solução
+Adicionar uma opção em "Ajustes do Visual" para selecionar um campo personalizado (de Lead ou Negócio) como **segmentação/legenda**. Quando selecionado, o gráfico de barras se transforma em barras empilhadas, mostrando a composição por valores do campo (ex: MQL = "SIM - Acima de 30k" vs "NÃO - Abaixo de 30k").
 
-Migrar de objetos únicos (`leadFieldFilter`, `dealFieldFilter`) para arrays (`leadFieldFilters`, `dealFieldFilters`), com retrocompatibilidade para configs existentes. Todos os filtros serão aplicados em **interseção (AND)**: o registro precisa atender a **todos** os filtros configurados.
+### Arquitetura
+
+Atualmente, `stackBy` no `VisualConfig` aceita apenas campos built-in (`responsible_name`, `canal`, etc.) e é usado exclusivamente com `chart_type = 'bar_stacked'`. A nova funcionalidade precisa:
+
+1. Permitir que **qualquer gráfico de barras/linha** ative um breakdown por campo personalizado
+2. Buscar os valores do campo customizado e injetá-los nos registros antes de agrupar
 
 ### Alterações
 
-#### 1. Tipo `VisualConfig` (`src/components/insights/visual-builder/types.ts`)
-- Adicionar campos `leadFieldFilters` e `dealFieldFilters` como arrays opcionais do mesmo tipo de objeto
-- Manter os campos legados `leadFieldFilter` / `dealFieldFilter` para retrocompatibilidade
+#### 1. `VisualConfig` — novo campo `stackByCustomField`
 
 ```typescript
-// Novo tipo para filtro individual
-export interface FieldFilter {
+stackByCustomField?: {
   fieldId: string;
   fieldName: string;
-  selectedValues: string[];
-}
-
-// Novos campos na VisualConfig
-leadFieldFilters?: FieldFilter[];
-dealFieldFilters?: FieldFilter[];
+  source: 'lead' | 'deal'; // de qual entidade vem o campo
+};
 ```
 
-#### 2. Funções de filtragem (`useLeadFieldFilter.ts`, `useDealFieldFilter.ts`)
-- Adicionar novas funções `filterByLeadFields` e `filterByDealFields` que recebem um **array** de filtros e aplicam cada um sequencialmente (AND logic — cada filtro reduz o conjunto de resultados)
-- Manter as funções originais intactas para não quebrar nada
+Quando definido, o visual será tratado como stacked independentemente do `chart_type` original.
 
+#### 2. `useStackedVisualData.ts` — suporte a custom field como série
+
+Na função `fetchStackedDealsData`:
+- Quando `config.stackByCustomField` está definido (e `source === 'deal'`), buscar `deal_field_values` para o campo, enriquecer cada deal com o label do valor, e usar como série
+- Quando `source === 'lead'`, buscar `lead_field_values` via `lead_id` dos deals
+- Para `fetchStackedLeadsData`: mesma lógica invertida
+
+Nova função genérica de enriquecimento:
 ```typescript
-export async function filterByDealFields<T extends { id: string }>(
-  records: T[],
+async function enrichWithCustomField(
+  records: any[],
   accountId: string,
-  filters: FieldFilter[]
-): Promise<T[]> {
-  let result = records;
-  for (const filter of filters) {
-    if (filter.selectedValues?.length > 0) {
-      result = await filterByDealField(result, accountId, filter);
-    }
+  fieldId: string,
+  source: 'lead' | 'deal',
+  idField: string // 'id' para deals, 'id' para leads
+): Promise<any[]>
+```
+
+Essa função busca `deal_field_values` ou `lead_field_values`, resolve labels de select/multi_select a partir de `custom_fields.options`, e injeta `_custom_stack_label` em cada registro.
+
+#### 3. `ConfigurableVisualCard.tsx` — ativar modo stacked
+
+Alterar a detecção de `isStacked`:
+```typescript
+const isStacked = (chartType === 'bar_stacked' && !!config?.stackBy) 
+  || !!config?.stackByCustomField;
+```
+
+Isso faz com que o visual use `useStackedVisualData` automaticamente quando um campo personalizado for selecionado.
+
+#### 4. `VisualQuickSettings.tsx` — nova seção de UI
+
+Adicionar seção "Segmentar por Campo Personalizado" (antes da aparência):
+- Dropdown para selecionar a origem: "Campo de Lead" / "Campo de Negócio"
+- Dropdown para selecionar qual campo personalizado
+- Botão de limpar para remover a segmentação
+- Visível apenas para chart types que suportam stacking (bar, bar_horizontal, line, bar_stacked)
+
+Estado local:
+```typescript
+const [stackByCustomField, setStackByCustomField] = useState(config?.stackByCustomField || null);
+```
+
+No `handleSave`, incluir no `newConfig`:
+```typescript
+stackByCustomField: stackByCustomField || undefined,
+// Quando custom field está ativo, garantir que stackBy também esteja definido
+stackBy: stackByCustomField ? '_custom' : config.stackBy,
+```
+
+#### 5. `useStackedVisualData.ts` — lógica de agrupamento
+
+Na seção de agrupamento (deals, linhas ~183-207), substituir o acesso direto a `sellerName` por uma função genérica:
+
+```typescript
+const getSeriesValue = (record: any): string => {
+  if (config.stackByCustomField) {
+    return record._custom_stack_label || 'Não informado';
   }
-  return result;
-}
+  return (record.users as any)?.name || 'Sem Responsável';
+};
 ```
 
-#### 3. Hooks de dados (`useVisualData.ts`, `useStackedVisualData.ts`, `useVisualDrilldown.ts`)
-- Criar helper que normaliza config legada + nova para array unificado:
-```typescript
-function getLeadFilters(config: VisualConfig): FieldFilter[] {
-  if (config.leadFieldFilters?.length) return config.leadFieldFilters;
-  if (config.leadFieldFilter?.fieldId) return [config.leadFieldFilter];
-  return [];
-}
-```
-- Substituir chamadas individuais de `filterByLeadField`/`filterByDealField` por `filterByLeadFields`/`filterByDealFields` usando o array normalizado
-
-#### 4. UI — Seções de filtro (`LeadFieldFilterSection.tsx`, `DealFieldFilterSection.tsx`)
-- Refatorar para receber/emitir um **array** de filtros
-- Cada filtro aparece como uma linha com seletor de campo + checkboxes de valores + botão de remover
-- Botão "Adicionar filtro" para inserir mais linhas
-- Quando um campo já está selecionado em um filtro, ele não aparece nas opções dos outros (evitar duplicatas)
-
-#### 5. `VisualQuickSettings.tsx`
-- Migrar estado de filtro para arrays:
-```typescript
-const [leadFilters, setLeadFilters] = useState<FieldFilter[]>(
-  getLeadFilters(config) // normaliza legado
-);
-const [dealFilters, setDealFilters] = useState<FieldFilter[]>(
-  getDealFilters(config)
-);
-```
-- No `handleSave`, salvar em `leadFieldFilters` / `dealFieldFilters` (novos campos array)
-- Não salvar mais nos campos legados singulares (configs antigas continuam sendo lidas pelo helper de normalização)
-
-### Garantias de não-conflito
-
-1. **Aplicação sequencial (AND):** cada filtro reduz o conjunto — `filterByDealField(filterByDealField(records, f1), f2)` — impossível de se anularem
-2. **Retrocompatibilidade:** helper de normalização lê tanto o formato antigo (objeto) quanto o novo (array)
-3. **Sem duplicata de campo:** a UI impede selecionar o mesmo campo em dois filtros diferentes
-4. **Filtros de lead e deal são independentes:** lead filters rodam sobre `lead_id`, deal filters sobre `deal_id` — operam em eixos diferentes, sem interferência
+Mesma alteração para leads (linhas ~311 e ~393).
 
 ### Arquivos afetados
-- `src/components/insights/visual-builder/types.ts`
-- `src/hooks/useLeadFieldFilter.ts`
-- `src/hooks/useDealFieldFilter.ts`
-- `src/hooks/useVisualData.ts`
-- `src/hooks/useStackedVisualData.ts`
-- `src/hooks/useVisualDrilldown.ts`
-- `src/components/insights/visuals/LeadFieldFilterSection.tsx`
-- `src/components/insights/visuals/DealFieldFilterSection.tsx`
-- `src/components/insights/visuals/VisualQuickSettings.tsx`
+
+- `src/components/insights/visual-builder/types.ts` — adicionar `stackByCustomField` ao `VisualConfig`
+- `src/hooks/useStackedVisualData.ts` — enriquecer registros com custom field e usar como série
+- `src/components/insights/visuals/ConfigurableVisualCard.tsx` — expandir detecção de `isStacked`
+- `src/components/insights/visuals/VisualQuickSettings.tsx` — nova seção de UI para seleção do campo
 
