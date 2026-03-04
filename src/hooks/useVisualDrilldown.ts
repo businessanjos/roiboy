@@ -77,15 +77,24 @@ async function fetchDealsRecords(
     `)
     .eq('account_id', accountId);
 
-  // Apply status filter from visual config (e.g., 'won' for won deals scorecard)
-  if (config.statusFilter) {
-    query = query.eq('status', config.statusFilter);
+  // Infer status filter if not explicitly set (matches useVisualData logic)
+  const effectiveStatusFilter = config.statusFilter ?? inferStatusFilter(config.measure, config.dimension);
+
+  if (effectiveStatusFilter) {
+    query = query.eq('status', effectiveStatusFilter);
   }
 
-  // Determine which date field to use for filters based on dimension
-  const dateFilterField = config.dimension?.type === 'date' && config.dimension.field 
-    ? config.dimension.field 
-    : 'created_at';
+  // Determine which date field to use for filters
+  let dateFilterField: string;
+  if (config.dimension?.type === 'date' && config.dimension.field) {
+    dateFilterField = config.dimension.field;
+  } else if (effectiveStatusFilter === 'won') {
+    dateFilterField = 'won_at';
+  } else if (effectiveStatusFilter === 'lost') {
+    dateFilterField = 'lost_at';
+  } else {
+    dateFilterField = 'created_at';
+  }
 
   // For specific date fields (won_at, lost_at), filter out records with null values
   if (dateFilterField === 'won_at') {
@@ -317,6 +326,17 @@ function formatDateGroup(dateString: string, grouping: string): string {
   } catch {
     return 'Data Inválida';
   }
+}
+
+function inferStatusFilter(
+  measure: VisualConfig['measure'],
+  dimension: VisualConfig['dimension']
+): 'won' | 'lost' | undefined {
+  if (dimension.field !== '_total') return undefined;
+  if (measure.field === 'value' && (measure.aggregation === 'sum' || measure.aggregation === 'avg')) {
+    return 'won';
+  }
+  return undefined;
 }
 
 async function fetchTasksRecords(
