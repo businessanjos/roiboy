@@ -1,29 +1,77 @@
 
 
-## Problema: Filtros do visual não são aplicados no drilldown (Explorar Dados)
+## Problema: Drilldown do Scorecard de Faturamento retorna 0 registros
 
 ### Causa raiz
 
-O componente principal (`ConfigurableVisualCard`) aplica corretamente os filtros `leadFieldFilter`, `dealFieldFilter` e `hiddenCategories` nos dados do gráfico. Porém, quando o usuário clica em "Explorar Dados", o hook `useVisualDrilldown.ts` **ignora completamente esses filtros** — ele busca todos os registros sem aplicar nenhuma restrição do visual.
+O scorecard "Faturamento" é um visual de deals com `measure: { field: 'value', aggregation: 'sum' }` e `dimension: { field: '_total' }`. Existem **duas divergências críticas** entre como o visual principal (`useVisualData`) e o drilldown (`useVisualDrilldown`) buscam os dados:
 
-Resultado: o gráfico mostra apenas "Tráfego Pago" (correto), mas ao explorar os dados, aparecem leads de "Instagram" e outras fontes (incorreto).
+**1. StatusFilter não é inferido no drilldown**
+
+O visual principal usa `inferStatusFilter()` que detecta `measure.field === 'value'` + `aggregation === 'sum'` e infere `statusFilter = 'won'`. O drilldown só verifica `config.statusFilter` (valor explícito no config). Se o visual não tem `statusFilter` explícito salvo, o drilldown não filtra por status — ou filtra errado.
+
+**2. Campo de data errado no drilldown**
+
+O visual principal, quando `statusFilter === 'won'`, usa `won_at` para filtrar por data. O drilldown ignora essa lógica e sempre usa `created_at` como fallback quando a dimensão não é do tipo `date`. Isso significa que um deal ganho em março mas criado em janeiro **não aparece** quando o filtro de data é "março".
+
+```text
+Visual principal (correto):
+  statusFilter = 'won' (inferido)
+  dateField = 'won_at'
+  → Encontra o deal ganho em março ✓
+
+Drilldown (incorreto):
+  statusFilter = undefined (não inferido)
+  dateField = 'created_at'
+  → Filtra por created_at em março → deal foi criado em janeiro → 0 registros ✗
+```
 
 ### Solução
 
-Aplicar os mesmos filtros na função de drilldown:
+Aplicar a mesma lógica de inferência e seleção de campo de data no drilldown:
 
 ### Alteração — `src/hooks/useVisualDrilldown.ts`
 
-**1. Importar as funções de filtragem** (linhas 1-7):
-- Adicionar imports de `filterByLeadField` e `filterByDealField`
+**1. Adicionar a função `inferStatusFilter`** (copiar de `useVisualData.ts`):
+```typescript
+function inferStatusFilter(
+  measure: VisualConfig['measure'], 
+  dimension: VisualConfig['dimension']
+): 'won' | 'lost' | undefined {
+  if (dimension.field !== '_total') return undefined;
+  if (measure.field === 'value' && (measure.aggregation === 'sum' || measure.aggregation === 'avg')) {
+    return 'won';
+  }
+  return undefined;
+}
+```
 
-**2. `fetchLeadsRecords` (linha 139-197)** — aplicar `leadFieldFilter` e `hiddenCategories`:
-- Após buscar todos os leads, aplicar `filterByLeadField` se `config.leadFieldFilter` estiver configurado
-- Após filtrar por `groupName`, remover registros cujo grupo pertence a `hiddenCategories`
+**2. Em `fetchDealsRecords`**, calcular o `effectiveStatusFilter` e usar na query:
+```typescript
+const effectiveStatusFilter = config.statusFilter ?? inferStatusFilter(config.measure, config.dimension);
 
-**3. `fetchDealsRecords` (linha 54-137)** — aplicar `leadFieldFilter`, `dealFieldFilter` e `hiddenCategories`:
-- Após buscar todos os deals, aplicar `filterByLeadField` e `filterByDealField` se configurados
-- Remover registros de categorias ocultas
+if (effectiveStatusFilter) {
+  query = query.eq('status', effectiveStatusFilter);
+}
+```
 
-Isso garante que o drilldown respeite exatamente os mesmos filtros aplicados no visual principal.
+**3. Corrigir a seleção do campo de data** para considerar o statusFilter:
+```typescript
+let dateFilterField: string;
+if (config.dimension?.type === 'date' && config.dimension.field) {
+  dateFilterField = config.dimension.field;
+} else if (effectiveStatusFilter === 'won') {
+  dateFilterField = 'won_at';
+} else if (effectiveStatusFilter === 'lost') {
+  dateFilterField = 'lost_at';
+} else {
+  dateFilterField = 'created_at';
+}
+```
+
+### Resultado esperado
+
+- O drilldown do scorecard "Faturamento" vai encontrar exatamente os mesmos deals que o visual principal exibe
+- O campo de data correto (`won_at`) será usado para filtrar, garantindo que deals ganhos no período apareçam
+- A paridade total entre gráfico e lista de registros é mantida
 
