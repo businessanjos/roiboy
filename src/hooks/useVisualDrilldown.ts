@@ -166,6 +166,9 @@ async function fetchDealsRecords(
       responsible: deal.users?.name,
       probability: deal.probability,
       source: deal.source,
+      won_at: deal.won_at,
+      lost_at: deal.lost_at,
+      lost_reason: deal.lost_reason,
     },
   }));
 }

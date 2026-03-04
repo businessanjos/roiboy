@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { DataSourceSelect } from "./DataSourceSelect";
 import { MeasureSection } from "./MeasureSection";
@@ -19,6 +20,7 @@ import { FormattingSection } from "./FormattingSection";
 import { ChartTypeSelector } from "./ChartTypeSelector";
 import { FormulaSection } from "./FormulaSection";
 import { AppearanceSection } from "./AppearanceSection";
+import { getColumnsForDataSource, getDefaultColumns } from "../visuals/ConfigurableTable";
 import {
   DataSource,
   Aggregation,
@@ -55,6 +57,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   const [isCreating, setIsCreating] = useState(false);
   const [gaugeSubType, setGaugeSubType] = useState<GaugeSubType>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState<string>('');
+  const [tableColumns, setTableColumns] = useState<string[]>([]);
   
   // Indicator state
   const [indicatorMin, setIndicatorMin] = useState('0');
@@ -82,6 +85,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
       setCustomFormula('');
       setGaugeSubType('days_elapsed');
       setGaugeGoal('');
+      setTableColumns([]);
       setIndicatorMin('0');
       setIndicatorMax('100');
       setIndicatorMinLabel('');
@@ -99,24 +103,28 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
     setMeasureField(null);
     setDimensionField(null);
     
-    // Auto-select aggregation based on available fields
     if (dataSource) {
       const hasNumericFields = DATA_SOURCE_FIELDS[dataSource].numeric.length > 0;
       if (!hasNumericFields) {
         setAggregation('count');
       }
+      // Set default table columns when data source changes
+      setTableColumns(getDefaultColumns(dataSource));
     }
   }, [dataSource]);
 
   // Auto-generate title when selections change
   const isGauge = chartType === 'gauge';
   const isIndicator = chartType === 'indicator';
+  const isTable = chartType === 'data_table';
   
   useEffect(() => {
     if (isGauge) {
       setTitle(gaugeSubType === 'days_elapsed' ? 'Dias Corridos do Mês' : 'Faturamento x Meta');
     } else if (isIndicator && !title) {
       setTitle('Indicador');
+    } else if (isTable && dataSource && !title) {
+      setTitle('Tabela de ' + (dataSource === 'deals' ? 'Negócios' : dataSource === 'leads' ? 'Leads' : dataSource === 'tasks' ? 'Tarefas' : 'Produtos'));
     } else if (dataSource && dimensionField) {
       const generatedTitle = generateVisualTitle(
         dataSource,
@@ -126,7 +134,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
       );
       setTitle(generatedTitle);
     }
-  }, [dataSource, measureField, aggregation, dimensionField, isGauge, isIndicator, gaugeSubType]);
+  }, [dataSource, measureField, aggregation, dimensionField, isGauge, isIndicator, isTable, gaugeSubType]);
 
   // Check if dimension is a date field
   const dimensionFields = dataSource ? DATA_SOURCE_FIELDS[dataSource].dimension : [];
@@ -139,6 +147,11 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   
   const canCreate = isGauge
     ? (isGaugeDaysElapsed || (isGaugeRevenue && dataSource === 'deals')) &&
+      title.trim() !== '' &&
+      activeDashboardId !== null
+    : isTable
+    ? dataSource !== null &&
+      tableColumns.length > 0 &&
       title.trim() !== '' &&
       activeDashboardId !== null
     : isIndicator
@@ -177,6 +190,15 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
           },
           appearance: { showDataLabels: false, dateDisplayFormat: 'monthYear', colorPalette: 'professional', fillEmptyDates: false },
         };
+      } else if (isTable) {
+        config = {
+          dataSource: dataSource!,
+          measure: { field: '', aggregation: 'count' },
+          dimension: { field: '_total', type: 'text' },
+          formatting: { type: 'decimal', decimals: 0 },
+          appearance: { showDataLabels: false, dateDisplayFormat: 'monthYear', colorPalette: 'professional', fillEmptyDates: false },
+          tableConfig: { columns: tableColumns },
+        };
       } else {
         config = {
           dataSource: dataSource!,
@@ -208,7 +230,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
         title: title.trim(),
         chart_type: chartType,
         config,
-        layout: { x: 0, y: 0, w: 6, h: 4 },
+        layout: { x: 0, y: 0, w: isTable ? 12 : 6, h: isTable ? 6 : 4 },
       });
 
       onOpenChange(false);
@@ -286,6 +308,47 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
                       <p className="text-xs text-muted-foreground">
                         Você pode editar metas de outros meses nos ajustes do visual após criá-lo.
                       </p>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : isTable ? (
+              <>
+                {/* Data Source for table */}
+                <DataSourceSelect
+                  value={dataSource}
+                  onChange={setDataSource}
+                />
+
+                {dataSource && (
+                  <>
+                    <Separator />
+                    <div className="space-y-3">
+                      <Label className="text-base font-medium">Colunas da Tabela</Label>
+                      <p className="text-xs text-muted-foreground">Selecione as colunas que deseja exibir na tabela.</p>
+                      <div className="space-y-2">
+                        {getColumnsForDataSource(dataSource).map((col) => {
+                          const isChecked = tableColumns.includes(col.key);
+                          return (
+                            <div key={col.key} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`col-${col.key}`}
+                                checked={isChecked}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setTableColumns(prev => [...prev, col.key]);
+                                  } else {
+                                    setTableColumns(prev => prev.filter(k => k !== col.key));
+                                  }
+                                }}
+                              />
+                              <label htmlFor={`col-${col.key}`} className="text-sm cursor-pointer">
+                                {col.label}
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </>
                 )}

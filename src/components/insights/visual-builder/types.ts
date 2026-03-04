@@ -2,7 +2,7 @@ export type DataSource = 'deals' | 'leads' | 'products' | 'tasks';
 export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate' | 'sales_cycle';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
-export type ChartType = 'bar' | 'bar_horizontal' | 'bar_stacked' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial' | 'gauge' | 'indicator' | 'bubble_map' | 'funnel';
+export type ChartType = 'bar' | 'bar_horizontal' | 'bar_stacked' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial' | 'gauge' | 'indicator' | 'bubble_map' | 'funnel' | 'data_table';
 export type GaugeSubType = 'days_elapsed' | 'revenue_vs_goal';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
 export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature';
@@ -77,6 +77,10 @@ export interface VisualConfig {
     fieldName: string;     // Nome do campo para exibição
     selectedValues: string[]; // Labels selecionados
   };
+  // Table configuration
+  tableConfig?: {
+    columns: string[];
+  };
 }
 
 // Data source options
@@ -124,6 +128,7 @@ export const CHART_TYPE_OPTIONS: { value: ChartType; label: string }[] = [
   { value: 'indicator', label: 'Indicador' },
   { value: 'bubble_map', label: 'Mapa de Bolhas' },
   { value: 'funnel', label: 'Funil' },
+  { value: 'data_table', label: 'Tabela' },
 ];
 
 // Date display format options
