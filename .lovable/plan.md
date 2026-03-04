@@ -1,29 +1,21 @@
 
 
-## Adicionar "Tabela" ao modal de criação de visuais
+## Exibir título real do negócio na tabela
 
-O tipo `data_table` foi registrado no `VisualBuilderSheet` (editor avançado), mas o modal principal de criação (`AddVisualModal.tsx`) tem sua própria lista de tipos separada que não inclui a tabela.
+### Problema
+O fetch de deals no `useVisualDrilldown.ts` não inclui o campo `title` na query do Supabase, e o mapeamento usa `Negócio #${id.slice(0,8)}` como fallback fixo.
 
-### Alteração — `src/components/insights/AddVisualModal.tsx`
+### Alteração — `src/hooks/useVisualDrilldown.ts`
 
-1. **Importar ícone `Table`** de lucide-react (linha 13)
-
-2. **Adicionar `"data_table"` ao tipo local `ChartType`** (linha 23)
-
-3. **Adicionar entrada na lista `CHART_TYPES`** (após o funil, linha 39):
-   ```typescript
-   { value: "data_table", label: "Tabela", description: "Exibir registros detalhados em formato de tabela", icon: Table }
+1. **Adicionar `title` ao select** da query de deals (linha 64):
+   ```sql
+   id, title, lead_id, value, ...
    ```
 
-4. **Definir `totalSteps = 2`** para `data_table` (linha 162) — a tabela não precisa de métrica/agrupamento, apenas selecionar colunas e título
+2. **Usar o título real no mapeamento** (linha 160):
+   ```typescript
+   name: deal.title || `Negócio #${deal.id.slice(0, 8)}`,
+   ```
 
-5. **Adicionar lógica de criação** no `handleCreate` para `data_table`:
-   - Criar config com `dataSource: 'deals'`, dimensão genérica
-   - Incluir `tableConfig.columns` com colunas padrão
-   - Layout maior: `w: 12, h: 6`
-
-6. **Adicionar UI do step 2** para `data_table`:
-   - Seleção de fonte de dados (Negócios, Leads, Tarefas, Produtos)
-   - Checkboxes para selecionar colunas disponíveis
-   - Campo de título
+Apenas essas duas linhas precisam mudar. O campo `title` existe na tabela `deals` e será usado quando disponível, mantendo o fallback para deals sem título.
 
