@@ -64,7 +64,9 @@ const CustomTooltip = ({ active, payload, label, formatting, singleSeries }: any
 
 const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMultiplier: number) => {
   const { x, y, width, height, value } = props;
-  if (!value || value === 0 || width < 50) return null;
+  const minWidth = 40 * fontMultiplier;
+  const minHeight = 18 * fontMultiplier;
+  if (!value || value === 0 || width < minWidth || height < minHeight) return null;
 
   return (
     <text
