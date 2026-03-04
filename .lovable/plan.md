@@ -1,47 +1,29 @@
 
 
-## Problema
+## Problema: Filtros do visual não são aplicados no drilldown (Explorar Dados)
 
-O funil mostra "Ganhos: 1" mas todas as etapas anteriores aparecem com 0. Isso é logicamente impossível — se um negócio foi ganho, ele obrigatoriamente passou por todas as etapas anteriores.
+### Causa raiz
 
-## Causa raiz
+O componente principal (`ConfigurableVisualCard`) aplica corretamente os filtros `leadFieldFilter`, `dealFieldFilter` e `hiddenCategories` nos dados do gráfico. Porém, quando o usuário clica em "Explorar Dados", o hook `useVisualDrilldown.ts` **ignora completamente esses filtros** — ele busca todos os registros sem aplicar nenhuma restrição do visual.
 
-Nos componentes `ConfigurableFunnel.tsx` e `SalesFunnelChart.tsx`, a lógica de contagem cumulativa (de baixo para cima) **exclui "Ganhos"** da base do acumulador. A última etapa regular começa com base `0`, então se nenhuma etapa regular tem deals no período, os valores ficam todos zerados — mesmo que exista 1 deal ganho.
+Resultado: o gráfico mostra apenas "Tráfego Pago" (correto), mas ao explorar os dados, aparecem leads de "Instagram" e outras fontes (incorreto).
 
-```text
-Lógica atual (base = 0):
-Follow Up:    0 + 0 = 0
-Proposta:     0 + 0 = 0
-...todas = 0
-Ganhos:       1  (isolado, não propaga)
+### Solução
 
-Lógica correta (base = Ganhos):
-Follow Up:    0 + 1 = 1
-Proposta:     0 + 1 = 1
-...todas ≥ 1
-Ganhos:       1
-```
+Aplicar os mesmos filtros na função de drilldown:
 
-## Alterações
+### Alteração — `src/hooks/useVisualDrilldown.ts`
 
-### 1. `src/components/insights/visuals/ConfigurableFunnel.tsx` — linha 41
+**1. Importar as funções de filtragem** (linhas 1-7):
+- Adicionar imports de `filterByLeadField` e `filterByDealField`
 
-Trocar a base `0` pelo valor de Ganhos:
+**2. `fetchLeadsRecords` (linha 139-197)** — aplicar `leadFieldFilter` e `hiddenCategories`:
+- Após buscar todos os leads, aplicar `filterByLeadField` se `config.leadFieldFilter` estiver configurado
+- Após filtrar por `groupName`, remover registros cujo grupo pertence a `hiddenCategories`
 
-```typescript
-// DE:
-const below = i < regularData.length - 1 ? cumulativeCounts[i + 1] : 0;
+**3. `fetchDealsRecords` (linha 54-137)** — aplicar `leadFieldFilter`, `dealFieldFilter` e `hiddenCategories`:
+- Após buscar todos os deals, aplicar `filterByLeadField` e `filterByDealField` se configurados
+- Remover registros de categorias ocultas
 
-// PARA:
-const below = i < regularData.length - 1 ? cumulativeCounts[i + 1] : (ganhosItem?.value || 0);
-```
-
-### 2. `src/components/insights/whatsapp-dashboard/SalesFunnelChart.tsx` — linha 85
-
-Mesma correção no funil do WhatsApp Dashboard. A etapa "Venda" (equivalente a Ganhos) já é a última em `visibleStages`, então aqui o acumulador base (`belowTotal`) já inclui "Venda" na cadeia. **Porém**, como "Venda" é incluída inline em `allStagesWithVenda`, ela já participa do loop cumulativo — este componente não tem o mesmo bug. Nenhuma alteração necessária aqui.
-
-## Resultado esperado
-
-- Se existe 1 deal ganho, **todas** as etapas anteriores mostram no mínimo 1 no valor cumulativo
-- O funil mantém forma de afunilamento correta mesmo com filtros de data restritivos
+Isso garante que o drilldown respeite exatamente os mesmos filtros aplicados no visual principal.
 
