@@ -1,101 +1,41 @@
 
 
-## Segmentação por Campo Personalizado (Breakdown/Legenda)
+## Simplificar Seleção de Campo de Segmentação
 
-### O que será feito
+### Problema
+A UI atual exige dois passos (escolher "Campo de Negócio" ou "Campo de Lead", depois escolher o campo) e não mostra todos os campos disponíveis juntos. O usuário quer **um único dropdown** listando todos os campos personalizados de Lead e Negócio, agrupados por origem.
 
-Adicionar uma opção em "Ajustes do Visual" para selecionar um campo personalizado (de Lead ou Negócio) como **segmentação/legenda**. Quando selecionado, o gráfico de barras se transforma em barras empilhadas, mostrando a composição por valores do campo (ex: MQL = "SIM - Acima de 30k" vs "NÃO - Abaixo de 30k").
+### Solução
 
-### Arquitetura
+Substituir os dois dropdowns (Origem + Campo) por **um único Select** que lista todos os campos personalizados de ambas as entidades, agrupados visualmente:
 
-Atualmente, `stackBy` no `VisualConfig` aceita apenas campos built-in (`responsible_name`, `canal`, etc.) e é usado exclusivamente com `chart_type = 'bar_stacked'`. A nova funcionalidade precisa:
-
-1. Permitir que **qualquer gráfico de barras/linha** ative um breakdown por campo personalizado
-2. Buscar os valores do campo customizado e injetá-los nos registros antes de agrupar
+```text
+┌──────────────────────────────┐
+│ Nenhum (sem segmentação)     │
+│ ── Campos de Negócio ──     │
+│ MQL                          │
+│ Canal de Venda               │
+│ ── Campos de Lead ──        │
+│ Faturamento Atual            │
+│ Origem do Lead               │
+└──────────────────────────────┘
+```
 
 ### Alterações
 
-#### 1. `VisualConfig` — novo campo `stackByCustomField`
+#### `VisualQuickSettings.tsx`
 
-```typescript
-stackByCustomField?: {
-  fieldId: string;
-  fieldName: string;
-  source: 'lead' | 'deal'; // de qual entidade vem o campo
-};
-```
+1. **Buscar campos de ambas as entidades** em um único `useEffect` — buscar `custom_fields` com `show_in_deals = true` e `show_in_leads = true` separadamente, depois combinar em uma lista com prefixo de source (`deal:` ou `lead:`)
 
-Quando definido, o visual será tratado como stacked independentemente do `chart_type` original.
+2. **Substituir os dois Selects** (Origem + Campo) por um único Select com grupos:
+   - Grupo "Campos de Negócio" — campos com `show_in_deals = true`
+   - Grupo "Campos de Lead" — campos com `show_in_leads = true`
+   - Valor codificado como `deal::{fieldId}` ou `lead::{fieldId}` para preservar a informação de source
 
-#### 2. `useStackedVisualData.ts` — suporte a custom field como série
+3. **Remover** o estado `customFieldSource` e `availableCustomFields` — substituir por `allSegmentFields` (array com `{ id, name, source }`)
 
-Na função `fetchStackedDealsData`:
-- Quando `config.stackByCustomField` está definido (e `source === 'deal'`), buscar `deal_field_values` para o campo, enriquecer cada deal com o label do valor, e usar como série
-- Quando `source === 'lead'`, buscar `lead_field_values` via `lead_id` dos deals
-- Para `fetchStackedLeadsData`: mesma lógica invertida
-
-Nova função genérica de enriquecimento:
-```typescript
-async function enrichWithCustomField(
-  records: any[],
-  accountId: string,
-  fieldId: string,
-  source: 'lead' | 'deal',
-  idField: string // 'id' para deals, 'id' para leads
-): Promise<any[]>
-```
-
-Essa função busca `deal_field_values` ou `lead_field_values`, resolve labels de select/multi_select a partir de `custom_fields.options`, e injeta `_custom_stack_label` em cada registro.
-
-#### 3. `ConfigurableVisualCard.tsx` — ativar modo stacked
-
-Alterar a detecção de `isStacked`:
-```typescript
-const isStacked = (chartType === 'bar_stacked' && !!config?.stackBy) 
-  || !!config?.stackByCustomField;
-```
-
-Isso faz com que o visual use `useStackedVisualData` automaticamente quando um campo personalizado for selecionado.
-
-#### 4. `VisualQuickSettings.tsx` — nova seção de UI
-
-Adicionar seção "Segmentar por Campo Personalizado" (antes da aparência):
-- Dropdown para selecionar a origem: "Campo de Lead" / "Campo de Negócio"
-- Dropdown para selecionar qual campo personalizado
-- Botão de limpar para remover a segmentação
-- Visível apenas para chart types que suportam stacking (bar, bar_horizontal, line, bar_stacked)
-
-Estado local:
-```typescript
-const [stackByCustomField, setStackByCustomField] = useState(config?.stackByCustomField || null);
-```
-
-No `handleSave`, incluir no `newConfig`:
-```typescript
-stackByCustomField: stackByCustomField || undefined,
-// Quando custom field está ativo, garantir que stackBy também esteja definido
-stackBy: stackByCustomField ? '_custom' : config.stackBy,
-```
-
-#### 5. `useStackedVisualData.ts` — lógica de agrupamento
-
-Na seção de agrupamento (deals, linhas ~183-207), substituir o acesso direto a `sellerName` por uma função genérica:
-
-```typescript
-const getSeriesValue = (record: any): string => {
-  if (config.stackByCustomField) {
-    return record._custom_stack_label || 'Não informado';
-  }
-  return (record.users as any)?.name || 'Sem Responsável';
-};
-```
-
-Mesma alteração para leads (linhas ~311 e ~393).
+4. **Ao selecionar**, parsear o valor composto para extrair `source` e `fieldId`, e montar o `stackByCustomField` diretamente
 
 ### Arquivos afetados
-
-- `src/components/insights/visual-builder/types.ts` — adicionar `stackByCustomField` ao `VisualConfig`
-- `src/hooks/useStackedVisualData.ts` — enriquecer registros com custom field e usar como série
-- `src/components/insights/visuals/ConfigurableVisualCard.tsx` — expandir detecção de `isStacked`
-- `src/components/insights/visuals/VisualQuickSettings.tsx` — nova seção de UI para seleção do campo
+- `src/components/insights/visuals/VisualQuickSettings.tsx` — simplificar UI de segmentação para um único dropdown agrupado
 
