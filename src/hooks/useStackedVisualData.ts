@@ -2,10 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
-import { VisualConfig } from "@/components/insights/visual-builder/types";
+import { VisualConfig, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
 import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek } from "date-fns";
-import { filterByLeadField } from "@/hooks/useLeadFieldFilter";
-import { filterByDealField } from "@/hooks/useDealFieldFilter";
+import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
+import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithCanal } from "@/hooks/useVisualData";
 
 export interface StackedDataPoint {
@@ -95,15 +95,16 @@ async function fetchStackedDealsData(
     from += pageSize;
   }
 
-  // Apply lead field filter if configured
-  const { leadFieldFilter, dealFieldFilter } = config;
-  if (leadFieldFilter && leadFieldFilter.selectedValues && leadFieldFilter.selectedValues.length > 0) {
-    allDeals = await filterByLeadField(allDeals, accountId, leadFieldFilter, 'deals');
+  // Apply lead field filters if configured (AND logic)
+  const leadFilters = getLeadFilters(config);
+  if (leadFilters.length > 0) {
+    allDeals = await filterByLeadFields(allDeals, accountId, leadFilters, 'deals');
   }
 
-  // Apply deal field filter if configured
-  if (dealFieldFilter && dealFieldFilter.selectedValues && dealFieldFilter.selectedValues.length > 0) {
-    allDeals = await filterByDealField(allDeals, accountId, dealFieldFilter);
+  // Apply deal field filters if configured (AND logic)
+  const dealFilters = getDealFilters(config);
+  if (dealFilters.length > 0) {
+    allDeals = await filterByDealFields(allDeals, accountId, dealFilters);
   }
 
   // Enrich deals with Canal de Venda if needed
@@ -258,10 +259,10 @@ async function fetchStackedLeadsData(
     from += pageSize;
   }
 
-  // Apply lead field filter if configured
-  const { leadFieldFilter } = config;
-  if (leadFieldFilter && leadFieldFilter.selectedValues && leadFieldFilter.selectedValues.length > 0) {
-    allLeads = await filterByLeadField(allLeads, accountId, leadFieldFilter, 'leads');
+  // Apply lead field filters if configured (AND logic)
+  const leadFilters = getLeadFilters(config);
+  if (leadFilters.length > 0) {
+    allLeads = await filterByLeadFields(allLeads, accountId, leadFilters, 'leads');
   }
 
   // Enrich leads with custom field data if needed

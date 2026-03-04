@@ -65,22 +65,46 @@ export interface VisualConfig {
     minLabel?: string;
     maxLabel?: string;
   };
-  // Lead field filter
+  // Lead field filter (legacy single filter)
   leadFieldFilter?: {
-    fieldId: string;       // UUID do campo (MQL, Canal, Faturamento)
-    fieldName: string;     // Nome do campo para exibição
-    selectedValues: string[]; // Labels selecionados
+    fieldId: string;
+    fieldName: string;
+    selectedValues: string[];
   };
-  // Deal custom field filter
+  // Deal custom field filter (legacy single filter)
   dealFieldFilter?: {
-    fieldId: string;       // UUID do campo personalizado do negócio
-    fieldName: string;     // Nome do campo para exibição
-    selectedValues: string[]; // Labels selecionados
+    fieldId: string;
+    fieldName: string;
+    selectedValues: string[];
   };
+  // Multiple lead field filters (AND logic)
+  leadFieldFilters?: FieldFilter[];
+  // Multiple deal field filters (AND logic)
+  dealFieldFilters?: FieldFilter[];
   // Table configuration
   tableConfig?: {
     columns: string[];
   };
+}
+
+// Individual field filter for multi-filter support
+export interface FieldFilter {
+  fieldId: string;
+  fieldName: string;
+  selectedValues: string[];
+}
+
+// Normalize legacy single filter + new array filters into a unified array
+export function getLeadFilters(config: VisualConfig): FieldFilter[] {
+  if (config.leadFieldFilters?.length) return config.leadFieldFilters;
+  if (config.leadFieldFilter?.fieldId) return [config.leadFieldFilter];
+  return [];
+}
+
+export function getDealFilters(config: VisualConfig): FieldFilter[] {
+  if (config.dealFieldFilters?.length) return config.dealFieldFilters;
+  if (config.dealFieldFilter?.fieldId) return [config.dealFieldFilter];
+  return [];
 }
 
 // Data source options

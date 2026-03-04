@@ -40,6 +40,9 @@ import {
   ColorPalette, 
   FontScale,
   DisplayScale,
+  FieldFilter,
+  getLeadFilters,
+  getDealFilters,
   DEFAULT_APPEARANCE,
   DISPLAY_SCALE_OPTIONS,
   DEFAULT_DISPLAY_SCALE,
@@ -125,15 +128,15 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // Lead field filter state
-  const [leadFilterFieldId, setLeadFilterFieldId] = useState(config?.leadFieldFilter?.fieldId ?? '');
-  const [leadFilterFieldName, setLeadFilterFieldName] = useState(config?.leadFieldFilter?.fieldName ?? '');
-  const [leadFilterValues, setLeadFilterValues] = useState<string[]>(config?.leadFieldFilter?.selectedValues ?? []);
+  // Lead field filters state (array)
+  const [leadFilters, setLeadFilters] = useState<FieldFilter[]>(
+    config ? getLeadFilters(config) : []
+  );
   
-  // Deal field filter state
-  const [dealFilterFieldId, setDealFilterFieldId] = useState(config?.dealFieldFilter?.fieldId ?? '');
-  const [dealFilterFieldName, setDealFilterFieldName] = useState(config?.dealFieldFilter?.fieldName ?? '');
-  const [dealFilterValues, setDealFilterValues] = useState<string[]>(config?.dealFieldFilter?.selectedValues ?? []);
+  // Deal field filters state (array)
+  const [dealFilters, setDealFilters] = useState<FieldFilter[]>(
+    config ? getDealFilters(config) : []
+  );
   
   // Monthly goals state for gauge revenue_vs_goal
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
@@ -151,12 +154,8 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
       setDecimals(config?.formatting?.decimals ?? 2);
       setHiddenUsers(config?.hiddenUsers ?? []);
       setHiddenCategories(config?.hiddenCategories ?? []);
-      setLeadFilterFieldId(config?.leadFieldFilter?.fieldId ?? '');
-      setLeadFilterFieldName(config?.leadFieldFilter?.fieldName ?? '');
-      setLeadFilterValues(config?.leadFieldFilter?.selectedValues ?? []);
-      setDealFilterFieldId(config?.dealFieldFilter?.fieldId ?? '');
-      setDealFilterFieldName(config?.dealFieldFilter?.fieldName ?? '');
-      setDealFilterValues(config?.dealFieldFilter?.selectedValues ?? []);
+      setLeadFilters(config ? getLeadFilters(config) : []);
+      setDealFilters(config ? getDealFilters(config) : []);
       setTableColumns(config?.tableConfig?.columns ?? []);
       
       // Initialize monthly goals
@@ -223,16 +222,11 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
         },
         hiddenUsers: isCallCommercial ? hiddenUsers : config.hiddenUsers,
         hiddenCategories: showCategoryFilter ? hiddenCategories : config.hiddenCategories,
-        leadFieldFilter: leadFilterFieldId ? {
-          fieldId: leadFilterFieldId,
-          fieldName: leadFilterFieldName,
-          selectedValues: leadFilterValues,
-        } : undefined,
-        dealFieldFilter: dealFilterFieldId ? {
-          fieldId: dealFilterFieldId,
-          fieldName: dealFilterFieldName,
-          selectedValues: dealFilterValues,
-        } : undefined,
+        // Save as array format (new multi-filter), clear legacy single filter
+        leadFieldFilter: undefined,
+        dealFieldFilter: undefined,
+        leadFieldFilters: leadFilters.filter(f => f.fieldId && f.selectedValues.length > 0),
+        dealFieldFilters: dealFilters.filter(f => f.fieldId && f.selectedValues.length > 0),
         ...(isDataTable && tableColumns.length > 0 && {
           tableConfig: { columns: tableColumns },
         }),
@@ -452,19 +446,13 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
           )}
           {/* Lead field filter for all visuals */}
           <LeadFieldFilterSection
-            selectedFieldId={leadFilterFieldId}
-            selectedFieldName={leadFilterFieldName}
-            selectedValues={leadFilterValues}
-            onFieldChange={(id, name) => { setLeadFilterFieldId(id); setLeadFilterFieldName(name); }}
-            onSelectedValuesChange={setLeadFilterValues}
+            filters={leadFilters}
+            onFiltersChange={setLeadFilters}
           />
           {/* Deal field filter for all visuals */}
           <DealFieldFilterSection
-            selectedFieldId={dealFilterFieldId}
-            selectedFieldName={dealFilterFieldName}
-            selectedValues={dealFilterValues}
-            onFieldChange={(id, name) => { setDealFilterFieldId(id); setDealFilterFieldName(name); }}
-            onSelectedValuesChange={setDealFilterValues}
+            filters={dealFilters}
+            onFiltersChange={setDealFilters}
           />
           <AppearanceSection
             showDataLabels={showDataLabels}

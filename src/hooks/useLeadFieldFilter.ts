@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { VisualConfig } from "@/components/insights/visual-builder/types";
+import { VisualConfig, FieldFilter } from "@/components/insights/visual-builder/types";
 
 /**
  * Filters records by lead field values.
@@ -132,4 +132,23 @@ async function getMatchingLeadIds(
   }
 
   return matchingLeadIds;
+}
+
+/**
+ * Apply multiple lead field filters sequentially (AND logic).
+ * Each filter reduces the result set further.
+ */
+export async function filterByLeadFields<T extends { id: string; lead_id?: string | null }>(
+  records: T[],
+  accountId: string,
+  filters: FieldFilter[],
+  mode: 'deals' | 'leads'
+): Promise<T[]> {
+  let result = records;
+  for (const filter of filters) {
+    if (filter.selectedValues?.length > 0) {
+      result = await filterByLeadField(result, accountId, filter, mode);
+    }
+  }
+  return result;
 }

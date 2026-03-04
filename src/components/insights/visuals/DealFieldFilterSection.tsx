@@ -9,8 +9,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { FieldFilter } from "@/components/insights/visual-builder/types";
 
 interface DealField {
   id: string;
@@ -20,68 +23,41 @@ interface DealField {
 }
 
 interface DealFieldFilterSectionProps {
-  selectedFieldId: string;
-  selectedFieldName: string;
-  selectedValues: string[];
-  onFieldChange: (fieldId: string, fieldName: string) => void;
-  onSelectedValuesChange: (values: string[]) => void;
+  filters: FieldFilter[];
+  onFiltersChange: (filters: FieldFilter[]) => void;
 }
 
-export function DealFieldFilterSection({
-  selectedFieldId,
-  selectedFieldName,
-  selectedValues,
-  onFieldChange,
-  onSelectedValuesChange,
-}: DealFieldFilterSectionProps) {
+function SingleDealFilter({
+  filter,
+  index,
+  dealFields,
+  usedFieldIds,
+  onUpdate,
+  onRemove,
+}: {
+  filter: FieldFilter;
+  index: number;
+  dealFields: DealField[];
+  usedFieldIds: Set<string>;
+  onUpdate: (index: number, filter: FieldFilter) => void;
+  onRemove: (index: number) => void;
+}) {
   const { currentUser } = useCurrentUser();
-  const [dealFields, setDealFields] = useState<DealField[]>([]);
   const [fieldOptions, setFieldOptions] = useState<string[]>([]);
-  const [loadingFields, setLoadingFields] = useState(false);
   const [loadingOptions, setLoadingOptions] = useState(false);
 
-  // Fetch available deal custom fields
   useEffect(() => {
-    if (!currentUser?.account_id) return;
-
-    const fetchFields = async () => {
-      setLoadingFields(true);
-      try {
-        const { data } = await supabase
-          .from('custom_fields')
-          .select('id, name, field_type, options')
-          .eq('account_id', currentUser.account_id)
-          .eq('show_in_deals', true)
-          .eq('is_active', true)
-          .order('display_order', { ascending: true });
-
-        if (data) {
-          setDealFields(data as DealField[]);
-        }
-      } catch (error) {
-        console.error('Error fetching deal custom fields:', error);
-      } finally {
-        setLoadingFields(false);
-      }
-    };
-
-    fetchFields();
-  }, [currentUser?.account_id]);
-
-  // Fetch options when field changes
-  useEffect(() => {
-    if (!selectedFieldId || !currentUser?.account_id) {
+    if (!filter.fieldId || !currentUser?.account_id) {
       setFieldOptions([]);
       return;
     }
 
-    const selectedField = dealFields.find(f => f.id === selectedFieldId);
+    const selectedField = dealFields.find(f => f.id === filter.fieldId);
     if (!selectedField) return;
 
     const fetchOptions = async () => {
       setLoadingOptions(true);
       try {
-        // For select/multi_select fields, use options from field definition
         if (
           (selectedField.field_type === 'select' || selectedField.field_type === 'multi_select') &&
           selectedField.options &&
@@ -91,11 +67,10 @@ export function DealFieldFilterSection({
           const labels = selectedField.options.map((opt: any) => opt.label).filter(Boolean);
           setFieldOptions(labels);
         } else {
-          // For other field types, fetch unique values from deal_field_values
           const { data: values } = await supabase
             .from('deal_field_values')
             .select('value_text')
-            .eq('field_id', selectedFieldId)
+            .eq('field_id', filter.fieldId)
             .eq('account_id', currentUser.account_id)
             .not('value_text', 'is', null);
 
@@ -112,43 +87,47 @@ export function DealFieldFilterSection({
     };
 
     fetchOptions();
-  }, [selectedFieldId, currentUser?.account_id, dealFields]);
+  }, [filter.fieldId, currentUser?.account_id, dealFields]);
 
   const handleFieldSelect = (value: string) => {
     if (value === 'none') {
-      onFieldChange('', '');
-      onSelectedValuesChange([]);
+      onRemove(index);
       return;
     }
     const field = dealFields.find(f => f.id === value);
     if (field) {
-      onFieldChange(field.id, field.name);
-      onSelectedValuesChange([]);
+      onUpdate(index, { fieldId: field.id, fieldName: field.name, selectedValues: [] });
     }
   };
 
   const handleToggleValue = (value: string, checked: boolean) => {
-    if (checked) {
-      onSelectedValuesChange([...selectedValues, value]);
-    } else {
-      onSelectedValuesChange(selectedValues.filter(v => v !== value));
-    }
+    const newValues = checked
+      ? [...filter.selectedValues, value]
+      : filter.selectedValues.filter(v => v !== value);
+    onUpdate(index, { ...filter, selectedValues: newValues });
   };
 
-  return (
-    <div className="space-y-3">
-      <Label className="text-base font-medium">Filtro por Negócio</Label>
-      <p className="text-xs text-muted-foreground">
-        Filtre os dados do visual por um campo personalizado do Negócio.
-      </p>
+  const availableFields = dealFields.filter(
+    f => f.id === filter.fieldId || !usedFieldIds.has(f.id)
+  );
 
-      <Select value={selectedFieldId || 'none'} onValueChange={handleFieldSelect}>
-        <SelectTrigger>
+  return (
+    <div className="space-y-2 p-3 border rounded-lg relative">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-1 right-1 h-6 w-6"
+        onClick={() => onRemove(index)}
+      >
+        <X className="h-3 w-3" />
+      </Button>
+
+      <Select value={filter.fieldId || 'none'} onValueChange={handleFieldSelect}>
+        <SelectTrigger className="pr-8">
           <SelectValue placeholder="Selecione um campo" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="none">Nenhum filtro</SelectItem>
-          {dealFields.map(field => (
+          {availableFields.map(field => (
             <SelectItem key={field.id} value={field.id}>
               {field.name}
             </SelectItem>
@@ -156,32 +135,104 @@ export function DealFieldFilterSection({
         </SelectContent>
       </Select>
 
-      {selectedFieldId && fieldOptions.length > 0 && (
-        <div className="space-y-2 max-h-[200px] overflow-y-auto">
+      {filter.fieldId && fieldOptions.length > 0 && (
+        <div className="space-y-1 max-h-[150px] overflow-y-auto">
           {loadingOptions ? (
             <p className="text-xs text-muted-foreground">Carregando opções...</p>
           ) : (
-            fieldOptions.map(option => {
-              const isChecked = selectedValues.includes(option);
-              return (
-                <div key={option} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`deal-filter-${option}`}
-                    checked={isChecked}
-                    onCheckedChange={(checked) => handleToggleValue(option, !!checked)}
-                  />
-                  <label htmlFor={`deal-filter-${option}`} className="text-sm cursor-pointer">
-                    {option}
-                  </label>
-                </div>
-              );
-            })
+            fieldOptions.map(option => (
+              <div key={option} className="flex items-center gap-2">
+                <Checkbox
+                  id={`deal-filter-${index}-${option}`}
+                  checked={filter.selectedValues.includes(option)}
+                  onCheckedChange={(checked) => handleToggleValue(option, !!checked)}
+                />
+                <label htmlFor={`deal-filter-${index}-${option}`} className="text-sm cursor-pointer">
+                  {option}
+                </label>
+              </div>
+            ))
           )}
         </div>
       )}
 
-      {selectedFieldId && !loadingOptions && fieldOptions.length === 0 && (
-        <p className="text-xs text-muted-foreground">Nenhuma opção encontrada para este campo.</p>
+      {filter.fieldId && !loadingOptions && fieldOptions.length === 0 && (
+        <p className="text-xs text-muted-foreground">Nenhuma opção encontrada.</p>
+      )}
+    </div>
+  );
+}
+
+export function DealFieldFilterSection({ filters, onFiltersChange }: DealFieldFilterSectionProps) {
+  const { currentUser } = useCurrentUser();
+  const [dealFields, setDealFields] = useState<DealField[]>([]);
+
+  useEffect(() => {
+    if (!currentUser?.account_id) return;
+
+    const fetchFields = async () => {
+      try {
+        const { data } = await supabase
+          .from('custom_fields')
+          .select('id, name, field_type, options')
+          .eq('account_id', currentUser.account_id)
+          .eq('show_in_deals', true)
+          .eq('is_active', true)
+          .order('display_order', { ascending: true });
+
+        if (data) {
+          setDealFields(data as DealField[]);
+        }
+      } catch (error) {
+        console.error('Error fetching deal custom fields:', error);
+      }
+    };
+
+    fetchFields();
+  }, [currentUser?.account_id]);
+
+  const usedFieldIds = new Set(filters.map(f => f.fieldId).filter(Boolean));
+
+  const handleUpdate = (index: number, filter: FieldFilter) => {
+    const newFilters = [...filters];
+    newFilters[index] = filter;
+    onFiltersChange(newFilters);
+  };
+
+  const handleRemove = (index: number) => {
+    onFiltersChange(filters.filter((_, i) => i !== index));
+  };
+
+  const handleAdd = () => {
+    onFiltersChange([...filters, { fieldId: '', fieldName: '', selectedValues: [] }]);
+  };
+
+  const canAddMore = dealFields.length > 0 && usedFieldIds.size < dealFields.length;
+
+  return (
+    <div className="space-y-3">
+      <Label className="text-base font-medium">Filtro por Negócio</Label>
+      <p className="text-xs text-muted-foreground">
+        Filtre os dados por campos do Negócio. Múltiplos filtros usam lógica AND.
+      </p>
+
+      {filters.map((filter, index) => (
+        <SingleDealFilter
+          key={index}
+          filter={filter}
+          index={index}
+          dealFields={dealFields}
+          usedFieldIds={usedFieldIds}
+          onUpdate={handleUpdate}
+          onRemove={handleRemove}
+        />
+      ))}
+
+      {canAddMore && (
+        <Button variant="outline" size="sm" className="w-full" onClick={handleAdd}>
+          <Plus className="h-3 w-3 mr-1" />
+          Adicionar filtro de Negócio
+        </Button>
       )}
 
       <Separator />
