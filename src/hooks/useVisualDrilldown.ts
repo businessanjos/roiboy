@@ -63,6 +63,7 @@ async function fetchDealsRecords(
     .from('deals')
     .select(`
       id,
+      title,
       lead_id,
       value,
       probability,
@@ -157,7 +158,7 @@ async function fetchDealsRecords(
 
   return filteredData.map((deal: any) => ({
     id: deal.id,
-    name: `Negócio #${deal.id.slice(0, 8)}`,
+    name: deal.title || `Negócio #${deal.id.slice(0, 8)}`,
     value: deal.value || 0,
     status: deal.status,
     date: deal.created_at,
