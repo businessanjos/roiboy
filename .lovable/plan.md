@@ -1,77 +1,81 @@
 
 
-## Problema: Drilldown do Scorecard de Faturamento retorna 0 registros
+## Visual de Tabela para Insights
 
-### Causa raiz
+### Objetivo
+Adicionar um novo tipo de visualização **"Tabela"** ao sistema de Insights, permitindo que o usuário configure quais colunas exibir, com barra de rolagem interna quando o conteúdo excede o tamanho do widget.
 
-O scorecard "Faturamento" é um visual de deals com `measure: { field: 'value', aggregation: 'sum' }` e `dimension: { field: '_total' }`. Existem **duas divergências críticas** entre como o visual principal (`useVisualData`) e o drilldown (`useVisualDrilldown`) buscam os dados:
+### Arquitetura
 
-**1. StatusFilter não é inferido no drilldown**
+O visual de tabela reutiliza a mesma infraestrutura de dados do drilldown (`useVisualDrilldown`), mas renderizado inline dentro do widget do grid em vez de um dialog.
 
-O visual principal usa `inferStatusFilter()` que detecta `measure.field === 'value'` + `aggregation === 'sum'` e infere `statusFilter = 'won'`. O drilldown só verifica `config.statusFilter` (valor explícito no config). Se o visual não tem `statusFilter` explícito salvo, o drilldown não filtra por status — ou filtra errado.
+### Alterações
 
-**2. Campo de data errado no drilldown**
+#### 1. Registrar o tipo `data_table` no sistema de tipos
+**Arquivo:** `src/components/insights/visual-builder/types.ts`
 
-O visual principal, quando `statusFilter === 'won'`, usa `won_at` para filtrar por data. O drilldown ignora essa lógica e sempre usa `created_at` como fallback quando a dimensão não é do tipo `date`. Isso significa que um deal ganho em março mas criado em janeiro **não aparece** quando o filtro de data é "março".
-
-```text
-Visual principal (correto):
-  statusFilter = 'won' (inferido)
-  dateField = 'won_at'
-  → Encontra o deal ganho em março ✓
-
-Drilldown (incorreto):
-  statusFilter = undefined (não inferido)
-  dateField = 'created_at'
-  → Filtra por created_at em março → deal foi criado em janeiro → 0 registros ✗
-```
-
-### Solução
-
-Aplicar a mesma lógica de inferência e seleção de campo de data no drilldown:
-
-### Alteração — `src/hooks/useVisualDrilldown.ts`
-
-**1. Adicionar a função `inferStatusFilter`** (copiar de `useVisualData.ts`):
+- Adicionar `'data_table'` ao tipo `ChartType`
+- Adicionar opção `{ value: 'data_table', label: 'Tabela' }` ao array `CHART_TYPE_OPTIONS`
+- Adicionar novo campo opcional `tableConfig` ao `VisualConfig`:
 ```typescript
-function inferStatusFilter(
-  measure: VisualConfig['measure'], 
-  dimension: VisualConfig['dimension']
-): 'won' | 'lost' | undefined {
-  if (dimension.field !== '_total') return undefined;
-  if (measure.field === 'value' && (measure.aggregation === 'sum' || measure.aggregation === 'avg')) {
-    return 'won';
-  }
-  return undefined;
-}
+tableConfig?: {
+  columns: string[]; // e.g. ['name', 'value', 'status', 'date', 'stage', 'responsible', 'email', 'source']
+};
 ```
 
-**2. Em `fetchDealsRecords`**, calcular o `effectiveStatusFilter` e usar na query:
-```typescript
-const effectiveStatusFilter = config.statusFilter ?? inferStatusFilter(config.measure, config.dimension);
+#### 2. Adicionar ícone ao seletor de tipo de gráfico
+**Arquivo:** `src/components/insights/visual-builder/ChartTypeSelector.tsx`
 
-if (effectiveStatusFilter) {
-  query = query.eq('status', effectiveStatusFilter);
-}
-```
+- Adicionar `data_table: Table` ao `ICON_MAP` (importar `Table` de lucide-react)
 
-**3. Corrigir a seleção do campo de data** para considerar o statusFilter:
-```typescript
-let dateFilterField: string;
-if (config.dimension?.type === 'date' && config.dimension.field) {
-  dateFilterField = config.dimension.field;
-} else if (effectiveStatusFilter === 'won') {
-  dateFilterField = 'won_at';
-} else if (effectiveStatusFilter === 'lost') {
-  dateFilterField = 'lost_at';
-} else {
-  dateFilterField = 'created_at';
-}
-```
+#### 3. Criar componente `ConfigurableTable`
+**Novo arquivo:** `src/components/insights/visuals/ConfigurableTable.tsx`
 
-### Resultado esperado
+- Recebe `config: VisualConfig` como prop
+- Usa `useVisualDrilldown` (sem `groupName`) para buscar todos os registros
+- Renderiza uma tabela HTML com:
+  - Cabeçalho fixo (sticky header)
+  - Corpo com barra de rolagem vertical (`overflow-y: auto`) limitada ao espaço disponível do widget
+  - Colunas configuráveis baseadas em `config.tableConfig.columns`
+  - Colunas redimensionáveis via drag nos separadores do header
+- Colunas disponíveis por dataSource:
+  - **deals:** Título, Valor, Status, Data Criação, Data Ganho, Etapa, Responsável, Origem, Motivo Perda
+  - **leads:** Nome, Status, Origem, Data Criação, Responsável, E-mail, Faturamento Atual
+  - **tasks:** Título, Status, Tipo, Vendedor, Data Vencimento
 
-- O drilldown do scorecard "Faturamento" vai encontrar exatamente os mesmos deals que o visual principal exibe
-- O campo de data correto (`won_at`) será usado para filtrar, garantindo que deals ganhos no período apareçam
-- A paridade total entre gráfico e lista de registros é mantida
+#### 4. Integrar no `ConfigurableChart`
+**Arquivo:** `src/components/insights/visuals/ConfigurableChart.tsx`
+
+- Adicionar case `'data_table'` no switch que renderiza `<ConfigurableTable config={visualConfig!} />`
+- A tabela não precisa de `data`/`formatting` pois busca seus próprios dados
+
+#### 5. Integrar no `ConfigurableVisualCard`
+**Arquivo:** `src/components/insights/visuals/ConfigurableVisualCard.tsx`
+
+- Para `chartType === 'data_table'`, pular o fetch de `useVisualData` (não necessário)
+- Manter drilldown desabilitado (a tabela já É os dados detalhados)
+
+#### 6. Adicionar seleção de colunas no wizard
+**Arquivo:** `src/components/insights/visual-builder/VisualBuilderSheet.tsx`
+
+- Quando `chartType === 'data_table'`, após a seleção de DataSource, exibir checkboxes para escolher quais colunas incluir
+- Pré-selecionar colunas padrão (Nome, Valor, Status, Data)
+- Salvar em `config.tableConfig.columns`
+
+#### 7. Adicionar seleção de colunas nos ajustes rápidos
+**Arquivo:** `src/components/insights/visuals/VisualQuickSettings.tsx`
+
+- Adicionar seção de checkboxes para editar colunas visíveis quando o visual for do tipo `data_table`
+
+#### 8. Exportar novo componente
+**Arquivo:** `src/components/insights/visuals/index.ts`
+
+- Adicionar `export { ConfigurableTable } from "./ConfigurableTable";`
+
+### Detalhes de implementação da tabela
+
+- **Scroll interno:** O componente usa `overflow-auto` com `max-height: 100%` para caber dentro do card do grid. O header fica sticky com `position: sticky; top: 0`
+- **Colunas redimensionáveis:** Implementar via `onMouseDown` nos separadores do header, atualizando larguras em estado local
+- **Responsividade:** Quando o widget for pequeno, a tabela mostra scroll horizontal também
+- **Performance:** Usar `LazyTableRows` do `lazy-table.tsx` existente para carregamento progressivo quando houver muitos registros
 
