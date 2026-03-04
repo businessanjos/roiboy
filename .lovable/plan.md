@@ -1,31 +1,35 @@
 
 
-## Correção: Erro "record 'new' has no field 'sector_id'"
+## Correção: Campos de segmentação não aparecem no dropdown
 
 ### Causa raiz
 
-A função `notify_task_assignment()` (trigger na tabela `internal_tasks`) tenta acessar `NEW.sector_id` na linha 112, mas a tabela `internal_tasks` **não possui** a coluna `sector_id`. Isso causa o erro toda vez que o `assigned_to` é alterado.
+A query em `VisualQuickSettings.tsx` filtra por `.eq('entity', 'deal')` e `.eq('entity', 'lead')`, mas a tabela `custom_fields` **não tem** uma coluna `entity`. O sistema usa flags booleanas: `show_in_deals` e `show_in_leads`.
 
 ### Solução
 
-Criar uma migration que atualiza a função `notify_task_assignment()`, substituindo `COALESCE(NEW.sector_id, 'operacoes')` por simplesmente `'operacoes'` (ou determinando o setor via `deal_id` se disponível).
+Alterar as duas queries no `useEffect` (linhas 212-227) para usar os filtros corretos:
 
-Lógica corrigida para determinar o setor:
-- Se `client_id` está presente → `'operacoes'`
-- Se `deal_id` está presente → `'vendas'`
-- Caso contrário → `'operacoes'` (fallback seguro)
+```typescript
+// Deals
+supabase
+  .from('custom_fields')
+  .select('id, name')
+  .eq('account_id', currentUser.account_id)
+  .eq('show_in_deals', true)
+  .eq('is_active', true)
+  .order('display_order'),
 
-### Alteração
-
-Uma migration SQL que faz `CREATE OR REPLACE FUNCTION public.notify_task_assignment()` com a linha 112 corrigida de:
-```sql
-v_sector_id := COALESCE(NEW.sector_id, 'operacoes');
+// Leads
+supabase
+  .from('custom_fields')
+  .select('id, name')
+  .eq('account_id', currentUser.account_id)
+  .eq('show_in_leads', true)
+  .eq('is_active', true)
+  .order('display_order'),
 ```
-para:
-```sql
-v_sector_id := CASE WHEN NEW.deal_id IS NOT NULL THEN 'vendas' ELSE 'operacoes' END;
-```
 
-### Arquivos afetados
-- Nova migration SQL (via ferramenta de migração)
+### Arquivo afetado
+- `src/components/insights/visuals/VisualQuickSettings.tsx` — corrigir filtros da query de campos personalizados
 
