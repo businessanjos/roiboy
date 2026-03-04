@@ -164,31 +164,7 @@ export function PipelineExportDialog({
     setSelectedCustom(new Set());
   };
 
-  // Resolve select/multi_select label
-  const resolveLabel = (field: CustomFieldDef, rawValue: any): string => {
-    if (rawValue == null) return "";
-    if (field.field_type === "select") {
-      const opt = field.options.find((o) => o.value === rawValue);
-      return opt ? opt.label : String(rawValue);
-    }
-    if (field.field_type === "multi_select") {
-      const arr = Array.isArray(rawValue) ? rawValue : [];
-      return arr
-        .map((v: string) => {
-          const opt = field.options.find((o) => o.value === v);
-          return opt ? opt.label : v;
-        })
-        .join(", ");
-    }
-    if (field.field_type === "boolean") return rawValue ? "Sim" : "Não";
-    if (field.field_type === "currency" && rawValue != null) {
-      return new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      }).format(Number(rawValue));
-    }
-    return String(rawValue ?? "");
-  };
+  // resolveLabel is defined inside handleExport where maps are available
 
   const handleExport = async () => {
     if (!currentUser?.account_id) return;
@@ -247,7 +223,67 @@ export function PipelineExportDialog({
       const usersMap = Object.fromEntries(salesUsers.map((u) => [u.id, u.name]));
       const productsMap = Object.fromEntries(products.map((p) => [p.id, p.name]));
 
-      // 3. Apply filters
+      // Resolve field value to human-readable label
+      const resolveLabel = (field: CustomFieldDef, rawValue: any): string => {
+        if (rawValue == null || rawValue === "") return "";
+        switch (field.field_type) {
+          case "select": {
+            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            if (typeof rawValue === "string" && uuidRegex.test(rawValue) && productsMap[rawValue]) {
+              return productsMap[rawValue];
+            }
+            const opt = field.options?.find((o) => o.value === rawValue);
+            return opt ? opt.label : String(rawValue);
+          }
+          case "multi_select": {
+            const arr = Array.isArray(rawValue) ? rawValue : [];
+            return arr
+              .map((v: string) => {
+                const opt = field.options?.find((o) => o.value === v);
+                return opt ? opt.label : v;
+              })
+              .join(", ");
+          }
+          case "boolean":
+            return rawValue ? "Sim" : "Não";
+          case "currency":
+            return new Intl.NumberFormat("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            }).format(Number(rawValue));
+          case "number":
+            return String(rawValue);
+          case "date":
+            return rawValue ? new Date(rawValue).toLocaleDateString("pt-BR") : "";
+          case "location": {
+            if (typeof rawValue === "object" && rawValue !== null) {
+              if (rawValue.formatted_address) return rawValue.formatted_address;
+              const parts = [rawValue.city, rawValue.state].filter(Boolean);
+              return parts.join(", ");
+            }
+            return String(rawValue);
+          }
+          case "user": {
+            const userIds = Array.isArray(rawValue) ? rawValue : [rawValue];
+            return userIds
+              .map((uid: string) => usersMap[uid] || uid)
+              .join(", ");
+          }
+          case "multi_instagram": {
+            const instagrams = Array.isArray(rawValue) ? rawValue : [];
+            return instagrams.join(", ");
+          }
+          case "text":
+          case "instagram":
+            return String(rawValue);
+          default:
+            if (typeof rawValue === "object") {
+              try { return JSON.stringify(rawValue); } catch { return ""; }
+            }
+            return String(rawValue ?? "");
+        }
+      };
+
       let filtered = allDeals;
 
       if (filterStatus !== "all") {
