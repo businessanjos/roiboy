@@ -21,7 +21,9 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -132,10 +134,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
   const [stackByCustomField, setStackByCustomField] = useState<VisualConfig['stackByCustomField'] | null>(
     config?.stackByCustomField || null
   );
-  const [customFieldSource, setCustomFieldSource] = useState<'lead' | 'deal'>(
-    config?.stackByCustomField?.source || 'deal'
-  );
-  const [availableCustomFields, setAvailableCustomFields] = useState<{ id: string; name: string }[]>([]);
+  const [allSegmentFields, setAllSegmentFields] = useState<{ id: string; name: string; source: 'lead' | 'deal' }[]>([]);
   
   // Lead field filters state (array)
   const [leadFilters, setLeadFilters] = useState<FieldFilter[]>(
@@ -167,7 +166,6 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
       setDealFilters(config ? getDealFilters(config) : []);
       setTableColumns(config?.tableConfig?.columns ?? []);
       setStackByCustomField(config?.stackByCustomField || null);
-      setCustomFieldSource(config?.stackByCustomField?.source || 'deal');
       
       // Initialize monthly goals
       if (config?.gaugeConfig?.monthlyGoals) {
@@ -204,25 +202,35 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
     fetchUsers();
   }, [open, isCallCommercial, currentUser?.account_id]);
 
-  // Fetch custom fields for segmentation
+  // Fetch custom fields for segmentation (both deal and lead at once)
   const supportsStacking = ['bar', 'bar_horizontal', 'bar_stacked', 'line'].includes(visual.chart_type || '');
   
   useEffect(() => {
     if (!open || !supportsStacking || !currentUser?.account_id) return;
     
-    const entity = customFieldSource === 'deal' ? 'deal' : 'lead';
-    const fetchFields = async () => {
-      const { data } = await supabase
-        .from('custom_fields' as any)
-        .select('id, name')
-        .eq('account_id', currentUser.account_id)
-        .eq('entity', entity)
-        .eq('is_active', true)
-        .order('display_order');
-      setAvailableCustomFields((data as any[]) || []);
+    const fetchAllFields = async () => {
+      const [dealRes, leadRes] = await Promise.all([
+        supabase
+          .from('custom_fields' as any)
+          .select('id, name')
+          .eq('account_id', currentUser.account_id)
+          .eq('entity', 'deal')
+          .eq('is_active', true)
+          .order('display_order'),
+        supabase
+          .from('custom_fields' as any)
+          .select('id, name')
+          .eq('account_id', currentUser.account_id)
+          .eq('entity', 'lead')
+          .eq('is_active', true)
+          .order('display_order'),
+      ]);
+      const dealFields = ((dealRes.data as any[]) || []).map(f => ({ ...f, source: 'deal' as const }));
+      const leadFields = ((leadRes.data as any[]) || []).map(f => ({ ...f, source: 'lead' as const }));
+      setAllSegmentFields([...dealFields, ...leadFields]);
     };
-    fetchFields();
-  }, [open, supportsStacking, customFieldSource, currentUser?.account_id]);
+    fetchAllFields();
+  }, [open, supportsStacking, currentUser?.account_id]);
 
   const isDimensionDate = config?.dimension?.type === 'date';
 
@@ -488,63 +496,58 @@ export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickS
             filters={dealFilters}
             onFiltersChange={setDealFilters}
           />
-          {/* Custom field segmentation/breakdown */}
+          {/* Custom field segmentation/breakdown — single grouped dropdown */}
           {supportsStacking && (
             <div className="space-y-3">
               <Label className="text-base font-medium">Segmentar por Campo (Legenda)</Label>
               <p className="text-xs text-muted-foreground">
                 Transforma o gráfico em barras empilhadas, segmentando por valores de um campo personalizado.
               </p>
-              <div className="space-y-2">
-                <Label className="text-sm font-normal text-muted-foreground">Origem do Campo</Label>
-                <Select 
-                  value={customFieldSource} 
-                  onValueChange={(v) => {
-                    setCustomFieldSource(v as 'lead' | 'deal');
+              <Select 
+                value={stackByCustomField ? `${stackByCustomField.source}::${stackByCustomField.fieldId}` : '_none'} 
+                onValueChange={(v) => {
+                  if (v === '_none') {
                     setStackByCustomField(null);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="deal">Campo de Negócio</SelectItem>
-                    <SelectItem value="lead">Campo de Lead</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-normal text-muted-foreground">Campo Personalizado</Label>
-                <Select 
-                  value={stackByCustomField?.fieldId || '_none'} 
-                  onValueChange={(v) => {
-                    if (v === '_none') {
-                      setStackByCustomField(null);
-                    } else {
-                      const field = availableCustomFields.find(f => f.id === v);
-                      if (field) {
-                        setStackByCustomField({
-                          fieldId: field.id,
-                          fieldName: field.name,
-                          source: customFieldSource,
-                        });
-                      }
+                  } else {
+                    const [source, fieldId] = v.split('::');
+                    const field = allSegmentFields.find(f => f.id === fieldId && f.source === source);
+                    if (field) {
+                      setStackByCustomField({
+                        fieldId: field.id,
+                        fieldName: field.name,
+                        source: field.source,
+                      });
                     }
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um campo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">Nenhum (sem segmentação)</SelectItem>
-                    {availableCustomFields.map((field) => (
-                      <SelectItem key={field.id} value={field.id}>
-                        {field.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  }
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um campo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">Nenhum (sem segmentação)</SelectItem>
+                  {allSegmentFields.filter(f => f.source === 'deal').length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>Campos de Negócio</SelectLabel>
+                      {allSegmentFields.filter(f => f.source === 'deal').map((field) => (
+                        <SelectItem key={`deal::${field.id}`} value={`deal::${field.id}`}>
+                          {field.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                  {allSegmentFields.filter(f => f.source === 'lead').length > 0 && (
+                    <SelectGroup>
+                      <SelectLabel>Campos de Lead</SelectLabel>
+                      {allSegmentFields.filter(f => f.source === 'lead').map((field) => (
+                        <SelectItem key={`lead::${field.id}`} value={`lead::${field.id}`}>
+                          {field.name}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  )}
+                </SelectContent>
+              </Select>
               <Separator />
             </div>
           )}
