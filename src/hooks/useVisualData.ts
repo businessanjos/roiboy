@@ -567,13 +567,15 @@ async function fetchDealsData(
   }
 
   // Determine which date field to use for filters based on dimension and status
+  // Status filter takes priority for date filtering
+  // The dimension field only controls grouping, not which records are included
   let dateFilterField: string;
-  if (dimension.type === 'date' && dimension.field && dimension.field !== '_total') {
-    dateFilterField = dimension.field;
-  } else if (statusFilter === 'won') {
+  if (statusFilter === 'won') {
     dateFilterField = 'won_at';
   } else if (statusFilter === 'lost') {
     dateFilterField = 'lost_at';
+  } else if (dimension.type === 'date' && dimension.field && dimension.field !== '_total') {
+    dateFilterField = dimension.field;
   } else {
     dateFilterField = 'created_at';
   }
