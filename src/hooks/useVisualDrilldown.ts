@@ -5,6 +5,8 @@ import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { VisualConfig } from "@/components/insights/visual-builder/types";
 import { format, parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { filterByLeadField } from "@/hooks/useLeadFieldFilter";
+import { filterByDealField } from "@/hooks/useDealFieldFilter";
 
 export interface DrilldownRecord {
   id: string;
@@ -61,6 +63,7 @@ async function fetchDealsRecords(
     .from('deals')
     .select(`
       id,
+      lead_id,
       value,
       probability,
       status,
@@ -112,8 +115,30 @@ async function fetchDealsRecords(
     return [];
   }
 
-  // Filter by group name if provided
   let filteredData = data || [];
+
+  // Apply leadFieldFilter if configured (deals have lead_id)
+  if (config.leadFieldFilter?.fieldId && config.leadFieldFilter?.selectedValues?.length) {
+    filteredData = await filterByLeadField(
+      filteredData.map((d: any) => ({ ...d, lead_id: d.lead_id })),
+      accountId, config.leadFieldFilter, 'deals'
+    ) as any[];
+  }
+
+  // Apply dealFieldFilter if configured
+  if (config.dealFieldFilter?.fieldId && config.dealFieldFilter?.selectedValues?.length) {
+    filteredData = await filterByDealField(filteredData, accountId, config.dealFieldFilter) as any[];
+  }
+
+  // Apply hiddenCategories filter
+  if (config.hiddenCategories?.length && config.dimension) {
+    filteredData = filteredData.filter((item: any) => {
+      const itemGroup = getGroupKey(item, config.dimension, config);
+      return !config.hiddenCategories!.includes(itemGroup);
+    });
+  }
+
+  // Filter by group name if provided
   if (groupName && config.dimension) {
     filteredData = filteredData.filter(item => {
       const itemGroup = getGroupKey(item, config.dimension, config);
@@ -174,6 +199,20 @@ async function fetchLeadsRecords(
   }
 
   let filteredData = allData;
+
+  // Apply leadFieldFilter if configured
+  if (config.leadFieldFilter?.fieldId && config.leadFieldFilter?.selectedValues?.length) {
+    filteredData = await filterByLeadField(filteredData, accountId, config.leadFieldFilter, 'leads');
+  }
+
+  // Apply hiddenCategories filter
+  if (config.hiddenCategories?.length && config.dimension) {
+    filteredData = filteredData.filter((item: any) => {
+      const itemGroup = getGroupKey(item, config.dimension, config);
+      return !config.hiddenCategories!.includes(itemGroup);
+    });
+  }
+
   if (groupName && config.dimension) {
     filteredData = filteredData.filter((item: any) => {
       const itemGroup = getGroupKey(item, config.dimension, config);
