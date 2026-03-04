@@ -1,57 +1,60 @@
 
 
-## Exportação incompleta de negócios — Dados de contato faltando
+## Problema: Funil perde etapas ao filtrar por período
 
-### Problema identificado
+### Causa raiz
 
-A exportação busca dados de contato **apenas** da tabela `leads` (via `leads(full_name, phone, email)` no join). Porém, existem **39 negócios** que não possuem `lead_id` — eles estão vinculados apenas a um `client_id` (ex: renovações, carteira). Para esses negócios, nome, telefone e email ficam vazios.
+No `useVisualData.ts`, o funil de vendas (`chartType === 'funnel'`, `dimension.field === 'stage_name'`) busca deals filtrados por `created_at` no período selecionado. A função `aggregateData` só cria entradas para etapas que têm pelo menos 1 deal no resultado. **Etapas sem deals no período simplesmente desaparecem do funil.**
 
-**Exemplo concreto**: O negócio "[CARTEIRA - EP] Jhulia Gabrielly Marcon Padilha" não tem `lead_id`, mas tem `client_id` apontando para a cliente "Jhulia Padilha" com telefone `+554196196728`. A exportação atual ignora completamente esses dados.
+Exemplo: se no mês atual só existem deals nas etapas "Oportunidade", "Diagnóstico" e "Contrato", as etapas "Prospecção" e "Proposta" somem completamente — mesmo que deals ganhos tenham obrigatoriamente passado por elas.
 
 ### Solução
 
-Alterar a query de exportação para também buscar dados da tabela `clients` e usar como fallback quando o lead não existe.
+Após a agregação e ordenação por `display_order`, garantir que **todas as etapas do pipeline** apareçam no funil, preenchendo com `value: 0` as que não tiveram deals no período.
 
-### Alterações — `src/components/sales/PipelineExportDialog.tsx`
+### Alteração — `src/hooks/useVisualData.ts` (linhas ~76-89)
 
-**1. Query: incluir join com clients (linha ~211-213)**
+Após o sort por `display_order`, inserir lógica que:
 
-Adicionar `clients(full_name, phone_e164, emails)` ao select da query, junto com o join de leads já existente.
-
-```typescript
-.select(
-  `id, title, value, status, probability, tags, created_at, won_at, lost_at, lost_reason, stage_id, responsible_user_id, lead_id, client_id,
-  leads(full_name, phone, email),
-  clients!deals_client_id_fkey(full_name, phone_e164, emails)`
-)
-```
-
-**2. Resolução com fallback (linhas ~328-337)**
-
-Ao montar cada linha, usar dados do lead quando disponível, e fazer fallback para dados do client:
+1. Compara as etapas retornadas com a lista completa de `deal_stages` (que já foi buscada na linha 78)
+2. Para cada etapa do pipeline que não está no resultado, insere um `AggregatedDataPoint` com `value: 0` na posição correta
+3. Preserva a cor da etapa vinda de `deal_stages`
 
 ```typescript
-const lead = deal.leads;
-const client = deal.clients;
+// After sorting by display_order (line 88)
+if (stages && stages.length > 0) {
+  const orderMap = new Map(stages.map(s => [s.name, s.display_order]));
+  result.sort((a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
 
-// Nome: lead > client
-const contactName = lead?.full_name || client?.full_name || "";
-
-// Telefone: lead > client
-const contactPhone = lead?.phone || client?.phone_e164 || "";
-
-// Email: lead > client (clients usa array emails)
-const contactEmail = lead?.email || 
-  (Array.isArray(client?.emails) && client.emails.length > 0 ? client.emails[0] : "") || "";
+  // Ensure ALL pipeline stages appear, even with 0 deals
+  const existingNames = new Set(result.map(r => r.name));
+  const stageColors = await supabase
+    .from('deal_stages')
+    .select('name, color')
+    .eq('account_id', currentUser.account_id);
+  
+  const colorMap = new Map((stageColors.data || []).map(s => [s.name, s.color]));
+  
+  for (const stage of stages) {
+    if (!existingNames.has(stage.name)) {
+      result.push({
+        name: stage.name,
+        value: 0,
+        count: 0,
+        color: colorMap.get(stage.name) || '#6366f1',
+      });
+    }
+  }
+  // Re-sort after adding missing stages
+  result.sort((a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
+}
 ```
 
-**3. Usar as variáveis resolvidas nos campos fixos**
-
-Substituir as referências diretas `lead?.full_name`, `lead?.phone`, `lead?.email` pelas variáveis com fallback.
+Otimização: como já temos o `stages` da query anterior (linha 78), podemos buscar `color` na mesma query original, evitando uma query extra. Basta alterar o select de `'name, display_order'` para `'name, display_order, color'`.
 
 ### Resultado esperado
 
-- Todos os 840 negócios terão dados de contato preenchidos (quando disponíveis no sistema)
-- Negócios vinculados apenas a clientes (renovações, carteira) terão nome, telefone e email do cliente
-- Nenhuma mudança na interface visual — apenas a lógica de exportação é corrigida
+- Todas as etapas do pipeline sempre aparecem no funil, independentemente do filtro de data
+- Etapas sem deals no período aparecem com valor 0, mantendo a visualização completa do funil
+- A etapa "Ganhos" continua sendo adicionada ao final como já é feito
 
