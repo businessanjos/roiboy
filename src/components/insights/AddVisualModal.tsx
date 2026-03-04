@@ -10,17 +10,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight, Trophy, Phone, Gauge, Activity, MapPin, Filter } from "lucide-react";
+import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight, Trophy, Phone, Gauge, Activity, MapPin, Filter, Table } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
-import { VisualConfig, DEFAULT_APPEARANCE } from "./visual-builder/types";
+import { VisualConfig, DEFAULT_APPEARANCE, DataSource, DATA_SOURCE_OPTIONS } from "./visual-builder/types";
+import { getColumnsForDataSource, getDefaultColumns } from "./visuals/ConfigurableTable";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface AddVisualModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge" | "indicator" | "bubble_map" | "funnel";
+type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge" | "indicator" | "bubble_map" | "funnel" | "data_table";
 type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta" | "tasks_count";
 type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual" | "canal" | "activity_type" | "status_task";
 
@@ -37,6 +39,7 @@ const CHART_TYPES = [
   { value: "indicator" as const, label: "Indicador", description: "Arco semicircular com valor e escala personalizada", icon: Activity },
   { value: "bubble_map" as const, label: "Mapa de Bolhas", description: "Distribuição geográfica de faturamento por cidade", icon: MapPin },
   { value: "funnel" as const, label: "Funil", description: "Progressão sequencial entre etapas com conversão", icon: Filter },
+  { value: "data_table" as const, label: "Tabela", description: "Exibir registros detalhados em formato de tabela", icon: Table },
 ];
 
 const METRICS = [
@@ -157,9 +160,11 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
   const [indicatorMaxLabel, setIndicatorMaxLabel] = useState("");
   const [indicatorMetric, setIndicatorMetric] = useState<Metric | null>(null);
   const [funnelProcess, setFunnelProcess] = useState<'deal_stages' | 'task_status' | null>(null);
+  const [tableDataSource, setTableDataSource] = useState<DataSource>('deals');
+  const [tableColumns, setTableColumns] = useState<string[]>(() => getDefaultColumns('deals'));
 
-  // Scorecards, rankings, call_commercial, gauge, indicator, bubble_map and funnel have only 2 steps
-  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge' || chartType === 'indicator' || chartType === 'bubble_map' || chartType === 'funnel') ? 2 : 3;
+  // Scorecards, rankings, call_commercial, gauge, indicator, bubble_map, funnel and data_table have only 2 steps
+  const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge' || chartType === 'indicator' || chartType === 'bubble_map' || chartType === 'funnel' || chartType === 'data_table') ? 2 : 3;
 
   // Reset form when modal closes
   useEffect(() => {
@@ -179,6 +184,8 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       setIndicatorMaxLabel("");
       setIndicatorMetric(null);
       setFunnelProcess(null);
+      setTableDataSource('deals');
+      setTableColumns(getDefaultColumns('deals'));
     }
   }, [open]);
 
@@ -196,6 +203,9 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       setTitle(indicatorMetric ? `Indicador - ${METRIC_LABELS[indicatorMetric]}` : 'Indicador');
     } else if (chartType === 'funnel') {
       setTitle(funnelProcess === 'deal_stages' ? 'Funil de Vendas' : funnelProcess === 'task_status' ? 'Funil de Tarefas' : 'Funil');
+    } else if (chartType === 'data_table') {
+      const sourceLabels: Record<DataSource, string> = { deals: 'Negócios', leads: 'Leads', tasks: 'Tarefas', products: 'Produtos' };
+      setTitle(`Tabela de ${sourceLabels[tableDataSource]}`);
     } else if (chartType === 'scorecard' && metric) {
       setTitle(metric === 'meta' ? 'Meta' : METRIC_LABELS[metric]);
     } else if (metric && groupBy) {
@@ -205,7 +215,7 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
       const generatedTitle = `${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}${seasonalitySuffix}`;
       setTitle(generatedTitle);
     }
-  }, [chartType, metric, groupBy, gaugeSubType, dateGrouping, indicatorMetric, funnelProcess]);
+  }, [chartType, metric, groupBy, gaugeSubType, dateGrouping, indicatorMetric, funnelProcess, tableDataSource]);
 
   const canProceedStep1 = chartType !== null;
   const canProceedStep2 = metric !== null;
@@ -217,6 +227,8 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
     ? metric !== null && title.trim() !== "" && activeDashboardId !== null
     : chartType === 'funnel'
     ? funnelProcess !== null && title.trim() !== "" && activeDashboardId !== null
+    : chartType === 'data_table'
+    ? tableColumns.length > 0 && title.trim() !== "" && activeDashboardId !== null
     : (chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge')
     ? title.trim() !== "" && activeDashboardId !== null
     : groupBy !== null && title.trim() !== "" && activeDashboardId !== null;
@@ -410,6 +422,34 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
           chart_type: 'funnel',
           config,
           layout: { x: 0, y: 0, w: 6, h: 5 },
+        });
+        onOpenChange(false);
+      } catch (error) {
+        console.error("Error creating visual:", error);
+      } finally {
+        setIsCreating(false);
+      }
+      return;
+    }
+
+    if (chartType === 'data_table') {
+      if (!canCreate) return;
+      setIsCreating(true);
+      try {
+        const config: VisualConfig = {
+          dataSource: tableDataSource,
+          measure: { field: '', aggregation: 'count' },
+          dimension: { field: 'created_at', type: 'date', dateGrouping: 'month' },
+          formatting: { type: 'decimal', decimals: 0 },
+          appearance: DEFAULT_APPEARANCE,
+          tableConfig: { columns: tableColumns },
+        };
+        await addVisual({
+          dashboard_id: activeDashboardId,
+          title: title.trim(),
+          chart_type: 'data_table',
+          config,
+          layout: { x: 0, y: 0, w: 12, h: 6 },
         });
         onOpenChange(false);
       } catch (error) {
@@ -783,7 +823,71 @@ export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
             </div>
           )}
 
-          {step === 2 && chartType !== 'ranking' && chartType !== 'call_commercial' && chartType !== 'gauge' && chartType !== 'indicator' && chartType !== 'funnel' && chartType !== 'bubble_map' && (
+          {/* Step 2: Data Table configuration */}
+          {step === 2 && chartType === 'data_table' && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">Configure a tabela de dados</p>
+              
+              <div className="space-y-2">
+                <Label>Fonte de Dados</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {DATA_SOURCE_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => {
+                        setTableDataSource(opt.value);
+                        setTableColumns(getDefaultColumns(opt.value));
+                      }}
+                      className={cn(
+                        "px-3 py-2 rounded-lg border-2 text-sm font-medium transition-all",
+                        tableDataSource === opt.value
+                          ? "border-primary bg-primary/5 text-primary"
+                          : "border-border hover:border-primary/50"
+                      )}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t">
+                <Label>Colunas</Label>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {getColumnsForDataSource(tableDataSource).map((col) => (
+                    <label
+                      key={col.key}
+                      className="flex items-center gap-2 cursor-pointer"
+                    >
+                      <Checkbox
+                        checked={tableColumns.includes(col.key)}
+                        onCheckedChange={(checked) => {
+                          setTableColumns(prev =>
+                            checked
+                              ? [...prev, col.key]
+                              : prev.filter(k => k !== col.key)
+                          );
+                        }}
+                      />
+                      <span className="text-sm">{col.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t">
+                <Label htmlFor="visual-title-table">Título</Label>
+                <Input
+                  id="visual-title-table"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Ex: Tabela de Negócios"
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 2 && chartType !== 'ranking' && chartType !== 'call_commercial' && chartType !== 'gauge' && chartType !== 'indicator' && chartType !== 'funnel' && chartType !== 'bubble_map' && chartType !== 'data_table' && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">O que você quer medir?</p>
               <RadioGroup
