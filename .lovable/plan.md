@@ -1,25 +1,23 @@
 
 
-## Correção: Gráfico mudou de vertical para horizontal
+## Correção: Ocultar rótulos que não cabem nos segmentos
 
-### Causa raiz
-
-Quando forçamos `effectiveChartType = 'bar_stacked'` para visuais com segmentação ativa, o `StackedHorizontalBarChart` usa `visualConfig?.chartOrientation || 'horizontal'` como orientação padrão. O gráfico original era vertical (`bar`), mas como `chartOrientation` não está definido no config, o fallback `'horizontal'` é aplicado.
+### Problema
+A função `renderInsideLabel` só verifica `width < 50` para barras horizontais. No modo vertical, o espaço relevante é a `height` do segmento, e mesmo para horizontal, 50px pode ser insuficiente para textos longos. Resultado: rótulos espremidos e ilegíveis.
 
 ### Solução
-
-Em `ConfigurableVisualCard.tsx`, quando o `effectiveChartType` é forçado para `'bar_stacked'`, injetar a orientação correta no `visualConfig` baseado no `chartType` original:
-
-- `chartType === 'bar'` → orientação `'vertical'`
-- `chartType === 'bar_horizontal'` → orientação `'horizontal'`
+Atualizar `renderInsideLabel` em `StackedHorizontalBarChart.tsx` para verificar **ambas** as dimensões — tanto `width` quanto `height` — garantindo que o rótulo só apareça se houver espaço suficiente:
 
 ```typescript
-// Ao montar visualConfig para ConfigurableChart:
-const effectiveVisualConfig = isStacked && effectiveChartType === 'bar_stacked' && !config.chartOrientation
-  ? { ...config, chartOrientation: chartType === 'bar' ? 'vertical' : 'horizontal' }
-  : config;
+const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMultiplier: number) => {
+  const { x, y, width, height, value } = props;
+  const minWidth = 40 * fontMultiplier;
+  const minHeight = 18 * fontMultiplier;
+  if (!value || value === 0 || width < minWidth || height < minHeight) return null;
+  // ... render text
+};
 ```
 
 ### Arquivo afetado
-- `src/components/insights/visuals/ConfigurableVisualCard.tsx`
+- `src/components/insights/visuals/StackedHorizontalBarChart.tsx` — linha 67
 
