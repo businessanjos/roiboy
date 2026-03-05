@@ -1470,6 +1470,8 @@ serve(async (req) => {
                         : (content || "Nova mensagem").substring(0, 120),
                       url: "/royzapp",
                       tag: `zapp-${zappConversationId}-${Date.now()}`,
+                      category: "zapp_messages",
+                      sector_id: sectorId || null,
                     };
                     // Fire-and-forget: don't await to keep webhook fast
                     fetch(pushUrl, {
