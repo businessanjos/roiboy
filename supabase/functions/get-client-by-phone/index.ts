@@ -22,6 +22,7 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
+    const searchType = url.searchParams.get("type");
     let phone = url.searchParams.get("phone_e164");
 
     // Normalizar: URL decode transforma + em espaço
@@ -75,23 +76,29 @@ serve(async (req) => {
       `get-client-by-phone: auth_method=${auth.method}, phone=${phone}, variants=${phoneVariants.join(",")}`
     );
 
-    // Find client by phone - scoped to authenticated account
-    const { data: client, error: clientError } = await supabase
-      .from("clients")
-      .select("id, full_name, phone_e164, status, tags")
-      .in("phone_e164", phoneVariants)
-      .eq("account_id", auth.accountId)
-      .maybeSingle();
+    let client = null;
 
-    if (clientError) {
-      console.error("Database error:", clientError.code);
-      if (auth.method === "api_key" && auth.apiKeyId) {
-        await logApiKeyUsage(supabase, auth.apiKeyId, req, 500);
+    // Only search clients table if not filtering by lead
+    if (searchType !== 'lead') {
+      const { data: clientData, error: clientError } = await supabase
+        .from("clients")
+        .select("id, full_name, phone_e164, status, tags")
+        .in("phone_e164", phoneVariants)
+        .eq("account_id", auth.accountId)
+        .maybeSingle();
+
+      if (clientError) {
+        console.error("Database error:", clientError.code);
+        if (auth.method === "api_key" && auth.apiKeyId) {
+          await logApiKeyUsage(supabase, auth.apiKeyId, req, 500);
+        }
+        return new Response(JSON.stringify({ error: "Internal error" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-      return new Response(JSON.stringify({ error: "Internal error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+      client = clientData;
     }
 
     if (!client) {
