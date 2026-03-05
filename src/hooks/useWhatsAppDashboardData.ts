@@ -414,7 +414,7 @@ export function useWhatsAppDashboardData() {
         avgTimePerTransition.push({
           from,
           to,
-          avgDays: Math.round(avgDays)
+          avgDays,
         });
       }
       
@@ -428,7 +428,7 @@ export function useWhatsAppDashboardData() {
         avgTimePerTransition.push({
           from: lastStage,
           to: 'Venda',
-          avgDays: Math.round(avgDays)
+          avgDays,
         });
       }
 
