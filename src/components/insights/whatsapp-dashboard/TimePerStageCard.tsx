@@ -17,7 +17,11 @@ interface TimePerStageCardProps {
 }
 
 function formatDuration(days: number): string {
-  if (days === 0) return '0h';
+  if (days === 0) return '0min';
+  const totalMinutes = days * 24 * 60;
+  if (totalMinutes < 60) {
+    return `${Math.round(totalMinutes)}min`;
+  }
   if (days < 1) {
     const hours = Math.round(days * 24);
     return `${hours}h`;
