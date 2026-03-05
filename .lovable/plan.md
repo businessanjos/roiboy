@@ -1,44 +1,39 @@
 
 
-## Plano: Usar a config exata do visual de funil salvo
+## Plano: Garantir paridade total usando cache direto do React Query
 
-### Causa Raiz
+### Diagnóstico
 
-O `WhatsAppDashboardPanel` cria uma **config hardcoded** para chamar `useVisualData`, enquanto o visual de funil dentro do `InsightsGrid` usa a **config salva no banco de dados** (que pode conter filtros adicionais como `leadFieldFilters`, `dealFieldFilters`, `statusFilter`, etc.). Essas duas configs geram queries diferentes, resultando na diferença de +1 em todas as contagens cumulativas.
+Apesar de usar a config do visual salvo, a chamada `useVisualData` no `WhatsAppDashboardPanel` pode estar gerando uma queryKey ligeiramente diferente da usada pelo `ConfigurableVisualCard` (por exemplo, serialização de propriedades `undefined`, referências de objeto, ou timing de renderização). Isso resulta em duas queries separadas que retornam dados com +1 de diferença.
 
-### Solução
+### Solução Definitiva
 
-Em vez de usar uma config hardcoded, extrair a config do **visual de funil real** (do prop `visuals`) e usá-la diretamente na chamada a `useVisualData`. Isso garante que ambos os componentes compartilhem **exatamente o mesmo cache do React Query**, eliminando qualquer discrepância.
+Eliminar a chamada `useVisualData` do `WhatsAppDashboardPanel`. Em vez disso, usar `useQueryClient()` para ler **diretamente o cache** da query que o `ConfigurableVisualCard` já executou. Isso garante 100% de paridade pois lê exatamente os mesmos dados — não uma cópia, os mesmos bytes.
 
 ### Alterações
 
 **Arquivo: `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`**
 
-1. Encontrar o visual de funil nos `visuals` recebidos via props:
+1. Remover import de `useVisualData`
+2. Importar `useQueryClient` do `@tanstack/react-query`, `useCurrentUser` e `useInsightsFilters`
+3. Substituir a chamada `useVisualData` por leitura direta do cache:
+
 ```typescript
+const queryClient = useQueryClient();
+const { currentUser } = useCurrentUser();
+const { filters } = useInsightsFilters();
+
 const funnelVisual = visuals.find(v => v.chart_type === 'funnel');
+const funnelConfig = funnelVisual?.config || null;
+
+// Read directly from the React Query cache — same data as the funnel card
+const funnelData = queryClient.getQueryData<AggregatedDataPoint[]>(
+  ['visual-data', funnelConfig, funnelVisual?.chart_type || 'funnel', filters, currentUser?.account_id]
+) || [];
 ```
 
-2. Usar a config desse visual (ou fallback para a config hardcoded caso não exista):
-```typescript
-const funnelConfig = funnelVisual?.config || {
-  dataSource: 'deals',
-  measure: { field: 'value', aggregation: 'count' },
-  dimension: { field: 'stage_name', type: 'text' },
-  formatting: { type: 'decimal', decimals: 0 },
-};
-```
-
-3. Passar `chartType` do visual real:
-```typescript
-const { data: funnelData } = useVisualData({ 
-  config: funnelConfig, 
-  chartType: funnelVisual?.chart_type || 'funnel' 
-});
-```
-
-Isso faz com que o `queryKey` do React Query seja idêntico ao do `ConfigurableVisualCard`, compartilhando o cache e garantindo valores 100% iguais.
+4. O restante da lógica cumulativa permanece inalterado (já está correto), pois agora opera sobre os mesmos dados exatos.
 
 ### Resultado Esperado
-Valores e percentuais nas Taxas de Conversão serão **idênticos** aos do Funil de Vendas (87, 60, 33, etc.).
+Os valores nas Taxas de Conversão serão **idênticos** aos do Funil de Vendas pois leem a mesma entrada de cache.
 
