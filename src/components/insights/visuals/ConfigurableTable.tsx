@@ -21,15 +21,15 @@ export interface TableColumnDef {
 }
 
 function DealStatusBadge({ status }: { status?: string }) {
-  if (!status) return null;
   const map: Record<string, { label: string; className: string }> = {
     won: { label: 'Ganho', className: 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30' },
     lost: { label: 'Perdido', className: 'bg-red-500/15 text-red-700 border-red-500/30' },
     open: { label: 'Aberto', className: 'bg-blue-500/15 text-blue-700 border-blue-500/30' },
   };
-  const info = map[status];
-  if (!info) return null;
-  return <Badge className={`text-[10px] px-1.5 py-0 font-medium ${info.className}`}>{info.label}</Badge>;
+  const info = status ? map[status] : null;
+  const label = info?.label ?? 'Sem Negócio';
+  const className = info?.className ?? 'bg-gray-500/15 text-gray-600 border-gray-500/30';
+  return <Badge className={`text-[10px] px-1.5 py-0 font-medium ${className}`}>{label}</Badge>;
 }
 
 const DEAL_COLUMNS: TableColumnDef[] = [
