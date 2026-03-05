@@ -50,6 +50,7 @@ export default function MarketingInsightsTab() {
     renameDashboard,
     addVisual,
     updateVisual,
+    removeVisual,
     isCreating,
   } = useMarketingDashboards();
 
@@ -201,6 +202,8 @@ export default function MarketingInsightsTab() {
                 visuals={visuals}
                 onLayoutChange={handleLayoutChange}
                 readOnly={!canManage}
+                onUpdateVisual={updateVisual}
+                onRemoveVisual={removeVisual}
               />
             )}
           </div>

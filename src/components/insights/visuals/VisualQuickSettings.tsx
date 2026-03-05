@@ -49,7 +49,7 @@ import {
   DISPLAY_SCALE_OPTIONS,
   DEFAULT_DISPLAY_SCALE,
 } from "../visual-builder/types";
-import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
+import { useInsightsDashboardsSafe } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useVisualData } from "@/hooks/useVisualData";
 import { supabase } from "@/integrations/supabase/client";
@@ -66,10 +66,14 @@ interface VisualQuickSettingsProps {
   visual: InsightsVisual;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  overrideUpdateVisual?: (id: string, updates: any) => Promise<void>;
+  overrideRemoveVisual?: (id: string) => Promise<void>;
 }
 
-export function VisualQuickSettings({ visual, open, onOpenChange }: VisualQuickSettingsProps) {
-  const { updateVisual, removeVisual } = useInsightsDashboards();
+export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdateVisual, overrideRemoveVisual }: VisualQuickSettingsProps) {
+  const ctx = useInsightsDashboardsSafe();
+  const updateVisual = overrideUpdateVisual ?? ctx?.updateVisual ?? (async () => {});
+  const removeVisual = overrideRemoveVisual ?? ctx?.removeVisual ?? (async () => {});
   const { currentUser } = useCurrentUser();
   const config = visual.config as VisualConfig | null;
 
