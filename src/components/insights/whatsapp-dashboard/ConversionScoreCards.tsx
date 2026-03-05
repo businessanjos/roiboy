@@ -38,15 +38,6 @@ export function ConversionScoreCards({
 
   return (
     <div className="grid grid-cols-3 gap-6 py-4 border-t border-b border-border/50">
-      {/* Overall Conversion */}
-      <div className="text-center">
-        <p className="text-sm text-muted-foreground mb-1">Conversão Total</p>
-        <p className="text-2xl font-bold text-primary">{overallConversion}%</p>
-        <p className="text-xs text-muted-foreground mt-1">
-          {wonDeals} vendas / {totalDeals} leads
-        </p>
-      </div>
-
       {/* Stage to Stage Conversions */}
       {conversions.slice(0, 2).map((conv, index) => (
         <div key={index} className="text-center">
@@ -59,6 +50,15 @@ export function ConversionScoreCards({
           </p>
         </div>
       ))}
+
+      {/* Overall Conversion */}
+      <div className="text-center">
+        <p className="text-sm text-muted-foreground mb-1">Conversão Total</p>
+        <p className="text-2xl font-bold text-primary">{overallConversion}%</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {wonDeals} vendas / {totalDeals} leads
+        </p>
+      </div>
     </div>
   );
 }
