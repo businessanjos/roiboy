@@ -4,7 +4,7 @@ import { Clock, Filter, TrendingUp, Zap, Monitor, Maximize2, Minimize2, X, Plus,
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWhatsAppDashboardData } from "@/hooks/useWhatsAppDashboardData";
-import { PipelineCards } from "./PipelineCards";
+
 
 import { ConversionScoreCards } from "./ConversionScoreCards";
 import { LeadsByDayChart } from "./LeadsByDayChart";
@@ -18,7 +18,7 @@ import { ZoomControls } from "@/components/ui/zoom-controls";
 import { InsightsGrid } from "../grid/InsightsGrid";
 import type { InsightsVisual } from "@/hooks/useInsightsDashboards";
 
-type SectionId = 'pipeline' | 'funnel_time' | 'conversion' | 'leads' | 'engagement' | 'time_saved';
+type SectionId = 'funnel_time' | 'conversion' | 'leads' | 'engagement' | 'time_saved';
 
 interface WhatsAppDashboardPanelProps {
   onAddVisual?: () => void;
@@ -137,17 +137,6 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
     <div className="relative">
       {/* Built-in sections - normal flow */}
       <div className="space-y-6">
-        {sectionVisible('pipeline') && (
-          <CollapsibleSection
-            title="Pipeline de Conversão"
-            subtitle="Distribuição por etapa"
-            icon={<Filter className="h-5 w-5 text-primary" />}
-            rightContent={hideButton('pipeline')}
-          >
-            <PipelineCards stages={data?.stageDistribution || []} isLoading={isLoading} />
-          </CollapsibleSection>
-        )}
-
         {sectionVisible('funnel_time') && (
           <CollapsibleSection
             title="Funil e Tempo"
