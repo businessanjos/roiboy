@@ -1,46 +1,35 @@
 
 
-## Plano: Visual customizado "Leads com Origem da Venda"
+## Plano: Filtro inline na coluna "Origem da Venda" da tabela de leads
 
 ### O que será feito
-Criar um componente de tabela customizado que exibe leads com a coluna "Origem da Venda" puxada do campo personalizado do negócio mais recente vinculado ao lead. Esse visual será integrado ao sistema existente como um novo tipo de visual ou como uma coluna enriquecida na tabela de leads.
-
-### Abordagem
-Como a tabela padrão de leads (`ConfigurableTable`) não suporta enriquecimento cross-entity (buscar dados de negócios para cada lead), a solução mais limpa é:
-
-1. **Adicionar uma nova coluna virtual `deal_source`** ao `LEAD_COLUMNS` na `ConfigurableTable`
-2. **Enriquecer os dados no `useVisualDrilldown`** durante o fetch de leads: após buscar os leads, fazer uma segunda query para buscar o negócio mais recente de cada lead e o valor do campo personalizado "Origem da Venda"
+Adicionar um botão de filtro pequeno (ícone de funil) ao lado do header da coluna "Origem da Venda" na `ConfigurableTable`. Ao clicar, abre um Popover com checkboxes listando os valores únicos de `deal_source` presentes nos dados carregados. O filtro é client-side (filtra os records já em memória).
 
 ### Alterações
 
-#### 1. `src/hooks/useVisualDrilldown.ts` — `fetchLeadsRecords()`
-- Após buscar os leads, coletar todos os `lead.id`
-- Buscar o negócio mais recente de cada lead na tabela `deals` (agrupando por `lead_id`, ordenando por `created_at DESC`, pegando apenas o primeiro)
-- Buscar o campo personalizado "Origem da Venda" na tabela `custom_fields` pelo nome
-- Buscar os valores em `deal_field_values` para os deal IDs encontrados
-- Resolver os labels das opções (select/multi_select) usando o mapa de opções do campo
-- Adicionar `extra.deal_source` em cada `DrilldownRecord` de lead
+#### `src/components/insights/visuals/ConfigurableTable.tsx`
 
-#### 2. `src/components/insights/visuals/ConfigurableTable.tsx`
-- Adicionar nova coluna `deal_source` no `LEAD_COLUMNS`:
-  ```
-  { key: 'deal_source', label: 'Origem da Venda', defaultWidth: 160, getValue: (r) => r.extra?.deal_source || '-' }
-  ```
+1. **Estado de filtro**: Adicionar `const [dealSourceFilter, setDealSourceFilter] = useState<Set<string>>(new Set())` para armazenar os valores selecionados.
 
-### Lógica de enriquecimento (pseudocódigo)
+2. **Extrair valores únicos**: Usar `useMemo` para coletar todos os valores únicos de `deal_source` dos records carregados (excluindo `-` e vazios).
+
+3. **Filtrar records**: Aplicar o filtro client-side antes de renderizar — se `dealSourceFilter` não estiver vazio, mostrar apenas records cujo `deal_source` está no set.
+
+4. **UI no header**: Para a coluna `deal_source`, renderizar um botão com ícone `Filter` (lucide) ao lado do label. Ao clicar, abre um `Popover` contendo:
+   - Lista de checkboxes com os valores únicos
+   - Botão "Limpar" para remover todos os filtros
+   - O ícone fica destacado (cor primária) quando há filtro ativo
+
+5. **Imports adicionais**: `Popover, PopoverTrigger, PopoverContent` do shadcn, `Checkbox` do shadcn, `Filter` do lucide-react.
+
+### Fluxo
 ```
-1. Buscar todos os leads (já existente)
-2. leadIds = leads.map(l => l.id)
-3. Para cada lead, buscar o deal mais recente:
-   - Query: deals WHERE lead_id IN (leadIds) ORDER BY created_at DESC
-   - Agrupar por lead_id, pegar apenas o primeiro (mais recente)
-4. Buscar campo "Origem da Venda" em custom_fields
-5. Buscar deal_field_values para os deal IDs com field_id do campo encontrado
-6. Resolver labels e mapear: leadId → label da Origem da Venda
-7. Incluir no extra de cada DrilldownRecord
+Header "Origem da Venda" [🔽 ícone filtro]
+  → Click → Popover com checkboxes dos valores únicos
+  → Selecionar valores → tabela filtra client-side instantaneamente
+  → Ícone fica highlighted quando filtro ativo
 ```
 
-### Arquivos Afetados
-- **Editar**: `src/hooks/useVisualDrilldown.ts` — enriquecer `fetchLeadsRecords` com dados de "Origem da Venda" do deal mais recente
-- **Editar**: `src/components/insights/visuals/ConfigurableTable.tsx` — adicionar coluna `deal_source` ao `LEAD_COLUMNS`
+### Arquivo afetado
+- **Editar**: `src/components/insights/visuals/ConfigurableTable.tsx`
 
