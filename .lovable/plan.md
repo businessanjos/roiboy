@@ -1,20 +1,34 @@
 
 
-## Plano: Mover Insights Marketing para página própria no menu lateral
+## Diagnóstico: Visual de tabela crashando na página Marketing Insights
 
-### Alterações
+### Causa Raiz
+O erro no console é claro: **"useInsightsDashboards must be used within InsightsDashboardsProvider"**.
 
-#### 1. `src/config/sectors.ts`
-- Adicionar item `{ to: "/marketing-insights", icon: BarChart3, label: "Insights" }` ao array `navItems` do setor `marketing`
+O componente `ConfigurableVisualCard` renderiza `VisualQuickSettings`, que internamente chama `useInsightsDashboards()` (versão estrita que lança exceção). A página Marketing Insights **não** está envolvida por `InsightsDashboardsProvider`, então o componente crasheia e o `VisualErrorBoundary` captura o erro exibindo "Erro ao renderizar este visual".
 
-#### 2. `src/App.tsx`
-- Adicionar rota `<Route path="/marketing-insights" element={<MarketingInsightsPage />} />`
-- Lazy import do novo componente de página
+### Solução
+Modificar `VisualQuickSettings` para usar `useInsightsDashboardsSafe()` em vez de `useInsightsDashboards()`, e aceitar props opcionais de override (`updateVisual`, `removeVisual`) — padrão similar ao que já foi feito no `AddVisualModal`.
 
-#### 3. Nova página: `src/pages/MarketingInsights.tsx`
-- Página simples com header "Insights Marketing" e renderiza `<MarketingInsightsTab />`
+Alternativamente (e de forma mais simples): fazer o `ConfigurableVisualCard` aceitar funções `updateVisual` e `removeVisual` como props opcionais e repassá-las ao `VisualQuickSettings`.
 
-#### 4. `src/pages/Marketing.tsx`
-- Remover a aba "Insights" do `TabsList` e o respectivo `TabsContent`
-- Remover import do `MarketingInsightsTab` e `BarChart3`
+**Abordagem escolhida** (mínima e consistente): Alterar `VisualQuickSettings` para usar `useInsightsDashboardsSafe()` e receber overrides via props.
+
+### Arquivos Afetados
+
+1. **`src/components/insights/visuals/VisualQuickSettings.tsx`**
+   - Trocar `useInsightsDashboards()` por `useInsightsDashboardsSafe()`
+   - Adicionar props `overrideUpdateVisual` e `overrideRemoveVisual`
+   - Usar `override ?? ctx?.updateVisual` com fallback
+
+2. **`src/components/insights/visuals/ConfigurableVisualCard.tsx`**
+   - Aceitar props opcionais `onUpdateVisual` e `onRemoveVisual`
+   - Repassar ao `VisualQuickSettings`
+
+3. **`src/components/insights/grid/InsightsGrid.tsx`**
+   - Aceitar props opcionais `onUpdateVisual` e `onRemoveVisual`
+   - Repassar ao `ConfigurableVisualCard`
+
+4. **`src/components/marketing/MarketingInsightsTab.tsx`**
+   - Passar `updateVisual` e `removeVisual` do hook `useMarketingDashboards` para o `InsightsGrid`
 
