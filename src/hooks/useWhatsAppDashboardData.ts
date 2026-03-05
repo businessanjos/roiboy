@@ -45,6 +45,7 @@ export interface WhatsAppDashboardData {
   stageDistribution: StageDistribution[];
   totalDeals: number;
   wonDeals: number;
+  wonDealsForFunnel: number;
   lostDeals: number;
   overallConversion: number;
   leadsByDay: LeadsByDay[];
@@ -137,6 +138,23 @@ export function useWhatsAppDashboardData() {
 
       // Build filter conditions
       const userFilter = filters.userId !== 'all' ? filters.userId : null;
+
+      // Fetch won deals count using won_at filter (matches funnel visual logic)
+      let wonDealsQuery = supabase
+        .from('deals')
+        .select('id', { count: 'exact', head: true })
+        .eq('account_id', accountId)
+        .eq('status', 'won')
+        .not('won_at', 'is', null)
+        .gte('won_at', filters.startDate)
+        .lte('won_at', filters.endDate);
+
+      if (userFilter) {
+        wonDealsQuery = wonDealsQuery.eq('responsible_user_id', userFilter);
+      }
+
+      const { count: wonDealsForFunnel } = await wonDealsQuery;
+
 
       // 1. Pipeline by Stage - need to fetch deals separately to apply filters
       const { data: stagesData } = await supabase
@@ -525,6 +543,7 @@ export function useWhatsAppDashboardData() {
         stageDistribution,
         totalDeals,
         wonDeals,
+        wonDealsForFunnel: wonDealsForFunnel ?? 0,
         lostDeals,
         overallConversion,
         leadsByDay,
