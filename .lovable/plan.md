@@ -1,38 +1,52 @@
 
 
-## Plano: Aplicar filtro de preferências no envio de push do uazapi-webhook
+## Plano: Usar `useVisualData` diretamente (reativo) em vez de `getQueryData` (snapshot estático)
 
-### Problema
+### Causa Raiz
 
-O filtro de setor nas preferências de notificação push **não funciona para mensagens do zAPP** porque:
+`queryClient.getQueryData()` é uma **leitura síncrona não-reativa** — ela captura o cache no momento da renderização mas **não re-renderiza** quando o cache é atualizado. Isso significa que:
 
-1. O `uazapi-webhook` chama `send-push` diretamente com `account_id` (envia para **todos** os usuários da conta), sem passar por nenhuma verificação de preferências.
-2. A Edge Function `send-push` não consulta a tabela `push_notification_preferences` — simplesmente envia para todas as subscriptions encontradas.
-3. O trigger `send_push_on_notification` (que **respeita** as preferências) só é acionado por INSERTs na tabela `notifications`, mas o webhook do zAPP **não insere** na tabela `notifications` — ele chama `send-push` diretamente via HTTP.
-
-Em resumo: o caminho de push do zAPP ignora completamente as preferências do usuário.
+1. Se o funil ainda não carregou quando o painel renderiza, `getQueryData` retorna `[]`
+2. Quando o funil termina de carregar, as Taxas de Conversão **não atualizam** porque `getQueryData` não é um subscriber
+3. O resultado são valores desatualizados ou vazios, explicando a discrepância persistente
 
 ### Solução
 
-Modificar a Edge Function `send-push` para consultar `push_notification_preferences` antes de enviar, filtrando por categoria e setor. Isso resolve o problema para **todos** os caminhos que chamam `send-push`, incluindo o webhook.
+Voltar a usar o hook `useVisualData` diretamente (que é reativo e **subscreve** às mudanças do cache), passando exatamente os mesmos parâmetros que o `ConfigurableVisualCard` usa:
+
+- `config`: `funnelVisual.config as VisualConfig`  
+- `chartType`: `funnelVisual.chart_type` (não um fallback diferente)
+- `enabled`: apenas quando o visual de funil existe
+
+Como o React Query faz **deep equality** nas queryKeys, a mesma config + chartType + filters + accountId resultará no **reuso do cache existente** (sem fetch duplicado), mas com **reatividade** — quando o cache atualiza, o componente re-renderiza.
 
 ### Alterações
 
-**Arquivo: `supabase/functions/send-push/index.ts`**
+**Arquivo: `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`**
 
-1. Aceitar novo campo opcional no body: `category` (ex: `'zapp_messages'`) e `sector_id`
-2. Quando enviando por `account_id`, para **cada user_id** nas subscriptions:
-   - Consultar `push_notification_preferences` do usuário
-   - Verificar se a categoria está habilitada (ex: `notify_zapp_messages`)
-   - Verificar se o `sector_id` está na lista `notify_sectors` (ou se a lista é vazia/null = todos)
-   - Pular o envio se qualquer verificação falhar
-3. Quando enviando por `user_id` (já filtrado pelo trigger), manter comportamento atual
+1. Re-importar `useVisualData` e remover `useQueryClient`
+2. Substituir a leitura de cache estática por:
 
-**Arquivo: `supabase/functions/uazapi-webhook/index.ts`**
+```typescript
+const funnelVisual = visuals.find(v => v.chart_type === 'funnel');
 
-1. Adicionar `category: 'zapp_messages'` e `sector_id: sectorId` ao body do `send-push` call (linha ~1465)
+const { data: funnelData } = useVisualData({
+  config: (funnelVisual?.config as VisualConfig) || null,
+  chartType: funnelVisual?.chart_type || 'funnel',
+  enabled: !!funnelVisual?.config,
+});
+```
+
+3. Remover imports não mais necessários: `useQueryClient`, `useCurrentUser`, `useInsightsFilters` (se não usados em outro lugar)
+
+### Por que isso funciona
+
+- `useVisualData` internamente usa `useQuery` com queryKey `['visual-data', config, chartType, filters, accountId]`
+- O `ConfigurableVisualCard` do funil usa **exatamente** a mesma queryKey com os mesmos valores
+- React Query reconhece a queryKey duplicada e **compartilha o cache** — uma única fetch serve ambos os componentes
+- Ambos recebem os **mesmos dados** e re-renderizam juntos quando o cache atualiza
 
 ### Resultado Esperado
 
-Usuário que marcou apenas "Vendas" nos setores receberá push **somente** de mensagens do zAPP associadas ao setor Vendas. Mensagens de outros setores serão filtradas.
+Os valores nas Taxas de Conversão (87 em Chegou Lead, 60 em Contato Realizado, 33 em Em Qualificação, 55%, etc.) serão **idênticos** aos do Funil de Vendas, pois ambos consomem o mesmo cache reativo.
 
