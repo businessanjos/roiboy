@@ -1,32 +1,34 @@
 
 
-## Correção: Filtro de data na exportação usa campo errado
+## Correção: Filtro de data ignora fuso horário
 
 ### Problema
-O filtro de datas (linhas 334-345) **sempre** usa `created_at` para filtrar, independente do status selecionado. Quando o usuário filtra por "Ganhas" entre 01/02 e 28/02, negócios que foram **criados** antes de fevereiro mas **ganhos** em fevereiro são excluídos da exportação. Por isso retornaram 30 em vez de 33.
+O `won_at` é armazenado em UTC. Ao fazer `.split("T")[0]`, extraímos a data UTC, não a data local. Um negócio ganho às 22h no Brasil (UTC-3) tem `won_at = "2026-02-28T01:00:00Z"` mas na realidade foi ganho dia 27/02 no horário local -- ou o inverso: ganho às 23h de 28/02 local vira `2026-03-01T02:00:00Z`, que o filtro interpreta como março, excluindo do período de fevereiro.
+
+Isso explica os 2-3 negócios faltando consistentemente.
 
 ### Solução
-Ajustar o filtro de data para usar o campo correto conforme o status:
-- **Status "won"**: filtrar por `won_at`
-- **Status "lost"**: filtrar por `lost_at`
-- **Qualquer outro**: filtrar por `created_at`
+Converter o timestamp UTC para data local antes de comparar:
 
 ```typescript
-// Determinar qual campo de data usar baseado no filtro de status
 const getDateField = (deal: any): string => {
-  if (filterStatus === "won") return (deal.won_at || "").split("T")[0];
-  if (filterStatus === "lost") return (deal.lost_at || "").split("T")[0];
-  return (deal.created_at || "").split("T")[0];
+  let raw: string | null = null;
+  if (filterStatus === "won") raw = deal.won_at;
+  else if (filterStatus === "lost") raw = deal.lost_at;
+  else raw = deal.created_at;
+  
+  if (!raw) return "";
+  // Converter UTC para data local
+  const d = new Date(raw);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
 };
-
-if (filterDateFrom) {
-  filtered = filtered.filter((d) => getDateField(d) >= filterDateFrom);
-}
-if (filterDateTo) {
-  filtered = filtered.filter((d) => getDateField(d) <= filterDateTo);
-}
 ```
 
+Ao usar `new Date(raw)` e extrair com `.getFullYear()/.getMonth()/.getDate()`, o JavaScript converte automaticamente para o fuso horário local do navegador.
+
 ### Arquivo afetado
-- `src/components/sales/PipelineExportDialog.tsx` — linhas 333-345
+- `src/components/sales/PipelineExportDialog.tsx` -- linhas 334-338 (função `getDateField`)
 
