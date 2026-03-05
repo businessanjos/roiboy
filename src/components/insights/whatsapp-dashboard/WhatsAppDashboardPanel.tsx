@@ -31,14 +31,15 @@ interface WhatsAppDashboardPanelProps {
 export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChange, isLoadingVisuals }: WhatsAppDashboardPanelProps) {
   const { data, isLoading } = useWhatsAppDashboardData();
 
-  // Use the same data source as the funnel visual for conversion cards
-  const funnelConfig = {
+  // Use the exact config from the saved funnel visual to share React Query cache
+  const funnelVisual = visuals.find(v => v.chart_type === 'funnel');
+  const funnelConfig = (funnelVisual?.config as any) || {
     dataSource: 'deals' as const,
     measure: { field: 'value', aggregation: 'count' as const },
     dimension: { field: 'stage_name', type: 'text' as const },
     formatting: { type: 'decimal' as const, decimals: 0 },
   };
-  const { data: funnelData } = useVisualData({ config: funnelConfig, chartType: 'funnel' });
+  const { data: funnelData } = useVisualData({ config: funnelConfig, chartType: (funnelVisual?.chart_type || 'funnel') as any });
 
 
   const [hiddenSections, setHiddenSections] = useState<Set<SectionId>>(new Set());
