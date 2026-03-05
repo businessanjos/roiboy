@@ -1,15 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Clock, Filter, TrendingUp, Zap, Monitor, Maximize2, Minimize2, X, Plus, EyeOff, RotateCcw } from "lucide-react";
+import { Clock, Filter, Zap, Monitor, Maximize2, Minimize2, X, Plus, EyeOff, RotateCcw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWhatsAppDashboardData } from "@/hooks/useWhatsAppDashboardData";
-import { useVisualData } from "@/hooks/useVisualData";
-import type { AggregatedDataPoint } from "@/hooks/useVisualData";
-import type { VisualConfig } from "@/components/insights/visual-builder/types";
 
-
-import { ConversionScoreCards } from "./ConversionScoreCards";
 import { LeadsByDayChart } from "./LeadsByDayChart";
 import { TimePerStageCard } from "./TimePerStageCard";
 import { EngagementByPeriodCards } from "./EngagementByPeriodCards";
@@ -21,7 +16,7 @@ import { ZoomControls } from "@/components/ui/zoom-controls";
 import { InsightsGrid } from "../grid/InsightsGrid";
 import type { InsightsVisual } from "@/hooks/useInsightsDashboards";
 
-type SectionId = 'funnel_time' | 'conversion' | 'leads' | 'engagement' | 'time_saved';
+type SectionId = 'funnel_time' | 'leads' | 'engagement' | 'time_saved';
 
 interface WhatsAppDashboardPanelProps {
   onAddVisual?: () => void;
@@ -32,15 +27,6 @@ interface WhatsAppDashboardPanelProps {
 
 export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChange, isLoadingVisuals }: WhatsAppDashboardPanelProps) {
   const { data, isLoading } = useWhatsAppDashboardData();
-
-  // Use reactive hook to subscribe to funnel data (same cache key as ConfigurableVisualCard)
-  const funnelVisual = visuals.find(v => v.chart_type === 'funnel');
-  const { data: funnelData = [] } = useVisualData({
-    config: (funnelVisual?.config as VisualConfig) || null,
-    chartType: funnelVisual?.chart_type || 'funnel',
-    enabled: !!funnelVisual?.config,
-  });
-
 
   const [hiddenSections, setHiddenSections] = useState<Set<SectionId>>(new Set());
   const [isFocusMode, setIsFocusMode] = useState(false);
@@ -118,43 +104,10 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
     }
   };
 
-  // Calculate conversion data from the same source as the funnel visual
-  const funnelStages = funnelData || [];
-  const isGanhos = (name: string) => name === 'Ganhos';
-  const regularFunnelStages = funnelStages.filter(d => !isGanhos(d.name));
-  const ganhosItem = funnelStages.find(d => isGanhos(d.name));
-  const ganhosValue = ganhosItem?.value || 0;
-
-  // Build cumulative counts bottom-up (same logic as ConfigurableFunnel)
-  const funnelCumulative: number[] = new Array(regularFunnelStages.length);
-  for (let i = regularFunnelStages.length - 1; i >= 0; i--) {
-    const below = i < regularFunnelStages.length - 1 ? funnelCumulative[i + 1] : ganhosValue;
-    funnelCumulative[i] = regularFunnelStages[i].value + below;
-  }
-
-  const stageConversions = regularFunnelStages.length >= 2
-    ? regularFunnelStages.slice(0, 2).map((stage, index) => {
-        const fromCum = funnelCumulative[index] || 0;
-        const toCum = funnelCumulative[index + 1] || 0;
-        const rate = fromCum > 0 ? Math.round((toCum / fromCum) * 100) : 0;
-        return {
-          from: regularFunnelStages[index].name,
-          to: regularFunnelStages[index + 1]?.name || '',
-          rate,
-          fromCount: fromCum,
-          toCount: toCum,
-        };
-      })
-    : [];
-
-  const funnelTotal = funnelCumulative[0] || 0;
-  const funnelOverallConversion = funnelTotal > 0 ? Math.round((ganhosValue / funnelTotal) * 100) : 0;
-
   const sectionVisible = (id: SectionId) => !hiddenSections.has(id);
 
   const dashboardContent = (
     <div className="relative">
-      {/* Built-in sections - normal flow */}
       <div className="space-y-6">
         {sectionVisible('funnel_time') && (
           <CollapsibleSection
@@ -186,28 +139,11 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
           </CollapsibleSection>
         )}
 
-        {sectionVisible('conversion') && (
-          <CollapsibleSection
-            title="Taxas de Conversão"
-            subtitle="Indicadores de performance do funil"
-            icon={<TrendingUp className="h-5 w-5 text-primary" />}
-            rightContent={hideButton('conversion')}
-          >
-            <ConversionScoreCards 
-              overallConversion={funnelOverallConversion}
-              stageConversions={stageConversions}
-              wonDeals={ganhosValue}
-              totalDeals={funnelTotal}
-              isLoading={isLoading}
-            />
-          </CollapsibleSection>
-        )}
-
         {sectionVisible('leads') && (
           <CollapsibleSection
             title="Leads por Dia"
             subtitle="Volume de novos leads"
-            icon={<TrendingUp className="h-5 w-5 text-primary" />}
+            icon={<Filter className="h-5 w-5 text-primary" />}
             rightContent={hideButton('leads')}
           >
             <LeadsByDayChart data={data?.leadsByDay || []} isLoading={isLoading} />
@@ -278,7 +214,6 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
     <>
       {focusModeOverlay}
       <div className="p-4 md:p-6 space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">Dashboard Operacional - WhatsApp</h1>
@@ -304,10 +239,8 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
           </div>
         </div>
 
-        {/* Filters */}
         <InsightsFilterBar />
 
-        {/* Dashboard Content */}
         {dashboardContent}
       </div>
     </>
