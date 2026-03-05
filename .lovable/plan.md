@@ -1,27 +1,44 @@
 
-## Plano: Alinhar Taxas de Conversão com o Funil de Vendas
 
-### Problema
-As **Taxas de Conversão** e o **Funil de Vendas** usam fontes de dados diferentes (`useWhatsAppDashboardData` vs `useVisualData`), gerando discrepâncias nos valores e percentuais. Por exemplo: funnel mostra 87/59/33/4 enquanto cards mostram 84/57/30/2.
+## Plano: Usar a config exata do visual de funil salvo
 
 ### Causa Raiz
-São dois hooks separados fazendo queries similares mas não idênticas ao banco de dados. Pequenas diferenças na lógica (ex: joins, paginação) resultam em contagens ligeiramente diferentes.
+
+O `WhatsAppDashboardPanel` cria uma **config hardcoded** para chamar `useVisualData`, enquanto o visual de funil dentro do `InsightsGrid` usa a **config salva no banco de dados** (que pode conter filtros adicionais como `leadFieldFilters`, `dealFieldFilters`, `statusFilter`, etc.). Essas duas configs geram queries diferentes, resultando na diferença de +1 em todas as contagens cumulativas.
 
 ### Solução
-Adicionar uma chamada a `useVisualData` diretamente no `WhatsAppDashboardPanel` com a mesma configuração do funil (`dataSource='deals'`, `dimension.field='stage_name'`, `chartType='funnel'`). Isso garante que os dados das **Taxas de Conversão** venham **exatamente da mesma fonte** que o funil visual.
+
+Em vez de usar uma config hardcoded, extrair a config do **visual de funil real** (do prop `visuals`) e usá-la diretamente na chamada a `useVisualData`. Isso garante que ambos os componentes compartilhem **exatamente o mesmo cache do React Query**, eliminando qualquer discrepância.
 
 ### Alterações
 
 **Arquivo: `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`**
 
-1. Importar `useVisualData` e `AggregatedDataPoint`
-2. Criar config estática de funil e chamar `useVisualData` com `chartType='funnel'`
-3. Substituir o cálculo de `stageConversions` para usar os dados retornados pelo hook (mesma lógica de `ConfigurableFunnel.tsx`):
-   - Separar "Ganhos" dos estágios regulares
-   - Calcular cumulativos de baixo para cima usando "Ganhos" como base
-   - Computar taxas de conversão entre etapas consecutivas
-   - Computar conversão total como `Ganhos / cumulative[0]`
-4. Passar `wonDeals` e `totalDeals` derivados do mesmo dataset para `ConversionScoreCards`
+1. Encontrar o visual de funil nos `visuals` recebidos via props:
+```typescript
+const funnelVisual = visuals.find(v => v.chart_type === 'funnel');
+```
+
+2. Usar a config desse visual (ou fallback para a config hardcoded caso não exista):
+```typescript
+const funnelConfig = funnelVisual?.config || {
+  dataSource: 'deals',
+  measure: { field: 'value', aggregation: 'count' },
+  dimension: { field: 'stage_name', type: 'text' },
+  formatting: { type: 'decimal', decimals: 0 },
+};
+```
+
+3. Passar `chartType` do visual real:
+```typescript
+const { data: funnelData } = useVisualData({ 
+  config: funnelConfig, 
+  chartType: funnelVisual?.chart_type || 'funnel' 
+});
+```
+
+Isso faz com que o `queryKey` do React Query seja idêntico ao do `ConfigurableVisualCard`, compartilhando o cache e garantindo valores 100% iguais.
 
 ### Resultado Esperado
-Os valores e percentuais nas Taxas de Conversão serão **idênticos** aos do Funil de Vendas, pois derivam da mesma query.
+Valores e percentuais nas Taxas de Conversão serão **idênticos** aos do Funil de Vendas (87, 60, 33, etc.).
+
