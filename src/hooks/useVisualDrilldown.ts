@@ -236,10 +236,14 @@ async function fetchLeadsRecords(
     });
   }
 
+  // Enrich with "Origem da Venda" from most recent deal per lead
+  const leadIds = filteredData.map((l: any) => l.id);
+  const dealSourceMap = await fetchDealSourceForLeads(accountId, leadIds);
+
   return filteredData.map((lead: any) => ({
     id: lead.id,
     name: lead.full_name || 'Sem nome',
-    value: 1, // Leads are counted
+    value: 1,
     status: lead.status,
     date: lead.created_at,
     extra: {
@@ -247,6 +251,7 @@ async function fetchLeadsRecords(
       phone: lead.phone,
       source: lead.source,
       revenue_range: lead.revenue_range,
+      deal_source: dealSourceMap.get(lead.id) || undefined,
     },
   }));
 }
@@ -419,4 +424,92 @@ async function fetchTasksRecords(
       completed_at: task.completed_at,
     },
   }));
+}
+
+/**
+ * Fetch "Origem da Venda" custom field value from the most recent deal for each lead.
+ * Returns a Map<leadId, label>.
+ */
+async function fetchDealSourceForLeads(
+  accountId: string,
+  leadIds: string[]
+): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (leadIds.length === 0) return result;
+
+  // 1. Find the "Origem da Venda" custom field
+  const { data: origemField } = await supabase
+    .from('custom_fields')
+    .select('id, field_type, options')
+    .eq('account_id', accountId)
+    .eq('name', 'Origem da Venda')
+    .eq('is_active', true)
+    .single();
+
+  if (!origemField) return result;
+
+  // Build option value→label map for select fields
+  const optionMap = new Map<string, string>();
+  if (origemField.options && Array.isArray(origemField.options)) {
+    for (const opt of origemField.options as Array<{ value: string; label: string }>) {
+      optionMap.set(opt.value, opt.label);
+    }
+  }
+
+  // 2. Fetch all deals for these leads (only need lead_id, id, created_at)
+  const batchSize = 500;
+  let allDeals: any[] = [];
+  for (let i = 0; i < leadIds.length; i += batchSize) {
+    const batch = leadIds.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from('deals')
+      .select('id, lead_id, created_at')
+      .eq('account_id', accountId)
+      .in('lead_id', batch)
+      .order('created_at', { ascending: false });
+    if (data) allDeals = allDeals.concat(data);
+  }
+
+  // 3. Keep only the most recent deal per lead
+  const latestDealByLead = new Map<string, string>(); // leadId → dealId
+  for (const deal of allDeals) {
+    if (!latestDealByLead.has(deal.lead_id)) {
+      latestDealByLead.set(deal.lead_id, deal.id);
+    }
+  }
+
+  const dealIds = Array.from(latestDealByLead.values());
+  if (dealIds.length === 0) return result;
+
+  // 4. Fetch deal_field_values for these deals
+  let allFieldValues: any[] = [];
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batch = dealIds.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, value_text, value_json')
+      .eq('field_id', origemField.id)
+      .in('deal_id', batch);
+    if (data) allFieldValues = allFieldValues.concat(data);
+  }
+
+  // 5. Build dealId → label map
+  const dealValueMap = new Map<string, string>();
+  for (const fv of allFieldValues) {
+    let label: string | undefined;
+    if (fv.value_text) {
+      label = optionMap.get(fv.value_text) || fv.value_text;
+    } else if (fv.value_json && Array.isArray(fv.value_json)) {
+      label = (fv.value_json as string[]).map(v => optionMap.get(v) || v).join(', ');
+    }
+    if (label) dealValueMap.set(fv.deal_id, label);
+  }
+
+  // 6. Map leadId → label
+  for (const [leadId, dealId] of latestDealByLead) {
+    const label = dealValueMap.get(dealId);
+    if (label) result.set(leadId, label);
+  }
+
+  return result;
 }
