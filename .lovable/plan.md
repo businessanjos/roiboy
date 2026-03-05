@@ -1,37 +1,40 @@
 
 
-## Plano: Filtro inline na coluna "Origem" + persistência de filtros
+## Plano: Tag de status do negócio ao lado do nome do lead
 
 ### O que será feito
-1. Adicionar filtro inline (ícone funil + popover com checkboxes) na coluna **"Origem"** (`source`), idêntico ao já existente em "Origem da Venda" (`deal_source`)
-2. **Persistir ambos os filtros** usando `usePersistedFilter` para que sobrevivam à navegação entre páginas
+Adicionar uma tag colorida ao lado do nome de cada lead na tabela, indicando o status do negócio mais recente vinculado: **Aberto** (azul), **Ganho** (verde) ou **Perdido** (vermelho). Leads sem negócio não terão tag.
 
-### Alterações em `src/components/insights/visuals/ConfigurableTable.tsx`
+### Alterações
 
-1. **Importar** `usePersistedFilter` de `@/hooks/usePersistedFilter`
+#### 1. `src/hooks/useVisualDrilldown.ts` — Enriquecer com status do deal
+- Na função `fetchDealSourceForLeads`, já buscamos deals com `id, lead_id, created_at`. Basta adicionar `status` ao select.
+- Retornar um segundo Map `dealStatusMap: Map<leadId, status>` junto com o existente, ou alterar para retornar um objeto `{ source: Map, status: Map }`.
+- Em `fetchLeadsRecords`, injetar `extra.deal_status` no DrilldownRecord de cada lead.
 
-2. **Generalizar filtros**: Substituir o estado `dealSourceFilter` (que é um `useState<Set>`) por dois `usePersistedFilter` com chaves únicas baseadas no `config.id` do visual:
-   - `usePersistedFilter<string[]>('table', `${config.id}_source`, [])` → filtro da coluna Origem
-   - `usePersistedFilter<string[]>('table', `${config.id}_deal_source`, [])` → filtro da coluna Origem da Venda
-   - Usar arrays (`string[]`) em vez de `Set` pois `usePersistedFilter` serializa para JSON
+#### 2. `src/components/insights/visuals/ConfigurableTable.tsx` — Renderizar tag
+- Alterar a coluna `name` em `LEAD_COLUMNS` para que o `getValue` retorne apenas o texto, mas criar uma renderização customizada.
+- Adicionar uma propriedade opcional `render` ao `TableColumnDef` para permitir JSX customizado.
+- Na coluna `name` dos leads, renderizar o nome + uma badge colorida com o status do deal (`extra.deal_status`):
+  - `won` → badge verde "Ganho"
+  - `lost` → badge vermelha "Perdido"  
+  - `open` → badge azul "Aberto"
+  - sem deal → sem badge
 
-3. **Extrair valores únicos** para ambas as colunas via `useMemo`:
-   - `uniqueSources`: valores únicos de `r.extra?.source`
-   - `uniqueDealSources`: já existente
+### Detalhes técnicos
 
-4. **Aplicar filtros combinados** (AND): filtrar records que satisfaçam ambos os filtros ativos simultaneamente
+```typescript
+// DrilldownRecord.extra terá:
+extra: {
+  deal_source: "instagram",
+  deal_status: "won" | "lost" | "open" | undefined,
+}
 
-5. **Definir colunas filtráveis**: Array constante `FILTERABLE_COLUMNS = ['source', 'deal_source']`. No render do header, verificar se `col.key` está nessa lista e renderizar o popover de filtro correspondente
-
-6. **Refatorar UI do header**: Extrair a lógica do popover de filtro para evitar duplicação — um bloco condicional genérico que recebe o `col.key`, os valores únicos e o estado do filtro correspondente
-
-### Fluxo de persistência
+// Coluna name renderiza:
+// "Daniela Becker" [Ganho]  ← badge verde
 ```
-Usuário seleciona filtro → usePersistedFilter grava no localStorage
-Usuário sai da página → volta → usePersistedFilter restaura do localStorage
-Chave: roy_filters_{userId}_table_{visualId}_{columnKey}
-```
 
-### Arquivo afetado
-- **Editar**: `src/components/insights/visuals/ConfigurableTable.tsx`
+### Arquivos afetados
+- `src/hooks/useVisualDrilldown.ts` — adicionar `status` ao fetch de deals e mapear para `extra.deal_status`
+- `src/components/insights/visuals/ConfigurableTable.tsx` — adicionar render customizado com badge na coluna nome (apenas para leads)
 
