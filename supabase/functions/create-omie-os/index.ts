@@ -77,6 +77,50 @@ async function findOmieVendedorByName(appKey: string, appSecret: string, name: s
   }
 }
 
+async function createOmieClient(
+  appKey: string,
+  appSecret: string,
+  clientData: {
+    cpfCnpj: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    clientId?: string;
+    dealId?: string;
+  }
+): Promise<any> {
+  const cleanDoc = clientData.cpfCnpj.replace(/\D/g, '');
+  const isPF = cleanDoc.length <= 11;
+
+  const payload: any = {
+    codigo_cliente_integracao: clientData.clientId || clientData.dealId || `ROY-${Date.now()}`,
+    cnpj_cpf: cleanDoc,
+    razao_social: clientData.name,
+    nome_fantasia: clientData.name,
+    contribuinte: '2',
+    pessoa_fisica: isPF ? 'S' : 'N',
+  };
+
+  if (clientData.email) payload.email = clientData.email;
+  if (clientData.phone) {
+    const cleanPhone = clientData.phone.replace(/\D/g, '');
+    if (cleanPhone.length >= 10) {
+      payload.telefone1_ddd = cleanPhone.substring(0, 2);
+      payload.telefone1_numero = cleanPhone.substring(2);
+    }
+  }
+
+  console.log('Creating Omie client:', JSON.stringify(payload));
+  const result = await callOmieApi(appKey, appSecret, 'geral/clientes', 'IncluirCliente', payload);
+  console.log('Omie client created:', JSON.stringify(result));
+
+  return {
+    codigo_cliente_omie: result.codigo_cliente_omie,
+    codigo_cliente_integracao: result.codigo_cliente_integracao,
+    razao_social: clientData.name,
+  };
+}
+
 function isUUID(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
@@ -191,7 +235,38 @@ serve(async (req) => {
     }
 
     if (!omieClient) {
-      throw new Error(`Cliente não encontrado no Omie. Busca por: ${clientCpfCnpj || client?.full_name || 'N/A'}`);
+      if (clientCpfCnpj) {
+        // Auto-create client in Omie
+        const clientName = client?.full_name || deal.contact_name || deal.title;
+        const clientEmail = Array.isArray(client?.emails) && client.emails.length > 0 ? client.emails[0] : '';
+        const clientPhone = client?.phone_e164 || '';
+
+        console.log(`Cliente não encontrado no Omie. Criando automaticamente: ${clientName} (${clientCpfCnpj})`);
+
+        omieClient = await createOmieClient(appKey, appSecret, {
+          cpfCnpj: clientCpfCnpj,
+          name: clientName,
+          email: clientEmail,
+          phone: clientPhone,
+          clientId: client?.id,
+          dealId: deal_id,
+        });
+
+        // Log auto-creation
+        await supabase.from('omie_integration_logs').insert({
+          account_id,
+          deal_id,
+          action: 'auto_create_client',
+          status: 'success',
+          omie_os_id: String(omieClient.codigo_cliente_omie || ''),
+          request_payload: { cpfCnpj: clientCpfCnpj, name: clientName },
+          response_payload: omieClient,
+        });
+
+        console.log(`Cliente criado no Omie com código: ${omieClient.codigo_cliente_omie}`);
+      } else {
+        throw new Error(`Cliente não encontrado no Omie e sem CPF/CNPJ para auto-cadastro. Busca por: ${client?.full_name || 'N/A'}`);
+      }
     }
 
     // 6. Validate required fields
