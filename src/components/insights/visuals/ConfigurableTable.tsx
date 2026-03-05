@@ -30,6 +30,7 @@ const LEAD_COLUMNS: TableColumnDef[] = [
   { key: 'name', label: 'Nome', defaultWidth: 180, getValue: (r) => r.name },
   { key: 'status', label: 'Status', defaultWidth: 100, getValue: (r) => r.status || '-' },
   { key: 'source', label: 'Origem', defaultWidth: 120, getValue: (r) => r.extra?.source || '-' },
+  { key: 'deal_source', label: 'Origem da Venda', defaultWidth: 160, getValue: (r) => r.extra?.deal_source || '-' },
   { key: 'date', label: 'Data Criação', defaultWidth: 120, getValue: (r) => formatDate(r.date) },
   { key: 'email', label: 'E-mail', defaultWidth: 200, getValue: (r) => r.extra?.email || '-' },
   { key: 'phone', label: 'Telefone', defaultWidth: 140, getValue: (r) => r.extra?.phone || '-' },
