@@ -330,18 +330,18 @@ export function PipelineExportDialog({
       filtered = applyCustomFieldFilter(filtered, faturamentoField, filterFaturamento);
       filtered = applyCustomFieldFilter(filtered, canalField, filterCanal);
 
-      // Date range filter
+      // Date range filter - use the correct date field based on status
+      const getDateField = (deal: any): string => {
+        if (filterStatus === "won") return (deal.won_at || "").split("T")[0];
+        if (filterStatus === "lost") return (deal.lost_at || "").split("T")[0];
+        return (deal.created_at || "").split("T")[0];
+      };
+
       if (filterDateFrom) {
-        filtered = filtered.filter((d) => {
-          const dateStr = (d.created_at || "").split("T")[0];
-          return dateStr >= filterDateFrom;
-        });
+        filtered = filtered.filter((d) => getDateField(d) >= filterDateFrom);
       }
       if (filterDateTo) {
-        filtered = filtered.filter((d) => {
-          const dateStr = (d.created_at || "").split("T")[0];
-          return dateStr <= filterDateTo;
-        });
+        filtered = filtered.filter((d) => getDateField(d) <= filterDateTo);
       }
 
       if (filtered.length === 0) {
