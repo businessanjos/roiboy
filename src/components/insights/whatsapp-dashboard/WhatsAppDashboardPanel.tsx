@@ -1,13 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { useQueryClient } from "@tanstack/react-query";
 import { Clock, Filter, TrendingUp, Zap, Monitor, Maximize2, Minimize2, X, Plus, EyeOff, RotateCcw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWhatsAppDashboardData } from "@/hooks/useWhatsAppDashboardData";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useInsightsFilters } from "@/hooks/useInsightsFilters";
+import { useVisualData } from "@/hooks/useVisualData";
 import type { AggregatedDataPoint } from "@/hooks/useVisualData";
+import type { VisualConfig } from "@/components/insights/visual-builder/types";
 
 
 import { ConversionScoreCards } from "./ConversionScoreCards";
@@ -34,16 +33,13 @@ interface WhatsAppDashboardPanelProps {
 export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChange, isLoadingVisuals }: WhatsAppDashboardPanelProps) {
   const { data, isLoading } = useWhatsAppDashboardData();
 
-  const queryClient = useQueryClient();
-  const { currentUser } = useCurrentUser();
-  const { filters } = useInsightsFilters();
-
-  // Read funnel data directly from React Query cache to guarantee parity with the funnel visual
+  // Use reactive hook to subscribe to funnel data (same cache key as ConfigurableVisualCard)
   const funnelVisual = visuals.find(v => v.chart_type === 'funnel');
-  const funnelConfig = (funnelVisual?.config as any) || null;
-  const funnelData = (queryClient.getQueryData<AggregatedDataPoint[]>(
-    ['visual-data', funnelConfig, funnelVisual?.chart_type || 'funnel', filters, currentUser?.account_id]
-  ) || []) as AggregatedDataPoint[];
+  const { data: funnelData = [] } = useVisualData({
+    config: (funnelVisual?.config as VisualConfig) || null,
+    chartType: funnelVisual?.chart_type || 'funnel',
+    enabled: !!funnelVisual?.config,
+  });
 
 
   const [hiddenSections, setHiddenSections] = useState<Set<SectionId>>(new Set());
