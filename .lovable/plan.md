@@ -1,23 +1,31 @@
 
 
-## Plano: Exibir tempo em horas quando < 1 dia
+## Plano: Exibir minutos quando tempo < 1 hora
 
-### Problema
-Atualmente `avgDays` é arredondado com `Math.round()` no hook, perdendo a precisão para tempos menores que 24h (aparecem como "0 dias").
+### Alteração em `src/components/insights/whatsapp-dashboard/TimePerStageCard.tsx`
 
-### Alterações
+Atualizar `formatDuration` para 3 faixas:
 
-**1. `src/hooks/useWhatsAppDashboardData.ts`**
-- Remover `Math.round(avgDays)` nas linhas 417 e 431 — passar o valor float bruto
-- Também ajustar `totalCycleDays` (linha 435) para manter precisão
+- `< 1/24 dia` (< 1 hora): exibir em minutos → `Xmin`
+- `< 1 dia` (1-23h): exibir em horas → `Xh`
+- `≥ 1 dia`: exibir em dias → `X dias`
 
-**2. `src/components/insights/whatsapp-dashboard/TimePerStageCard.tsx`**
-- Criar função helper `formatDuration(days: number)`:
-  - Se `days < 1`: exibir em horas → `Math.round(days * 24) + "h"` (ex: "5h", "18h")
-  - Se `days >= 1`: exibir em dias → `Math.round(days) + " dias"` (ex: "2 dias")
-- Aplicar nos transitions e no Ciclo Total de Vendas
+```typescript
+function formatDuration(days: number): string {
+  if (days === 0) return '0min';
+  const totalMinutes = days * 24 * 60;
+  if (totalMinutes < 60) {
+    return `${Math.round(totalMinutes)}min`;
+  }
+  if (days < 1) {
+    const hours = Math.round(days * 24);
+    return `${hours}h`;
+  }
+  const rounded = Math.round(days);
+  return `${rounded} ${rounded === 1 ? 'dia' : 'dias'}`;
+}
+```
 
-### Arquivos afetados
-- `src/hooks/useWhatsAppDashboardData.ts` — passar valores float
-- `src/components/insights/whatsapp-dashboard/TimePerStageCard.tsx` — formatação condicional
+### Arquivo afetado
+- `src/components/insights/whatsapp-dashboard/TimePerStageCard.tsx`
 
