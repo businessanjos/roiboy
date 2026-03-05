@@ -4,6 +4,7 @@ import { Clock, Filter, TrendingUp, Zap, Monitor, Maximize2, Minimize2, X, Plus,
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWhatsAppDashboardData } from "@/hooks/useWhatsAppDashboardData";
+import { useVisualData, type AggregatedDataPoint } from "@/hooks/useVisualData";
 
 
 import { ConversionScoreCards } from "./ConversionScoreCards";
@@ -30,7 +31,16 @@ interface WhatsAppDashboardPanelProps {
 export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChange, isLoadingVisuals }: WhatsAppDashboardPanelProps) {
   const { data, isLoading } = useWhatsAppDashboardData();
 
-  
+  // Use the same data source as the funnel visual for conversion cards
+  const funnelConfig = {
+    dataSource: 'deals' as const,
+    measure: { field: 'value', aggregation: 'count' as const },
+    dimension: { field: 'stage_name', type: 'text' as const },
+    formatting: { type: 'decimal' as const, decimals: 0 },
+  };
+  const { data: funnelData } = useVisualData({ config: funnelConfig, chartType: 'funnel' });
+
+
   const [hiddenSections, setHiddenSections] = useState<Set<SectionId>>(new Set());
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -107,31 +117,37 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
     }
   };
 
-  // Calculate cumulative counts for proper funnel conversion display
-  // Include won deals as base to match funnel visual logic
-  const stages = data?.stageDistribution || [];
-  const totalWonDeals = data?.wonDealsForFunnel ?? 0;
-  const cumulativeCounts: number[] = [];
-  for (let i = stages.length - 1; i >= 0; i--) {
-    const belowTotal = i < stages.length - 1 ? cumulativeCounts[i + 1] : totalWonDeals;
-    cumulativeCounts[i] = stages[i].count + belowTotal;
+  // Calculate conversion data from the same source as the funnel visual
+  const funnelStages = funnelData || [];
+  const isGanhos = (name: string) => name === 'Ganhos';
+  const regularFunnelStages = funnelStages.filter(d => !isGanhos(d.name));
+  const ganhosItem = funnelStages.find(d => isGanhos(d.name));
+  const ganhosValue = ganhosItem?.value || 0;
+
+  // Build cumulative counts bottom-up (same logic as ConfigurableFunnel)
+  const funnelCumulative: number[] = new Array(regularFunnelStages.length);
+  for (let i = regularFunnelStages.length - 1; i >= 0; i--) {
+    const below = i < regularFunnelStages.length - 1 ? funnelCumulative[i + 1] : ganhosValue;
+    funnelCumulative[i] = regularFunnelStages[i].value + below;
   }
 
-  const stageConversions = stages.length >= 2 
-    ? stages.slice(0, 2).map((stage, index) => {
-        if (index === 0) {
-          const fromCumulative = cumulativeCounts[0] || 0;
-          const toCumulative = cumulativeCounts[1] || 0;
-          const rate = fromCumulative > 0 ? Math.round((toCumulative / fromCumulative) * 100) : 0;
-          return { from: stages[0].name, to: stages[1]?.name || '', rate, fromCount: fromCumulative, toCount: toCumulative };
-        } else {
-          const fromCumulative = cumulativeCounts[1] || 0;
-          const toCumulative = cumulativeCounts[2] || 0;
-          const rate = fromCumulative > 0 ? Math.round((toCumulative / fromCumulative) * 100) : 0;
-          return { from: stages[1].name, to: stages[2]?.name || '', rate, fromCount: fromCumulative, toCount: toCumulative };
-        }
+  const stageConversions = regularFunnelStages.length >= 2
+    ? regularFunnelStages.slice(0, 2).map((stage, index) => {
+        const fromCum = funnelCumulative[index] || 0;
+        const toCum = funnelCumulative[index + 1] || 0;
+        const rate = fromCum > 0 ? Math.round((toCum / fromCum) * 100) : 0;
+        return {
+          from: regularFunnelStages[index].name,
+          to: regularFunnelStages[index + 1]?.name || '',
+          rate,
+          fromCount: fromCum,
+          toCount: toCum,
+        };
       })
     : [];
+
+  const funnelTotal = funnelCumulative[0] || 0;
+  const funnelOverallConversion = funnelTotal > 0 ? Math.round((ganhosValue / funnelTotal) * 100) : 0;
 
   const sectionVisible = (id: SectionId) => !hiddenSections.has(id);
 
@@ -177,10 +193,10 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
             rightContent={hideButton('conversion')}
           >
             <ConversionScoreCards 
-              overallConversion={data?.overallConversion || 0}
+              overallConversion={funnelOverallConversion}
               stageConversions={stageConversions}
-              wonDeals={data?.wonDeals || 0}
-              totalDeals={data?.totalDeals || 0}
+              wonDeals={ganhosValue}
+              totalDeals={funnelTotal}
               isLoading={isLoading}
             />
           </CollapsibleSection>
