@@ -16,6 +16,16 @@ interface TimePerStageCardProps {
   isLoading?: boolean;
 }
 
+function formatDuration(days: number): string {
+  if (days === 0) return '0h';
+  if (days < 1) {
+    const hours = Math.round(days * 24);
+    return `${hours}h`;
+  }
+  const rounded = Math.round(days);
+  return `${rounded} ${rounded === 1 ? 'dia' : 'dias'}`;
+}
+
 export function TimePerStageCard({ 
   transitions, 
   totalCycleDays, 
@@ -67,7 +77,7 @@ export function TimePerStageCard({
                     <span className="truncate">{t.from} → {t.to}</span>
                   </div>
                   <span className="font-semibold ml-2 whitespace-nowrap">
-                    {t.avgDays} dias
+                    {formatDuration(t.avgDays)}
                   </span>
                 </div>
               ))}
@@ -106,7 +116,7 @@ export function TimePerStageCard({
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-base font-bold text-primary">
-                      {totalCycleDays} dias
+                      {formatDuration(totalCycleDays)}
                     </span>
                     <span className="text-[10px] text-red-500">↘-8%</span>
                   </div>
