@@ -1,33 +1,35 @@
 
 
-## Plano: Filtro inline na coluna "Origem da Venda" da tabela de leads
+## Plano: Filtro inline na coluna "Origem" + persistência de filtros
 
 ### O que será feito
-Adicionar um botão de filtro pequeno (ícone de funil) ao lado do header da coluna "Origem da Venda" na `ConfigurableTable`. Ao clicar, abre um Popover com checkboxes listando os valores únicos de `deal_source` presentes nos dados carregados. O filtro é client-side (filtra os records já em memória).
+1. Adicionar filtro inline (ícone funil + popover com checkboxes) na coluna **"Origem"** (`source`), idêntico ao já existente em "Origem da Venda" (`deal_source`)
+2. **Persistir ambos os filtros** usando `usePersistedFilter` para que sobrevivam à navegação entre páginas
 
-### Alterações
+### Alterações em `src/components/insights/visuals/ConfigurableTable.tsx`
 
-#### `src/components/insights/visuals/ConfigurableTable.tsx`
+1. **Importar** `usePersistedFilter` de `@/hooks/usePersistedFilter`
 
-1. **Estado de filtro**: Adicionar `const [dealSourceFilter, setDealSourceFilter] = useState<Set<string>>(new Set())` para armazenar os valores selecionados.
+2. **Generalizar filtros**: Substituir o estado `dealSourceFilter` (que é um `useState<Set>`) por dois `usePersistedFilter` com chaves únicas baseadas no `config.id` do visual:
+   - `usePersistedFilter<string[]>('table', `${config.id}_source`, [])` → filtro da coluna Origem
+   - `usePersistedFilter<string[]>('table', `${config.id}_deal_source`, [])` → filtro da coluna Origem da Venda
+   - Usar arrays (`string[]`) em vez de `Set` pois `usePersistedFilter` serializa para JSON
 
-2. **Extrair valores únicos**: Usar `useMemo` para coletar todos os valores únicos de `deal_source` dos records carregados (excluindo `-` e vazios).
+3. **Extrair valores únicos** para ambas as colunas via `useMemo`:
+   - `uniqueSources`: valores únicos de `r.extra?.source`
+   - `uniqueDealSources`: já existente
 
-3. **Filtrar records**: Aplicar o filtro client-side antes de renderizar — se `dealSourceFilter` não estiver vazio, mostrar apenas records cujo `deal_source` está no set.
+4. **Aplicar filtros combinados** (AND): filtrar records que satisfaçam ambos os filtros ativos simultaneamente
 
-4. **UI no header**: Para a coluna `deal_source`, renderizar um botão com ícone `Filter` (lucide) ao lado do label. Ao clicar, abre um `Popover` contendo:
-   - Lista de checkboxes com os valores únicos
-   - Botão "Limpar" para remover todos os filtros
-   - O ícone fica destacado (cor primária) quando há filtro ativo
+5. **Definir colunas filtráveis**: Array constante `FILTERABLE_COLUMNS = ['source', 'deal_source']`. No render do header, verificar se `col.key` está nessa lista e renderizar o popover de filtro correspondente
 
-5. **Imports adicionais**: `Popover, PopoverTrigger, PopoverContent` do shadcn, `Checkbox` do shadcn, `Filter` do lucide-react.
+6. **Refatorar UI do header**: Extrair a lógica do popover de filtro para evitar duplicação — um bloco condicional genérico que recebe o `col.key`, os valores únicos e o estado do filtro correspondente
 
-### Fluxo
+### Fluxo de persistência
 ```
-Header "Origem da Venda" [🔽 ícone filtro]
-  → Click → Popover com checkboxes dos valores únicos
-  → Selecionar valores → tabela filtra client-side instantaneamente
-  → Ícone fica highlighted quando filtro ativo
+Usuário seleciona filtro → usePersistedFilter grava no localStorage
+Usuário sai da página → volta → usePersistedFilter restaura do localStorage
+Chave: roy_filters_{userId}_table_{visualId}_{columnKey}
 ```
 
 ### Arquivo afetado
