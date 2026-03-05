@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { useVisualDrilldown, DrilldownRecord } from "@/hooks/useVisualDrilldown";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { VisualConfig, DataSource } from "../visual-builder/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -95,13 +96,22 @@ function translateStatus(status?: string): string {
   return map[status] || status;
 }
 
-interface ConfigurableTableProps {
-  config: VisualConfig;
+// Columns that support inline filtering
+const FILTERABLE_COLUMNS = ['source', 'deal_source'];
+
+function getFilterExtraKey(colKey: string): string {
+  // Maps column key to the extra field used for filtering
+  return colKey === 'source' ? 'source' : 'deal_source';
 }
 
-export function ConfigurableTable({ config }: ConfigurableTableProps) {
+interface ConfigurableTableProps {
+  config: VisualConfig;
+  visualId?: string;
+}
+
+export function ConfigurableTable({ config, visualId }: ConfigurableTableProps) {
   const { data, isLoading } = useVisualDrilldown({ config, enabled: true });
-  
+
   const allColumns = getColumnsForDataSource(config.dataSource);
   const selectedKeys = config.tableConfig?.columns || getDefaultColumns(config.dataSource);
   const columns = useMemo(
@@ -116,8 +126,15 @@ export function ConfigurableTable({ config }: ConfigurableTableProps) {
     return w;
   });
 
-  // Deal source filter state
-  const [dealSourceFilter, setDealSourceFilter] = useState<Set<string>>(new Set());
+  // Persisted filters - use visualId or a stable key from config
+  const configId = visualId || `${config.dataSource}_${config.measure.field}_${config.dimension.field}`;
+  const [sourceFilter, setSourceFilter] = usePersistedFilter<string[]>('table', `${configId}_source`, []);
+  const [dealSourceFilter, setDealSourceFilter] = usePersistedFilter<string[]>('table', `${configId}_deal_source`, []);
+
+  const filterStateMap: Record<string, { values: string[]; set: (v: string[]) => void }> = {
+    source: { values: sourceFilter, set: setSourceFilter },
+    deal_source: { values: dealSourceFilter, set: setDealSourceFilter },
+  };
 
   // Resize logic
   const resizing = useRef<{ key: string; startX: number; startW: number } | null>(null);
@@ -145,24 +162,35 @@ export function ConfigurableTable({ config }: ConfigurableTableProps) {
 
   const records = data || [];
 
-  // Extract unique deal_source values
-  const uniqueDealSources = useMemo(() => {
-    const values = new Set<string>();
-    records.forEach(r => {
-      const v = r.extra?.deal_source;
-      if (v && v !== '-') values.add(v);
-    });
-    return Array.from(values).sort();
+  // Extract unique values for each filterable column
+  const uniqueValuesMap = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const colKey of FILTERABLE_COLUMNS) {
+      const extraKey = getFilterExtraKey(colKey);
+      const values = new Set<string>();
+      records.forEach(r => {
+        const v = r.extra?.[extraKey];
+        if (v && v !== '-') values.add(v);
+      });
+      map[colKey] = Array.from(values).sort();
+    }
+    return map;
   }, [records]);
 
-  // Apply filter
+  // Apply combined filters (AND)
   const filteredRecords = useMemo(() => {
-    if (dealSourceFilter.size === 0) return records;
     return records.filter(r => {
-      const v = r.extra?.deal_source || '-';
-      return dealSourceFilter.has(v);
+      for (const colKey of FILTERABLE_COLUMNS) {
+        const filterValues = filterStateMap[colKey]?.values;
+        if (filterValues && filterValues.length > 0) {
+          const extraKey = getFilterExtraKey(colKey);
+          const v = r.extra?.[extraKey] || '-';
+          if (!filterValues.includes(v)) return false;
+        }
+      }
+      return true;
     });
-  }, [records, dealSourceFilter]);
+  }, [records, sourceFilter, dealSourceFilter]);
 
   if (isLoading) {
     return (
@@ -172,76 +200,87 @@ export function ConfigurableTable({ config }: ConfigurableTableProps) {
     );
   }
 
-  const toggleDealSource = (value: string) => {
-    setDealSourceFilter(prev => {
-      const next = new Set(prev);
-      if (next.has(value)) next.delete(value);
-      else next.add(value);
-      return next;
-    });
+  const toggleFilterValue = (colKey: string, value: string) => {
+    const state = filterStateMap[colKey];
+    if (!state) return;
+    const current = state.values;
+    if (current.includes(value)) {
+      state.set(current.filter(v => v !== value));
+    } else {
+      state.set([...current, value]);
+    }
   };
 
-  const hasActiveFilter = dealSourceFilter.size > 0;
+  const clearFilter = (colKey: string) => {
+    filterStateMap[colKey]?.set([]);
+  };
 
   return (
     <div className="h-full w-full overflow-auto relative">
       <table className="w-max min-w-full border-collapse text-sm">
         <thead className="sticky top-0 z-10">
           <tr className="bg-muted/80 backdrop-blur-sm">
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                className="relative text-left font-medium text-muted-foreground px-3 py-2 border-b border-border select-none whitespace-nowrap"
-                style={{ width: colWidths[col.key] || col.defaultWidth, minWidth: 60 }}
-              >
-                <span className="flex items-center gap-1">
-                  {col.label}
-                  {col.key === 'deal_source' && uniqueDealSources.length > 0 && (
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <button
-                          className={`inline-flex items-center justify-center rounded p-0.5 transition-colors hover:bg-accent ${hasActiveFilter ? 'text-primary' : 'text-muted-foreground/60'}`}
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Filter className="h-3.5 w-3.5" />
-                        </button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-56 p-2" align="start" side="bottom">
-                        <div className="flex items-center justify-between mb-2 px-1">
-                          <span className="text-xs font-medium text-foreground">Filtrar por origem</span>
-                          {hasActiveFilter && (
-                            <button
-                              className="text-xs text-primary hover:underline"
-                              onClick={() => setDealSourceFilter(new Set())}
-                            >
-                              Limpar
-                            </button>
-                          )}
-                        </div>
-                        <div className="max-h-48 overflow-y-auto space-y-1">
-                          {uniqueDealSources.map(value => (
-                            <label
-                              key={value}
-                              className="flex items-center gap-2 px-1 py-1 rounded hover:bg-accent cursor-pointer text-sm"
-                            >
-                              <Checkbox
-                                checked={dealSourceFilter.has(value)}
-                                onCheckedChange={() => toggleDealSource(value)}
-                              />
-                              <span className="truncate text-foreground">{value}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  )}
-                </span>
-                <span
-                  className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 transition-colors"
-                  onMouseDown={(e) => onMouseDown(col.key, e)}
-                />
-              </th>
-            ))}
+            {columns.map((col) => {
+              const isFilterable = FILTERABLE_COLUMNS.includes(col.key);
+              const uniqueValues = uniqueValuesMap[col.key] || [];
+              const filterValues = filterStateMap[col.key]?.values || [];
+              const hasActiveFilter = filterValues.length > 0;
+
+              return (
+                <th
+                  key={col.key}
+                  className="relative text-left font-medium text-muted-foreground px-3 py-2 border-b border-border select-none whitespace-nowrap"
+                  style={{ width: colWidths[col.key] || col.defaultWidth, minWidth: 60 }}
+                >
+                  <span className="flex items-center gap-1">
+                    {col.label}
+                    {isFilterable && uniqueValues.length > 0 && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            className={`inline-flex items-center justify-center rounded p-0.5 transition-colors hover:bg-accent ${hasActiveFilter ? 'text-primary' : 'text-muted-foreground/60'}`}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <Filter className="h-3.5 w-3.5" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-56 p-2" align="start" side="bottom">
+                          <div className="flex items-center justify-between mb-2 px-1">
+                            <span className="text-xs font-medium text-foreground">Filtrar por {col.label.toLowerCase()}</span>
+                            {hasActiveFilter && (
+                              <button
+                                className="text-xs text-primary hover:underline"
+                                onClick={() => clearFilter(col.key)}
+                              >
+                                Limpar
+                              </button>
+                            )}
+                          </div>
+                          <div className="max-h-48 overflow-y-auto space-y-1">
+                            {uniqueValues.map(value => (
+                              <label
+                                key={value}
+                                className="flex items-center gap-2 px-1 py-1 rounded hover:bg-accent cursor-pointer text-sm"
+                              >
+                                <Checkbox
+                                  checked={filterValues.includes(value)}
+                                  onCheckedChange={() => toggleFilterValue(col.key, value)}
+                                />
+                                <span className="truncate text-foreground">{value}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </span>
+                  <span
+                    className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-primary/30 transition-colors"
+                    onMouseDown={(e) => onMouseDown(col.key, e)}
+                  />
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
