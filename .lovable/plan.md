@@ -1,27 +1,53 @@
 
 
-## Diagnóstico: Divergência entre Funil e Taxas de Conversão
+## Plano: Alinhar Taxas de Conversão com Funil de Vendas
 
-### Problema Identificado
+### Causa Raiz
 
-O **Funil de Vendas** inclui a etapa "Venda" (deals ganhos) na sua contagem cumulativa de baixo para cima, enquanto as **Taxas de Conversão** calculam a contagem cumulativa apenas com as etapas do pipeline (sem incluir "Venda").
+O funil visual (custom visual no InsightsGrid) usa `useVisualData`, que conta deals ganhos filtrando por `won_at`. Já as Taxas de Conversão usam `useWhatsAppDashboardData`, que conta deals ganhos a partir de uma query filtrada por `created_at`. Deals criados em um período mas ganhos em outro geram contagens diferentes.
 
-Exemplo da imagem:
-- Funil mostra **Chegou Lead = 87**, **Contato Realizado = 59**
-- Taxas de Conversão mostram **84 em Chegou Lead**, **57 em Contato Realizado**
+Além disso, o `stage.count` no dashboard inclui deals de TODOS os status (open, won, lost), enquanto o funil visual (`useVisualData`) também conta todos os status. Ambos deveriam ser equivalentes, mas a diferença no filtro de data dos won deals (`created_at` vs `won_at`) gera a divergência de 1-2 deals nos acumulados.
 
-A diferença (87 vs 84, 59 vs 57) ocorre porque o funil soma os deals ganhos (wonCount) na base e acumula para cima, mas o cálculo das Taxas de Conversão em `WhatsAppDashboardPanel.tsx` (linhas 112-116) não inclui o estágio "Venda" no acumulador.
+### Solução
 
-### Correção
+Adicionar uma query separada no `useWhatsAppDashboardData` para contar deals ganhos usando `won_at` (igual ao funil visual), e usar esse valor como base do acumulador no painel.
 
-**Arquivo:** `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`
+### Alterações
 
-Adicionar os deals ganhos (totalWonDeals) como base do acumulador no cálculo de `stageConversions`, replicando a mesma lógica do funil:
+**Arquivo: `src/hooks/useWhatsAppDashboardData.ts`**
 
-1. Calcular `totalWonDeals` a partir de `stages.reduce((sum, s) => sum + (s.wonCount || 0), 0)`
-2. Usar `totalWonDeals` como o valor base (bottom) na construção do array `cumulativeCounts`, em vez de começar com 0
-3. Isso alinhará os números cumulativos (87, 59, etc.) com o funil
+Após a query principal de deals (linha ~160), adicionar uma query separada para won deals filtrando por `won_at`:
+
+```typescript
+// Fetch won deals count using won_at filter (matches funnel visual logic)
+let wonDealsQuery = supabase
+  .from('deals')
+  .select('id', { count: 'exact', head: true })
+  .eq('account_id', accountId)
+  .eq('status', 'won')
+  .not('won_at', 'is', null)
+  .gte('won_at', filters.startDate)
+  .lte('won_at', filters.endDate);
+
+if (userFilter) {
+  wonDealsQuery = wonDealsQuery.eq('responsible_user_id', userFilter);
+}
+
+const { count: wonDealsForFunnel } = await wonDealsQuery;
+```
+
+Expor esse valor como `wonDealsForFunnel` no retorno do hook (novo campo no `WhatsAppDashboardData`).
+
+**Arquivo: `src/components/insights/whatsapp-dashboard/WhatsAppDashboardPanel.tsx`**
+
+Substituir o cálculo de `totalWonDeals` (linha 113) para usar o novo campo:
+
+```typescript
+const totalWonDeals = data?.wonDealsForFunnel ?? 0;
+```
+
+Isso garante que o acumulador do painel use exatamente o mesmo valor de "Ganhos" que o funil visual exibe.
 
 ### Resultado Esperado
-Os valores exibidos nas Taxas de Conversão passarão a ser idênticos aos do Funil de Vendas.
+Os percentuais e contagens nas Taxas de Conversão serão idênticos aos do Funil de Vendas.
 
