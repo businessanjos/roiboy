@@ -332,9 +332,18 @@ export function PipelineExportDialog({
 
       // Date range filter - use the correct date field based on status
       const getDateField = (deal: any): string => {
-        if (filterStatus === "won") return (deal.won_at || "").split("T")[0];
-        if (filterStatus === "lost") return (deal.lost_at || "").split("T")[0];
-        return (deal.created_at || "").split("T")[0];
+        let raw: string | null = null;
+        if (filterStatus === "won") raw = deal.won_at;
+        else if (filterStatus === "lost") raw = deal.lost_at;
+        else raw = deal.created_at;
+        
+        if (!raw) return "";
+        // Converter UTC para data local do navegador
+        const d = new Date(raw);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
       };
 
       if (filterDateFrom) {
