@@ -80,11 +80,12 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
     queryFn: async () => {
       if (!currentUser?.account_id) return [];
       
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("insights_dashboards")
         .select("*")
-        .eq("account_id", currentUser.account_id)
-        .order("display_order" as any, { ascending: true })
+        .eq("account_id", currentUser.account_id) as any)
+        .eq("sector", "vendas")
+        .order("display_order", { ascending: true })
         .order("created_at", { ascending: true });
       
       if (error) throw error;
@@ -411,4 +412,8 @@ export function useInsightsDashboards() {
     throw new Error("useInsightsDashboards must be used within InsightsDashboardsProvider");
   }
   return context;
+}
+
+export function useInsightsDashboardsSafe() {
+  return useContext(InsightsDashboardsContext);
 }
