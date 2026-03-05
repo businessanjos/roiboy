@@ -1,19 +1,13 @@
 
 
-## Plano: Tag "Sem Negócio" para leads sem deal vinculado
+## Plano: Reordenar cards de Taxas de Conversão
 
-### Alteração única em `src/components/insights/visuals/ConfigurableTable.tsx`
+### Alteração em `src/components/insights/whatsapp-dashboard/ConversionScoreCards.tsx`
 
-No componente `DealStatusBadge`, quando `status` for `undefined`/vazio, renderizar uma badge cinza "Sem Negócio" em vez de retornar `null`.
+Inverter a ordem de renderização: primeiro as conversões entre etapas (esquerda), depois a Conversão Total (direita/último).
 
-```typescript
-// Adicionar ao map:
-// sem status → badge cinza "Sem Negócio"
-```
+Atualmente: `[Conversão Total] [Etapa1→Etapa2] [Etapa2→Etapa3]`
+Resultado: `[Etapa1→Etapa2] [Etapa2→Etapa3] [Conversão Total]`
 
-- Cor: cinza (`bg-gray-500/15 text-gray-600 border-gray-500/30`)
-- Label: "Sem Negócio"
-
-### Arquivo afetado
-- `src/components/insights/visuals/ConfigurableTable.tsx` — apenas o componente `DealStatusBadge`
+Basta mover o bloco "Overall Conversion" para depois do `.map()` das conversões de etapa.
 
