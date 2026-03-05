@@ -229,7 +229,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { user_id, account_id, title, body, url, tag } = await req.json();
+    const { user_id, account_id, title, body, url, tag, category, sector_id } = await req.json();
 
     if ((!user_id && !account_id) || !title) {
       return new Response(JSON.stringify({ error: "user_id or account_id, and title are required" }), {
@@ -271,14 +271,65 @@ Deno.serve(async (req) => {
       });
     }
 
+    // When category is provided (e.g. from uazapi-webhook), filter by user preferences
+    // Map category to the preference column name
+    const categoryColumnMap: Record<string, string> = {
+      zapp_messages: "notify_zapp_messages",
+      task_assigned: "notify_task_assigned",
+      mentions: "notify_mentions",
+      system_alerts: "notify_system_alerts",
+    };
+
+    // Build a set of user_ids that should be skipped based on preferences
+    const skipUserIds = new Set<string>();
+
+    if (category && account_id) {
+      // Get unique user_ids from subscriptions
+      const uniqueUserIds = [...new Set(subscriptions.map((s: any) => s.user_id).filter(Boolean))];
+
+      if (uniqueUserIds.length > 0) {
+        const prefColumn = categoryColumnMap[category];
+
+        const { data: prefs } = await supabaseAdmin
+          .from("push_notification_preferences")
+          .select("user_id, notify_zapp_messages, notify_task_assigned, notify_mentions, notify_system_alerts, notify_sectors")
+          .in("user_id", uniqueUserIds);
+
+        if (prefs) {
+          for (const pref of prefs) {
+            // Check if category is disabled
+            if (prefColumn && (pref as any)[prefColumn] === false) {
+              skipUserIds.add(pref.user_id);
+              continue;
+            }
+
+            // Check sector filter: if user has sector preferences AND notification has a sector_id
+            const userSectors = pref.notify_sectors as string[] | null;
+            if (sector_id && userSectors && userSectors.length > 0) {
+              if (!userSectors.includes(sector_id)) {
+                skipUserIds.add(pref.user_id);
+              }
+            }
+          }
+        }
+      }
+    }
+
     const payload = JSON.stringify({ title, body, url, tag });
     const privateKeyJwk = JSON.parse(vapidData.private_key);
 
     let sent = 0;
     let failed = 0;
+    let skipped = 0;
     const expiredEndpoints: string[] = [];
 
     for (const sub of subscriptions) {
+      // Skip if user preferences say no
+      if (sub.user_id && skipUserIds.has(sub.user_id)) {
+        skipped++;
+        continue;
+      }
+
       const result = await sendWebPush(sub, payload, vapidData.public_key, privateKeyJwk);
 
       if (result.success) {
@@ -295,14 +346,21 @@ Deno.serve(async (req) => {
 
     // Clean up expired subscriptions
     if (expiredEndpoints.length > 0) {
-      await supabaseAdmin
+      const deleteQuery = supabaseAdmin
         .from("push_subscriptions")
         .delete()
-        .eq("user_id", user_id)
         .in("endpoint", expiredEndpoints);
+      
+      if (user_id) {
+        deleteQuery.eq("user_id", user_id);
+      } else if (account_id) {
+        deleteQuery.eq("account_id", account_id);
+      }
+      
+      await deleteQuery;
     }
 
-    return new Response(JSON.stringify({ sent, failed, expired: expiredEndpoints.length }), {
+    return new Response(JSON.stringify({ sent, failed, skipped, expired: expiredEndpoints.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
