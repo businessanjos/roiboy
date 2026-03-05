@@ -1,32 +1,32 @@
 
 
-## Correção: Dados faltando na exportação do pipeline
+## Correção: Filtro de data na exportação usa campo errado
 
-### Causa raiz
-
-Na linha 207, a query `deal_field_values` busca valores em chunks de 200 deals, mas **sem especificar `.limit()`**. O Supabase aplica um limite padrão de **1000 linhas por query**.
-
-Com ~15-20 campos personalizados por negócio, cada chunk de 200 deals gera 3000-4000 linhas de field values. Apenas os primeiros 1000 são retornados — o restante é **silenciosamente descartado**, resultando em campos vazios na exportação.
+### Problema
+O filtro de datas (linhas 334-345) **sempre** usa `created_at` para filtrar, independente do status selecionado. Quando o usuário filtra por "Ganhas" entre 01/02 e 28/02, negócios que foram **criados** antes de fevereiro mas **ganhos** em fevereiro são excluídos da exportação. Por isso retornaram 30 em vez de 33.
 
 ### Solução
-
-Duas mudanças em `src/components/sales/PipelineExportDialog.tsx`:
-
-1. **Reduzir o tamanho do chunk** de 200 para 50 deals por iteração
-2. **Adicionar `.limit(10000)`** na query para garantir que todos os valores sejam retornados
+Ajustar o filtro de data para usar o campo correto conforme o status:
+- **Status "won"**: filtrar por `won_at`
+- **Status "lost"**: filtrar por `lost_at`
+- **Qualquer outro**: filtrar por `created_at`
 
 ```typescript
-// Linha 204: mudar CHUNK de 200 para 50
-const CHUNK = 50;
+// Determinar qual campo de data usar baseado no filtro de status
+const getDateField = (deal: any): string => {
+  if (filterStatus === "won") return (deal.won_at || "").split("T")[0];
+  if (filterStatus === "lost") return (deal.lost_at || "").split("T")[0];
+  return (deal.created_at || "").split("T")[0];
+};
 
-// Linha 207-210: adicionar .limit(10000)
-const { data } = await supabase
-  .from("deal_field_values")
-  .select("deal_id, field_id, value_text, value_number, value_boolean, value_date, value_json")
-  .in("deal_id", chunk)
-  .limit(10000);
+if (filterDateFrom) {
+  filtered = filtered.filter((d) => getDateField(d) >= filterDateFrom);
+}
+if (filterDateTo) {
+  filtered = filtered.filter((d) => getDateField(d) <= filterDateTo);
+}
 ```
 
 ### Arquivo afetado
-- `src/components/sales/PipelineExportDialog.tsx` — linhas 204-210
+- `src/components/sales/PipelineExportDialog.tsx` — linhas 333-345
 
