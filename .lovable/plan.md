@@ -1,34 +1,42 @@
 
 
-## Correção: Filtro de data ignora fuso horário
+## Plano: Aba "Insights Marketing" no setor de Marketing
 
-### Problema
-O `won_at` é armazenado em UTC. Ao fazer `.split("T")[0]`, extraímos a data UTC, não a data local. Um negócio ganho às 22h no Brasil (UTC-3) tem `won_at = "2026-02-28T01:00:00Z"` mas na realidade foi ganho dia 27/02 no horário local -- ou o inverso: ganho às 23h de 28/02 local vira `2026-03-01T02:00:00Z`, que o filtro interpreta como março, excluindo do período de fevereiro.
+### Visão Geral
+Adicionar uma nova aba "Insights" na página de Marketing que reutiliza toda a infraestrutura existente de painéis e visuais do Insights (sidebar, grid, criação de visuais), mas filtrando dashboards por um novo campo `sector` na tabela `insights_dashboards`. Apenas administradores e gestores poderão criar, editar ou excluir painéis e visuais.
 
-Isso explica os 2-3 negócios faltando consistentemente.
+### Alterações
 
-### Solução
-Converter o timestamp UTC para data local antes de comparar:
+#### 1. Migração de Banco de Dados
+- Adicionar coluna `sector TEXT DEFAULT 'vendas'` à tabela `insights_dashboards`
+- Atualizar dashboards existentes para `sector = 'vendas'`
+- Criar índice para a nova coluna
 
-```typescript
-const getDateField = (deal: any): string => {
-  let raw: string | null = null;
-  if (filterStatus === "won") raw = deal.won_at;
-  else if (filterStatus === "lost") raw = deal.lost_at;
-  else raw = deal.created_at;
-  
-  if (!raw) return "";
-  // Converter UTC para data local
-  const d = new Date(raw);
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-};
-```
+#### 2. Hook `useMarketingInsightsDashboards`
+- Novo hook (ou parametrizar o existente) que filtra dashboards por `sector = 'marketing'`
+- Cria dashboards com `sector: 'marketing'`
+- Não usa navegação por URL (funciona inline na aba)
+- Recebe um parâmetro `readOnly` para controlar permissões
 
-Ao usar `new Date(raw)` e extrair com `.getFullYear()/.getMonth()/.getDate()`, o JavaScript converte automaticamente para o fuso horário local do navegador.
+#### 3. Componente `MarketingInsightsTab`
+- Novo componente que encapsula o sistema de Insights dentro da aba de Marketing
+- Inclui sidebar simplificada (lista de painéis) + área principal com grid de visuais
+- Lógica de permissão: verifica se o usuário é admin (`role === 'admin'`, `is_also_admin`) ou gestor (`team_role_name === 'Admin'` ou `'Gestor'`)
+- Se não for admin/gestor: oculta botões de criar painel, adicionar visual, excluir, renomear
 
-### Arquivo afetado
-- `src/components/sales/PipelineExportDialog.tsx` -- linhas 334-338 (função `getDateField`)
+#### 4. Página Marketing (`Marketing.tsx`)
+- Adicionar nova aba "Insights" com ícone `BarChart3`
+- Renderizar `MarketingInsightsTab` dentro do `TabsContent`
+
+### Controle de Permissão
+- **Leitura**: Todos os usuários da conta podem visualizar painéis e visuais de marketing
+- **Escrita** (criar/editar/excluir): Apenas `admin`, `is_also_admin`, ou `team_role_name` em `['Admin', 'Gestor']`
+- RLS existente já cobre o acesso por `account_id` -- o controle admin/gestor é feito no frontend
+
+### Arquivos Afetados
+- **Nova migração SQL**: adicionar coluna `sector` em `insights_dashboards`
+- **Novo**: `src/components/marketing/MarketingInsightsTab.tsx` -- componente da aba
+- **Novo**: `src/hooks/useMarketingDashboards.tsx` -- hook filtrado por sector
+- **Editar**: `src/pages/Marketing.tsx` -- adicionar aba Insights
+- **Editar**: `src/hooks/useInsightsDashboards.tsx` -- adicionar filtro `sector` no fetch (para o Insights de vendas não mostrar os de marketing)
 
