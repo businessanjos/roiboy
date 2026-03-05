@@ -5482,6 +5482,7 @@ export type Database = {
           folder: string | null
           id: string
           name: string
+          sector: string
           user_id: string
         }
         Insert: {
@@ -5491,6 +5492,7 @@ export type Database = {
           folder?: string | null
           id?: string
           name: string
+          sector?: string
           user_id: string
         }
         Update: {
@@ -5500,6 +5502,7 @@ export type Database = {
           folder?: string | null
           id?: string
           name?: string
+          sector?: string
           user_id?: string
         }
         Relationships: [

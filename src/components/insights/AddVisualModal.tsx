@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight, Trophy, Phone, Gauge, Activity, MapPin, Filter, Table } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
+import { useInsightsDashboardsSafe } from "@/hooks/useInsightsDashboards";
 import { VisualConfig, DEFAULT_APPEARANCE, DataSource, DATA_SOURCE_OPTIONS } from "./visual-builder/types";
 import { getColumnsForDataSource, getDefaultColumns } from "./visuals/ConfigurableTable";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,6 +20,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 interface AddVisualModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  overrideDashboardId?: string | null;
+  overrideAddVisual?: (visual: any) => Promise<void>;
 }
 
 type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge" | "indicator" | "bubble_map" | "funnel" | "data_table";
@@ -141,8 +143,10 @@ const GROUP_LABELS: Record<GroupBy, string> = {
   status_task: "por Status",
 };
 
-export function AddVisualModal({ open, onOpenChange }: AddVisualModalProps) {
-  const { activeDashboardId, addVisual } = useInsightsDashboards();
+export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overrideAddVisual }: AddVisualModalProps) {
+  const ctx = useInsightsDashboardsSafe();
+  const activeDashboardId = overrideDashboardId ?? ctx?.activeDashboardId ?? null;
+  const addVisual = overrideAddVisual ?? ctx?.addVisual ?? (async () => {});
   
   const [step, setStep] = useState(1);
   const [chartType, setChartType] = useState<ChartType | null>(null);
