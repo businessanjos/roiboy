@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Calendar, CalendarDays, Bell, Users, Grid3X3, BarChart3 } from 'lucide-react';
+import { Calendar, CalendarDays, Bell, Users, Grid3X3 } from 'lucide-react';
 import { useMarketingEvents, MarketingEvent } from '@/hooks/useMarketingEvents';
 import { MonthlyCalendarView } from '@/components/marketing/MonthlyCalendarView';
 import { YearlyCalendarView } from '@/components/marketing/YearlyCalendarView';
@@ -10,7 +10,7 @@ import { MarketingEventDialog, MarketingEventSheet } from '@/components/marketin
 import MarketingEventsTab from '@/components/marketing/MarketingEventsTab';
 import MarketingRemindersTab from '@/components/marketing/MarketingRemindersTab';
 import AttendanceReport from '@/components/events/AttendanceReport';
-import MarketingInsightsTab from '@/components/marketing/MarketingInsightsTab';
+
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export default function Marketing() {
@@ -144,10 +144,6 @@ export default function Marketing() {
             <Users className="h-4 w-4" />
             Presenças
           </TabsTrigger>
-          <TabsTrigger value="insights" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Insights
-          </TabsTrigger>
           <TabsTrigger value="reminders" className="flex items-center gap-2">
             <Bell className="h-4 w-4" />
             Lembretes
@@ -189,9 +185,6 @@ export default function Marketing() {
           <AttendanceReport accountId={currentUser?.account_id ?? null} />
         </TabsContent>
 
-        <TabsContent value="insights">
-          <MarketingInsightsTab />
-        </TabsContent>
 
         <TabsContent value="reminders">
           <MarketingRemindersTab />

@@ -66,6 +66,7 @@ const Marketing = lazy(() => import("./pages/Marketing"));
 const ContentCalendar = lazy(() => import("./pages/ContentCalendar"));
 const SocialMedia = lazy(() => import("./pages/SocialMedia"));
 const MarketingTasks = lazy(() => import("./pages/MarketingTasks"));
+const MarketingInsights = lazy(() => import("./pages/MarketingInsights"));
 const Insights = lazy(() => import("./pages/Insights"));
 const WhatsAppDiagnostics = lazy(() => import("./pages/admin/WhatsAppDiagnostics"));
 // Financial module with sub-routes
@@ -192,6 +193,7 @@ const App = () => (
                             <Route path="/content-calendar" element={<ContentCalendar />} />
                             <Route path="/social-media" element={<SocialMedia />} />
                             <Route path="/marketing-tasks" element={<MarketingTasks />} />
+                            <Route path="/marketing-insights" element={<MarketingInsights />} />
                             <Route path="/insights" element={<Insights />} />
                             <Route path="/insights/:dashboardId" element={<Insights />} />
                             <Route path="/team-chat/:chatId" element={<TeamChat />} />
