@@ -1,8 +1,9 @@
-import { useState, useCallback, useRef, useMemo } from "react";
+import { useState, useCallback, useRef, useMemo, ReactNode } from "react";
 import { useVisualDrilldown, DrilldownRecord } from "@/hooks/useVisualDrilldown";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { VisualConfig, DataSource } from "../visual-builder/types";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Filter } from "lucide-react";
@@ -16,6 +17,19 @@ export interface TableColumnDef {
   label: string;
   defaultWidth: number;
   getValue: (record: DrilldownRecord) => string;
+  render?: (record: DrilldownRecord) => ReactNode;
+}
+
+function DealStatusBadge({ status }: { status?: string }) {
+  if (!status) return null;
+  const map: Record<string, { label: string; className: string }> = {
+    won: { label: 'Ganho', className: 'bg-emerald-500/15 text-emerald-700 border-emerald-500/30' },
+    lost: { label: 'Perdido', className: 'bg-red-500/15 text-red-700 border-red-500/30' },
+    open: { label: 'Aberto', className: 'bg-blue-500/15 text-blue-700 border-blue-500/30' },
+  };
+  const info = map[status];
+  if (!info) return null;
+  return <Badge className={`text-[10px] px-1.5 py-0 font-medium ${info.className}`}>{info.label}</Badge>;
 }
 
 const DEAL_COLUMNS: TableColumnDef[] = [
@@ -31,7 +45,12 @@ const DEAL_COLUMNS: TableColumnDef[] = [
 ];
 
 const LEAD_COLUMNS: TableColumnDef[] = [
-  { key: 'name', label: 'Nome', defaultWidth: 180, getValue: (r) => r.name },
+  { key: 'name', label: 'Nome', defaultWidth: 220, getValue: (r) => r.name, render: (r) => (
+    <div className="flex items-center gap-1.5">
+      <span className="truncate">{r.name}</span>
+      <DealStatusBadge status={r.extra?.deal_status} />
+    </div>
+  ) },
   { key: 'status', label: 'Status', defaultWidth: 100, getValue: (r) => r.status || '-' },
   { key: 'source', label: 'Origem', defaultWidth: 120, getValue: (r) => r.extra?.source || '-' },
   { key: 'deal_source', label: 'Origem da Venda', defaultWidth: 160, getValue: (r) => r.extra?.deal_source || '-' },
@@ -300,7 +319,7 @@ export function ConfigurableTable({ config, visualId }: ConfigurableTableProps) 
                     style={{ maxWidth: colWidths[col.key] || col.defaultWidth }}
                     title={col.getValue(record)}
                   >
-                    {col.getValue(record)}
+                    {col.render ? col.render(record) : col.getValue(record)}
                   </td>
                 ))}
               </tr>
