@@ -23,6 +23,8 @@ interface InsightsGridProps {
   visuals: InsightsVisual[];
   onLayoutChange: (layouts: Array<{ id: string; layout: LayoutItem }>) => void;
   readOnly?: boolean;
+  onUpdateVisual?: (id: string, updates: any) => Promise<void>;
+  onRemoveVisual?: (id: string) => Promise<void>;
 }
 
 const ROW_HEIGHT = 20;
@@ -68,7 +70,7 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
   };
 }
 
-export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: InsightsGridProps) {
+export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual }: InsightsGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1200);
 
@@ -172,7 +174,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false }: Insi
       >
         {visuals.map((visual) => (
           <div key={visual.id} className="h-full">
-            <ConfigurableVisualCard visual={visual} />
+            <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
           </div>
         ))}
       </GridLayout>
