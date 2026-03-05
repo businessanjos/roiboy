@@ -110,7 +110,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
   // Calculate cumulative counts for proper funnel conversion display
   // Include won deals as base to match funnel visual logic
   const stages = data?.stageDistribution || [];
-  const totalWonDeals = stages.reduce((sum, s) => sum + ((s as any).wonCount || 0), 0);
+  const totalWonDeals = data?.wonDealsForFunnel ?? 0;
   const cumulativeCounts: number[] = [];
   for (let i = stages.length - 1; i >= 0; i--) {
     const belowTotal = i < stages.length - 1 ? cumulativeCounts[i + 1] : totalWonDeals;
