@@ -285,11 +285,16 @@ async function filterByFieldValues(
 ): Promise<Set<string>> {
   if (selectedValues.length === 0 || entityIds.length === 0) return new Set(entityIds);
 
-  const { data: fieldDef } = await supabase
+  const { data: fieldDef, error: fieldDefError } = await supabase
     .from('custom_fields')
     .select('options, field_type')
     .eq('id', fieldId)
     .maybeSingle();
+
+  if (fieldDefError || !fieldDef) {
+    console.warn(`[filterByFieldValues] Could not fetch field definition for ${fieldId}:`, fieldDefError ? JSON.stringify(fieldDefError) : 'null result. Returning all as fallback.');
+    return new Set(entityIds);
+  }
 
   const fieldType = fieldDef?.field_type || '';
   const isMultiSelect = fieldType === 'multi_select';
