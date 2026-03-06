@@ -79,6 +79,7 @@ import { LeadFieldValueEditor, type LeadCustomField, FieldValueBadge, type Field
 import { CustomField } from "@/components/custom-fields";
 import { LeadImportPreview, ImportLeadRow, ExistingLeadInfo, DuplicateMatchType } from "@/components/leads/LeadImportPreview";
 import { useZappNavigation } from "@/hooks/useZappNavigation";
+import { ZappLeadPhonePickerDialog } from "@/components/royzapp/dialogs/ZappLeadPhonePickerDialog";
 import { MergeLeadDialog, MergedLeadData } from "@/components/leads/MergeLeadDialog";
 import { useLeadMerge } from "@/hooks/useLeadMerge";
 import { useLeadDuplicateDetection, LeadDuplicateMatch } from "@/hooks/useLeadDuplicateDetection";
@@ -123,6 +124,38 @@ export default function Leads() {
   } = useLeads();
   const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
   const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
+  const [phonePickerOpen, setPhonePickerOpen] = useState(false);
+  const [phonePickerLead, setPhonePickerLead] = useState<Lead | null>(null);
+
+  const handleOpenZappForLead = useCallback((lead: Lead) => {
+    if (lead.additional_phones && lead.additional_phones.length > 0) {
+      setPhonePickerLead(lead);
+      setPhonePickerOpen(true);
+    } else {
+      openZappConversation({
+        phone: lead.phone,
+        leadId: lead.id,
+        name: lead.full_name,
+        openInNewTab: true,
+      });
+    }
+  }, [openZappConversation]);
+
+  const getPhonePickerPhones = useCallback((lead: Lead) => {
+    const phones: { phone: string; label?: string; isPrimary?: boolean }[] = [];
+    if (lead.phone) {
+      phones.push({ phone: lead.phone, isPrimary: true });
+    }
+    if (lead.additional_phones) {
+      lead.additional_phones.forEach((p) => {
+        const phoneStr = typeof p === 'object' && p !== null && (p as any).number ? (p as any).number : String(p);
+        if (phoneStr && phoneStr !== lead.phone) {
+          phones.push({ phone: phoneStr });
+        }
+      });
+    }
+    return phones;
+  }, []);
   const { mergeLeads } = useLeadMerge();
   const { duplicates: leadDuplicates, checkDuplicates: checkLeadDuplicates, clearDuplicates: clearLeadDuplicates, loading: checkingDuplicates } = useLeadDuplicateDetection();
 
@@ -1293,12 +1326,7 @@ export default function Leads() {
                               className="h-7 w-7 hover:bg-emerald-500/20"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                openZappConversation({
-                                  phone: lead.phone,
-                                  leadId: lead.id,
-                                  name: lead.full_name,
-                                  openInNewTab: true,
-                                });
+                                handleOpenZappForLead(lead);
                               }}
                               disabled={zappLoading}
                               title="Abrir conversa no RoyZapp"
@@ -1317,12 +1345,7 @@ export default function Leads() {
                               {lead.phone && (
                                 <DropdownMenuItem onClick={(e) => {
                                   e.stopPropagation();
-                                  openZappConversation({
-                                    phone: lead.phone,
-                                    leadId: lead.id,
-                                    name: lead.full_name,
-                                    openInNewTab: true,
-                                  });
+                                  handleOpenZappForLead(lead);
                                 }}>
                                   <MessageCircle className="h-4 w-4 mr-2" />
                                   Conversar no RoyZapp
@@ -1938,6 +1961,26 @@ export default function Leads() {
             if (success) {
               await refetchLeads();
             }
+          }}
+        />
+      )}
+
+      {phonePickerLead && (
+        <ZappLeadPhonePickerDialog
+          open={phonePickerOpen}
+          onOpenChange={(open) => {
+            setPhonePickerOpen(open);
+            if (!open) setPhonePickerLead(null);
+          }}
+          leadName={phonePickerLead.full_name}
+          phones={getPhonePickerPhones(phonePickerLead)}
+          onSelectPhone={(phone) => {
+            openZappConversation({
+              phone,
+              leadId: phonePickerLead.id,
+              name: phonePickerLead.full_name,
+              openInNewTab: true,
+            });
           }}
         />
       )}
