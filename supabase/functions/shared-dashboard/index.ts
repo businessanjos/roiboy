@@ -1034,6 +1034,8 @@ async function computeLeadsData(
   const hasLeadFilter = leadFilters.length > 0;
   const hasDealFilter = (dealFiltersArr.length > 0) || (dealStatusFilter && dealStatusFilter.length > 0);
 
+  console.log(`[leads] dim=${dimension.field}, hasLeadFilter=${hasLeadFilter}, hasDealFilter=${hasDealFilter}, leadFilters=${leadFilters.length}, dealFilters=${dealFiltersArr.length}, dealStatusFilter=${JSON.stringify(dealStatusFilter)}`);
+
   // Scorecard total without filters: use server-side count
   if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter) {
     let countQuery = supabase
@@ -1046,7 +1048,8 @@ async function computeLeadsData(
     if (filters.endDate) countQuery = countQuery.lte('created_at', filters.endDate);
 
     const { count, error } = await countQuery;
-    if (error) { console.error('Error fetching leads count:', error); return []; }
+    if (error) { console.error('[leads] Error fetching leads count:', error); return []; }
+    console.log(`[leads] Scorecard count (no filters): ${count}`);
     return [{ name: 'Total', value: count || 0 }];
   }
 
@@ -1062,39 +1065,55 @@ async function computeLeadsData(
       if (filters.endDate) q = q.lte('created_at', filters.endDate);
       return q;
     },
-    'created_at'
+    'created_at',
+    'leads-base'
   );
+  console.log(`[leads] Base leads fetched: ${allData.length}`);
 
   // Apply lead field filters
   if (hasLeadFilter) {
-    allData = await applyLeadFieldFilters(supabase, allData, accountId, leadFilters, 'leads');
+    try {
+      allData = await applyLeadFieldFilters(supabase, allData, accountId, leadFilters, 'leads');
+      console.log(`[leads] After lead field filters: ${allData.length}`);
+    } catch (err) {
+      console.error('[leads] Error in applyLeadFieldFilters:', err);
+    }
   }
 
   // Apply deal-based cross-filters
   if (hasDealFilter && allData.length > 0) {
-    let allDeals = await paginateQuery(
-      () => {
-        let q = supabase
-          .from('deals')
-          .select('id, lead_id')
-          .eq('account_id', accountId);
-        if (dealStatusFilter && dealStatusFilter.length > 0) {
-          q = q.in('status', dealStatusFilter);
-        }
-        return q;
-      },
-      'created_at'
-    );
+    try {
+      let allDeals = await paginateQuery(
+        () => {
+          let q = supabase
+            .from('deals')
+            .select('id, lead_id, status, created_at')
+            .eq('account_id', accountId);
+          if (dealStatusFilter && dealStatusFilter.length > 0) {
+            q = q.in('status', dealStatusFilter);
+          }
+          return q;
+        },
+        'created_at',
+        'leads-crossfilter-deals'
+      );
+      console.log(`[leads] Cross-filter deals fetched: ${allDeals.length}`);
 
-    if (dealFiltersArr.length > 0) {
-      allDeals = await applyDealFieldFilters(supabase, allDeals, accountId, dealFiltersArr);
-    }
+      if (dealFiltersArr.length > 0) {
+        allDeals = await applyDealFieldFilters(supabase, allDeals, accountId, dealFiltersArr);
+        console.log(`[leads] Cross-filter deals after field filters: ${allDeals.length}`);
+      }
 
-    const matchingLeadIds = new Set<string>();
-    for (const deal of allDeals) {
-      if (deal.lead_id) matchingLeadIds.add(deal.lead_id);
+      const matchingLeadIds = new Set<string>();
+      for (const deal of allDeals) {
+        if (deal.lead_id) matchingLeadIds.add(deal.lead_id);
+      }
+      console.log(`[leads] Unique lead_ids from matching deals: ${matchingLeadIds.size}`);
+      allData = allData.filter((lead: any) => matchingLeadIds.has(lead.id));
+      console.log(`[leads] After cross-filter intersection: ${allData.length}`);
+    } catch (err) {
+      console.error('[leads] Error in deal cross-filter:', err);
     }
-    allData = allData.filter((lead: any) => matchingLeadIds.has(lead.id));
   }
 
   // Scorecard total with filters
