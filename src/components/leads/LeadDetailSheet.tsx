@@ -186,10 +186,17 @@ export function LeadDetailSheet({
         .single();
 
       if (leadError) throw leadError;
+      // Normalize additional_phones: DB stores {number: "..."} objects
+      const normalizedPhones = Array.isArray(leadData.additional_phones)
+        ? (leadData.additional_phones as Array<string | { number: string }>).map(
+            (p) => (typeof p === 'object' && p !== null && 'number' in p ? (p as { number: string }).number : String(p))
+          )
+        : null;
+
       setLead({
         ...leadData,
         emails: Array.isArray(leadData.emails) ? leadData.emails as string[] : null,
-        additional_phones: Array.isArray(leadData.additional_phones) ? leadData.additional_phones as string[] : null,
+        additional_phones: normalizedPhones,
         instagrams: Array.isArray(leadData.instagrams) ? leadData.instagrams as string[] : null,
       });
 
