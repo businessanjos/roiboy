@@ -115,6 +115,12 @@ async function createOmieClient(
     razao_social: clientData.name,
     nome_fantasia: clientData.name,
     contribuinte: 'N',
+    endereco: clientData.street || 'Não informado',
+    endereco_numero: clientData.streetNumber || 'S/N',
+    bairro: clientData.neighborhood || 'Não informado',
+    cidade: clientData.city || '',
+    estado: clientData.state || '',
+    cep: clientData.zipCode?.replace(/\D/g, '') || '',
     pessoa_fisica: isPF ? 'S' : 'N',
   };
 
