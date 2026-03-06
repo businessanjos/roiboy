@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { GripVertical, LayoutDashboard, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Copy, GripVertical, LayoutDashboard, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { InsightsDashboard } from "@/hooks/useInsightsDashboards";
 import { RenameDashboardDialog } from "./RenameDashboardDialog";
 import { DeleteDashboardDialog } from "./DeleteDashboardDialog";
@@ -20,6 +20,7 @@ interface InsightsDashboardItemProps {
   onSelect: () => void;
   onDelete?: (id: string) => Promise<void>;
   onRename?: (id: string, name: string) => Promise<void>;
+  onDuplicate?: (id: string) => Promise<void>;
   readOnly?: boolean;
 }
 
@@ -29,6 +30,7 @@ export function InsightsDashboardItem({
   onSelect,
   onDelete,
   onRename,
+  onDuplicate,
   readOnly = false,
 }: InsightsDashboardItemProps) {
   const [showActions, setShowActions] = useState(false);
@@ -99,6 +101,12 @@ export function InsightsDashboardItem({
                 <Pencil className="h-4 w-4 mr-2" />
                 Renomear
               </DropdownMenuItem>
+              {onDuplicate && (
+                <DropdownMenuItem onClick={() => onDuplicate(dashboard.id)}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Duplicar
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={() => setDeleteDialogOpen(true)}
                 className="text-destructive focus:text-destructive"

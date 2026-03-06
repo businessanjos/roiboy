@@ -23,6 +23,7 @@ interface InsightsDashboardListProps {
   onSelect: (id: string) => void;
   onDelete?: (id: string) => Promise<void>;
   onRename?: (id: string, name: string) => Promise<void>;
+  onDuplicate?: (id: string) => Promise<void>;
   onReorder?: (orderedIds: string[]) => Promise<void>;
   readOnly?: boolean;
 }
@@ -33,6 +34,7 @@ export function InsightsDashboardList({
   onSelect,
   onDelete,
   onRename,
+  onDuplicate,
   onReorder,
   readOnly = false,
 }: InsightsDashboardListProps) {
@@ -75,6 +77,7 @@ export function InsightsDashboardList({
               onSelect={() => onSelect(dashboard.id)}
               onDelete={onDelete}
               onRename={onRename}
+              onDuplicate={onDuplicate}
               readOnly={readOnly}
             />
           ))}
