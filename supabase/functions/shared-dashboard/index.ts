@@ -1779,6 +1779,310 @@ async function computeStackedLeadsData(
   return { data: result, seriesKeys };
 }
 
+// ─── Data Table Records (mirrors useVisualDrilldown) ───
+
+interface DrilldownRecord {
+  id: string;
+  name: string;
+  value: number;
+  status?: string;
+  date: string;
+  extra?: Record<string, any>;
+}
+
+async function computeDataTableRecords(
+  supabase: any,
+  accountId: string,
+  config: any,
+  filters: FilterParams
+): Promise<DrilldownRecord[]> {
+  if (!config) return [];
+  const dataSource = config.dataSource || 'deals';
+
+  switch (dataSource) {
+    case 'deals':
+      return computeDealTableRecords(supabase, accountId, config, filters);
+    case 'leads':
+      return computeLeadTableRecords(supabase, accountId, config, filters);
+    case 'tasks':
+      return computeTaskTableRecords(supabase, accountId, config, filters);
+    case 'products':
+      return computeProductTableRecords(supabase, accountId, config, filters);
+    default:
+      return [];
+  }
+}
+
+async function computeDealTableRecords(
+  supabase: any,
+  accountId: string,
+  config: any,
+  filters: FilterParams
+): Promise<DrilldownRecord[]> {
+  const effectiveStatusFilter = config.statusFilter ?? inferStatusFilter(config.measure, config.dimension);
+
+  const buildQuery = () => {
+    let q = supabase
+      .from('deals')
+      .select('id, title, lead_id, value, probability, status, source, lost_reason, created_at, won_at, lost_at, deal_stages!deals_stage_id_fkey(name), users!deals_responsible_user_id_fkey(name)')
+      .eq('account_id', accountId);
+
+    if (config.dealStatusFilter?.length) {
+      q = q.in('status', config.dealStatusFilter);
+    } else if (effectiveStatusFilter) {
+      q = q.eq('status', effectiveStatusFilter);
+    }
+
+    let dateFilterField = 'created_at';
+    if (config.dimension?.type === 'date' && config.dimension.field) {
+      dateFilterField = config.dimension.field;
+    } else if (effectiveStatusFilter === 'won') {
+      dateFilterField = 'won_at';
+    } else if (effectiveStatusFilter === 'lost') {
+      dateFilterField = 'lost_at';
+    }
+
+    if (dateFilterField === 'won_at') q = q.not('won_at', 'is', null);
+    else if (dateFilterField === 'lost_at') q = q.not('lost_at', 'is', null);
+
+    if (filters.startDate) q = q.gte(dateFilterField, filters.startDate);
+    if (filters.endDate) q = q.lte(dateFilterField, filters.endDate);
+    if (filters.userId) q = q.eq('responsible_user_id', filters.userId);
+
+    return q;
+  };
+
+  const allDeals = await paginateQuery(buildQuery, 'created_at', 'deal-table');
+
+  let filteredData = allDeals;
+  const leadFilters = getLeadFilters(config);
+  if (leadFilters.length > 0) {
+    filteredData = await applyLeadFieldFilters(supabase, filteredData, accountId, leadFilters, 'deals');
+  }
+  const dealFilters = getDealFilters(config);
+  if (dealFilters.length > 0) {
+    filteredData = await applyDealFieldFilters(supabase, filteredData, accountId, dealFilters);
+  }
+
+  // Apply product filter
+  if (filters.productId) {
+    const productDealIds = await getDealIdsForProduct(supabase, accountId, filters.productId);
+    if (productDealIds) {
+      filteredData = filteredData.filter((d: any) => productDealIds.has(d.id));
+    }
+  }
+
+  return filteredData.map((deal: any) => ({
+    id: deal.id,
+    name: deal.title || `Negócio #${deal.id.slice(0, 8)}`,
+    value: deal.value || 0,
+    status: deal.status,
+    date: deal.created_at,
+    extra: {
+      stage: deal.deal_stages?.name,
+      responsible: deal.users?.name,
+      probability: deal.probability,
+      source: deal.source,
+      won_at: deal.won_at,
+      lost_at: deal.lost_at,
+      lost_reason: deal.lost_reason,
+    },
+  }));
+}
+
+async function computeLeadTableRecords(
+  supabase: any,
+  accountId: string,
+  config: any,
+  filters: FilterParams
+): Promise<DrilldownRecord[]> {
+  const buildQuery = () => {
+    let q = supabase
+      .from('leads')
+      .select('id, full_name, status, source, revenue_range, created_at, email, phone')
+      .eq('account_id', accountId)
+      .is('converted_to_client_id', null);
+
+    if (filters.startDate) q = q.gte('created_at', filters.startDate);
+    if (filters.endDate) q = q.lte('created_at', filters.endDate);
+    return q;
+  };
+
+  const allLeads = await paginateQuery(buildQuery, 'created_at', 'lead-table');
+
+  let filteredData = allLeads;
+  const leadFilters = getLeadFilters(config);
+  if (leadFilters.length > 0) {
+    filteredData = await applyLeadFieldFilters(supabase, filteredData, accountId, leadFilters, 'leads');
+  }
+
+  // Enrich with deal source and deal status
+  const leadIds = filteredData.map((l: any) => l.id);
+  const { sourceMap, statusMap } = await fetchDealSourceForLeadsServer(supabase, accountId, leadIds);
+
+  return filteredData.map((lead: any) => ({
+    id: lead.id,
+    name: lead.full_name || 'Sem nome',
+    value: 1,
+    status: lead.status,
+    date: lead.created_at,
+    extra: {
+      email: lead.email,
+      phone: lead.phone,
+      source: lead.source,
+      revenue_range: lead.revenue_range,
+      deal_source: sourceMap.get(lead.id) || undefined,
+      deal_status: statusMap.get(lead.id) || undefined,
+    },
+  }));
+}
+
+async function fetchDealSourceForLeadsServer(
+  supabase: any,
+  accountId: string,
+  leadIds: string[]
+): Promise<{ sourceMap: Map<string, string>; statusMap: Map<string, string> }> {
+  const sourceMap = new Map<string, string>();
+  const statusMap = new Map<string, string>();
+  if (leadIds.length === 0) return { sourceMap, statusMap };
+
+  // Find "Origem da Venda" custom field
+  const { data: origemField } = await supabase
+    .from('custom_fields')
+    .select('id, field_type, options')
+    .eq('account_id', accountId)
+    .eq('name', 'Origem da Venda')
+    .eq('is_active', true)
+    .maybeSingle();
+
+  // Fetch deals for these leads
+  const batchSize = 100;
+  let allDeals: any[] = [];
+  for (let i = 0; i < leadIds.length; i += batchSize) {
+    const batch = leadIds.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from('deals')
+      .select('id, lead_id, created_at, status')
+      .eq('account_id', accountId)
+      .in('lead_id', batch)
+      .order('created_at', { ascending: false });
+    if (data) allDeals = allDeals.concat(data);
+  }
+
+  const latestDealByLead = new Map<string, string>();
+  for (const deal of allDeals) {
+    if (!latestDealByLead.has(deal.lead_id)) {
+      latestDealByLead.set(deal.lead_id, deal.id);
+      statusMap.set(deal.lead_id, deal.status || 'open');
+    }
+  }
+
+  if (!origemField) return { sourceMap, statusMap };
+
+  const optionMap = new Map<string, string>();
+  if (origemField.options && Array.isArray(origemField.options)) {
+    for (const opt of origemField.options as Array<{ value: string; label: string }>) {
+      optionMap.set(opt.value, opt.label);
+    }
+  }
+
+  const dealIds = Array.from(latestDealByLead.values());
+  if (dealIds.length === 0) return { sourceMap, statusMap };
+
+  let allFieldValues: any[] = [];
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batch = dealIds.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, value_text, value_json')
+      .eq('field_id', origemField.id)
+      .in('deal_id', batch);
+    if (data) allFieldValues = allFieldValues.concat(data);
+  }
+
+  const dealValueMap = new Map<string, string>();
+  for (const fv of allFieldValues) {
+    let label: string | undefined;
+    if (fv.value_text) {
+      label = optionMap.get(fv.value_text) || fv.value_text;
+    } else if (fv.value_json && Array.isArray(fv.value_json)) {
+      label = (fv.value_json as string[]).map((v: string) => optionMap.get(v) || v).join(', ');
+    }
+    if (label) dealValueMap.set(fv.deal_id, label);
+  }
+
+  for (const [leadId, dealId] of latestDealByLead) {
+    const label = dealValueMap.get(dealId);
+    if (label) sourceMap.set(leadId, label);
+  }
+
+  return { sourceMap, statusMap };
+}
+
+async function computeTaskTableRecords(
+  supabase: any,
+  accountId: string,
+  config: any,
+  filters: FilterParams
+): Promise<DrilldownRecord[]> {
+  const buildQuery = () => {
+    let q = supabase
+      .from('internal_tasks')
+      .select('id, title, activity_type_id, completed_at, assigned_to, due_date, created_at, users!internal_tasks_assigned_to_fkey(name), activity_types!internal_tasks_activity_type_id_fkey(name)')
+      .eq('account_id', accountId);
+
+    if (filters.startDate) {
+      const startDate = filters.startDate.split('T')[0];
+      q = q.gte('due_date', startDate);
+    }
+    if (filters.endDate) {
+      const endDate = filters.endDate.split('T')[0];
+      q = q.lte('due_date', endDate);
+    }
+    if (filters.userId) q = q.eq('assigned_to', filters.userId);
+    return q;
+  };
+
+  const allTasks = await paginateQuery(buildQuery, 'due_date', 'task-table');
+
+  return allTasks.map((task: any) => ({
+    id: task.id,
+    name: task.title || `Tarefa #${task.id.slice(0, 8)}`,
+    value: 1,
+    status: task.completed_at ? 'Concluída' : 'Pendente',
+    date: task.due_date || task.created_at,
+    extra: {
+      responsible: task.users?.name,
+      activity_type: task.activity_types?.name,
+      completed_at: task.completed_at,
+    },
+  }));
+}
+
+async function computeProductTableRecords(
+  supabase: any,
+  accountId: string,
+  _config: any,
+  _filters: FilterParams
+): Promise<DrilldownRecord[]> {
+  const { data } = await supabase
+    .from('products')
+    .select('id, name, price, billing_period, is_active, created_at')
+    .eq('account_id', accountId)
+    .order('created_at', { ascending: false });
+
+  return (data || []).map((product: any) => ({
+    id: product.id,
+    name: product.name || 'Sem nome',
+    value: product.price || 0,
+    status: product.is_active ? 'Ativo' : 'Inativo',
+    date: product.created_at,
+    extra: {
+      billing_period: product.billing_period,
+    },
+  }));
+}
+
 // ─── Filter options ───
 
 async function fetchFilterOptions(supabase: any, accountId: string) {

@@ -574,6 +574,7 @@ export default function SharedInsightsDashboard() {
                       data={visualsData[visual.id] || []}
                       stackedData={stackedVisualsData[visual.id]?.data}
                       stackedSeriesKeys={stackedVisualsData[visual.id]?.seriesKeys}
+                      drilldownData={drilldownData[visual.id]}
                     />
                   </div>
                 ))}
