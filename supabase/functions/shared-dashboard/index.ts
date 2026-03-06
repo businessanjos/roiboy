@@ -2141,6 +2141,7 @@ Deno.serve(async (req) => {
           visuals: visuals || [],
           visualsData,
           stackedVisualsData,
+          drilldownData: drilldownData || {},
           filterOptions,
         }),
         {
