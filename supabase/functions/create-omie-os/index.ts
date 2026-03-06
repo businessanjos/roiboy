@@ -266,11 +266,24 @@ serve(async (req) => {
 
         console.log(`Cliente não encontrado no Omie. Criando automaticamente: ${clientName} (${clientCpfCnpj})`);
 
+        // Extract city/state from deal's "Cidade" custom field
+        const CIDADE_FIELD_ID = '5accffbd-3d87-4735-b890-bc6c361694b7';
+        const cidadeFieldValue = (dealFieldValues || []).find((v: any) => v.field_id === CIDADE_FIELD_ID);
+        const cidadeJson = cidadeFieldValue?.value_json as any;
+        const addressParts = cidadeJson?.formatted_address?.split(',').map((s: string) => s.trim()) || [];
+        const cityFromDeal = addressParts[0] || '';
+        const stateFullName = addressParts[1] || '';
+        const stateUF = STATE_MAP[stateFullName] || (stateFullName.length === 2 ? stateFullName.toUpperCase() : '');
+
+        console.log(`Endereço extraído do campo Cidade: city=${cityFromDeal}, state=${stateUF} (${stateFullName})`);
+
         omieClient = await createOmieClient(appKey, appSecret, {
           cpfCnpj: clientCpfCnpj,
           name: clientName,
           email: clientEmail,
           phone: clientPhone,
+          city: cityFromDeal,
+          state: stateUF,
           clientId: client?.id,
           dealId: deal_id,
         });
