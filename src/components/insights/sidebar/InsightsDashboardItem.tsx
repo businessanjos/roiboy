@@ -30,6 +30,7 @@ export function InsightsDashboardItem({
   onSelect,
   onDelete,
   onRename,
+  onDuplicate,
   readOnly = false,
 }: InsightsDashboardItemProps) {
   const [showActions, setShowActions] = useState(false);
