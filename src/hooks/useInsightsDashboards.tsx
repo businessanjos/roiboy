@@ -301,6 +301,68 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
     },
   });
 
+  // Duplicate dashboard mutation
+  const duplicateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!currentUser?.account_id || !currentUser?.id) {
+        throw new Error("Usuário não autenticado");
+      }
+
+      // Get original dashboard
+      const original = dashboards.find(d => d.id === id);
+      if (!original) throw new Error("Painel não encontrado");
+
+      // Create new dashboard
+      const { data: newDashboard, error: dashError } = await supabase
+        .from("insights_dashboards")
+        .insert({
+          name: `${original.name} (cópia)`,
+          account_id: currentUser.account_id,
+          user_id: currentUser.id,
+          folder: original.folder,
+        })
+        .select()
+        .single();
+
+      if (dashError) throw dashError;
+
+      // Copy visuals
+      const { data: originalVisuals, error: visualsError } = await supabase
+        .from("insights_visuals")
+        .select("*")
+        .eq("dashboard_id", id);
+
+      if (visualsError) throw visualsError;
+
+      if (originalVisuals && originalVisuals.length > 0) {
+        const copies = originalVisuals.map(v => ({
+          dashboard_id: (newDashboard as any).id,
+          title: v.title,
+          chart_type: v.chart_type,
+          config: v.config,
+          layout: v.layout,
+        }));
+
+        const { error: copyError } = await supabase
+          .from("insights_visuals")
+          .insert(copies);
+
+        if (copyError) throw copyError;
+      }
+
+      return newDashboard as InsightsDashboard;
+    },
+    onSuccess: (newDashboard) => {
+      queryClient.invalidateQueries({ queryKey: ["insights-dashboards"] });
+      toast.success("Painel duplicado com sucesso!");
+      navigate(`/insights/${newDashboard.id}`);
+    },
+    onError: (error) => {
+      console.error("Error duplicating dashboard:", error);
+      toast.error("Erro ao duplicar painel");
+    },
+  });
+
   // Reorder dashboards mutation
   const reorderMutation = useMutation({
     mutationFn: async (orderedIds: string[]) => {
