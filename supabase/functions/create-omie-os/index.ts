@@ -29,6 +29,17 @@ async function callOmieApi(appKey: string, appSecret: string, endpoint: string, 
   return result;
 }
 
+const STATE_MAP: Record<string, string> = {
+  'Acre': 'AC', 'Alagoas': 'AL', 'Amapá': 'AP', 'Amazonas': 'AM',
+  'Bahia': 'BA', 'Ceará': 'CE', 'Distrito Federal': 'DF', 'Espírito Santo': 'ES',
+  'Goiás': 'GO', 'Maranhão': 'MA', 'Mato Grosso': 'MT', 'Mato Grosso do Sul': 'MS',
+  'Minas Gerais': 'MG', 'Pará': 'PA', 'Paraíba': 'PB', 'Paraná': 'PR',
+  'Pernambuco': 'PE', 'Piauí': 'PI', 'Rio de Janeiro': 'RJ', 'Rio Grande do Norte': 'RN',
+  'Rio Grande do Sul': 'RS', 'Rondônia': 'RO', 'Roraima': 'RR', 'Santa Catarina': 'SC',
+  'São Paulo': 'SP', 'Sergipe': 'SE', 'Tocantins': 'TO',
+};
+
+
 async function findOmieClientByCpfCnpj(appKey: string, appSecret: string, cpfCnpj: string) {
   try {
     const cleanDoc = cpfCnpj.replace(/\D/g, '');
@@ -85,6 +96,12 @@ async function createOmieClient(
     name: string;
     email?: string;
     phone?: string;
+    street?: string;
+    streetNumber?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
     clientId?: string;
     dealId?: string;
   }
@@ -98,6 +115,12 @@ async function createOmieClient(
     razao_social: clientData.name,
     nome_fantasia: clientData.name,
     contribuinte: 'N',
+    endereco: clientData.street || 'Não informado',
+    endereco_numero: clientData.streetNumber || 'S/N',
+    bairro: clientData.neighborhood || 'Não informado',
+    cidade: clientData.city || '',
+    estado: clientData.state || '',
+    cep: clientData.zipCode?.replace(/\D/g, '') || '',
     pessoa_fisica: isPF ? 'S' : 'N',
   };
 
@@ -196,7 +219,7 @@ serve(async (req) => {
     // 3. Get deal custom field values
     const { data: dealFieldValues } = await supabase
       .from('deal_field_values')
-      .select('field_id, value_text, value_number, value_boolean, value_date')
+      .select('field_id, value_text, value_number, value_boolean, value_date, value_json')
       .eq('deal_id', deal_id);
 
     // 4. Get responsible user name
@@ -243,11 +266,24 @@ serve(async (req) => {
 
         console.log(`Cliente não encontrado no Omie. Criando automaticamente: ${clientName} (${clientCpfCnpj})`);
 
+        // Extract city/state from deal's "Cidade" custom field
+        const CIDADE_FIELD_ID = '5accffbd-3d87-4735-b890-bc6c361694b7';
+        const cidadeFieldValue = (dealFieldValues || []).find((v: any) => v.field_id === CIDADE_FIELD_ID);
+        const cidadeJson = cidadeFieldValue?.value_json as any;
+        const addressParts = cidadeJson?.formatted_address?.split(',').map((s: string) => s.trim()) || [];
+        const cityFromDeal = addressParts[0] || '';
+        const stateFullName = addressParts[1] || '';
+        const stateUF = STATE_MAP[stateFullName] || (stateFullName.length === 2 ? stateFullName.toUpperCase() : '');
+
+        console.log(`Endereço extraído do campo Cidade: city=${cityFromDeal}, state=${stateUF} (${stateFullName})`);
+
         omieClient = await createOmieClient(appKey, appSecret, {
           cpfCnpj: clientCpfCnpj,
           name: clientName,
           email: clientEmail,
           phone: clientPhone,
+          city: cityFromDeal,
+          state: stateUF,
           clientId: client?.id,
           dealId: deal_id,
         });

@@ -1,63 +1,41 @@
 
 
-## Correção: Usar campo "Cidade" do negócio para endereço no cadastro Omie
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-### Situação atual
+### O que será feito
 
-O campo "Cidade" no negócio é do tipo `location` e armazena no `value_json` um objeto com esta estrutura:
-```json
-{
-  "formatted_address": "Santo Ângelo, Rio Grande do Sul, Brasil",
-  "latitude": ...,
-  "longitude": ...
-}
-```
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-O endereço formatado segue o padrão: **"Cidade, Estado, País"** (separado por vírgulas).
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-### Plano
+### Alterações por arquivo
 
-**Arquivo: `supabase/functions/create-omie-os/index.ts`**
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
 
-1. **Incluir `value_json` no select** de `deal_field_values` (linha 199) — atualmente busca apenas `value_text, value_number, value_boolean, value_date`.
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
 
-2. **Extrair cidade e estado do campo "Cidade"** (ID: `5accffbd-3d87-4735-b890-bc6c361694b7`):
-   - Buscar o `value_json` do campo
-   - Parsear `formatted_address` separando por vírgula: `[cidade, estado, país]`
-   - Mapear estado completo para UF de 2 letras (ex: "Rio Grande do Sul" → "RS")
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
 
-3. **Expandir `createOmieClient`** para aceitar e enviar os campos de endereço:
-   - `cidade` → campo Omie `cidade`
-   - `estado` (UF) → campo Omie `estado`
-   - `endereco` → valor padrão "Não informado" (obrigatório mas não temos rua)
-   - `endereco_numero` → "S/N"
-   - `bairro` → "Não informado"
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
 
-4. **Mapeamento de estados brasileiros**: Incluir um dicionário de nome completo → UF para converter "Rio Grande do Sul" → "RS", "São Paulo" → "SP", etc.
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
 
-### Detalhes técnicos
-
-```typescript
-// Constante com o ID do campo Cidade
-const CIDADE_FIELD_ID = '5accffbd-3d87-4735-b890-bc6c361694b7';
-
-// Parsear "Santo Ângelo, Rio Grande do Sul, Brasil"
-const cidadeJson = dealFieldValues?.find(v => v.field_id === CIDADE_FIELD_ID)?.value_json;
-const parts = cidadeJson?.formatted_address?.split(',').map(s => s.trim()) || [];
-const city = parts[0] || '';
-const stateFullName = parts[1] || '';
-const stateUF = STATE_MAP[stateFullName] || stateFullName.substring(0, 2).toUpperCase();
-```
-
-O payload de `IncluirCliente` receberá:
-```typescript
-endereco: 'Não informado',
-endereco_numero: 'S/N',
-bairro: 'Não informado',
-cidade: city,        // "Santo Ângelo"
-estado: stateUF,     // "RS"
-```
-
-### Arquivo alterado
-- `supabase/functions/create-omie-os/index.ts`
+### Arquivos alterados
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 
