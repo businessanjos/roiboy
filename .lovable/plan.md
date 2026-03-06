@@ -1,23 +1,41 @@
 
 
-## Diagnóstico: Erro "contribuinte deve ser 'S' ou 'N'"
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-### Problema
+### O que será feito
 
-A API do Omie rejeita o valor `'2'` para o campo `contribuinte` na criação automática de clientes. O código atual na linha 100 de `create-omie-os/index.ts` define:
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-```typescript
-contribuinte: '2',
-```
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-A API espera apenas `'S'` (contribuinte de ICMS) ou `'N'` (não contribuinte). O valor `'2'` era aceito em versões antigas da API mas foi descontinuado.
+### Alterações por arquivo
 
-### Correção
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
 
-**`supabase/functions/create-omie-os/index.ts`** — linha 100:
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
 
-Alterar `contribuinte: '2'` para `contribuinte: 'N'`. Para prestadores de serviço (que é o caso de OS), o valor correto é `'N'` (não contribuinte de ICMS). Se for pessoa jurídica contribuinte, o padrão `'N'` ainda é o mais seguro para auto-cadastro.
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
 
-### Arquivo alterado
-- `supabase/functions/create-omie-os/index.ts`
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+
+### Arquivos alterados
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 
