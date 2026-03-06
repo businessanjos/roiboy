@@ -1919,16 +1919,39 @@ Deno.serve(async (req) => {
 
     if (req.method === "GET") {
       const url = new URL(req.url);
-      const shareToken = url.searchParams.get("share_token");
+      const shareToken = url.searchParams.get("token") || url.searchParams.get("share_token");
       const email = url.searchParams.get("email");
-      const startDate = url.searchParams.get("start_date") || undefined;
-      const endDate = url.searchParams.get("end_date") || undefined;
-      const userId = url.searchParams.get("user_id") || undefined;
-      const productId = url.searchParams.get("product_id") || undefined;
+      const startDate = url.searchParams.get("startDate") || url.searchParams.get("start_date") || undefined;
+      const endDate = url.searchParams.get("endDate") || url.searchParams.get("end_date") || undefined;
+      const userId = url.searchParams.get("userId") || url.searchParams.get("user_id") || undefined;
+      const productId = url.searchParams.get("productId") || url.searchParams.get("product_id") || undefined;
 
-      if (!shareToken || !email) {
-        return new Response(JSON.stringify({ error: "Token e email são obrigatórios" }), {
+      if (!shareToken) {
+        return new Response(JSON.stringify({ error: "Token é obrigatório" }), {
           status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Token-only request: validate share and return dashboard name
+      if (!email) {
+        const { data: shareInfo, error: shareInfoError } = await supabaseAdmin
+          .from("insights_dashboard_shares")
+          .select("id, share_token, is_active, insights_dashboards(id, name)")
+          .eq("share_token", shareToken)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (shareInfoError || !shareInfo) {
+          return new Response(JSON.stringify({ error: "Link inválido ou expirado" }), {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const dashInfo = shareInfo.insights_dashboards as any;
+        return new Response(JSON.stringify({ dashboard_name: dashInfo?.name || "Painel" }), {
+          status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
