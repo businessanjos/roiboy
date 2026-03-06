@@ -2032,6 +2032,7 @@ Deno.serve(async (req) => {
 
       // Compute data for each visual
       const visualsData: Record<string, any> = {};
+      const stackedVisualsData: Record<string, any> = {};
 
       for (const visual of visuals || []) {
         const chartType = visual.chart_type;
@@ -2040,9 +2041,9 @@ Deno.serve(async (req) => {
         if (isStacked) {
           const dataSource = visual.config?.dataSource || 'deals';
           if (dataSource === 'leads') {
-            visualsData[visual.id] = await computeStackedLeadsData(supabaseAdmin, accountId, visual.config, filters);
+            stackedVisualsData[visual.id] = await computeStackedLeadsData(supabaseAdmin, accountId, visual.config, filters);
           } else {
-            visualsData[visual.id] = await computeStackedDealsData(supabaseAdmin, visual, accountId, filters);
+            stackedVisualsData[visual.id] = await computeStackedDealsData(supabaseAdmin, visual, accountId, filters);
           }
         } else {
           visualsData[visual.id] = await computeVisualData(supabaseAdmin, visual, accountId, filters);
