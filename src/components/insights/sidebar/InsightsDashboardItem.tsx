@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { GripVertical, LayoutDashboard, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Copy, GripVertical, LayoutDashboard, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { InsightsDashboard } from "@/hooks/useInsightsDashboards";
 import { RenameDashboardDialog } from "./RenameDashboardDialog";
 import { DeleteDashboardDialog } from "./DeleteDashboardDialog";
