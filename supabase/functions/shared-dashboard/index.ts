@@ -2001,6 +2001,15 @@ Deno.serve(async (req) => {
         });
       }
 
+      // If status_only=true, return immediately without computing visuals
+      const statusOnly = url.searchParams.get("status_only");
+      if (statusOnly === "true") {
+        return new Response(JSON.stringify({ status: "approved" }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       // Access approved — fetch dashboard data
       const dashboardData = share.insights_dashboards as any;
       const accountId = dashboardData.account_id;
