@@ -67,18 +67,26 @@ function inferStatusFilter(
 }
 
 /** Paginate a supabase query using a factory function to avoid query builder reuse bugs. */
-async function paginateQuery(buildQuery: () => any, orderField: string = 'created_at'): Promise<any[]> {
+async function paginateQuery(buildQuery: () => any, orderField: string = 'created_at', label: string = ''): Promise<any[]> {
   let all: any[] = [];
   let from = 0;
   const pageSize = 1000;
   while (true) {
-    const { data, error } = await buildQuery()
-      .order(orderField, { ascending: false })
-      .range(from, from + pageSize - 1);
-    if (error) { console.error('Pagination error:', error); return all; }
-    all = all.concat(data || []);
-    if (!data || data.length < pageSize) break;
-    from += pageSize;
+    try {
+      const { data, error } = await buildQuery()
+        .order(orderField, { ascending: false })
+        .range(from, from + pageSize - 1);
+      if (error) {
+        console.error(`[paginateQuery${label ? ' ' + label : ''}] Error at page ${from}:`, JSON.stringify(error));
+        break;
+      }
+      all = all.concat(data || []);
+      if (!data || data.length < pageSize) break;
+      from += pageSize;
+    } catch (err) {
+      console.error(`[paginateQuery${label ? ' ' + label : ''}] Exception at page ${from}:`, err);
+      break;
+    }
   }
   return all;
 }
