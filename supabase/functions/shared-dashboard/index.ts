@@ -1080,23 +1080,30 @@ async function computeLeadsData(
     }
   }
 
-  // Apply deal-based cross-filters
+  // Apply deal-based cross-filters (matches getLeadIdsByDealConstraints exactly)
   if (hasDealFilter && allData.length > 0) {
     try {
-      let allDeals = await paginateQuery(
-        () => {
-          let q = supabase
-            .from('deals')
-            .select('id, lead_id, status, created_at')
-            .eq('account_id', accountId);
-          if (dealStatusFilter && dealStatusFilter.length > 0) {
-            q = q.in('status', dealStatusFilter);
-          }
-          return q;
-        },
-        'created_at',
-        'leads-crossfilter-deals'
-      );
+      // Fetch ALL deals with lead_id using simple pagination (no .order, matching internal hook)
+      let allDeals: any[] = [];
+      let dFrom = 0;
+      const dPageSize = 1000;
+      while (true) {
+        let dq = supabase
+          .from('deals')
+          .select('id, lead_id')
+          .eq('account_id', accountId);
+        if (dealStatusFilter && dealStatusFilter.length > 0) {
+          dq = dq.in('status', dealStatusFilter);
+        }
+        const { data: dData, error: dError } = await dq.range(dFrom, dFrom + dPageSize - 1);
+        if (dError) {
+          console.error('[leads] Error fetching deals for cross-filter:', JSON.stringify(dError));
+          break;
+        }
+        allDeals = allDeals.concat(dData || []);
+        if (!dData || dData.length < dPageSize) break;
+        dFrom += dPageSize;
+      }
       console.log(`[leads] Cross-filter deals fetched: ${allDeals.length}`);
 
       if (dealFiltersArr.length > 0) {
@@ -1112,7 +1119,7 @@ async function computeLeadsData(
       allData = allData.filter((lead: any) => matchingLeadIds.has(lead.id));
       console.log(`[leads] After cross-filter intersection: ${allData.length}`);
     } catch (err) {
-      console.error('[leads] Error in deal cross-filter:', err);
+      console.error('[leads] Error in deal cross-filter:', String(err));
     }
   }
 
