@@ -2091,6 +2091,7 @@ Deno.serve(async (req) => {
       // Compute data for each visual
       const visualsData: Record<string, any> = {};
       const stackedVisualsData: Record<string, any> = {};
+      let drilldownData: Record<string, any> | undefined;
 
       for (const visual of visuals || []) {
         const chartType = visual.chart_type;
