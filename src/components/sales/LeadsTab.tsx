@@ -81,6 +81,7 @@ import { LeadDetailSheet } from "@/components/leads/LeadDetailSheet";
 import { toast } from "sonner";
 import { LeadImportPreview, ImportLeadRow } from "@/components/leads/LeadImportPreview";
 import { useZappNavigation } from "@/hooks/useZappNavigation";
+import { ZappLeadPhonePickerDialog } from "@/components/royzapp/dialogs";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -127,6 +128,10 @@ export default function LeadsTab() {
   const { duplicates: leadDuplicates, checkDuplicates: checkLeadDuplicates, clearDuplicates: clearLeadDuplicates } = useLeadDuplicateDetection();
   const { currentUser } = useCurrentUser();
 
+  // Phone picker state for leads with multiple phones
+  const [phonePickerOpen, setPhonePickerOpen] = useState(false);
+  const [phonePickerLead, setPhonePickerLead] = useState<Lead | null>(null);
+
   // Product state for deal creation
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
@@ -156,6 +161,33 @@ export default function LeadsTab() {
   const [existingClient, setExistingClient] = useState<{ id: string; full_name: string; phone_e164: string } | null>(null);
   const [creatingDeal, setCreatingDeal] = useState(false);
   const [leadForDeal, setLeadForDeal] = useState<Lead | null>(null);
+
+  // Helper: open zapp conversation, showing phone picker if lead has multiple phones
+  const handleOpenZappForLead = useCallback((lead: Lead) => {
+    const additionalPhones = Array.isArray(lead.additional_phones) ? lead.additional_phones : [];
+    if (additionalPhones.length > 0 && lead.phone) {
+      setPhonePickerLead(lead);
+      setPhonePickerOpen(true);
+    } else {
+      openZappConversation({
+        phone: lead.phone,
+        leadId: lead.id,
+        name: lead.full_name,
+        openInNewTab: true,
+      });
+    }
+  }, [openZappConversation]);
+
+  const getPhonePickerPhones = useCallback((lead: Lead) => {
+    const phones: Array<{ phone: string; label?: string; isPrimary?: boolean }> = [];
+    if (lead.phone) phones.push({ phone: lead.phone, isPrimary: true });
+    const additionalPhones = Array.isArray(lead.additional_phones) ? lead.additional_phones : [];
+    for (const ap of additionalPhones) {
+      if (typeof ap === 'string') phones.push({ phone: ap });
+      else if (typeof ap === 'object' && ap !== null && (ap as any).number) phones.push({ phone: (ap as any).number, label: (ap as any).label });
+    }
+    return phones;
+  }, []);
 
   // Get deals for the current lead
   const getLeadDeals = useCallback((leadId: string) => {
@@ -1138,12 +1170,7 @@ export default function LeadsTab() {
                             className="h-6 w-6 hover:bg-emerald-500/20"
                             onClick={(e) => {
                               e.stopPropagation();
-                              openZappConversation({
-                                phone: lead.phone,
-                                leadId: lead.id,
-                                name: lead.full_name,
-                                openInNewTab: true,
-                              });
+                              handleOpenZappForLead(lead);
                             }}
                             disabled={zappLoading}
                             title="Abrir conversa no RoyZapp"
@@ -1171,12 +1198,7 @@ export default function LeadsTab() {
                               <DropdownMenuItem
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  openZappConversation({
-                                    phone: lead.phone,
-                                    leadId: lead.id,
-                                    name: lead.full_name,
-                                    openInNewTab: true,
-                                  });
+                                  handleOpenZappForLead(lead);
                                 }}
                               >
                                 <MessageCircle className="h-4 w-4 mr-2" />
@@ -1608,6 +1630,24 @@ export default function LeadsTab() {
       {/* Dialogs for WhatsApp instance selection and PIN */}
       {InstanceSelectorDialog}
       {PinDialog}
+      
+      {/* Phone picker for leads with multiple phones */}
+      {phonePickerLead && (
+        <ZappLeadPhonePickerDialog
+          open={phonePickerOpen}
+          onOpenChange={setPhonePickerOpen}
+          leadName={phonePickerLead.full_name}
+          phones={getPhonePickerPhones(phonePickerLead)}
+          onSelectPhone={(phone) => {
+            openZappConversation({
+              phone,
+              leadId: phonePickerLead.id,
+              name: phonePickerLead.full_name,
+              openInNewTab: true,
+            });
+          }}
+        />
+      )}
     </div>
   );
 }
