@@ -1,41 +1,98 @@
 
 
-## Plano: Adicionar filtro e segmentação por Status do Negócio
+## Correção: Paridade completa de dados no dashboard compartilhado
 
-### O que será feito
+### Problemas identificados
 
-1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
+Após análise detalhada da Edge Function `shared-dashboard` vs o hook `useVisualData`, identifiquei **6 problemas críticos** que explicam os visuais que não carregam e os dados incorretos:
 
-2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
+| Problema | Impacto |
+|---|---|
+| **1. Bug no `paginateQuery`** | A função reutiliza o mesmo query builder, acumulando `.order()` e `.range()` a cada iteração. Após a primeira página, as queries subsequentes ficam corrompidas, retornando dados incorretos ou vazios. |
+| **2. `sales_cycle` não implementado** | Visuais com `measure.aggregation === 'sales_cycle'` retornam array vazio — nunca carregam. |
+| **3. `conversion_rate` não implementado** | Visuais com `measure.aggregation === 'conversion_rate'` retornam array vazio — nunca carregam. |
+| **4. `call_commercial` chart type não implementado** | Visuais de tarefas com `chart_type === 'call_commercial'` são tratados como tarefas genéricas — dados incorretos. |
+| **5. Task funnel (`TASK_FUNNEL_ORDER`) não implementado** | Visuais de tarefas com `chart_type === 'funnel'` não usam a ordenação fixa de funil — dados incorretos ou ausentes. |
+| **6. `productId` filter ignorado** | O filtro de produto da barra de filtros compartilhada nunca é aplicado nos queries de deals/leads. |
 
-### Alterações por arquivo
+### Solução
 
-**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
-- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
-- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
-- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
+**Arquivo: `supabase/functions/shared-dashboard/index.ts`**
 
-**`src/components/insights/visuals/VisualQuickSettings.tsx`**
-- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
-- Passar para `DealFieldFilterSection` como prop
-- No `handleSave`, converter o array de status selecionados para o campo adequado no config
-- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
+#### 1. Corrigir `paginateQuery`
+Reescrever para NÃO reutilizar o mesmo builder. Em vez disso, aceitar uma factory function que cria uma query limpa a cada iteração:
 
-**`src/components/insights/visual-builder/types.ts`**
-- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
-- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+```typescript
+async function paginateQuery(
+  buildQuery: () => any,
+  orderField: string = 'created_at'
+): Promise<any[]> {
+  let all: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await buildQuery()
+      .order(orderField, { ascending: false })
+      .range(from, from + pageSize - 1);
+    if (error) { console.error('Pagination error:', error); return all; }
+    all = all.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+```
 
-**`src/hooks/useVisualData.ts`**
-- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+Atualizar todas as chamadas a `paginateQuery` para passar uma factory function em vez do builder diretamente.
 
-**`src/hooks/useStackedVisualData.ts`**
-- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
-- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+#### 2. Implementar `sales_cycle`
+Adicionar `computeSalesCycleData()` que replica a lógica de `calculateSalesCycle`:
+- Busca deals ganhos com `won_at`
+- Busca `FIRST_CONTACT_FIELD_ID` de `deal_field_values`
+- Calcula diferença em dias entre `won_at` e `first_contact`
+- Suporta scorecard (`_total`) e agrupamento por vendedor/data
+
+#### 3. Implementar `conversion_rate`
+Adicionar `computeConversionRateData()` que replica `calculateConversionRate` + variantes:
+- Scorecard: `(won / total) * 100`
+- Por período: agrupa por data
+- Por dimensão textual: agrupa por vendedor, etapa, etc.
+
+#### 4. Implementar `call_commercial`
+Adicionar `computeCallCommercialData()` que:
+- Busca `activity_types` para "Call Comercial Agendada" e "Call Comercial Concluída"
+- Conta agendadas (não concluídas) e concluídas por vendedor
+- Retorna `{ name, value: scheduled, count: completed }`
+
+#### 5. Implementar task funnel
+Adicionar `computeTasksFunnelData()` com `TASK_FUNNEL_ORDER`:
+- Busca tarefas concluídas agrupadas por tipo de atividade
+- Retorna na ordem fixa do funil
+
+#### 6. Aplicar filtro de produto
+Em `computeDealsData`: quando `filters.productId` está definido, buscar `deal_products` para filtrar deals que contêm o produto selecionado.
+
+#### 7. Rotear corretamente em `computeVisualData`
+Atualizar o switch para desviar para as novas funções:
+```typescript
+case 'deals':
+  if (config.measure.aggregation === 'sales_cycle')
+    result = await computeSalesCycleData(...);
+  else if (config.measure.aggregation === 'conversion_rate')
+    result = await computeConversionRateData(...);
+  else
+    result = await computeDealsData(...);
+  break;
+case 'tasks':
+  if (chartType === 'call_commercial')
+    result = await computeCallCommercialData(...);
+  else if (chartType === 'funnel')
+    result = await computeTasksFunnelData(...);
+  else
+    result = await computeTasksData(...);
+  break;
+```
 
 ### Arquivos alterados
-- `src/components/insights/visual-builder/types.ts`
-- `src/components/insights/visuals/DealFieldFilterSection.tsx`
-- `src/components/insights/visuals/VisualQuickSettings.tsx`
-- `src/hooks/useVisualData.ts`
-- `src/hooks/useStackedVisualData.ts`
+- `supabase/functions/shared-dashboard/index.ts`
 
