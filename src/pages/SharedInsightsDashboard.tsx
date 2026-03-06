@@ -241,9 +241,19 @@ export default function SharedInsightsDashboard() {
   useEffect(() => {
     if (state !== "pending" || !token || !email) return;
     const interval = setInterval(async () => {
-      const data = await fetchApprovedData(filters, email);
-      if (data.status === "approved") { setState("approved"); }
-      else if (data.status === "rejected") { setState("rejected"); }
+      try {
+        const data = await callEdge("GET", `?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}&status_only=true`);
+        if (data.status === "approved") {
+          setState("approved");
+          clearInterval(interval);
+          fetchApprovedData(filters, email);
+        } else if (data.status === "rejected") {
+          setState("rejected");
+          clearInterval(interval);
+        }
+      } catch {
+        // Ignore polling errors to keep retrying
+      }
     }, 5000);
     return () => clearInterval(interval);
   }, [state, token, email, callEdge, fetchApprovedData, filters]);
