@@ -27,6 +27,7 @@ interface StackedResult {
 
 // ─── Constants (same as useVisualData) ───
 const MQL_FIELD_ID = '448404cd-0344-4892-a574-2387b1c17578';
+const FIRST_CONTACT_FIELD_ID = '166fe351-b29b-4f08-b330-88f82c65f625';
 const LEAD_MQL_FIELD_ID = 'e4270e93-e9b9-4d9b-9589-d614ce335bcd';
 const LEAD_FATURAMENTO_FIELD_ID = 'e352a1ca-cfbc-435a-95f7-2f53b5cac041';
 const DEAL_CANAL_FIELD_ID = '16ebda9f-cd3b-412c-bb06-0950001963c5';
@@ -41,6 +42,17 @@ const LEAD_MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
   opt_2: { label: 'NAO - Abaixo de 30k', color: '#ef4444' },
 };
 
+const TASK_FUNNEL_ORDER = [
+  'Primeiro Contato Realizado',
+  'Ligação Atendida',
+  'Ligação não atendida',
+  'No-Show',
+  'Call Comercial Agendada',
+  'Call Comercial Concluída',
+  'Proposta de Fechamento',
+  'Follow Up',
+];
+
 // ─── Helpers ───
 
 function inferStatusFilter(
@@ -54,13 +66,15 @@ function inferStatusFilter(
   return undefined;
 }
 
-/** Paginate a supabase query to fetch ALL rows beyond the 1000 default. */
-async function paginateQuery(baseQuery: any, orderField: string = 'created_at'): Promise<any[]> {
+/** Paginate a supabase query using a factory function to avoid query builder reuse bugs. */
+async function paginateQuery(buildQuery: () => any, orderField: string = 'created_at'): Promise<any[]> {
   let all: any[] = [];
   let from = 0;
   const pageSize = 1000;
   while (true) {
-    const { data, error } = await baseQuery.order(orderField, { ascending: false }).range(from, from + pageSize - 1);
+    const { data, error } = await buildQuery()
+      .order(orderField, { ascending: false })
+      .range(from, from + pageSize - 1);
     if (error) { console.error('Pagination error:', error); return all; }
     all = all.concat(data || []);
     if (!data || data.length < pageSize) break;
@@ -80,7 +94,6 @@ function formatDateGroup(dateStr: string, grouping: string, displayFormat: strin
     case 'day':
       return String(d.getUTCDate()).padStart(2, '0');
     case 'week': {
-      // Match ptBR locale week format: "Sem W/yyyy"
       const jan1 = new Date(d.getUTCFullYear(), 0, 1);
       const dayOfYear = Math.floor((d.getTime() - jan1.getTime()) / 86400000) + 1;
       const weekNum = Math.ceil(dayOfYear / 7);
@@ -405,6 +418,17 @@ function getDealFilters(config: any): any[] {
   return filters;
 }
 
+// ─── Product filter helper ───
+async function getDealIdsForProduct(supabase: any, accountId: string, productId: string): Promise<Set<string> | null> {
+  if (!productId || productId === 'all') return null;
+  const { data } = await supabase
+    .from('deal_products')
+    .select('deal_id')
+    .eq('product_id', productId);
+  if (!data) return new Set();
+  return new Set(data.map((d: any) => d.deal_id));
+}
+
 // ─── Core aggregation (mirrors useVisualData.aggregateData) ───
 
 function getGroupKey(item: any, dimension: any, dateDisplayFormat: string): string {
@@ -559,6 +583,334 @@ function fillMissingDates(
   return allDates.map(dateKey => dataMap.get(dateKey) || { name: dateKey, value: 0, count: 0 });
 }
 
+// ─── Sales Cycle computation (mirrors calculateSalesCycle) ───
+
+async function computeSalesCycleData(
+  supabase: any,
+  accountId: string,
+  config: any,
+  filters: FilterParams
+): Promise<AggregatedDataPoint[]> {
+  const { dimension, appearance } = config;
+  const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
+
+  // 1. Fetch won deals with won_at
+  const allDeals = await paginateQuery(
+    () => {
+      let q = supabase
+        .from('deals')
+        .select('id, won_at, users!deals_responsible_user_id_fkey(name)')
+        .eq('account_id', accountId)
+        .eq('status', 'won')
+        .not('won_at', 'is', null);
+      if (filters.startDate) q = q.gte('won_at', filters.startDate);
+      if (filters.endDate) q = q.lte('won_at', filters.endDate);
+      if (filters.userId && filters.userId !== 'all') q = q.eq('responsible_user_id', filters.userId);
+      return q;
+    },
+    'won_at'
+  );
+
+  if (allDeals.length === 0) return [{ name: 'Total', value: 0, count: 0 }];
+
+  // 2. Fetch first contact dates
+  const dealIds = allDeals.map((d: any) => d.id);
+  let allFieldValues: any[] = [];
+  const batchSize = 500;
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batch = dealIds.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, value_date')
+      .eq('field_id', FIRST_CONTACT_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('deal_id', batch);
+    if (data) allFieldValues = allFieldValues.concat(data);
+  }
+
+  const firstContactMap = new Map<string, string>();
+  for (const fv of allFieldValues) {
+    if (fv.value_date) firstContactMap.set(fv.deal_id, fv.value_date);
+  }
+
+  // 3. Calculate days difference per deal
+  const dealCycles: { deal: any; days: number }[] = [];
+  for (const deal of allDeals) {
+    const firstContactStr = firstContactMap.get(deal.id);
+    if (!firstContactStr || !deal.won_at) continue;
+    const wonDate = new Date(deal.won_at);
+    const [y, m, d] = firstContactStr.split('-').map(Number);
+    const firstContact = new Date(y, m - 1, d);
+    const diffMs = wonDate.getTime() - firstContact.getTime();
+    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays >= 0) dealCycles.push({ deal, days: diffDays });
+  }
+
+  // 4. Scorecard
+  if (dimension.field === '_total') {
+    if (dealCycles.length === 0) return [{ name: 'Total', value: 0, count: 0 }];
+    const avg = dealCycles.reduce((sum, dc) => sum + dc.days, 0) / dealCycles.length;
+    return [{ name: 'Total', value: Math.round(avg), count: dealCycles.length }];
+  }
+
+  // 5. Grouped
+  const groups = new Map<string, { totalDays: number; count: number }>();
+  for (const { deal, days } of dealCycles) {
+    let groupKey: string;
+    if (dimension.field === 'responsible_name') {
+      groupKey = (deal.users as any)?.name || 'Sem Responsável';
+    } else if (dimension.type === 'date') {
+      groupKey = formatDateGroup(deal.won_at, dimension.dateGrouping || 'month', dateDisplayFormat);
+    } else {
+      groupKey = (deal as any)[dimension.field] || 'Não informado';
+    }
+    if (!groups.has(groupKey)) groups.set(groupKey, { totalDays: 0, count: 0 });
+    const g = groups.get(groupKey)!;
+    g.totalDays += days;
+    g.count++;
+  }
+
+  const result: AggregatedDataPoint[] = [];
+  for (const [name, { totalDays, count }] of groups) {
+    if (dimension.field === 'responsible_name' && name === 'Sem Responsável') continue;
+    result.push({ name, value: Math.round(totalDays / count), count });
+  }
+
+  if (dimension.type === 'date') {
+    result.sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    result.sort((a, b) => a.value - b.value);
+  }
+
+  return result;
+}
+
+// ─── Conversion Rate computation (mirrors calculateConversionRate + variants) ───
+
+async function computeConversionRateData(
+  supabase: any,
+  accountId: string,
+  config: any,
+  filters: FilterParams
+): Promise<AggregatedDataPoint[]> {
+  const { dimension, appearance } = config;
+  const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
+
+  // Scorecard: total conversion rate
+  if (dimension.field === '_total') {
+    let totalQuery = supabase
+      .from('deals')
+      .select('*', { count: 'exact', head: true })
+      .eq('account_id', accountId);
+    let wonQuery = supabase
+      .from('deals')
+      .select('*', { count: 'exact', head: true })
+      .eq('account_id', accountId)
+      .eq('status', 'won')
+      .not('won_at', 'is', null);
+
+    if (filters.startDate) {
+      totalQuery = totalQuery.gte('created_at', filters.startDate);
+      wonQuery = wonQuery.gte('won_at', filters.startDate);
+    }
+    if (filters.endDate) {
+      totalQuery = totalQuery.lte('created_at', filters.endDate);
+      wonQuery = wonQuery.lte('won_at', filters.endDate);
+    }
+    if (filters.userId && filters.userId !== 'all') {
+      totalQuery = totalQuery.eq('responsible_user_id', filters.userId);
+      wonQuery = wonQuery.eq('responsible_user_id', filters.userId);
+    }
+
+    const [totalResult, wonResult] = await Promise.all([totalQuery, wonQuery]);
+    const total = totalResult.count || 0;
+    const won = wonResult.count || 0;
+    const rate = total > 0 ? (won / total) * 100 : 0;
+    return [{ name: 'Total', value: Number(rate.toFixed(1)), count: total }];
+  }
+
+  // By text dimension (salesperson, stage, etc.)
+  if (dimension.type === 'text') {
+    const allDeals = await paginateQuery(
+      () => {
+        let q = supabase
+          .from('deals')
+          .select('id, status, source, lost_reason, created_at, won_at, deal_stages!deals_stage_id_fkey(name, color), users!deals_responsible_user_id_fkey(name)')
+          .eq('account_id', accountId);
+        if (filters.startDate) q = q.gte('created_at', filters.startDate);
+        if (filters.endDate) q = q.lte('created_at', filters.endDate);
+        if (filters.userId && filters.userId !== 'all') q = q.eq('responsible_user_id', filters.userId);
+        return q;
+      },
+      'created_at'
+    );
+
+    const groups = new Map<string, { total: number; won: number; color?: string }>();
+    for (const deal of allDeals) {
+      let groupName: string;
+      let groupColor: string | undefined;
+      if (dimension.field === 'responsible_name') {
+        groupName = (deal.users as any)?.name || 'Sem Responsável';
+      } else if (dimension.field === 'stage_name') {
+        groupName = (deal.deal_stages as any)?.name || 'Sem Etapa';
+        groupColor = (deal.deal_stages as any)?.color;
+      } else if (dimension.field === 'source') {
+        groupName = deal.source || 'Não informado';
+      } else if (dimension.field === 'lost_reason') {
+        groupName = deal.lost_reason || 'Não informado';
+      } else {
+        groupName = (deal as any)[dimension.field] || 'Não informado';
+      }
+      if (!groups.has(groupName)) groups.set(groupName, { total: 0, won: 0, color: groupColor });
+      const group = groups.get(groupName)!;
+      group.total++;
+      if (deal.status === 'won' && deal.won_at) {
+        const wonDate = new Date(deal.won_at);
+        const startDate = filters.startDate ? new Date(filters.startDate) : null;
+        const endDate = filters.endDate ? new Date(filters.endDate) : null;
+        if ((!startDate || wonDate >= startDate) && (!endDate || wonDate <= endDate)) {
+          group.won++;
+        }
+      }
+    }
+
+    const result: AggregatedDataPoint[] = [];
+    for (const [name, { total, won, color }] of groups) {
+      if (dimension.field === 'responsible_name' && name === 'Sem Responsável') continue;
+      result.push({ name, value: total > 0 ? Number(((won / total) * 100).toFixed(1)) : 0, count: total, color });
+    }
+    result.sort((a, b) => b.value - a.value);
+    return result;
+  }
+
+  // By date period
+  const allDeals = await paginateQuery(
+    () => {
+      let q = supabase
+        .from('deals')
+        .select('id, status, created_at, won_at')
+        .eq('account_id', accountId);
+      if (filters.startDate) q = q.gte('created_at', filters.startDate);
+      if (filters.endDate) q = q.lte('created_at', filters.endDate);
+      if (filters.userId && filters.userId !== 'all') q = q.eq('responsible_user_id', filters.userId);
+      return q;
+    },
+    'created_at'
+  );
+
+  const periods = new Map<string, { total: number; won: number }>();
+  const dateGrouping = dimension.dateGrouping || 'month';
+  for (const deal of allDeals) {
+    const periodKey = formatDateGroup(deal.created_at, dateGrouping, dateDisplayFormat);
+    if (!periods.has(periodKey)) periods.set(periodKey, { total: 0, won: 0 });
+    const period = periods.get(periodKey)!;
+    period.total++;
+    if (deal.status === 'won') period.won++;
+  }
+
+  const result: AggregatedDataPoint[] = Array.from(periods.entries()).map(([name, { total, won }]) => ({
+    name,
+    value: total > 0 ? Number(((won / total) * 100).toFixed(1)) : 0,
+    count: total,
+  }));
+  result.sort((a, b) => a.name.localeCompare(b.name));
+  return result;
+}
+
+// ─── Call Commercial computation (mirrors fetchTasksCallCommercialData) ───
+
+async function computeCallCommercialData(
+  supabase: any,
+  accountId: string,
+  filters: FilterParams
+): Promise<AggregatedDataPoint[]> {
+  const { data: activityTypes } = await supabase
+    .from('activity_types')
+    .select('id, name')
+    .eq('account_id', accountId)
+    .in('name', ['Call Comercial Agendada', 'Call Comercial Concluída']);
+
+  if (!activityTypes || activityTypes.length === 0) return [];
+
+  const agendadaType = activityTypes.find((at: any) => at.name === 'Call Comercial Agendada');
+  const concluidaType = activityTypes.find((at: any) => at.name === 'Call Comercial Concluída');
+  if (!agendadaType && !concluidaType) return [];
+
+  const typeIds = [agendadaType?.id, concluidaType?.id].filter(Boolean) as string[];
+
+  const allTasks = await paginateQuery(
+    () => {
+      let q = supabase
+        .from('internal_tasks')
+        .select('id, activity_type_id, completed_at, assigned_to, due_date, users!internal_tasks_assigned_to_fkey(name)')
+        .eq('account_id', accountId)
+        .in('activity_type_id', typeIds)
+        .not('assigned_to', 'is', null);
+      if (filters.startDate) q = q.gte('due_date', filters.startDate.split('T')[0]);
+      if (filters.endDate) q = q.lte('due_date', filters.endDate.split('T')[0]);
+      if (filters.userId && filters.userId !== 'all') q = q.eq('assigned_to', filters.userId);
+      return q;
+    },
+    'due_date'
+  );
+
+  const userMap = new Map<string, { scheduled: number; completed: number }>();
+  for (const task of allTasks) {
+    const userName = (task.users as any)?.name;
+    if (!userName) continue;
+    if (!userMap.has(userName)) userMap.set(userName, { scheduled: 0, completed: 0 });
+    const entry = userMap.get(userName)!;
+    if (task.activity_type_id === agendadaType?.id && !task.completed_at) entry.scheduled++;
+    else if (task.activity_type_id === concluidaType?.id && task.completed_at) entry.completed++;
+  }
+
+  const result: AggregatedDataPoint[] = [];
+  for (const [name, { scheduled, completed }] of userMap) {
+    result.push({ name, value: scheduled, count: completed });
+  }
+  result.sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+  return result;
+}
+
+// ─── Task Funnel computation (mirrors fetchTasksFunnelData) ───
+
+async function computeTasksFunnelData(
+  supabase: any,
+  accountId: string,
+  filters: FilterParams
+): Promise<AggregatedDataPoint[]> {
+  const allTasks = await paginateQuery(
+    () => {
+      let q = supabase
+        .from('internal_tasks')
+        .select('id, activity_type_id, completed_at, assigned_to, due_date, activity_types!internal_tasks_activity_type_id_fkey(name)')
+        .eq('account_id', accountId)
+        .not('completed_at', 'is', null);
+      if (filters.startDate) q = q.gte('due_date', filters.startDate.split('T')[0]);
+      if (filters.endDate) q = q.lte('due_date', filters.endDate.split('T')[0]);
+      if (filters.userId && filters.userId !== 'all') q = q.eq('assigned_to', filters.userId);
+      return q;
+    },
+    'due_date'
+  );
+
+  const counts = new Map<string, number>();
+  for (const task of allTasks) {
+    const typeName = (task.activity_types as any)?.name;
+    if (!typeName) continue;
+    counts.set(typeName, (counts.get(typeName) || 0) + 1);
+  }
+
+  const result: AggregatedDataPoint[] = [];
+  for (const name of TASK_FUNNEL_ORDER) {
+    const matchedKey = Array.from(counts.keys()).find(
+      k => k.toLowerCase() === name.toLowerCase()
+    );
+    result.push({ name, value: matchedKey ? counts.get(matchedKey)! : 0 });
+  }
+  return result;
+}
+
 // ─── Data source fetchers (full parity with useVisualData) ───
 
 async function computeDealsData(
@@ -570,28 +922,19 @@ async function computeDealsData(
   const { measure, dimension, appearance } = config;
   const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
 
+  // Route to special aggregations
+  if (measure.aggregation === 'sales_cycle') {
+    return computeSalesCycleData(supabase, accountId, config, filters);
+  }
+  if (measure.aggregation === 'conversion_rate') {
+    return computeConversionRateData(supabase, accountId, config, filters);
+  }
+
   // Infer status filter (matches useVisualData exactly)
   const effectiveStatusFilter = config.statusFilter ?? inferStatusFilter(measure, dimension);
   const dealStatusFilter = config.dealStatusFilter;
 
-  let query = supabase
-    .from('deals')
-    .select(`
-      id, lead_id, value, probability, status, source, lost_reason,
-      created_at, won_at, lost_at,
-      deal_stages!deals_stage_id_fkey(name, color),
-      users!deals_responsible_user_id_fkey(name)
-    `)
-    .eq('account_id', accountId);
-
-  // Apply status filter (dealStatusFilter multi-value takes priority)
-  if (dealStatusFilter && dealStatusFilter.length > 0) {
-    query = query.in('status', dealStatusFilter);
-  } else if (effectiveStatusFilter) {
-    query = query.eq('status', effectiveStatusFilter);
-  }
-
-  // Date field logic: status takes priority for date filtering
+  // Date field logic
   let dateFilterField: string;
   if (effectiveStatusFilter === 'won') {
     dateFilterField = 'won_at';
@@ -603,19 +946,46 @@ async function computeDealsData(
     dateFilterField = 'created_at';
   }
 
-  if (dateFilterField === 'won_at') query = query.not('won_at', 'is', null);
-  if (dateFilterField === 'lost_at') query = query.not('lost_at', 'is', null);
+  // Product filter
+  const productDealIds = await getDealIdsForProduct(supabase, accountId, filters.productId || '');
 
-  if (filters.startDate) query = query.gte(dateFilterField, filters.startDate);
-  if (filters.endDate) query = query.lte(dateFilterField, filters.endDate);
-  if (filters.userId && filters.userId !== 'all') query = query.eq('responsible_user_id', filters.userId);
+  const allRawDeals = await paginateQuery(
+    () => {
+      let q = supabase
+        .from('deals')
+        .select(`
+          id, lead_id, value, probability, status, source, lost_reason,
+          created_at, won_at, lost_at,
+          deal_stages!deals_stage_id_fkey(name, color),
+          users!deals_responsible_user_id_fkey(name)
+        `)
+        .eq('account_id', accountId);
 
-  // Paginate
-  const allRawDeals = await paginateQuery(query, dateFilterField);
+      if (dealStatusFilter && dealStatusFilter.length > 0) {
+        q = q.in('status', dealStatusFilter);
+      } else if (effectiveStatusFilter) {
+        q = q.eq('status', effectiveStatusFilter);
+      }
+
+      if (dateFilterField === 'won_at') q = q.not('won_at', 'is', null);
+      if (dateFilterField === 'lost_at') q = q.not('lost_at', 'is', null);
+
+      if (filters.startDate) q = q.gte(dateFilterField, filters.startDate);
+      if (filters.endDate) q = q.lte(dateFilterField, filters.endDate);
+      if (filters.userId && filters.userId !== 'all') q = q.eq('responsible_user_id', filters.userId);
+      return q;
+    },
+    dateFilterField
+  );
+
+  // Apply product filter
+  let filteredData = allRawDeals;
+  if (productDealIds) {
+    filteredData = filteredData.filter((d: any) => productDealIds.has(d.id));
+  }
 
   // Apply lead field filters (AND logic)
   const leadFilters = getLeadFilters(config);
-  let filteredData = allRawDeals;
   if (leadFilters.length > 0) {
     filteredData = await applyLeadFieldFilters(supabase, filteredData, accountId, leadFilters, 'deals');
   }
@@ -673,16 +1043,19 @@ async function computeLeadsData(
   }
 
   // Paginate all leads (excluding converted)
-  let baseQuery = supabase
-    .from('leads')
-    .select('id, status, source, revenue_range, canal, created_at')
-    .eq('account_id', accountId)
-    .is('converted_to_client_id', null);
-
-  if (filters.startDate) baseQuery = baseQuery.gte('created_at', filters.startDate);
-  if (filters.endDate) baseQuery = baseQuery.lte('created_at', filters.endDate);
-
-  let allData = await paginateQuery(baseQuery, 'created_at');
+  let allData = await paginateQuery(
+    () => {
+      let q = supabase
+        .from('leads')
+        .select('id, status, source, revenue_range, canal, created_at')
+        .eq('account_id', accountId)
+        .is('converted_to_client_id', null);
+      if (filters.startDate) q = q.gte('created_at', filters.startDate);
+      if (filters.endDate) q = q.lte('created_at', filters.endDate);
+      return q;
+    },
+    'created_at'
+  );
 
   // Apply lead field filters
   if (hasLeadFilter) {
@@ -691,15 +1064,19 @@ async function computeLeadsData(
 
   // Apply deal-based cross-filters
   if (hasDealFilter && allData.length > 0) {
-    // Find leads that have matching deals
-    let dealQuery = supabase
-      .from('deals')
-      .select('id, lead_id')
-      .eq('account_id', accountId);
-    if (dealStatusFilter && dealStatusFilter.length > 0) {
-      dealQuery = dealQuery.in('status', dealStatusFilter);
-    }
-    let allDeals = await paginateQuery(dealQuery, 'created_at');
+    let allDeals = await paginateQuery(
+      () => {
+        let q = supabase
+          .from('deals')
+          .select('id, lead_id')
+          .eq('account_id', accountId);
+        if (dealStatusFilter && dealStatusFilter.length > 0) {
+          q = q.in('status', dealStatusFilter);
+        }
+        return q;
+      },
+      'created_at'
+    );
 
     if (dealFiltersArr.length > 0) {
       allDeals = await applyDealFieldFilters(supabase, allDeals, accountId, dealFiltersArr);
@@ -768,16 +1145,19 @@ async function computeTasksData(
   const { measure, dimension, appearance } = config;
   const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
 
-  let baseQuery = supabase
-    .from('internal_tasks')
-    .select('id, title, activity_type_id, completed_at, assigned_to, due_date, created_at, users!internal_tasks_assigned_to_fkey(name), activity_types!internal_tasks_activity_type_id_fkey(name)')
-    .eq('account_id', accountId);
-
-  if (filters.startDate) baseQuery = baseQuery.gte('due_date', filters.startDate.split('T')[0]);
-  if (filters.endDate) baseQuery = baseQuery.lte('due_date', filters.endDate.split('T')[0]);
-  if (filters.userId && filters.userId !== 'all') baseQuery = baseQuery.eq('assigned_to', filters.userId);
-
-  const allTasks = await paginateQuery(baseQuery, 'due_date');
+  const allTasks = await paginateQuery(
+    () => {
+      let q = supabase
+        .from('internal_tasks')
+        .select('id, title, activity_type_id, completed_at, assigned_to, due_date, created_at, users!internal_tasks_assigned_to_fkey(name), activity_types!internal_tasks_activity_type_id_fkey(name)')
+        .eq('account_id', accountId);
+      if (filters.startDate) q = q.gte('due_date', filters.startDate.split('T')[0]);
+      if (filters.endDate) q = q.lte('due_date', filters.endDate.split('T')[0]);
+      if (filters.userId && filters.userId !== 'all') q = q.eq('assigned_to', filters.userId);
+      return q;
+    },
+    'due_date'
+  );
 
   if (dimension.field === '_total') {
     return [{ name: 'Total', value: allTasks.length, count: allTasks.length }];
@@ -841,7 +1221,13 @@ async function computeVisualData(
         result = await computeProductsData(supabase, accountId, config, filters);
         break;
       case 'tasks':
-        result = await computeTasksData(supabase, accountId, config, filters);
+        if (chartType === 'call_commercial') {
+          result = await computeCallCommercialData(supabase, accountId, filters);
+        } else if (chartType === 'funnel') {
+          result = await computeTasksFunnelData(supabase, accountId, filters);
+        } else {
+          result = await computeTasksData(supabase, accountId, config, filters);
+        }
         break;
       default:
         result = [];
@@ -853,7 +1239,7 @@ async function computeVisualData(
     }
 
     // Funnel: sort by pipeline order + append "Ganhos"
-    if (chartType === 'funnel' && dimension.field === 'stage_name') {
+    if (chartType === 'funnel' && dataSource === 'deals' && dimension.field === 'stage_name') {
       const { data: stages } = await supabase
         .from('deal_stages')
         .select('name, display_order, color')
@@ -884,7 +1270,7 @@ async function computeVisualData(
       const wonResult = await computeDealsData(supabase, accountId, wonConfig, filters);
       const wonCount = wonResult.length > 0 ? wonResult[0].value : 0;
       result.push({ name: 'Ganhos', value: wonCount, color: '#10b981' });
-    } else if (chartType === 'funnel' && dimension.type !== 'date') {
+    } else if (chartType === 'funnel' && dataSource !== 'tasks' && dimension.type !== 'date') {
       result.sort((a, b) => b.value - a.value);
     }
 
@@ -954,31 +1340,40 @@ async function enrichWithCustomField(
   const batchSize = 500;
   for (let i = 0; i < entityIds.length; i += batchSize) {
     const batch = entityIds.slice(i, i + batchSize);
-    const { data } = await supabase.from(table).select(selectColumns).eq('field_id', fieldId).eq('account_id', accountId).in(idColumn, batch);
+    const { data } = await supabase
+      .from(table)
+      .select(selectColumns)
+      .eq('field_id', fieldId)
+      .eq('account_id', accountId)
+      .in(idColumn, batch);
     if (data) allValues = allValues.concat(data);
   }
 
   const entityLabelMap = new Map<string, string>();
   for (const row of allValues) {
     const entityId = row[idColumn];
-    let label: string;
-    if (isMultiSelect && row.value_json && Array.isArray(row.value_json)) {
-      label = row.value_json.map((v: string) => valueToLabel.get(v) || v).join(', ');
+    if (isMultiSelect && Array.isArray(row.value_json)) {
+      const labels = row.value_json.map((v: string) => valueToLabel.get(v) || v).join(', ');
+      if (labels) entityLabelMap.set(entityId, labels);
     } else if (row.value_text) {
-      label = valueToLabel.get(row.value_text) || row.value_text;
-    } else continue;
-    entityLabelMap.set(entityId, label);
+      entityLabelMap.set(entityId, valueToLabel.get(row.value_text) || row.value_text);
+    }
   }
 
-  return records.map((r: any) => {
-    let entityId: string;
-    if (source === 'lead' && dataSource === 'deals') entityId = r.lead_id;
-    else entityId = r.id;
-    return { ...r, _custom_stack_label: entityLabelMap.get(entityId) || 'Não informado' };
+  return records.map((record: any) => {
+    let label: string | undefined;
+    if (source === 'deal' && dataSource === 'deals') {
+      label = entityLabelMap.get(record.id);
+    } else if (source === 'lead' && dataSource === 'leads') {
+      label = entityLabelMap.get(record.id);
+    } else if (source === 'lead' && dataSource === 'deals') {
+      label = record.lead_id ? entityLabelMap.get(record.lead_id) : undefined;
+    }
+    return { ...record, _custom_stack_label: label || 'Não informado' };
   });
 }
 
-async function computeStackedVisualData(
+async function computeStackedDealsData(
   supabase: any,
   visual: any,
   accountId: string,
@@ -987,42 +1382,49 @@ async function computeStackedVisualData(
   const config = visual.config;
   if (!config) return { data: [], seriesKeys: [] };
 
-  const { measure, dimension, statusFilter } = config;
-  const dateGrouping = dimension?.dateGrouping || 'day';
-  const displayFormat = config.appearance?.dateDisplayFormat || 'monthYear';
+  const { dimension, measure } = config;
+  const dateGrouping = dimension.dateGrouping || 'day';
 
   try {
-    if (config.dataSource === 'leads') {
-      return await computeStackedLeadsData(supabase, accountId, config, filters);
-    }
+    const statusFilter = config.statusFilter ?? inferStatusFilter(measure, dimension);
 
-    // Deals stacked
-    let query = supabase
-      .from('deals')
-      .select('id, lead_id, value, status, created_at, won_at, lost_at, users!deals_responsible_user_id_fkey(name), responsible_user_id')
-      .eq('account_id', accountId);
-
-    if (config.dealStatusFilter?.length > 0) {
-      query = query.in('status', config.dealStatusFilter);
-    } else if (statusFilter) {
-      query = query.eq('status', statusFilter);
-    }
-
-    // Date field logic
     let dateField: string;
     if (dimension.field && dimension.field !== 'created_at') dateField = dimension.field;
     else if (statusFilter === 'won') dateField = 'won_at';
     else if (statusFilter === 'lost') dateField = 'lost_at';
     else dateField = 'created_at';
 
-    if (dateField === 'won_at') query = query.not('won_at', 'is', null);
-    if (dateField === 'lost_at') query = query.not('lost_at', 'is', null);
+    // Product filter
+    const productDealIds = await getDealIdsForProduct(supabase, accountId, filters.productId || '');
 
-    if (filters.startDate) query = query.gte(dateField, filters.startDate);
-    if (filters.endDate) query = query.lte(dateField, filters.endDate);
-    if (filters.userId && filters.userId !== 'all') query = query.eq('responsible_user_id', filters.userId);
+    let allDeals = await paginateQuery(
+      () => {
+        let q = supabase
+          .from('deals')
+          .select('id, lead_id, value, status, created_at, won_at, lost_at, users!deals_responsible_user_id_fkey(name), responsible_user_id')
+          .eq('account_id', accountId);
 
-    let allDeals = await paginateQuery(query, dateField);
+        if (config.dealStatusFilter?.length > 0) {
+          q = q.in('status', config.dealStatusFilter);
+        } else if (statusFilter) {
+          q = q.eq('status', statusFilter);
+        }
+
+        if (dateField === 'won_at') q = q.not('won_at', 'is', null);
+        if (dateField === 'lost_at') q = q.not('lost_at', 'is', null);
+
+        if (filters.startDate) q = q.gte(dateField, filters.startDate);
+        if (filters.endDate) q = q.lte(dateField, filters.endDate);
+        if (filters.userId && filters.userId !== 'all') q = q.eq('responsible_user_id', filters.userId);
+        return q;
+      },
+      dateField
+    );
+
+    // Apply product filter
+    if (productDealIds) {
+      allDeals = allDeals.filter((d: any) => productDealIds.has(d.id));
+    }
 
     // Apply field filters
     const leadFilters = getLeadFilters(config);
@@ -1100,7 +1502,6 @@ async function computeStackedVisualData(
         allPeriods.push({ key, label: key });
       }
     } else {
-      // Generate from date range
       const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
       if (filters.startDate && filters.endDate) {
         const start = new Date(filters.startDate);
@@ -1118,7 +1519,6 @@ async function computeStackedVisualData(
             allPeriods.push({ key: `${y}`, label: `${y}` });
           }
         } else {
-          // week - use sorted keys from data
           const sortedKeys = Array.from(periodMap.keys()).sort();
           for (const key of sortedKeys) {
             const parts = key.split('-');
@@ -1165,20 +1565,22 @@ async function computeStackedLeadsData(
   filters: FilterParams
 ): Promise<StackedResult> {
   const stackByField = config.stackBy || 'status';
-  const displayFormat = config.appearance?.dateDisplayFormat || 'monthYear';
   const dateGrouping = config.dimension.dateGrouping || 'day';
 
-  let baseQuery = supabase
-    .from('leads')
-    .select('id, status, source, canal, created_at, responsible_user_id')
-    .eq('account_id', accountId)
-    .is('converted_to_client_id', null);
-
-  if (filters.startDate) baseQuery = baseQuery.gte('created_at', filters.startDate);
-  if (filters.endDate) baseQuery = baseQuery.lte('created_at', filters.endDate);
-  if (filters.userId && filters.userId !== 'all') baseQuery = baseQuery.eq('responsible_user_id', filters.userId);
-
-  let allLeads = await paginateQuery(baseQuery, 'created_at');
+  let allLeads = await paginateQuery(
+    () => {
+      let q = supabase
+        .from('leads')
+        .select('id, status, source, canal, created_at, responsible_user_id')
+        .eq('account_id', accountId)
+        .is('converted_to_client_id', null);
+      if (filters.startDate) q = q.gte('created_at', filters.startDate);
+      if (filters.endDate) q = q.lte('created_at', filters.endDate);
+      if (filters.userId && filters.userId !== 'all') q = q.eq('responsible_user_id', filters.userId);
+      return q;
+    },
+    'created_at'
+  );
 
   // Apply lead field filters
   const leadFilters = getLeadFilters(config);
@@ -1420,114 +1822,133 @@ Deno.serve(async (req) => {
           .from("insights_share_access_requests")
           .update({
             request_count: (existing.request_count || 1) + 1,
-            created_at: new Date().toISOString(),
             status: "pending",
+            created_at: new Date().toISOString(),
           })
           .eq("id", existing.id)
           .select("id, status")
           .single();
 
         if (updateError) {
-          return new Response(JSON.stringify({ error: "Erro ao atualizar solicitação" }), {
+          return new Response(JSON.stringify({ error: "Erro ao reenviar solicitação" }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
 
-        // Create notification for re-request
-        const dashboardName2 = (share as any).insights_dashboards?.name || "Painel";
-        await supabaseAdmin.from("notifications").insert({
-          account_id: share.account_id,
-          user_id: share.created_by,
-          type: "dashboard_share_request",
-          title: "Solicitação de acesso ao painel",
-          content: `${email} solicitou acesso novamente ao painel "${dashboardName2}"`,
-          link: `/insights/${share.dashboard_id}`,
-          source_type: "insights_share_request",
-          source_id: updated!.id,
-        });
+        // Notify dashboard owner
+        const dashboardData = share.insights_dashboards as any;
+        if (dashboardData?.account_id) {
+          const { data: ownerUsers } = await supabaseAdmin
+            .from("users")
+            .select("id")
+            .eq("account_id", dashboardData.account_id)
+            .or("role.eq.admin,is_also_admin.eq.true");
 
-        return new Response(JSON.stringify({ status: "pending", request_id: updated!.id }), {
+          if (ownerUsers) {
+            for (const owner of ownerUsers) {
+              await supabaseAdmin.from("notifications").insert({
+                account_id: dashboardData.account_id,
+                user_id: owner.id,
+                type: "insights_access_request",
+                title: "Solicitação de acesso ao painel",
+                content: `${email} solicitou acesso ao painel "${dashboardData.name}"`,
+                link: `/insights/${share.dashboard_id}?tab=shares`,
+                source_type: "insights_share",
+                source_id: share.id,
+              });
+            }
+          }
+        }
+
+        return new Response(JSON.stringify({ status: updated?.status || "pending", request_id: updated?.id || existing.id }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Create access request
-      const { data: request, error: reqError } = await supabaseAdmin
+      // Create new request
+      const { data: newRequest, error: insertError } = await supabaseAdmin
         .from("insights_share_access_requests")
-        .insert({ share_id: share.id, email: email.toLowerCase(), request_count: 1 })
+        .insert({
+          share_id: share.id,
+          email: email.toLowerCase(),
+          status: "pending",
+          request_count: 1,
+        })
         .select("id, status")
         .single();
 
-      if (reqError) {
+      if (insertError) {
         return new Response(JSON.stringify({ error: "Erro ao criar solicitação" }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Create notification for the share creator
-      const dashboardName = (share as any).insights_dashboards?.name || "Painel";
-      await supabaseAdmin.from("notifications").insert({
-        account_id: share.account_id,
-        user_id: share.created_by,
-        type: "dashboard_share_request",
-        title: "Solicitação de acesso ao painel",
-        content: `${email} solicitou acesso ao painel "${dashboardName}"`,
-        link: `/insights/${share.dashboard_id}`,
-        source_type: "insights_share_request",
-        source_id: request!.id,
-      });
+      // Notify dashboard owner
+      const dashboardData = share.insights_dashboards as any;
+      if (dashboardData?.account_id) {
+        const { data: ownerUsers } = await supabaseAdmin
+          .from("users")
+          .select("id")
+          .eq("account_id", dashboardData.account_id)
+          .or("role.eq.admin,is_also_admin.eq.true");
 
-      return new Response(JSON.stringify({ status: "pending", request_id: request!.id }), {
-        status: 201,
+        if (ownerUsers) {
+          for (const owner of ownerUsers) {
+            await supabaseAdmin.from("notifications").insert({
+              account_id: dashboardData.account_id,
+              user_id: owner.id,
+              type: "insights_access_request",
+              title: "Solicitação de acesso ao painel",
+              content: `${email} solicitou acesso ao painel "${dashboardData.name}"`,
+              link: `/insights/${share.dashboard_id}?tab=shares`,
+              source_type: "insights_share",
+              source_id: share.id,
+            });
+          }
+        }
+      }
+
+      return new Response(JSON.stringify({ status: newRequest?.status || "pending", request_id: newRequest?.id }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (req.method === "GET") {
       const url = new URL(req.url);
-      const token = url.searchParams.get("token");
+      const shareToken = url.searchParams.get("share_token");
       const email = url.searchParams.get("email");
+      const startDate = url.searchParams.get("start_date") || undefined;
+      const endDate = url.searchParams.get("end_date") || undefined;
+      const userId = url.searchParams.get("user_id") || undefined;
+      const productId = url.searchParams.get("product_id") || undefined;
 
-      if (!token) {
-        return new Response(JSON.stringify({ error: "Token obrigatório" }), {
+      if (!shareToken || !email) {
+        return new Response(JSON.stringify({ error: "Token e email são obrigatórios" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Validate share
-      const { data: share } = await supabaseAdmin
+      // Find active share
+      const { data: share, error: shareError } = await supabaseAdmin
         .from("insights_dashboard_shares")
-        .select("id, dashboard_id, account_id, is_active")
-        .eq("share_token", token)
+        .select("*, insights_dashboards(id, name, account_id)")
+        .eq("share_token", shareToken)
         .eq("is_active", true)
         .single();
 
-      if (!share) {
+      if (shareError || !share) {
         return new Response(JSON.stringify({ error: "Link inválido ou expirado" }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // If no email, return share info (dashboard name)
-      if (!email) {
-        const { data: dashboard } = await supabaseAdmin
-          .from("insights_dashboards")
-          .select("name")
-          .eq("id", share.dashboard_id)
-          .single();
-
-        return new Response(JSON.stringify({ valid: true, dashboard_name: dashboard?.name }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Cleanup expired pending/rejected requests (30 min)
+      // Cleanup expired requests
       await supabaseAdmin
         .from("insights_share_access_requests")
         .delete()
@@ -1536,68 +1957,80 @@ Deno.serve(async (req) => {
         .lt("created_at", new Date(Date.now() - 30 * 60 * 1000).toISOString());
 
       // Check access
-      const { data: accessReq } = await supabaseAdmin
+      const { data: accessRequest } = await supabaseAdmin
         .from("insights_share_access_requests")
-        .select("status")
+        .select("id, status")
         .eq("share_id", share.id)
         .eq("email", email.toLowerCase())
         .single();
 
-      if (!accessReq) {
-        return new Response(JSON.stringify({ status: "not_found" }), {
+      if (!accessRequest) {
+        return new Response(JSON.stringify({ status: "not_requested" }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      if (accessReq.status !== "approved") {
-        return new Response(JSON.stringify({ status: accessReq.status }), {
+      if (accessRequest.status !== "approved") {
+        return new Response(JSON.stringify({ status: accessRequest.status }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Extract filter params
-      const filterParams: FilterParams = {
-        startDate: url.searchParams.get("startDate") || undefined,
-        endDate: url.searchParams.get("endDate") || undefined,
-        userId: url.searchParams.get("userId") || undefined,
-        productId: url.searchParams.get("productId") || undefined,
-      };
+      // Access approved — fetch dashboard data
+      const dashboardData = share.insights_dashboards as any;
+      const accountId = dashboardData.account_id;
 
-      // Approved — fetch dashboard + visuals + compute data
-      const { data: dashboard } = await supabaseAdmin
-        .from("insights_dashboards")
+      // Fetch visuals
+      const { data: visuals, error: visualsError } = await supabaseAdmin
+        .from("insights_visuals")
         .select("*")
-        .eq("id", share.dashboard_id)
-        .single();
+        .eq("dashboard_id", dashboardData.id)
+        .order("position", { ascending: true });
 
-      const [visualsRes, filterOptions] = await Promise.all([
-        supabaseAdmin
-          .from("insights_visuals")
-          .select("*")
-          .eq("dashboard_id", share.dashboard_id)
-          .order("created_at"),
-        fetchFilterOptions(supabaseAdmin, share.account_id),
-      ]);
+      if (visualsError) {
+        return new Response(JSON.stringify({ error: "Erro ao carregar visuais" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-      const visuals = visualsRes.data;
+      const filters: FilterParams = { startDate, endDate, userId, productId };
 
-      // Pre-compute data for each visual server-side
-      const visualsData: Record<string, AggregatedDataPoint[]> = {};
-      const stackedVisualsData: Record<string, StackedResult> = {};
-      if (visuals) {
-        for (const visual of visuals) {
-          if (visual.chart_type === 'bar_stacked') {
-            stackedVisualsData[visual.id] = await computeStackedVisualData(supabaseAdmin, visual, share.account_id, filterParams);
+      // Compute data for each visual
+      const visualsData: Record<string, any> = {};
+
+      for (const visual of visuals || []) {
+        const chartType = visual.chart_type;
+        const isStacked = chartType === 'bar_stacked';
+
+        if (isStacked) {
+          const dataSource = visual.config?.dataSource || 'deals';
+          if (dataSource === 'leads') {
+            visualsData[visual.id] = await computeStackedLeadsData(supabaseAdmin, accountId, visual.config, filters);
           } else {
-            visualsData[visual.id] = await computeVisualData(supabaseAdmin, visual, share.account_id, filterParams);
+            visualsData[visual.id] = await computeStackedDealsData(supabaseAdmin, visual, accountId, filters);
           }
+        } else {
+          visualsData[visual.id] = await computeVisualData(supabaseAdmin, visual, accountId, filters);
         }
       }
 
+      // Fetch filter options
+      const filterOptions = await fetchFilterOptions(supabaseAdmin, accountId);
+
       return new Response(
-        JSON.stringify({ status: "approved", dashboard, visuals, visualsData, stackedVisualsData, filterOptions }),
+        JSON.stringify({
+          status: "approved",
+          dashboard: {
+            id: dashboardData.id,
+            name: dashboardData.name,
+          },
+          visuals: visuals || [],
+          visualsData,
+          filterOptions,
+        }),
         {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -1605,13 +2038,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+    return new Response(JSON.stringify({ error: "Método não suportado" }), {
       status: 405,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    console.error("shared-dashboard error:", err);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
+  } catch (error) {
+    console.error("Shared dashboard error:", error);
+    return new Response(JSON.stringify({ error: "Erro interno do servidor" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
