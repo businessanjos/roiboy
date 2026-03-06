@@ -326,12 +326,19 @@ async function filterByFieldValues(
   
   console.log(`[filterByFieldValues] Total field values fetched: ${allValues.length}`);
 
+  // Defensive fallback: if no field values were fetched but entities exist, queries likely failed silently
+  if (allValues.length === 0 && entityIds.length > 0) {
+    console.warn(`[filterByFieldValues] WARNING: No field values returned for ${entityIds.length} entities on field ${fieldId}. Returning ALL as fallback to avoid false empty results.`);
+    return new Set(entityIds);
+  }
+
   const matchingIds = new Set<string>();
 
   if (isMultiSelect) {
     const selectedValueKeys = new Set(
       selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
     );
+    console.log(`[filterByFieldValues] multi_select mappedKeys: ${JSON.stringify([...selectedValueKeys])}`);
     for (const row of allValues) {
       if (row.value_json && Array.isArray(row.value_json)) {
         for (const val of row.value_json) {
@@ -343,16 +350,19 @@ async function filterByFieldValues(
     const selectedValueKeys = new Set(
       selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
     );
+    console.log(`[filterByFieldValues] select mappedKeys: ${JSON.stringify([...selectedValueKeys])}`);
     for (const row of allValues) {
       if (row.value_text && selectedValueKeys.has(row.value_text)) matchingIds.add(row[idColumn]);
     }
   } else {
     const selectedSet = new Set(selectedValues);
+    console.log(`[filterByFieldValues] free text matching: ${JSON.stringify([...selectedSet])}`);
     for (const row of allValues) {
       if (row.value_text && selectedSet.has(row.value_text)) matchingIds.add(row[idColumn]);
     }
   }
 
+  console.log(`[filterByFieldValues] Result: ${matchingIds.size} matches out of ${entityIds.length} entities`);
   return matchingIds;
 }
 
