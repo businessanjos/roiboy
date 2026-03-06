@@ -305,17 +305,26 @@ async function filterByFieldValues(
   const selectColumns = isMultiSelect ? `${idColumn}, value_json` : `${idColumn}, value_text`;
 
   let allValues: any[] = [];
-  const batchSize = 500;
+  const batchSize = 100; // Reduced from 500 to avoid URL length limits with .in() containing UUIDs
+  console.log(`[filterByFieldValues] Starting: field=${fieldId}, table=${table}, entities=${entityIds.length}, fieldType=${fieldType}, isSelect=${isSelectField}, isMulti=${isMultiSelect}, optionsMap size=${optionLabelToValue.size}, selectedValues=${JSON.stringify(selectedValues)}`);
+  
   for (let i = 0; i < entityIds.length; i += batchSize) {
     const batch = entityIds.slice(i, i + batchSize);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from(table)
       .select(selectColumns)
       .eq('field_id', fieldId)
       .eq('account_id', accountId)
       .in(idColumn, batch);
+    
+    if (error) {
+      console.error(`[filterByFieldValues] Batch ${i}/${entityIds.length} ERROR:`, JSON.stringify(error));
+      continue;
+    }
     if (data) allValues = allValues.concat(data);
   }
+  
+  console.log(`[filterByFieldValues] Total field values fetched: ${allValues.length}`);
 
   const matchingIds = new Set<string>();
 
