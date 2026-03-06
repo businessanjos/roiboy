@@ -219,7 +219,7 @@ serve(async (req) => {
     // 3. Get deal custom field values
     const { data: dealFieldValues } = await supabase
       .from('deal_field_values')
-      .select('field_id, value_text, value_number, value_boolean, value_date')
+      .select('field_id, value_text, value_number, value_boolean, value_date, value_json')
       .eq('deal_id', deal_id);
 
     // 4. Get responsible user name
