@@ -396,6 +396,10 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
     await renameMutation.mutateAsync({ id, name });
   }, [renameMutation]);
 
+  const duplicateDashboard = useCallback(async (id: string) => {
+    await duplicateMutation.mutateAsync(id);
+  }, [duplicateMutation]);
+
   const navigateToDashboard = useCallback((id: string) => {
     navigate(`/insights/${id}`);
   }, [navigate]);
