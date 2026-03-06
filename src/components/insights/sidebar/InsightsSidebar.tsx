@@ -20,6 +20,7 @@ export function InsightsSidebar() {
     navigateToDashboard,
     deleteDashboard,
     renameDashboard,
+    duplicateDashboard,
     reorderDashboards,
     isLoading,
   } = useInsightsDashboards();
