@@ -23,6 +23,7 @@ interface InsightsDashboardListProps {
   onSelect: (id: string) => void;
   onDelete?: (id: string) => Promise<void>;
   onRename?: (id: string, name: string) => Promise<void>;
+  onDuplicate?: (id: string) => Promise<void>;
   onReorder?: (orderedIds: string[]) => Promise<void>;
   readOnly?: boolean;
 }
