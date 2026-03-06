@@ -1,42 +1,36 @@
 
 
-## Plano: Corrigir suporte a múltiplos telefones de Leads
+## Plano: Corrigir múltiplos telefones — Leads.tsx e busca RoyZapp
 
-### Problema raiz
+### Problemas identificados
 
-O campo `additional_phones` no banco armazena objetos `{number: "...", label: "..."}`, mas o hook `useLeads.tsx` define o tipo como `string[] | null` e faz cast direto (`as string[]`) sem normalizar. Isso faz com que:
+**1. Página `/leads` (Leads.tsx) não tem phone picker**
+O botão "Abrir Conversa no ROY zAPP" na página `/leads` chama `openZappConversation` diretamente com `lead.phone` (linhas 1296 e 1320). Não existe nenhuma lógica de verificação de `additional_phones` nem o `ZappLeadPhonePickerDialog` nesta página. A correção anterior só foi aplicada em `LeadsTab.tsx` (setor Vendas do Pipeline), mas o usuário está na página `/leads`.
 
-1. **LeadsTab**: `handleOpenZappForLead` verifica `additionalPhones.length > 0` — isso funciona (o array não está vazio), mas os itens são objetos, não strings. O `getPhonePickerPhones` tenta tratar ambos os formatos, porém o tipo `Lead` diz `string[]`, mascarando o bug.
-
-2. **RoyZapp busca**: O código de expansão no `searchContacts` está correto (trata objetos e strings), mas a query ao banco filtra apenas pela coluna `phone` (`phone.ilike.%...%`), nunca buscando em `additional_phones`. Leads encontrados por **nome** mostram os adicionais corretamente; leads encontrados por **telefone adicional** não aparecem porque o filtro SQL não inclui essa coluna. Porém, como `additional_phones` é JSONB, não dá para filtrar com `.ilike` — o filtro client-side após o fetch é a abordagem correta.
+**2. Busca no ROY zAPP retorna poucos resultados**
+O filtro `additional_phones::text.ilike.%...%` adicionado na query PostgREST provavelmente está causando erro ou comportamento inesperado, pois PostgREST não suporta casting de tipos (`::text`) diretamente nos filtros `.or()`. Isso faz a query de leads falhar silenciosamente ou retornar resultados incorretos.
 
 ### Correções
 
-**1. `src/hooks/useLeads.tsx`** — Normalizar `additional_phones` de objetos para strings
+**Arquivo: `src/pages/Leads.tsx`**
 
-Na linha 134, em vez de `as string[]`, mapear cada item para extrair o valor string:
-```typescript
-additional_phones: Array.isArray(lead.additional_phones)
-  ? (lead.additional_phones as any[]).map(p => 
-      typeof p === 'object' && p !== null && p.number ? p.number : String(p)
-    )
-  : null,
-```
-Repetir nas linhas 180 (createLead) e em qualquer outro ponto que faça o mesmo cast.
+1. Importar `ZappLeadPhonePickerDialog`
+2. Adicionar estados `phonePickerOpen` e `phonePickerLead`
+3. Criar `handleOpenZappForLead` — mesma lógica do LeadsTab: verificar se `additional_phones.length > 0`, se sim abrir picker, se não ir direto
+4. Criar `getPhonePickerPhones` — montar lista de telefones (principal + adicionais)
+5. Substituir as duas chamadas diretas de `openZappConversation` (linhas 1296 e 1320) por `handleOpenZappForLead(lead)`
+6. Renderizar `ZappLeadPhonePickerDialog` no final do componente
 
-**2. `src/pages/RoyZapp.tsx`** — Buscar mais leads para capturar telefones adicionais
+**Arquivo: `src/pages/RoyZapp.tsx`**
 
-O problema é que a query SQL filtra por `phone.ilike.%...%` e `additional_phones` é JSONB (não pesquisável com ilike). Solução: quando é busca por telefone, também buscar por nome e fazer filtro client-side. Alternativa mais simples: usar `additional_phones::text` como cast no RPC ou simplesmente aumentar o limite e buscar todos os leads que contenham o número no JSONB. 
+1. Remover `additional_phones::text.ilike.%...%` do filtro `.or()` da query de leads (linhas 3093-3095)
+2. Manter a query buscando apenas por `full_name` e `phone` (como era antes)
+3. Manter o `additional_phones` no `select` para que a expansão client-side continue funcionando
+4. Para capturar leads por telefone adicional: fazer uma segunda query separada buscando no JSONB com `additional_phones.cs.[{"number":"..."}]` ou simplesmente buscar todos os leads por nome e expandir client-side (abordagem mais segura)
 
-Na verdade, a abordagem mais pragmática: adicionar um `.or()` extra com `additional_phones::text.ilike.%phone%` — Supabase PostgREST suporta isso com casting. Caso não funcione, a solução é usar uma busca textual.
-
-Vou usar a abordagem: para buscas por telefone, adicionar o filtro `additional_phones::text` para capturar matches em telefones adicionais JSONB.
-
-**3. `src/components/sales/LeadsTab.tsx`** — Após normalização no useLeads, o código existente já funciona
-
-O `getPhonePickerPhones` já trata strings, e após a normalização no hook, os itens serão strings. Nenhuma mudança necessária aqui.
+A abordagem mais confiável: remover o cast do filtro SQL, voltar ao filtro original (`full_name.ilike` + `phone.ilike`), e aumentar o limit de 10 para 20 para compensar. Os telefones adicionais já são expandidos client-side após o fetch.
 
 ### Arquivos alterados
-- `src/hooks/useLeads.tsx` — normalizar `additional_phones` de objetos para strings
-- `src/pages/RoyZapp.tsx` — incluir busca em `additional_phones` (JSONB) para buscas por telefone
+- `src/pages/Leads.tsx` — adicionar phone picker (import, estados, handler, renderização)
+- `src/pages/RoyZapp.tsx` — remover `additional_phones::text` do filtro `.or()`, restaurar filtro original
 
