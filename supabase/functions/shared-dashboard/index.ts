@@ -2101,8 +2101,10 @@ Deno.serve(async (req) => {
 
         try {
           if (isDataTable) {
-            // data_table visuals use client-side queries; skip in shared dashboard
-            console.log(`[compute] Skipping data_table visual ${visual.id}`);
+            // Compute drilldown records for data_table visuals
+            console.log(`[compute] Computing data_table records for visual ${visual.id}`);
+            if (!drilldownData) drilldownData = {};
+            drilldownData[visual.id] = await computeDataTableRecords(supabaseAdmin, accountId, visual.config, filters);
             visualsData[visual.id] = [];
           } else if (isStacked) {
             const dataSource = visual.config?.dataSource || 'deals';
