@@ -20,6 +20,7 @@ interface InsightsDashboardItemProps {
   onSelect: () => void;
   onDelete?: (id: string) => Promise<void>;
   onRename?: (id: string, name: string) => Promise<void>;
+  onDuplicate?: (id: string) => Promise<void>;
   readOnly?: boolean;
 }
 
