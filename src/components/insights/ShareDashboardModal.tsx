@@ -86,6 +86,13 @@ export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboard
     if (open && shareId) fetchRequests();
   }, [open, shareId, fetchRequests]);
 
+  // Poll for new access requests every 15 seconds while modal is open
+  useEffect(() => {
+    if (!open || !shareId) return;
+    const interval = setInterval(fetchRequests, 15000);
+    return () => clearInterval(interval);
+  }, [open, shareId, fetchRequests]);
+
   const createShareLink = async () => {
     if (!currentUser) return;
     setLoading(true);
