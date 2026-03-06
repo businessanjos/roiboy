@@ -4,6 +4,8 @@ import { BarChart3, AlertTriangle } from "lucide-react";
 import { ConfigurableChart } from "./ConfigurableChart";
 import { VisualConfig, ChartType } from "../visual-builder/types";
 import { evaluateFormula } from "@/lib/formula-evaluator";
+import { getColumnsForDataSource, getDefaultColumns, type TableColumnDef } from "./ConfigurableTable";
+import type { DrilldownRecord } from "@/hooks/useVisualDrilldown";
 
 interface AggregatedDataPoint {
   name: string;
@@ -22,6 +24,7 @@ interface SharedVisualCardProps {
   data: AggregatedDataPoint[];
   stackedData?: Array<{ name: string; [key: string]: string | number }>;
   stackedSeriesKeys?: string[];
+  drilldownData?: DrilldownRecord[];
 }
 
 // Simple error boundary for individual cards
@@ -53,7 +56,60 @@ class CardErrorBoundary extends React.Component<
   }
 }
 
-export function SharedVisualCard({ visual, data, stackedData, stackedSeriesKeys }: SharedVisualCardProps) {
+function SharedDataTable({ config, records }: { config: VisualConfig; records: DrilldownRecord[] }) {
+  const allColumns = getColumnsForDataSource(config.dataSource);
+  const selectedKeys = config.tableConfig?.columns || getDefaultColumns(config.dataSource);
+  const columns = useMemo(
+    () => allColumns.filter(c => selectedKeys.includes(c.key)),
+    [allColumns, selectedKeys]
+  );
+
+  return (
+    <div className="h-full w-full overflow-auto relative">
+      <table className="w-max min-w-full border-collapse text-sm">
+        <thead className="sticky top-0 z-10">
+          <tr className="bg-muted/80 backdrop-blur-sm">
+            {columns.map((col) => (
+              <th
+                key={col.key}
+                className="text-left font-medium text-muted-foreground px-3 py-2 border-b border-border whitespace-nowrap"
+                style={{ width: col.defaultWidth, minWidth: 60 }}
+              >
+                {col.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {records.length === 0 ? (
+            <tr>
+              <td colSpan={columns.length} className="text-center text-muted-foreground py-8">
+                Sem dados para exibir
+              </td>
+            </tr>
+          ) : (
+            records.map((record) => (
+              <tr key={record.id} className="hover:bg-muted/40 transition-colors border-b border-border/50">
+                {columns.map((col) => (
+                  <td
+                    key={col.key}
+                    className="px-3 py-2 whitespace-nowrap overflow-hidden text-ellipsis"
+                    style={{ maxWidth: col.defaultWidth }}
+                    title={col.getValue(record)}
+                  >
+                    {col.render ? col.render(record) : col.getValue(record)}
+                  </td>
+                ))}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function SharedVisualCard({ visual, data, stackedData, stackedSeriesKeys, drilldownData }: SharedVisualCardProps) {
   const config = visual.config as VisualConfig | null;
   const chartType = (visual.chart_type || 'bar') as ChartType;
   const title = visual.title || "Visual";
@@ -91,15 +147,16 @@ export function SharedVisualCard({ visual, data, stackedData, stackedSeriesKeys 
 
   if (chartType === 'data_table') {
     return (
-      <Card className="h-full flex flex-col">
-        <CardHeader className="pb-2 flex-shrink-0">
-          <CardTitle className="text-base truncate">{title}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-          <BarChart3 className="h-10 w-10 mb-2 opacity-40" />
-          <p className="text-sm">Tabelas não são suportadas na visualização compartilhada</p>
-        </CardContent>
-      </Card>
+      <CardErrorBoundary title={title}>
+        <Card className="h-full flex flex-col">
+          <CardHeader className="pb-2 flex-shrink-0">
+            <CardTitle className="text-base truncate">{title}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0 overflow-auto p-0 px-2 pb-2">
+            <SharedDataTable config={config} records={drilldownData || []} />
+          </CardContent>
+        </Card>
+      </CardErrorBoundary>
     );
   }
 

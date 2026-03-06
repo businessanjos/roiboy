@@ -123,6 +123,7 @@ export default function SharedInsightsDashboard() {
   const [visuals, setVisuals] = useState<any[]>([]);
   const [visualsData, setVisualsData] = useState<Record<string, AggregatedDataPoint[]>>({});
   const [stackedVisualsData, setStackedVisualsData] = useState<Record<string, { data: any[]; seriesKeys: string[] }>>({});
+  const [drilldownData, setDrilldownData] = useState<Record<string, any[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -180,6 +181,7 @@ export default function SharedInsightsDashboard() {
       setVisuals(data.visuals || []);
       setVisualsData(data.visualsData || {});
       setStackedVisualsData(data.stackedVisualsData || {});
+      setDrilldownData(data.drilldownData || {});
       if (data.filterOptions) setFilterOptions(data.filterOptions);
     }
     return data;
@@ -572,6 +574,7 @@ export default function SharedInsightsDashboard() {
                       data={visualsData[visual.id] || []}
                       stackedData={stackedVisualsData[visual.id]?.data}
                       stackedSeriesKeys={stackedVisualsData[visual.id]?.seriesKeys}
+                      drilldownData={drilldownData[visual.id]}
                     />
                   </div>
                 ))}
