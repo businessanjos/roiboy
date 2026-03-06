@@ -48,7 +48,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, dealStatusFilter);
           break;
         case 'leads':
-          result = await fetchLeadsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, leadFilters);
+          result = await fetchLeadsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, leadFilters, dealFilters, dealStatusFilter);
           break;
         case 'products':
           result = await fetchProductsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
@@ -886,19 +886,69 @@ async function calculateConversionRateByPeriod(
   return result;
 }
 
+/**
+ * Cross-resource filter: find lead IDs that have deals matching deal field filters and/or deal status filter.
+ */
+async function getLeadIdsByDealConstraints(
+  accountId: string,
+  dealFilters?: FieldFilter[],
+  dealStatusFilter?: string[]
+): Promise<Set<string>> {
+  // Fetch all deals (with lead_id) from the account, applying status filter at DB level
+  let allDeals: { id: string; lead_id: string | null }[] = [];
+  let from = 0;
+  const pageSize = 1000;
+
+  while (true) {
+    let query = supabase
+      .from('deals')
+      .select('id, lead_id')
+      .eq('account_id', accountId);
+
+    if (dealStatusFilter && dealStatusFilter.length > 0) {
+      query = query.in('status', dealStatusFilter);
+    }
+
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if (error) {
+      console.error('Error fetching deals for lead cross-filter:', error);
+      break;
+    }
+    allDeals = allDeals.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  // Apply deal field filters (custom fields AND logic)
+  let filteredDeals: { id: string; lead_id: string | null }[] = allDeals;
+  if (dealFilters && dealFilters.length > 0) {
+    filteredDeals = await filterByDealFields(filteredDeals, accountId, dealFilters);
+  }
+
+  // Extract unique lead_ids from matching deals
+  const leadIds = new Set<string>();
+  for (const deal of filteredDeals) {
+    if (deal.lead_id) leadIds.add(deal.lead_id);
+  }
+  return leadIds;
+}
+
 async function fetchLeadsData(
   accountId: string,
   measure: VisualConfig['measure'],
   dimension: VisualConfig['dimension'],
   filters: any,
   dateDisplayFormat: DateDisplayFormat,
-  leadFilters?: FieldFilter[]
+  leadFilters?: FieldFilter[],
+  dealFilters?: FieldFilter[],
+  dealStatusFilter?: string[]
 ): Promise<AggregatedDataPoint[]> {
-  // Determine if we need lead field filtering
+  // Determine if we need lead field filtering or deal-based filtering
   const hasLeadFilter = leadFilters && leadFilters.length > 0;
+  const hasDealFilter = (dealFilters && dealFilters.length > 0) || (dealStatusFilter && dealStatusFilter.length > 0);
 
-  // For scorecard total count WITHOUT lead filter, use server-side count
-  if (dimension.field === '_total' && !hasLeadFilter) {
+  // For scorecard total count WITHOUT any filter, use server-side count
+  if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter) {
     let countQuery = supabase
       .from('leads')
       .select('*', { count: 'exact', head: true })
@@ -956,6 +1006,12 @@ async function fetchLeadsData(
   // Apply lead field filters if configured (AND logic)
   if (hasLeadFilter) {
     allData = await filterByLeadFields(allData, accountId, leadFilters!, 'leads');
+  }
+
+  // Apply deal-based filters: find leads that have matching deals
+  if (hasDealFilter && allData.length > 0) {
+    const matchingLeadIds = await getLeadIdsByDealConstraints(accountId, dealFilters, dealStatusFilter);
+    allData = allData.filter(lead => matchingLeadIds.has(lead.id));
   }
 
   // For scorecard total with filter, return count after filtering

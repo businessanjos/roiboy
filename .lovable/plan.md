@@ -1,46 +1,41 @@
 
 
-## Investigação: Discrepância entre "Leads por Faturamento Atual" e "QUANTIDADE DE LEADS - MQL"
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-### Diagnóstico
+### O que será feito
 
-Analisei os configs dos dois visuais diretamente no banco de dados e encontrei que **não é um bug de código** — são configurações diferentes entre os dois visuais:
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-| | Scorecard "QUANTIDADE DE LEADS - MQL" | Barra "Leads por Faturamento Atual" |
-|---|---|---|
-| **dataSource** | `deals` | `leads` |
-| **Filtro Lead - MQL** | SIM - Acima de 30k | SIM - Acima de 30k |
-| **Filtro Lead - Canal** | Trafego Pago | ❌ Não tem |
-| **Filtro Deal - Origem** | [TRAF-STUDIO-EC] | [TRAF-STUDIO-EC] |
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-**Três diferenças causam a discrepância:**
+### Alterações por arquivo
 
-1. **DataSource diferente**: O scorecard conta **negócios** (`deals`), não leads. Um lead pode ter múltiplos negócios, ou nenhum, gerando contagens diferentes.
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
 
-2. **Filtro adicional de Canal**: O scorecard exige Canal = "Trafego Pago", que o gráfico de barras não tem. Isso reduz o resultado do scorecard.
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
 
-3. **Filtro de negócio ignorado no gráfico de barras**: O gráfico de barras tem `dealFieldFilters: Origem da Venda = [TRAF-STUDIO-EC]` configurado, mas a função `fetchLeadsData` **não aplica filtros de negócio** — ela só recebe e aplica `leadFilters`. Então esse filtro é silenciosamente ignorado, inflando a contagem.
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
 
-### Bug real encontrado
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
 
-Existe um bug real no ponto 3: quando um visual de dataSource `leads` tem `dealFieldFilters` configurados, eles são **ignorados** porque `fetchLeadsData` nunca recebe os `dealFilters`. Veja a chamada na linha 51:
-
-```typescript
-result = await fetchLeadsData(accountId, measure, dimension, filters, dateDisplayFormat, leadFilters);
-// dealFilters nunca é passado!
-```
-
-### Correção proposta
-
-**`src/hooks/useVisualData.ts`**:
-1. Passar `dealFilters` e `dealStatusFilter` para `fetchLeadsData`
-2. Dentro de `fetchLeadsData`, quando houver deal filters, buscar os `deal_id`s que satisfazem os filtros, pegar os `lead_id`s correspondentes, e filtrar os leads por essa interseção (semelhante à lógica de `filterByLeadFields` mas no sentido inverso: deal → lead)
-
-A lógica seria:
-- Buscar todos os deals do account com os deal field filters aplicados
-- Extrair os `lead_id`s únicos desses deals
-- Filtrar `allData` para incluir apenas leads cujo `id` está nesse conjunto
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
 
 ### Arquivos alterados
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
 - `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 
