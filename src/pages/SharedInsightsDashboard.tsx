@@ -181,6 +181,7 @@ export default function SharedInsightsDashboard() {
       setVisuals(data.visuals || []);
       setVisualsData(data.visualsData || {});
       setStackedVisualsData(data.stackedVisualsData || {});
+      setDrilldownData(data.drilldownData || {});
       if (data.filterOptions) setFilterOptions(data.filterOptions);
     }
     return data;
