@@ -400,18 +400,9 @@ export default function RoyZapp() {
             .eq("id", convByPhone.data.id);
         }
       } else {
-        // Fallback: buscar por lead_id/client_id (caso telefone seja diferente)
-        const { data: convById } = await supabase
-          .from("zapp_conversations")
-          .select("id")
-          .eq("account_id", currentUser.account_id)
-          .eq(idField, contact.id)
-          .eq("integration_id", selectedIntegrationId)
-          .maybeSingle();
-        
-        if (convById) {
-          zappConvId = convById.id;
-        }
+        // Não fazer fallback por lead_id/client_id — se o telefone é diferente,
+        // devemos criar uma nova conversa para esse telefone específico.
+        // zappConvId permanece null para forçar criação de nova conversa.
       }
       
       if (zappConvId) {
@@ -3094,7 +3085,7 @@ export default function RoyZapp() {
           ? `phone.ilike.%${normalizedPhone}%`
           : `full_name.ilike.%${textSearch}%,phone.ilike.%${textSearch}%`)
         .order("full_name")
-        .limit(10),
+        .limit(20),
       
       // 3. Search existing conversations (WhatsApp contacts)
       supabase
@@ -3530,34 +3521,22 @@ export default function RoyZapp() {
         }
         
         // Atualizar lead_id/client_id se não estiver vinculado (baseado no tipo do contato)
-        if (isLeadContact && !convByPhone.data.lead_id && contact.id) {
+        const realContactId = contact.id.includes('-alt-') ? contact.id.split('-alt-')[0] : contact.id;
+        if (isLeadContact && !convByPhone.data.lead_id && realContactId) {
           await supabase
             .from("zapp_conversations")
-            .update({ lead_id: contact.id, contact_name: contact.full_name })
+            .update({ lead_id: realContactId, contact_name: contact.full_name })
             .eq("id", convByPhone.data.id);
-        } else if (isClientContact && !convByPhone.data.client_id && contact.id) {
+        } else if (isClientContact && !convByPhone.data.client_id && realContactId) {
           await supabase
             .from("zapp_conversations")
-            .update({ client_id: contact.id, contact_name: contact.full_name })
+            .update({ client_id: realContactId, contact_name: contact.full_name })
             .eq("id", convByPhone.data.id);
         }
       } else {
-        // Fallback: buscar por lead_id/client_id (caso telefone seja diferente)
-        // IMPORTANTE: Filtrar por integration_id para manter isolamento por instância
-        if (isLeadContact || isClientContact) {
-          const idField = isLeadContact ? 'lead_id' : 'client_id';
-          const { data: convById } = await supabase
-            .from("zapp_conversations")
-            .select("id")
-            .eq("account_id", currentUser.account_id)
-            .eq(idField, contact.id)
-            .eq("integration_id", selectedIntegrationId)
-            .maybeSingle();
-          
-          if (convById) {
-            zappConvId = convById.id;
-          }
-        }
+        // Não fazer fallback por lead_id/client_id — se o telefone é diferente,
+        // devemos criar uma nova conversa para esse telefone específico.
+        // zappConvId permanece null para forçar criação de nova conversa.
       }
       
       if (zappConvId) {
