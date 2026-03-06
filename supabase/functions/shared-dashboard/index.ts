@@ -2144,12 +2144,13 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Cleanup: remove pending/rejected requests older than 30 minutes
+      // Cleanup: remove only rejected requests older than 30 minutes (to allow re-requests)
+      // Pending requests persist until admin approves/rejects
       await supabaseAdmin
         .from("insights_share_access_requests")
         .delete()
         .eq("share_id", share.id)
-        .in("status", ["pending", "rejected"])
+        .eq("status", "rejected")
         .lt("created_at", new Date(Date.now() - 30 * 60 * 1000).toISOString());
 
       // Check if request already exists
@@ -2333,12 +2334,13 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Cleanup expired requests
+      // Cleanup: remove only rejected requests older than 30 minutes (to allow re-requests)
+      // Pending requests persist until admin approves/rejects
       await supabaseAdmin
         .from("insights_share_access_requests")
         .delete()
         .eq("share_id", share.id)
-        .in("status", ["pending", "rejected"])
+        .eq("status", "rejected")
         .lt("created_at", new Date(Date.now() - 30 * 60 * 1000).toISOString());
 
       // Check access
