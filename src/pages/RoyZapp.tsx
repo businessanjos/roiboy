@@ -3091,8 +3091,8 @@ export default function RoyZapp() {
         .eq("account_id", currentUser.account_id)
         .is("converted_to_client_id", null)
         .or(isPhoneSearch && normalizedPhone.length >= 4
-          ? `phone.ilike.%${normalizedPhone}%,additional_phones::text.ilike.%${normalizedPhone}%`
-          : `full_name.ilike.%${textSearch}%,phone.ilike.%${textSearch}%,additional_phones::text.ilike.%${textSearch}%`)
+          ? `phone.ilike.%${normalizedPhone}%`
+          : `full_name.ilike.%${textSearch}%,phone.ilike.%${textSearch}%`)
         .order("full_name")
         .limit(10),
       
