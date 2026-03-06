@@ -20,46 +20,962 @@ interface FilterParams {
   productId?: string;
 }
 
-function formatDateGroup(dateStr: string, grouping: string, displayFormat: string): string {
-  const d = new Date(dateStr);
-  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-  const fullMonths = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-  
-  if (grouping === 'year') return `${d.getFullYear()}`;
-  
-  if (grouping === 'month' || grouping === 'week') {
-    switch (displayFormat) {
-      case 'short': return months[d.getMonth()];
-      case 'full': return `${fullMonths[d.getMonth()]} ${d.getFullYear()}`;
-      case 'monthYear':
-      default:
-        return `${months[d.getMonth()]}/${String(d.getFullYear()).slice(-2)}`;
-    }
-  }
-  
-  // day
-  return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
-
 interface StackedResult {
   data: Array<{ name: string; [key: string]: string | number }>;
   seriesKeys: string[];
 }
 
-function getDateFieldForVisual(config: any): string {
-  const { dimension, statusFilter } = config || {};
-  if (dimension?.type === 'date' && dimension.field && dimension.field !== 'created_at') {
-    return dimension.field;
+// ─── Constants (same as useVisualData) ───
+const MQL_FIELD_ID = '448404cd-0344-4892-a574-2387b1c17578';
+const LEAD_MQL_FIELD_ID = 'e4270e93-e9b9-4d9b-9589-d614ce335bcd';
+const LEAD_FATURAMENTO_FIELD_ID = 'e352a1ca-cfbc-435a-95f7-2f53b5cac041';
+const DEAL_CANAL_FIELD_ID = '16ebda9f-cd3b-412c-bb06-0950001963c5';
+
+const MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
+  sim_acima_30k: { label: 'SIM - Acima de 30k', color: '#22c55e' },
+  nao_abaixo_30k: { label: 'NÃO - Abaixo de 30k', color: '#ef4444' },
+};
+
+const LEAD_MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
+  opt_1: { label: 'SIM - Acima de 30k', color: '#22c55e' },
+  opt_2: { label: 'NAO - Abaixo de 30k', color: '#ef4444' },
+};
+
+// ─── Helpers ───
+
+function inferStatusFilter(
+  measure: any,
+  dimension: any
+): 'won' | 'lost' | undefined {
+  if (dimension.field !== '_total') return undefined;
+  if (measure.field === 'value' && (measure.aggregation === 'sum' || measure.aggregation === 'avg')) {
+    return 'won';
   }
-  if (statusFilter === 'won') return 'won_at';
-  if (statusFilter === 'lost') return 'lost_at';
-  return 'created_at';
+  return undefined;
 }
 
-function applyDateFilter(query: any, dateField: string, filters: FilterParams) {
-  if (filters.startDate) query = query.gte(dateField, filters.startDate);
-  if (filters.endDate) query = query.lte(dateField, filters.endDate);
-  return query;
+/** Paginate a supabase query to fetch ALL rows beyond the 1000 default. */
+async function paginateQuery(baseQuery: any, orderField: string = 'created_at'): Promise<any[]> {
+  let all: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await baseQuery.order(orderField, { ascending: false }).range(from, from + pageSize - 1);
+    if (error) { console.error('Pagination error:', error); return all; }
+    all = all.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
+function formatDateGroup(dateStr: string, grouping: string, displayFormat: string): string {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return 'Data Inválida';
+
+  const monthsShort = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+  const monthsFull = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+
+  switch (grouping) {
+    case 'day':
+      return String(d.getUTCDate()).padStart(2, '0');
+    case 'week': {
+      // Match ptBR locale week format: "Sem W/yyyy"
+      const jan1 = new Date(d.getUTCFullYear(), 0, 1);
+      const dayOfYear = Math.floor((d.getTime() - jan1.getTime()) / 86400000) + 1;
+      const weekNum = Math.ceil(dayOfYear / 7);
+      return `Sem ${weekNum}/${d.getUTCFullYear()}`;
+    }
+    case 'month': {
+      const m = monthsShort[d.getUTCMonth()];
+      const y = String(d.getUTCFullYear()).slice(-2);
+      switch (displayFormat) {
+        case 'short': return m + '.';
+        case 'full': return `${monthsFull[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+        case 'monthYear':
+        default:
+          return `${m}./${y}`;
+      }
+    }
+    case 'year':
+      return `${d.getUTCFullYear()}`;
+    default:
+      return `${monthsShort[d.getUTCMonth()]}./${String(d.getUTCFullYear()).slice(-2)}`;
+  }
+}
+
+// ─── Enrichment functions (mirror useVisualData) ───
+
+async function enrichDealsWithMql(supabase: any, accountId: string, deals: any[]): Promise<any[]> {
+  if (deals.length === 0) return deals;
+  const dealIds = deals.map((d: any) => d.id);
+  let allValues: any[] = [];
+  const batchSize = 500;
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batch = dealIds.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, value_text')
+      .eq('field_id', MQL_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('deal_id', batch);
+    if (data) allValues = allValues.concat(data);
+  }
+  const mqlMap = new Map<string, { label: string; color: string }>();
+  for (const row of allValues) {
+    const mapped = MQL_VALUE_MAP[row.value_text || ''];
+    if (mapped) mqlMap.set(row.deal_id, mapped);
+  }
+  return deals.map((deal: any) => {
+    const mql = mqlMap.get(deal.id);
+    return { ...deal, _mql_label: mql?.label || 'Não informado', _mql_color: mql?.color || undefined };
+  });
+}
+
+async function enrichDealsWithCanal(supabase: any, accountId: string, deals: any[]): Promise<any[]> {
+  if (deals.length === 0) return deals;
+  const { data: fieldDef } = await supabase
+    .from('custom_fields')
+    .select('options')
+    .eq('id', DEAL_CANAL_FIELD_ID)
+    .single();
+  const optionLabels = new Map<string, string>();
+  if (fieldDef?.options && Array.isArray(fieldDef.options)) {
+    for (const opt of fieldDef.options as { value: string; label: string }[]) {
+      optionLabels.set(opt.value, opt.label);
+    }
+  }
+  const dealIds = deals.map((d: any) => d.id);
+  let allValues: any[] = [];
+  const batchSize = 500;
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batch = dealIds.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, value_text')
+      .eq('field_id', DEAL_CANAL_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('deal_id', batch);
+    if (data) allValues = allValues.concat(data);
+  }
+  const canalMap = new Map<string, string>();
+  for (const row of allValues) {
+    if (row.value_text) {
+      canalMap.set(row.deal_id, optionLabels.get(row.value_text) || row.value_text);
+    }
+  }
+  return deals.map((deal: any) => ({ ...deal, canal: canalMap.get(deal.id) || 'Não informado' }));
+}
+
+async function enrichLeadsWithMql(supabase: any, accountId: string, leads: any[]): Promise<any[]> {
+  if (leads.length === 0) return leads;
+  const leadIds = leads.map((l: any) => l.id);
+  let allValues: any[] = [];
+  const batchSize = 500;
+  for (let i = 0; i < leadIds.length; i += batchSize) {
+    const batch = leadIds.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from('lead_field_values')
+      .select('lead_id, value_text')
+      .eq('field_id', LEAD_MQL_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('lead_id', batch);
+    if (data) allValues = allValues.concat(data);
+  }
+  const mqlMap = new Map<string, { label: string; color: string }>();
+  for (const row of allValues) {
+    const mapped = LEAD_MQL_VALUE_MAP[row.value_text || ''];
+    if (mapped) mqlMap.set(row.lead_id, mapped);
+  }
+  return leads.map((lead: any) => {
+    const mql = mqlMap.get(lead.id);
+    return { ...lead, _mql_label: mql?.label || 'Não informado', _mql_color: mql?.color || undefined };
+  });
+}
+
+async function enrichLeadsWithFaturamento(supabase: any, accountId: string, leads: any[]): Promise<any[]> {
+  if (leads.length === 0) return leads;
+  const leadIds = leads.map((l: any) => l.id);
+  let allValues: any[] = [];
+  const batchSize = 500;
+  for (let i = 0; i < leadIds.length; i += batchSize) {
+    const batch = leadIds.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from('lead_field_values')
+      .select('lead_id, value_text')
+      .eq('field_id', LEAD_FATURAMENTO_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('lead_id', batch);
+    if (data) allValues = allValues.concat(data);
+  }
+  const fatMap = new Map<string, string>();
+  for (const row of allValues) {
+    if (row.value_text) fatMap.set(row.lead_id, row.value_text);
+  }
+  return leads.map((lead: any) => ({ ...lead, faturamento_atual: fatMap.get(lead.id) || 'Não informado' }));
+}
+
+async function enrichLeadsWithOwner(supabase: any, accountId: string, leads: any[]): Promise<any[]> {
+  if (leads.length === 0) return leads;
+  const leadIds = leads.map((l: any) => l.id);
+  let allDeals: any[] = [];
+  const batchSize = 500;
+  for (let i = 0; i < leadIds.length; i += batchSize) {
+    const batch = leadIds.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from('deals')
+      .select('id, lead_id, responsible_user_id, created_at')
+      .eq('account_id', accountId)
+      .in('lead_id', batch);
+    if (data) allDeals = allDeals.concat(data);
+  }
+  const latestDealByLead = new Map<string, any>();
+  for (const deal of allDeals) {
+    if (!deal.lead_id || !deal.responsible_user_id) continue;
+    const existing = latestDealByLead.get(deal.lead_id);
+    if (!existing || new Date(deal.created_at) > new Date(existing.created_at)) {
+      latestDealByLead.set(deal.lead_id, deal);
+    }
+  }
+  const userIds = [...new Set(Array.from(latestDealByLead.values()).map((d: any) => d.responsible_user_id))];
+  const userNameMap = new Map<string, string>();
+  for (let i = 0; i < userIds.length; i += batchSize) {
+    const batch = userIds.slice(i, i + batchSize);
+    const { data } = await supabase.from('users').select('id, name').in('id', batch);
+    for (const user of data || []) userNameMap.set(user.id, user.name);
+  }
+  return leads.map((lead: any) => {
+    const deal = latestDealByLead.get(lead.id);
+    const userName = deal ? userNameMap.get(deal.responsible_user_id) : null;
+    return { ...lead, responsible_name: userName || 'Sem Proprietário' };
+  });
+}
+
+// ─── Field filter helpers (replicate useLeadFieldFilter / useDealFieldFilter) ───
+
+async function filterByFieldValues(
+  supabase: any,
+  entityIds: string[],
+  accountId: string,
+  fieldId: string,
+  selectedValues: string[],
+  table: 'lead_field_values' | 'deal_field_values',
+  idColumn: 'lead_id' | 'deal_id'
+): Promise<Set<string>> {
+  if (selectedValues.length === 0 || entityIds.length === 0) return new Set(entityIds);
+
+  const { data: fieldDef } = await supabase
+    .from('custom_fields')
+    .select('options, field_type')
+    .eq('id', fieldId)
+    .maybeSingle();
+
+  const fieldType = fieldDef?.field_type || '';
+  const isMultiSelect = fieldType === 'multi_select';
+
+  const optionLabelToValue = new Map<string, string>();
+  if (fieldDef?.options && Array.isArray(fieldDef.options)) {
+    for (const opt of fieldDef.options as any[]) {
+      if (opt.label && opt.value) optionLabelToValue.set(opt.label, opt.value);
+    }
+  }
+
+  const isSelectField = optionLabelToValue.size > 0 && !isMultiSelect;
+  const selectColumns = isMultiSelect ? `${idColumn}, value_json` : `${idColumn}, value_text`;
+
+  let allValues: any[] = [];
+  const batchSize = 500;
+  for (let i = 0; i < entityIds.length; i += batchSize) {
+    const batch = entityIds.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from(table)
+      .select(selectColumns)
+      .eq('field_id', fieldId)
+      .eq('account_id', accountId)
+      .in(idColumn, batch);
+    if (data) allValues = allValues.concat(data);
+  }
+
+  const matchingIds = new Set<string>();
+
+  if (isMultiSelect) {
+    const selectedValueKeys = new Set(
+      selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
+    );
+    for (const row of allValues) {
+      if (row.value_json && Array.isArray(row.value_json)) {
+        for (const val of row.value_json) {
+          if (selectedValueKeys.has(val)) { matchingIds.add(row[idColumn]); break; }
+        }
+      }
+    }
+  } else if (isSelectField) {
+    const selectedValueKeys = new Set(
+      selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
+    );
+    for (const row of allValues) {
+      if (row.value_text && selectedValueKeys.has(row.value_text)) matchingIds.add(row[idColumn]);
+    }
+  } else {
+    const selectedSet = new Set(selectedValues);
+    for (const row of allValues) {
+      if (row.value_text && selectedSet.has(row.value_text)) matchingIds.add(row[idColumn]);
+    }
+  }
+
+  return matchingIds;
+}
+
+async function applyLeadFieldFilters<T extends { id: string; lead_id?: string | null }>(
+  supabase: any,
+  records: T[],
+  accountId: string,
+  leadFilters: any[],
+  mode: 'deals' | 'leads'
+): Promise<T[]> {
+  let result = records;
+  for (const filter of leadFilters) {
+    if (!filter.selectedValues?.length) continue;
+    if (mode === 'deals') {
+      const dealsWithLeads = result.filter((r: any) => r.lead_id);
+      if (dealsWithLeads.length === 0) { result = []; break; }
+      const recordsByLeadId = new Map<string, T[]>();
+      for (const r of dealsWithLeads) {
+        const leadId = (r as any).lead_id;
+        if (!recordsByLeadId.has(leadId)) recordsByLeadId.set(leadId, []);
+        recordsByLeadId.get(leadId)!.push(r);
+      }
+      const leadIds = Array.from(recordsByLeadId.keys());
+      const matchingIds = await filterByFieldValues(supabase, leadIds, accountId, filter.fieldId, filter.selectedValues, 'lead_field_values', 'lead_id');
+      const filtered: T[] = [];
+      for (const leadId of matchingIds) {
+        const recs = recordsByLeadId.get(leadId);
+        if (recs) filtered.push(...recs);
+      }
+      result = filtered;
+    } else {
+      const leadIds = result.map(r => r.id);
+      const matchingIds = await filterByFieldValues(supabase, leadIds, accountId, filter.fieldId, filter.selectedValues, 'lead_field_values', 'lead_id');
+      result = result.filter(r => matchingIds.has(r.id));
+    }
+  }
+  return result;
+}
+
+async function applyDealFieldFilters<T extends { id: string }>(
+  supabase: any,
+  records: T[],
+  accountId: string,
+  dealFilters: any[]
+): Promise<T[]> {
+  let result = records;
+  for (const filter of dealFilters) {
+    if (!filter.selectedValues?.length) continue;
+    const dealIds = result.map(r => r.id);
+    const matchingIds = await filterByFieldValues(supabase, dealIds, accountId, filter.fieldId, filter.selectedValues, 'deal_field_values', 'deal_id');
+    result = result.filter(r => matchingIds.has(r.id));
+  }
+  return result;
+}
+
+// Extract filters from config (matches getLeadFilters / getDealFilters)
+function getLeadFilters(config: any): any[] {
+  const filters: any[] = [];
+  if (config.leadFieldFilter?.fieldId && config.leadFieldFilter?.selectedValues?.length > 0) {
+    filters.push(config.leadFieldFilter);
+  }
+  if (config.leadFieldFilters && Array.isArray(config.leadFieldFilters)) {
+    for (const f of config.leadFieldFilters) {
+      if (f.fieldId && f.selectedValues?.length > 0) filters.push(f);
+    }
+  }
+  return filters;
+}
+
+function getDealFilters(config: any): any[] {
+  const filters: any[] = [];
+  if (config.dealFieldFilter?.fieldId && config.dealFieldFilter?.selectedValues?.length > 0) {
+    filters.push(config.dealFieldFilter);
+  }
+  if (config.dealFieldFilters && Array.isArray(config.dealFieldFilters)) {
+    for (const f of config.dealFieldFilters) {
+      if (f.fieldId && f.selectedValues?.length > 0) filters.push(f);
+    }
+  }
+  return filters;
+}
+
+// ─── Core aggregation (mirrors useVisualData.aggregateData) ───
+
+function getGroupKey(item: any, dimension: any, dateDisplayFormat: string): string {
+  const field = dimension.field;
+  if (field === 'stage_name') return item.deal_stages?.name || 'Sem Etapa';
+  if (field === 'responsible_name') return item.responsible_name || item.users?.name || 'Sem Responsável';
+  if (field === 'is_active') return item.is_active ? 'Ativo' : 'Inativo';
+  if (field === 'mql') return item._mql_label || 'Não informado';
+  if (field === 'faturamento_atual') return item.faturamento_atual || 'Não informado';
+  if (field === 'canal') return item.canal || 'Não informado';
+
+  if (dimension.type === 'date') {
+    const dateValue = item[field];
+    if (!dateValue) return 'Sem Data';
+    return formatDateGroup(dateValue, dimension.dateGrouping || 'month', dateDisplayFormat);
+  }
+
+  return item[field] || 'Não informado';
+}
+
+function getGroupColor(item: any, dimension: any): string | undefined {
+  if (dimension.field === 'stage_name') return item.deal_stages?.color;
+  if (dimension.field === 'mql') return item._mql_color;
+  return undefined;
+}
+
+function getMeasureValue(item: any, field: string): number {
+  const value = item[field];
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') { const p = parseFloat(value); return isNaN(p) ? 0 : p; }
+  return 0;
+}
+
+function aggregateGlobalTotal(data: any[], measure: any): AggregatedDataPoint[] {
+  let value: number;
+  switch (measure.aggregation) {
+    case 'count': value = data.length; break;
+    case 'sum': value = data.reduce((acc: number, item: any) => acc + (getMeasureValue(item, measure.field) || 0), 0); break;
+    case 'avg': {
+      const total = data.reduce((acc: number, item: any) => acc + (getMeasureValue(item, measure.field) || 0), 0);
+      value = data.length > 0 ? total / data.length : 0;
+      break;
+    }
+    default: value = 0;
+  }
+  return [{ name: 'Total', value, count: data.length }];
+}
+
+function aggregateData(
+  data: any[],
+  measure: any,
+  dimension: any,
+  dateDisplayFormat: string
+): AggregatedDataPoint[] {
+  const groups = new Map<string, { values: number[]; color?: string; count: number }>();
+
+  for (const item of data) {
+    const groupKey = getGroupKey(item, dimension, dateDisplayFormat);
+    const groupColor = getGroupColor(item, dimension);
+
+    if (!groups.has(groupKey)) groups.set(groupKey, { values: [], color: groupColor, count: 0 });
+    const group = groups.get(groupKey)!;
+    group.count++;
+
+    if (measure.aggregation !== 'count') {
+      const value = getMeasureValue(item, measure.field);
+      if (value !== null && !isNaN(value)) group.values.push(value);
+    }
+  }
+
+  const result: AggregatedDataPoint[] = [];
+  for (const [name, group] of groups) {
+    let value: number;
+    switch (measure.aggregation) {
+      case 'count': value = group.count; break;
+      case 'sum': value = group.values.reduce((a: number, b: number) => a + b, 0); break;
+      case 'avg': value = group.values.length > 0 ? group.values.reduce((a: number, b: number) => a + b, 0) / group.values.length : 0; break;
+      default: value = 0;
+    }
+    result.push({ name, value, count: group.count, color: group.color });
+  }
+
+  if (dimension.type === 'date') {
+    result.sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    result.sort((a, b) => b.value - a.value);
+  }
+
+  if (dimension.field === 'responsible_name') {
+    return result.filter(item => item.name !== 'Sem Responsável');
+  }
+
+  return result;
+}
+
+// ─── Fill empty dates (mirrors useVisualData.fillMissingDates) ───
+
+function fillMissingDates(
+  data: AggregatedDataPoint[],
+  startDate: string,
+  endDate: string,
+  grouping: string,
+  displayFormat: string
+): AggregatedDataPoint[] {
+  const dataMap = new Map(data.map(d => [d.name, d]));
+  const allDates: string[] = [];
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  switch (grouping) {
+    case 'day':
+      for (let d = 1; d <= 31; d++) {
+        allDates.push(String(d).padStart(2, '0'));
+      }
+      // Aggregate same-day values
+      const aggregated = new Map<string, AggregatedDataPoint>();
+      for (const point of data) {
+        const existing = aggregated.get(point.name);
+        if (existing) {
+          existing.value += point.value;
+          existing.count = (existing.count || 0) + (point.count || 0);
+        } else {
+          aggregated.set(point.name, { ...point });
+        }
+      }
+      return allDates.map(dateKey => aggregated.get(dateKey) || { name: dateKey, value: 0, count: 0 });
+
+    case 'week': {
+      const current = new Date(start);
+      while (current <= end) {
+        allDates.push(formatDateGroup(current.toISOString(), 'week', displayFormat));
+        current.setDate(current.getDate() + 7);
+      }
+      break;
+    }
+    case 'month': {
+      const current = new Date(start.getUTCFullYear(), start.getUTCMonth(), 1);
+      while (current <= end) {
+        allDates.push(formatDateGroup(current.toISOString(), 'month', displayFormat));
+        current.setMonth(current.getMonth() + 1);
+      }
+      break;
+    }
+    case 'year': {
+      for (let y = start.getUTCFullYear(); y <= end.getUTCFullYear(); y++) {
+        allDates.push(String(y));
+      }
+      break;
+    }
+  }
+
+  return allDates.map(dateKey => dataMap.get(dateKey) || { name: dateKey, value: 0, count: 0 });
+}
+
+// ─── Data source fetchers (full parity with useVisualData) ───
+
+async function computeDealsData(
+  supabase: any,
+  accountId: string,
+  config: any,
+  filters: FilterParams
+): Promise<AggregatedDataPoint[]> {
+  const { measure, dimension, appearance } = config;
+  const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
+
+  // Infer status filter (matches useVisualData exactly)
+  const effectiveStatusFilter = config.statusFilter ?? inferStatusFilter(measure, dimension);
+  const dealStatusFilter = config.dealStatusFilter;
+
+  let query = supabase
+    .from('deals')
+    .select(`
+      id, lead_id, value, probability, status, source, lost_reason,
+      created_at, won_at, lost_at,
+      deal_stages!deals_stage_id_fkey(name, color),
+      users!deals_responsible_user_id_fkey(name)
+    `)
+    .eq('account_id', accountId);
+
+  // Apply status filter (dealStatusFilter multi-value takes priority)
+  if (dealStatusFilter && dealStatusFilter.length > 0) {
+    query = query.in('status', dealStatusFilter);
+  } else if (effectiveStatusFilter) {
+    query = query.eq('status', effectiveStatusFilter);
+  }
+
+  // Date field logic: status takes priority for date filtering
+  let dateFilterField: string;
+  if (effectiveStatusFilter === 'won') {
+    dateFilterField = 'won_at';
+  } else if (effectiveStatusFilter === 'lost') {
+    dateFilterField = 'lost_at';
+  } else if (dimension.type === 'date' && dimension.field && dimension.field !== '_total') {
+    dateFilterField = dimension.field;
+  } else {
+    dateFilterField = 'created_at';
+  }
+
+  if (dateFilterField === 'won_at') query = query.not('won_at', 'is', null);
+  if (dateFilterField === 'lost_at') query = query.not('lost_at', 'is', null);
+
+  if (filters.startDate) query = query.gte(dateFilterField, filters.startDate);
+  if (filters.endDate) query = query.lte(dateFilterField, filters.endDate);
+  if (filters.userId && filters.userId !== 'all') query = query.eq('responsible_user_id', filters.userId);
+
+  // Paginate
+  const allRawDeals = await paginateQuery(query, dateFilterField);
+
+  // Apply lead field filters (AND logic)
+  const leadFilters = getLeadFilters(config);
+  let filteredData = allRawDeals;
+  if (leadFilters.length > 0) {
+    filteredData = await applyLeadFieldFilters(supabase, filteredData, accountId, leadFilters, 'deals');
+  }
+
+  // Apply deal field filters (AND logic)
+  const dealFiltersArr = getDealFilters(config);
+  if (dealFiltersArr.length > 0) {
+    filteredData = await applyDealFieldFilters(supabase, filteredData, accountId, dealFiltersArr);
+  }
+
+  // Scorecard
+  if (dimension.field === '_total') {
+    return aggregateGlobalTotal(filteredData, measure);
+  }
+
+  // Enrichments based on dimension
+  if (dimension.field === 'mql') {
+    filteredData = await enrichDealsWithMql(supabase, accountId, filteredData);
+  }
+  if (dimension.field === 'canal') {
+    filteredData = await enrichDealsWithCanal(supabase, accountId, filteredData);
+  }
+
+  return aggregateData(filteredData, measure, dimension, dateDisplayFormat);
+}
+
+async function computeLeadsData(
+  supabase: any,
+  accountId: string,
+  config: any,
+  filters: FilterParams
+): Promise<AggregatedDataPoint[]> {
+  const { measure, dimension, appearance } = config;
+  const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
+  const leadFilters = getLeadFilters(config);
+  const dealFiltersArr = getDealFilters(config);
+  const dealStatusFilter = config.dealStatusFilter;
+  const hasLeadFilter = leadFilters.length > 0;
+  const hasDealFilter = (dealFiltersArr.length > 0) || (dealStatusFilter && dealStatusFilter.length > 0);
+
+  // Scorecard total without filters: use server-side count
+  if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter) {
+    let countQuery = supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .eq('account_id', accountId)
+      .is('converted_to_client_id', null);
+
+    if (filters.startDate) countQuery = countQuery.gte('created_at', filters.startDate);
+    if (filters.endDate) countQuery = countQuery.lte('created_at', filters.endDate);
+
+    const { count, error } = await countQuery;
+    if (error) { console.error('Error fetching leads count:', error); return []; }
+    return [{ name: 'Total', value: count || 0 }];
+  }
+
+  // Paginate all leads (excluding converted)
+  let baseQuery = supabase
+    .from('leads')
+    .select('id, status, source, revenue_range, canal, created_at')
+    .eq('account_id', accountId)
+    .is('converted_to_client_id', null);
+
+  if (filters.startDate) baseQuery = baseQuery.gte('created_at', filters.startDate);
+  if (filters.endDate) baseQuery = baseQuery.lte('created_at', filters.endDate);
+
+  let allData = await paginateQuery(baseQuery, 'created_at');
+
+  // Apply lead field filters
+  if (hasLeadFilter) {
+    allData = await applyLeadFieldFilters(supabase, allData, accountId, leadFilters, 'leads');
+  }
+
+  // Apply deal-based cross-filters
+  if (hasDealFilter && allData.length > 0) {
+    // Find leads that have matching deals
+    let dealQuery = supabase
+      .from('deals')
+      .select('id, lead_id')
+      .eq('account_id', accountId);
+    if (dealStatusFilter && dealStatusFilter.length > 0) {
+      dealQuery = dealQuery.in('status', dealStatusFilter);
+    }
+    let allDeals = await paginateQuery(dealQuery, 'created_at');
+
+    if (dealFiltersArr.length > 0) {
+      allDeals = await applyDealFieldFilters(supabase, allDeals, accountId, dealFiltersArr);
+    }
+
+    const matchingLeadIds = new Set<string>();
+    for (const deal of allDeals) {
+      if (deal.lead_id) matchingLeadIds.add(deal.lead_id);
+    }
+    allData = allData.filter((lead: any) => matchingLeadIds.has(lead.id));
+  }
+
+  // Scorecard total with filters
+  if (dimension.field === '_total') {
+    return [{ name: 'Total', value: allData.length }];
+  }
+
+  // Enrichments based on dimension
+  if (dimension.field === 'mql') {
+    allData = await enrichLeadsWithMql(supabase, accountId, allData);
+    return aggregateData(allData, { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
+  }
+  if (dimension.field === 'responsible_name') {
+    allData = await enrichLeadsWithOwner(supabase, accountId, allData);
+    return aggregateData(allData, { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
+  }
+  if (dimension.field === 'faturamento_atual') {
+    allData = await enrichLeadsWithFaturamento(supabase, accountId, allData);
+    return aggregateData(allData, { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
+  }
+
+  return aggregateData(allData, { ...measure, aggregation: 'count' }, dimension, dateDisplayFormat);
+}
+
+async function computeProductsData(
+  supabase: any,
+  accountId: string,
+  config: any,
+  filters: FilterParams
+): Promise<AggregatedDataPoint[]> {
+  const { measure, dimension, appearance } = config;
+  const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
+
+  let query = supabase
+    .from('products')
+    .select('id, name, price, billing_period, is_active, created_at')
+    .eq('account_id', accountId);
+
+  if (filters.productId && filters.productId !== 'all') {
+    query = query.eq('id', filters.productId);
+  }
+
+  const { data, error } = await query;
+  if (error || !data) return [];
+
+  if (dimension.field === '_total') return aggregateGlobalTotal(data, measure);
+  return aggregateData(data, measure, dimension, dateDisplayFormat);
+}
+
+async function computeTasksData(
+  supabase: any,
+  accountId: string,
+  config: any,
+  filters: FilterParams
+): Promise<AggregatedDataPoint[]> {
+  const { measure, dimension, appearance } = config;
+  const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
+
+  let baseQuery = supabase
+    .from('internal_tasks')
+    .select('id, title, activity_type_id, completed_at, assigned_to, due_date, created_at, users!internal_tasks_assigned_to_fkey(name), activity_types!internal_tasks_activity_type_id_fkey(name)')
+    .eq('account_id', accountId);
+
+  if (filters.startDate) baseQuery = baseQuery.gte('due_date', filters.startDate.split('T')[0]);
+  if (filters.endDate) baseQuery = baseQuery.lte('due_date', filters.endDate.split('T')[0]);
+  if (filters.userId && filters.userId !== 'all') baseQuery = baseQuery.eq('assigned_to', filters.userId);
+
+  const allTasks = await paginateQuery(baseQuery, 'due_date');
+
+  if (dimension.field === '_total') {
+    return [{ name: 'Total', value: allTasks.length, count: allTasks.length }];
+  }
+
+  const groups = new Map<string, number>();
+  for (const task of allTasks) {
+    let groupKey: string;
+    switch (dimension.field) {
+      case 'activity_type': groupKey = (task.activity_types as any)?.name || 'Sem Tipo'; break;
+      case 'assigned_to': groupKey = (task.users as any)?.name || 'Sem Responsável'; break;
+      case 'status': groupKey = task.completed_at ? 'Concluída' : 'Pendente'; break;
+      case 'due_date':
+      case 'created_at': {
+        const dateVal = task[dimension.field];
+        if (!dateVal) { groupKey = 'Sem Data'; break; }
+        groupKey = formatDateGroup(dateVal, dimension.dateGrouping || 'month', dateDisplayFormat);
+        break;
+      }
+      default: groupKey = 'Outros';
+    }
+    groups.set(groupKey, (groups.get(groupKey) || 0) + 1);
+  }
+
+  const result: AggregatedDataPoint[] = Array.from(groups.entries()).map(([name, count]) => ({ name, value: count, count }));
+  if (dimension.type === 'date') {
+    result.sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    result.sort((a, b) => b.value - a.value);
+  }
+  return result;
+}
+
+// ─── Main visual data computation ───
+
+async function computeVisualData(
+  supabase: any,
+  visual: any,
+  accountId: string,
+  filters: FilterParams
+): Promise<AggregatedDataPoint[]> {
+  const config = visual.config;
+  if (!config) return [];
+
+  const { dataSource, dimension, appearance } = config;
+  const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
+  const fillEmptyDates = appearance?.fillEmptyDates || false;
+  const chartType = visual.chart_type;
+
+  try {
+    let result: AggregatedDataPoint[];
+
+    switch (dataSource) {
+      case 'deals':
+        result = await computeDealsData(supabase, accountId, config, filters);
+        break;
+      case 'leads':
+        result = await computeLeadsData(supabase, accountId, config, filters);
+        break;
+      case 'products':
+        result = await computeProductsData(supabase, accountId, config, filters);
+        break;
+      case 'tasks':
+        result = await computeTasksData(supabase, accountId, config, filters);
+        break;
+      default:
+        result = [];
+    }
+
+    // Fill empty dates if enabled
+    if (fillEmptyDates && dimension.type === 'date' && filters.startDate && filters.endDate) {
+      result = fillMissingDates(result, filters.startDate, filters.endDate, dimension.dateGrouping || 'month', dateDisplayFormat);
+    }
+
+    // Funnel: sort by pipeline order + append "Ganhos"
+    if (chartType === 'funnel' && dimension.field === 'stage_name') {
+      const { data: stages } = await supabase
+        .from('deal_stages')
+        .select('name, display_order, color')
+        .eq('account_id', accountId)
+        .order('display_order', { ascending: true });
+
+      if (stages && stages.length > 0) {
+        const orderMap = new Map(stages.map((s: any) => [s.name, s.display_order]));
+        result.sort((a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
+
+        // Ensure all pipeline stages appear
+        const existingNames = new Set(result.map(r => r.name));
+        for (const stage of stages) {
+          if (!existingNames.has(stage.name)) {
+            result.push({ name: stage.name, value: 0, count: 0, color: stage.color || '#6366f1' });
+          }
+        }
+        result.sort((a, b) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
+      }
+
+      // Append "Ganhos" count
+      const wonConfig = {
+        ...config,
+        statusFilter: 'won',
+        measure: { field: 'value', aggregation: 'count' },
+        dimension: { field: '_total', type: 'text' },
+      };
+      const wonResult = await computeDealsData(supabase, accountId, wonConfig, filters);
+      const wonCount = wonResult.length > 0 ? wonResult[0].value : 0;
+      result.push({ name: 'Ganhos', value: wonCount, color: '#10b981' });
+    } else if (chartType === 'funnel' && dimension.type !== 'date') {
+      result.sort((a, b) => b.value - a.value);
+    }
+
+    return result;
+  } catch (err) {
+    console.error(`Error computing visual data for ${visual.id}:`, err);
+    return [];
+  }
+}
+
+// ─── Stacked visual data ───
+
+async function enrichWithCustomField(
+  supabase: any,
+  records: any[],
+  accountId: string,
+  fieldId: string,
+  source: 'lead' | 'deal' | '_status',
+  dataSource: 'deals' | 'leads'
+): Promise<any[]> {
+  if (records.length === 0) return records;
+
+  const { data: fieldDef } = await supabase
+    .from('custom_fields')
+    .select('options, field_type')
+    .eq('id', fieldId)
+    .maybeSingle();
+
+  const fieldType = fieldDef?.field_type || '';
+  const isMultiSelect = fieldType === 'multi_select';
+
+  const valueToLabel = new Map<string, string>();
+  if (fieldDef?.options && Array.isArray(fieldDef.options)) {
+    for (const opt of fieldDef.options as any[]) {
+      if (opt.value && opt.label) valueToLabel.set(opt.value, opt.label);
+    }
+  }
+
+  const table = source === 'deal' ? 'deal_field_values' : 'lead_field_values';
+  const idColumn = source === 'deal' ? 'deal_id' : 'lead_id';
+
+  let recordIdMap: Map<string, string[]>;
+  if (source === 'deal' && dataSource === 'deals') {
+    recordIdMap = new Map();
+    for (const r of records) recordIdMap.set(r.id, [r.id]);
+  } else if (source === 'lead' && dataSource === 'leads') {
+    recordIdMap = new Map();
+    for (const r of records) recordIdMap.set(r.id, [r.id]);
+  } else if (source === 'lead' && dataSource === 'deals') {
+    recordIdMap = new Map();
+    for (const r of records) {
+      if (r.lead_id) {
+        const existing = recordIdMap.get(r.lead_id) || [];
+        existing.push(r.id);
+        recordIdMap.set(r.lead_id, existing);
+      }
+    }
+  } else {
+    return records;
+  }
+
+  const entityIds = Array.from(recordIdMap.keys());
+  if (entityIds.length === 0) return records;
+
+  const selectColumns = isMultiSelect ? `${idColumn}, value_json` : `${idColumn}, value_text`;
+  let allValues: any[] = [];
+  const batchSize = 500;
+  for (let i = 0; i < entityIds.length; i += batchSize) {
+    const batch = entityIds.slice(i, i + batchSize);
+    const { data } = await supabase.from(table).select(selectColumns).eq('field_id', fieldId).eq('account_id', accountId).in(idColumn, batch);
+    if (data) allValues = allValues.concat(data);
+  }
+
+  const entityLabelMap = new Map<string, string>();
+  for (const row of allValues) {
+    const entityId = row[idColumn];
+    let label: string;
+    if (isMultiSelect && row.value_json && Array.isArray(row.value_json)) {
+      label = row.value_json.map((v: string) => valueToLabel.get(v) || v).join(', ');
+    } else if (row.value_text) {
+      label = valueToLabel.get(row.value_text) || row.value_text;
+    } else continue;
+    entityLabelMap.set(entityId, label);
+  }
+
+  return records.map((r: any) => {
+    let entityId: string;
+    if (source === 'lead' && dataSource === 'deals') entityId = r.lead_id;
+    else entityId = r.id;
+    return { ...r, _custom_stack_label: entityLabelMap.get(entityId) || 'Não informado' };
+  });
 }
 
 async function computeStackedVisualData(
@@ -73,66 +989,108 @@ async function computeStackedVisualData(
 
   const { measure, dimension, statusFilter } = config;
   const dateGrouping = dimension?.dateGrouping || 'day';
+  const displayFormat = config.appearance?.dateDisplayFormat || 'monthYear';
 
   try {
+    if (config.dataSource === 'leads') {
+      return await computeStackedLeadsData(supabase, accountId, config, filters);
+    }
+
+    // Deals stacked
     let query = supabase
       .from('deals')
-      .select('id, value, status, created_at, won_at, lost_at, users!deals_responsible_user_id_fkey(name), responsible_user_id')
+      .select('id, lead_id, value, status, created_at, won_at, lost_at, users!deals_responsible_user_id_fkey(name), responsible_user_id')
       .eq('account_id', accountId);
 
-    if (statusFilter) query = query.eq('status', statusFilter);
+    if (config.dealStatusFilter?.length > 0) {
+      query = query.in('status', config.dealStatusFilter);
+    } else if (statusFilter) {
+      query = query.eq('status', statusFilter);
+    }
 
-    const dateField = getDateFieldForVisual(config);
+    // Date field logic
+    let dateField: string;
+    if (dimension.field && dimension.field !== 'created_at') dateField = dimension.field;
+    else if (statusFilter === 'won') dateField = 'won_at';
+    else if (statusFilter === 'lost') dateField = 'lost_at';
+    else dateField = 'created_at';
+
     if (dateField === 'won_at') query = query.not('won_at', 'is', null);
     if (dateField === 'lost_at') query = query.not('lost_at', 'is', null);
 
-    // Apply filters
-    query = applyDateFilter(query, dateField, filters);
-    if (filters.userId && filters.userId !== 'all') {
-      query = query.eq('responsible_user_id', filters.userId);
+    if (filters.startDate) query = query.gte(dateField, filters.startDate);
+    if (filters.endDate) query = query.lte(dateField, filters.endDate);
+    if (filters.userId && filters.userId !== 'all') query = query.eq('responsible_user_id', filters.userId);
+
+    let allDeals = await paginateQuery(query, dateField);
+
+    // Apply field filters
+    const leadFilters = getLeadFilters(config);
+    if (leadFilters.length > 0) {
+      allDeals = await applyLeadFieldFilters(supabase, allDeals, accountId, leadFilters, 'deals');
+    }
+    const dealFiltersArr = getDealFilters(config);
+    if (dealFiltersArr.length > 0) {
+      allDeals = await applyDealFieldFilters(supabase, allDeals, accountId, dealFiltersArr);
     }
 
-    const { data: deals, error } = await query.limit(5000);
-    if (error || !deals) return { data: [], seriesKeys: [] };
+    // Enrich with Canal if needed
+    const needsCanal = config.stackBy === 'canal' || config.dimension.field === 'canal';
+    if (needsCanal) allDeals = await enrichDealsWithCanal(supabase, accountId, allDeals);
 
-    // Group by period key and seller
+    // Enrich with custom field or status for stacking
+    if (config.stackByCustomField) {
+      if (config.stackByCustomField.source === '_status') {
+        const statusLabelMap: Record<string, string> = { won: 'Ganho', open: 'Em Aberto', lost: 'Perdido' };
+        allDeals = allDeals.map((d: any) => ({ ...d, _custom_stack_label: statusLabelMap[d.status] || d.status }));
+      } else {
+        allDeals = await enrichWithCustomField(supabase, allDeals, accountId, config.stackByCustomField.fieldId, config.stackByCustomField.source, 'deals');
+      }
+    }
+
+    // Group by period and series
     const periodMap = new Map<string, Map<string, number>>();
-    const allSellers = new Set<string>();
+    const allSeries = new Set<string>();
 
-    for (const deal of deals) {
+    const getSeriesValue = (record: any): string => {
+      if (config.stackByCustomField) return record._custom_stack_label || 'Não informado';
+      return (record.users as any)?.name || 'Sem Responsável';
+    };
+
+    const getPeriodKey = (d: Date): string => {
+      switch (dateGrouping) {
+        case 'year': return `${d.getUTCFullYear()}`;
+        case 'month': return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+        case 'week': {
+          const day = d.getUTCDay();
+          const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
+          const weekStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), diff));
+          return `${weekStart.getUTCFullYear()}-${String(weekStart.getUTCMonth() + 1).padStart(2, '0')}-${String(weekStart.getUTCDate()).padStart(2, '0')}`;
+        }
+        default: return String(d.getUTCDate()).padStart(2, '0');
+      }
+    };
+
+    for (const deal of allDeals) {
       const dateStr = (deal as any)[dateField];
       if (!dateStr) continue;
       const d = new Date(dateStr);
-
-      let periodKey: string;
-      switch (dateGrouping) {
-        case 'year': periodKey = `${d.getFullYear()}`; break;
-        case 'month': periodKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; break;
-        case 'week': {
-          const day = d.getDay();
-          const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-          const weekStart = new Date(d);
-          weekStart.setDate(diff);
-          periodKey = `${weekStart.getFullYear()}-${String(weekStart.getMonth() + 1).padStart(2, '0')}-${String(weekStart.getDate()).padStart(2, '0')}`;
-          break;
-        }
-        default: periodKey = String(d.getDate()).padStart(2, '0');
-      }
-
-      const sellerName = (deal.users as any)?.name || 'Sem Responsável';
-      if (sellerName !== 'Sem Responsável') allSellers.add(sellerName);
+      const periodKey = getPeriodKey(d);
+      const seriesValue = getSeriesValue(deal);
+      allSeries.add(seriesValue);
 
       if (!periodMap.has(periodKey)) periodMap.set(periodKey, new Map());
       const sellerMap = periodMap.get(periodKey)!;
-      const currentVal = sellerMap.get(sellerName) || 0;
+      const currentVal = sellerMap.get(seriesValue) || 0;
       if (measure?.aggregation === 'count') {
-        sellerMap.set(sellerName, currentVal + 1);
+        sellerMap.set(seriesValue, currentVal + 1);
       } else {
-        sellerMap.set(sellerName, currentVal + (Number((deal as any).value) || 0));
+        sellerMap.set(seriesValue, currentVal + (Number((deal as any).value) || 0));
       }
     }
 
-    const seriesKeys = Array.from(allSellers).sort();
+    if (!config.stackByCustomField) allSeries.delete('Sem Responsável');
+    const seriesKeys = Array.from(allSeries).sort();
 
     // Generate all periods
     const allPeriods: { key: string; label: string }[] = [];
@@ -142,18 +1100,44 @@ async function computeStackedVisualData(
         allPeriods.push({ key, label: key });
       }
     } else {
-      const sortedKeys = Array.from(periodMap.keys()).sort();
-      for (const key of sortedKeys) {
-        let label = key;
+      // Generate from date range
+      const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+      if (filters.startDate && filters.endDate) {
+        const start = new Date(filters.startDate);
+        const end = new Date(filters.endDate);
         if (dateGrouping === 'month') {
-          const [y, m] = key.split('-');
-          const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-          label = `${months[parseInt(m, 10) - 1]}/${y.slice(-2)}`;
-        } else if (dateGrouping === 'week') {
-          const parts = key.split('-');
-          label = `Sem ${parts[2]}/${parts[1]}`;
+          const current = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
+          while (current <= end) {
+            const key = `${current.getUTCFullYear()}-${String(current.getUTCMonth() + 1).padStart(2, '0')}`;
+            const label = `${months[current.getUTCMonth()]}./${String(current.getUTCFullYear()).slice(-2)}`;
+            allPeriods.push({ key, label });
+            current.setUTCMonth(current.getUTCMonth() + 1);
+          }
+        } else if (dateGrouping === 'year') {
+          for (let y = start.getUTCFullYear(); y <= end.getUTCFullYear(); y++) {
+            allPeriods.push({ key: `${y}`, label: `${y}` });
+          }
+        } else {
+          // week - use sorted keys from data
+          const sortedKeys = Array.from(periodMap.keys()).sort();
+          for (const key of sortedKeys) {
+            const parts = key.split('-');
+            allPeriods.push({ key, label: `Sem ${parts[2]}/${parts[1]}` });
+          }
         }
-        allPeriods.push({ key, label });
+      } else {
+        const sortedKeys = Array.from(periodMap.keys()).sort();
+        for (const key of sortedKeys) {
+          let label = key;
+          if (dateGrouping === 'month') {
+            const [y, m] = key.split('-');
+            label = `${months[parseInt(m, 10) - 1]}./${y.slice(-2)}`;
+          } else if (dateGrouping === 'week') {
+            const parts = key.split('-');
+            label = `Sem ${parts[2]}/${parts[1]}`;
+          }
+          allPeriods.push({ key, label });
+        }
       }
     }
 
@@ -174,198 +1158,168 @@ async function computeStackedVisualData(
   }
 }
 
-async function computeVisualData(
-  supabase: any,
-  visual: any,
-  accountId: string,
-  filters: FilterParams
-): Promise<AggregatedDataPoint[]> {
-  const config = visual.config;
-  if (!config) return [];
-
-  const { dataSource, measure, dimension, statusFilter, appearance } = config;
-  const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
-
-  try {
-    switch (dataSource) {
-      case 'deals':
-        return await computeDealsData(supabase, accountId, measure, dimension, statusFilter, dateDisplayFormat, filters);
-      case 'leads':
-        return await computeLeadsData(supabase, accountId, measure, dimension, dateDisplayFormat, filters);
-      case 'products':
-        return await computeProductsData(supabase, accountId, measure, dimension, dateDisplayFormat, filters);
-      default:
-        return [];
-    }
-  } catch (err) {
-    console.error(`Error computing visual data for ${visual.id}:`, err);
-    return [];
-  }
-}
-
-async function computeDealsData(
+async function computeStackedLeadsData(
   supabase: any,
   accountId: string,
-  measure: any,
-  dimension: any,
-  statusFilter: string | undefined,
-  dateDisplayFormat: string,
+  config: any,
   filters: FilterParams
-): Promise<AggregatedDataPoint[]> {
-  let query = supabase
-    .from('deals')
-    .select('id, value, status, source, lost_reason, created_at, won_at, lost_at, deal_stages!deals_stage_id_fkey(name), users!deals_responsible_user_id_fkey(name), responsible_user_id')
-    .eq('account_id', accountId);
+): Promise<StackedResult> {
+  const stackByField = config.stackBy || 'status';
+  const displayFormat = config.appearance?.dateDisplayFormat || 'monthYear';
+  const dateGrouping = config.dimension.dateGrouping || 'day';
 
-  if (statusFilter) query = query.eq('status', statusFilter);
-  if (statusFilter === 'won') query = query.not('won_at', 'is', null);
-  if (statusFilter === 'lost') query = query.not('lost_at', 'is', null);
-
-  // Apply filters
-  const dateField = getDateFieldForVisual({ dimension, statusFilter });
-  query = applyDateFilter(query, dateField, filters);
-  if (filters.userId && filters.userId !== 'all') {
-    query = query.eq('responsible_user_id', filters.userId);
-  }
-
-  const { data, error } = await query.limit(5000);
-  if (error || !data) return [];
-
-  return aggregateData(data, measure, dimension, dateDisplayFormat, statusFilter);
-}
-
-async function computeLeadsData(
-  supabase: any,
-  accountId: string,
-  measure: any,
-  dimension: any,
-  dateDisplayFormat: string,
-  filters: FilterParams
-): Promise<AggregatedDataPoint[]> {
-  let query = supabase
+  let baseQuery = supabase
     .from('leads')
-    .select('id, status, source, canal, created_at')
-    .eq('account_id', accountId);
+    .select('id, status, source, canal, created_at, responsible_user_id')
+    .eq('account_id', accountId)
+    .is('converted_to_client_id', null);
 
-  query = applyDateFilter(query, 'created_at', filters);
+  if (filters.startDate) baseQuery = baseQuery.gte('created_at', filters.startDate);
+  if (filters.endDate) baseQuery = baseQuery.lte('created_at', filters.endDate);
+  if (filters.userId && filters.userId !== 'all') baseQuery = baseQuery.eq('responsible_user_id', filters.userId);
 
-  const { data, error } = await query.limit(5000);
-  if (error || !data) return [];
+  let allLeads = await paginateQuery(baseQuery, 'created_at');
 
-  return aggregateData(data, measure, dimension, dateDisplayFormat);
-}
-
-async function computeProductsData(
-  supabase: any,
-  accountId: string,
-  measure: any,
-  dimension: any,
-  dateDisplayFormat: string,
-  filters: FilterParams
-): Promise<AggregatedDataPoint[]> {
-  let query = supabase
-    .from('products')
-    .select('id, name, price, billing_period, is_active, created_at')
-    .eq('account_id', accountId);
-
-  if (filters.productId && filters.productId !== 'all') {
-    query = query.eq('id', filters.productId);
+  // Apply lead field filters
+  const leadFilters = getLeadFilters(config);
+  if (leadFilters.length > 0) {
+    allLeads = await applyLeadFieldFilters(supabase, allLeads, accountId, leadFilters, 'leads');
   }
 
-  const { data, error } = await query.limit(5000);
-  if (error || !data) return [];
+  // Enrichments
+  const dimensionField = config.dimension.field || 'canal';
+  const needsFaturamento = dimensionField === 'faturamento_atual' || stackByField === 'faturamento_atual';
+  const needsMql = dimensionField === 'mql' || stackByField === 'mql';
+  if (needsFaturamento) allLeads = await enrichLeadsWithFaturamento(supabase, accountId, allLeads);
+  if (needsMql) allLeads = await enrichLeadsWithMql(supabase, accountId, allLeads);
 
-  return aggregateData(data, measure, dimension, dateDisplayFormat);
-}
+  if (config.stackByCustomField && config.stackByCustomField.source !== '_status') {
+    allLeads = await enrichWithCustomField(supabase, allLeads, accountId, config.stackByCustomField.fieldId, config.stackByCustomField.source, 'leads');
+  }
 
-function aggregateData(
-  data: any[],
-  measure: any,
-  dimension: any,
-  dateDisplayFormat: string,
-  statusFilter?: string
-): AggregatedDataPoint[] {
-  // Scorecard (global total)
-  if (dimension.field === '_total') {
-    let value = 0;
-    if (measure.aggregation === 'count') {
-      value = data.length;
-    } else if (measure.aggregation === 'sum') {
-      value = data.reduce((sum: number, item: any) => sum + (Number(item[measure.field]) || 0), 0);
-    } else if (measure.aggregation === 'avg') {
-      const vals = data.map((item: any) => Number(item[measure.field]) || 0);
-      value = vals.length > 0 ? vals.reduce((a: number, b: number) => a + b, 0) / vals.length : 0;
+  const getFieldValue = (lead: any, field: string): string => {
+    if (config.stackByCustomField) return lead._custom_stack_label || 'Não informado';
+    if (field === 'mql') return lead._mql_label || 'Não informado';
+    return lead[field] || 'Não informado';
+  };
+
+  const isTemporalDimension = config.dimension.type === 'date';
+
+  if (isTemporalDimension) {
+    const periodMap = new Map<string, Map<string, number>>();
+    const allSeries = new Set<string>();
+    const months = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+    const getPeriodKey = (d: Date): string => {
+      switch (dateGrouping) {
+        case 'year': return `${d.getUTCFullYear()}`;
+        case 'month': return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+        case 'week': {
+          const day = d.getUTCDay();
+          const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1);
+          const weekStart = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), diff));
+          return `${weekStart.getUTCFullYear()}-${String(weekStart.getUTCMonth() + 1).padStart(2, '0')}-${String(weekStart.getUTCDate()).padStart(2, '0')}`;
+        }
+        default: return String(d.getUTCDate()).padStart(2, '0');
+      }
+    };
+
+    for (const lead of allLeads) {
+      const dateStr = lead.created_at;
+      if (!dateStr) continue;
+      const date = new Date(dateStr);
+      const periodKey = getPeriodKey(date);
+      const seriesValue = getFieldValue(lead, stackByField);
+      allSeries.add(seriesValue);
+
+      if (!periodMap.has(periodKey)) periodMap.set(periodKey, new Map());
+      const seriesMap = periodMap.get(periodKey)!;
+      seriesMap.set(seriesValue, (seriesMap.get(seriesValue) || 0) + 1);
     }
-    return [{ name: 'Total', value, count: data.length }];
-  }
 
-  // Determine the date field for grouping
-  let dateField = 'created_at';
-  if (dimension.type === 'date' && dimension.field) {
-    dateField = dimension.field;
-  } else if (statusFilter === 'won') {
-    dateField = 'won_at';
-  } else if (statusFilter === 'lost') {
-    dateField = 'lost_at';
-  }
+    const seriesKeys = Array.from(allSeries).sort();
 
-  // Group data
-  const groups = new Map<string, { sum: number; count: number }>();
-
-  for (const item of data) {
-    let groupKey: string;
-
-    if (dimension.type === 'date') {
-      const dateVal = item[dateField];
-      if (!dateVal) continue;
-      groupKey = formatDateGroup(dateVal, dimension.dateGrouping || 'month', dateDisplayFormat);
+    const allPeriods: { key: string; label: string }[] = [];
+    if (dateGrouping === 'day') {
+      for (let d = 1; d <= 31; d++) {
+        const key = String(d).padStart(2, '0');
+        allPeriods.push({ key, label: key });
+      }
+    } else if (filters.startDate && filters.endDate) {
+      const start = new Date(filters.startDate);
+      const end = new Date(filters.endDate);
+      if (dateGrouping === 'month') {
+        const current = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
+        while (current <= end) {
+          const key = `${current.getUTCFullYear()}-${String(current.getUTCMonth() + 1).padStart(2, '0')}`;
+          const label = `${months[current.getUTCMonth()]}./${String(current.getUTCFullYear()).slice(-2)}`;
+          allPeriods.push({ key, label });
+          current.setUTCMonth(current.getUTCMonth() + 1);
+        }
+      } else if (dateGrouping === 'year') {
+        for (let y = start.getUTCFullYear(); y <= end.getUTCFullYear(); y++) {
+          allPeriods.push({ key: `${y}`, label: `${y}` });
+        }
+      } else {
+        const sortedKeys = Array.from(periodMap.keys()).sort();
+        for (const key of sortedKeys) {
+          const parts = key.split('-');
+          allPeriods.push({ key, label: `Sem ${parts[2]}/${parts[1]}` });
+        }
+      }
     } else {
-      // Text dimension
-      switch (dimension.field) {
-        case 'stage_name':
-          groupKey = (item.deal_stages as any)?.name || 'Sem Etapa';
-          break;
-        case 'responsible_name':
-          groupKey = (item.users as any)?.name || 'Sem Responsável';
-          break;
-        case 'is_active':
-          groupKey = item.is_active ? 'Ativo' : 'Inativo';
-          break;
-        default:
-          groupKey = item[dimension.field] || 'Não informado';
+      const sortedKeys = Array.from(periodMap.keys()).sort();
+      for (const key of sortedKeys) {
+        let label = key;
+        if (dateGrouping === 'month') {
+          const [y, m] = key.split('-');
+          label = `${months[parseInt(m, 10) - 1]}./${y.slice(-2)}`;
+        }
+        allPeriods.push({ key, label });
       }
     }
 
-    if (!groups.has(groupKey)) groups.set(groupKey, { sum: 0, count: 0 });
-    const g = groups.get(groupKey)!;
-    g.sum += Number(item[measure.field]) || 0;
-    g.count++;
-  }
-
-  const result: AggregatedDataPoint[] = [];
-  for (const [name, { sum, count }] of groups) {
-    let value: number;
-    if (measure.aggregation === 'count') {
-      value = count;
-    } else if (measure.aggregation === 'sum') {
-      value = sum;
-    } else if (measure.aggregation === 'avg') {
-      value = count > 0 ? sum / count : 0;
-    } else {
-      value = count;
+    const result: Array<{ name: string; [key: string]: string | number }> = [];
+    for (const period of allPeriods) {
+      const seriesMap = periodMap.get(period.key);
+      const point: { name: string; [key: string]: string | number } = { name: period.label };
+      for (const key of seriesKeys) {
+        point[key] = seriesMap?.get(key) || 0;
+      }
+      result.push(point);
     }
-    result.push({ name, value, count });
+
+    return { data: result, seriesKeys };
   }
 
-  // Sort
-  if (dimension.type === 'date') {
-    result.sort((a, b) => a.name.localeCompare(b.name));
-  } else {
-    result.sort((a, b) => b.value - a.value);
+  // Non-temporal stacking for leads
+  const groups = new Map<string, Map<string, number>>();
+  const allSeries = new Set<string>();
+
+  for (const lead of allLeads) {
+    const dimValue = lead[config.dimension.field] || 'Não informado';
+    const seriesValue = getFieldValue(lead, stackByField);
+    allSeries.add(seriesValue);
+
+    if (!groups.has(dimValue)) groups.set(dimValue, new Map());
+    const seriesMap = groups.get(dimValue)!;
+    seriesMap.set(seriesValue, (seriesMap.get(seriesValue) || 0) + 1);
   }
 
-  return result;
+  const seriesKeys = Array.from(allSeries).sort();
+  const result: Array<{ name: string; [key: string]: string | number }> = [];
+  for (const [name, seriesMap] of groups) {
+    const point: { name: string; [key: string]: string | number } = { name };
+    for (const key of seriesKeys) {
+      point[key] = seriesMap.get(key) || 0;
+    }
+    result.push(point);
+  }
+
+  return { data: result, seriesKeys };
 }
+
+// ─── Filter options ───
 
 async function fetchFilterOptions(supabase: any, accountId: string) {
   const [usersRes, productsRes] = await Promise.all([
@@ -377,6 +1331,8 @@ async function fetchFilterOptions(supabase: any, accountId: string) {
     products: productsRes.data || [],
   };
 }
+
+// ─── Main handler (preserved from original) ───
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
