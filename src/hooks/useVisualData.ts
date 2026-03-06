@@ -48,7 +48,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, dealStatusFilter);
           break;
         case 'leads':
-          result = await fetchLeadsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, leadFilters);
+          result = await fetchLeadsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, leadFilters, dealFilters, dealStatusFilter);
           break;
         case 'products':
           result = await fetchProductsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
