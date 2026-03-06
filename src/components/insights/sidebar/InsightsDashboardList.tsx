@@ -34,6 +34,7 @@ export function InsightsDashboardList({
   onSelect,
   onDelete,
   onRename,
+  onDuplicate,
   onReorder,
   readOnly = false,
 }: InsightsDashboardListProps) {
