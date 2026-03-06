@@ -131,7 +131,9 @@ export function useLeads(options?: { enabled?: boolean }) {
         ...lead,
         tags: Array.isArray(lead.tags) ? lead.tags as string[] : [],
         emails: Array.isArray(lead.emails) ? lead.emails as string[] : null,
-        additional_phones: Array.isArray(lead.additional_phones) ? lead.additional_phones as string[] : null,
+        additional_phones: Array.isArray(lead.additional_phones)
+          ? (lead.additional_phones as any[]).map(p => typeof p === 'object' && p !== null && p.number ? p.number : String(p))
+          : null,
         instagrams: Array.isArray(lead.instagrams) ? lead.instagrams as string[] : null,
       }));
 
@@ -177,7 +179,9 @@ export function useLeads(options?: { enabled?: boolean }) {
         ...newLead,
         tags: Array.isArray(newLead.tags) ? newLead.tags as string[] : [],
         emails: Array.isArray(newLead.emails) ? newLead.emails as string[] : null,
-        additional_phones: Array.isArray(newLead.additional_phones) ? newLead.additional_phones as string[] : null,
+        additional_phones: Array.isArray(newLead.additional_phones)
+          ? (newLead.additional_phones as any[]).map(p => typeof p === 'object' && p !== null && p.number ? p.number : String(p))
+          : null,
         instagrams: Array.isArray(newLead.instagrams) ? newLead.instagrams as string[] : null,
       };
 
