@@ -886,6 +886,53 @@ async function calculateConversionRateByPeriod(
   return result;
 }
 
+/**
+ * Cross-resource filter: find lead IDs that have deals matching deal field filters and/or deal status filter.
+ */
+async function getLeadIdsByDealConstraints(
+  accountId: string,
+  dealFilters?: FieldFilter[],
+  dealStatusFilter?: string[]
+): Promise<Set<string>> {
+  // Fetch all deals (with lead_id) from the account, applying status filter at DB level
+  let allDeals: { id: string; lead_id: string | null }[] = [];
+  let from = 0;
+  const pageSize = 1000;
+
+  while (true) {
+    let query = supabase
+      .from('deals')
+      .select('id, lead_id')
+      .eq('account_id', accountId);
+
+    if (dealStatusFilter && dealStatusFilter.length > 0) {
+      query = query.in('status', dealStatusFilter);
+    }
+
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if (error) {
+      console.error('Error fetching deals for lead cross-filter:', error);
+      break;
+    }
+    allDeals = allDeals.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  // Apply deal field filters (custom fields AND logic)
+  let filteredDeals: { id: string; lead_id: string | null }[] = allDeals;
+  if (dealFilters && dealFilters.length > 0) {
+    filteredDeals = await filterByDealFields(filteredDeals, accountId, dealFilters);
+  }
+
+  // Extract unique lead_ids from matching deals
+  const leadIds = new Set<string>();
+  for (const deal of filteredDeals) {
+    if (deal.lead_id) leadIds.add(deal.lead_id);
+  }
+  return leadIds;
+}
+
 async function fetchLeadsData(
   accountId: string,
   measure: VisualConfig['measure'],
