@@ -81,11 +81,13 @@ export interface VisualConfig {
   leadFieldFilters?: FieldFilter[];
   // Multiple deal field filters (AND logic)
   dealFieldFilters?: FieldFilter[];
+  // Multi-value status filter for deals (e.g., ['won', 'open'])
+  dealStatusFilter?: string[];
   // Custom field breakdown/segmentation for stacked charts
   stackByCustomField?: {
     fieldId: string;
     fieldName: string;
-    source: 'lead' | 'deal';
+    source: 'lead' | 'deal' | '_status';
   };
   // Table configuration
   tableConfig?: {
