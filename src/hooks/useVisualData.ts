@@ -892,13 +892,16 @@ async function fetchLeadsData(
   dimension: VisualConfig['dimension'],
   filters: any,
   dateDisplayFormat: DateDisplayFormat,
-  leadFilters?: FieldFilter[]
+  leadFilters?: FieldFilter[],
+  dealFilters?: FieldFilter[],
+  dealStatusFilter?: string[]
 ): Promise<AggregatedDataPoint[]> {
-  // Determine if we need lead field filtering
+  // Determine if we need lead field filtering or deal-based filtering
   const hasLeadFilter = leadFilters && leadFilters.length > 0;
+  const hasDealFilter = (dealFilters && dealFilters.length > 0) || (dealStatusFilter && dealStatusFilter.length > 0);
 
-  // For scorecard total count WITHOUT lead filter, use server-side count
-  if (dimension.field === '_total' && !hasLeadFilter) {
+  // For scorecard total count WITHOUT any filter, use server-side count
+  if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter) {
     let countQuery = supabase
       .from('leads')
       .select('*', { count: 'exact', head: true })
@@ -956,6 +959,12 @@ async function fetchLeadsData(
   // Apply lead field filters if configured (AND logic)
   if (hasLeadFilter) {
     allData = await filterByLeadFields(allData, accountId, leadFilters!, 'leads');
+  }
+
+  // Apply deal-based filters: find leads that have matching deals
+  if (hasDealFilter && allData.length > 0) {
+    const matchingLeadIds = await getLeadIdsByDealConstraints(accountId, dealFilters, dealStatusFilter);
+    allData = allData.filter(lead => matchingLeadIds.has(lead.id));
   }
 
   // For scorecard total with filter, return count after filtering
