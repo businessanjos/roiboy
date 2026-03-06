@@ -67,18 +67,26 @@ function inferStatusFilter(
 }
 
 /** Paginate a supabase query using a factory function to avoid query builder reuse bugs. */
-async function paginateQuery(buildQuery: () => any, orderField: string = 'created_at'): Promise<any[]> {
+async function paginateQuery(buildQuery: () => any, orderField: string = 'created_at', label: string = ''): Promise<any[]> {
   let all: any[] = [];
   let from = 0;
   const pageSize = 1000;
   while (true) {
-    const { data, error } = await buildQuery()
-      .order(orderField, { ascending: false })
-      .range(from, from + pageSize - 1);
-    if (error) { console.error('Pagination error:', error); return all; }
-    all = all.concat(data || []);
-    if (!data || data.length < pageSize) break;
-    from += pageSize;
+    try {
+      const { data, error } = await buildQuery()
+        .order(orderField, { ascending: false })
+        .range(from, from + pageSize - 1);
+      if (error) {
+        console.error(`[paginateQuery${label ? ' ' + label : ''}] Error at page ${from}:`, JSON.stringify(error));
+        break;
+      }
+      all = all.concat(data || []);
+      if (!data || data.length < pageSize) break;
+      from += pageSize;
+    } catch (err) {
+      console.error(`[paginateQuery${label ? ' ' + label : ''}] Exception at page ${from}:`, err);
+      break;
+    }
   }
   return all;
 }
@@ -1026,6 +1034,8 @@ async function computeLeadsData(
   const hasLeadFilter = leadFilters.length > 0;
   const hasDealFilter = (dealFiltersArr.length > 0) || (dealStatusFilter && dealStatusFilter.length > 0);
 
+  console.log(`[leads] dim=${dimension.field}, hasLeadFilter=${hasLeadFilter}, hasDealFilter=${hasDealFilter}, leadFilters=${leadFilters.length}, dealFilters=${dealFiltersArr.length}, dealStatusFilter=${JSON.stringify(dealStatusFilter)}`);
+
   // Scorecard total without filters: use server-side count
   if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter) {
     let countQuery = supabase
@@ -1038,7 +1048,8 @@ async function computeLeadsData(
     if (filters.endDate) countQuery = countQuery.lte('created_at', filters.endDate);
 
     const { count, error } = await countQuery;
-    if (error) { console.error('Error fetching leads count:', error); return []; }
+    if (error) { console.error('[leads] Error fetching leads count:', error); return []; }
+    console.log(`[leads] Scorecard count (no filters): ${count}`);
     return [{ name: 'Total', value: count || 0 }];
   }
 
@@ -1054,39 +1065,55 @@ async function computeLeadsData(
       if (filters.endDate) q = q.lte('created_at', filters.endDate);
       return q;
     },
-    'created_at'
+    'created_at',
+    'leads-base'
   );
+  console.log(`[leads] Base leads fetched: ${allData.length}`);
 
   // Apply lead field filters
   if (hasLeadFilter) {
-    allData = await applyLeadFieldFilters(supabase, allData, accountId, leadFilters, 'leads');
+    try {
+      allData = await applyLeadFieldFilters(supabase, allData, accountId, leadFilters, 'leads');
+      console.log(`[leads] After lead field filters: ${allData.length}`);
+    } catch (err) {
+      console.error('[leads] Error in applyLeadFieldFilters:', err);
+    }
   }
 
   // Apply deal-based cross-filters
   if (hasDealFilter && allData.length > 0) {
-    let allDeals = await paginateQuery(
-      () => {
-        let q = supabase
-          .from('deals')
-          .select('id, lead_id')
-          .eq('account_id', accountId);
-        if (dealStatusFilter && dealStatusFilter.length > 0) {
-          q = q.in('status', dealStatusFilter);
-        }
-        return q;
-      },
-      'created_at'
-    );
+    try {
+      let allDeals = await paginateQuery(
+        () => {
+          let q = supabase
+            .from('deals')
+            .select('id, lead_id, status, created_at')
+            .eq('account_id', accountId);
+          if (dealStatusFilter && dealStatusFilter.length > 0) {
+            q = q.in('status', dealStatusFilter);
+          }
+          return q;
+        },
+        'created_at',
+        'leads-crossfilter-deals'
+      );
+      console.log(`[leads] Cross-filter deals fetched: ${allDeals.length}`);
 
-    if (dealFiltersArr.length > 0) {
-      allDeals = await applyDealFieldFilters(supabase, allDeals, accountId, dealFiltersArr);
-    }
+      if (dealFiltersArr.length > 0) {
+        allDeals = await applyDealFieldFilters(supabase, allDeals, accountId, dealFiltersArr);
+        console.log(`[leads] Cross-filter deals after field filters: ${allDeals.length}`);
+      }
 
-    const matchingLeadIds = new Set<string>();
-    for (const deal of allDeals) {
-      if (deal.lead_id) matchingLeadIds.add(deal.lead_id);
+      const matchingLeadIds = new Set<string>();
+      for (const deal of allDeals) {
+        if (deal.lead_id) matchingLeadIds.add(deal.lead_id);
+      }
+      console.log(`[leads] Unique lead_ids from matching deals: ${matchingLeadIds.size}`);
+      allData = allData.filter((lead: any) => matchingLeadIds.has(lead.id));
+      console.log(`[leads] After cross-filter intersection: ${allData.length}`);
+    } catch (err) {
+      console.error('[leads] Error in deal cross-filter:', err);
     }
-    allData = allData.filter((lead: any) => matchingLeadIds.has(lead.id));
   }
 
   // Scorecard total with filters
@@ -2037,16 +2064,33 @@ Deno.serve(async (req) => {
       for (const visual of visuals || []) {
         const chartType = visual.chart_type;
         const isStacked = chartType === 'bar_stacked';
+        const isDataTable = chartType === 'data_table';
 
-        if (isStacked) {
-          const dataSource = visual.config?.dataSource || 'deals';
-          if (dataSource === 'leads') {
-            stackedVisualsData[visual.id] = await computeStackedLeadsData(supabaseAdmin, accountId, visual.config, filters);
+        console.log(`[compute] Visual ${visual.id} type=${chartType} dataSource=${visual.config?.dataSource}`);
+
+        try {
+          if (isDataTable) {
+            // data_table visuals use client-side queries; skip in shared dashboard
+            console.log(`[compute] Skipping data_table visual ${visual.id}`);
+            visualsData[visual.id] = [];
+          } else if (isStacked) {
+            const dataSource = visual.config?.dataSource || 'deals';
+            if (dataSource === 'leads') {
+              stackedVisualsData[visual.id] = await computeStackedLeadsData(supabaseAdmin, accountId, visual.config, filters);
+            } else {
+              stackedVisualsData[visual.id] = await computeStackedDealsData(supabaseAdmin, visual, accountId, filters);
+            }
           } else {
-            stackedVisualsData[visual.id] = await computeStackedDealsData(supabaseAdmin, visual, accountId, filters);
+            visualsData[visual.id] = await computeVisualData(supabaseAdmin, visual, accountId, filters);
           }
-        } else {
-          visualsData[visual.id] = await computeVisualData(supabaseAdmin, visual, accountId, filters);
+          console.log(`[compute] Visual ${visual.id} done. Result length: ${isStacked ? (stackedVisualsData[visual.id]?.data?.length || 0) : (visualsData[visual.id]?.length || 0)}`);
+        } catch (err) {
+          console.error(`[compute] Visual ${visual.id} FAILED:`, err);
+          if (isStacked) {
+            stackedVisualsData[visual.id] = { data: [], seriesKeys: [] };
+          } else {
+            visualsData[visual.id] = [];
+          }
         }
       }
 
