@@ -3066,7 +3066,7 @@ export default function RoyZapp() {
       // 1. Search clients (include all relevant statuses, not just active)
       supabase
         .from("clients")
-        .select("id, full_name, phone_e164, avatar_url, status")
+        .select("id, full_name, phone_e164, avatar_url, status, additional_phones")
         .eq("account_id", currentUser.account_id)
         .in("status", ["active", "churn_risk", "churned", "no_contract", "paused"])
         .or(isPhoneSearch && normalizedPhone.length >= 4 
@@ -3127,13 +3127,36 @@ export default function RoyZapp() {
     }
 
     // Map results with type indicator
-    const clients = (clientsResult.data || []).map(c => ({
-      id: c.id,
-      full_name: c.full_name,
-      phone_e164: c.phone_e164,
-      avatar_url: c.avatar_url,
-      type: 'client' as const,
-    }));
+    const clients: Array<{ id: string; full_name: string; phone_e164: string; avatar_url: string | null; type: 'client' }> = [];
+    for (const c of (clientsResult.data || [])) {
+      const getClientAdditionalPhones = (): Array<{ phone: string; label?: string }> => {
+        if (!Array.isArray(c.additional_phones)) return [];
+        return (c.additional_phones as any[]).map((ap: any) => {
+          if (typeof ap === 'string') return { phone: ap };
+          if (typeof ap === 'object' && ap !== null && ap.number) return { phone: ap.number, label: ap.label };
+          return null;
+        }).filter(Boolean) as Array<{ phone: string; label?: string }>;
+      };
+
+      const clientAdditionalPhones = getClientAdditionalPhones();
+
+      if (isPhoneSearch && normalizedPhone.length >= 4) {
+        const primaryMatches = (c.phone_e164 || '').replace(/\D/g, '').includes(normalizedPhone);
+        if (primaryMatches) {
+          clients.push({ id: c.id, full_name: c.full_name, phone_e164: c.phone_e164, avatar_url: c.avatar_url, type: 'client' });
+        }
+        clientAdditionalPhones.forEach((ap, idx) => {
+          if (ap.phone.replace(/\D/g, '').includes(normalizedPhone)) {
+            clients.push({ id: `${c.id}-alt-${idx}`, full_name: c.full_name, phone_e164: ap.phone, avatar_url: c.avatar_url, type: 'client' });
+          }
+        });
+      } else {
+        clients.push({ id: c.id, full_name: c.full_name, phone_e164: c.phone_e164, avatar_url: c.avatar_url, type: 'client' });
+        clientAdditionalPhones.forEach((ap, idx) => {
+          clients.push({ id: `${c.id}-alt-${idx}`, full_name: c.full_name, phone_e164: ap.phone, avatar_url: c.avatar_url, type: 'client' });
+        });
+      }
+    }
 
     const leads: Array<{ id: string; full_name: string; phone_e164: string; avatar_url: string | null; type: 'lead' }> = [];
     for (const l of (leadsResult.data || [])) {
