@@ -123,6 +123,7 @@ export default function SharedInsightsDashboard() {
   const [visuals, setVisuals] = useState<any[]>([]);
   const [visualsData, setVisualsData] = useState<Record<string, AggregatedDataPoint[]>>({});
   const [stackedVisualsData, setStackedVisualsData] = useState<Record<string, { data: any[]; seriesKeys: string[] }>>({});
+  const [drilldownData, setDrilldownData] = useState<Record<string, any[]>>({});
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
