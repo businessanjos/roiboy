@@ -3084,10 +3084,10 @@ export default function RoyZapp() {
         .order("full_name")
         .limit(15),
       
-      // 2. Search unconverted leads
+      // 2. Search unconverted leads (include additional_phones)
       supabase
         .from("leads")
-        .select("id, full_name, phone, avatar_url")
+        .select("id, full_name, phone, avatar_url, additional_phones")
         .eq("account_id", currentUser.account_id)
         .is("converted_to_client_id", null)
         .or(isPhoneSearch && normalizedPhone.length >= 4
@@ -3144,13 +3144,40 @@ export default function RoyZapp() {
       type: 'client' as const,
     }));
 
-    const leads = (leadsResult.data || []).map(l => ({
-      id: l.id,
-      full_name: l.full_name,
-      phone_e164: l.phone || "",
-      avatar_url: l.avatar_url,
-      type: 'lead' as const,
-    }));
+    const leads: Array<{ id: string; full_name: string; phone_e164: string; avatar_url: string | null; type: 'lead' }> = [];
+    for (const l of (leadsResult.data || [])) {
+      // Helper to extract phone from additional_phones entries (can be string or {number, label})
+      const getAdditionalPhones = (): Array<{ phone: string; label?: string }> => {
+        if (!Array.isArray(l.additional_phones)) return [];
+        return (l.additional_phones as any[]).map((ap: any) => {
+          if (typeof ap === 'string') return { phone: ap };
+          if (typeof ap === 'object' && ap !== null && ap.number) return { phone: ap.number, label: ap.label };
+          return null;
+        }).filter(Boolean) as Array<{ phone: string; label?: string }>;
+      };
+
+      const additionalPhones = getAdditionalPhones();
+
+      if (isPhoneSearch && normalizedPhone.length >= 4) {
+        // Phone search: only include numbers that match
+        const primaryMatches = (l.phone || '').replace(/\D/g, '').includes(normalizedPhone);
+        if (primaryMatches) {
+          leads.push({ id: l.id, full_name: l.full_name, phone_e164: l.phone || "", avatar_url: l.avatar_url, type: 'lead' });
+        }
+        additionalPhones.forEach((ap, idx) => {
+          if (ap.phone.replace(/\D/g, '').includes(normalizedPhone)) {
+            leads.push({ id: `${l.id}-alt-${idx}`, full_name: l.full_name, phone_e164: ap.phone, avatar_url: l.avatar_url, type: 'lead' });
+          }
+        });
+      } else {
+        // Name search: show primary phone entry
+        leads.push({ id: l.id, full_name: l.full_name, phone_e164: l.phone || "", avatar_url: l.avatar_url, type: 'lead' });
+        // Also show separate entries for each additional phone
+        additionalPhones.forEach((ap, idx) => {
+          leads.push({ id: `${l.id}-alt-${idx}`, full_name: l.full_name, phone_e164: ap.phone, avatar_url: l.avatar_url, type: 'lead' });
+        });
+      }
+    }
 
     // Conversations not linked to client or lead
     const conversations = (conversationsResult.data || [])
