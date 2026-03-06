@@ -1,23 +1,41 @@
 
 
-## Fix: Shared Dashboard Visuals Not Loading
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-### Root Cause
-The `shared-dashboard` Edge Function is **not listed in `supabase/config.toml`**, so `verify_jwt` defaults to `true`. The Supabase API gateway rejects requests from unauthenticated visitors (the shared link) before the function code ever executes. The frontend's `callEdge` sends only an `apikey` header, not an `Authorization: Bearer` JWT, so the gateway returns a 401.
+### O que será feito
 
-The initial token-only call (`?token=X`, no email) may succeed intermittently depending on caching or gateway behavior, showing the dashboard name and "approved" state. But the full data call fails silently — `res.json()` on a 401 returns `{"msg":"Invalid JWT"}`, which has no `status === "approved"` match, so visuals never get populated.
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-### Fix
-Add `shared-dashboard` to `config.toml` with `verify_jwt = false`, then redeploy the function.
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-**File: `supabase/config.toml`** — append:
-```toml
-[functions.shared-dashboard]
-verify_jwt = false
-```
+### Alterações por arquivo
 
-**Deployment**: Redeploy the `shared-dashboard` Edge Function.
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
 
-### Why This Regressed
-The `config.toml` is auto-managed. A recent regeneration or edit may have dropped the entry if it was previously present, or it was never added — meaning the function only worked when called with authenticated sessions (e.g., when the owner tested from within the app).
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
+
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+
+### Arquivos alterados
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 

@@ -209,3 +209,6 @@ verify_jwt = false
 
 [functions.list-omie-accounts]
 verify_jwt = false
+
+[functions.shared-dashboard]
+verify_jwt = false
