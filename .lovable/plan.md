@@ -1,36 +1,31 @@
 
 
-## Plano: Corrigir múltiplos telefones — Leads.tsx e busca RoyZapp
+## Plano: Corrigir seleção de telefone adicional e busca no ROY zAPP
 
 ### Problemas identificados
 
-**1. Página `/leads` (Leads.tsx) não tem phone picker**
-O botão "Abrir Conversa no ROY zAPP" na página `/leads` chama `openZappConversation` diretamente com `lead.phone` (linhas 1296 e 1320). Não existe nenhuma lógica de verificação de `additional_phones` nem o `ZappLeadPhonePickerDialog` nesta página. A correção anterior só foi aplicada em `LeadsTab.tsx` (setor Vendas do Pipeline), mas o usuário está na página `/leads`.
+**1. Telefone adicional abre conversa do número principal**
 
-**2. Busca no ROY zAPP retorna poucos resultados**
-O filtro `additional_phones::text.ilike.%...%` adicionado na query PostgREST provavelmente está causando erro ou comportamento inesperado, pois PostgREST não suporta casting de tipos (`::text`) diretamente nos filtros `.or()`. Isso faz a query de leads falhar silenciosamente ou retornar resultados incorretos.
+Dois locais causam isso:
 
-### Correções
+- **`createConversationFromUrl`** (linha 403-414): Quando o usuário seleciona o telefone adicional na página `/leads`, a URL é construída corretamente com `newPhone=553195564347`. A busca por telefone (linha 351) não encontra conversa existente para esse número. Então o fallback na linha 403 busca por `lead_id` e encontra a conversa existente do telefone principal. Resultado: abre a conversa do número principal.
 
-**Arquivo: `src/pages/Leads.tsx`**
+- **`createConversationWithContact`** (linha 3544-3560): Mesma lógica. Quando o contato vem da busca "Nova Conversa" com ID `${leadId}-alt-0`, o fallback por `lead_id` usa esse ID modificado (que não existe no banco), então não encontra nada — nesse caso funciona. Mas quando vem de `createConversationFromUrl`, o `leadId` é o ID real do lead.
 
-1. Importar `ZappLeadPhonePickerDialog`
-2. Adicionar estados `phonePickerOpen` e `phonePickerLead`
-3. Criar `handleOpenZappForLead` — mesma lógica do LeadsTab: verificar se `additional_phones.length > 0`, se sim abrir picker, se não ir direto
-4. Criar `getPhonePickerPhones` — montar lista de telefones (principal + adicionais)
-5. Substituir as duas chamadas diretas de `openZappConversation` (linhas 1296 e 1320) por `handleOpenZappForLead(lead)`
-6. Renderizar `ZappLeadPhonePickerDialog` no final do componente
+**Correção**: No fallback por `lead_id`/`client_id`, quando não encontrou conversa pelo telefone, **não** devemos redirecionar para outra conversa do mesmo lead. Se o telefone é diferente, devemos criar uma nova conversa para aquele telefone específico. Remover ou condicionar o fallback por ID em ambos os locais.
 
 **Arquivo: `src/pages/RoyZapp.tsx`**
 
-1. Remover `additional_phones::text.ilike.%...%` do filtro `.or()` da query de leads (linhas 3093-3095)
-2. Manter a query buscando apenas por `full_name` e `phone` (como era antes)
-3. Manter o `additional_phones` no `select` para que a expansão client-side continue funcionando
-4. Para capturar leads por telefone adicional: fazer uma segunda query separada buscando no JSONB com `additional_phones.cs.[{"number":"..."}]` ou simplesmente buscar todos os leads por nome e expandir client-side (abordagem mais segura)
+- Linha 403-414 (`createConversationFromUrl`): Remover o fallback por `lead_id`/`client_id`. Se não encontrou conversa pelo telefone, deixar `zappConvId = null` para que o fluxo crie uma nova conversa.
+- Linha 3544-3560 (`createConversationWithContact`): Mesma correção — remover o fallback por ID. Quando o contato tem um `id` com `-alt-`, extrair o ID real do lead para vincular corretamente na nova conversa, mas não buscar conversas existentes por esse ID.
+- Linha 3533: Ao vincular `lead_id`, extrair o ID real removendo o sufixo `-alt-X`: `const realId = contact.id.includes('-alt-') ? contact.id.split('-alt-')[0] : contact.id;`
 
-A abordagem mais confiável: remover o cast do filtro SQL, voltar ao filtro original (`full_name.ilike` + `phone.ilike`), e aumentar o limit de 10 para 20 para compensar. Os telefones adicionais já são expandidos client-side após o fetch.
+**2. Busca por nome não mostra telefones adicionais**
+
+O código de expansão client-side (linhas 3172-3179) já adiciona entradas para `additional_phones`. Porém o limite da query é `10` (linha 3097). Se existem muitos leads com o nome "Teste", os 10 slots são preenchidos antes do lead específico aparecer, e seus telefones adicionais nunca são expandidos.
+
+**Correção**: Aumentar o limit de `10` para `20` na query de leads (linha 3097) para garantir que mais leads sejam retornados e seus telefones adicionais expandidos.
 
 ### Arquivos alterados
-- `src/pages/Leads.tsx` — adicionar phone picker (import, estados, handler, renderização)
-- `src/pages/RoyZapp.tsx` — remover `additional_phones::text` do filtro `.or()`, restaurar filtro original
+- `src/pages/RoyZapp.tsx` — remover fallback por lead_id em ambas as funções; extrair ID real de leads `-alt-`; aumentar limit da query de busca
 
