@@ -2019,7 +2019,7 @@ Deno.serve(async (req) => {
         .from("insights_visuals")
         .select("*")
         .eq("dashboard_id", dashboardData.id)
-        .order("position", { ascending: true });
+        .order("created_at", { ascending: true });
 
       if (visualsError) {
         return new Response(JSON.stringify({ error: "Erro ao carregar visuais" }), {
