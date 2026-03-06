@@ -96,6 +96,12 @@ async function createOmieClient(
     name: string;
     email?: string;
     phone?: string;
+    street?: string;
+    streetNumber?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
     clientId?: string;
     dealId?: string;
   }
