@@ -126,6 +126,7 @@ export function InsightsSidebar() {
               onSelect={navigateToDashboard}
               onDelete={deleteDashboard}
               onRename={renameDashboard}
+              onDuplicate={duplicateDashboard}
               onReorder={reorderDashboards}
             />
           )}

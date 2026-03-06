@@ -101,6 +101,12 @@ export function InsightsDashboardItem({
                 <Pencil className="h-4 w-4 mr-2" />
                 Renomear
               </DropdownMenuItem>
+              {onDuplicate && (
+                <DropdownMenuItem onClick={() => onDuplicate(dashboard.id)}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Duplicar
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onClick={() => setDeleteDialogOpen(true)}
                 className="text-destructive focus:text-destructive"

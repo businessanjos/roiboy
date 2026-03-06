@@ -77,6 +77,7 @@ export function InsightsDashboardList({
               onSelect={() => onSelect(dashboard.id)}
               onDelete={onDelete}
               onRename={onRename}
+              onDuplicate={onDuplicate}
               readOnly={readOnly}
             />
           ))}

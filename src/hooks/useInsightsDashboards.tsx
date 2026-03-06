@@ -459,6 +459,7 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
     createDashboard,
     deleteDashboard,
     renameDashboard,
+    duplicateDashboard,
     reorderDashboards,
     navigateToDashboard,
     addVisual,
