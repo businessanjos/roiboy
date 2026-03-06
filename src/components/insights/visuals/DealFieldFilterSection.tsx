@@ -22,9 +22,17 @@ interface DealField {
   options: any;
 }
 
+const DEAL_STATUS_OPTIONS = [
+  { value: 'won', label: 'Ganho' },
+  { value: 'open', label: 'Em Aberto' },
+  { value: 'lost', label: 'Perdido' },
+];
+
 interface DealFieldFilterSectionProps {
   filters: FieldFilter[];
   onFiltersChange: (filters: FieldFilter[]) => void;
+  dealStatusFilter?: string[];
+  onDealStatusFilterChange?: (statuses: string[]) => void;
 }
 
 function SingleDealFilter({
@@ -163,7 +171,7 @@ function SingleDealFilter({
   );
 }
 
-export function DealFieldFilterSection({ filters, onFiltersChange }: DealFieldFilterSectionProps) {
+export function DealFieldFilterSection({ filters, onFiltersChange, dealStatusFilter = [], onDealStatusFilterChange }: DealFieldFilterSectionProps) {
   const { currentUser } = useCurrentUser();
   const [dealFields, setDealFields] = useState<DealField[]>([]);
 
@@ -215,6 +223,33 @@ export function DealFieldFilterSection({ filters, onFiltersChange }: DealFieldFi
       <p className="text-xs text-muted-foreground">
         Filtre os dados por campos do Negócio. Múltiplos filtros usam lógica AND.
       </p>
+
+      {/* Fixed Status filter */}
+      {onDealStatusFilterChange && (
+        <div className="space-y-2 p-3 border rounded-lg">
+          <Label className="text-sm font-medium">Status do Negócio</Label>
+          <div className="space-y-1">
+            {DEAL_STATUS_OPTIONS.map(opt => (
+              <div key={opt.value} className="flex items-center gap-2">
+                <Checkbox
+                  id={`deal-status-${opt.value}`}
+                  checked={dealStatusFilter.includes(opt.value)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      onDealStatusFilterChange([...dealStatusFilter, opt.value]);
+                    } else {
+                      onDealStatusFilterChange(dealStatusFilter.filter(v => v !== opt.value));
+                    }
+                  }}
+                />
+                <label htmlFor={`deal-status-${opt.value}`} className="text-sm cursor-pointer">
+                  {opt.label}
+                </label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {filters.map((filter, index) => (
         <SingleDealFilter

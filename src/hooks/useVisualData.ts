@@ -30,7 +30,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
     queryFn: async (): Promise<AggregatedDataPoint[]> => {
       if (!config || !currentUser?.account_id) return [];
 
-      const { dataSource, measure, dimension, appearance, statusFilter } = config;
+      const { dataSource, measure, dimension, appearance, statusFilter, dealStatusFilter } = config;
       const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
       const fillEmptyDates = appearance?.fillEmptyDates || false;
 
@@ -45,7 +45,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
       switch (dataSource) {
         case 'deals':
-          result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters);
+          result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, dealStatusFilter);
           break;
         case 'leads':
           result = await fetchLeadsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, leadFilters);
@@ -527,7 +527,8 @@ async function fetchDealsData(
   dateDisplayFormat: DateDisplayFormat,
   statusFilter?: 'won' | 'lost' | 'open',
   leadFilters?: FieldFilter[],
-  dealFilters?: FieldFilter[]
+  dealFilters?: FieldFilter[],
+  dealStatusFilter?: string[]
 ): Promise<AggregatedDataPoint[]> {
   // Special handling for sales cycle calculation
   if (measure.aggregation === 'sales_cycle') {
@@ -566,7 +567,10 @@ async function fetchDealsData(
   .eq('account_id', accountId);
 
   // Apply status filter if specified (e.g., only 'won' deals for revenue)
-  if (statusFilter) {
+  // dealStatusFilter (multi-value) takes priority over statusFilter (single)
+  if (dealStatusFilter && dealStatusFilter.length > 0) {
+    query = query.in('status', dealStatusFilter);
+  } else if (statusFilter) {
     query = query.eq('status', statusFilter);
   }
 

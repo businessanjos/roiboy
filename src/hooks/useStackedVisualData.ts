@@ -21,7 +21,7 @@ async function enrichWithCustomField(
   records: any[],
   accountId: string,
   fieldId: string,
-  source: 'lead' | 'deal',
+  source: 'lead' | 'deal' | '_status',
   dataSource: 'deals' | 'leads'
 ): Promise<any[]> {
   if (records.length === 0) return records;
@@ -169,7 +169,9 @@ async function fetchStackedDealsData(
     `)
     .eq('account_id', accountId);
 
-  if (statusFilter) {
+  if (config.dealStatusFilter && config.dealStatusFilter.length > 0) {
+    query = query.in('status', config.dealStatusFilter);
+  } else if (statusFilter) {
     query = query.eq('status', statusFilter);
   }
 
@@ -226,14 +228,20 @@ async function fetchStackedDealsData(
     allDeals = await enrichDealsWithCanal(accountId, allDeals);
   }
 
-  // Enrich with custom field for stacking if configured
+  // Enrich with custom field or status for stacking if configured
   if (config.stackByCustomField) {
-    allDeals = await enrichWithCustomField(
-      allDeals, accountId,
-      config.stackByCustomField.fieldId,
-      config.stackByCustomField.source,
-      'deals'
-    );
+    if (config.stackByCustomField.source === '_status') {
+      // Inject status label directly
+      const statusLabelMap: Record<string, string> = { won: 'Ganho', open: 'Em Aberto', lost: 'Perdido' };
+      allDeals = allDeals.map(d => ({ ...d, _custom_stack_label: statusLabelMap[d.status] || d.status }));
+    } else {
+      allDeals = await enrichWithCustomField(
+        allDeals, accountId,
+        config.stackByCustomField.fieldId,
+        config.stackByCustomField.source as 'lead' | 'deal',
+        'deals'
+      );
+    }
   }
 
   const dateGrouping = config.dimension.dateGrouping || 'day';
@@ -409,11 +417,11 @@ async function fetchStackedLeadsData(
   }
 
   // Enrich with custom field for stacking if configured
-  if (config.stackByCustomField) {
+  if (config.stackByCustomField && config.stackByCustomField.source !== '_status') {
     allLeads = await enrichWithCustomField(
       allLeads, accountId,
       config.stackByCustomField.fieldId,
-      config.stackByCustomField.source,
+      config.stackByCustomField.source as 'lead' | 'deal',
       'leads'
     );
   }

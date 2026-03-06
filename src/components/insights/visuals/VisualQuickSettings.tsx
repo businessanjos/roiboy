@@ -150,6 +150,11 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
     config ? getDealFilters(config) : []
   );
   
+  // Deal status filter state
+  const [dealStatusFilter, setDealStatusFilter] = useState<string[]>(
+    config?.dealStatusFilter ?? []
+  );
+  
   // Monthly goals state for gauge revenue_vs_goal
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
 
@@ -168,6 +173,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
       setHiddenCategories(config?.hiddenCategories ?? []);
       setLeadFilters(config ? getLeadFilters(config) : []);
       setDealFilters(config ? getDealFilters(config) : []);
+      setDealStatusFilter(config?.dealStatusFilter ?? []);
       setTableColumns(config?.tableConfig?.columns ?? []);
       setStackByCustomField(config?.stackByCustomField || null);
       
@@ -270,6 +276,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
         dealFieldFilter: undefined,
         leadFieldFilters: leadFilters.filter(f => f.fieldId && f.selectedValues.length > 0),
         dealFieldFilters: dealFilters.filter(f => f.fieldId && f.selectedValues.length > 0),
+        dealStatusFilter: dealStatusFilter.length > 0 ? dealStatusFilter : undefined,
         stackByCustomField: stackByCustomField || undefined,
         // When custom field segmentation is active, set stackBy to '_custom' to trigger stacked mode
         stackBy: stackByCustomField ? '_custom' : config.stackBy,
@@ -499,6 +506,8 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
           <DealFieldFilterSection
             filters={dealFilters}
             onFiltersChange={setDealFilters}
+            dealStatusFilter={dealStatusFilter}
+            onDealStatusFilterChange={setDealStatusFilter}
           />
           {/* Custom field segmentation/breakdown — single grouped dropdown */}
           {supportsStacking && (
@@ -512,6 +521,12 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
                 onValueChange={(v) => {
                   if (v === '_none') {
                     setStackByCustomField(null);
+                  } else if (v === '_status::_status') {
+                    setStackByCustomField({
+                      fieldId: '_status',
+                      fieldName: 'Status do Negócio',
+                      source: '_status',
+                    });
                   } else {
                     const [source, fieldId] = v.split('::');
                     const field = allSegmentFields.find(f => f.id === fieldId && f.source === source);
@@ -530,6 +545,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="_none">Nenhum (sem segmentação)</SelectItem>
+                  <SelectItem value="_status::_status">Status do Negócio</SelectItem>
                   {allSegmentFields.filter(f => f.source === 'deal').length > 0 && (
                     <SelectGroup>
                       <SelectLabel>Campos de Negócio</SelectLabel>
