@@ -2064,16 +2064,33 @@ Deno.serve(async (req) => {
       for (const visual of visuals || []) {
         const chartType = visual.chart_type;
         const isStacked = chartType === 'bar_stacked';
+        const isDataTable = chartType === 'data_table';
 
-        if (isStacked) {
-          const dataSource = visual.config?.dataSource || 'deals';
-          if (dataSource === 'leads') {
-            stackedVisualsData[visual.id] = await computeStackedLeadsData(supabaseAdmin, accountId, visual.config, filters);
+        console.log(`[compute] Visual ${visual.id} type=${chartType} dataSource=${visual.config?.dataSource}`);
+
+        try {
+          if (isDataTable) {
+            // data_table visuals use client-side queries; skip in shared dashboard
+            console.log(`[compute] Skipping data_table visual ${visual.id}`);
+            visualsData[visual.id] = [];
+          } else if (isStacked) {
+            const dataSource = visual.config?.dataSource || 'deals';
+            if (dataSource === 'leads') {
+              stackedVisualsData[visual.id] = await computeStackedLeadsData(supabaseAdmin, accountId, visual.config, filters);
+            } else {
+              stackedVisualsData[visual.id] = await computeStackedDealsData(supabaseAdmin, visual, accountId, filters);
+            }
           } else {
-            stackedVisualsData[visual.id] = await computeStackedDealsData(supabaseAdmin, visual, accountId, filters);
+            visualsData[visual.id] = await computeVisualData(supabaseAdmin, visual, accountId, filters);
           }
-        } else {
-          visualsData[visual.id] = await computeVisualData(supabaseAdmin, visual, accountId, filters);
+          console.log(`[compute] Visual ${visual.id} done. Result length: ${isStacked ? (stackedVisualsData[visual.id]?.data?.length || 0) : (visualsData[visual.id]?.length || 0)}`);
+        } catch (err) {
+          console.error(`[compute] Visual ${visual.id} FAILED:`, err);
+          if (isStacked) {
+            stackedVisualsData[visual.id] = { data: [], seriesKeys: [] };
+          } else {
+            visualsData[visual.id] = [];
+          }
         }
       }
 

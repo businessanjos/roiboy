@@ -89,6 +89,20 @@ export function SharedVisualCard({ visual, data, stackedData, stackedSeriesKeys 
 
   const hasStackedData = stackedData && stackedData.length > 0 && stackedSeriesKeys && stackedSeriesKeys.length > 0;
 
+  if (chartType === 'data_table') {
+    return (
+      <Card className="h-full flex flex-col">
+        <CardHeader className="pb-2 flex-shrink-0">
+          <CardTitle className="text-base truncate">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
+          <BarChart3 className="h-10 w-10 mb-2 opacity-40" />
+          <p className="text-sm">Tabelas não são suportadas na visualização compartilhada</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (data.length === 0 && !hasStackedData && chartType !== 'number' && chartType !== 'scorecard') {
     return (
       <Card className="h-full flex flex-col">
