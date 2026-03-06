@@ -1,41 +1,46 @@
 
 
-## Plano: Adicionar filtro e segmentação por Status do Negócio
+## Correção: Painel compartilhado mostrando vazio
 
-### O que será feito
+### Problemas identificados
 
-1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
+**1. Query falha silenciosamente** — A Edge Function ordena por `.order("position", { ascending: true })` (linha 2022), mas a tabela `insights_visuals` **não tem coluna `position`**. Isso causa um erro no Supabase que retorna `visuals = null`, e o frontend exibe "Este painel não possui visuais configurados."
 
-2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
+**2. Dados empilhados nunca chegam ao frontend** — A Edge Function coloca TODOS os dados (stacked e não-stacked) no objeto `visualsData`. Mas o frontend espera:
+- `visualsData[id]` → `AggregatedDataPoint[]` (array simples)  
+- `stackedVisualsData[id]` → `{ data, seriesKeys }` (objeto com série)
 
-### Alterações por arquivo
+Como a Edge Function nunca retorna `stackedVisualsData`, os visuais empilhados ficam sem dados.
 
-**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
-- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
-- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
-- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
+### Solução
 
-**`src/components/insights/visuals/VisualQuickSettings.tsx`**
-- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
-- Passar para `DealFieldFilterSection` como prop
-- No `handleSave`, converter o array de status selecionados para o campo adequado no config
-- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
+**Arquivo: `supabase/functions/shared-dashboard/index.ts`**
 
-**`src/components/insights/visual-builder/types.ts`**
-- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
-- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+1. **Corrigir ordenação** — Trocar `.order("position", ...)` por `.order("created_at", { ascending: true })` (que é a ordenação usada no hook interno)
 
-**`src/hooks/useVisualData.ts`**
-- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+2. **Separar dados stacked** — No loop de computação (linhas 2033-2050), separar os resultados em dois objetos distintos:
 
-**`src/hooks/useStackedVisualData.ts`**
-- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
-- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+```typescript
+const visualsData: Record<string, AggregatedDataPoint[]> = {};
+const stackedVisualsData: Record<string, StackedResult> = {};
+
+for (const visual of visuals || []) {
+  const isStacked = visual.chart_type === 'bar_stacked';
+  if (isStacked) {
+    // Resultado vai para stackedVisualsData
+    stackedVisualsData[visual.id] = await compute...;
+  } else {
+    // Resultado vai para visualsData
+    visualsData[visual.id] = await computeVisualData(...);
+  }
+}
+```
+
+3. **Incluir `stackedVisualsData` na resposta** — Adicionar ao JSON de retorno:
+```typescript
+{ status: "approved", dashboard, visuals, visualsData, stackedVisualsData, filterOptions }
+```
 
 ### Arquivos alterados
-- `src/components/insights/visual-builder/types.ts`
-- `src/components/insights/visuals/DealFieldFilterSection.tsx`
-- `src/components/insights/visuals/VisualQuickSettings.tsx`
-- `src/hooks/useVisualData.ts`
-- `src/hooks/useStackedVisualData.ts`
+- `supabase/functions/shared-dashboard/index.ts`
 
