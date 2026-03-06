@@ -285,11 +285,16 @@ async function filterByFieldValues(
 ): Promise<Set<string>> {
   if (selectedValues.length === 0 || entityIds.length === 0) return new Set(entityIds);
 
-  const { data: fieldDef } = await supabase
+  const { data: fieldDef, error: fieldDefError } = await supabase
     .from('custom_fields')
     .select('options, field_type')
     .eq('id', fieldId)
     .maybeSingle();
+
+  if (fieldDefError || !fieldDef) {
+    console.warn(`[filterByFieldValues] Could not fetch field definition for ${fieldId}:`, fieldDefError ? JSON.stringify(fieldDefError) : 'null result. Returning all as fallback.');
+    return new Set(entityIds);
+  }
 
   const fieldType = fieldDef?.field_type || '';
   const isMultiSelect = fieldType === 'multi_select';
@@ -305,16 +310,31 @@ async function filterByFieldValues(
   const selectColumns = isMultiSelect ? `${idColumn}, value_json` : `${idColumn}, value_text`;
 
   let allValues: any[] = [];
-  const batchSize = 500;
+  const batchSize = 100; // Reduced from 500 to avoid URL length limits with .in() containing UUIDs
+  console.log(`[filterByFieldValues] Starting: field=${fieldId}, table=${table}, entities=${entityIds.length}, fieldType=${fieldType}, isSelect=${isSelectField}, isMulti=${isMultiSelect}, optionsMap size=${optionLabelToValue.size}, selectedValues=${JSON.stringify(selectedValues)}`);
+  
   for (let i = 0; i < entityIds.length; i += batchSize) {
     const batch = entityIds.slice(i, i + batchSize);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from(table)
       .select(selectColumns)
       .eq('field_id', fieldId)
       .eq('account_id', accountId)
       .in(idColumn, batch);
+    
+    if (error) {
+      console.error(`[filterByFieldValues] Batch ${i}/${entityIds.length} ERROR:`, JSON.stringify(error));
+      continue;
+    }
     if (data) allValues = allValues.concat(data);
+  }
+  
+  console.log(`[filterByFieldValues] Total field values fetched: ${allValues.length}`);
+
+  // Defensive fallback: if no field values were fetched but entities exist, queries likely failed silently
+  if (allValues.length === 0 && entityIds.length > 0) {
+    console.warn(`[filterByFieldValues] WARNING: No field values returned for ${entityIds.length} entities on field ${fieldId}. Returning ALL as fallback to avoid false empty results.`);
+    return new Set(entityIds);
   }
 
   const matchingIds = new Set<string>();
@@ -323,6 +343,7 @@ async function filterByFieldValues(
     const selectedValueKeys = new Set(
       selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
     );
+    console.log(`[filterByFieldValues] multi_select mappedKeys: ${JSON.stringify([...selectedValueKeys])}`);
     for (const row of allValues) {
       if (row.value_json && Array.isArray(row.value_json)) {
         for (const val of row.value_json) {
@@ -334,16 +355,19 @@ async function filterByFieldValues(
     const selectedValueKeys = new Set(
       selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
     );
+    console.log(`[filterByFieldValues] select mappedKeys: ${JSON.stringify([...selectedValueKeys])}`);
     for (const row of allValues) {
       if (row.value_text && selectedValueKeys.has(row.value_text)) matchingIds.add(row[idColumn]);
     }
   } else {
     const selectedSet = new Set(selectedValues);
+    console.log(`[filterByFieldValues] free text matching: ${JSON.stringify([...selectedSet])}`);
     for (const row of allValues) {
       if (row.value_text && selectedSet.has(row.value_text)) matchingIds.add(row[idColumn]);
     }
   }
 
+  console.log(`[filterByFieldValues] Result: ${matchingIds.size} matches out of ${entityIds.length} entities`);
   return matchingIds;
 }
 
