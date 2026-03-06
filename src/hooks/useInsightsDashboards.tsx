@@ -40,6 +40,7 @@ interface InsightsDashboardsContextType {
   createDashboard: (name: string) => Promise<void>;
   deleteDashboard: (id: string) => Promise<void>;
   renameDashboard: (id: string, name: string) => Promise<void>;
+  duplicateDashboard: (id: string) => Promise<void>;
   reorderDashboards: (orderedIds: string[]) => Promise<void>;
   navigateToDashboard: (id: string) => void;
   setActiveDashboardId: (id: string | null) => void;
