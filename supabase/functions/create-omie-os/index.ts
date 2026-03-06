@@ -97,7 +97,7 @@ async function createOmieClient(
     cnpj_cpf: cleanDoc,
     razao_social: clientData.name,
     nome_fantasia: clientData.name,
-    contribuinte: '2',
+    contribuinte: 'N',
     pessoa_fisica: isPF ? 'S' : 'N',
   };
 
