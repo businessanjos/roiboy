@@ -150,6 +150,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   const ctx = useInsightsDashboardsSafe();
   const activeDashboardId = overrideDashboardId ?? ctx?.activeDashboardId ?? null;
   const addVisual = overrideAddVisual ?? ctx?.addVisual ?? (async () => {});
+  const { currentUser } = useCurrentUser();
   
   const [step, setStep] = useState(1);
   const [chartType, setChartType] = useState<ChartType | null>(null);
@@ -169,6 +170,25 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   const [funnelProcess, setFunnelProcess] = useState<'deal_stages' | 'task_status' | null>(null);
   const [tableDataSource, setTableDataSource] = useState<DataSource>('deals');
   const [tableColumns, setTableColumns] = useState<string[]>(() => getDefaultColumns('deals'));
+
+  // Fetch custom fields for the selected data source
+  const { data: customFields } = useQuery({
+    queryKey: ['custom-fields-for-table', tableDataSource, currentUser?.account_id],
+    queryFn: async () => {
+      if (!currentUser?.account_id) return [];
+      const showField = tableDataSource === 'deals' ? 'show_in_deals' : tableDataSource === 'leads' ? 'show_in_leads' : null;
+      if (!showField) return [];
+      const { data } = await supabase
+        .from('custom_fields')
+        .select('id, name, field_type')
+        .eq('account_id', currentUser.account_id)
+        .eq('is_active', true)
+        .eq(showField, true)
+        .order('name');
+      return data || [];
+    },
+    enabled: chartType === 'data_table' && !!currentUser?.account_id && (tableDataSource === 'deals' || tableDataSource === 'leads'),
+  });
 
   // Scorecards, rankings, call_commercial, gauge, indicator, bubble_map, funnel and data_table have only 2 steps
   const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge' || chartType === 'indicator' || chartType === 'bubble_map' || chartType === 'funnel' || chartType === 'data_table') ? 2 : 3;
