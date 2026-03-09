@@ -219,9 +219,9 @@ async function enrichWithCustomFields(
   let allValues: any[] = [];
   for (let i = 0; i < entityIds.length; i += batchSize) {
     const batch = entityIds.slice(i, i + batchSize);
-    const { data } = await supabase
+    const { data } = await (supabase
       .from(table)
-      .select(`${idColumn}, field_id, value_text, value_number, value_date, value_boolean, value_json`)
+      .select(`${idColumn}, field_id, value_text, value_number, value_date, value_boolean, value_json`) as any)
       .eq('account_id', accountId)
       .in('field_id', fieldIds)
       .in(idColumn, batch);
