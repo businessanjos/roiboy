@@ -59,9 +59,35 @@ class CardErrorBoundary extends React.Component<
 function SharedDataTable({ config, records }: { config: VisualConfig; records: DrilldownRecord[] }) {
   const allColumns = getColumnsForDataSource(config.dataSource);
   const selectedKeys = config.tableConfig?.columns || getDefaultColumns(config.dataSource);
+  
+  // Build native + cf columns
+  const cfKeys = selectedKeys.filter((k: string) => k.startsWith('cf_'));
+  const cfColumns: TableColumnDef[] = cfKeys.map((key: string) => {
+    const fieldId = key.replace('cf_', '');
+    // Try to get label from cfLabels in first record's custom_fields meta, or fallback
+    return {
+      key,
+      label: `Campo ${fieldId.slice(0, 6)}`,
+      defaultWidth: 150,
+      getValue: (r: DrilldownRecord) => r.extra?.custom_fields?.[fieldId] || '-',
+    };
+  });
+
+  // Infer labels from config.tableConfig.cfLabels if available
+  const cfLabels = (config as any).tableConfig?.cfLabels as Record<string, string> | undefined;
+  if (cfLabels) {
+    for (const col of cfColumns) {
+      const fieldId = col.key.replace('cf_', '');
+      if (cfLabels[fieldId]) col.label = cfLabels[fieldId];
+    }
+  }
+
   const columns = useMemo(
-    () => allColumns.filter(c => selectedKeys.includes(c.key)),
-    [allColumns, selectedKeys]
+    () => {
+      const nativeSelected = allColumns.filter(c => selectedKeys.includes(c.key));
+      return [...nativeSelected, ...cfColumns];
+    },
+    [allColumns, selectedKeys, cfColumns]
   );
 
   return (

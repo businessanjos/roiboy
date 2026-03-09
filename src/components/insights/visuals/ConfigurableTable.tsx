@@ -155,12 +155,50 @@ interface ConfigurableTableProps {
 
 export function ConfigurableTable({ config, visualId }: ConfigurableTableProps) {
   const { data, isLoading } = useVisualDrilldown({ config, enabled: true });
+  const { currentUser } = useCurrentUser();
+
+  const selectedKeys = config.tableConfig?.columns || getDefaultColumns(config.dataSource);
+  const cfKeys = useMemo(() => selectedKeys.filter(k => k.startsWith('cf_')), [selectedKeys]);
+  const cfFieldIds = useMemo(() => cfKeys.map(k => k.replace('cf_', '')), [cfKeys]);
+
+  // Fetch custom field names for cf_ columns
+  const { data: cfFieldDefs } = useQuery({
+    queryKey: ['cf-field-defs-table', cfFieldIds],
+    queryFn: async () => {
+      if (cfFieldIds.length === 0) return [];
+      const { data } = await supabase
+        .from('custom_fields')
+        .select('id, name, field_type')
+        .in('id', cfFieldIds);
+      return data || [];
+    },
+    enabled: cfFieldIds.length > 0,
+    staleTime: 300000,
+  });
 
   const allColumns = getColumnsForDataSource(config.dataSource);
-  const selectedKeys = config.tableConfig?.columns || getDefaultColumns(config.dataSource);
+  
+  // Build dynamic cf columns with real names
+  const cfColumns: TableColumnDef[] = useMemo(() => {
+    if (!cfKeys.length) return [];
+    return cfKeys.map(key => {
+      const fieldId = key.replace('cf_', '');
+      const def = cfFieldDefs?.find(f => f.id === fieldId);
+      return {
+        key,
+        label: def?.name || `Campo ${fieldId.slice(0, 6)}`,
+        defaultWidth: 150,
+        getValue: (r: DrilldownRecord) => r.extra?.custom_fields?.[fieldId] || '-',
+      };
+    });
+  }, [cfKeys, cfFieldDefs]);
+
   const columns = useMemo(
-    () => allColumns.filter(c => selectedKeys.includes(c.key)),
-    [allColumns, selectedKeys]
+    () => {
+      const nativeSelected = allColumns.filter(c => selectedKeys.includes(c.key));
+      return [...nativeSelected, ...cfColumns];
+    },
+    [allColumns, selectedKeys, cfColumns]
   );
 
   // Column widths state
