@@ -1,48 +1,41 @@
 
 
-## Correção: Tabela de negócios ganhos retorna apenas 3 de 7
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-### Causa Raiz
+### O que será feito
 
-Quando o visual de tabela tem `dealStatusFilter: ['won']`, o filtro de **status** é aplicado corretamente (`status IN ('won')`). Porém, a lógica que escolhe qual campo de data usar para o filtro de período **ignora o `dealStatusFilter`**.
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-O fluxo atual:
-1. `inferStatusFilter()` retorna `undefined` (pois a tabela usa `dimension.field = 'created_at'`, não `'_total'`)
-2. `effectiveStatusFilter` = `undefined`
-3. O campo de data cai na condição `dimension.type === 'date'` → usa `created_at`
-4. A query filtra por `created_at >= 01/03 AND created_at <= 31/03`
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-**Resultado**: Negócios criados antes de março mas ganhos em março são excluídos. Dos 7 ganhos em março, apenas 3 foram **criados** em março.
+### Alterações por arquivo
 
-### Correção
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
 
-Em **ambos** os hooks (`useVisualDrilldown.ts` e `useVisualData.ts`) e na **Edge Function** (`shared-dashboard/index.ts`), adicionar verificação de `dealStatusFilter` na lógica de escolha do campo de data:
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
 
-- Se `dealStatusFilter` contém **apenas** `['won']` → usar `won_at`
-- Se `dealStatusFilter` contém **apenas** `['lost']` → usar `lost_at`
-- Caso contrário, manter a lógica atual
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
 
 ### Arquivos alterados
-
-1. **`src/hooks/useVisualDrilldown.ts`** (~linhas 84-100) — Antes de checar `dimension.type`, verificar se `dealStatusFilter` indica um campo de data específico
-2. **`src/hooks/useVisualData.ts`** (~linhas 577-589) — Mesma lógica: priorizar `dealStatusFilter` na escolha do campo de data
-3. **`supabase/functions/shared-dashboard/index.ts`** — Replicar a mesma correção nas funções `computeDealTableRecords` e no fetch principal de deals
-
-### Lógica da correção (pseudocódigo)
-
-```typescript
-// Nova lógica para determinar dateFilterField
-let dateFilterField: string;
-const singleDealStatus = config.dealStatusFilter?.length === 1 ? config.dealStatusFilter[0] : null;
-
-if (effectiveStatusFilter === 'won' || singleDealStatus === 'won') {
-  dateFilterField = 'won_at';
-} else if (effectiveStatusFilter === 'lost' || singleDealStatus === 'lost') {
-  dateFilterField = 'lost_at';
-} else if (dimension.type === 'date' && dimension.field && dimension.field !== '_total') {
-  dateFilterField = dimension.field;
-} else {
-  dateFilterField = 'created_at';
-}
-```
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 

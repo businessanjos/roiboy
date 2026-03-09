@@ -578,9 +578,11 @@ async function fetchDealsData(
   // Status filter takes priority for date filtering
   // The dimension field only controls grouping, not which records are included
   let dateFilterField: string;
-  if (statusFilter === 'won') {
+  const singleDealStatus = dealStatusFilter && dealStatusFilter.length === 1 ? dealStatusFilter[0] : null;
+
+  if (statusFilter === 'won' || singleDealStatus === 'won') {
     dateFilterField = 'won_at';
-  } else if (statusFilter === 'lost') {
+  } else if (statusFilter === 'lost' || singleDealStatus === 'lost') {
     dateFilterField = 'lost_at';
   } else if (dimension.type === 'date' && dimension.field && dimension.field !== '_total') {
     dateFilterField = dimension.field;
