@@ -1,43 +1,41 @@
 
 
-## Campos Personalizados como Colunas na Tabela de Dados
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-### Problema
-O visual de tabela (`data_table`) exibe apenas colunas fixas pré-definidas (Título, Valor, Status, Etapa, etc.). Os campos personalizados do negócio — que frequentemente contêm informações críticas — não aparecem como opções de coluna.
+### O que será feito
 
-### Solução
-Carregar dinamicamente os campos personalizados (`custom_fields` com `show_in_deals = true`) e adicioná-los como opções de coluna selecionáveis no modal de criação e na renderização da tabela.
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-### Alterações
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-**1. `ConfigurableTable.tsx` — Colunas dinâmicas de campos personalizados**
-- Criar hook `useCustomFieldColumns(dataSource)` que busca `custom_fields` ativos para o data source (inicialmente `deals`, depois `leads`)
-- Gerar `TableColumnDef[]` dinâmicas com `key: 'cf_${field.id}'`, lendo o valor de `record.extra?.custom_fields?.[fieldId]`
-- Exportar função `getColumnsForDataSourceWithCustomFields(dataSource, customFields)` que concatena colunas fixas + dinâmicas
-- Na renderização, formatar valores conforme `field_type` (currency, date, select com label, multi_select, text)
+### Alterações por arquivo
 
-**2. `AddVisualModal.tsx` — Mostrar campos personalizados na lista de colunas**
-- Quando `chartType === 'data_table'` e `tableDataSource === 'deals'`, buscar campos personalizados via query ao Supabase (`custom_fields` com `show_in_deals = true`, `is_active = true`)
-- Renderizar os campos personalizados abaixo das colunas fixas na seção "Colunas", com um separador "Campos Personalizados"
-- Chaves no formato `cf_${field.id}` para distinguir de colunas nativas
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
 
-**3. `useVisualDrilldown.ts` — Enriquecer `DrilldownRecord.extra` com valores de campos personalizados**
-- Quando `config.tableConfig?.columns` contém chaves `cf_*`, extrair os field IDs
-- Após buscar os deals, fazer batch query em `deal_field_values` para esses fields
-- Mapear valores para `extra.custom_fields = { [fieldId]: displayValue }`
-- Para campos `select`: converter `value_text` (option value) em label usando field options
-- Para campos `multi_select`: converter `value_json` array em labels separados por vírgula
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
 
-**4. Edge Function (`shared-dashboard/index.ts`) — Suporte server-side**
-- Em `computeDealTableRecords`, replicar a mesma lógica: quando `tableConfig.columns` tem `cf_*`, buscar `deal_field_values` e `custom_fields` options, e popular `extra.custom_fields`
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
 
-**5. `SharedVisualCard.tsx` — Renderizar colunas dinâmicas no compartilhamento**
-- Ao montar colunas no `SharedDataTable`, incluir colunas `cf_*` do `tableConfig.columns` com label e getValue lendo de `extra.custom_fields`
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
 
 ### Arquivos alterados
-- `src/components/insights/visuals/ConfigurableTable.tsx`
-- `src/components/insights/AddVisualModal.tsx`
-- `src/hooks/useVisualDrilldown.ts`
-- `supabase/functions/shared-dashboard/index.ts`
-- `src/components/insights/visuals/SharedVisualCard.tsx`
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 

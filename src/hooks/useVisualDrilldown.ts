@@ -160,6 +160,11 @@ async function fetchDealsRecords(
     });
   }
 
+  // Enrich with custom field values if cf_* columns are selected
+  const customFieldsData = await enrichWithCustomFields(
+    accountId, filteredData.map((d: any) => d.id), config.tableConfig?.columns, 'deal_field_values', 'deal_id'
+  );
+
   return filteredData.map((deal: any) => ({
     id: deal.id,
     name: deal.title || `Negócio #${deal.id.slice(0, 8)}`,
@@ -174,8 +179,98 @@ async function fetchDealsRecords(
       won_at: deal.won_at,
       lost_at: deal.lost_at,
       lost_reason: deal.lost_reason,
+      custom_fields: customFieldsData.get(deal.id),
     },
   }));
+}
+
+/**
+ * Enrich records with custom field values for cf_* columns.
+ * Returns Map<entityId, Record<fieldId, displayValue>>
+ */
+async function enrichWithCustomFields(
+  accountId: string,
+  entityIds: string[],
+  columns: string[] | undefined,
+  table: 'deal_field_values' | 'lead_field_values',
+  idColumn: 'deal_id' | 'lead_id'
+): Promise<Map<string, Record<string, string>>> {
+  const result = new Map<string, Record<string, string>>();
+  if (!columns || entityIds.length === 0) return result;
+
+  const cfColumns = columns.filter(c => c.startsWith('cf_'));
+  if (cfColumns.length === 0) return result;
+
+  const fieldIds = cfColumns.map(c => c.replace('cf_', ''));
+
+  // Fetch field definitions (for select/multi_select label resolution)
+  const { data: fieldDefs } = await supabase
+    .from('custom_fields')
+    .select('id, name, field_type, options')
+    .in('id', fieldIds);
+
+  const fieldDefMap = new Map<string, any>();
+  for (const fd of fieldDefs || []) {
+    fieldDefMap.set(fd.id, fd);
+  }
+
+  // Fetch field values in batches
+  const batchSize = 500;
+  let allValues: any[] = [];
+  for (let i = 0; i < entityIds.length; i += batchSize) {
+    const batch = entityIds.slice(i, i + batchSize);
+    const { data } = await (supabase
+      .from(table)
+      .select(`${idColumn}, field_id, value_text, value_number, value_date, value_boolean, value_json`) as any)
+      .eq('account_id', accountId)
+      .in('field_id', fieldIds)
+      .in(idColumn, batch);
+    if (data) allValues = allValues.concat(data);
+  }
+
+  // Build entity → { fieldId: displayValue }
+  for (const row of allValues) {
+    const entityId = row[idColumn];
+    if (!result.has(entityId)) result.set(entityId, {});
+    const map = result.get(entityId)!;
+    const fieldDef = fieldDefMap.get(row.field_id);
+    map[row.field_id] = resolveFieldDisplayValue(row, fieldDef);
+  }
+
+  return result;
+}
+
+function resolveFieldDisplayValue(row: any, fieldDef: any): string {
+  if (!fieldDef) return row.value_text || '-';
+
+  const optionMap = new Map<string, string>();
+  if (fieldDef.options && Array.isArray(fieldDef.options)) {
+    for (const opt of fieldDef.options as Array<{ value: string; label: string }>) {
+      optionMap.set(opt.value, opt.label);
+    }
+  }
+
+  switch (fieldDef.field_type) {
+    case 'select':
+      return row.value_text ? (optionMap.get(row.value_text) || row.value_text) : '-';
+    case 'multi_select':
+      if (row.value_json && Array.isArray(row.value_json)) {
+        return (row.value_json as string[]).map(v => optionMap.get(v) || v).join(', ') || '-';
+      }
+      return '-';
+    case 'currency':
+      return row.value_number != null
+        ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(row.value_number)
+        : '-';
+    case 'date':
+      return row.value_date || '-';
+    case 'boolean':
+      return row.value_boolean != null ? (row.value_boolean ? 'Sim' : 'Não') : '-';
+    case 'number':
+      return row.value_number != null ? String(row.value_number) : '-';
+    default:
+      return row.value_text || '-';
+  }
 }
 
 async function fetchLeadsRecords(

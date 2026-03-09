@@ -16,6 +16,9 @@ import { useInsightsDashboardsSafe } from "@/hooks/useInsightsDashboards";
 import { VisualConfig, DEFAULT_APPEARANCE, DataSource, DATA_SOURCE_OPTIONS } from "./visual-builder/types";
 import { getColumnsForDataSource, getDefaultColumns } from "./visuals/ConfigurableTable";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface AddVisualModalProps {
   open: boolean;
@@ -147,6 +150,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   const ctx = useInsightsDashboardsSafe();
   const activeDashboardId = overrideDashboardId ?? ctx?.activeDashboardId ?? null;
   const addVisual = overrideAddVisual ?? ctx?.addVisual ?? (async () => {});
+  const { currentUser } = useCurrentUser();
   
   const [step, setStep] = useState(1);
   const [chartType, setChartType] = useState<ChartType | null>(null);
@@ -166,6 +170,25 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   const [funnelProcess, setFunnelProcess] = useState<'deal_stages' | 'task_status' | null>(null);
   const [tableDataSource, setTableDataSource] = useState<DataSource>('deals');
   const [tableColumns, setTableColumns] = useState<string[]>(() => getDefaultColumns('deals'));
+
+  // Fetch custom fields for the selected data source
+  const { data: customFields } = useQuery({
+    queryKey: ['custom-fields-for-table', tableDataSource, currentUser?.account_id],
+    queryFn: async () => {
+      if (!currentUser?.account_id) return [];
+      const showField = tableDataSource === 'deals' ? 'show_in_deals' : tableDataSource === 'leads' ? 'show_in_leads' : null;
+      if (!showField) return [];
+      const { data } = await supabase
+        .from('custom_fields')
+        .select('id, name, field_type')
+        .eq('account_id', currentUser.account_id)
+        .eq('is_active', true)
+        .eq(showField, true)
+        .order('name');
+      return data || [];
+    },
+    enabled: chartType === 'data_table' && !!currentUser?.account_id && (tableDataSource === 'deals' || tableDataSource === 'leads'),
+  });
 
   // Scorecards, rankings, call_commercial, gauge, indicator, bubble_map, funnel and data_table have only 2 steps
   const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge' || chartType === 'indicator' || chartType === 'bubble_map' || chartType === 'funnel' || chartType === 'data_table') ? 2 : 3;
@@ -876,6 +899,36 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                       <span className="text-sm">{col.label}</span>
                     </label>
                   ))}
+
+                  {/* Custom fields section */}
+                  {customFields && customFields.length > 0 && (
+                    <>
+                      <div className="pt-2 pb-1 border-t">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Campos Personalizados</span>
+                      </div>
+                      {customFields.map((field) => {
+                        const key = `cf_${field.id}`;
+                        return (
+                          <label
+                            key={key}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Checkbox
+                              checked={tableColumns.includes(key)}
+                              onCheckedChange={(checked) => {
+                                setTableColumns(prev =>
+                                  checked
+                                    ? [...prev, key]
+                                    : prev.filter(k => k !== key)
+                                );
+                              }}
+                            />
+                            <span className="text-sm">{field.name}</span>
+                          </label>
+                        );
+                      })}
+                    </>
+                  )}
                 </div>
               </div>
 

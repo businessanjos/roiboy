@@ -1872,6 +1872,9 @@ async function computeDealTableRecords(
     }
   }
 
+  // Enrich with custom field values if cf_* columns are selected
+  const customFieldsData = await enrichWithCustomFieldsServer(supabase, accountId, filteredData.map((d: any) => d.id), config.tableConfig?.columns, 'deal_field_values', 'deal_id');
+
   return filteredData.map((deal: any) => ({
     id: deal.id,
     name: deal.title || `Negócio #${deal.id.slice(0, 8)}`,
@@ -1886,8 +1889,93 @@ async function computeDealTableRecords(
       won_at: deal.won_at,
       lost_at: deal.lost_at,
       lost_reason: deal.lost_reason,
+      custom_fields: customFieldsData.get(deal.id),
     },
   }));
+}
+
+/** Server-side enrichment of custom field values for cf_* columns */
+async function enrichWithCustomFieldsServer(
+  supabase: any,
+  accountId: string,
+  entityIds: string[],
+  columns: string[] | undefined,
+  table: string,
+  idColumn: string
+): Promise<Map<string, Record<string, string>>> {
+  const result = new Map<string, Record<string, string>>();
+  if (!columns || entityIds.length === 0) return result;
+
+  const cfColumns = columns.filter((c: string) => c.startsWith('cf_'));
+  if (cfColumns.length === 0) return result;
+
+  const fieldIds = cfColumns.map((c: string) => c.replace('cf_', ''));
+
+  // Fetch field definitions
+  const { data: fieldDefs } = await supabase
+    .from('custom_fields')
+    .select('id, name, field_type, options')
+    .in('id', fieldIds);
+
+  const fieldDefMap = new Map<string, any>();
+  for (const fd of fieldDefs || []) {
+    fieldDefMap.set(fd.id, fd);
+  }
+
+  // Fetch field values in batches
+  const batchSize = 500;
+  let allValues: any[] = [];
+  for (let i = 0; i < entityIds.length; i += batchSize) {
+    const batch = entityIds.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from(table)
+      .select(`${idColumn}, field_id, value_text, value_number, value_date, value_boolean, value_json`)
+      .eq('account_id', accountId)
+      .in('field_id', fieldIds)
+      .in(idColumn, batch);
+    if (data) allValues = allValues.concat(data);
+  }
+
+  for (const row of allValues) {
+    const entityId = row[idColumn];
+    if (!result.has(entityId)) result.set(entityId, {});
+    const map = result.get(entityId)!;
+    const fieldDef = fieldDefMap.get(row.field_id);
+    map[row.field_id] = resolveFieldDisplayValueServer(row, fieldDef);
+  }
+
+  return result;
+}
+
+function resolveFieldDisplayValueServer(row: any, fieldDef: any): string {
+  if (!fieldDef) return row.value_text || '-';
+
+  const optionMap = new Map<string, string>();
+  if (fieldDef.options && Array.isArray(fieldDef.options)) {
+    for (const opt of fieldDef.options as Array<{ value: string; label: string }>) {
+      optionMap.set(opt.value, opt.label);
+    }
+  }
+
+  switch (fieldDef.field_type) {
+    case 'select':
+      return row.value_text ? (optionMap.get(row.value_text) || row.value_text) : '-';
+    case 'multi_select':
+      if (row.value_json && Array.isArray(row.value_json)) {
+        return (row.value_json as string[]).map((v: string) => optionMap.get(v) || v).join(', ') || '-';
+      }
+      return '-';
+    case 'currency':
+      return row.value_number != null ? `R$ ${Number(row.value_number).toFixed(2)}` : '-';
+    case 'date':
+      return row.value_date || '-';
+    case 'boolean':
+      return row.value_boolean != null ? (row.value_boolean ? 'Sim' : 'Não') : '-';
+    case 'number':
+      return row.value_number != null ? String(row.value_number) : '-';
+    default:
+      return row.value_text || '-';
+  }
 }
 
 async function computeLeadTableRecords(
@@ -2413,6 +2501,23 @@ Deno.serve(async (req) => {
             if (!drilldownData) drilldownData = {};
             drilldownData[visual.id] = await computeDataTableRecords(supabaseAdmin, accountId, visual.config, filters);
             visualsData[visual.id] = [];
+
+            // Resolve custom field labels for cf_* columns
+            const cfCols = (visual.config?.tableConfig?.columns || []).filter((c: string) => c.startsWith('cf_'));
+            if (cfCols.length > 0) {
+              const cfIds = cfCols.map((c: string) => c.replace('cf_', ''));
+              const { data: cfDefs } = await supabaseAdmin
+                .from('custom_fields')
+                .select('id, name')
+                .in('id', cfIds);
+              if (cfDefs && cfDefs.length > 0) {
+                const cfLabels: Record<string, string> = {};
+                for (const fd of cfDefs) cfLabels[fd.id] = fd.name;
+                // Attach cfLabels to the visual config for client rendering
+                if (!visual.config.tableConfig) visual.config.tableConfig = {};
+                visual.config.tableConfig.cfLabels = cfLabels;
+              }
+            }
           } else if (isStacked) {
             const dataSource = visual.config?.dataSource || 'deals';
             if (dataSource === 'leads') {
