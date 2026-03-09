@@ -1834,12 +1834,14 @@ async function computeDealTableRecords(
     }
 
     let dateFilterField = 'created_at';
-    if (config.dimension?.type === 'date' && config.dimension.field) {
-      dateFilterField = config.dimension.field;
-    } else if (effectiveStatusFilter === 'won') {
+    const singleDealStatus = config.dealStatusFilter?.length === 1 ? config.dealStatusFilter[0] : null;
+
+    if (effectiveStatusFilter === 'won' || singleDealStatus === 'won') {
       dateFilterField = 'won_at';
-    } else if (effectiveStatusFilter === 'lost') {
+    } else if (effectiveStatusFilter === 'lost' || singleDealStatus === 'lost') {
       dateFilterField = 'lost_at';
+    } else if (config.dimension?.type === 'date' && config.dimension.field) {
+      dateFilterField = config.dimension.field;
     }
 
     if (dateFilterField === 'won_at') q = q.not('won_at', 'is', null);

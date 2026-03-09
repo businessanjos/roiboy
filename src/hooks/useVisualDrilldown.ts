@@ -88,13 +88,16 @@ async function fetchDealsRecords(
   }
 
   // Determine which date field to use for filters
+  // dealStatusFilter takes priority for date field selection
   let dateFilterField: string;
-  if (config.dimension?.type === 'date' && config.dimension.field) {
-    dateFilterField = config.dimension.field;
-  } else if (effectiveStatusFilter === 'won') {
+  const singleDealStatus = config.dealStatusFilter?.length === 1 ? config.dealStatusFilter[0] : null;
+
+  if (effectiveStatusFilter === 'won' || singleDealStatus === 'won') {
     dateFilterField = 'won_at';
-  } else if (effectiveStatusFilter === 'lost') {
+  } else if (effectiveStatusFilter === 'lost' || singleDealStatus === 'lost') {
     dateFilterField = 'lost_at';
+  } else if (config.dimension?.type === 'date' && config.dimension.field) {
+    dateFilterField = config.dimension.field;
   } else {
     dateFilterField = 'created_at';
   }
