@@ -1,4 +1,7 @@
 import { useState, useCallback, useRef, useMemo, ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useVisualDrilldown, DrilldownRecord } from "@/hooks/useVisualDrilldown";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { VisualConfig, DataSource } from "../visual-builder/types";
