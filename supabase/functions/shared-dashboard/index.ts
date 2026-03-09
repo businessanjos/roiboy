@@ -2501,6 +2501,23 @@ Deno.serve(async (req) => {
             if (!drilldownData) drilldownData = {};
             drilldownData[visual.id] = await computeDataTableRecords(supabaseAdmin, accountId, visual.config, filters);
             visualsData[visual.id] = [];
+
+            // Resolve custom field labels for cf_* columns
+            const cfCols = (visual.config?.tableConfig?.columns || []).filter((c: string) => c.startsWith('cf_'));
+            if (cfCols.length > 0) {
+              const cfIds = cfCols.map((c: string) => c.replace('cf_', ''));
+              const { data: cfDefs } = await supabaseAdmin
+                .from('custom_fields')
+                .select('id, name')
+                .in('id', cfIds);
+              if (cfDefs && cfDefs.length > 0) {
+                const cfLabels: Record<string, string> = {};
+                for (const fd of cfDefs) cfLabels[fd.id] = fd.name;
+                // Attach cfLabels to the visual config for client rendering
+                if (!visual.config.tableConfig) visual.config.tableConfig = {};
+                visual.config.tableConfig.cfLabels = cfLabels;
+              }
+            }
           } else if (isStacked) {
             const dataSource = visual.config?.dataSource || 'deals';
             if (dataSource === 'leads') {
