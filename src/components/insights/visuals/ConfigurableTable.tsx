@@ -86,6 +86,28 @@ export function getColumnsForDataSource(dataSource: DataSource): TableColumnDef[
   }
 }
 
+/** Build dynamic columns for cf_* keys from DrilldownRecord.extra.custom_fields */
+export function buildCustomFieldColumns(cfKeys: string[], records: DrilldownRecord[]): TableColumnDef[] {
+  // Infer labels from the first record that has data, or use fieldId as fallback
+  const labelMap = new Map<string, string>();
+
+  // Try to infer labels from config metadata stored during creation
+  for (const key of cfKeys) {
+    const fieldId = key.replace('cf_', '');
+    labelMap.set(fieldId, fieldId.slice(0, 8)); // fallback
+  }
+
+  return cfKeys.map(key => {
+    const fieldId = key.replace('cf_', '');
+    return {
+      key,
+      label: labelMap.get(fieldId) || fieldId.slice(0, 8),
+      defaultWidth: 150,
+      getValue: (r: DrilldownRecord) => r.extra?.custom_fields?.[fieldId] || '-',
+    };
+  });
+}
+
 export function getDefaultColumns(dataSource: DataSource): string[] {
   switch (dataSource) {
     case 'deals': return ['name', 'value', 'status', 'stage', 'responsible'];

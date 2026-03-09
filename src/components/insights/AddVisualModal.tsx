@@ -899,6 +899,36 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                       <span className="text-sm">{col.label}</span>
                     </label>
                   ))}
+
+                  {/* Custom fields section */}
+                  {customFields && customFields.length > 0 && (
+                    <>
+                      <div className="pt-2 pb-1 border-t">
+                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Campos Personalizados</span>
+                      </div>
+                      {customFields.map((field) => {
+                        const key = `cf_${field.id}`;
+                        return (
+                          <label
+                            key={key}
+                            className="flex items-center gap-2 cursor-pointer"
+                          >
+                            <Checkbox
+                              checked={tableColumns.includes(key)}
+                              onCheckedChange={(checked) => {
+                                setTableColumns(prev =>
+                                  checked
+                                    ? [...prev, key]
+                                    : prev.filter(k => k !== key)
+                                );
+                              }}
+                            />
+                            <span className="text-sm">{field.name}</span>
+                          </label>
+                        );
+                      })}
+                    </>
+                  )}
                 </div>
               </div>
 
