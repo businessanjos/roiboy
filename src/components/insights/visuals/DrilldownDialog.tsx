@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -8,9 +9,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Download, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Separator } from "@/components/ui/separator";
+import { Download, ChevronLeft, ChevronRight, Columns3 } from "lucide-react";
 import { useVisualDrilldown, DrilldownRecord } from "@/hooks/useVisualDrilldown";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { supabase } from "@/integrations/supabase/client";
 import { VisualConfig, DATA_SOURCE_OPTIONS } from "../visual-builder/types";
+import { getColumnsForDataSource, getDefaultColumns, type TableColumnDef } from "./ConfigurableTable";
 import { formatValueDisplay } from "@/lib/formula-evaluator";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -43,12 +50,85 @@ export function DrilldownDialog({
 }: DrilldownDialogProps) {
   const config = visual.config as VisualConfig | null;
   const [currentPage, setCurrentPage] = useState(0);
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const { currentUser } = useCurrentUser();
+
+  // Fetch custom fields for the data source
+  const { data: customFields = [] } = useQuery({
+    queryKey: ['drilldown-custom-fields', config?.dataSource, currentUser?.account_id],
+    queryFn: async () => {
+      if (!currentUser?.account_id || !config?.dataSource) return [];
+      const flagField = config.dataSource === 'leads' ? 'show_in_leads' : 'show_in_deals';
+      if (config.dataSource !== 'deals' && config.dataSource !== 'leads') return [];
+
+      const { data } = await supabase
+        .from('custom_fields')
+        .select('id, name, field_type')
+        .eq('account_id', currentUser.account_id)
+        .eq(flagField, true)
+        .eq('is_active', true)
+        .order('display_order');
+
+      return data || [];
+    },
+    enabled: open && !!currentUser?.account_id && !!config?.dataSource,
+    staleTime: 300000,
+  });
+
+  // Native columns for data source
+  const nativeColumns = useMemo(
+    () => (config ? getColumnsForDataSource(config.dataSource) : []),
+    [config?.dataSource]
+  );
+
+  const defaultCols = useMemo(
+    () => (config ? getDefaultColumns(config.dataSource) : []),
+    [config?.dataSource]
+  );
+
+  // Initialize selected columns when dialog opens
+  useEffect(() => {
+    if (open) {
+      setSelectedColumns(defaultCols);
+      setCurrentPage(0);
+    }
+  }, [open, defaultCols]);
+
+  // Derive extra cf columns to pass to the hook
+  const extraCfColumns = useMemo(
+    () => selectedColumns.filter(c => c.startsWith('cf_')),
+    [selectedColumns]
+  );
 
   const { data: records = [], isLoading } = useVisualDrilldown({
     config,
     groupName,
     enabled: open && !!config,
+    extraCfColumns: extraCfColumns.length > 0 ? extraCfColumns : undefined,
   });
+
+  // Build visible columns from selection
+  const visibleColumns = useMemo(() => {
+    const cols: TableColumnDef[] = [];
+
+    for (const key of selectedColumns) {
+      if (key.startsWith('cf_')) {
+        const fieldId = key.replace('cf_', '');
+        const cf = customFields.find(f => f.id === fieldId);
+        cols.push({
+          key,
+          label: cf?.name || `Campo ${fieldId.slice(0, 6)}`,
+          defaultWidth: 150,
+          getValue: (r: DrilldownRecord) => r.extra?.custom_fields?.[fieldId] || '-',
+        });
+      } else {
+        const native = nativeColumns.find(c => c.key === key);
+        if (native) cols.push(native);
+      }
+    }
+
+    return cols;
+  }, [selectedColumns, nativeColumns, customFields]);
 
   // Pagination
   const totalPages = Math.ceil(records.length / PAGE_SIZE);
@@ -57,25 +137,24 @@ export function DrilldownDialog({
     return records.slice(start, start + PAGE_SIZE);
   }, [records, currentPage]);
 
-  // Reset page when dialog opens
-  useMemo(() => {
-    if (open) setCurrentPage(0);
-  }, [open]);
+  // Toggle column
+  const toggleColumn = (key: string) => {
+    setSelectedColumns(prev =>
+      prev.includes(key)
+        ? prev.filter(k => k !== key)
+        : [...prev, key]
+    );
+  };
 
   // Export to CSV
   const handleExport = () => {
-    if (records.length === 0) return;
+    if (records.length === 0 || visibleColumns.length === 0) return;
 
-    const headers = ['Nome', 'Valor', 'Status', 'Data'];
+    const headers = visibleColumns.map(c => c.label);
     const csvContent = [
       headers.join(','),
       ...records.map((record) =>
-        [
-          `"${record.name}"`,
-          record.value,
-          `"${record.status || ''}"`,
-          `"${formatDate(record.date)}"`,
-        ].join(',')
+        visibleColumns.map(col => `"${(col.getValue(record) || '').replace(/"/g, '""')}"`).join(',')
       ),
     ].join('\n');
 
@@ -92,7 +171,7 @@ export function DrilldownDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center justify-between pr-8">
             <span className="truncate">
@@ -109,10 +188,54 @@ export function DrilldownDialog({
             )}
             <span>•</span>
             <span>{records.length} registros</span>
+            <span>•</span>
+            {/* Column selector */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
+                  <Columns3 className="h-3.5 w-3.5" />
+                  Colunas ({selectedColumns.length})
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64 p-0" align="start">
+                <ScrollArea className="max-h-72">
+                  <div className="p-3 space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Campos nativos</p>
+                    {nativeColumns.map(col => (
+                      <label key={col.key} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-muted/50 rounded px-1">
+                        <Checkbox
+                          checked={selectedColumns.includes(col.key)}
+                          onCheckedChange={() => toggleColumn(col.key)}
+                        />
+                        <span className="text-sm">{col.label}</span>
+                      </label>
+                    ))}
+                    {customFields.length > 0 && (
+                      <>
+                        <Separator className="my-2" />
+                        <p className="text-xs font-medium text-muted-foreground mb-2">Campos personalizados</p>
+                        {customFields.map(cf => {
+                          const key = `cf_${cf.id}`;
+                          return (
+                            <label key={key} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-muted/50 rounded px-1">
+                              <Checkbox
+                                checked={selectedColumns.includes(key)}
+                                onCheckedChange={() => toggleColumn(key)}
+                              />
+                              <span className="text-sm">{cf.name}</span>
+                            </label>
+                          );
+                        })}
+                      </>
+                    )}
+                  </div>
+                </ScrollArea>
+              </PopoverContent>
+            </Popover>
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 overflow-auto">
           {isLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -124,56 +247,36 @@ export function DrilldownDialog({
               Nenhum registro encontrado
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
-                  {config?.dataSource === 'deals' && (
-                    <>
-                      <TableHead>Etapa</TableHead>
-                      <TableHead>Responsável</TableHead>
-                    </>
-                  )}
-                  {config?.dataSource === 'leads' && (
-                    <TableHead>Fonte</TableHead>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedRecords.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell className="font-medium max-w-[200px] truncate">
-                      {record.name}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {config?.formatting?.type === 'currency'
-                        ? formatValueDisplay(record.value, 'currency', 2)
-                        : formatValueDisplay(record.value, 'decimal', 2)}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={record.status} />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(record.date)}
-                    </TableCell>
-                    {config?.dataSource === 'deals' && (
-                      <>
-                        <TableCell>{record.extra?.stage || '-'}</TableCell>
-                        <TableCell>{record.extra?.responsible || '-'}</TableCell>
-                      </>
-                    )}
-                    {config?.dataSource === 'leads' && (
-                      <TableCell>{record.extra?.source || '-'}</TableCell>
-                    )}
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {visibleColumns.map(col => (
+                      <TableHead key={col.key} style={{ minWidth: col.defaultWidth }} className="whitespace-nowrap">
+                        {col.label}
+                      </TableHead>
+                    ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedRecords.map((record) => (
+                    <TableRow key={record.id}>
+                      {visibleColumns.map(col => (
+                        <TableCell key={col.key} className="whitespace-nowrap" style={{ maxWidth: col.defaultWidth + 40 }}>
+                          {col.render ? col.render(record) : (
+                            <span className="truncate block" title={col.getValue(record)}>
+                              {col.getValue(record)}
+                            </span>
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
-        </ScrollArea>
+        </div>
 
         {/* Footer with pagination and export */}
         <div className="flex items-center justify-between pt-4 border-t flex-shrink-0">
@@ -217,36 +320,4 @@ export function DrilldownDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-function StatusBadge({ status }: { status?: string }) {
-  if (!status) return <span className="text-muted-foreground">-</span>;
-
-  const colors: Record<string, string> = {
-    won: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-    lost: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-    open: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-    new: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-    qualified: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
-    Ativo: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-    Inativo: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400',
-  };
-
-  const colorClass = colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400';
-
-  return (
-    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
-      {status}
-    </span>
-  );
-}
-
-function formatDate(dateString: string | null): string {
-  if (!dateString) return '-';
-  try {
-    const date = parseISO(dateString);
-    return format(date, "dd/MM/yyyy", { locale: ptBR });
-  } catch {
-    return '-';
-  }
 }

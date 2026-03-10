@@ -1,35 +1,41 @@
 
 
-## Seletor de Colunas no "Explorar Dados"
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
 ### O que será feito
-Adicionar um botão "Colunas" no header do DrilldownDialog que abre um popover com checkboxes para selecionar quais colunas exibir. Inclui colunas nativas do data source + campos personalizados. Com muitas colunas, a tabela terá scroll horizontal.
 
-### Alterações
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-**1. `DrilldownDialog.tsx` — Refatoração principal**
-- Adicionar state `selectedColumns: string[]` inicializado com colunas padrão do data source
-- Buscar campos personalizados do negócio via query (`custom_fields` com `show_in_deals/show_in_leads = true`)
-- Adicionar botão com ícone `Columns` (lucide) ao lado do subtítulo que abre um `Popover` com:
-  - Lista de colunas nativas com checkboxes
-  - Separador "Campos Personalizados"
-  - Lista de campos personalizados com checkboxes (`cf_${id}`)
-- Construir `TableColumnDef[]` dinamicamente a partir de `selectedColumns`, reutilizando `getColumnsForDataSource()` para nativas e gerando dinâmicas para `cf_*`
-- Passar `selectedColumns` (com `cf_*` keys) para o `useVisualDrilldown` via config para que `enrichWithCustomFields` carregue os valores necessários
-- Envolver a `<Table>` em um container com `overflow-x: auto` para scroll horizontal
-- Atualizar `handleExport` para exportar apenas as colunas selecionadas
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-**2. `useVisualDrilldown.ts` — Aceitar colunas extras**
-- Na chamada de `enrichWithCustomFields`, além de `config.tableConfig?.columns`, também aceitar colunas passadas via parâmetro opcional `extraCfColumns` para suportar o drilldown dinâmico
-- Alterar a interface `UseVisualDrilldownParams` para incluir `extraColumns?: string[]`
+### Alterações por arquivo
 
-### Fluxo do usuário
-1. Abre "Explorar Dados" → vê colunas padrão (Nome, Valor, Status, Data, Etapa, Responsável)
-2. Clica no botão "Colunas" → popover com todas as opções + campos personalizados
-3. Marca/desmarca colunas → tabela atualiza instantaneamente
-4. Se muitas colunas, scroll horizontal aparece automaticamente
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
+
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
+
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
 
 ### Arquivos alterados
-- `src/components/insights/visuals/DrilldownDialog.tsx`
-- `src/hooks/useVisualDrilldown.ts`
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 

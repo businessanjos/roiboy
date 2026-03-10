@@ -21,14 +21,15 @@ interface UseVisualDrilldownParams {
   config: VisualConfig | null;
   groupName?: string; // Filter to specific group (e.g., "Janeiro/24")
   enabled?: boolean;
+  extraCfColumns?: string[]; // Additional cf_* columns from drilldown column selector
 }
 
-export function useVisualDrilldown({ config, groupName, enabled = true }: UseVisualDrilldownParams) {
+export function useVisualDrilldown({ config, groupName, enabled = true, extraCfColumns }: UseVisualDrilldownParams) {
   const { currentUser } = useCurrentUser();
   const { filters } = useInsightsFilters();
 
   return useQuery({
-    queryKey: ['visual-drilldown', config, groupName, filters, currentUser?.account_id],
+    queryKey: ['visual-drilldown', config, groupName, filters, currentUser?.account_id, extraCfColumns],
     queryFn: async (): Promise<DrilldownRecord[]> => {
       if (!config || !currentUser?.account_id) return [];
 
@@ -36,7 +37,7 @@ export function useVisualDrilldown({ config, groupName, enabled = true }: UseVis
 
       switch (dataSource) {
         case 'deals':
-          return fetchDealsRecords(currentUser.account_id, config, filters, groupName);
+          return fetchDealsRecords(currentUser.account_id, config, filters, groupName, extraCfColumns);
         case 'leads':
           return fetchLeadsRecords(currentUser.account_id, config, filters, groupName);
         case 'products':
@@ -48,7 +49,7 @@ export function useVisualDrilldown({ config, groupName, enabled = true }: UseVis
       }
     },
     enabled: enabled && !!config && !!currentUser?.account_id,
-    staleTime: 120000, // OPTIMIZED: 2 minutes (up from 30 seconds)
+    staleTime: 120000,
     refetchOnWindowFocus: false,
   });
 }
@@ -57,7 +58,8 @@ async function fetchDealsRecords(
   accountId: string,
   config: VisualConfig,
   filters: any,
-  groupName?: string
+  groupName?: string,
+  extraCfColumns?: string[]
 ): Promise<DrilldownRecord[]> {
   let query = supabase
     .from('deals')
@@ -164,8 +166,14 @@ async function fetchDealsRecords(
   }
 
   // Enrich with custom field values if cf_* columns are selected
+  // Merge tableConfig columns with extra drilldown columns
+  const allColumns = [
+    ...(config.tableConfig?.columns || []),
+    ...(extraCfColumns || []),
+  ];
+  const uniqueColumns = [...new Set(allColumns)];
   const customFieldsData = await enrichWithCustomFields(
-    accountId, filteredData.map((d: any) => d.id), config.tableConfig?.columns, 'deal_field_values', 'deal_id'
+    accountId, filteredData.map((d: any) => d.id), uniqueColumns.length > 0 ? uniqueColumns : undefined, 'deal_field_values', 'deal_id'
   );
 
   return filteredData.map((deal: any) => ({
