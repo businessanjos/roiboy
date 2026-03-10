@@ -1,25 +1,41 @@
 
 
-## Diagnóstico: Formulários CX preenchidos mas "inacessíveis"
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-### Dados confirmados no banco
-Os 14 formulários CX preenchidos **existem corretamente** no banco de dados. Não há dados perdidos. As políticas de segurança (RLS) também estão corretas — o SELECT está permitido para o account_id correto.
+### O que será feito
 
-### Causa raiz do problema
-Quando você clica no formulário "Formulário CX - Conhecendo Você" na lista, o diálogo abre na aba **"Preview"** por padrão (que mostra uma prévia do formulário em branco, para testes). As respostas preenchidas ficam na aba **"Respostas [14]"**, que é a terceira aba no topo do diálogo.
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-O código atual em `Forms.tsx` linha 1735:
-```tsx
-<Tabs defaultValue="preview" ...>
-```
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-Isso faz com que o diálogo sempre abra na aba Preview, mesmo quando o usuário quer ver as respostas.
+### Alterações por arquivo
 
-### Correção — `src/pages/Forms.tsx`
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
 
-1. **Mudar o `defaultValue` da Tabs para `"responses"`** quando o diálogo é aberto via clique na linha do formulário (função `viewResponses`). Isso garante que ao clicar em qualquer formulário, o usuário veja imediatamente as respostas preenchidas.
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
 
-2. Adicionar um estado `activeTab` que controla qual aba está ativa, e setá-lo como `"responses"` em `viewResponses()` e `"fields"/"preview"` quando aberto por outras ações (como editar).
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
 
-Resultado: Ao clicar no formulário CX na lista, o diálogo abrirá diretamente na aba de Respostas mostrando os 14 cards com os dados preenchidos por cada sócio.
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+
+### Arquivos alterados
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 
