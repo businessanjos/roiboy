@@ -68,10 +68,10 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
                 className="h-10 rounded-md flex items-center justify-between px-4 transition-all flex-1 min-w-0 overflow-hidden"
                 style={{ backgroundColor: bgColor }}
               >
-                <span className="text-sm font-medium text-white truncate whitespace-nowrap" style={{ fontSize: Math.max(10, Math.round(13 * m * Math.min(1, widthPct / 40))) }}>
+                <span className="text-sm font-medium text-white truncate whitespace-nowrap" style={{ fontSize: Math.round(13 * m) }}>
                   {item.name}
                 </span>
-                <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.max(10, Math.round(13 * m * Math.min(1, widthPct / 40))) }}>
+                <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.round(13 * m) }}>
                   {formatValueCompact(cumValue, formatting.type)}
                 </span>
               </div>
