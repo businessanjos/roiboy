@@ -24,12 +24,12 @@ interface UseVisualDrilldownParams {
   extraCfColumns?: string[]; // Additional cf_* columns from drilldown column selector
 }
 
-export function useVisualDrilldown({ config, groupName, enabled = true }: UseVisualDrilldownParams) {
+export function useVisualDrilldown({ config, groupName, enabled = true, extraCfColumns }: UseVisualDrilldownParams) {
   const { currentUser } = useCurrentUser();
   const { filters } = useInsightsFilters();
 
   return useQuery({
-    queryKey: ['visual-drilldown', config, groupName, filters, currentUser?.account_id],
+    queryKey: ['visual-drilldown', config, groupName, filters, currentUser?.account_id, extraCfColumns],
     queryFn: async (): Promise<DrilldownRecord[]> => {
       if (!config || !currentUser?.account_id) return [];
 
@@ -37,7 +37,7 @@ export function useVisualDrilldown({ config, groupName, enabled = true }: UseVis
 
       switch (dataSource) {
         case 'deals':
-          return fetchDealsRecords(currentUser.account_id, config, filters, groupName);
+          return fetchDealsRecords(currentUser.account_id, config, filters, groupName, extraCfColumns);
         case 'leads':
           return fetchLeadsRecords(currentUser.account_id, config, filters, groupName);
         case 'products':
@@ -49,7 +49,7 @@ export function useVisualDrilldown({ config, groupName, enabled = true }: UseVis
       }
     },
     enabled: enabled && !!config && !!currentUser?.account_id,
-    staleTime: 120000, // OPTIMIZED: 2 minutes (up from 30 seconds)
+    staleTime: 120000,
     refetchOnWindowFocus: false,
   });
 }
