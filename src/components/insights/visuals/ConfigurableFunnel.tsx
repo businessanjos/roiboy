@@ -89,7 +89,7 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
         const ganhosWidthPct = Math.max((ganhosItem.value / maxValue) * 100, 8);
         return (
           <div className="w-full flex justify-center items-center">
-            <div className="flex items-center gap-1.5" style={{ width: `${ganhosWidthPct}%`, minWidth: '200px' }}>
+            <div className="flex items-center gap-1.5" style={{ width: `${ganhosWidthPct}%`, minWidth: '120px' }}>
               <span className="text-xs font-semibold text-muted-foreground w-10 text-right shrink-0" style={{ fontSize: Math.round(11 * m) }}>
                 {ganhosStagePct}%
               </span>
