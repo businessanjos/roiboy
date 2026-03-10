@@ -38,7 +38,6 @@ async function fetchCampaignsFromDomain(domain: string, apiToken: string): Promi
       return { campaigns: [], error: `Erro ao buscar campanhas (status ${apiResponse.status}).` };
     }
 
-    // Detect HTML response
     if (responseText.trim().startsWith("<!DOCTYPE") || responseText.trim().startsWith("<html")) {
       console.error("[threecplus-campaigns] API returned HTML instead of JSON. Domain:", domain);
       return { campaigns: [], error: "Erro de configuração: o domínio do 3C Plus parece incorreto." };
@@ -101,9 +100,15 @@ Deno.serve(async (req) => {
 
     const userId = claimsData.claims.sub;
 
-    const { data: userData } = await supabase
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // Fetch user with account_id
+    const { data: userData } = await supabaseAdmin
       .from("users")
-      .select("id")
+      .select("id, account_id")
       .eq("auth_user_id", userId)
       .single();
 
@@ -114,12 +119,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch integration
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
+    // Fetch user's own integration
     const { data: integration } = await supabaseAdmin
       .from("user_integrations")
       .select("access_token, metadata")
@@ -135,22 +135,65 @@ Deno.serve(async (req) => {
     }
 
     const meta = integration.metadata as Record<string, unknown> | null;
-    const baseDomain = getBaseDomain(meta?.domain as string | null);
+    const userDomain = (meta?.domain as string | null) || null;
+    const baseDomain = getBaseDomain(userDomain);
     const apiToken = integration.access_token;
 
-    console.log("[threecplus-campaigns] User:", userData.id, "Domain:", baseDomain, "Token (last 6):", apiToken.slice(-6));
+    console.log("[threecplus-campaigns] User:", userData.id, "Domain:", baseDomain, "UserDomainRaw:", userDomain, "Token (last 6):", apiToken.slice(-6));
 
-    // Fetch campaigns from configured domain
+    // Step 1: Try user's own domain
     let result = await fetchCampaignsFromDomain(baseDomain, apiToken);
 
-    // Fallback: if custom domain returned 0 campaigns, try default domain
+    // Step 2: If 0 campaigns, try peer domain from same account
+    if (result.campaigns.length === 0 && userData.account_id) {
+      console.log("[threecplus-campaigns] No campaigns on user domain, searching peer integrations in account:", userData.account_id);
+
+      // Find other 3cplus integrations in the same account that have a domain configured
+      const { data: peerUsers } = await supabaseAdmin
+        .from("users")
+        .select("id")
+        .eq("account_id", userData.account_id)
+        .neq("id", userData.id);
+
+      if (peerUsers && peerUsers.length > 0) {
+        const peerUserIds = peerUsers.map((u: any) => u.id);
+
+        const { data: peerIntegrations } = await supabaseAdmin
+          .from("user_integrations")
+          .select("metadata")
+          .eq("provider", "3cplus")
+          .in("user_id", peerUserIds);
+
+        if (peerIntegrations) {
+          // Find a peer with a non-null domain that differs from what we already tried
+          for (const peer of peerIntegrations) {
+            const peerMeta = peer.metadata as Record<string, unknown> | null;
+            const peerDomainRaw = (peerMeta?.domain as string | null) || null;
+            if (!peerDomainRaw) continue;
+
+            const peerDomain = getBaseDomain(peerDomainRaw);
+            if (peerDomain === baseDomain) continue; // Already tried this domain
+
+            console.log("[threecplus-campaigns] Trying peer domain:", peerDomain);
+            const peerResult = await fetchCampaignsFromDomain(peerDomain, apiToken);
+            if (peerResult.campaigns.length > 0) {
+              result = peerResult;
+              console.log(`[threecplus-campaigns] Peer domain succeeded: ${peerResult.campaigns.length} campaigns from ${peerDomain}`);
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    // Step 3: Final fallback to default domain if still 0
     const defaultDomain = "https://app.3c.fluxoti.com";
     if (result.campaigns.length === 0 && baseDomain !== defaultDomain) {
-      console.log("[threecplus-campaigns] No campaigns on custom domain, trying default:", defaultDomain);
+      console.log("[threecplus-campaigns] No campaigns from any domain, trying default:", defaultDomain);
       const fallbackResult = await fetchCampaignsFromDomain(defaultDomain, apiToken);
       if (fallbackResult.campaigns.length > 0) {
         result = fallbackResult;
-        console.log(`[threecplus-campaigns] Fallback succeeded: ${fallbackResult.campaigns.length} campaigns from default domain`);
+        console.log(`[threecplus-campaigns] Default fallback succeeded: ${fallbackResult.campaigns.length} campaigns`);
       }
     }
 
