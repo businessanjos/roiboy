@@ -1734,7 +1734,7 @@ export default function Forms() {
           </div>
 
           {/* Tabs */}
-          <Tabs defaultValue="preview" className="flex-1 flex flex-col overflow-hidden">
+          <Tabs value={responsesActiveTab} onValueChange={setResponsesActiveTab} className="flex-1 flex flex-col overflow-hidden">
             <div className="px-4 border-b">
               <TabsList className="h-auto p-0 bg-transparent gap-4">
                 <TabsTrigger
