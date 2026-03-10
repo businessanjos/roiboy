@@ -97,10 +97,10 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
                 className="h-10 rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-emerald-400 ring-offset-2 flex-1 min-w-0 overflow-hidden"
                 style={{ backgroundColor: '#10b981' }}
               >
-                <span className="text-sm font-medium text-white flex items-center gap-1.5 truncate whitespace-nowrap" style={{ fontSize: Math.max(10, Math.round(13 * m * Math.min(1, ganhosWidthPct / 40))) }}>
+                <span className="text-sm font-medium text-white flex items-center gap-1.5 truncate whitespace-nowrap" style={{ fontSize: Math.round(13 * m) }}>
                   🏆 {ganhosItem.name}
                 </span>
-                <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.max(10, Math.round(13 * m * Math.min(1, ganhosWidthPct / 40))) }}>
+                <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.round(13 * m) }}>
                   {formatValueCompact(ganhosItem.value, formatting.type)}
                 </span>
               </div>
