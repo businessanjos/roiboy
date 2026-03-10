@@ -48,7 +48,7 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
     <div className="flex flex-col items-center justify-center gap-1.5 h-full w-full px-4 py-2 overflow-hidden">
       {regularData.map((item, index) => {
         const cumValue = cumulativeCounts[index];
-        const widthPct = Math.max((cumValue / maxValue) * 100, 15);
+        const widthPct = Math.max((cumValue / maxValue) * 100, 8);
         const prevCum = index > 0 ? cumulativeCounts[index - 1] : cumValue;
         const conversionPct = index > 0 && prevCum > 0
           ? Math.round((cumValue / prevCum) * 100)
@@ -60,7 +60,7 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
 
         return (
           <div key={item.name} className="w-full flex justify-center items-center">
-            <div className="flex items-center gap-1.5" style={{ width: `${widthPct}%`, minWidth: '200px' }}>
+            <div className="flex items-center gap-1.5" style={{ width: `${widthPct}%`, minWidth: '120px' }}>
               <span className="text-xs font-semibold text-muted-foreground w-10 text-right shrink-0" style={{ fontSize: Math.round(11 * m) }}>
                 {stagePct}%
               </span>
@@ -86,10 +86,10 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
         const lastCum = cumulativeCounts.length > 0 ? cumulativeCounts[cumulativeCounts.length - 1] : 1;
         const ganhosStagePct = lastCum > 0 ? Math.round((ganhosItem.value / lastCum) * 100) : 0;
         const ganhosOverallPct = Math.round((ganhosItem.value / maxValue) * 100);
-        const ganhosWidthPct = Math.max((ganhosItem.value / maxValue) * 100, 15);
+        const ganhosWidthPct = Math.max((ganhosItem.value / maxValue) * 100, 8);
         return (
           <div className="w-full flex justify-center items-center">
-            <div className="flex items-center gap-1.5" style={{ width: `${ganhosWidthPct}%`, minWidth: '200px' }}>
+            <div className="flex items-center gap-1.5" style={{ width: `${ganhosWidthPct}%`, minWidth: '120px' }}>
               <span className="text-xs font-semibold text-muted-foreground w-10 text-right shrink-0" style={{ fontSize: Math.round(11 * m) }}>
                 {ganhosStagePct}%
               </span>
