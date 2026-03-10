@@ -584,6 +584,7 @@ export default function Forms() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [responsesDialogOpen, setResponsesDialogOpen] = useState(false);
+  const [responsesActiveTab, setResponsesActiveTab] = useState("responses");
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [responses, setResponses] = useState<any[]>([]);
   const [loadingResponses, setLoadingResponses] = useState(false);
