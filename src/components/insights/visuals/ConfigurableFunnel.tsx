@@ -48,7 +48,7 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
     <div className="flex flex-col items-center justify-center gap-1.5 h-full w-full px-4 py-2 overflow-hidden">
       {regularData.map((item, index) => {
         const cumValue = cumulativeCounts[index];
-        const widthPct = Math.max((cumValue / maxValue) * 100, 15);
+        const widthPct = Math.max((cumValue / maxValue) * 100, 10);
         const prevCum = index > 0 ? cumulativeCounts[index - 1] : cumValue;
         const conversionPct = index > 0 && prevCum > 0
           ? Math.round((cumValue / prevCum) * 100)
