@@ -59,7 +59,7 @@ export function ZappCallDialog({
 
   // Timer
   useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
     if (callStatus === "answered") {
       interval = setInterval(() => {
         setElapsedSeconds((prev) => prev + 1);

@@ -92,9 +92,9 @@ export function useZappData(options: UseZappDataOptions = {}) {
   const [whatsappInstanceName, setWhatsappInstanceName] = useState<string | null>(null);
 
   // Refs for heartbeat and realtime
-  const agentHeartbeatRef = useRef<NodeJS.Timeout | null>(null);
+  const agentHeartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastHeartbeatRef = useRef<number>(0);
-  const realtimeFetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const realtimeFetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFetchTimeRef = useRef<number>(0);
   
   // Ref for notification callback to avoid stale closures

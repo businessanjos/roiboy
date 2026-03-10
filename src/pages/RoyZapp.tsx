@@ -589,7 +589,7 @@ export default function RoyZapp() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
   
   // User signature state (persisted to database)

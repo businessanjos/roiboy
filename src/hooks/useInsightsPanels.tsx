@@ -114,7 +114,7 @@ export function InsightsPanelsProvider({ children }: { children: ReactNode }) {
   });
 
   // Debounce ref for layout updates
-  const layoutUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const layoutUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Create panel mutation
   const createPanelMutation = useMutation({
