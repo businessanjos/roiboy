@@ -58,7 +58,8 @@ async function fetchDealsRecords(
   accountId: string,
   config: VisualConfig,
   filters: any,
-  groupName?: string
+  groupName?: string,
+  extraCfColumns?: string[]
 ): Promise<DrilldownRecord[]> {
   let query = supabase
     .from('deals')
