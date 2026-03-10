@@ -1,16 +1,41 @@
 
 
-## Corrigir Barras do Funil — Legibilidade e Proporção
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-### Problema
-O `min-width: 8%` tornou barras muito estreitas e a fórmula de redução de fonte (`widthPct / 40`) encolhe o texto a ponto de ficar ilegível. Etapas com 10 itens vs 2 itens ficam visualmente iguais porque ambas caem na faixa ilegível.
+### O que será feito
 
-### Correção — `ConfigurableFunnel.tsx`
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-1. **Aumentar piso mínimo de largura** para `15%` — garante que a menor barra ainda seja legível
-2. **Remover escala dinâmica de fonte** — usar tamanho fixo (`13 * m`) para nome e valor, confiando no `truncate` para nomes longos em barras estreitas
-3. **Manter `minWidth: 180px`** para garantir que texto + valor caibam mesmo em containers pequenos
-4. Aplicar as mesmas correções na barra de Ganhos
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-Resultado: "Chegou Lead" ocupa 100%, "Contato Realizado" ~60%, "Em Qualificação" ~24% (mas com piso de 15%), etapas com 2 items ~8% → piso de 15%. A diferença entre 24% e 15% será visível, e todas as barras terão texto legível.
+### Alterações por arquivo
+
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
+
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
+
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+
+### Arquivos alterados
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 
