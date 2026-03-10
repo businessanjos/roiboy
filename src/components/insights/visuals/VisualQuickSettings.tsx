@@ -91,6 +91,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
   // Fetch visual data to extract unique categories
   const { data: visualData } = useVisualData({
     config,
+    chartType: (visual.chart_type || undefined) as any,
     enabled: open && !!config && showCategoryFilter,
   });
 
