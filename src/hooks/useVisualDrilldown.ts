@@ -21,6 +21,7 @@ interface UseVisualDrilldownParams {
   config: VisualConfig | null;
   groupName?: string; // Filter to specific group (e.g., "Janeiro/24")
   enabled?: boolean;
+  extraCfColumns?: string[]; // Additional cf_* columns from drilldown column selector
 }
 
 export function useVisualDrilldown({ config, groupName, enabled = true }: UseVisualDrilldownParams) {
