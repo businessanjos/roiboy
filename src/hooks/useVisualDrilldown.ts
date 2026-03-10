@@ -166,8 +166,14 @@ async function fetchDealsRecords(
   }
 
   // Enrich with custom field values if cf_* columns are selected
+  // Merge tableConfig columns with extra drilldown columns
+  const allColumns = [
+    ...(config.tableConfig?.columns || []),
+    ...(extraCfColumns || []),
+  ];
+  const uniqueColumns = [...new Set(allColumns)];
   const customFieldsData = await enrichWithCustomFields(
-    accountId, filteredData.map((d: any) => d.id), config.tableConfig?.columns, 'deal_field_values', 'deal_id'
+    accountId, filteredData.map((d: any) => d.id), uniqueColumns.length > 0 ? uniqueColumns : undefined, 'deal_field_values', 'deal_id'
   );
 
   return filteredData.map((deal: any) => ({
