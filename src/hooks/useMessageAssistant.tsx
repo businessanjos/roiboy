@@ -117,7 +117,7 @@ export function useMessageAssistant({
   // Correction state
   const [correction, setCorrection] = useState<string | null>(null);
   const [isCheckingSpelling, setIsCheckingSpelling] = useState(false);
-  const correctionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const correctionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastCheckedTextRef = useRef<string>("");
   
   // Suggestions state
