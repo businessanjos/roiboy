@@ -86,7 +86,7 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
         const lastCum = cumulativeCounts.length > 0 ? cumulativeCounts[cumulativeCounts.length - 1] : 1;
         const ganhosStagePct = lastCum > 0 ? Math.round((ganhosItem.value / lastCum) * 100) : 0;
         const ganhosOverallPct = Math.round((ganhosItem.value / maxValue) * 100);
-        const ganhosWidthPct = Math.max((ganhosItem.value / maxValue) * 100, 8);
+        const ganhosWidthPct = Math.max((ganhosItem.value / maxValue) * 100, 15);
         return (
           <div className="w-full flex justify-center items-center">
             <div className="flex items-center gap-1.5" style={{ width: `${ganhosWidthPct}%`, minWidth: '120px' }}>
