@@ -1,41 +1,20 @@
 
 
-## Plano: Adicionar filtro e segmentação por Status do Negócio
+## Diagnóstico: Campos personalizados no seletor de colunas
 
-### O que será feito
+### Análise
 
-1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
+O código em `DrilldownDialog.tsx` já contém a lógica completa para buscar e exibir campos personalizados (linhas 57-76 para a query, linhas 213-230 para renderização). Confirmei que o banco de dados contém 19 campos personalizados ativos com `show_in_deals = true` para a conta do usuário.
 
-2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
+O problema mais provável é a **altura do ScrollArea** (`max-h-72` = 288px). Com 9 campos nativos (cada um ~32px) + header + padding, o conteúdo nativo já ocupa ~290px. Os campos personalizados ficam **abaixo da área visível** e a scrollbar do `ScrollArea` pode não ser suficientemente visível para indicar que há mais conteúdo.
 
-### Alterações por arquivo
+### Correção
 
-**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
-- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
-- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
-- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
+**Arquivo: `src/components/insights/visuals/DrilldownDialog.tsx`**
 
-**`src/components/insights/visuals/VisualQuickSettings.tsx`**
-- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
-- Passar para `DealFieldFilterSection` como prop
-- No `handleSave`, converter o array de status selecionados para o campo adequado no config
-- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
+1. Aumentar `max-h-72` para `max-h-[400px]` no ScrollArea para acomodar campos nativos + personalizados
+2. Mover a seção "Campos personalizados" para ser visualmente mais destacada com um sticky header ou separação clara
+3. Aumentar a largura do popover de `w-64` para `w-72` para melhor legibilidade
 
-**`src/components/insights/visual-builder/types.ts`**
-- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
-- Adicionar valor especial para `stackByCustomField` quando source é `_status`
-
-**`src/hooks/useVisualData.ts`**
-- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
-
-**`src/hooks/useStackedVisualData.ts`**
-- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
-- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
-
-### Arquivos alterados
-- `src/components/insights/visual-builder/types.ts`
-- `src/components/insights/visuals/DealFieldFilterSection.tsx`
-- `src/components/insights/visuals/VisualQuickSettings.tsx`
-- `src/hooks/useVisualData.ts`
-- `src/hooks/useStackedVisualData.ts`
+Isso garante que o usuário veja os campos personalizados sem precisar rolar, ou pelo menos que a scrollbar seja mais evidente.
 
