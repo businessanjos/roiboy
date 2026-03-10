@@ -949,6 +949,7 @@ export default function Forms() {
   const viewResponses = async (form: Form) => {
     setSelectedForm(form);
     setLoadingResponses(true);
+    setResponsesActiveTab("responses");
     setResponsesDialogOpen(true);
     resetPreview(); // Clear preview state when opening a new form
 
