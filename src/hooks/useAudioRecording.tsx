@@ -22,7 +22,7 @@ export function useAudioRecording(): UseAudioRecordingReturn {
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Helper function to detect best audio format for WhatsApp compatibility
   const getBestAudioMimeType = (): { mimeType: string; extension: string } => {

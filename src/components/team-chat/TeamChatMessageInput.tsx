@@ -48,7 +48,7 @@ export function TeamChatMessageInput({ onSendMessage, disabled }: TeamChatMessag
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const insertFormatting = useCallback((type: 'bold' | 'italic' | 'strikethrough' | 'monospace') => {

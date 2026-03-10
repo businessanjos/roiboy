@@ -124,7 +124,7 @@ export function useMessageAssistant({
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [currentSpinPhase, setCurrentSpinPhase] = useState<string | null>(null);
-  const suggestionsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const suggestionsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastMessagesRef = useRef<string>("");
 
   // Check spelling with debounce - OPTIMIZED: 3000ms debounce, 50 char minimum

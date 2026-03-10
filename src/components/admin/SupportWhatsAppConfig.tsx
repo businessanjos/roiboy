@@ -40,7 +40,7 @@ export function SupportWhatsAppConfig() {
 
   // Polling for connection status when connecting
   useEffect(() => {
-    let intervalId: NodeJS.Timeout;
+    let intervalId: ReturnType<typeof setInterval>;
     
     if (isPolling || settings?.status === "connecting") {
       intervalId = setInterval(() => {
