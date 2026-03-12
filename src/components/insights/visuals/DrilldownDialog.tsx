@@ -90,13 +90,73 @@ export function DrilldownDialog({
     [config?.dataSource]
   );
 
+  // Storage key for persisting column selection
+  const storageKey = useMemo(() => {
+    if (!currentUser?.id || !visualId) return null;
+    return `roy_drilldown_cols_${currentUser.id}_${visualId}`;
+  }, [currentUser?.id, visualId]);
+
   // Initialize selected columns when dialog opens
   useEffect(() => {
     if (open) {
+      if (storageKey) {
+        try {
+          const stored = localStorage.getItem(storageKey);
+          if (stored) {
+            const parsed = JSON.parse(stored) as string[];
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setSelectedColumns(parsed);
+              setSavedColumns(parsed);
+              setCurrentPage(0);
+              return;
+            }
+          }
+        } catch { /* ignore */ }
+      }
       setSelectedColumns(defaultCols);
+      setSavedColumns(defaultCols);
       setCurrentPage(0);
     }
-  }, [open, defaultCols]);
+  }, [open, defaultCols, storageKey]);
+
+  // Check if columns are dirty (changed from saved state)
+  const isDirty = useMemo(() => {
+    if (!savedColumns) return false;
+    if (selectedColumns.length !== savedColumns.length) return true;
+    return selectedColumns.some((col, i) => col !== savedColumns[i]);
+  }, [selectedColumns, savedColumns]);
+
+  // Save columns to localStorage
+  const handleSaveColumns = () => {
+    if (storageKey) {
+      localStorage.setItem(storageKey, JSON.stringify(selectedColumns));
+      setSavedColumns([...selectedColumns]);
+    }
+  };
+
+  // Drag-and-drop handlers for table header reordering
+  const handleHeaderDragStart = (index: number) => {
+    setDraggedColIndex(index);
+  };
+
+  const handleHeaderDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleHeaderDrop = (targetIndex: number) => {
+    if (draggedColIndex === null || draggedColIndex === targetIndex) {
+      setDraggedColIndex(null);
+      return;
+    }
+    setSelectedColumns(prev => {
+      const updated = [...prev];
+      const [moved] = updated.splice(draggedColIndex, 1);
+      updated.splice(targetIndex, 0, moved);
+      return updated;
+    });
+    setDraggedColIndex(null);
+  };
 
   // Derive extra cf columns to pass to the hook
   const extraCfColumns = useMemo(
