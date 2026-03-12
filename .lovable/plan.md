@@ -1,22 +1,41 @@
 
 
-## Problema
-O botão de alternância de tipo de gráfico (ícone `ArrowLeftRight`) não aparece em visuais empilhados porque o `chart_type` armazenado no banco é `bar_stacked`, que não está no conjunto de tipos intercambiáveis (`SWITCHABLE_SET`).
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-O `SWITCHABLE_SET` atual contém apenas: `bar`, `bar_horizontal`, `line`, `pie`.
+### O que será feito
 
-## Correção
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-**Arquivo: `src/components/insights/visuals/ConfigurableVisualCard.tsx`**
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-1. Expandir `SWITCHABLE_TYPES` para incluir `bar_stacked`:
-   ```
-   { type: 'bar_stacked', icon: BarChart3, label: 'Empilhado' }
-   ```
+### Alterações por arquivo
 
-2. Ao alternar de `bar_stacked` para outro tipo (ex: `line`, `pie`), o visual mantém a configuração de empilhamento (`stackBy`/`stackByCustomField`) no config — a renderização do `ConfigurableChart` já lida com isso naturalmente (ignora stacking quando o tipo não suporta).
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
 
-3. Ao alternar de outro tipo para `bar_stacked`, o visual volta a empilhar se já tiver `stackBy`/`stackByCustomField` no config.
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
 
-Isso garante que o botão apareça em **todos** os visuais de gráfico (incluindo empilhados) e que a alternância funcione sem perda de configuração.
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+
+### Arquivos alterados
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 

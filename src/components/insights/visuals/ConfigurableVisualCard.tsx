@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 const SWITCHABLE_TYPES: { type: ChartType; icon: React.ElementType; label: string }[] = [
   { type: 'bar', icon: BarChart3, label: 'Barras' },
   { type: 'bar_horizontal', icon: BarChart3, label: 'Barras H.' },
+  { type: 'bar_stacked', icon: BarChart3, label: 'Empilhado' },
   { type: 'line', icon: LineChart, label: 'Linhas' },
   { type: 'pie', icon: PieChart, label: 'Pizza' },
 ];
