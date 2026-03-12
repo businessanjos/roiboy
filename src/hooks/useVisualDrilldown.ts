@@ -150,6 +150,12 @@ async function fetchDealsRecords(
     filteredData = await filterByDealFields(filteredData, accountId, dealFilters) as any[];
   }
 
+  // Enrich with product if dimension is product/product_name
+  const isProductDimension = config.dimension?.field === 'product' || config.dimension?.field === 'product_name';
+  if (isProductDimension) {
+    filteredData = await enrichDealsWithProduct(accountId, filteredData);
+  }
+
   // Apply hiddenCategories filter
   if (config.hiddenCategories?.length && config.dimension) {
     filteredData = filteredData.filter((item: any) => {
