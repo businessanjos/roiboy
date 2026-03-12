@@ -292,6 +292,14 @@ export function DrilldownDialog({
                       </>
                     )}
                 </div>
+                {isDirty && (
+                  <div className="border-t px-3 py-2">
+                    <Button variant="outline" size="sm" className="w-full h-7 text-xs gap-1.5" onClick={handleSaveColumns}>
+                      <Save className="h-3 w-3" />
+                      Salvar colunas
+                    </Button>
+                  </div>
+                )}
               </PopoverContent>
             </Popover>
           </div>
