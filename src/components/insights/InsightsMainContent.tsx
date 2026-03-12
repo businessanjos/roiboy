@@ -24,6 +24,7 @@ export function InsightsMainContent() {
     createDashboard, 
     isCreating,
     updateVisual,
+    removeVisual,
   } = useInsightsDashboards();
 
   const { currentUser } = useCurrentUser();
