@@ -485,6 +485,91 @@ export async function enrichDealsWithCanal(accountId: string, deals: any[]): Pro
   }));
 }
 
+export async function enrichDealsWithProduct(accountId: string, deals: any[]): Promise<any[]> {
+  if (deals.length === 0) return deals;
+
+  // 1. Fetch the field definition to get legacy option labels
+  const { data: fieldDef } = await supabase
+    .from('custom_fields')
+    .select('options')
+    .eq('id', DEAL_ITEM_VENDA_FIELD_ID)
+    .single();
+
+  const optionLabels = new Map<string, string>();
+  if (fieldDef?.options && Array.isArray(fieldDef.options)) {
+    for (const opt of fieldDef.options as { value: string; label: string }[]) {
+      optionLabels.set(opt.value, opt.label);
+    }
+  }
+
+  // 2. Fetch product field values for all deals in batches
+  const dealIds = deals.map(d => d.id);
+  let allValues: any[] = [];
+  const batchSize = 500;
+
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batch = dealIds.slice(i, i + batchSize);
+    const { data, error } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, value_text')
+      .eq('field_id', DEAL_ITEM_VENDA_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('deal_id', batch);
+
+    if (error) {
+      console.error('Error fetching deal product values:', error);
+      continue;
+    }
+    allValues = allValues.concat(data || []);
+  }
+
+  // 3. Separate UUIDs from legacy option keys
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const productUuids = new Set<string>();
+  const dealValueMap = new Map<string, string>(); // deal_id -> raw value_text
+
+  for (const row of allValues) {
+    if (row.value_text) {
+      dealValueMap.set(row.deal_id, row.value_text);
+      if (uuidRegex.test(row.value_text)) {
+        productUuids.add(row.value_text);
+      }
+    }
+  }
+
+  // 4. Fetch product names for UUIDs
+  const productNameMap = new Map<string, string>();
+  const uuidArray = Array.from(productUuids);
+  for (let i = 0; i < uuidArray.length; i += batchSize) {
+    const batch = uuidArray.slice(i, i + batchSize);
+    const { data, error } = await supabase
+      .from('products')
+      .select('id, name')
+      .in('id', batch);
+
+    if (error) {
+      console.error('Error fetching product names:', error);
+      continue;
+    }
+    for (const p of data || []) {
+      productNameMap.set(p.id, p.name);
+    }
+  }
+
+  // 5. Resolve label for each deal
+  return deals.map(deal => {
+    const rawValue = dealValueMap.get(deal.id);
+    let productName = 'Não informado';
+    if (rawValue) {
+      if (uuidRegex.test(rawValue)) {
+        productName = productNameMap.get(rawValue) || rawValue;
+      } else {
+        productName = optionLabels.get(rawValue) || rawValue;
+      }
+    }
+    return { ...deal, product: productName };
+  });
+}
 async function enrichDealsWithMql(accountId: string, deals: any[]): Promise<any[]> {
   if (deals.length === 0) return deals;
 
