@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VisualErrorBoundary } from "./VisualErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings } from "lucide-react";
+import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings, LineChart, PieChart, ArrowLeftRight } from "lucide-react";
 import { useVisualData } from "@/hooks/useVisualData";
 import { useStackedVisualData } from "@/hooks/useStackedVisualData";
 import { useMapVisualData } from "@/hooks/useMapVisualData";
@@ -17,6 +17,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
+const SWITCHABLE_TYPES: { type: ChartType; icon: React.ElementType; label: string }[] = [
+  { type: 'bar', icon: BarChart3, label: 'Barras' },
+  { type: 'bar_horizontal', icon: BarChart3, label: 'Barras H.' },
+  { type: 'line', icon: LineChart, label: 'Linhas' },
+  { type: 'pie', icon: PieChart, label: 'Pizza' },
+];
+
+const SWITCHABLE_SET = new Set(SWITCHABLE_TYPES.map(t => t.type));
 
 interface InsightsVisual {
   id: string;
@@ -173,6 +188,41 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
                 <span className="truncate">{visual.title || "Visual"}</span>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
+                {SWITCHABLE_SET.has(chartType) && onUpdateVisual && (
+                  <Popover>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <PopoverTrigger asChild>
+                          <TooltipTrigger asChild>
+                            <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                              <ArrowLeftRight className="h-4 w-4" />
+                            </button>
+                          </TooltipTrigger>
+                        </PopoverTrigger>
+                        <TooltipContent>Alternar Tipo</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <PopoverContent className="w-auto p-2" align="end">
+                      <div className="grid grid-cols-2 gap-1">
+                        {SWITCHABLE_TYPES.map(({ type, icon: Icon, label }) => (
+                          <button
+                            key={type}
+                            onClick={() => onUpdateVisual(visual.id, { chart_type: type })}
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors",
+                              chartType === type
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            <Icon className={cn("h-4 w-4", type === 'bar_horizontal' && "rotate-90")} />
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
