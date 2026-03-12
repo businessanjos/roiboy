@@ -125,7 +125,7 @@ export function StackedHorizontalBarChart({
             className="text-muted-foreground"
           />
           <Tooltip content={<CustomTooltip formatting={safeFormatting} singleSeries={seriesKeys.length <= 1} />} />
-          {seriesKeys.length > 1 && (
+          {seriesKeys.length >= 1 && (
             <Legend
               verticalAlign="top"
               height={36}
@@ -181,7 +181,7 @@ export function StackedHorizontalBarChart({
           interval={0}
         />
         <Tooltip content={<CustomTooltip formatting={safeFormatting} singleSeries={seriesKeys.length <= 1} />} />
-        {seriesKeys.length > 1 && (
+        {seriesKeys.length >= 1 && (
           <Legend
             verticalAlign="top"
             height={36}
