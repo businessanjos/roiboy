@@ -198,7 +198,7 @@ export function DrilldownDialog({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-72 p-0" align="start">
-                <div className="max-h-[400px] overflow-y-auto">
+                <ScrollArea style={{ maxHeight: 'var(--radix-popover-content-available-height, 400px)' }}>
                   <div className="p-3 space-y-1">
                     <p className="text-xs font-medium text-muted-foreground mb-2">Campos nativos</p>
                     {nativeColumns.map(col => (
@@ -229,7 +229,7 @@ export function DrilldownDialog({
                       </>
                     )}
                   </div>
-                </div>
+                </ScrollArea>
               </PopoverContent>
             </Popover>
           </div>

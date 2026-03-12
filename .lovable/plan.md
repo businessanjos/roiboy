@@ -1,21 +1,41 @@
 
 
-## Correção: Scrollbar no seletor de colunas do Explorar Dados
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-### Problema
-O `PopoverContent` do Radix UI aplica **collision avoidance** por padrão, limitando a altura do popover para caber na viewport. Quando isso acontece, o conteúdo interno é cortado sem gerar scrollbar, pois o `overflow-y-auto` está no div interno mas o container externo (o próprio popover) é quem está sendo reduzido.
+### O que será feito
 
-Existem 19 campos personalizados com `show_in_deals=true`, mas o popover mostra apenas 1 porque o restante fica invisível abaixo do corte.
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-### Solução
-No arquivo `src/components/insights/visuals/DrilldownDialog.tsx`:
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-1. Substituir o `div` com `overflow-y-auto` por um `ScrollArea` (componente já importado no arquivo, linha 11)
-2. Adicionar `style={{ maxHeight: 'var(--radix-popover-content-available-height, 400px)' }}` ao ScrollArea — isso usa a variável CSS que o Radix expõe com a altura real disponível após collision detection
-3. Remover o `max-h-[400px]` fixo do div wrapper
+### Alterações por arquivo
 
-Isso garante que, independente de onde o popover é posicionado, o conteúdo sempre terá scrollbar funcional dentro do espaço disponível.
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
 
-### Arquivo editado
-- `src/components/insights/visuals/DrilldownDialog.tsx` (linhas 200-232)
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
+
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+
+### Arquivos alterados
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 
