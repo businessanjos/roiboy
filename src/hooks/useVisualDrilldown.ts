@@ -7,6 +7,7 @@ import { format, parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, en
 import { ptBR } from "date-fns/locale";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
+import { enrichDealsWithProduct } from "@/hooks/useVisualData";
 
 export interface DrilldownRecord {
   id: string;
