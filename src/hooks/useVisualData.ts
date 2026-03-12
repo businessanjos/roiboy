@@ -1510,7 +1510,7 @@ async function fetchTasksCallCommercialData(
 
   let baseQuery = supabase
     .from('internal_tasks')
-    .select('id, activity_type_id, completed_at, assigned_to, due_date, users!internal_tasks_assigned_to_fkey(name)')
+    .select('id, activity_type_id, completed_at, assigned_to, due_date, deal_id, users!internal_tasks_assigned_to_fkey(name)')
     .eq('account_id', accountId)
     .in('activity_type_id', typeIds)
     .not('assigned_to', 'is', null);
@@ -1537,20 +1537,21 @@ async function fetchTasksCallCommercialData(
     from += pageSize;
   }
 
-  const userMap = new Map<string, { scheduled: number; completed: number }>();
+  const userMap = new Map<string, { scheduledDeals: Set<string>; completedDeals: Set<string> }>();
 
   for (const task of allTasks) {
     const userName = (task.users as any)?.name;
     if (!userName) continue;
-    if (!userMap.has(userName)) userMap.set(userName, { scheduled: 0, completed: 0 });
+    if (!userMap.has(userName)) userMap.set(userName, { scheduledDeals: new Set(), completedDeals: new Set() });
     const entry = userMap.get(userName)!;
-    if (task.activity_type_id === agendadaType?.id && !task.completed_at) entry.scheduled++;
-    else if (task.activity_type_id === concluidaType?.id && task.completed_at) entry.completed++;
+    const dedupeKey = task.deal_id || task.id; // fallback to task id if no deal
+    if (task.activity_type_id === agendadaType?.id && !task.completed_at) entry.scheduledDeals.add(dedupeKey);
+    else if (task.activity_type_id === concluidaType?.id && task.completed_at) entry.completedDeals.add(dedupeKey);
   }
 
   const result: AggregatedDataPoint[] = [];
-  for (const [name, { scheduled, completed }] of userMap) {
-    result.push({ name, value: scheduled, count: completed });
+  for (const [name, { scheduledDeals, completedDeals }] of userMap) {
+    result.push({ name, value: scheduledDeals.size, count: completedDeals.size });
   }
   result.sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
 
