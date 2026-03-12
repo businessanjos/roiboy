@@ -232,6 +232,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
           open={drilldownOpen}
           onOpenChange={setDrilldownOpen}
           visual={visual}
+          visualId={visual.id}
           groupName={drilldownGroup}
         />
 

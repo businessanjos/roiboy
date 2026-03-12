@@ -37,6 +37,7 @@ interface DrilldownDialogProps {
     title: string | null;
     config: unknown;
   };
+  visualId?: string;
   groupName?: string;
 }
 
