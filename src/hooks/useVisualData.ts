@@ -1258,7 +1258,7 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], dateDispla
   if (field === 'canal') {
     return item.canal || 'Não informado';
   }
-  if (field === 'product') {
+  if (field === 'product' || field === 'product_name') {
     return item.product || 'Não informado';
   }
 
