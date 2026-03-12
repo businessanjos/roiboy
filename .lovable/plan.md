@@ -1,41 +1,40 @@
 
 
-## Plano: Adicionar filtro e segmentação por Status do Negócio
+## Alternância rápida de tipo de gráfico dentro do visual
 
 ### O que será feito
+Adicionar um botão no header de cada visual (ao lado dos ícones existentes de Explorar Dados, Ajustes e Info) que abre um popover/dropdown com os tipos de gráfico compatíveis. Ao selecionar, o `chart_type` do visual é atualizado no banco sem precisar recriar o visual — todos os filtros, medidas e dimensões são preservados.
 
-1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
+### Tipos intercambiáveis
+Nem todos os tipos são intercambiáveis (scorecard, gauge, indicator, bubble_map, data_table têm estruturas de dados muito diferentes). A alternância será limitada a tipos que compartilham a mesma estrutura de dados:
 
-2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
+```text
+Grupo "Gráfico padrão": bar, bar_horizontal, line, pie
+Grupo "Empilhado": bar_stacked (mantém sozinho, sem alternância)
+Grupo "Especial": number, scorecard, ranking, call_commercial, gauge, indicator, bubble_map, funnel, data_table (sem alternância)
+```
 
-### Alterações por arquivo
+O botão de alternância só aparecerá para visuais do grupo "Gráfico padrão".
 
-**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
-- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
-- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
-- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
+### Alterações
 
-**`src/components/insights/visuals/VisualQuickSettings.tsx`**
-- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
-- Passar para `DealFieldFilterSection` como prop
-- No `handleSave`, converter o array de status selecionados para o campo adequado no config
-- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
+**1. `src/components/insights/visuals/ConfigurableVisualCard.tsx`**
+- Importar `Popover`, `PopoverTrigger`, `PopoverContent` do shadcn
+- Importar ícones correspondentes (`BarChart3`, `LineChart`, `PieChart`, `ArrowLeftRight`)
+- Adicionar estado local para controlar o popover
+- Definir constante `SWITCHABLE_TYPES` com os 4 tipos intercambiáveis e seus ícones/labels
+- Renderizar botão com ícone `ArrowLeftRight` (ou similar) no header, apenas quando `chartType` pertence ao grupo intercambiável
+- Ao clicar num tipo, chamar `onUpdateVisual(visual.id, { chart_type: novoTipo })` — a mesma função já usada pelo QuickSettings
+- O visual re-renderiza automaticamente porque o `chart_type` muda no banco e o React Query invalida
 
-**`src/components/insights/visual-builder/types.ts`**
-- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
-- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+**2. Nenhuma outra alteração necessária**
+- `ConfigurableChart` já suporta todos os tipos via switch/case
+- `useVisualData` usa `chartType` no queryKey mas a query em si não muda para esses 4 tipos
+- O banco já aceita qualquer string em `chart_type`
 
-**`src/hooks/useVisualData.ts`**
-- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
-
-**`src/hooks/useStackedVisualData.ts`**
-- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
-- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
-
-### Arquivos alterados
-- `src/components/insights/visual-builder/types.ts`
-- `src/components/insights/visuals/DealFieldFilterSection.tsx`
-- `src/components/insights/visuals/VisualQuickSettings.tsx`
-- `src/hooks/useVisualData.ts`
-- `src/hooks/useStackedVisualData.ts`
+### UX
+- Ícone discreto no header (consistente com os existentes)
+- Popover compacto com 4 opções em grid (ícone + label curto)
+- Tipo atual destacado visualmente
+- Mudança instantânea (otimistic update)
 
