@@ -24,6 +24,7 @@ export function InsightsMainContent() {
     createDashboard, 
     isCreating,
     updateVisual,
+    removeVisual,
   } = useInsightsDashboards();
 
   const { currentUser } = useCurrentUser();
@@ -211,10 +212,12 @@ export function InsightsMainContent() {
 
             {/* Visuals preserving saved layout (read-only) */}
             {hasVisuals && (
-              <InsightsGrid 
+            <InsightsGrid 
                 visuals={visuals} 
                 onLayoutChange={() => {}} 
-                readOnly 
+                readOnly
+                onUpdateVisual={updateVisual}
+                onRemoveVisual={removeVisual}
               />
             )}
             </div>
@@ -276,7 +279,9 @@ export function InsightsMainContent() {
           !isFocusMode && (
             <InsightsGrid 
               visuals={visuals} 
-              onLayoutChange={handleLayoutChange} 
+              onLayoutChange={handleLayoutChange}
+              onUpdateVisual={updateVisual}
+              onRemoveVisual={removeVisual}
             />
           )
         ) : (
