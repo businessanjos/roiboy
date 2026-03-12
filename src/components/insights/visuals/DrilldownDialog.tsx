@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Download, ChevronLeft, ChevronRight, Columns3 } from "lucide-react";
+import { Download, ChevronLeft, ChevronRight, Columns3, Save, GripVertical } from "lucide-react";
 import { useVisualDrilldown, DrilldownRecord } from "@/hooks/useVisualDrilldown";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +37,7 @@ interface DrilldownDialogProps {
     title: string | null;
     config: unknown;
   };
+  visualId?: string;
   groupName?: string;
 }
 
@@ -46,11 +47,14 @@ export function DrilldownDialog({
   open,
   onOpenChange,
   visual,
+  visualId,
   groupName,
 }: DrilldownDialogProps) {
   const config = visual.config as VisualConfig | null;
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [savedColumns, setSavedColumns] = useState<string[] | null>(null);
+  const [draggedColIndex, setDraggedColIndex] = useState<number | null>(null);
   const { currentUser } = useCurrentUser();
 
   // Fetch custom fields for the data source
@@ -86,13 +90,73 @@ export function DrilldownDialog({
     [config?.dataSource]
   );
 
+  // Storage key for persisting column selection
+  const storageKey = useMemo(() => {
+    if (!currentUser?.id || !visualId) return null;
+    return `roy_drilldown_cols_${currentUser.id}_${visualId}`;
+  }, [currentUser?.id, visualId]);
+
   // Initialize selected columns when dialog opens
   useEffect(() => {
     if (open) {
+      if (storageKey) {
+        try {
+          const stored = localStorage.getItem(storageKey);
+          if (stored) {
+            const parsed = JSON.parse(stored) as string[];
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setSelectedColumns(parsed);
+              setSavedColumns(parsed);
+              setCurrentPage(0);
+              return;
+            }
+          }
+        } catch { /* ignore */ }
+      }
       setSelectedColumns(defaultCols);
+      setSavedColumns(defaultCols);
       setCurrentPage(0);
     }
-  }, [open, defaultCols]);
+  }, [open, defaultCols, storageKey]);
+
+  // Check if columns are dirty (changed from saved state)
+  const isDirty = useMemo(() => {
+    if (!savedColumns) return false;
+    if (selectedColumns.length !== savedColumns.length) return true;
+    return selectedColumns.some((col, i) => col !== savedColumns[i]);
+  }, [selectedColumns, savedColumns]);
+
+  // Save columns to localStorage
+  const handleSaveColumns = () => {
+    if (storageKey) {
+      localStorage.setItem(storageKey, JSON.stringify(selectedColumns));
+      setSavedColumns([...selectedColumns]);
+    }
+  };
+
+  // Drag-and-drop handlers for table header reordering
+  const handleHeaderDragStart = (index: number) => {
+    setDraggedColIndex(index);
+  };
+
+  const handleHeaderDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleHeaderDrop = (targetIndex: number) => {
+    if (draggedColIndex === null || draggedColIndex === targetIndex) {
+      setDraggedColIndex(null);
+      return;
+    }
+    setSelectedColumns(prev => {
+      const updated = [...prev];
+      const [moved] = updated.splice(draggedColIndex, 1);
+      updated.splice(targetIndex, 0, moved);
+      return updated;
+    });
+    setDraggedColIndex(null);
+  };
 
   // Derive extra cf columns to pass to the hook
   const extraCfColumns = useMemo(
@@ -228,6 +292,14 @@ export function DrilldownDialog({
                       </>
                     )}
                 </div>
+                {isDirty && (
+                  <div className="border-t px-3 py-2">
+                    <Button variant="outline" size="sm" className="w-full h-7 text-xs gap-1.5" onClick={handleSaveColumns}>
+                      <Save className="h-3 w-3" />
+                      Salvar colunas
+                    </Button>
+                  </div>
+                )}
               </PopoverContent>
             </Popover>
           </div>
@@ -249,9 +321,21 @@ export function DrilldownDialog({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {visibleColumns.map(col => (
-                      <TableHead key={col.key} style={{ minWidth: col.defaultWidth }} className="whitespace-nowrap">
-                        {col.label}
+                    {visibleColumns.map((col, colIndex) => (
+                      <TableHead
+                        key={col.key}
+                        style={{ minWidth: col.defaultWidth }}
+                        className={`whitespace-nowrap cursor-grab select-none ${draggedColIndex === colIndex ? 'opacity-50' : ''}`}
+                        draggable
+                        onDragStart={() => handleHeaderDragStart(colIndex)}
+                        onDragOver={handleHeaderDragOver}
+                        onDrop={() => handleHeaderDrop(colIndex)}
+                        onDragEnd={() => setDraggedColIndex(null)}
+                      >
+                        <span className="flex items-center gap-1">
+                          <GripVertical className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          {col.label}
+                        </span>
                       </TableHead>
                     ))}
                   </TableRow>
