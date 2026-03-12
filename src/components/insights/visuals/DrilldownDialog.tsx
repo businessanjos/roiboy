@@ -321,9 +321,21 @@ export function DrilldownDialog({
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {visibleColumns.map(col => (
-                      <TableHead key={col.key} style={{ minWidth: col.defaultWidth }} className="whitespace-nowrap">
-                        {col.label}
+                    {visibleColumns.map((col, colIndex) => (
+                      <TableHead
+                        key={col.key}
+                        style={{ minWidth: col.defaultWidth }}
+                        className={`whitespace-nowrap cursor-grab select-none ${draggedColIndex === colIndex ? 'opacity-50' : ''}`}
+                        draggable
+                        onDragStart={() => handleHeaderDragStart(colIndex)}
+                        onDragOver={handleHeaderDragOver}
+                        onDrop={() => handleHeaderDrop(colIndex)}
+                        onDragEnd={() => setDraggedColIndex(null)}
+                      >
+                        <span className="flex items-center gap-1">
+                          <GripVertical className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          {col.label}
+                        </span>
                       </TableHead>
                     ))}
                   </TableRow>
