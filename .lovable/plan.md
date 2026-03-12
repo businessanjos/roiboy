@@ -1,41 +1,20 @@
 
+Objetivo: corrigir a rolagem do popover “Colunas” para funcionar com a roda do mouse (sem depender de arrastar a barra).
 
-## Plano: Adicionar filtro e segmentação por Status do Negócio
+Diagnóstico
+- O container já tem `overflow-y-scroll`, mas por estar dentro de `Popover` em um `Dialog`, o evento de wheel está sendo capturado/interferido no nível superior.
+- Resultado: a rolagem por roda do mouse não aplica no conteúdo do seletor, embora arrastar a barra funcione.
 
-### O que será feito
+Plano de implementação
+1. Em `src/components/insights/visuals/DrilldownDialog.tsx`, tornar o popover modal (`<Popover modal={true}>`) para isolar melhor interação/scroll no contexto do dialog.
+2. No container scrollável da lista de colunas, adicionar handler de wheel robusto:
+   - `onWheel={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }}`
+   - Isso garante rolagem por mouse wheel mesmo quando o scroll padrão é bloqueado por camadas externas.
+3. Manter as classes atuais de UX (`overflow-y-scroll`, `overscroll-contain`, `max-h-[min(350px,calc(100vh-12rem))]`, `playbook-scroll-native`) para preservar barra visível e limite em telas menores.
+4. Validar comportamento:
+   - Roda do mouse para cima/baixo dentro do popover.
+   - Acesso até o último campo personalizado.
+   - Sem “scroll bleed” no modal pai.
 
-1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
-
-2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
-
-### Alterações por arquivo
-
-**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
-- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
-- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
-- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
-
-**`src/components/insights/visuals/VisualQuickSettings.tsx`**
-- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
-- Passar para `DealFieldFilterSection` como prop
-- No `handleSave`, converter o array de status selecionados para o campo adequado no config
-- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
-
-**`src/components/insights/visual-builder/types.ts`**
-- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
-- Adicionar valor especial para `stackByCustomField` quando source é `_status`
-
-**`src/hooks/useVisualData.ts`**
-- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
-
-**`src/hooks/useStackedVisualData.ts`**
-- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
-- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
-
-### Arquivos alterados
-- `src/components/insights/visual-builder/types.ts`
-- `src/components/insights/visuals/DealFieldFilterSection.tsx`
-- `src/components/insights/visuals/VisualQuickSettings.tsx`
-- `src/hooks/useVisualData.ts`
-- `src/hooks/useStackedVisualData.ts`
-
+Resultado esperado
+- O usuário conseguirá navegar toda a lista apenas com o scroll do mouse, de forma consistente em telas grandes e pequenas.
