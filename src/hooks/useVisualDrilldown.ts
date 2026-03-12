@@ -420,6 +420,9 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], config: Vi
   if (field === 'responsible_name') {
     return item.users?.name || 'Sem Responsável';
   }
+  if (field === 'product' || field === 'product_name') {
+    return item.product || 'Não informado';
+  }
   if (field === 'is_active') {
     return item.is_active ? 'Ativo' : 'Inativo';
   }
