@@ -228,6 +228,12 @@ async function fetchStackedDealsData(
     allDeals = await enrichDealsWithCanal(accountId, allDeals);
   }
 
+  // Enrich deals with Product if needed
+  const needsProduct = config.stackBy === 'product' || config.dimension.field === 'product';
+  if (needsProduct) {
+    allDeals = await enrichDealsWithProduct(accountId, allDeals);
+  }
+
   // Enrich with custom field or status for stacking if configured
   if (config.stackByCustomField) {
     if (config.stackByCustomField.source === '_status') {
