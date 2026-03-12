@@ -279,7 +279,9 @@ export function InsightsMainContent() {
           !isFocusMode && (
             <InsightsGrid 
               visuals={visuals} 
-              onLayoutChange={handleLayoutChange} 
+              onLayoutChange={handleLayoutChange}
+              onUpdateVisual={updateVisual}
+              onRemoveVisual={removeVisual}
             />
           )
         ) : (
