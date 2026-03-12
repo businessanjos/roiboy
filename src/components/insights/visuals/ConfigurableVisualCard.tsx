@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VisualErrorBoundary } from "./VisualErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings } from "lucide-react";
+import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings, LineChart, PieChart, ArrowLeftRight } from "lucide-react";
 import { useVisualData } from "@/hooks/useVisualData";
 import { useStackedVisualData } from "@/hooks/useStackedVisualData";
 import { useMapVisualData } from "@/hooks/useMapVisualData";
@@ -17,6 +17,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
+const SWITCHABLE_TYPES: { type: ChartType; icon: React.ElementType; label: string }[] = [
+  { type: 'bar', icon: BarChart3, label: 'Barras' },
+  { type: 'bar_horizontal', icon: BarChart3, label: 'Barras H.' },
+  { type: 'line', icon: LineChart, label: 'Linhas' },
+  { type: 'pie', icon: PieChart, label: 'Pizza' },
+];
+
+const SWITCHABLE_SET = new Set(SWITCHABLE_TYPES.map(t => t.type));
 
 interface InsightsVisual {
   id: string;
