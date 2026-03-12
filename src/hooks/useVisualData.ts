@@ -743,9 +743,10 @@ async function fetchDealsData(
   }
 
   // If grouping by Product, fetch Item da Venda custom field and resolve product names
-  if (dimension.field === 'product') {
+  if (dimension.field === 'product' || dimension.field === 'product_name') {
     const enrichedData = await enrichDealsWithProduct(accountId, filteredData);
-    return aggregateData(enrichedData, measure, dimension, dateDisplayFormat);
+    const normalizedDimension = { ...dimension, field: 'product' };
+    return aggregateData(enrichedData, measure, normalizedDimension, dateDisplayFormat);
   }
 
   return aggregateData(filteredData, measure, dimension, dateDisplayFormat);
@@ -1257,7 +1258,7 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], dateDispla
   if (field === 'canal') {
     return item.canal || 'Não informado';
   }
-  if (field === 'product') {
+  if (field === 'product' || field === 'product_name') {
     return item.product || 'Não informado';
   }
 

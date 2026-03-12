@@ -96,7 +96,7 @@ const GROUP_BY_TO_DIMENSION: Record<GroupBy, { field: string; type: 'date' | 'te
   month: { field: 'created_at', type: 'date', dateGrouping: 'month' }, // Default, overridden by getDateFieldForMetric
   user: { field: 'responsible_name', type: 'text' },
   stage: { field: 'stage_name', type: 'text' },
-  product: { field: 'product_name', type: 'text' },
+  product: { field: 'product', type: 'text' },
   mql: { field: 'mql', type: 'text' },
   faturamento_atual: { field: 'faturamento_atual', type: 'text' },
   canal: { field: 'canal', type: 'text' },

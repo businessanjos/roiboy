@@ -7,6 +7,7 @@ import { format, parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, en
 import { ptBR } from "date-fns/locale";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
+import { enrichDealsWithProduct } from "@/hooks/useVisualData";
 
 export interface DrilldownRecord {
   id: string;
@@ -147,6 +148,12 @@ async function fetchDealsRecords(
   const dealFilters = getDealFilters(config);
   if (dealFilters.length > 0) {
     filteredData = await filterByDealFields(filteredData, accountId, dealFilters) as any[];
+  }
+
+  // Enrich with product if dimension is product/product_name
+  const isProductDimension = config.dimension?.field === 'product' || config.dimension?.field === 'product_name';
+  if (isProductDimension) {
+    filteredData = await enrichDealsWithProduct(accountId, filteredData);
   }
 
   // Apply hiddenCategories filter
@@ -412,6 +419,9 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], config: Vi
   }
   if (field === 'responsible_name') {
     return item.users?.name || 'Sem Responsável';
+  }
+  if (field === 'product' || field === 'product_name') {
+    return item.product || 'Não informado';
   }
   if (field === 'is_active') {
     return item.is_active ? 'Ativo' : 'Inativo';
