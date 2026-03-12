@@ -742,6 +742,12 @@ async function fetchDealsData(
     return aggregateData(enrichedData, measure, dimension, dateDisplayFormat);
   }
 
+  // If grouping by Product, fetch Item da Venda custom field and resolve product names
+  if (dimension.field === 'product') {
+    const enrichedData = await enrichDealsWithProduct(accountId, filteredData);
+    return aggregateData(enrichedData, measure, dimension, dateDisplayFormat);
+  }
+
   return aggregateData(filteredData, measure, dimension, dateDisplayFormat);
 }
 
