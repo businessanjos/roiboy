@@ -47,11 +47,14 @@ export function DrilldownDialog({
   open,
   onOpenChange,
   visual,
+  visualId,
   groupName,
 }: DrilldownDialogProps) {
   const config = visual.config as VisualConfig | null;
   const [currentPage, setCurrentPage] = useState(0);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [savedColumns, setSavedColumns] = useState<string[] | null>(null);
+  const [draggedColIndex, setDraggedColIndex] = useState<number | null>(null);
   const { currentUser } = useCurrentUser();
 
   // Fetch custom fields for the data source
