@@ -1,39 +1,41 @@
 
 
-## Adicionar dimensão "Produto" para visuais de Negócios
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-### Problema
-Não existe a opção de agrupar negócios por Produto no visual builder configurável. O campo "Item da Venda" é armazenado na tabela `deal_field_values` (campo `033b91fb-...`), e o valor pode ser um UUID de produto ou uma chave de opção legada — não está diretamente na tabela `deals`.
+### O que será feito
 
-### Solução
-Seguir o mesmo padrão já existente para "Canal" (`enrichDealsWithCanal`): criar uma função `enrichDealsWithProduct` e adicionar `product` como dimensão disponível para negócios.
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-### Alterações
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-**1. `src/components/insights/visual-builder/types.ts`**
-- Adicionar na lista `deals.dimension`:
-  ```
-  { value: 'product', label: 'Produto', type: 'text' }
-  ```
+### Alterações por arquivo
 
-**2. `src/hooks/useVisualData.ts`**
-- Criar função `enrichDealsWithProduct(accountId, deals)` que:
-  - Busca valores de `deal_field_values` onde `field_id = ITEM_VENDA`
-  - Se o valor for UUID válido → busca nome do produto na tabela `products`
-  - Se não for UUID → resolve label via opções do campo personalizado (legado)
-  - Injeta campo `product` em cada deal
-- Em `fetchDealsData`, adicionar bloco (similar ao de `canal`):
-  ```typescript
-  if (dimension.field === 'product') {
-    const enrichedData = await enrichDealsWithProduct(accountId, filteredData);
-    return aggregateData(enrichedData, measure, dimension, dateDisplayFormat);
-  }
-  ```
-- Em `getGroupKey`, adicionar:
-  ```typescript
-  if (field === 'product') return item.product || 'Não informado';
-  ```
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
 
-**3. `src/hooks/useStackedVisualData.ts`**
-- Adicionar enriquecimento de produto quando `dimension.field === 'product'` ou `stackBy === 'product'`, seguindo o padrão do Canal.
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
+
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+
+### Arquivos alterados
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 
