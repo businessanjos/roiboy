@@ -245,6 +245,7 @@ export const DATA_SOURCE_FIELDS: Record<DataSource, {
       { value: 'lost_at', label: 'Data de Perda', type: 'date' },
       { value: 'lost_reason', label: 'Motivo de Perda', type: 'text' },
       { value: 'canal', label: 'Canal', type: 'text' },
+      { value: 'product', label: 'Produto', type: 'text' },
     ],
   },
   leads: {

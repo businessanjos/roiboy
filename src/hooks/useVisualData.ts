@@ -430,6 +430,7 @@ async function enrichLeadsWithOwner(accountId: string, leads: any[]): Promise<an
 }
 
 const DEAL_CANAL_FIELD_ID = '16ebda9f-cd3b-412c-bb06-0950001963c5';
+const DEAL_ITEM_VENDA_FIELD_ID = '033b91fb-3add-4c96-aec9-567fefbd0fb2';
 
 export async function enrichDealsWithCanal(accountId: string, deals: any[]): Promise<any[]> {
   if (deals.length === 0) return deals;
