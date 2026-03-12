@@ -190,7 +190,7 @@ export function DrilldownDialog({
             <span>{records.length} registros</span>
             <span>•</span>
             {/* Column selector */}
-            <Popover>
+            <Popover modal={true}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
                   <Columns3 className="h-3.5 w-3.5" />
@@ -198,7 +198,7 @@ export function DrilldownDialog({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-72 p-0" align="start">
-                <div className="overflow-y-scroll overscroll-contain max-h-[min(350px,calc(100vh-12rem))] playbook-scroll-native p-3 space-y-1">
+                <div onWheel={(e) => { e.stopPropagation(); e.currentTarget.scrollTop += e.deltaY; }} className="overflow-y-scroll overscroll-contain max-h-[min(350px,calc(100vh-12rem))] playbook-scroll-native p-3 space-y-1">
                     <p className="text-xs font-medium text-muted-foreground mb-2">Campos nativos</p>
                     {nativeColumns.map(col => (
                       <label key={col.key} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-muted/50 rounded px-1">
