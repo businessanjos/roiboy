@@ -1,41 +1,36 @@
 
 
-## Plano: Adicionar filtro e segmentação por Status do Negócio
+## Persistir Colunas e Reordenar no "Explorar Dados"
 
-### O que será feito
+### O que muda
 
-1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
+1. **Persistência de colunas selecionadas**: Ao alterar colunas no popover, aparece um botão "Salvar" sutil. Ao clicar, a seleção (e ordem) é salva no `localStorage` por visual (usando `visual.id` + `dataSource`). Ao reabrir o dialog, restaura a configuração salva em vez dos defaults.
 
-2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
+2. **Reordenação de colunas por drag-and-drop**: Os cabeçalhos da tabela no "Explorar Dados" ganham suporte a arrastar e soltar para reordenar livremente. A nova ordem é refletida imediatamente e salva junto com a seleção ao clicar "Salvar".
 
-### Alterações por arquivo
+### Alterações técnicas
 
-**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
-- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
-- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
-- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
+**Arquivo: `src/components/insights/visuals/DrilldownDialog.tsx`**
 
-**`src/components/insights/visuals/VisualQuickSettings.tsx`**
-- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
-- Passar para `DealFieldFilterSection` como prop
-- No `handleSave`, converter o array de status selecionados para o campo adequado no config
-- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
+- Adicionar `visualId` como prop (vindo de `visual.id` via `ConfigurableVisualCard`)
+- Criar chave de localStorage: `roy_drilldown_cols_{userId}_{visualId}`
+- No `useEffect` de abertura: carregar colunas salvas do localStorage; se não houver, usar `defaultCols`
+- Rastrear se houve mudança vs. estado salvo (`isDirty`) para mostrar/esconder o botão "Salvar"
+- Botão "Salvar" aparece no rodapé do Popover de colunas quando `isDirty = true`
+- Ao salvar: gravar `selectedColumns` (array ordenado) no localStorage
+- Para reordenação dos cabeçalhos: implementar drag-and-drop nativo (HTML5 `draggable`, `onDragStart`, `onDragOver`, `onDrop`) nos `<TableHead>` — atualiza `selectedColumns` ao soltar, sem dependência externa adicional
 
-**`src/components/insights/visual-builder/types.ts`**
-- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
-- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+**Arquivo: `src/components/insights/visuals/ConfigurableVisualCard.tsx`**
 
-**`src/hooks/useVisualData.ts`**
-- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+- Passar `visual.id` como prop `visualId` ao `<DrilldownDialog>`
 
-**`src/hooks/useStackedVisualData.ts`**
-- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
-- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+**Interface `DrilldownDialogProps`**:
+- Adicionar campo `visualId?: string`
 
-### Arquivos alterados
-- `src/components/insights/visual-builder/types.ts`
-- `src/components/insights/visuals/DealFieldFilterSection.tsx`
-- `src/components/insights/visuals/VisualQuickSettings.tsx`
-- `src/hooks/useVisualData.ts`
-- `src/hooks/useStackedVisualData.ts`
+### Fluxo do usuário
+1. Abre "Explorar Dados" → colunas carregadas do localStorage (ou defaults)
+2. Altera seleção de colunas → botão "Salvar" aparece no popover
+3. Clica "Salvar" → persiste no localStorage, botão desaparece
+4. Arrasta cabeçalho de coluna na tabela → reordena colunas imediatamente
+5. Reabre dialog → colunas e ordem restauradas
 
