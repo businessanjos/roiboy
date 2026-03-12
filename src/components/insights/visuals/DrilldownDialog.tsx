@@ -190,7 +190,7 @@ export function DrilldownDialog({
             <span>{records.length} registros</span>
             <span>•</span>
             {/* Column selector */}
-            <Popover>
+            <Popover modal={true}>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-7 gap-1.5 text-xs">
                   <Columns3 className="h-3.5 w-3.5" />
