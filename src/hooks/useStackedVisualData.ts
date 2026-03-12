@@ -153,6 +153,22 @@ export function useStackedVisualData({ config, enabled = true }: UseStackedVisua
   });
 }
 
+// Detect if a dimension field is categorical (non-date)
+const CATEGORICAL_FIELDS = ['product', 'product_name', 'canal', 'responsible'];
+
+function isCategoricalField(field: string | undefined, type: string | undefined): boolean {
+  if (type && type !== 'date') return true;
+  if (field && CATEGORICAL_FIELDS.includes(field)) return true;
+  return false;
+}
+
+function getCategoryValue(deal: any, field: string): string {
+  if (field === 'product' || field === 'product_name') return deal.product || 'Não informado';
+  if (field === 'canal') return deal.canal || 'Não informado';
+  if (field === 'responsible') return (deal.users as any)?.name || 'Sem Responsável';
+  return deal[field] || 'Não informado';
+}
+
 async function fetchStackedDealsData(
   accountId: string,
   config: VisualConfig,
@@ -160,6 +176,7 @@ async function fetchStackedDealsData(
 ): Promise<{ data: StackedDataPoint[]; seriesKeys: string[] }> {
   const { measure, dimension, statusFilter } = config;
   const displayFormat = config.appearance?.dateDisplayFormat || 'monthYear';
+  const isCategorical = isCategoricalField(dimension.field, dimension.type);
 
   let query = supabase
     .from('deals')
@@ -175,9 +192,9 @@ async function fetchStackedDealsData(
     query = query.eq('status', statusFilter);
   }
 
-  // Determine date field with smart mapping (same logic as useVisualData)
+  // Determine date field for temporal filtering (NOT the dimension field when categorical)
   let dateField: string;
-  if (dimension.field && dimension.field !== 'created_at') {
+  if (!isCategorical && dimension.field && dimension.field !== 'created_at') {
     dateField = dimension.field;
   } else if (statusFilter === 'won') {
     dateField = 'won_at';
@@ -237,7 +254,6 @@ async function fetchStackedDealsData(
   // Enrich with custom field or status for stacking if configured
   if (config.stackByCustomField) {
     if (config.stackByCustomField.source === '_status') {
-      // Inject status label directly
       const statusLabelMap: Record<string, string> = { won: 'Ganho', open: 'Em Aberto', lost: 'Perdido' };
       allDeals = allDeals.map(d => ({ ...d, _custom_stack_label: statusLabelMap[d.status] || d.status }));
     } else {
@@ -250,9 +266,61 @@ async function fetchStackedDealsData(
     }
   }
 
+  const getSeriesValue = (record: any): string => {
+    if (config.stackByCustomField) {
+      return record._custom_stack_label || 'Não informado';
+    }
+    return (record.users as any)?.name || 'Sem Responsável';
+  };
+
+  // === CATEGORICAL DIMENSION PATH ===
+  if (isCategorical) {
+    const categoryMap = new Map<string, Map<string, number>>();
+    const allSeries = new Set<string>();
+
+    for (const deal of allDeals) {
+      const catValue = getCategoryValue(deal, dimension.field || 'product');
+      const seriesValue = getSeriesValue(deal);
+      allSeries.add(seriesValue);
+
+      if (!categoryMap.has(catValue)) categoryMap.set(catValue, new Map());
+      const seriesMap = categoryMap.get(catValue)!;
+      const currentVal = seriesMap.get(seriesValue) || 0;
+
+      if (measure.aggregation === 'count') {
+        seriesMap.set(seriesValue, currentVal + 1);
+      } else {
+        seriesMap.set(seriesValue, currentVal + (deal.value || 0));
+      }
+    }
+
+    if (!config.stackByCustomField) {
+      allSeries.delete('Sem Responsável');
+    }
+
+    const seriesKeys = Array.from(allSeries).sort();
+    const result: StackedDataPoint[] = [];
+
+    for (const [category, seriesMap] of categoryMap) {
+      const point: StackedDataPoint = { name: category };
+      for (const key of seriesKeys) {
+        point[key] = seriesMap.get(key) || 0;
+      }
+      result.push(point);
+    }
+
+    result.sort((a, b) => {
+      const totalA = seriesKeys.reduce((sum, k) => sum + (Number(a[k]) || 0), 0);
+      const totalB = seriesKeys.reduce((sum, k) => sum + (Number(b[k]) || 0), 0);
+      return totalB - totalA;
+    });
+
+    return { data: result, seriesKeys };
+  }
+
+  // === TEMPORAL DIMENSION PATH ===
   const dateGrouping = config.dimension.dateGrouping || 'day';
 
-  // Determine the full date range from filters
   let rangeStart: Date;
   let rangeEnd: Date;
 
@@ -270,7 +338,6 @@ async function fetchStackedDealsData(
     rangeEnd = endOfYear(new Date());
   }
 
-  // Helper to get period key and label from a date
   const getPeriodKey = (date: Date): string => {
     switch (dateGrouping) {
       case 'year': return format(date, 'yyyy');
@@ -297,7 +364,6 @@ async function fetchStackedDealsData(
     }
   };
 
-  // Generate all periods in the interval
   const allPeriods: { key: string; label: string }[] = [];
   switch (dateGrouping) {
     case 'year':
@@ -310,23 +376,14 @@ async function fetchStackedDealsData(
       eachWeekOfInterval({ start: rangeStart, end: rangeEnd }, { weekStartsOn: 1 }).forEach(d => allPeriods.push({ key: getPeriodKey(d), label: getPeriodLabel(d) }));
       break;
     default:
-      // Fixed 01-31 range: aggregate same day across months
       for (let d = 1; d <= 31; d++) {
         const key = String(d).padStart(2, '0');
         allPeriods.push({ key, label: key });
       }
   }
 
-  // Group by period key and by series value
   const periodMap = new Map<string, Map<string, number>>();
   const allSeries = new Set<string>();
-
-  const getSeriesValue = (record: any): string => {
-    if (config.stackByCustomField) {
-      return record._custom_stack_label || 'Não informado';
-    }
-    return (record.users as any)?.name || 'Sem Responsável';
-  };
 
   for (const deal of allDeals) {
     const dateStr = (deal as any)[dateField];
@@ -350,14 +407,12 @@ async function fetchStackedDealsData(
     }
   }
 
-  // Remove "Sem Responsável" / "Não informado" cleanup
   if (!config.stackByCustomField) {
     allSeries.delete('Sem Responsável');
   }
 
   const seriesKeys = Array.from(allSeries).sort() as string[];
 
-  // Build data points for ALL periods in the range
   const result: StackedDataPoint[] = [];
 
   for (const period of allPeriods) {

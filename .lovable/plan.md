@@ -1,31 +1,41 @@
 
 
-## Corrigir visual empilhado com dimensão categórica (Produto + Faturamento Atual)
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-### Problema
-`fetchStackedDealsData` assume que a dimensão (eixo X) é sempre temporal (data). Quando a dimensão é `product` (ou `canal`, `responsible`), a linha 180 define `dateField = 'product'`, e depois tenta filtrar por datas e fazer `parseISO` nesse valor — resultando em dados vazios.
+### O que será feito
 
-### Causa raiz
-Não existe um caminho categórico em `fetchStackedDealsData`, ao contrário de `fetchStackedLeadsData` que já possui essa lógica (linhas ~460-510 do mesmo arquivo).
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-### Correção
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-**Arquivo: `src/hooks/useStackedVisualData.ts` — função `fetchStackedDealsData`**
+### Alterações por arquivo
 
-1. **Detectar se a dimensão é categórica**: Verificar se `dimension.type !== 'date'` ou se o campo é `product`/`product_name`/`canal`/`responsible` (campos não-data).
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
 
-2. **Separar o dateField da lógica de filtro temporal**: Quando a dimensão é categórica, o dateField para filtros de data deve ser inferido do `statusFilter` (won_at, lost_at, created_at) — não do `dimension.field`.
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
 
-3. **Adicionar caminho categórico**: Após o enriquecimento (produto, canal, custom field), quando a dimensão é categórica:
-   - Agrupar deals pela categoria (ex: `deal.product`) no eixo X
-   - Agrupar pela série (ex: `_custom_stack_label` do Faturamento Atual) para empilhamento
-   - Construir `StackedDataPoint[]` com categorias como `name` e séries como chaves
-   - Ordenar por total descendente (como já feito em leads)
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
 
-4. **Manter caminho temporal inalterado**: O fluxo atual de agrupamento por períodos de data continua funcionando para dimensões temporais.
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
 
-Mudanças concentradas em ~60 linhas dentro de `fetchStackedDealsData`:
-- Linhas ~178-188: Não usar `dimension.field` como dateField quando é categórico
-- Após linha ~251: Adicionar bloco `if (isCategoricalDimension)` com lógica de agrupamento categórico + return antecipado
-- Helper `getCategoryValue(deal, field)` para resolver `product`, `canal`, `responsible`, etc.
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+
+### Arquivos alterados
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 
