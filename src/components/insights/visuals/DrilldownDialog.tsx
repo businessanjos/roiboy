@@ -228,7 +228,7 @@ export function DrilldownDialog({
                         })}
                       </>
                     )}
-                  </div>
+                </ScrollArea>
                 </div>
               </PopoverContent>
             </Popover>
