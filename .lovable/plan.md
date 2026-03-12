@@ -1,28 +1,41 @@
 
-Objetivo: corrigir o seletor “Colunas” do Explorar Dados para que a rolagem funcione sempre e nenhuma opção fique inacessível.
 
-Diagnóstico atual
-- O popover de colunas está em `src/components/insights/visuals/DrilldownDialog.tsx`.
-- Hoje ele usa `ScrollArea` customizada com `max-h-[350px]`, mas para este caso a barra não está aparecendo/funcionando de forma confiável dentro do popover.
-- Resultado: quando há muitos campos personalizados, itens no fim da lista ficam inacessíveis.
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-Plano de implementação
-1. Trocar a área de rolagem da lista de colunas para rolagem nativa do navegador (mais confiável neste contexto de popover):
-   - Substituir o `<ScrollArea ...>` por um `<div ...>` scrollável.
-2. Forçar scroll vertical sempre disponível:
-   - Usar classe com altura limitada + `overflow-y-scroll` (não `auto`) para manter a barra presente.
-3. Garantir comportamento em telas menores:
-   - Aplicar limite de altura com viewport-safe (ex.: `max-h-[min(350px,calc(100vh-12rem))]`) para nunca ultrapassar a janela.
-4. Melhorar usabilidade do scroll:
-   - Adicionar `overscroll-contain` para evitar “scroll bleed” no modal pai.
-   - Aplicar classe de scrollbar nativa já existente (`playbook-scroll-native`) para pista visual da barra.
-5. Limpeza:
-   - Remover import não usado de `ScrollArea` em `DrilldownDialog.tsx`.
+### O que será feito
 
-Arquivo afetado
-- `src/components/insights/visuals/DrilldownDialog.tsx`
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-Validação após implementação
-- Abrir “Colunas” com muitos campos personalizados e confirmar acesso até o último item.
-- Testar em altura menor de viewport para confirmar que o popover não estoura a tela e continua rolável.
-- Confirmar que seleção/desseleção de campos continua funcionando normalmente.
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
+
+### Alterações por arquivo
+
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
+
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
+
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+
+### Arquivos alterados
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
+

@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
@@ -198,8 +198,7 @@ export function DrilldownDialog({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-72 p-0" align="start">
-                <ScrollArea className="max-h-[350px]">
-                  <div className="p-3 space-y-1">
+                <div className="overflow-y-scroll overscroll-contain max-h-[min(350px,calc(100vh-12rem))] playbook-scroll-native p-3 space-y-1">
                     <p className="text-xs font-medium text-muted-foreground mb-2">Campos nativos</p>
                     {nativeColumns.map(col => (
                       <label key={col.key} className="flex items-center gap-2 py-1 cursor-pointer hover:bg-muted/50 rounded px-1">
@@ -228,8 +227,7 @@ export function DrilldownDialog({
                         })}
                       </>
                     )}
-                  </div>
-                </ScrollArea>
+                </div>
               </PopoverContent>
             </Popover>
           </div>
