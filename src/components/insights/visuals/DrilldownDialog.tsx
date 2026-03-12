@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import { Download, ChevronLeft, ChevronRight, Columns3 } from "lucide-react";
+import { Download, ChevronLeft, ChevronRight, Columns3, Save, GripVertical } from "lucide-react";
 import { useVisualDrilldown, DrilldownRecord } from "@/hooks/useVisualDrilldown";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
