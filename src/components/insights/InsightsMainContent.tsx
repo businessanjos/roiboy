@@ -212,10 +212,12 @@ export function InsightsMainContent() {
 
             {/* Visuals preserving saved layout (read-only) */}
             {hasVisuals && (
-              <InsightsGrid 
+            <InsightsGrid 
                 visuals={visuals} 
                 onLayoutChange={() => {}} 
-                readOnly 
+                readOnly
+                onUpdateVisual={updateVisual}
+                onRemoveVisual={removeVisual}
               />
             )}
             </div>
