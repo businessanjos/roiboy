@@ -64,9 +64,12 @@ const CustomTooltip = ({ active, payload, label, formatting, singleSeries }: any
 
 const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMultiplier: number) => {
   const { x, y, width, height, value } = props;
-  const minWidth = 40 * fontMultiplier;
-  const minHeight = 18 * fontMultiplier;
+  const minWidth = 35;
+  const minHeight = 14;
   if (!value || value === 0 || width < minWidth || height < minHeight) return null;
+
+  const baseFontSize = Math.round(10 * fontMultiplier);
+  const effectiveFontSize = Math.min(baseFontSize, height - 2);
 
   return (
     <text
@@ -75,7 +78,7 @@ const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMul
       fill="white"
       textAnchor="middle"
       dominantBaseline="middle"
-      fontSize={Math.round(10 * fontMultiplier)}
+      fontSize={effectiveFontSize}
       fontWeight={600}
     >
       {formatValueCompact(value, formatting.type)}
@@ -154,7 +157,7 @@ export function StackedHorizontalBarChart({
   }
 
   // Horizontal layout (original)
-  const barHeight = 32;
+  const barHeight = 40;
   const minHeight = 300;
   const calculatedHeight = Math.max(minHeight, data.length * barHeight + 80);
 
