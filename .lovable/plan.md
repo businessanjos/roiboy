@@ -1,41 +1,29 @@
 
 
-## Plano: Adicionar filtro e segmentação por Status do Negócio
+## Problema: Rótulos de dados desapareceram no gráfico empilhado horizontal
 
-### O que será feito
+### Causa raiz
 
-1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
+A função `renderInsideLabel` em `StackedHorizontalBarChart.tsx` (linha 65-69) escala os thresholds mínimos (`minWidth` e `minHeight`) pelo multiplicador de fonte:
 
-2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
+```
+minWidth = 40 * fontMultiplier   // xlarge: 64px
+minHeight = 18 * fontMultiplier  // xlarge: 28.8px
+```
 
-### Alterações por arquivo
+Com 31 pontos de dados (dias), cada barra horizontal tem ~32px de altura total. Dividida entre 4 vendedores (séries empilhadas), cada segmento tem ~8px de altura — muito abaixo dos 28.8px exigidos. Resultado: **todos** os rótulos são filtrados e nenhum é exibido.
 
-**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
-- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
-- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
-- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
+### Correção
 
-**`src/components/insights/visuals/VisualQuickSettings.tsx`**
-- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
-- Passar para `DealFieldFilterSection` como prop
-- No `handleSave`, converter o array de status selecionados para o campo adequado no config
-- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
+**Arquivo: `src/components/insights/visuals/StackedHorizontalBarChart.tsx`**
 
-**`src/components/insights/visual-builder/types.ts`**
-- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
-- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+1. **Reduzir os thresholds mínimos** — não escalar `minWidth`/`minHeight` pelo multiplicador de fonte (o threshold define espaço disponível, não tamanho do texto):
+   - `minWidth`: fixo em 35px
+   - `minHeight`: fixo em 14px
 
-**`src/hooks/useVisualData.ts`**
-- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+2. **Reduzir o fontSize do label** quando o espaço é pequeno — usar `Math.min(fontSize, height - 2)` para que o texto caiba mesmo em segmentos estreitos.
 
-**`src/hooks/useStackedVisualData.ts`**
-- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
-- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+3. **Aumentar `barHeight`** de 32 para 40px no layout horizontal para dar mais espaço vertical a cada barra, melhorando a legibilidade.
 
-### Arquivos alterados
-- `src/components/insights/visual-builder/types.ts`
-- `src/components/insights/visuals/DealFieldFilterSection.tsx`
-- `src/components/insights/visuals/VisualQuickSettings.tsx`
-- `src/hooks/useVisualData.ts`
-- `src/hooks/useStackedVisualData.ts`
+Isso restaura os rótulos dentro das barras sem comprometer a legibilidade, independente do `fontScale` configurado.
 
