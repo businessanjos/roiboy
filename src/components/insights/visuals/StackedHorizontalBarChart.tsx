@@ -157,7 +157,7 @@ export function StackedHorizontalBarChart({
   }
 
   // Horizontal layout (original)
-  const barHeight = 32;
+  const barHeight = 40;
   const minHeight = 300;
   const calculatedHeight = Math.max(minHeight, data.length * barHeight + 80);
 
