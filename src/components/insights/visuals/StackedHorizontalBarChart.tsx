@@ -64,12 +64,15 @@ const CustomTooltip = ({ active, payload, label, formatting, singleSeries }: any
 
 const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMultiplier: number) => {
   const { x, y, width, height, value } = props;
-  const minWidth = 35;
-  const minHeight = 14;
-  if (!value || value === 0 || width < minWidth || height < minHeight) return null;
+  if (!value || value === 0 || height < 14) return null;
 
   const baseFontSize = Math.round(10 * fontMultiplier);
   const effectiveFontSize = Math.min(baseFontSize, height - 2);
+
+  const formatted = formatValueCompact(value, formatting.type);
+  const estimatedTextWidth = formatted.length * effectiveFontSize * 0.65;
+
+  if (estimatedTextWidth + 8 > width) return null;
 
   return (
     <text
@@ -81,7 +84,7 @@ const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMul
       fontSize={effectiveFontSize}
       fontWeight={600}
     >
-      {formatValueCompact(value, formatting.type)}
+      {formatted}
     </text>
   );
 };
