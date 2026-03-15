@@ -2,9 +2,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommissionTab } from "@/components/sales/commission/CommissionTab";
 import { CareerPlanTab } from "@/components/sales/commission/CareerPlanTab";
 import { SalesTeamWrapper } from "@/components/sales/team/SalesTeamWrapper";
-import { Users, DollarSign, GraduationCap } from "lucide-react";
+import { Users, DollarSign, GraduationCap, Phone, Activity } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCommissionPlan } from "@/hooks/useCommissionPlan";
+import { ThreeCPlusMetrics } from "@/components/threecplus/ThreeCPlusMetrics";
+import { ThreeCPlusLiveMonitor } from "@/components/threecplus/ThreeCPlusLiveMonitor";
 
 export default function SalesTeam() {
   const { currentUser } = useCurrentUser();
@@ -27,6 +29,14 @@ export default function SalesTeam() {
               <Users className="h-4 w-4" />
               Equipe
             </TabsTrigger>
+            <TabsTrigger value="telephony" className="gap-1.5">
+              <Phone className="h-4 w-4" />
+              Telefonia
+            </TabsTrigger>
+            <TabsTrigger value="live" className="gap-1.5">
+              <Activity className="h-4 w-4" />
+              Ao Vivo
+            </TabsTrigger>
             <TabsTrigger value="commission" className="gap-1.5">
               <DollarSign className="h-4 w-4" />
               Comissionamento
@@ -39,6 +49,14 @@ export default function SalesTeam() {
 
           <TabsContent value="team">
             <SalesTeamWrapper showManagement />
+          </TabsContent>
+
+          <TabsContent value="telephony">
+            <ThreeCPlusMetrics />
+          </TabsContent>
+
+          <TabsContent value="live">
+            <ThreeCPlusLiveMonitor />
           </TabsContent>
 
           <TabsContent value="commission">
