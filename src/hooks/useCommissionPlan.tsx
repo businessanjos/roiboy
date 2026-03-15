@@ -388,15 +388,17 @@ export function useCommissionPlan(cargo: string = "Closer") {
     setCalculating(true);
 
     try {
-      // Get current month boundaries (1st to last day)
+      // Get current month boundaries (1st to last day) sem deslocamento de fuso
       const now = new Date();
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-      firstDay.setHours(0, 0, 0, 0);
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      lastDay.setHours(23, 59, 59, 999);
+      const year = now.getFullYear();
+      const month = now.getMonth();
 
-      const periodStart = firstDay.toISOString().split("T")[0];
-      const periodEnd = lastDay.toISOString().split("T")[0];
+      const firstDay = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+      const lastDay = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
+
+      const monthStr = String(month + 1).padStart(2, "0");
+      const periodStart = `${year}-${monthStr}-01`;
+      const periodEnd = `${year}-${monthStr}-${String(new Date(year, month + 1, 0).getDate()).padStart(2, "0")}`;
 
       // Get only sales team users (managed by Jonathan)
       const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
