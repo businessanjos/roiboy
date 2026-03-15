@@ -307,6 +307,9 @@ export function useCommissionPlan() {
             plan_id: planId!,
             level_name: l.level_name,
             monthly_target: l.monthly_target,
+            fixed_salary: l.fixed_salary,
+            team_bonus_percent: l.team_bonus_percent,
+            total_compensation: l.total_compensation,
             display_order: i,
           }))
         );
