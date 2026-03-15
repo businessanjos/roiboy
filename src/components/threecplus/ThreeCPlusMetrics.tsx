@@ -162,7 +162,8 @@ export function ThreeCPlusMetrics() {
         supabase
           .from("users")
           .select("id, name")
-          .eq("account_id", currentUser?.account_id || ""),
+          .eq("account_id", currentUser?.account_id || "")
+          .or("name.ilike.%jonathan%,name.ilike.%darlan%,name.ilike.%george%,name.ilike.%vanessa%"),
       ]);
 
       setCallLogs((logsRes.data as CallLog[]) || []);
