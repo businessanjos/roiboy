@@ -210,26 +210,41 @@ export function useCommissionPlan(cargo: string = "Closer") {
       const { data } = await query;
 
       if (data) {
+        const parseDateParts = (value: string) => {
+          const raw = (value || "").slice(0, 10);
+          const [y, m, d] = raw.split("-").map(Number);
+          if (!y || !m || !d) return null;
+          return { y, m, d };
+        };
+
         const isMonthlyPeriod = (periodStart: string, periodEnd: string) => {
-          const start = new Date(`${periodStart}T00:00:00`);
-          const end = new Date(`${periodEnd}T00:00:00`);
+          const start = parseDateParts(periodStart);
+          const end = parseDateParts(periodEnd);
+          if (!start || !end) return false;
 
-          if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+          const startIsFirstDay = start.d === 1;
+          const monthLastDay = new Date(start.y, start.m, 0).getDate();
 
-          const firstDay = new Date(start.getFullYear(), start.getMonth(), 1);
-          const lastDay = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+          const endIsSameMonthLastDay =
+            end.y === start.y &&
+            end.m === start.m &&
+            end.d === monthLastDay;
 
-          return (
-            start.getFullYear() === firstDay.getFullYear() &&
-            start.getMonth() === firstDay.getMonth() &&
-            start.getDate() === firstDay.getDate() &&
-            end.getFullYear() === lastDay.getFullYear() &&
-            end.getMonth() === lastDay.getMonth() &&
-            end.getDate() === lastDay.getDate()
-          );
+          // Compatibilidade com registros antigos gravados com +1 dia por fuso (ex.: 2026-04-01)
+          const endIsFirstDayNextMonth =
+            end.d === 1 &&
+            ((start.m === 12 && end.m === 1 && end.y === start.y + 1) ||
+              (end.y === start.y && end.m === start.m + 1));
+
+          return startIsFirstDay && (endIsSameMonthLastDay || endIsFirstDayNextMonth);
         };
 
         const monthlyData = data.filter((d: any) => isMonthlyPeriod(d.period_start, d.period_end));
+
+        if (monthlyData.length === 0) {
+          setPeriods([]);
+          return;
+        }
 
         const userIds = [...new Set(monthlyData.map((d: any) => d.user_id))];
         const { data: users } = await supabase
@@ -388,15 +403,17 @@ export function useCommissionPlan(cargo: string = "Closer") {
     setCalculating(true);
 
     try {
-      // Get current month boundaries (1st to last day)
+      // Get current month boundaries (1st to last day) sem deslocamento de fuso
       const now = new Date();
-      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-      firstDay.setHours(0, 0, 0, 0);
-      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      lastDay.setHours(23, 59, 59, 999);
+      const year = now.getFullYear();
+      const month = now.getMonth();
 
-      const periodStart = firstDay.toISOString().split("T")[0];
-      const periodEnd = lastDay.toISOString().split("T")[0];
+      const firstDay = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+      const lastDay = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
+
+      const monthStr = String(month + 1).padStart(2, "0");
+      const periodStart = `${year}-${monthStr}-01`;
+      const periodEnd = `${year}-${monthStr}-${String(new Date(year, month + 1, 0).getDate()).padStart(2, "0")}`;
 
       // Get only sales team users (managed by Jonathan)
       const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
