@@ -361,6 +361,14 @@ export function useCommissionPlan(cargo: string = "Closer") {
 
         if (updatePlanError) throw updatePlanError;
 
+        const { error: clearTierRefsError } = await supabase
+          .from("commission_periods")
+          .update({ tier_achieved_id: null })
+          .eq("plan_id", planId)
+          .not("tier_achieved_id", "is", null);
+
+        if (clearTierRefsError) throw clearTierRefsError;
+
         const [deleteTiersRes, deleteTriggersRes, deleteLevelsRes] = await Promise.all([
           supabase.from("commission_tiers").delete().eq("plan_id", planId),
           supabase.from("commission_triggers").delete().eq("plan_id", planId),
