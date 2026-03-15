@@ -721,10 +721,16 @@ export function useCommissionPlan(cargo: string = "Closer") {
   useEffect(() => {
     if (accountId) {
       fetchPlan();
-      fetchPeriods();
       fetchDealEntries();
     }
-  }, [accountId, fetchPlan, fetchPeriods, fetchDealEntries]);
+  }, [accountId, fetchPlan, fetchDealEntries]);
+
+  // Fetch periods only after plan is loaded to filter by plan_id
+  useEffect(() => {
+    if (plan?.id) {
+      fetchPeriods(plan.id);
+    }
+  }, [plan?.id, fetchPeriods]);
 
   const saveSalesLevels = async (levels: CommissionSalesLevel[]) => {
     if (!accountId || !plan?.id) {
