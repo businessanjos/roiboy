@@ -299,7 +299,7 @@ export function CommissionDashboard({
             </Card>
           );
         })
-      )}
+      ))}
     </div>
   );
 }
