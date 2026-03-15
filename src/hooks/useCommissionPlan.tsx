@@ -152,7 +152,7 @@ export function useCommissionPlan() {
 
       const activePlan = plans[0];
 
-      const [tiersRes, triggersRes] = await Promise.all([
+      const [tiersRes, triggersRes, levelsRes] = await Promise.all([
         supabase
           .from("commission_tiers")
           .select("*")
@@ -162,12 +162,18 @@ export function useCommissionPlan() {
           .from("commission_triggers")
           .select("*")
           .eq("plan_id", activePlan.id),
+        supabase
+          .from("commission_sales_levels")
+          .select("*")
+          .eq("plan_id", activePlan.id)
+          .order("display_order"),
       ]);
 
       setPlan({
         ...activePlan,
         tiers: (tiersRes.data || []) as CommissionTier[],
         triggers: (triggersRes.data || []) as CommissionTrigger[],
+        sales_levels: (levelsRes.data || []) as CommissionSalesLevel[],
       });
     } catch (err) {
       console.error("Error fetching commission plan:", err);
