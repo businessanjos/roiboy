@@ -306,6 +306,12 @@ export function CommissionDealView({ dealEntries, onUpdatePayment, onMarkAsPaid 
                                 Confirmar pagamento total
                               </DropdownMenuItem>
                             )}
+                            {entry.commission_status !== "released" && entry.commission_status !== "paid" && (
+                              <DropdownMenuItem onClick={() => handleAntecipar(entry)}>
+                                <Banknote className="h-4 w-4 mr-2" />
+                                Antecipar comissão
+                              </DropdownMenuItem>
+                            )}
                             {(entry.commission_status === "released" || entry.commission_status === "partial") && (
                               <DropdownMenuItem onClick={() => onMarkAsPaid(entry.id)}>
                                 <DollarSign className="h-4 w-4 mr-2" />
