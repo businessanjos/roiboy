@@ -189,16 +189,19 @@ export function useCommissionPlan(cargo: string = "Closer") {
     }
   }, [accountId, cargo]);
 
-  const fetchPeriods = useCallback(async (monthStart?: string) => {
-    if (!accountId || !plan) return;
+  const fetchPeriods = useCallback(async (planId?: string, monthStart?: string) => {
+    if (!accountId) return;
     try {
       let query = supabase
         .from("commission_periods")
         .select("*")
         .eq("account_id", accountId)
-        .eq("plan_id", plan.id)
         .order("period_start", { ascending: false })
         .limit(50);
+
+      if (planId) {
+        query = query.eq("plan_id", planId);
+      }
 
       if (monthStart) {
         query = query.eq("period_start", monthStart);
@@ -233,7 +236,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
     } catch (err) {
       console.error("Error fetching periods:", err);
     }
-  }, [accountId, plan]);
+  }, [accountId]);
 
   const fetchDealEntries = useCallback(async () => {
     if (!accountId) return;
@@ -614,7 +617,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
       }
 
       toast.success("Comissões calculadas com sucesso!");
-      await Promise.all([fetchPeriods(periodStart), fetchDealEntries()]);
+      await Promise.all([fetchPeriods(plan.id, periodStart), fetchDealEntries()]);
     } catch (err) {
       console.error("Error calculating commissions:", err);
       toast.error("Erro ao calcular comissões");
@@ -718,10 +721,16 @@ export function useCommissionPlan(cargo: string = "Closer") {
   useEffect(() => {
     if (accountId) {
       fetchPlan();
-      fetchPeriods();
       fetchDealEntries();
     }
-  }, [accountId, fetchPlan, fetchPeriods, fetchDealEntries]);
+  }, [accountId, fetchPlan, fetchDealEntries]);
+
+  // Fetch periods only after plan is loaded to filter by plan_id
+  useEffect(() => {
+    if (plan?.id) {
+      fetchPeriods(plan.id);
+    }
+  }, [plan?.id, fetchPeriods]);
 
   const saveSalesLevels = async (levels: CommissionSalesLevel[]) => {
     if (!accountId || !plan?.id) {
