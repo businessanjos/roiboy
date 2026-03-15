@@ -233,22 +233,27 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
   };
 
   const handleSave = async () => {
+    if (saving) return;
+
     setSaving(true);
-    const salesLevels = plan?.sales_levels || [];
-    await onSave(
-      {
-        name,
-        period_type: "monthly",
-        tier_mode: tierMode,
-        monthly_quota: monthlyQuota,
-        prospecting_commission_percent: prospectingPercent,
-        commission_model: selectedModel,
-      },
-      tiers,
-      triggers,
-      salesLevels
-    );
-    setSaving(false);
+    try {
+      const salesLevels = plan?.sales_levels || [];
+      await onSave(
+        {
+          name,
+          period_type: "monthly",
+          tier_mode: tierMode,
+          monthly_quota: monthlyQuota,
+          prospecting_commission_percent: prospectingPercent,
+          commission_model: selectedModel,
+        },
+        tiers,
+        triggers,
+        salesLevels
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const savedModel = detectModel(plan);
