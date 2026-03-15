@@ -2864,6 +2864,7 @@ export type Database = {
       commission_plans: {
         Row: {
           account_id: string
+          cargo: string
           created_at: string
           created_by: string
           id: string
@@ -2877,6 +2878,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          cargo?: string
           created_at?: string
           created_by: string
           id?: string
@@ -2890,6 +2892,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          cargo?: string
           created_at?: string
           created_by?: string
           id?: string

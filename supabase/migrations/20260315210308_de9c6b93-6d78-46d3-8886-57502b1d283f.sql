@@ -1,0 +1,1 @@
+ALTER TABLE public.commission_plans ADD COLUMN IF NOT EXISTS cargo text NOT NULL DEFAULT 'Closer';
