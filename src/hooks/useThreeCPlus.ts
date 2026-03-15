@@ -114,7 +114,7 @@ export function useThreeCPlus() {
 
     console.log("[useThreeCPlus] Connecting Socket.io to", domain);
     const socket = io(domain, {
-      query: { api_token: apiToken },
+      query: { token: apiToken },
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 10,
@@ -360,23 +360,41 @@ export function useThreeCPlus() {
     }
   }, [invokeAgent, stopCallTimer]);
 
-  // Manual call
+  // Manual call with retry (agent may not be idle yet after login)
   const manualCall = useCallback(async (phone: string) => {
     setLoading(true);
     try {
-      const enterData = await invokeAgent("manual_call_enter");
-      if (!enterData?.success) {
-        toast.error("Não foi possível entrar no modo manual");
+      let entered = false;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const enterData = await invokeAgent("manual_call_enter");
+        if (enterData?.success) {
+          entered = true;
+          break;
+        }
+        // Wait before retrying - agent may not be idle yet
+        if (attempt < 2) {
+          toast.info("Aguardando agente ficar ocioso...", { duration: 2000 });
+          await new Promise((r) => setTimeout(r, 3000));
+        }
+      }
+
+      if (!entered) {
+        toast.error("Agente não está ocioso", {
+          description: "Aguarde o discador liberar ou tente novamente em alguns segundos.",
+        });
         return false;
       }
 
-      // Wait a moment for socket event
-      await new Promise((r) => setTimeout(r, 1000));
+      setAgentStatus("manual_mode");
+
+      // Wait a moment for the server to process
+      await new Promise((r) => setTimeout(r, 1500));
 
       const dialData = await invokeAgent("manual_call_dial", { phone });
       if (!dialData?.success) {
         toast.error("Não foi possível discar");
         await invokeAgent("manual_call_exit");
+        setAgentStatus("idle");
         return false;
       }
 
