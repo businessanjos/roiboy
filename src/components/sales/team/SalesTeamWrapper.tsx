@@ -14,18 +14,18 @@ export function SalesTeamWrapper({ showManagement = false }: SalesTeamWrapperPro
   }
 
   return (
-    <Tabs defaultValue="performance" className="space-y-4">
-      <TabsList>
-        <TabsTrigger value="performance" className="gap-1.5 text-xs">
-          <BarChart3 className="h-3.5 w-3.5" />
+    <Tabs defaultValue="performance" className="space-y-5">
+      <TabsList className="h-11 p-1 bg-muted/60 gap-1 w-full sm:w-auto">
+        <TabsTrigger value="performance" className="gap-2 text-sm px-5 h-9 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium">
+          <BarChart3 className="h-4 w-4" />
           Performance
         </TabsTrigger>
-        <TabsTrigger value="career" className="gap-1.5 text-xs">
-          <GraduationCap className="h-3.5 w-3.5" />
+        <TabsTrigger value="career" className="gap-2 text-sm px-5 h-9 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium">
+          <GraduationCap className="h-4 w-4" />
           Carreira
         </TabsTrigger>
-        <TabsTrigger value="goals" className="gap-1.5 text-xs">
-          <Target className="h-3.5 w-3.5" />
+        <TabsTrigger value="goals" className="gap-2 text-sm px-5 h-9 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium">
+          <Target className="h-4 w-4" />
           Meta
         </TabsTrigger>
       </TabsList>
