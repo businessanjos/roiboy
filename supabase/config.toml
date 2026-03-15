@@ -212,3 +212,6 @@ verify_jwt = false
 
 [functions.shared-dashboard]
 verify_jwt = false
+
+[functions.team-insights]
+verify_jwt = false
