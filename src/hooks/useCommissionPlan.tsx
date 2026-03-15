@@ -189,18 +189,19 @@ export function useCommissionPlan(cargo: string = "Closer") {
     }
   }, [accountId, cargo]);
 
-  const fetchPeriods = useCallback(async (weekStart?: string) => {
-    if (!accountId) return;
+  const fetchPeriods = useCallback(async (monthStart?: string) => {
+    if (!accountId || !plan) return;
     try {
       let query = supabase
         .from("commission_periods")
         .select("*")
         .eq("account_id", accountId)
+        .eq("plan_id", plan.id)
         .order("period_start", { ascending: false })
         .limit(50);
 
-      if (weekStart) {
-        query = query.eq("period_start", weekStart);
+      if (monthStart) {
+        query = query.eq("period_start", monthStart);
       }
 
       const { data } = await query;
@@ -232,7 +233,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
     } catch (err) {
       console.error("Error fetching periods:", err);
     }
-  }, [accountId]);
+  }, [accountId, plan]);
 
   const fetchDealEntries = useCallback(async () => {
     if (!accountId) return;
