@@ -210,23 +210,33 @@ export function useCommissionPlan(cargo: string = "Closer") {
       const { data } = await query;
 
       if (data) {
+        const parseDateParts = (value: string) => {
+          const raw = (value || "").slice(0, 10);
+          const [y, m, d] = raw.split("-").map(Number);
+          if (!y || !m || !d) return null;
+          return { y, m, d };
+        };
+
         const isMonthlyPeriod = (periodStart: string, periodEnd: string) => {
-          const start = new Date(`${periodStart}T00:00:00`);
-          const end = new Date(`${periodEnd}T00:00:00`);
+          const start = parseDateParts(periodStart);
+          const end = parseDateParts(periodEnd);
+          if (!start || !end) return false;
 
-          if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+          const startIsFirstDay = start.d === 1;
+          const monthLastDay = new Date(start.y, start.m, 0).getDate();
 
-          const firstDay = new Date(start.getFullYear(), start.getMonth(), 1);
-          const lastDay = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+          const endIsSameMonthLastDay =
+            end.y === start.y &&
+            end.m === start.m &&
+            end.d === monthLastDay;
 
-          return (
-            start.getFullYear() === firstDay.getFullYear() &&
-            start.getMonth() === firstDay.getMonth() &&
-            start.getDate() === firstDay.getDate() &&
-            end.getFullYear() === lastDay.getFullYear() &&
-            end.getMonth() === lastDay.getMonth() &&
-            end.getDate() === lastDay.getDate()
-          );
+          // Compatibilidade com registros antigos gravados com +1 dia por fuso (ex.: 2026-04-01)
+          const endIsFirstDayNextMonth =
+            end.d === 1 &&
+            ((start.m === 12 && end.m === 1 && end.y === start.y + 1) ||
+              (end.y === start.y && end.m === start.m + 1));
+
+          return startIsFirstDay && (endIsSameMonthLastDay || endIsFirstDayNextMonth);
         };
 
         const monthlyData = data.filter((d: any) => isMonthlyPeriod(d.period_start, d.period_end));
