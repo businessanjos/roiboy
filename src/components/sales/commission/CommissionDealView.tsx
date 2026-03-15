@@ -103,6 +103,10 @@ export function CommissionDealView({ dealEntries, onUpdatePayment, onMarkAsPaid 
     return Array.from(map.entries()).sort((a, b) => b[1].total - a[1].total);
   }, [dealEntries]);
 
+  const handleAntecipar = async (entry: CommissionDealEntry) => {
+    await onUpdatePayment(entry.id, { payment_status: "fully_paid", notes: "Comissão antecipada" });
+  };
+
   const handleConfirmFullPayment = async (entry: CommissionDealEntry) => {
     await onUpdatePayment(entry.id, { payment_status: "fully_paid" });
   };
