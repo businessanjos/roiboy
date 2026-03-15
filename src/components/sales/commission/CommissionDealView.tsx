@@ -103,6 +103,10 @@ export function CommissionDealView({ dealEntries, onUpdatePayment, onMarkAsPaid 
     return Array.from(map.entries()).sort((a, b) => b[1].total - a[1].total);
   }, [dealEntries]);
 
+  const handleAntecipar = async (entry: CommissionDealEntry) => {
+    await onUpdatePayment(entry.id, { payment_status: "fully_paid", notes: "Comissão antecipada" });
+  };
+
   const handleConfirmFullPayment = async (entry: CommissionDealEntry) => {
     await onUpdatePayment(entry.id, { payment_status: "fully_paid" });
   };
@@ -304,6 +308,12 @@ export function CommissionDealView({ dealEntries, onUpdatePayment, onMarkAsPaid 
                               <DropdownMenuItem onClick={() => handleConfirmFullPayment(entry)}>
                                 <CheckCircle2 className="h-4 w-4 mr-2" />
                                 Confirmar pagamento total
+                              </DropdownMenuItem>
+                            )}
+                            {entry.commission_status !== "released" && entry.commission_status !== "paid" && (
+                              <DropdownMenuItem onClick={() => handleAntecipar(entry)}>
+                                <Banknote className="h-4 w-4 mr-2" />
+                                Antecipar comissão
                               </DropdownMenuItem>
                             )}
                             {(entry.commission_status === "released" || entry.commission_status === "partial") && (
