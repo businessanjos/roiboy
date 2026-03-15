@@ -272,7 +272,7 @@ export function useCommissionPlan() {
       if (planId) {
         await supabase
           .from("commission_plans")
-          .update({ name: planData.name, period_type: planData.period_type, tier_mode: planData.tier_mode, updated_at: new Date().toISOString() })
+          .update({ name: planData.name, period_type: planData.period_type, tier_mode: planData.tier_mode, monthly_quota: planData.monthly_quota, prospecting_commission_percent: planData.prospecting_commission_percent, updated_at: new Date().toISOString() })
           .eq("id", planId);
 
         await Promise.all([
