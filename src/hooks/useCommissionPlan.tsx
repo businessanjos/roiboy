@@ -26,6 +26,9 @@ export interface CommissionSalesLevel {
   id?: string;
   level_name: string;
   monthly_target: number;
+  fixed_salary: number;
+  team_bonus_percent: number;
+  total_compensation: number;
   display_order: number;
 }
 
@@ -34,6 +37,8 @@ export interface CommissionPlan {
   name: string;
   period_type: string;
   tier_mode: "percent_of_target" | "absolute";
+  monthly_quota: number;
+  prospecting_commission_percent: number;
   is_active: boolean;
   created_at: string;
   tiers: CommissionTier[];
