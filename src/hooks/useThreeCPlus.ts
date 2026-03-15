@@ -378,14 +378,16 @@ export function useThreeCPlus() {
           setWorkBreaks(campData.campaign.work_breaks);
         }
 
-        const becameIdle = await waitForAgentStatus(["idle"], 15000);
+        // Wait for socket to confirm idle; if it doesn't, force idle since API login succeeded (204)
+        const becameIdle = await waitForAgentStatus(["idle"], 10000);
 
         if (becameIdle) {
           toast.success("Conectado à campanha", { description: campaign.name });
         } else {
-          toast.info("Campanha conectada", {
-            description: "Aguardando o ramal WebRTC confirmar o login.",
-          });
+          // API returned 204 = login succeeded. Force idle so user can operate.
+          console.warn("[useThreeCPlus] Socket did not confirm idle within timeout. Forcing idle since API login succeeded.");
+          setAgentStatus("idle");
+          toast.success("Conectado à campanha", { description: campaign.name });
         }
       } else {
         toast.error("Falha ao entrar na campanha", { description: data?.error });

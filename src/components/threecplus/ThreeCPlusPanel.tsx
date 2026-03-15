@@ -121,10 +121,10 @@ export function ThreeCPlusPanel() {
     setExtensionLoaded(false);
   }, [connectionInfo?.extension_url]);
 
-  // Connect Socket.io after getting connection info
+  // Connect Socket.io to the client's own domain (not a generic socket server)
   useEffect(() => {
     if (connectionInfo && !isConnected) {
-      connectSocket(connectionInfo.socket_url ?? "https://socket.3c.fluxoti.com", connectionInfo.api_token);
+      connectSocket(connectionInfo.domain, connectionInfo.api_token);
       setShowExtension(true);
     }
   }, [connectionInfo, isConnected, connectSocket]);
