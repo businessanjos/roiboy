@@ -22,14 +22,23 @@ export interface CommissionTrigger {
   is_active: boolean;
 }
 
+export interface CommissionSalesLevel {
+  id?: string;
+  level_name: string;
+  monthly_target: number;
+  display_order: number;
+}
+
 export interface CommissionPlan {
   id: string;
   name: string;
   period_type: string;
+  tier_mode: "percent_of_target" | "absolute";
   is_active: boolean;
   created_at: string;
   tiers: CommissionTier[];
   triggers: CommissionTrigger[];
+  sales_levels: CommissionSalesLevel[];
 }
 
 export interface CommissionPeriodResult {
