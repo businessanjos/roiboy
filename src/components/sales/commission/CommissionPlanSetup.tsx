@@ -283,9 +283,16 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                     {model.icon}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                      {model.label}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                        {model.label}
+                      </h3>
+                      {(savedModel || "percent_tiers") === model.key && (
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
+                          Modelo atual
+                        </Badge>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
                       {model.description}
                     </p>
