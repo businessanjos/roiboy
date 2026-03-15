@@ -15,7 +15,7 @@ export function CommissionTab() {
     loading,
     calculating,
     savePlan,
-    calculateWeeklyCommissions,
+    calculateMonthlyCommissions,
     updateDealEntryPayment,
     markCommissionAsPaid,
   } = useCommissionPlan();
@@ -55,7 +55,7 @@ export function CommissionTab() {
               plan={plan}
               periods={periods}
               calculating={calculating}
-              onCalculate={calculateWeeklyCommissions}
+              onCalculate={calculateMonthlyCommissions}
               compact
             />
             <CommissionDealView
@@ -79,7 +79,7 @@ export function CommissionTab() {
             plan={plan}
             periods={periods}
             calculating={calculating}
-            onCalculate={calculateWeeklyCommissions}
+            onCalculate={calculateMonthlyCommissions}
           />
         ) : (
           <div className="text-center py-12 text-muted-foreground">

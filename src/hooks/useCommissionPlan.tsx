@@ -356,23 +356,20 @@ export function useCommissionPlan() {
     }
   };
 
-  const calculateWeeklyCommissions = async () => {
+  const calculateMonthlyCommissions = async () => {
     if (!accountId || !plan) return;
     setCalculating(true);
 
     try {
-      // Get current week boundaries (Mon-Sun)
+      // Get current month boundaries (1st to last day)
       const now = new Date();
-      const dayOfWeek = now.getDay();
-      const monday = new Date(now);
-      monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-      monday.setHours(0, 0, 0, 0);
-      const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
-      sunday.setHours(23, 59, 59, 999);
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      firstDay.setHours(0, 0, 0, 0);
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      lastDay.setHours(23, 59, 59, 999);
 
-      const periodStart = monday.toISOString().split("T")[0];
-      const periodEnd = sunday.toISOString().split("T")[0];
+      const periodStart = firstDay.toISOString().split("T")[0];
+      const periodEnd = lastDay.toISOString().split("T")[0];
 
       // Get only sales team users (managed by Jonathan)
       const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
@@ -387,27 +384,27 @@ export function useCommissionPlan() {
 
       if (!users || users.length === 0) return;
 
-      // Fetch data for the week
+      // Fetch data for the month
       const [dealsRes, callsRes, tasksRes] = await Promise.all([
         supabase
           .from("deals")
           .select("id, responsible_user_id, status, value, title, won_at, created_at")
           .eq("account_id", accountId)
           .eq("status", "won")
-          .gte("won_at", monday.toISOString())
-          .lte("won_at", sunday.toISOString()),
+          .gte("won_at", firstDay.toISOString())
+          .lte("won_at", lastDay.toISOString()),
         supabase
           .from("zapp_calls")
           .select("user_id, status")
           .eq("account_id", accountId)
-          .gte("created_at", monday.toISOString())
-          .lte("created_at", sunday.toISOString()),
+          .gte("created_at", firstDay.toISOString())
+          .lte("created_at", lastDay.toISOString()),
         supabase
           .from("internal_tasks")
           .select("assigned_to, completed_at")
           .eq("account_id", accountId)
-          .gte("created_at", monday.toISOString())
-          .lte("created_at", sunday.toISOString()),
+          .gte("created_at", firstDay.toISOString())
+          .lte("created_at", lastDay.toISOString()),
       ]);
 
       const wonDeals = dealsRes.data || [];
@@ -430,22 +427,22 @@ export function useCommissionPlan() {
         }
       }
 
-      // Also get deals without won_at but with status=won in date range (fallback)
+      // Also get all deals created in the month (for conversion rate)
       const { data: dealsAllRes } = await supabase
         .from("deals")
         .select("id, responsible_user_id, status, value, title, created_at")
         .eq("account_id", accountId)
-        .gte("created_at", monday.toISOString())
-        .lte("created_at", sunday.toISOString());
+        .gte("created_at", firstDay.toISOString())
+        .lte("created_at", lastDay.toISOString());
 
-      const allDealsInWeek = dealsAllRes || [];
+      const allDealsInMonth = dealsAllRes || [];
 
       // Calculate for each user
       for (const user of users) {
         const userWonDeals = wonDeals.filter((d: any) => d.responsible_user_id === user.id);
         const wonValue = userWonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
 
-        const userAllDeals = allDealsInWeek.filter((d: any) => d.responsible_user_id === user.id);
+        const userAllDeals = allDealsInMonth.filter((d: any) => d.responsible_user_id === user.id);
         const totalDeals = userAllDeals.length;
         const lostDeals = userAllDeals.filter((d: any) => d.status === "lost").length;
         const closedDeals = userWonDeals.length + lostDeals;
@@ -760,7 +757,7 @@ export function useCommissionPlan() {
     calculating,
     savePlan,
     saveSalesLevels,
-    calculateWeeklyCommissions,
+    calculateMonthlyCommissions,
     updateDealEntryPayment,
     markCommissionAsPaid,
     fetchPlan,

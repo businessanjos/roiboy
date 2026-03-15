@@ -79,11 +79,9 @@ export function CommissionDashboard({
     );
   }, [latestPeriods]);
 
-  const formatWeek = (start: string, end: string) => {
+  const formatPeriod = (start: string, end: string) => {
     const s = new Date(start + "T12:00:00");
-    const e = new Date(end + "T12:00:00");
-    const fmt = (d: Date) => d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-    return `${fmt(s)} - ${fmt(e)}`;
+    return s.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   };
 
   return (
@@ -93,12 +91,12 @@ export function CommissionDashboard({
         <div>
           <h3 className="font-semibold">{plan.name}</h3>
           <p className="text-xs text-muted-foreground">
-            Apuração {plan.period_type === "weekly" ? "semanal" : plan.period_type === "biweekly" ? "quinzenal" : "mensal"}
+            Apuração mensal
           </p>
         </div>
         <Button onClick={onCalculate} disabled={calculating}>
           <Calculator className="h-4 w-4 mr-2" />
-          {calculating ? "Calculando..." : "Calcular Semana Atual"}
+          {calculating ? "Calculando..." : "Calcular Mês Atual"}
         </Button>
       </div>
 
@@ -178,7 +176,7 @@ export function CommissionDashboard({
             <Card key={weekStart}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  📅 Semana: {formatWeek(firstPeriod.period_start, firstPeriod.period_end)}
+                  📅 {formatPeriod(firstPeriod.period_start, firstPeriod.period_end)}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
