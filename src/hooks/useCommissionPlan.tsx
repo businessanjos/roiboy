@@ -368,11 +368,16 @@ export function useCommissionPlan() {
       const periodStart = monday.toISOString().split("T")[0];
       const periodEnd = sunday.toISOString().split("T")[0];
 
-      // Get all team users
-      const { data: users } = await supabase
+      // Get only sales team users (managed by Jonathan)
+      const SALES_TEAM_NAMES = ["vanessa", "darlan", "george"];
+      const { data: allUsers } = await supabase
         .from("users")
         .select("id, name")
         .eq("account_id", accountId);
+
+      const users = (allUsers || []).filter((u: any) =>
+        SALES_TEAM_NAMES.some((n) => u.name?.toLowerCase().includes(n))
+      );
 
       if (!users || users.length === 0) return;
 
