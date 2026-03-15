@@ -303,7 +303,7 @@ export function useThreeCPlus() {
   }, [startCallTimer, stopCallTimer]);
 
   // Log call event to database
-  const logCallEvent = useCallback(async (eventData: any) => {
+  async function logCallEvent(eventData: any) {
     try {
       const call = eventData?.call || eventData;
       const { data: userData } = await supabase
@@ -341,7 +341,7 @@ export function useThreeCPlus() {
     } catch (err) {
       console.error("[useThreeCPlus] logCallEvent error:", err);
     }
-  }, []);
+  }
 
   // Fetch campaigns
   const fetchCampaigns = useCallback(async () => {
