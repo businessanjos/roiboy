@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -13,15 +12,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Calculator,
   CheckCircle2,
   XCircle,
   Trophy,
   TrendingUp,
   Phone,
-  Target,
   RefreshCw,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { CommissionPlan, CommissionPeriodResult } from "@/hooks/useCommissionPlan";
 
@@ -29,7 +36,7 @@ interface CommissionDashboardProps {
   plan: CommissionPlan;
   periods: CommissionPeriodResult[];
   calculating: boolean;
-  onCalculate: () => Promise<void>;
+  onCalculate: (year?: number, month?: number) => Promise<void>;
   compact?: boolean;
 }
 
@@ -39,12 +46,10 @@ const formatCurrency = (value: number) =>
 const getInitials = (name: string) =>
   name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 
-const TRIGGER_LABELS: Record<string, string> = {
-  min_calls: "Ligações",
-  min_conversion_rate: "Conversão",
-  no_delinquency: "Inadimplência",
-  tasks_completed: "Tarefas",
-};
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
 export function CommissionDashboard({
   plan,
@@ -53,7 +58,11 @@ export function CommissionDashboard({
   onCalculate,
   compact = false,
 }: CommissionDashboardProps) {
-  // Group periods by week
+  const now = new Date();
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-indexed
+
+  // Group periods by month
   const weekGroups = useMemo(() => {
     const groups: Record<string, CommissionPeriodResult[]> = {};
     for (const p of periods) {
@@ -64,11 +73,14 @@ export function CommissionDashboard({
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
   }, [periods]);
 
-  const latestWeek = weekGroups[0];
-  const latestPeriods = latestWeek ? latestWeek[1] : [];
+  // Filter periods for selected month
+  const selectedMonthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-01`;
+  const selectedPeriods = useMemo(() => {
+    return periods.filter((p) => p.period_start === selectedMonthKey);
+  }, [periods, selectedMonthKey]);
 
   const totals = useMemo(() => {
-    return latestPeriods.reduce(
+    return selectedPeriods.reduce(
       (acc, p) => ({
         wonValue: acc.wonValue + p.won_value,
         totalCommission: acc.totalCommission + p.total_commission,
@@ -77,12 +89,36 @@ export function CommissionDashboard({
       }),
       { wonValue: 0, totalCommission: 0, qualifiedCount: 0, totalCount: 0 }
     );
-  }, [latestPeriods]);
+  }, [selectedPeriods]);
 
-  const formatPeriod = (start: string, end: string) => {
-    const s = new Date(start + "T12:00:00");
-    return s.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  // Available months from existing data
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    for (const p of periods) {
+      months.add(p.period_start.slice(0, 7)); // YYYY-MM
+    }
+    return [...months].sort().reverse();
+  }, [periods]);
+
+  const goToPreviousMonth = () => {
+    if (selectedMonth === 0) {
+      setSelectedMonth(11);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
   };
+
+  const goToNextMonth = () => {
+    if (selectedMonth === 11) {
+      setSelectedMonth(0);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+  };
+
+  const isCurrentMonth = selectedYear === now.getFullYear() && selectedMonth === now.getMonth();
 
   return (
     <div className="space-y-6">
@@ -90,18 +126,40 @@ export function CommissionDashboard({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-semibold">{plan.name}</h3>
-          <p className="text-xs text-muted-foreground">
-            Apuração mensal
-          </p>
+          <p className="text-xs text-muted-foreground">Apuração mensal</p>
         </div>
-        <Button onClick={onCalculate} disabled={calculating}>
-          <Calculator className="h-4 w-4 mr-2" />
-          {calculating ? "Calculando..." : "Calcular Mês Atual"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Month navigator */}
+          <div className="flex items-center gap-1 bg-muted rounded-lg px-1 py-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToPreviousMonth}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium px-2 min-w-[140px] text-center">
+              {MONTH_NAMES[selectedMonth]} {selectedYear}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={goToNextMonth}
+              disabled={isCurrentMonth}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button
+            onClick={() => onCalculate(selectedYear, selectedMonth)}
+            disabled={calculating}
+            size="sm"
+          >
+            <Calculator className="h-4 w-4 mr-2" />
+            {calculating ? "Calculando..." : isCurrentMonth ? "Calcular Mês Atual" : "Recalcular"}
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
-      {latestPeriods.length > 0 && (
+      {selectedPeriods.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
@@ -159,29 +217,26 @@ export function CommissionDashboard({
       )}
 
       {/* Results Table */}
-      {!compact && (weekGroups.length === 0 ? (
+      {!compact && (selectedPeriods.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
             <Calculator className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="font-medium">Nenhum cálculo realizado</p>
+            <p className="font-medium">Nenhum cálculo para {MONTH_NAMES[selectedMonth]} {selectedYear}</p>
             <p className="text-sm mt-1">
-              Clique em "Calcular Semana Atual" para apurar as comissões.
+              Clique em "{isCurrentMonth ? "Calcular Mês Atual" : "Recalcular"}" para apurar as comissões.
             </p>
           </CardContent>
         </Card>
       ) : (
-        weekGroups.map(([weekStart, weekPeriods]) => {
-          const firstPeriod = weekPeriods[0];
-          return (
-            <Card key={weekStart}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  📅 {formatPeriod(firstPeriod.period_start, firstPeriod.period_end)}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              📅 {MONTH_NAMES[selectedMonth]} {selectedYear}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                     <TableRow>
                       <TableHead>Vendedor</TableHead>
                       <TableHead className="text-right">Valor Ganho</TableHead>
@@ -192,115 +247,113 @@ export function CommissionDashboard({
                       <TableHead className="text-right">Comissão</TableHead>
                       <TableHead className="text-center">Status</TableHead>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {weekPeriods
-                      .sort((a, b) => b.won_value - a.won_value)
-                      .map((period) => (
-                        <TableRow key={period.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={period.user_avatar || undefined} />
-                                <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                                  {getInitials(period.user_name || "")}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm font-medium">{period.user_name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {formatCurrency(period.won_value)}
-                            <span className="text-xs text-muted-foreground ml-1">
-                              ({period.won_deals} neg.)
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <Phone className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-sm">{period.total_calls}</span>
-                              {period.triggers_met?.min_calls !== undefined && (
-                                period.triggers_met.min_calls ? (
-                                  <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                ) : (
-                                  <XCircle className="h-3 w-3 text-red-500" />
-                                )
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-1">
-                              <span className="text-sm">{period.conversion_rate.toFixed(0)}%</span>
-                              {period.triggers_met?.min_conversion_rate !== undefined && (
-                                period.triggers_met.min_conversion_rate ? (
-                                  <CheckCircle2 className="h-3 w-3 text-green-500" />
-                                ) : (
-                                  <XCircle className="h-3 w-3 text-red-500" />
-                                )
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <span className="text-sm">
-                              {period.tasks_completed}/{period.tasks_total}
-                            </span>
-                            {period.triggers_met?.tasks_completed !== undefined && (
-                              period.triggers_met.tasks_completed ? (
-                                <CheckCircle2 className="h-3 w-3 text-green-500 inline ml-1" />
+                </TableHeader>
+                <TableBody>
+                  {selectedPeriods
+                    .sort((a, b) => b.won_value - a.won_value)
+                    .map((period) => (
+                      <TableRow key={period.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={period.user_avatar || undefined} />
+                              <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                                {getInitials(period.user_name || "")}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="text-sm font-medium">{period.user_name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(period.won_value)}
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({period.won_deals} neg.)
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <Phone className="h-3 w-3 text-muted-foreground" />
+                            <span className="text-sm">{period.total_calls}</span>
+                            {period.triggers_met?.min_calls !== undefined && (
+                              period.triggers_met.min_calls ? (
+                                <CheckCircle2 className="h-3 w-3 text-green-500" />
                               ) : (
-                                <XCircle className="h-3 w-3 text-red-500 inline ml-1" />
+                                <XCircle className="h-3 w-3 text-red-500" />
                               )
                             )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {Object.keys(period.triggers_met || {}).length === 0 ? (
-                              <Badge variant="outline" className="text-muted-foreground text-[10px]">
-                                — Sem gatilhos
-                              </Badge>
-                            ) : period.all_triggers_met ? (
-                              <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px]">
-                                ✅ OK
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="text-red-500 border-red-500/30 text-[10px]">
-                                ❌ Pendente
-                              </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="text-sm">{period.conversion_rate.toFixed(0)}%</span>
+                            {period.triggers_met?.min_conversion_rate !== undefined && (
+                              period.triggers_met.min_conversion_rate ? (
+                                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                              ) : (
+                                <XCircle className="h-3 w-3 text-red-500" />
+                              )
                             )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div>
-                              <span className={`font-bold ${period.all_triggers_met ? "text-emerald-600" : "text-muted-foreground line-through"}`}>
-                                {formatCurrency(period.total_commission)}
-                              </span>
-                              {period.bonus_value > 0 && (
-                                <p className="text-[10px] text-amber-600">
-                                  +{formatCurrency(period.bonus_value)} bônus
-                                </p>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] ${
-                                period.status === "paid"
-                                  ? "bg-green-500/10 text-green-600 border-green-500/30"
-                                  : period.status === "approved"
-                                  ? "bg-blue-500/10 text-blue-600 border-blue-500/30"
-                                  : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              {period.status === "paid" ? "Pago" : period.status === "approved" ? "Aprovado" : "Pendente"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className="text-sm">
+                            {period.tasks_completed}/{period.tasks_total}
+                          </span>
+                          {period.triggers_met?.tasks_completed !== undefined && (
+                            period.triggers_met.tasks_completed ? (
+                              <CheckCircle2 className="h-3 w-3 text-green-500 inline ml-1" />
+                            ) : (
+                              <XCircle className="h-3 w-3 text-red-500 inline ml-1" />
+                            )
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {Object.keys(period.triggers_met || {}).length === 0 ? (
+                            <Badge variant="outline" className="text-muted-foreground text-[10px]">
+                              — Sem gatilhos
                             </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          );
-        })
+                          ) : period.all_triggers_met ? (
+                            <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px]">
+                              ✅ OK
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-red-500 border-red-500/30 text-[10px]">
+                              ❌ Pendente
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div>
+                            <span className={`font-bold ${period.all_triggers_met ? "text-emerald-600" : "text-muted-foreground line-through"}`}>
+                              {formatCurrency(period.total_commission)}
+                            </span>
+                            {period.bonus_value > 0 && (
+                              <p className="text-[10px] text-amber-600">
+                                +{formatCurrency(period.bonus_value)} bônus
+                              </p>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant="outline"
+                            className={`text-[10px] ${
+                              period.status === "paid"
+                                ? "bg-green-500/10 text-green-600 border-green-500/30"
+                                : period.status === "approved"
+                                ? "bg-blue-500/10 text-blue-600 border-blue-500/30"
+                                : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {period.status === "paid" ? "Pago" : period.status === "approved" ? "Aprovado" : "Pendente"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
       ))}
     </div>
   );

@@ -455,15 +455,14 @@ export function useCommissionPlan(cargo: string = "Closer") {
     }
   };
 
-  const calculateMonthlyCommissions = async () => {
+  const calculateMonthlyCommissions = async (targetYear?: number, targetMonth?: number) => {
     if (!accountId || !plan) return;
     setCalculating(true);
 
     try {
-      // Get current month boundaries (1st to last day) sem deslocamento de fuso
       const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth();
+      const year = targetYear ?? now.getFullYear();
+      const month = targetMonth ?? now.getMonth(); // 0-indexed
 
       const firstDay = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
       const lastDay = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
@@ -712,7 +711,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
       }
 
       toast.success("Comissões calculadas com sucesso!");
-      await Promise.all([fetchPeriods(plan.id, periodStart), fetchDealEntries()]);
+      await Promise.all([fetchPeriods(plan.id), fetchDealEntries()]);
     } catch (err) {
       console.error("Error calculating commissions:", err);
       toast.error("Erro ao calcular comissões");
@@ -813,6 +812,54 @@ export function useCommissionPlan(cargo: string = "Closer") {
     }
   };
 
+  // Auto-calculate retroactive months that have no commission data
+  const calculateRetroactiveMonths = useCallback(async () => {
+    if (!accountId || !plan) return;
+
+    // Check which months have deals but no commission periods
+    const { data: earliestDeal } = await supabase
+      .from("deals")
+      .select("won_at")
+      .eq("account_id", accountId)
+      .eq("status", "won")
+      .order("won_at", { ascending: true })
+      .limit(1)
+      .single();
+
+    if (!earliestDeal?.won_at) return;
+
+    const startDate = new Date(earliestDeal.won_at);
+    const now = new Date();
+    const monthsToCheck: { year: number; month: number; periodStart: string }[] = [];
+
+    let cursor = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    while (cursor <= now) {
+      const y = cursor.getFullYear();
+      const m = cursor.getMonth();
+      const ps = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+      monthsToCheck.push({ year: y, month: m, periodStart: ps });
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+
+    // Check which months already have commission_periods
+    const { data: existingPeriods } = await supabase
+      .from("commission_periods")
+      .select("period_start")
+      .eq("plan_id", plan.id)
+      .eq("account_id", accountId);
+
+    const existingStarts = new Set((existingPeriods || []).map((p: any) => p.period_start));
+
+    const missingMonths = monthsToCheck.filter((m) => !existingStarts.has(m.periodStart));
+
+    if (missingMonths.length === 0) return;
+
+    // Calculate each missing month silently
+    for (const m of missingMonths) {
+      await calculateMonthlyCommissions(m.year, m.month);
+    }
+  }, [accountId, plan]);
+
   useEffect(() => {
     if (accountId) {
       fetchPlan();
@@ -826,6 +873,17 @@ export function useCommissionPlan(cargo: string = "Closer") {
       fetchPeriods(plan.id);
     }
   }, [plan?.id, fetchPeriods]);
+
+  // Auto-calculate retroactive months after plan loads
+  const retroCalcDone = useRef(false);
+  useEffect(() => {
+    if (plan?.id && !retroCalcDone.current) {
+      retroCalcDone.current = true;
+      calculateRetroactiveMonths().then(() => {
+        fetchPeriods(plan.id);
+      });
+    }
+  }, [plan?.id, calculateRetroactiveMonths, fetchPeriods]);
 
   const saveSalesLevels = async (levels: CommissionSalesLevel[]) => {
     if (!accountId || !plan?.id) {
