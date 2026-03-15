@@ -190,7 +190,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
   }, [accountId, cargo]);
 
   const fetchPeriods = useCallback(async (monthStart?: string) => {
-    if (!accountId || !plan) return;
+    if (!accountId) return;
     try {
       let query = supabase
         .from("commission_periods")
