@@ -79,7 +79,7 @@ export function CommissionTab() {
             plan={plan}
             periods={periods}
             calculating={calculating}
-            onCalculate={calculateWeeklyCommissions}
+            onCalculate={calculateMonthlyCommissions}
           />
         ) : (
           <div className="text-center py-12 text-muted-foreground">

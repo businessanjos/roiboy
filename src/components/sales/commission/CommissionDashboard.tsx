@@ -176,7 +176,7 @@ export function CommissionDashboard({
             <Card key={weekStart}>
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  📅 Semana: {formatWeek(firstPeriod.period_start, firstPeriod.period_end)}
+                  📅 {formatPeriod(firstPeriod.period_start, firstPeriod.period_end)}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
