@@ -2868,8 +2868,10 @@ export type Database = {
           created_by: string
           id: string
           is_active: boolean
+          monthly_quota: number
           name: string
           period_type: string
+          prospecting_commission_percent: number
           tier_mode: string
           updated_at: string
         }
@@ -2879,8 +2881,10 @@ export type Database = {
           created_by: string
           id?: string
           is_active?: boolean
+          monthly_quota?: number
           name: string
           period_type?: string
+          prospecting_commission_percent?: number
           tier_mode?: string
           updated_at?: string
         }
@@ -2890,8 +2894,10 @@ export type Database = {
           created_by?: string
           id?: string
           is_active?: boolean
+          monthly_quota?: number
           name?: string
           period_type?: string
+          prospecting_commission_percent?: number
           tier_mode?: string
           updated_at?: string
         }
@@ -2917,30 +2923,39 @@ export type Database = {
           account_id: string
           created_at: string
           display_order: number
+          fixed_salary: number
           id: string
           level_name: string
           monthly_target: number
           plan_id: string
+          team_bonus_percent: number
+          total_compensation: number
           updated_at: string
         }
         Insert: {
           account_id: string
           created_at?: string
           display_order?: number
+          fixed_salary?: number
           id?: string
           level_name: string
           monthly_target?: number
           plan_id: string
+          team_bonus_percent?: number
+          total_compensation?: number
           updated_at?: string
         }
         Update: {
           account_id?: string
           created_at?: string
           display_order?: number
+          fixed_salary?: number
           id?: string
           level_name?: string
           monthly_target?: number
           plan_id?: string
+          team_bonus_percent?: number
+          total_compensation?: number
           updated_at?: string
         }
         Relationships: [
