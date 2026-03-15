@@ -1,15 +1,20 @@
 import { Link } from "react-router-dom";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
+import { useAuth } from "@/hooks/useAuth";
 import { AlertTriangle, Clock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export function TrialBanner() {
   const { isLoading, subscriptionStatus, daysRemaining, isTrialExpired } = useSubscriptionStatus();
+  const { user } = useAuth();
 
   // Don't show banner if loading or has active subscription
   if (isLoading) return null;
   if (subscriptionStatus === "active" || subscriptionStatus === "paid") return null;
+
+  // Hide for @anjosbusiness.com.br users
+  if (user?.email?.endsWith("@anjosbusiness.com.br")) return null;
 
   // Show nothing if trial is expired (they'll be redirected)
   if (isTrialExpired) return null;
