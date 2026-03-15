@@ -130,6 +130,7 @@ export const sectors: Sector[] = [
       { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
       { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
+      { to: "/sales-scripts", icon: ScrollText, label: "Scripts de Vendas" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
