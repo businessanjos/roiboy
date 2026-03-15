@@ -369,7 +369,7 @@ export function useCommissionPlan() {
       const periodEnd = sunday.toISOString().split("T")[0];
 
       // Get only sales team users (managed by Jonathan)
-      const SALES_TEAM_NAMES = ["vanessa", "darlan", "george"];
+      const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
       const { data: allUsers } = await supabase
         .from("users")
         .select("id, name")
