@@ -9107,7 +9107,9 @@ export type Database = {
       sales_monthly_goals: {
         Row: {
           account_id: string
+          cargo: string
           created_at: string
+          goal_type: string
           goal_value: number
           id: string
           notes: string | null
@@ -9117,7 +9119,9 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          cargo?: string
           created_at?: string
+          goal_type?: string
           goal_value?: number
           id?: string
           notes?: string | null
@@ -9127,7 +9131,9 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          cargo?: string
           created_at?: string
+          goal_type?: string
           goal_value?: number
           id?: string
           notes?: string | null
