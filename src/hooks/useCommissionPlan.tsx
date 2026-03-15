@@ -187,7 +187,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
     } finally {
       setLoading(false);
     }
-  }, [accountId]);
+  }, [accountId, cargo]);
 
   const fetchPeriods = useCallback(async (weekStart?: string) => {
     if (!accountId) return;
