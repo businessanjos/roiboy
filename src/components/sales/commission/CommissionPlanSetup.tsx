@@ -288,7 +288,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                         {model.label}
                       </h3>
                       {(savedModel || "percent_tiers") === model.key && (
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
+                        <Badge className="text-[9px] px-1.5 py-0 bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-500">
                           Modelo atual
                         </Badge>
                       )}
