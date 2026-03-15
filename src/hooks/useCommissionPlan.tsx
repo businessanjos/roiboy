@@ -757,7 +757,7 @@ export function useCommissionPlan() {
     calculating,
     savePlan,
     saveSalesLevels,
-    calculateWeeklyCommissions,
+    calculateMonthlyCommissions,
     updateDealEntryPayment,
     markCommissionAsPaid,
     fetchPlan,
