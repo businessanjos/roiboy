@@ -338,21 +338,37 @@ export function useCommissionPlan(cargo: string = "Closer") {
     salesLevels: CommissionSalesLevel[]
   ) => {
     if (!accountId || !currentUser) return;
+    if (savePlanInFlightRef.current) return;
+
+    savePlanInFlightRef.current = true;
 
     try {
       let planId = plan?.id;
+      const normalizedTiers = normalizeCommissionTiers(tiers);
 
       if (planId) {
-        await supabase
+        const { error: updatePlanError } = await supabase
           .from("commission_plans")
-          .update({ name: planData.name, period_type: planData.period_type, tier_mode: planData.tier_mode, monthly_quota: planData.monthly_quota, prospecting_commission_percent: planData.prospecting_commission_percent, updated_at: new Date().toISOString() })
+          .update({
+            name: planData.name,
+            period_type: planData.period_type,
+            tier_mode: planData.tier_mode,
+            monthly_quota: planData.monthly_quota,
+            prospecting_commission_percent: planData.prospecting_commission_percent,
+            updated_at: new Date().toISOString(),
+          })
           .eq("id", planId);
 
-        await Promise.all([
+        if (updatePlanError) throw updatePlanError;
+
+        const [deleteTiersRes, deleteTriggersRes, deleteLevelsRes] = await Promise.all([
           supabase.from("commission_tiers").delete().eq("plan_id", planId),
           supabase.from("commission_triggers").delete().eq("plan_id", planId),
           supabase.from("commission_sales_levels").delete().eq("plan_id", planId),
         ]);
+
+        const deleteError = deleteTiersRes.error || deleteTriggersRes.error || deleteLevelsRes.error;
+        if (deleteError) throw deleteError;
       } else {
         const { data: newPlan, error } = await supabase
           .from("commission_plans")
@@ -373,9 +389,8 @@ export function useCommissionPlan(cargo: string = "Closer") {
         planId = newPlan.id;
       }
 
-      // Save sales levels
       if (salesLevels.length > 0) {
-        await supabase.from("commission_sales_levels").insert(
+        const { error: salesLevelsError } = await supabase.from("commission_sales_levels").insert(
           salesLevels.map((l, i) => ({
             account_id: accountId,
             plan_id: planId!,
@@ -387,11 +402,13 @@ export function useCommissionPlan(cargo: string = "Closer") {
             display_order: i,
           }))
         );
+
+        if (salesLevelsError) throw salesLevelsError;
       }
 
-      if (tiers.length > 0) {
-        await supabase.from("commission_tiers").insert(
-          tiers.map((t, i) => ({
+      if (normalizedTiers.length > 0) {
+        const { error: tiersError } = await supabase.from("commission_tiers").insert(
+          normalizedTiers.map((t, i) => ({
             plan_id: planId!,
             tier_name: t.tier_name,
             min_value: t.min_value,
@@ -402,10 +419,12 @@ export function useCommissionPlan(cargo: string = "Closer") {
             display_order: i,
           }))
         );
+
+        if (tiersError) throw tiersError;
       }
 
       if (triggers.length > 0) {
-        await supabase.from("commission_triggers").insert(
+        const { error: triggersError } = await supabase.from("commission_triggers").insert(
           triggers.map((t) => ({
             plan_id: planId!,
             trigger_type: t.trigger_type,
@@ -414,6 +433,8 @@ export function useCommissionPlan(cargo: string = "Closer") {
             is_active: !!t.is_active,
           }))
         );
+
+        if (triggersError) throw triggersError;
       }
 
       toast.success("Plano de comissão salvo com sucesso!");
@@ -421,6 +442,8 @@ export function useCommissionPlan(cargo: string = "Closer") {
     } catch (err) {
       console.error("Error saving plan:", err);
       toast.error("Erro ao salvar plano de comissão");
+    } finally {
+      savePlanInFlightRef.current = false;
     }
   };
 
