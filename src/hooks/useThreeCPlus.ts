@@ -132,21 +132,47 @@ export function useThreeCPlus() {
   }, [invokeAgent]);
 
   // Connect Socket.io
-  const connectSocket = useCallback((domain: string, apiToken: string) => {
+  const connectSocket = useCallback((socketUrl: string, apiToken: string) => {
     if (socketRef.current?.connected) return;
 
-    console.log("[useThreeCPlus] Connecting Socket.io to", domain);
-    const socket = io(domain, {
-      query: { token: apiToken },
+    socketRef.current?.disconnect();
+
+    console.log("[useThreeCPlus] Connecting Socket.io to", socketUrl);
+    const socket = io(socketUrl, {
+      query: { token: apiToken, api_token: apiToken },
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
+      timeout: 10000,
+      forceNew: true,
     });
+
+    const handleLoggedOut = () => {
+      console.log("[useThreeCPlus] agent logged out");
+      setAgentStatus("offline");
+      setSelectedCampaign(null);
+      setCurrentCall(null);
+      stopCallTimer();
+    };
+
+    const handleEnteredManualMode = () => {
+      console.log("[useThreeCPlus] agent entered manual mode");
+      setAgentStatus("manual_mode");
+    };
+
+    const handleFailedManualMode = () => {
+      toast.error("Falha ao entrar no modo manual");
+    };
 
     socket.on("connect", () => {
       console.log("[useThreeCPlus] Socket.io connected");
       setIsConnected(true);
+    });
+
+    socket.on("connect_error", (error: unknown) => {
+      console.error("[useThreeCPlus] Socket.io connect_error", error);
+      setIsConnected(false);
     });
 
     socket.on("disconnect", () => {
@@ -172,29 +198,21 @@ export function useThreeCPlus() {
       console.log("[useThreeCPlus] agent-login-failed", data);
       toast.error("Falha no login", { description: "Não foi possível conectar na campanha." });
       setAgentStatus("offline");
-    });
-
-    socket.on("agent-logged-out", () => {
-      console.log("[useThreeCPlus] agent-logged-out");
-      setAgentStatus("offline");
       setSelectedCampaign(null);
-      setCurrentCall(null);
-      stopCallTimer();
     });
 
-    socket.on("agent-entered-manual-mode", () => {
-      console.log("[useThreeCPlus] agent-entered-manual-mode");
-      setAgentStatus("manual_mode");
-    });
+    socket.on("agent-was-logged-out", handleLoggedOut);
+    socket.on("agent-logged-out", handleLoggedOut);
+    socket.on("agent-entered-manual", handleEnteredManualMode);
+    socket.on("agent-entered-manual-mode", handleEnteredManualMode);
 
     socket.on("agent-left-manual-mode", () => {
       console.log("[useThreeCPlus] agent-left-manual-mode");
       setAgentStatus("idle");
     });
 
-    socket.on("agent-entered-manual-mode-failed", () => {
-      toast.error("Falha ao entrar no modo manual");
-    });
+    socket.on("agent-failed-to-enter-manual", handleFailedManualMode);
+    socket.on("agent-entered-manual-mode-failed", handleFailedManualMode);
 
     socket.on("agent-entered-work-break", (data: any) => {
       console.log("[useThreeCPlus] agent-entered-work-break", data);
@@ -273,7 +291,6 @@ export function useThreeCPlus() {
     // Call history event (for logging)
     socket.on("call-history-was-created", (data: any) => {
       console.log("[useThreeCPlus] call-history-was-created", data);
-      // Log to our database
       logCallEvent(data);
     });
 
@@ -283,7 +300,7 @@ export function useThreeCPlus() {
     });
 
     socketRef.current = socket;
-  }, [startCallTimer, stopCallTimer]);
+  }, [logCallEvent, startCallTimer, stopCallTimer]);
 
   // Log call event to database
   const logCallEvent = useCallback(async (eventData: any) => {
