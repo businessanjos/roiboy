@@ -455,15 +455,14 @@ export function useCommissionPlan(cargo: string = "Closer") {
     }
   };
 
-  const calculateMonthlyCommissions = async () => {
+  const calculateMonthlyCommissions = async (targetYear?: number, targetMonth?: number) => {
     if (!accountId || !plan) return;
     setCalculating(true);
 
     try {
-      // Get current month boundaries (1st to last day) sem deslocamento de fuso
       const now = new Date();
-      const year = now.getFullYear();
-      const month = now.getMonth();
+      const year = targetYear ?? now.getFullYear();
+      const month = targetMonth ?? now.getMonth(); // 0-indexed
 
       const firstDay = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
       const lastDay = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
