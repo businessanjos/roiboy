@@ -373,7 +373,7 @@ export function ThreeCPlusPanel() {
           )}
 
           {/* Manual Call */}
-          {(agentStatus === "idle" || agentStatus === "manual_mode") && (
+          {selectedCampaign && !isInCall && agentStatus !== "offline" && agentStatus !== "acw" && agentStatus !== "on_break" && (
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Ligação Manual
