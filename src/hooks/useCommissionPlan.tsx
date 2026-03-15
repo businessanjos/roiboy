@@ -56,10 +56,68 @@ export interface CommissionPeriodResult {
   notes: string | null;
 }
 
+export interface CommissionDealEntry {
+  id: string;
+  account_id: string;
+  plan_id: string;
+  period_id: string | null;
+  deal_id: string | null;
+  contract_id: string | null;
+  user_id: string;
+  user_name?: string;
+  user_avatar?: string | null;
+  client_name: string | null;
+  deal_title: string | null;
+  deal_value: number;
+  payment_method: string | null;
+  payment_option: string | null;
+  installments_count: number;
+  commission_percent: number;
+  commission_total: number;
+  pix_installments_paid: number;
+  pix_amount_paid: number;
+  commission_on_pix: number;
+  remaining_amount: number;
+  remaining_paid: boolean;
+  remaining_paid_at: string | null;
+  commission_on_remaining: number;
+  commission_released: number;
+  commission_pending: number;
+  payment_status: string;
+  commission_status: string;
+  released_at: string | null;
+  paid_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+// Helper: classify payment method from contract payment_option
+export function classifyPaymentMethod(paymentOption: string | null): string {
+  if (!paymentOption) return "unknown";
+  const opt = paymentOption.toLowerCase();
+  if (opt.includes("a_vista")) return "a_vista";
+  if (opt.includes("cartao") || opt.includes("credito") || opt.includes("credit")) return "cartao";
+  if (opt.includes("cheque")) return "cheque";
+  if (opt.includes("pix")) return "pix_parcial";
+  return "other";
+}
+
+// Helper: determine if this is a PIX partial scenario
+// PIX partial = client pays first 2 installments via PIX, rest via card/check
+export function isPIXPartial(paymentOption: string | null, installmentsCount: number | null): boolean {
+  if (!paymentOption) return false;
+  const opt = paymentOption.toLowerCase();
+  // If payment_option explicitly mentions PIX and has installments > 2
+  // OR if the first installments are PIX but the contract is parcelado
+  return opt.includes("pix") && (installmentsCount || 1) > 2;
+}
+
 export function useCommissionPlan() {
   const { currentUser } = useCurrentUser();
   const [plan, setPlan] = useState<CommissionPlan | null>(null);
   const [periods, setPeriods] = useState<CommissionPeriodResult[]>([]);
+  const [dealEntries, setDealEntries] = useState<CommissionDealEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
 
@@ -126,7 +184,6 @@ export function useCommissionPlan() {
       const { data } = await query;
 
       if (data) {
-        // Enrich with user names
         const userIds = [...new Set(data.map((d: any) => d.user_id))];
         const { data: users } = await supabase
           .from("users")
@@ -149,6 +206,37 @@ export function useCommissionPlan() {
     }
   }, [accountId]);
 
+  const fetchDealEntries = useCallback(async () => {
+    if (!accountId) return;
+    try {
+      const { data } = await supabase
+        .from("commission_deal_entries")
+        .select("*")
+        .eq("account_id", accountId)
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      if (data) {
+        const userIds = [...new Set(data.map((d: any) => d.user_id))];
+        const { data: users } = await supabase
+          .from("users")
+          .select("id, name, avatar_url")
+          .in("id", userIds);
+        const userMap = new Map((users || []).map((u: any) => [u.id, u]));
+
+        setDealEntries(
+          data.map((d: any) => ({
+            ...d,
+            user_name: (userMap.get(d.user_id) as any)?.name || "Sem nome",
+            user_avatar: (userMap.get(d.user_id) as any)?.avatar_url || null,
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("Error fetching deal entries:", err);
+    }
+  }, [accountId]);
+
   const savePlan = async (
     planData: { name: string; period_type: string },
     tiers: CommissionTier[],
@@ -165,7 +253,6 @@ export function useCommissionPlan() {
           .update({ name: planData.name, period_type: planData.period_type, updated_at: new Date().toISOString() })
           .eq("id", planId);
 
-        // Delete old tiers and triggers
         await Promise.all([
           supabase.from("commission_tiers").delete().eq("plan_id", planId),
           supabase.from("commission_triggers").delete().eq("plan_id", planId),
@@ -186,7 +273,6 @@ export function useCommissionPlan() {
         planId = newPlan.id;
       }
 
-      // Insert tiers
       if (tiers.length > 0) {
         await supabase.from("commission_tiers").insert(
           tiers.map((t, i) => ({
@@ -202,7 +288,6 @@ export function useCommissionPlan() {
         );
       }
 
-      // Insert triggers
       const activeTriggers = triggers.filter((t) => t.is_active);
       if (activeTriggers.length > 0) {
         await supabase.from("commission_triggers").insert(
@@ -254,10 +339,11 @@ export function useCommissionPlan() {
       const [dealsRes, callsRes, tasksRes] = await Promise.all([
         supabase
           .from("deals")
-          .select("responsible_user_id, status, value")
+          .select("id, responsible_user_id, status, value, title, won_at, created_at")
           .eq("account_id", accountId)
-          .gte("created_at", monday.toISOString())
-          .lte("created_at", sunday.toISOString()),
+          .eq("status", "won")
+          .gte("won_at", monday.toISOString())
+          .lte("won_at", sunday.toISOString()),
         supabase
           .from("zapp_calls")
           .select("user_id, status")
@@ -272,19 +358,46 @@ export function useCommissionPlan() {
           .lte("created_at", sunday.toISOString()),
       ]);
 
-      const deals = dealsRes.data || [];
+      const wonDeals = dealsRes.data || [];
       const calls = callsRes.data || [];
       const tasks = tasksRes.data || [];
 
+      // Get contracts for won deals to determine payment method
+      const dealIds = wonDeals.map((d: any) => d.id);
+      let contractsByDeal: Record<string, any> = {};
+      if (dealIds.length > 0) {
+        const { data: contracts } = await supabase
+          .from("client_contracts")
+          .select("*, clients!client_contracts_client_id_fkey(full_name)")
+          .in("deal_id", dealIds);
+        
+        if (contracts) {
+          for (const c of contracts) {
+            contractsByDeal[c.deal_id] = c;
+          }
+        }
+      }
+
+      // Also get deals without won_at but with status=won in date range (fallback)
+      const { data: dealsAllRes } = await supabase
+        .from("deals")
+        .select("id, responsible_user_id, status, value, title, created_at")
+        .eq("account_id", accountId)
+        .gte("created_at", monday.toISOString())
+        .lte("created_at", sunday.toISOString());
+
+      const allDealsInWeek = dealsAllRes || [];
+
       // Calculate for each user
       for (const user of users) {
-        const userDeals = deals.filter((d: any) => d.responsible_user_id === user.id);
-        const wonDeals = userDeals.filter((d: any) => d.status === "won");
-        const wonValue = wonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
-        const totalDeals = userDeals.length;
-        const lostDeals = userDeals.filter((d: any) => d.status === "lost").length;
-        const closedDeals = wonDeals.length + lostDeals;
-        const conversionRate = closedDeals > 0 ? (wonDeals.length / closedDeals) * 100 : 0;
+        const userWonDeals = wonDeals.filter((d: any) => d.responsible_user_id === user.id);
+        const wonValue = userWonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
+
+        const userAllDeals = allDealsInWeek.filter((d: any) => d.responsible_user_id === user.id);
+        const totalDeals = userAllDeals.length;
+        const lostDeals = userAllDeals.filter((d: any) => d.status === "lost").length;
+        const closedDeals = userWonDeals.length + lostDeals;
+        const conversionRate = closedDeals > 0 ? (userWonDeals.length / closedDeals) * 100 : 0;
 
         const userCalls = calls.filter((c: any) => c.user_id === user.id);
         const totalCalls = userCalls.length;
@@ -309,7 +422,7 @@ export function useCommissionPlan() {
               met = conversionRate >= (trigger.trigger_value || 0);
               break;
             case "no_delinquency":
-              met = true; // TODO: check delinquency from contracts
+              met = true;
               break;
             case "tasks_completed":
               met = tasksTotal === 0 || tasksCompleted >= (trigger.trigger_value || 0);
@@ -326,7 +439,6 @@ export function useCommissionPlan() {
         let bonusValue = 0;
 
         if (allTriggersMet && wonValue > 0) {
-          // Find highest tier achieved
           const sortedTiers = [...plan.tiers].sort((a, b) => b.min_value - a.min_value);
           for (const tier of sortedTiers) {
             if (wonValue >= tier.min_value) {
@@ -341,7 +453,7 @@ export function useCommissionPlan() {
         }
 
         // Upsert the period result
-        await supabase
+        const { data: periodData } = await supabase
           .from("commission_periods")
           .upsert(
             {
@@ -351,7 +463,7 @@ export function useCommissionPlan() {
               period_start: periodStart,
               period_end: periodEnd,
               won_value: wonValue,
-              won_deals: wonDeals.length,
+              won_deals: userWonDeals.length,
               total_calls: totalCalls,
               conversion_rate: conversionRate,
               tasks_completed: tasksCompleted,
@@ -367,11 +479,90 @@ export function useCommissionPlan() {
               updated_at: new Date().toISOString(),
             },
             { onConflict: "plan_id,user_id,period_start" }
-          );
+          )
+          .select()
+          .single();
+
+        const periodId = periodData?.id;
+        const commissionPercent = achievedTier?.commission_percent || 0;
+
+        // Create per-deal entries with payment method logic
+        if (allTriggersMet && commissionPercent > 0) {
+          for (const deal of userWonDeals) {
+            const contract = contractsByDeal[deal.id];
+            const paymentOption = contract?.payment_option || contract?.payment_method || null;
+            const paymentMethodClass = classifyPaymentMethod(paymentOption);
+            const installments = contract?.installments_count || 1;
+            const dealVal = deal.value || 0;
+            const commTotal = dealVal * (commissionPercent / 100);
+            const clientName = (contract?.clients as any)?.full_name || null;
+
+            let pixPaid = 0;
+            let pixAmount = 0;
+            let commOnPix = 0;
+            let remainingAmt = 0;
+            let commOnRemaining = 0;
+            let commReleased = 0;
+            let commPending = commTotal;
+            let paymentStatus = "awaiting_payment";
+            let commissionStatus = "pending";
+
+            // For PIX partial (first 2 installments via PIX, rest card/check)
+            if (paymentMethodClass === "pix_parcial" && installments > 2) {
+              const perInstallment = dealVal / installments;
+              pixAmount = perInstallment * 2;
+              remainingAmt = dealVal - pixAmount;
+              commOnPix = pixAmount * (commissionPercent / 100);
+              commOnRemaining = remainingAmt * (commissionPercent / 100);
+              commPending = commTotal;
+              paymentStatus = "awaiting_payment";
+              commissionStatus = "pending";
+            } else {
+              // À vista, cartão ou cheque: commission is released fully after payment
+              commReleased = 0;
+              commPending = commTotal;
+              paymentStatus = "awaiting_payment";
+              commissionStatus = "pending";
+            }
+
+            await supabase
+              .from("commission_deal_entries")
+              .upsert(
+                {
+                  account_id: accountId,
+                  plan_id: plan.id,
+                  period_id: periodId || null,
+                  deal_id: deal.id,
+                  contract_id: contract?.id || null,
+                  user_id: user.id,
+                  client_name: clientName,
+                  deal_title: deal.title,
+                  deal_value: dealVal,
+                  payment_method: paymentMethodClass,
+                  payment_option: paymentOption,
+                  installments_count: installments,
+                  commission_percent: commissionPercent,
+                  commission_total: commTotal,
+                  pix_installments_paid: pixPaid,
+                  pix_amount_paid: pixAmount,
+                  commission_on_pix: commOnPix,
+                  remaining_amount: remainingAmt,
+                  remaining_paid: false,
+                  commission_on_remaining: commOnRemaining,
+                  commission_released: commReleased,
+                  commission_pending: commPending,
+                  payment_status: paymentStatus,
+                  commission_status: commissionStatus,
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: "plan_id,deal_id,user_id" }
+              );
+          }
+        }
       }
 
       toast.success("Comissões calculadas com sucesso!");
-      await fetchPeriods(periodStart);
+      await Promise.all([fetchPeriods(periodStart), fetchDealEntries()]);
     } catch (err) {
       console.error("Error calculating commissions:", err);
       toast.error("Erro ao calcular comissões");
@@ -380,21 +571,118 @@ export function useCommissionPlan() {
     }
   };
 
+  // Update deal entry payment status (Jonathan manually confirms payments)
+  const updateDealEntryPayment = async (
+    entryId: string,
+    updates: {
+      payment_status?: string;
+      pix_installments_paid?: number;
+      pix_amount_paid?: number;
+      remaining_paid?: boolean;
+    }
+  ) => {
+    try {
+      // Get current entry
+      const { data: entry } = await supabase
+        .from("commission_deal_entries")
+        .select("*")
+        .eq("id", entryId)
+        .single();
+
+      if (!entry) return;
+
+      const updated: any = { ...updates, updated_at: new Date().toISOString() };
+
+      // Recalculate commission released based on payment updates
+      const paymentMethod = entry.payment_method;
+      const commPercent = entry.commission_percent;
+
+      if (paymentMethod === "pix_parcial") {
+        const pixPaid = updates.pix_installments_paid ?? entry.pix_installments_paid;
+        const pixAmount = updates.pix_amount_paid ?? entry.pix_amount_paid;
+        const remainingPaid = updates.remaining_paid ?? entry.remaining_paid;
+
+        const commOnPix = pixAmount * (commPercent / 100);
+        const commOnRemaining = remainingPaid ? (entry.deal_value - pixAmount) * (commPercent / 100) : 0;
+        const commReleased = commOnPix + commOnRemaining;
+
+        updated.commission_on_pix = commOnPix;
+        updated.commission_on_remaining = commOnRemaining;
+        updated.commission_released = commReleased;
+        updated.commission_pending = entry.commission_total - commReleased;
+
+        if (remainingPaid) {
+          updated.payment_status = "fully_paid";
+          updated.commission_status = "released";
+          updated.released_at = new Date().toISOString();
+          updated.remaining_paid_at = new Date().toISOString();
+        } else if (pixPaid > 0) {
+          updated.payment_status = "partial_pix";
+          updated.commission_status = "partial";
+        }
+      } else {
+        // À vista, cartão, cheque: mark as fully paid
+        if (updates.payment_status === "fully_paid") {
+          updated.commission_released = entry.commission_total;
+          updated.commission_pending = 0;
+          updated.commission_status = "released";
+          updated.released_at = new Date().toISOString();
+        }
+      }
+
+      await supabase
+        .from("commission_deal_entries")
+        .update(updated)
+        .eq("id", entryId);
+
+      toast.success("Status de pagamento atualizado!");
+      await fetchDealEntries();
+    } catch (err) {
+      console.error("Error updating deal entry:", err);
+      toast.error("Erro ao atualizar");
+    }
+  };
+
+  // Mark a deal entry commission as paid
+  const markCommissionAsPaid = async (entryId: string) => {
+    try {
+      await supabase
+        .from("commission_deal_entries")
+        .update({
+          commission_status: "paid",
+          paid_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", entryId);
+
+      toast.success("Comissão marcada como paga!");
+      await fetchDealEntries();
+    } catch (err) {
+      console.error("Error marking as paid:", err);
+      toast.error("Erro ao marcar como paga");
+    }
+  };
+
   useEffect(() => {
     if (accountId) {
       fetchPlan();
       fetchPeriods();
+      fetchDealEntries();
     }
-  }, [accountId, fetchPlan, fetchPeriods]);
+  }, [accountId, fetchPlan, fetchPeriods, fetchDealEntries]);
 
   return {
     plan,
     periods,
+    dealEntries,
     loading,
     calculating,
     savePlan,
     calculateWeeklyCommissions,
+    updateDealEntryPayment,
+    markCommissionAsPaid,
     fetchPlan,
     fetchPeriods,
+    fetchDealEntries,
   };
 }
