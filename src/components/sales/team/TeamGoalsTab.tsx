@@ -268,15 +268,18 @@ export function TeamGoalsTab() {
       cargo: cargoMap[g.user_id] || "Vendedor", updated_at: new Date().toISOString(),
     }));
 
-    if (upserts.length > 0) {
-      const { error } = await supabase
-        .from("sales_monthly_goals")
-        .upsert(upserts as any, { onConflict: "account_id,user_id,year_month,goal_type" });
-      if (error) {
-        toast.error("Erro ao salvar metas");
-      } else {
-        toast.success("Metas atualizadas!");
-      }
+    if (upserts.length === 0) {
+      toast.info("Nenhuma meta foi alterada.");
+      setSaving(false);
+      return;
+    }
+    const { error } = await supabase
+      .from("sales_monthly_goals")
+      .upsert(upserts as any, { onConflict: "account_id,user_id,year_month,goal_type" });
+    if (error) {
+      toast.error("Erro ao salvar metas");
+    } else {
+      toast.success("Metas atualizadas!");
     }
     setSaving(false);
   };
