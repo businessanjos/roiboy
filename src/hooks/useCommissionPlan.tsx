@@ -298,6 +298,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
             monthly_quota: planData.monthly_quota,
             prospecting_commission_percent: planData.prospecting_commission_percent,
             created_by: currentUser.id,
+            cargo,
           })
           .select()
           .single();
