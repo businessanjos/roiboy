@@ -323,6 +323,8 @@ export function useThreeCPlus() {
       const data = await invokeAgent("login", { campaign_id: campaign.id });
       if (data?.success) {
         setSelectedCampaign(campaign);
+        // Set idle immediately so manual call UI is available
+        setAgentStatus("idle");
         // Fetch work breaks
         const campData = await invokeAgent("get_logged_campaign");
         if (campData?.success && campData.campaign?.work_breaks) {
