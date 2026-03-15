@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +18,6 @@ function getBaseDomain(domain: string | null): string {
 }
 
 async function getIntegration(supabaseAdmin: any, userId: string, accountId: string) {
-  // Get user's own integration first
   const { data: integration } = await supabaseAdmin
     .from("user_integrations")
     .select("access_token, metadata")
@@ -32,7 +31,6 @@ async function getIntegration(supabaseAdmin: any, userId: string, accountId: str
   const userDomain = (meta?.domain as string | null) || null;
   let baseDomain = getBaseDomain(userDomain);
 
-  // Try peer domain fallback if no domain set
   if (!userDomain && accountId) {
     const { data: peerUsers } = await supabaseAdmin
       .from("users")
@@ -75,32 +73,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
+    const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // Verify token by getting user
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+
+    if (authError || !user) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const authUserId = claimsData.claims.sub;
-
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
     const { data: userData } = await supabaseAdmin
       .from("users")
       .select("id, account_id")
-      .eq("auth_user_id", authUserId)
+      .eq("auth_user_id", user.id)
       .single();
 
     if (!userData) {
