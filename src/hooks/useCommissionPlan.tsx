@@ -241,6 +241,11 @@ export function useCommissionPlan(cargo: string = "Closer") {
 
         const monthlyData = data.filter((d: any) => isMonthlyPeriod(d.period_start, d.period_end));
 
+        if (monthlyData.length === 0) {
+          setPeriods([]);
+          return;
+        }
+
         const userIds = [...new Set(monthlyData.map((d: any) => d.user_id))];
         const { data: users } = await supabase
           .from("users")
