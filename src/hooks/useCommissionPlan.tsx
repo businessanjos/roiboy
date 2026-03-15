@@ -210,7 +210,28 @@ export function useCommissionPlan(cargo: string = "Closer") {
       const { data } = await query;
 
       if (data) {
-        const userIds = [...new Set(data.map((d: any) => d.user_id))];
+        const isMonthlyPeriod = (periodStart: string, periodEnd: string) => {
+          const start = new Date(`${periodStart}T00:00:00`);
+          const end = new Date(`${periodEnd}T00:00:00`);
+
+          if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return false;
+
+          const firstDay = new Date(start.getFullYear(), start.getMonth(), 1);
+          const lastDay = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+
+          return (
+            start.getFullYear() === firstDay.getFullYear() &&
+            start.getMonth() === firstDay.getMonth() &&
+            start.getDate() === firstDay.getDate() &&
+            end.getFullYear() === lastDay.getFullYear() &&
+            end.getMonth() === lastDay.getMonth() &&
+            end.getDate() === lastDay.getDate()
+          );
+        };
+
+        const monthlyData = data.filter((d: any) => isMonthlyPeriod(d.period_start, d.period_end));
+
+        const userIds = [...new Set(monthlyData.map((d: any) => d.user_id))];
         const { data: users } = await supabase
           .from("users")
           .select("id, name, avatar_url")
@@ -221,7 +242,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
         const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
 
         setPeriods(
-          data
+          monthlyData
             .map((d: any) => ({
               ...d,
               user_name: (userMap.get(d.user_id) as any)?.name || "Sem nome",
