@@ -300,7 +300,7 @@ export function useThreeCPlus() {
     });
 
     socketRef.current = socket;
-  }, [logCallEvent, startCallTimer, stopCallTimer]);
+  }, [startCallTimer, stopCallTimer]);
 
   // Log call event to database
   const logCallEvent = useCallback(async (eventData: any) => {
