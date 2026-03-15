@@ -2,12 +2,15 @@ import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SalesTeamTab } from "@/components/sales/SalesTeamTab";
 import { CommissionTab } from "@/components/sales/commission/CommissionTab";
-import { Users, DollarSign } from "lucide-react";
+import { CareerPlanTab } from "@/components/sales/commission/CareerPlanTab";
+import { Users, DollarSign, GraduationCap } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useCommissionPlan } from "@/hooks/useCommissionPlan";
 
 export default function SalesTeam() {
   const { currentUser } = useCurrentUser();
   const isJonathan = currentUser?.name?.toLowerCase().includes("jonathan");
+  const { plan, saveSalesLevels } = useCommissionPlan();
 
   return (
     <div className="p-4 space-y-4">
@@ -29,6 +32,10 @@ export default function SalesTeam() {
               <DollarSign className="h-4 w-4" />
               Comissionamento
             </TabsTrigger>
+            <TabsTrigger value="career" className="gap-1.5">
+              <GraduationCap className="h-4 w-4" />
+              Plano de Carreira
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="team">
@@ -37,6 +44,10 @@ export default function SalesTeam() {
 
           <TabsContent value="commission">
             <CommissionTab />
+          </TabsContent>
+
+          <TabsContent value="career">
+            <CareerPlanTab plan={plan} onSaveLevels={saveSalesLevels} />
           </TabsContent>
         </Tabs>
       ) : (
