@@ -2596,6 +2596,151 @@ export type Database = {
           },
         ]
       }
+      commission_deal_entries: {
+        Row: {
+          account_id: string
+          client_name: string | null
+          commission_on_pix: number | null
+          commission_on_remaining: number | null
+          commission_pending: number
+          commission_percent: number
+          commission_released: number
+          commission_status: string
+          commission_total: number
+          contract_id: string | null
+          created_at: string
+          deal_id: string | null
+          deal_title: string | null
+          deal_value: number
+          id: string
+          installments_count: number | null
+          notes: string | null
+          paid_at: string | null
+          payment_method: string | null
+          payment_option: string | null
+          payment_status: string
+          period_id: string | null
+          pix_amount_paid: number | null
+          pix_installments_paid: number | null
+          plan_id: string
+          released_at: string | null
+          remaining_amount: number | null
+          remaining_paid: boolean | null
+          remaining_paid_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          client_name?: string | null
+          commission_on_pix?: number | null
+          commission_on_remaining?: number | null
+          commission_pending?: number
+          commission_percent?: number
+          commission_released?: number
+          commission_status?: string
+          commission_total?: number
+          contract_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          deal_title?: string | null
+          deal_value?: number
+          id?: string
+          installments_count?: number | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_option?: string | null
+          payment_status?: string
+          period_id?: string | null
+          pix_amount_paid?: number | null
+          pix_installments_paid?: number | null
+          plan_id: string
+          released_at?: string | null
+          remaining_amount?: number | null
+          remaining_paid?: boolean | null
+          remaining_paid_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          client_name?: string | null
+          commission_on_pix?: number | null
+          commission_on_remaining?: number | null
+          commission_pending?: number
+          commission_percent?: number
+          commission_released?: number
+          commission_status?: string
+          commission_total?: number
+          contract_id?: string | null
+          created_at?: string
+          deal_id?: string | null
+          deal_title?: string | null
+          deal_value?: number
+          id?: string
+          installments_count?: number | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_option?: string | null
+          payment_status?: string
+          period_id?: string | null
+          pix_amount_paid?: number | null
+          pix_installments_paid?: number | null
+          plan_id?: string
+          released_at?: string | null
+          remaining_amount?: number | null
+          remaining_paid?: boolean | null
+          remaining_paid_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_deal_entries_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_deal_entries_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_deal_entries_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_deal_entries_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "commission_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_deal_entries_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "commission_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_deal_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       commission_periods: {
         Row: {
           account_id: string
