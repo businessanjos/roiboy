@@ -26,6 +26,9 @@ export interface CommissionSalesLevel {
   id?: string;
   level_name: string;
   monthly_target: number;
+  fixed_salary: number;
+  team_bonus_percent: number;
+  total_compensation: number;
   display_order: number;
 }
 
@@ -34,6 +37,8 @@ export interface CommissionPlan {
   name: string;
   period_type: string;
   tier_mode: "percent_of_target" | "absolute";
+  monthly_quota: number;
+  prospecting_commission_percent: number;
   is_active: boolean;
   created_at: string;
   tiers: CommissionTier[];
@@ -254,7 +259,7 @@ export function useCommissionPlan() {
   }, [accountId]);
 
   const savePlan = async (
-    planData: { name: string; period_type: string; tier_mode: string },
+    planData: { name: string; period_type: string; tier_mode: string; monthly_quota: number; prospecting_commission_percent: number },
     tiers: CommissionTier[],
     triggers: CommissionTrigger[],
     salesLevels: CommissionSalesLevel[]
@@ -267,7 +272,7 @@ export function useCommissionPlan() {
       if (planId) {
         await supabase
           .from("commission_plans")
-          .update({ name: planData.name, period_type: planData.period_type, tier_mode: planData.tier_mode, updated_at: new Date().toISOString() })
+          .update({ name: planData.name, period_type: planData.period_type, tier_mode: planData.tier_mode, monthly_quota: planData.monthly_quota, prospecting_commission_percent: planData.prospecting_commission_percent, updated_at: new Date().toISOString() })
           .eq("id", planId);
 
         await Promise.all([
@@ -283,6 +288,8 @@ export function useCommissionPlan() {
             name: planData.name,
             period_type: planData.period_type,
             tier_mode: planData.tier_mode,
+            monthly_quota: planData.monthly_quota,
+            prospecting_commission_percent: planData.prospecting_commission_percent,
             created_by: currentUser.id,
           })
           .select()
@@ -300,6 +307,9 @@ export function useCommissionPlan() {
             plan_id: planId!,
             level_name: l.level_name,
             monthly_target: l.monthly_target,
+            fixed_salary: l.fixed_salary,
+            team_bonus_percent: l.team_bonus_percent,
+            total_compensation: l.total_compensation,
             display_order: i,
           }))
         );
