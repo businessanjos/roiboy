@@ -27,6 +27,12 @@ const CAREER_LEVELS = [
   "Anjo Visionário / Esp. Elite",
 ];
 
+const AREAS = ["Comercial", "Operações", "CX", "CS", "Financeiro", "Marketing"];
+const CARGOS = ["Vendedor", "Closer", "SDR", "BDR", "Assistente", "Analista", "Coordenador", "Gerente"];
+
+// Nomes dos liderados do Jonathan no comercial
+const SALES_TEAM_NAMES = ["vanessa", "darlan", "george"];
+
 interface TeamMember {
   id: string;
   name: string;
@@ -39,6 +45,8 @@ interface CareerAssignment {
   contract_type: string;
   career_level_name: string;
   fixed_salary: number;
+  area: string;
+  cargo: string;
 }
 
 export function TeamCareerTab() {
@@ -71,7 +79,11 @@ export function TeamCareerTab() {
     ]);
 
     if (usersRes.data) {
-      setMembers(usersRes.data as TeamMember[]);
+      // Filter only Jonathan's sales team members
+      const filtered = (usersRes.data as TeamMember[]).filter((u) =>
+        SALES_TEAM_NAMES.some((name) => u.name.toLowerCase().includes(name))
+      );
+      setMembers(filtered);
     }
 
     if (careersRes.data) {
@@ -82,6 +94,8 @@ export function TeamCareerTab() {
           contract_type: c.contract_type,
           career_level_name: c.career_level_name,
           fixed_salary: c.fixed_salary,
+          area: (c as any).area || "Comercial",
+          cargo: (c as any).cargo || "Vendedor",
         };
       }
       setCareers(map);
@@ -98,6 +112,8 @@ export function TeamCareerTab() {
         contract_type: prev[userId]?.contract_type || "CLT",
         career_level_name: prev[userId]?.career_level_name || "Anjo Vendedor",
         fixed_salary: prev[userId]?.fixed_salary || 0,
+        area: prev[userId]?.area || "Comercial",
+        cargo: prev[userId]?.cargo || "Vendedor",
         [field]: value,
       },
     }));
@@ -120,8 +136,10 @@ export function TeamCareerTab() {
             contract_type: career.contract_type,
             career_level_name: career.career_level_name,
             fixed_salary: career.fixed_salary,
+            area: career.area,
+            cargo: career.cargo,
             updated_at: new Date().toISOString(),
-          },
+          } as any,
           { onConflict: "account_id,user_id" }
         );
 
@@ -159,10 +177,10 @@ export function TeamCareerTab() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <GraduationCap className="h-4 w-4" />
-            Carreira da Equipe
+            Carreira da Equipe Comercial
           </CardTitle>
           <p className="text-xs text-muted-foreground">
-            Defina o regime de contratação e nível no plano de carreira de cada vendedor.
+            Defina o regime, área, cargo e nível no plano de carreira de cada vendedor.
           </p>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -177,34 +195,38 @@ export function TeamCareerTab() {
               return (
                 <div
                   key={member.id}
-                  className="flex items-center gap-4 border rounded-lg p-4"
+                  className="border rounded-lg p-4 space-y-3"
                 >
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={member.avatar_url || undefined} />
-                    <AvatarFallback className="text-xs">
-                      {getInitials(member.name)}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{member.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {member.email}
-                    </p>
+                  {/* Row 1: Avatar + Name */}
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={member.avatar_url || undefined} />
+                      <AvatarFallback className="text-xs">
+                        {getInitials(member.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{member.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {member.email}
+                      </p>
+                    </div>
+                    <Badge variant="secondary" className="text-[10px] shrink-0">
+                      {career?.contract_type || "CLT"} · {career?.area || "Comercial"}
+                    </Badge>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
+                  {/* Row 2: Selectors */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     <div className="space-y-1">
                       <label className="text-[10px] text-muted-foreground uppercase tracking-wide">
                         Regime
                       </label>
                       <Select
                         value={career?.contract_type || "CLT"}
-                        onValueChange={(v) =>
-                          updateCareer(member.id, "contract_type", v)
-                        }
+                        onValueChange={(v) => updateCareer(member.id, "contract_type", v)}
                       >
-                        <SelectTrigger className="w-[90px] h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -224,15 +246,55 @@ export function TeamCareerTab() {
 
                     <div className="space-y-1">
                       <label className="text-[10px] text-muted-foreground uppercase tracking-wide">
-                        Nível
+                        Área
+                      </label>
+                      <Select
+                        value={career?.area || "Comercial"}
+                        onValueChange={(v) => updateCareer(member.id, "area", v)}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {AREAS.map((area) => (
+                            <SelectItem key={area} value={area}>
+                              {area}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                        Cargo
+                      </label>
+                      <Select
+                        value={career?.cargo || "Vendedor"}
+                        onValueChange={(v) => updateCareer(member.id, "cargo", v)}
+                      >
+                        <SelectTrigger className="h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {CARGOS.map((cargo) => (
+                            <SelectItem key={cargo} value={cargo}>
+                              {cargo}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                        Nível Carreira
                       </label>
                       <Select
                         value={career?.career_level_name || "Anjo Vendedor"}
-                        onValueChange={(v) =>
-                          updateCareer(member.id, "career_level_name", v)
-                        }
+                        onValueChange={(v) => updateCareer(member.id, "career_level_name", v)}
                       >
-                        <SelectTrigger className="w-[220px] h-8 text-xs">
+                        <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -244,13 +306,6 @@ export function TeamCareerTab() {
                         </SelectContent>
                       </Select>
                     </div>
-
-                    <Badge
-                      variant="secondary"
-                      className="text-[10px] shrink-0"
-                    >
-                      {career?.contract_type || "CLT"}
-                    </Badge>
                   </div>
                 </div>
               );
