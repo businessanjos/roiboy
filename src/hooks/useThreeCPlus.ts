@@ -40,6 +40,7 @@ interface ConnectionInfo {
   domain: string;
   api_token: string;
   extension_url: string;
+  socket_url?: string;
 }
 
 export function useThreeCPlus() {
@@ -56,6 +57,7 @@ export function useThreeCPlus() {
   const socketRef = useRef<Socket | null>(null);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const callStartRef = useRef<Date | null>(null);
+  const agentStatusRef = useRef<AgentStatus>("offline");
 
   // Start call timer
   const startCallTimer = useCallback(() => {
@@ -76,6 +78,27 @@ export function useThreeCPlus() {
     callStartRef.current = null;
     setCallTimer(0);
   }, []);
+
+  useEffect(() => {
+    agentStatusRef.current = agentStatus;
+  }, [agentStatus]);
+
+  const waitForAgentStatus = useCallback(
+    async (statuses: AgentStatus[], timeoutMs = 10000, intervalMs = 250) => {
+      const startTime = Date.now();
+
+      while (Date.now() - startTime < timeoutMs) {
+        if (statuses.includes(agentStatusRef.current)) {
+          return true;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      }
+
+      return statuses.includes(agentStatusRef.current);
+    },
+    []
+  );
 
   // Invoke the unified edge function
   const invokeAgent = useCallback(async (action: string, body: Record<string, unknown> = {}) => {
@@ -109,21 +132,47 @@ export function useThreeCPlus() {
   }, [invokeAgent]);
 
   // Connect Socket.io
-  const connectSocket = useCallback((domain: string, apiToken: string) => {
+  const connectSocket = useCallback((socketUrl: string, apiToken: string) => {
     if (socketRef.current?.connected) return;
 
-    console.log("[useThreeCPlus] Connecting Socket.io to", domain);
-    const socket = io(domain, {
-      query: { token: apiToken },
+    socketRef.current?.disconnect();
+
+    console.log("[useThreeCPlus] Connecting Socket.io to", socketUrl);
+    const socket = io(socketUrl, {
+      query: { token: apiToken, api_token: apiToken },
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
+      timeout: 10000,
+      forceNew: true,
     });
+
+    const handleLoggedOut = () => {
+      console.log("[useThreeCPlus] agent logged out");
+      setAgentStatus("offline");
+      setSelectedCampaign(null);
+      setCurrentCall(null);
+      stopCallTimer();
+    };
+
+    const handleEnteredManualMode = () => {
+      console.log("[useThreeCPlus] agent entered manual mode");
+      setAgentStatus("manual_mode");
+    };
+
+    const handleFailedManualMode = () => {
+      toast.error("Falha ao entrar no modo manual");
+    };
 
     socket.on("connect", () => {
       console.log("[useThreeCPlus] Socket.io connected");
       setIsConnected(true);
+    });
+
+    socket.on("connect_error", (error: unknown) => {
+      console.error("[useThreeCPlus] Socket.io connect_error", error);
+      setIsConnected(false);
     });
 
     socket.on("disconnect", () => {
@@ -149,29 +198,21 @@ export function useThreeCPlus() {
       console.log("[useThreeCPlus] agent-login-failed", data);
       toast.error("Falha no login", { description: "Não foi possível conectar na campanha." });
       setAgentStatus("offline");
-    });
-
-    socket.on("agent-logged-out", () => {
-      console.log("[useThreeCPlus] agent-logged-out");
-      setAgentStatus("offline");
       setSelectedCampaign(null);
-      setCurrentCall(null);
-      stopCallTimer();
     });
 
-    socket.on("agent-entered-manual-mode", () => {
-      console.log("[useThreeCPlus] agent-entered-manual-mode");
-      setAgentStatus("manual_mode");
-    });
+    socket.on("agent-was-logged-out", handleLoggedOut);
+    socket.on("agent-logged-out", handleLoggedOut);
+    socket.on("agent-entered-manual", handleEnteredManualMode);
+    socket.on("agent-entered-manual-mode", handleEnteredManualMode);
 
     socket.on("agent-left-manual-mode", () => {
       console.log("[useThreeCPlus] agent-left-manual-mode");
       setAgentStatus("idle");
     });
 
-    socket.on("agent-entered-manual-mode-failed", () => {
-      toast.error("Falha ao entrar no modo manual");
-    });
+    socket.on("agent-failed-to-enter-manual", handleFailedManualMode);
+    socket.on("agent-entered-manual-mode-failed", handleFailedManualMode);
 
     socket.on("agent-entered-work-break", (data: any) => {
       console.log("[useThreeCPlus] agent-entered-work-break", data);
@@ -250,7 +291,6 @@ export function useThreeCPlus() {
     // Call history event (for logging)
     socket.on("call-history-was-created", (data: any) => {
       console.log("[useThreeCPlus] call-history-was-created", data);
-      // Log to our database
       logCallEvent(data);
     });
 
@@ -263,7 +303,7 @@ export function useThreeCPlus() {
   }, [startCallTimer, stopCallTimer]);
 
   // Log call event to database
-  const logCallEvent = useCallback(async (eventData: any) => {
+  async function logCallEvent(eventData: any) {
     try {
       const call = eventData?.call || eventData;
       const { data: userData } = await supabase
@@ -301,7 +341,7 @@ export function useThreeCPlus() {
     } catch (err) {
       console.error("[useThreeCPlus] logCallEvent error:", err);
     }
-  }, []);
+  }
 
   // Fetch campaigns
   const fetchCampaigns = useCallback(async () => {
@@ -317,32 +357,50 @@ export function useThreeCPlus() {
 
   // Login to campaign
   const loginCampaign = useCallback(async (campaign: Campaign) => {
+    if (!isConnected) {
+      toast.error("Aguardando conexão do ramal", {
+        description: "Espere o socket e o WebRTC conectarem antes de entrar na campanha.",
+      });
+      return;
+    }
+
     setLoading(true);
     setAgentStatus("connecting");
+    setCurrentCall(null);
+
     try {
       const data = await invokeAgent("login", { campaign_id: campaign.id });
       if (data?.success) {
         setSelectedCampaign(campaign);
-        // Set idle immediately so manual call UI is available
-        setAgentStatus("idle");
-        // Fetch work breaks
+
         const campData = await invokeAgent("get_logged_campaign");
         if (campData?.success && campData.campaign?.work_breaks) {
           setWorkBreaks(campData.campaign.work_breaks);
         }
-        toast.success("Conectado à campanha", { description: campaign.name });
+
+        const becameIdle = await waitForAgentStatus(["idle"], 15000);
+
+        if (becameIdle) {
+          toast.success("Conectado à campanha", { description: campaign.name });
+        } else {
+          toast.info("Campanha conectada", {
+            description: "Aguardando o ramal WebRTC confirmar o login.",
+          });
+        }
       } else {
         toast.error("Falha ao entrar na campanha", { description: data?.error });
+        setSelectedCampaign(null);
         setAgentStatus("offline");
       }
     } catch (err) {
       console.error("[useThreeCPlus] loginCampaign error:", err);
       toast.error("Erro ao conectar na campanha");
+      setSelectedCampaign(null);
       setAgentStatus("offline");
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent]);
+  }, [invokeAgent, isConnected, waitForAgentStatus]);
 
   // Logout
   const logout = useCallback(async () => {
@@ -360,41 +418,55 @@ export function useThreeCPlus() {
     }
   }, [invokeAgent, stopCallTimer]);
 
-  // Manual call with retry (agent may not be idle yet after login)
+  // Manual call
   const manualCall = useCallback(async (phone: string) => {
+    const currentStatus = agentStatusRef.current;
+
+    if (currentStatus !== "idle" && currentStatus !== "manual_mode") {
+      toast.error("Agente não está pronto para discar", {
+        description: "Aguarde o status ficar ocioso antes de iniciar a ligação manual.",
+      });
+      return false;
+    }
+
     setLoading(true);
     try {
-      let entered = false;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const enterData = await invokeAgent("manual_call_enter");
-        if (enterData?.success) {
-          entered = true;
-          break;
+      if (currentStatus !== "manual_mode") {
+        let entered = false;
+
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const enterData = await invokeAgent("manual_call_enter");
+          if (enterData?.success) {
+            entered = true;
+            break;
+          }
+
+          if (attempt < 2) {
+            toast.info("Aguardando agente ficar ocioso...", { duration: 2000 });
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          }
         }
-        // Wait before retrying - agent may not be idle yet
-        if (attempt < 2) {
-          toast.info("Aguardando agente ficar ocioso...", { duration: 2000 });
-          await new Promise((r) => setTimeout(r, 3000));
+
+        if (!entered) {
+          toast.error("Agente não está ocioso", {
+            description: "Aguarde o discador liberar ou tente novamente em alguns segundos.",
+          });
+          return false;
+        }
+
+        const manualModeReady = await waitForAgentStatus(["manual_mode"], 5000);
+        if (!manualModeReady) {
+          toast.error("Modo manual ainda não confirmou", {
+            description: "Aguarde o ramal atualizar e tente novamente.",
+          });
+          return false;
         }
       }
-
-      if (!entered) {
-        toast.error("Agente não está ocioso", {
-          description: "Aguarde o discador liberar ou tente novamente em alguns segundos.",
-        });
-        return false;
-      }
-
-      setAgentStatus("manual_mode");
-
-      // Wait a moment for the server to process
-      await new Promise((r) => setTimeout(r, 1500));
 
       const dialData = await invokeAgent("manual_call_dial", { phone });
       if (!dialData?.success) {
         toast.error("Não foi possível discar");
         await invokeAgent("manual_call_exit");
-        setAgentStatus("idle");
         return false;
       }
 
@@ -407,7 +479,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent]);
+  }, [invokeAgent, waitForAgentStatus]);
 
   // Hangup
   const hangup = useCallback(async () => {

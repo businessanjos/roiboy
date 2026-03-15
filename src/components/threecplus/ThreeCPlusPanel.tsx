@@ -96,6 +96,7 @@ export function ThreeCPlusPanel() {
   const [showExtension, setShowExtension] = useState(false);
   const [manualPhone, setManualPhone] = useState("");
   const [initialized, setInitialized] = useState(false);
+  const [extensionLoaded, setExtensionLoaded] = useState(false);
 
   // Initialize connection
   const handleInit = useCallback(async () => {
@@ -116,10 +117,14 @@ export function ThreeCPlusPanel() {
     }
   }, [handleInit, initialized]);
 
+  useEffect(() => {
+    setExtensionLoaded(false);
+  }, [connectionInfo?.extension_url]);
+
   // Connect Socket.io after getting connection info
   useEffect(() => {
     if (connectionInfo && !isConnected) {
-      connectSocket(connectionInfo.domain, connectionInfo.api_token);
+      connectSocket(connectionInfo.socket_url ?? "https://socket.3c.fluxoti.com", connectionInfo.api_token);
       setShowExtension(true);
     }
   }, [connectionInfo, isConnected, connectSocket]);
@@ -145,6 +150,8 @@ export function ThreeCPlusPanel() {
   const statusInfo = getStatusInfo(agentStatus);
   const StatusIcon = statusInfo.icon;
   const isInCall = agentStatus === "on_call" || agentStatus === "manual_call_connected";
+  const canLogin = isConnected && extensionLoaded && !loading;
+  const canDialManually = agentStatus === "idle" || agentStatus === "manual_mode";
 
   // Floating button when panel is closed
   if (!isOpen) {
@@ -249,7 +256,7 @@ export function ThreeCPlusPanel() {
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Select onValueChange={handleLogin} disabled={loading}>
+                  <Select onValueChange={handleLogin} disabled={!canLogin}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione uma campanha" />
                     </SelectTrigger>
@@ -261,6 +268,16 @@ export function ThreeCPlusPanel() {
                       ))}
                     </SelectContent>
                   </Select>
+                  {!extensionLoaded && (
+                    <p className="text-xs text-muted-foreground">
+                      Carregando o ramal WebRTC antes de liberar o login.
+                    </p>
+                  )}
+                  {extensionLoaded && !isConnected && (
+                    <p className="text-xs text-muted-foreground">
+                      Conectando os eventos em tempo real da 3C Plus.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -285,6 +302,18 @@ export function ThreeCPlusPanel() {
                 <LogOut className="h-3.5 w-3.5 mr-1" />
                 Sair
               </Button>
+            </div>
+          )}
+
+          {selectedCampaign && agentStatus === "connecting" && (
+            <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Aguardando ramal ficar ocioso
+              </div>
+              <p className="text-xs text-muted-foreground">
+                A discagem manual será liberada assim que a 3C Plus confirmar o login do agente.
+              </p>
             </div>
           )}
 
@@ -373,7 +402,7 @@ export function ThreeCPlusPanel() {
           )}
 
           {/* Manual Call */}
-          {selectedCampaign && !isInCall && agentStatus !== "offline" && agentStatus !== "acw" && agentStatus !== "on_break" && (
+          {selectedCampaign && canDialManually && !isInCall && (
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Ligação Manual
@@ -481,6 +510,7 @@ export function ThreeCPlusPanel() {
                   allow="microphone"
                   className="w-full h-[120px] border-0"
                   title="3C Plus Extension"
+                  onLoad={() => setExtensionLoaded(true)}
                 />
               </div>
               <p className="text-[10px] text-muted-foreground text-center">
