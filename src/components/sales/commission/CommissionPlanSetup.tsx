@@ -229,8 +229,9 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                     <Label className="text-xs">Bônus fixo (R$)</Label>
                     <Input
                       type="number"
-                      value={tier.bonus_value}
-                      onChange={(e) => updateTier(index, { bonus_value: Number(e.target.value) })}
+                      value={tier.bonus_value || ""}
+                      placeholder="0"
+                      onChange={(e) => updateTier(index, { bonus_value: e.target.value === "" ? 0 : Number(e.target.value) })}
                       className="h-8 text-sm"
                     />
                   </div>
