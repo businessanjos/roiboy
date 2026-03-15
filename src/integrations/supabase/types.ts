@@ -8983,6 +8983,56 @@ export type Database = {
           },
         ]
       }
+      sales_goal_metrics: {
+        Row: {
+          account_id: string
+          cargo: string
+          created_at: string
+          default_value: number
+          display_order: number
+          icon_name: string
+          id: string
+          is_currency: boolean
+          metric_key: string
+          metric_label: string
+          metric_unit: string
+        }
+        Insert: {
+          account_id: string
+          cargo: string
+          created_at?: string
+          default_value?: number
+          display_order?: number
+          icon_name?: string
+          id?: string
+          is_currency?: boolean
+          metric_key: string
+          metric_label: string
+          metric_unit?: string
+        }
+        Update: {
+          account_id?: string
+          cargo?: string
+          created_at?: string
+          default_value?: number
+          display_order?: number
+          icon_name?: string
+          id?: string
+          is_currency?: boolean
+          metric_key?: string
+          metric_label?: string
+          metric_unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_goal_metrics_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_goals: {
         Row: {
           account_id: string
