@@ -356,23 +356,20 @@ export function useCommissionPlan() {
     }
   };
 
-  const calculateWeeklyCommissions = async () => {
+  const calculateMonthlyCommissions = async () => {
     if (!accountId || !plan) return;
     setCalculating(true);
 
     try {
-      // Get current week boundaries (Mon-Sun)
+      // Get current month boundaries (1st to last day)
       const now = new Date();
-      const dayOfWeek = now.getDay();
-      const monday = new Date(now);
-      monday.setDate(now.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
-      monday.setHours(0, 0, 0, 0);
-      const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
-      sunday.setHours(23, 59, 59, 999);
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+      firstDay.setHours(0, 0, 0, 0);
+      const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      lastDay.setHours(23, 59, 59, 999);
 
-      const periodStart = monday.toISOString().split("T")[0];
-      const periodEnd = sunday.toISOString().split("T")[0];
+      const periodStart = firstDay.toISOString().split("T")[0];
+      const periodEnd = lastDay.toISOString().split("T")[0];
 
       // Get only sales team users (managed by Jonathan)
       const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
