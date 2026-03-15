@@ -48,6 +48,7 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const Download = lazy(() => import("./pages/Download"));
 const Home = lazy(() => import("./pages/Home"));
+const SalesScripts = lazy(() => import("./pages/SalesScripts"));
 const Reminders = lazy(() => import("./pages/Reminders"));
 const WhatsAppGroups = lazy(() => import("./pages/WhatsAppGroups"));
 const PublicMembersBook = lazy(() => import("./pages/PublicMembersBook"));
@@ -199,6 +200,7 @@ const App = () => (
                             <Route path="/team-chat/:chatId" element={<TeamChat />} />
                             <Route path="/admin" element={<Admin />} />
                             <Route path="/admin/whatsapp-diagnostics" element={<WhatsAppDiagnostics />} />
+                            <Route path="/sales-scripts" element={<SalesScripts />} />
                           </Route>
                           <Route path="*" element={<NotFound />} />
                         </Routes>
