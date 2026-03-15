@@ -159,7 +159,7 @@ export function CommissionDashboard({
       </div>
 
       {/* Summary Cards */}
-      {latestPeriods.length > 0 && (
+      {selectedPeriods.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
