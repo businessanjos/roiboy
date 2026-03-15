@@ -27,6 +27,9 @@ import {
   ArrowRight,
   CheckCircle2,
   Package,
+  Users,
+  Shield,
+  Award,
 } from "lucide-react";
 import { CommissionPlan, CommissionTier, CommissionTrigger, CommissionSalesLevel } from "@/hooks/useCommissionPlan";
 import { motion, AnimatePresence } from "framer-motion";
