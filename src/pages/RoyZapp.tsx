@@ -2736,9 +2736,14 @@ export default function RoyZapp() {
     }, 0);
   }, [messageInput]);
 
-  // Filter users not already agents
+  // Filter users not already agents — only commercial team members
+  const COMMERCIAL_NAMES = ["jonathan", "darlan", "george", "vanessa"];
   const availableUsers = teamUsers.filter(
-    (user) => !agents.some((agent) => agent.user_id === user.id) || editingAgent?.user_id === user.id
+    (user) => {
+      const isCommercial = COMMERCIAL_NAMES.some(name => user.name.toLowerCase().includes(name));
+      const isNotAlreadyAgent = !agents.some((agent) => agent.user_id === user.id) || editingAgent?.user_id === user.id;
+      return isCommercial && isNotAlreadyAgent;
+    }
   );
 
   // currentAgent is now provided by useZappData hook
