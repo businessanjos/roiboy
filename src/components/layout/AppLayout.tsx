@@ -99,6 +99,9 @@ export function AppLayout() {
 
           {/* Chat com agentes de IA - temporariamente oculto */}
           {/* {isAdmin && <GlobalAgentChat />} */}
+
+          {/* 3C Plus Embedded Panel */}
+          <ThreeCPlusPanel />
         </div>
       </NotificationsProvider>
     </PlanLimitsProvider>
