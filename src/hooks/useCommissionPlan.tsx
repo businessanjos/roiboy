@@ -213,13 +213,19 @@ export function useCommissionPlan() {
 
         const userMap = new Map((users || []).map((u: any) => [u.id, u]));
 
+        const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
+
         setPeriods(
-          data.map((d: any) => ({
-            ...d,
-            user_name: (userMap.get(d.user_id) as any)?.name || "Sem nome",
-            user_avatar: (userMap.get(d.user_id) as any)?.avatar_url || null,
-            triggers_met: d.triggers_met || {},
-          }))
+          data
+            .map((d: any) => ({
+              ...d,
+              user_name: (userMap.get(d.user_id) as any)?.name || "Sem nome",
+              user_avatar: (userMap.get(d.user_id) as any)?.avatar_url || null,
+              triggers_met: d.triggers_met || {},
+            }))
+            .filter((d: any) =>
+              SALES_TEAM_NAMES.some((n) => d.user_name?.toLowerCase().includes(n))
+            )
         );
       }
     } catch (err) {
