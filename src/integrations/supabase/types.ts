@@ -2870,6 +2870,7 @@ export type Database = {
           is_active: boolean
           name: string
           period_type: string
+          tier_mode: string
           updated_at: string
         }
         Insert: {
@@ -2880,6 +2881,7 @@ export type Database = {
           is_active?: boolean
           name: string
           period_type?: string
+          tier_mode?: string
           updated_at?: string
         }
         Update: {
@@ -2890,6 +2892,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           period_type?: string
+          tier_mode?: string
           updated_at?: string
         }
         Relationships: [
@@ -2905,6 +2908,54 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_sales_levels: {
+        Row: {
+          account_id: string
+          created_at: string
+          display_order: number
+          id: string
+          level_name: string
+          monthly_target: number
+          plan_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          level_name: string
+          monthly_target?: number
+          plan_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          level_name?: string
+          monthly_target?: number
+          plan_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_sales_levels_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_sales_levels_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "commission_plans"
             referencedColumns: ["id"]
           },
         ]

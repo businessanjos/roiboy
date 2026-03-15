@@ -22,14 +22,23 @@ export interface CommissionTrigger {
   is_active: boolean;
 }
 
+export interface CommissionSalesLevel {
+  id?: string;
+  level_name: string;
+  monthly_target: number;
+  display_order: number;
+}
+
 export interface CommissionPlan {
   id: string;
   name: string;
   period_type: string;
+  tier_mode: "percent_of_target" | "absolute";
   is_active: boolean;
   created_at: string;
   tiers: CommissionTier[];
   triggers: CommissionTrigger[];
+  sales_levels: CommissionSalesLevel[];
 }
 
 export interface CommissionPeriodResult {
@@ -143,7 +152,7 @@ export function useCommissionPlan() {
 
       const activePlan = plans[0];
 
-      const [tiersRes, triggersRes] = await Promise.all([
+      const [tiersRes, triggersRes, levelsRes] = await Promise.all([
         supabase
           .from("commission_tiers")
           .select("*")
@@ -153,12 +162,19 @@ export function useCommissionPlan() {
           .from("commission_triggers")
           .select("*")
           .eq("plan_id", activePlan.id),
+        supabase
+          .from("commission_sales_levels")
+          .select("*")
+          .eq("plan_id", activePlan.id)
+          .order("display_order"),
       ]);
 
       setPlan({
         ...activePlan,
+        tier_mode: (activePlan.tier_mode || "percent_of_target") as "percent_of_target" | "absolute",
         tiers: (tiersRes.data || []) as CommissionTier[],
         triggers: (triggersRes.data || []) as CommissionTrigger[],
+        sales_levels: (levelsRes.data || []) as CommissionSalesLevel[],
       });
     } catch (err) {
       console.error("Error fetching commission plan:", err);
@@ -238,9 +254,10 @@ export function useCommissionPlan() {
   }, [accountId]);
 
   const savePlan = async (
-    planData: { name: string; period_type: string },
+    planData: { name: string; period_type: string; tier_mode: string },
     tiers: CommissionTier[],
-    triggers: CommissionTrigger[]
+    triggers: CommissionTrigger[],
+    salesLevels: CommissionSalesLevel[]
   ) => {
     if (!accountId || !currentUser) return;
 
@@ -250,12 +267,13 @@ export function useCommissionPlan() {
       if (planId) {
         await supabase
           .from("commission_plans")
-          .update({ name: planData.name, period_type: planData.period_type, updated_at: new Date().toISOString() })
+          .update({ name: planData.name, period_type: planData.period_type, tier_mode: planData.tier_mode, updated_at: new Date().toISOString() })
           .eq("id", planId);
 
         await Promise.all([
           supabase.from("commission_tiers").delete().eq("plan_id", planId),
           supabase.from("commission_triggers").delete().eq("plan_id", planId),
+          supabase.from("commission_sales_levels").delete().eq("plan_id", planId),
         ]);
       } else {
         const { data: newPlan, error } = await supabase
@@ -264,6 +282,7 @@ export function useCommissionPlan() {
             account_id: accountId,
             name: planData.name,
             period_type: planData.period_type,
+            tier_mode: planData.tier_mode,
             created_by: currentUser.id,
           })
           .select()
@@ -271,6 +290,19 @@ export function useCommissionPlan() {
 
         if (error) throw error;
         planId = newPlan.id;
+      }
+
+      // Save sales levels
+      if (salesLevels.length > 0) {
+        await supabase.from("commission_sales_levels").insert(
+          salesLevels.map((l, i) => ({
+            account_id: accountId,
+            plan_id: planId!,
+            level_name: l.level_name,
+            monthly_target: l.monthly_target,
+            display_order: i,
+          }))
+        );
       }
 
       if (tiers.length > 0) {
