@@ -8477,6 +8477,48 @@ export type Database = {
           },
         ]
       }
+      sales_call_analyses: {
+        Row: {
+          account_id: string
+          analysis: string
+          created_at: string
+          id: string
+          transcript_preview: string | null
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          analysis: string
+          created_at?: string
+          id?: string
+          transcript_preview?: string | null
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          analysis?: string
+          created_at?: string
+          id?: string
+          transcript_preview?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_call_analyses_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_call_analyses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_goals: {
         Row: {
           account_id: string
@@ -8538,6 +8580,120 @@ export type Database = {
           },
         ]
       }
+      sales_materials: {
+        Row: {
+          account_id: string
+          content: string
+          created_at: string
+          file_name: string | null
+          file_size: number | null
+          file_url: string | null
+          id: string
+          is_active: boolean
+          material_type: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          content?: string
+          created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean
+          material_type: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          content?: string
+          created_at?: string
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean
+          material_type?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_materials_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_materials_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_playbooks: {
+        Row: {
+          account_id: string
+          content: string
+          created_at: string
+          generated_from: Json | null
+          id: string
+          is_favorite: boolean
+          script_type: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          content: string
+          created_at?: string
+          generated_from?: Json | null
+          id?: string
+          is_favorite?: boolean
+          script_type?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          content?: string
+          created_at?: string
+          generated_from?: Json | null
+          id?: string
+          is_favorite?: boolean
+          script_type?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_playbooks_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_playbooks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_records: {
         Row: {
           account_id: string
@@ -8592,6 +8748,63 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_scripts: {
+        Row: {
+          account_id: string
+          content: string
+          created_at: string
+          created_by: string | null
+          funnel_stage: string | null
+          id: string
+          is_active: boolean
+          objection_type: string | null
+          tags: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          funnel_stage?: string | null
+          id?: string
+          is_active?: boolean
+          objection_type?: string | null
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          funnel_stage?: string | null
+          id?: string
+          is_active?: boolean
+          objection_type?: string | null
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_scripts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_scripts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
