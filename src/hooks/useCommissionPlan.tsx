@@ -127,6 +127,28 @@ export function isPIXPartial(paymentOption: string | null, installmentsCount: nu
   return opt.includes("pix") && (installmentsCount || 1) > 2;
 }
 
+const normalizeCommissionTiers = (rawTiers: CommissionTier[]): CommissionTier[] => {
+  const seen = new Set<string>();
+
+  return [...rawTiers]
+    .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+    .filter((tier) => {
+      const key = [
+        (tier.tier_name || "").trim().toLowerCase(),
+        tier.min_value ?? "",
+        tier.max_value ?? "",
+        tier.commission_percent ?? "",
+        tier.bonus_value ?? 0,
+        tier.is_super_meta ? 1 : 0,
+      ].join("|");
+
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .map((tier, index) => ({ ...tier, display_order: index }));
+};
+
 export function useCommissionPlan(cargo: string = "Closer") {
   const { currentUser } = useCurrentUser();
   const [plan, setPlan] = useState<CommissionPlan | null>(null);
