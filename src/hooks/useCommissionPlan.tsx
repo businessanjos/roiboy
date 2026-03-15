@@ -127,7 +127,7 @@ export function isPIXPartial(paymentOption: string | null, installmentsCount: nu
   return opt.includes("pix") && (installmentsCount || 1) > 2;
 }
 
-export function useCommissionPlan() {
+export function useCommissionPlan(cargo: string = "Closer") {
   const { currentUser } = useCurrentUser();
   const [plan, setPlan] = useState<CommissionPlan | null>(null);
   const [periods, setPeriods] = useState<CommissionPeriodResult[]>([]);
@@ -146,6 +146,7 @@ export function useCommissionPlan() {
         .select("*")
         .eq("account_id", accountId)
         .eq("is_active", true)
+        .eq("cargo", cargo)
         .order("created_at", { ascending: false })
         .limit(1);
 
