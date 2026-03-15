@@ -357,13 +357,6 @@ export function useThreeCPlus() {
 
   // Login to campaign
   const loginCampaign = useCallback(async (campaign: Campaign) => {
-    if (!isConnected) {
-      toast.error("Aguardando conexão do ramal", {
-        description: "Espere o socket e o WebRTC conectarem antes de entrar na campanha.",
-      });
-      return;
-    }
-
     setLoading(true);
     setAgentStatus("connecting");
     setCurrentCall(null);
