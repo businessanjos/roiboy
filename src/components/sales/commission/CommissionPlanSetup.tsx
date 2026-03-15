@@ -218,8 +218,9 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                   <Input
                     type="number"
                     step="0.5"
-                    value={tier.commission_percent}
-                    onChange={(e) => updateTier(index, { commission_percent: Number(e.target.value) })}
+                    value={tier.commission_percent || ""}
+                    placeholder="0"
+                    onChange={(e) => updateTier(index, { commission_percent: e.target.value === "" ? 0 : Number(e.target.value) })}
                     className="h-8 text-sm"
                   />
                 </div>
