@@ -21,13 +21,14 @@ import {
   Zap,
   Users,
   Target,
+  DollarSign,
 } from "lucide-react";
 import { CommissionPlan, CommissionTier, CommissionTrigger, CommissionSalesLevel } from "@/hooks/useCommissionPlan";
 
 interface CommissionPlanSetupProps {
   plan: CommissionPlan | null;
   onSave: (
-    planData: { name: string; period_type: string; tier_mode: string },
+    planData: { name: string; period_type: string; tier_mode: string; monthly_quota: number; prospecting_commission_percent: number },
     tiers: CommissionTier[],
     triggers: CommissionTrigger[],
     salesLevels: CommissionSalesLevel[]
@@ -42,36 +43,38 @@ const DEFAULT_TRIGGERS: CommissionTrigger[] = [
 ];
 
 const DEFAULT_LEVELS: CommissionSalesLevel[] = [
-  { level_name: "Junior", monthly_target: 50000, display_order: 0 },
-  { level_name: "Pleno", monthly_target: 80000, display_order: 1 },
-  { level_name: "Senior", monthly_target: 120000, display_order: 2 },
+  { level_name: "Anjo Vendedor", monthly_target: 450000, fixed_salary: 4000, team_bonus_percent: 0, total_compensation: 13000, display_order: 0 },
+  { level_name: "Anjo Executivo", monthly_target: 450000, fixed_salary: 4300, team_bonus_percent: 0, total_compensation: 13300, display_order: 1 },
+  { level_name: "Anjo Pro", monthly_target: 450000, fixed_salary: 4600, team_bonus_percent: 0, total_compensation: 13900, display_order: 2 },
+  { level_name: "Anjo Elite", monthly_target: 450000, fixed_salary: 5000, team_bonus_percent: 0, total_compensation: 14500, display_order: 3 },
+  { level_name: "Anjo Star", monthly_target: 450000, fixed_salary: 5500, team_bonus_percent: 0, total_compensation: 15000, display_order: 4 },
+  { level_name: "Anjo Mestre", monthly_target: 450000, fixed_salary: 6000, team_bonus_percent: 0, total_compensation: 15500, display_order: 5 },
+  { level_name: "Anjo Líder / Especialista", monthly_target: 450000, fixed_salary: 6500, team_bonus_percent: 0.25, total_compensation: 16600, display_order: 6 },
+  { level_name: "Anjo Estrategista / Esp. Pro", monthly_target: 450000, fixed_salary: 7200, team_bonus_percent: 0.5, total_compensation: 18500, display_order: 7 },
+  { level_name: "Anjo Visionário / Esp. Elite", monthly_target: 450000, fixed_salary: 8000, team_bonus_percent: 0.75, total_compensation: 20500, display_order: 8 },
+];
+
+const DEFAULT_TIERS: CommissionTier[] = [
+  { tier_name: "Até 80% da cota", min_value: 0, max_value: 80, commission_percent: 0.5, is_super_meta: false, bonus_value: 0, display_order: 0 },
+  { tier_name: "81% a 99%", min_value: 81, max_value: 99, commission_percent: 0.8, is_super_meta: false, bonus_value: 0, display_order: 1 },
+  { tier_name: "Acima de 100%", min_value: 100, max_value: null, commission_percent: 2, is_super_meta: true, bonus_value: 0, display_order: 2 },
 ];
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }).format(value);
 
 export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) {
-  const [name, setName] = useState(plan?.name || "Plano de Comissão Mensal");
+  const [name, setName] = useState(plan?.name || "Plano de Comissão - Eternum");
   const [tierMode, setTierMode] = useState<string>(plan?.tier_mode || "percent_of_target");
+  const [monthlyQuota, setMonthlyQuota] = useState(plan?.monthly_quota || 450000);
+  const [prospectingPercent, setProspectingPercent] = useState(plan?.prospecting_commission_percent || 3);
 
   const [salesLevels, setSalesLevels] = useState<CommissionSalesLevel[]>(
     plan?.sales_levels?.length ? plan.sales_levels : DEFAULT_LEVELS
   );
 
   const [tiers, setTiers] = useState<CommissionTier[]>(
-    plan?.tiers?.length
-      ? plan.tiers
-      : tierMode === "percent_of_target"
-        ? [
-            { tier_name: "Até 80% da meta", min_value: 0, max_value: 80, commission_percent: 3, is_super_meta: false, bonus_value: 0, display_order: 0 },
-            { tier_name: "80% a 100%", min_value: 80, max_value: 100, commission_percent: 5, is_super_meta: false, bonus_value: 0, display_order: 1 },
-            { tier_name: "Super Meta (>100%)", min_value: 100, max_value: null, commission_percent: 7, is_super_meta: true, bonus_value: 1000, display_order: 2 },
-          ]
-        : [
-            { tier_name: "Faixa 1", min_value: 0, max_value: 30000, commission_percent: 3, is_super_meta: false, bonus_value: 0, display_order: 0 },
-            { tier_name: "Faixa 2", min_value: 30000, max_value: 60000, commission_percent: 5, is_super_meta: false, bonus_value: 0, display_order: 1 },
-            { tier_name: "Super Meta", min_value: 60000, max_value: null, commission_percent: 7, is_super_meta: true, bonus_value: 1000, display_order: 2 },
-          ]
+    plan?.tiers?.length ? plan.tiers : DEFAULT_TIERS
   );
 
   const [triggers, setTriggers] = useState<CommissionTrigger[]>(
@@ -83,6 +86,8 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
     if (plan) {
       setName(plan.name);
       setTierMode(plan.tier_mode || "percent_of_target");
+      setMonthlyQuota(plan.monthly_quota || 450000);
+      setProspectingPercent(plan.prospecting_commission_percent || 3);
       if (plan.tiers.length) setTiers(plan.tiers);
       if (plan.triggers.length) setTriggers(plan.triggers);
       if (plan.sales_levels?.length) setSalesLevels(plan.sales_levels);
@@ -93,7 +98,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
   const addLevel = () => {
     setSalesLevels([
       ...salesLevels,
-      { level_name: `Nível ${salesLevels.length + 1}`, monthly_target: 0, display_order: salesLevels.length },
+      { level_name: `Nível ${salesLevels.length + 1}`, monthly_target: monthlyQuota, fixed_salary: 0, team_bonus_percent: 0, total_compensation: 0, display_order: salesLevels.length },
     ]);
   };
 
@@ -116,7 +121,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
         tier_name: isPercent ? `${(lastTier?.max_value || 0)}%+` : `Faixa ${tiers.length + 1}`,
         min_value: lastTier?.max_value || 0,
         max_value: null,
-        commission_percent: (lastTier?.commission_percent || 0) + 2,
+        commission_percent: (lastTier?.commission_percent || 0) + 1,
         is_super_meta: false,
         bonus_value: 0,
         display_order: tiers.length,
@@ -139,7 +144,12 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
 
   const handleSave = async () => {
     setSaving(true);
-    await onSave({ name, period_type: "monthly", tier_mode: tierMode }, tiers, triggers, salesLevels);
+    await onSave(
+      { name, period_type: "monthly", tier_mode: tierMode, monthly_quota: monthlyQuota, prospecting_commission_percent: prospectingPercent },
+      tiers,
+      triggers,
+      salesLevels
+    );
     setSaving(false);
   };
 
@@ -147,7 +157,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
 
   return (
     <div className="space-y-6">
-      {/* Plan Settings */}
+      {/* Plan Settings + Quota */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -168,25 +178,54 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="percent_of_target">% da meta atingida</SelectItem>
+                  <SelectItem value="percent_of_target">% da cota atingida</SelectItem>
                   <SelectItem value="absolute">Valor absoluto (R$)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Target className="h-3.5 w-3.5" />
+                Cota Mensal (R$)
+              </Label>
+              <Input
+                type="number"
+                value={monthlyQuota || ""}
+                onChange={(e) => setMonthlyQuota(e.target.value === "" ? 0 : Number(e.target.value))}
+                placeholder="Ex: 450000"
+              />
+              <p className="text-xs text-muted-foreground">Meta de vendas mensal aplicada a todos os vendedores.</p>
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <DollarSign className="h-3.5 w-3.5" />
+                Comissão Indicação/Prospecção (%)
+              </Label>
+              <Input
+                type="number"
+                step="0.5"
+                value={prospectingPercent || ""}
+                onChange={(e) => setProspectingPercent(e.target.value === "" ? 0 : Number(e.target.value))}
+                placeholder="Ex: 3"
+              />
+              <p className="text-xs text-muted-foreground">Percentual sobre vendas originadas de indicação ou prospecção ativa.</p>
+            </div>
+          </div>
           <p className="text-xs text-muted-foreground">
-            Período de apuração: <strong>Mensal</strong>
+            Período de apuração: <strong>Mensal</strong> · Cota: <strong>{formatCurrency(monthlyQuota)}</strong>
           </p>
         </CardContent>
       </Card>
 
-      {/* Sales Levels - STEP 1 */}
+      {/* Career Levels - STEP 1 */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              <Target className="h-4 w-4" />
-              1. Metas por Nível
+              <Users className="h-4 w-4" />
+              1. Plano de Carreira em Y
             </CardTitle>
             <Button variant="outline" size="sm" onClick={addLevel}>
               <Plus className="h-4 w-4 mr-1" />
@@ -196,58 +235,75 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground mb-2">
-            Defina os níveis do time e a meta mensal de cada um. As faixas de comissão serão aplicadas sobre essas metas.
+            Defina os níveis do plano de carreira, salário fixo e remuneração total esperada.
           </p>
           {salesLevels.map((level, index) => (
-            <div key={index} className="flex items-center gap-3 p-3 border rounded-lg">
-              <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-              <div className="flex-1 grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Nome do nível</Label>
+            <div key={index} className={`border rounded-lg p-4 space-y-3 ${level.team_bonus_percent > 0 ? "border-primary/30 bg-primary/5" : ""}`}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
                   <Input
                     value={level.level_name}
                     onChange={(e) => updateLevel(index, { level_name: e.target.value })}
+                    className="w-56 h-8 text-sm font-medium"
+                    placeholder="Nome do nível"
+                  />
+                  {level.team_bonus_percent > 0 && (
+                    <Badge variant="secondary" className="text-[10px]">
+                      +{level.team_bonus_percent}% time
+                    </Badge>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => removeLevel(index)}
+                  disabled={salesLevels.length <= 1}
+                >
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Salário fixo (R$)</Label>
+                  <Input
+                    type="number"
+                    value={level.fixed_salary || ""}
+                    onChange={(e) => updateLevel(index, { fixed_salary: e.target.value === "" ? 0 : Number(e.target.value) })}
                     className="h-8 text-sm"
-                    placeholder="Ex: Junior"
+                    placeholder="Ex: 4000"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Meta mensal (R$)</Label>
+                  <Label className="text-xs">Remuneração total (R$)</Label>
                   <Input
                     type="number"
-                    value={level.monthly_target || ""}
-                    onChange={(e) => updateLevel(index, { monthly_target: e.target.value === "" ? 0 : Number(e.target.value) })}
+                    value={level.total_compensation || ""}
+                    onChange={(e) => updateLevel(index, { total_compensation: e.target.value === "" ? 0 : Number(e.target.value) })}
                     className="h-8 text-sm"
-                    placeholder="Ex: 80000"
+                    placeholder="Ex: 13000"
                   />
                 </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">% sobre o time</Label>
+                  <Input
+                    type="number"
+                    step="0.25"
+                    value={level.team_bonus_percent || ""}
+                    onChange={(e) => updateLevel(index, { team_bonus_percent: e.target.value === "" ? 0 : Number(e.target.value) })}
+                    className="h-8 text-sm"
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Comissão esperada</Label>
+                  <div className="h-8 flex items-center text-sm font-medium text-muted-foreground">
+                    {formatCurrency(Math.max(0, (level.total_compensation || 0) - (level.fixed_salary || 0)))}
+                  </div>
+                </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 shrink-0"
-                onClick={() => removeLevel(index)}
-                disabled={salesLevels.length <= 1}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
             </div>
           ))}
-
-          {/* Preview table */}
-          {salesLevels.length > 0 && (
-            <div className="mt-3 p-3 bg-muted/50 rounded-lg">
-              <p className="text-xs font-medium mb-2">Resumo das metas:</p>
-              <div className="space-y-1">
-                {salesLevels.map((level, index) => (
-                  <div key={index} className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">{level.level_name}</span>
-                    <span className="font-medium">{formatCurrency(level.monthly_target)}/mês</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -268,8 +324,8 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground mb-2">
             {isPercent
-              ? "Defina as faixas como % da meta atingida. Ex: de 0% a 80% da meta → 3%."
-              : "Defina as faixas em valor absoluto (R$). Aplica igualmente a todos os vendedores."}
+              ? `Defina as faixas como % da cota atingida (cota: ${formatCurrency(monthlyQuota)}).`
+              : "Defina as faixas em valor absoluto (R$)."}
           </p>
           {tiers.map((tier, index) => (
             <div
@@ -338,7 +394,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                   <Label className="text-xs">Comissão (%)</Label>
                   <Input
                     type="number"
-                    step="0.5"
+                    step="0.1"
                     value={tier.commission_percent || ""}
                     placeholder="0"
                     onChange={(e) => updateTier(index, { commission_percent: e.target.value === "" ? 0 : Number(e.target.value) })}
@@ -359,34 +415,21 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                 )}
               </div>
 
-              {/* Preview per level */}
-              <div className="text-xs text-muted-foreground space-y-0.5">
+              {/* Preview */}
+              <div className="text-xs text-muted-foreground">
                 {isPercent ? (
-                  <>
-                    <div>
-                      De {tier.min_value}%{tier.max_value ? ` até ${tier.max_value}%` : " em diante"} da meta → {tier.commission_percent}%
-                      {tier.is_super_meta && tier.bonus_value > 0 && ` + bônus de ${formatCurrency(tier.bonus_value)}`}
-                    </div>
-                    {salesLevels.length > 0 && (
-                      <div className="pl-3 border-l-2 border-muted mt-1 space-y-0.5">
-                        {salesLevels.map((level) => {
-                          const minVal = (tier.min_value / 100) * level.monthly_target;
-                          const maxVal = tier.max_value ? (tier.max_value / 100) * level.monthly_target : null;
-                          return (
-                            <div key={level.level_name} className="flex gap-2">
-                              <span className="font-medium">{level.level_name}:</span>
-                              <span>
-                                {formatCurrency(minVal)}{maxVal ? ` → ${formatCurrency(maxVal)}` : "+"}
-                              </span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
+                  <div>
+                    {tier.min_value}%{tier.max_value ? ` a ${tier.max_value}%` : "+"} da cota →{" "}
+                    <strong>{tier.commission_percent}%</strong> de comissão
+                    {tier.is_super_meta && tier.bonus_value > 0 && ` + bônus de ${formatCurrency(tier.bonus_value)}`}
+                    <span className="ml-2 text-foreground/60">
+                      ({formatCurrency((tier.min_value / 100) * monthlyQuota)}
+                      {tier.max_value ? ` a ${formatCurrency((tier.max_value / 100) * monthlyQuota)}` : "+"})
+                    </span>
+                  </div>
                 ) : (
                   <div>
-                    De {formatCurrency(tier.min_value)}
+                    {formatCurrency(tier.min_value)}
                     {tier.max_value ? ` até ${formatCurrency(tier.max_value)}` : " em diante"} → {tier.commission_percent}%
                     {tier.is_super_meta && tier.bonus_value > 0 && ` + bônus de ${formatCurrency(tier.bonus_value)}`}
                   </div>
@@ -394,6 +437,16 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
               </div>
             </div>
           ))}
+
+          {/* Prospecting reminder */}
+          <div className="p-3 border rounded-lg bg-muted/30">
+            <div className="flex items-center gap-2 text-sm">
+              <DollarSign className="h-4 w-4 text-primary" />
+              <span className="font-medium">Indicação / Prospecção:</span>
+              <span className="text-primary font-bold">{prospectingPercent}%</span>
+              <span className="text-muted-foreground text-xs">(configurado acima)</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
