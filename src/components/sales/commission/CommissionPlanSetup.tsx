@@ -251,7 +251,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
     setSaving(false);
   };
 
-  const isPercent = tierMode === "percent_of_target";
+  const savedModel = detectModel(plan);
   const currentModelDef = COMMISSION_MODELS.find((m) => m.key === selectedModel);
 
   // ===== STEP 1: Model selection =====
