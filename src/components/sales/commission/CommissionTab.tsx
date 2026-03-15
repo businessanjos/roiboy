@@ -91,7 +91,7 @@ export function CommissionTab() {
       </TabsContent>
 
       <TabsContent value="setup">
-        <CommissionPlanSetup plan={plan} onSave={savePlan} />
+        <CommissionPlanSetup plan={plan} onSave={savePlan as any} />
       </TabsContent>
     </Tabs>
   );
