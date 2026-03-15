@@ -418,41 +418,55 @@ export function useThreeCPlus() {
     }
   }, [invokeAgent, stopCallTimer]);
 
-  // Manual call with retry (agent may not be idle yet after login)
+  // Manual call
   const manualCall = useCallback(async (phone: string) => {
+    const currentStatus = agentStatusRef.current;
+
+    if (currentStatus !== "idle" && currentStatus !== "manual_mode") {
+      toast.error("Agente não está pronto para discar", {
+        description: "Aguarde o status ficar ocioso antes de iniciar a ligação manual.",
+      });
+      return false;
+    }
+
     setLoading(true);
     try {
-      let entered = false;
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const enterData = await invokeAgent("manual_call_enter");
-        if (enterData?.success) {
-          entered = true;
-          break;
+      if (currentStatus !== "manual_mode") {
+        let entered = false;
+
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const enterData = await invokeAgent("manual_call_enter");
+          if (enterData?.success) {
+            entered = true;
+            break;
+          }
+
+          if (attempt < 2) {
+            toast.info("Aguardando agente ficar ocioso...", { duration: 2000 });
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+          }
         }
-        // Wait before retrying - agent may not be idle yet
-        if (attempt < 2) {
-          toast.info("Aguardando agente ficar ocioso...", { duration: 2000 });
-          await new Promise((r) => setTimeout(r, 3000));
+
+        if (!entered) {
+          toast.error("Agente não está ocioso", {
+            description: "Aguarde o discador liberar ou tente novamente em alguns segundos.",
+          });
+          return false;
+        }
+
+        const manualModeReady = await waitForAgentStatus(["manual_mode"], 5000);
+        if (!manualModeReady) {
+          toast.error("Modo manual ainda não confirmou", {
+            description: "Aguarde o ramal atualizar e tente novamente.",
+          });
+          return false;
         }
       }
-
-      if (!entered) {
-        toast.error("Agente não está ocioso", {
-          description: "Aguarde o discador liberar ou tente novamente em alguns segundos.",
-        });
-        return false;
-      }
-
-      setAgentStatus("manual_mode");
-
-      // Wait a moment for the server to process
-      await new Promise((r) => setTimeout(r, 1500));
 
       const dialData = await invokeAgent("manual_call_dial", { phone });
       if (!dialData?.success) {
         toast.error("Não foi possível discar");
         await invokeAgent("manual_call_exit");
-        setAgentStatus("idle");
         return false;
       }
 
@@ -465,7 +479,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent]);
+  }, [invokeAgent, waitForAgentStatus]);
 
   // Hangup
   const hangup = useCallback(async () => {

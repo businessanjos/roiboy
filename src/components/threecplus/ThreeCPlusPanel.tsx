@@ -510,6 +510,7 @@ export function ThreeCPlusPanel() {
                   allow="microphone"
                   className="w-full h-[120px] border-0"
                   title="3C Plus Extension"
+                  onLoad={() => setExtensionLoaded(true)}
                 />
               </div>
               <p className="text-[10px] text-muted-foreground text-center">
