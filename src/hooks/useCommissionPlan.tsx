@@ -442,7 +442,7 @@ export function useCommissionPlan() {
         const userWonDeals = wonDeals.filter((d: any) => d.responsible_user_id === user.id);
         const wonValue = userWonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
 
-        const userAllDeals = allDealsInWeek.filter((d: any) => d.responsible_user_id === user.id);
+        const userAllDeals = allDealsInMonth.filter((d: any) => d.responsible_user_id === user.id);
         const totalDeals = userAllDeals.length;
         const lostDeals = userAllDeals.filter((d: any) => d.status === "lost").length;
         const closedDeals = userWonDeals.length + lostDeals;

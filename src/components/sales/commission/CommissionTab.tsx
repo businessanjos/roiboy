@@ -55,7 +55,7 @@ export function CommissionTab() {
               plan={plan}
               periods={periods}
               calculating={calculating}
-              onCalculate={calculateWeeklyCommissions}
+              onCalculate={calculateMonthlyCommissions}
               compact
             />
             <CommissionDealView
