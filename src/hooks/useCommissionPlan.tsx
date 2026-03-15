@@ -199,10 +199,12 @@ export function useCommissionPlan(cargo: string = "Closer") {
           .order("display_order"),
       ]);
 
+      const normalizedTiers = normalizeCommissionTiers((tiersRes.data || []) as CommissionTier[]);
+
       setPlan({
         ...activePlan,
         tier_mode: (activePlan.tier_mode || "percent_of_target") as "percent_of_target" | "absolute",
-        tiers: (tiersRes.data || []) as CommissionTier[],
+        tiers: normalizedTiers,
         triggers: (triggersRes.data || []) as CommissionTrigger[],
         sales_levels: (levelsRes.data || []) as CommissionSalesLevel[],
       });
