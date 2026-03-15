@@ -204,7 +204,7 @@ export default function SalesScripts() {
     onSuccess: async (data) => {
       setTranscriptAnalysis(data.analysis);
       const preview = (transcriptText || '').substring(0, 200);
-      await supabase.from('sales_call_analyses').insert({ account_id: accountId!, analysis: data.analysis, transcript_preview: preview || null });
+      await supabase.from('sales_call_analyses').insert({ account_id: accountId!, user_id: currentUser?.id!, analysis: data.analysis, transcript_preview: preview || null });
       queryClient.invalidateQueries({ queryKey: ['sales-call-analyses'] });
       toast.success('Análise concluída e salva!');
     },
