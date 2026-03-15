@@ -1,8 +1,7 @@
-import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SalesTeamTab } from "@/components/sales/SalesTeamTab";
 import { CommissionTab } from "@/components/sales/commission/CommissionTab";
 import { CareerPlanTab } from "@/components/sales/commission/CareerPlanTab";
+import { SalesTeamWrapper } from "@/components/sales/team/SalesTeamWrapper";
 import { Users, DollarSign, GraduationCap } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCommissionPlan } from "@/hooks/useCommissionPlan";
@@ -39,7 +38,7 @@ export default function SalesTeam() {
           </TabsList>
 
           <TabsContent value="team">
-            <SalesTeamTab />
+            <SalesTeamWrapper showManagement />
           </TabsContent>
 
           <TabsContent value="commission">
@@ -51,7 +50,7 @@ export default function SalesTeam() {
           </TabsContent>
         </Tabs>
       ) : (
-        <SalesTeamTab />
+        <SalesTeamWrapper />
       )}
     </div>
   );
