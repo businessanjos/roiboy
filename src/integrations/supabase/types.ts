@@ -2596,6 +2596,259 @@ export type Database = {
           },
         ]
       }
+      commission_periods: {
+        Row: {
+          account_id: string
+          all_triggers_met: boolean
+          approved_at: string | null
+          approved_by: string | null
+          bonus_value: number
+          commission_value: number
+          conversion_rate: number
+          created_at: string
+          has_delinquency: boolean
+          id: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          plan_id: string
+          status: string
+          tasks_completed: number
+          tasks_total: number
+          tier_achieved_id: string | null
+          total_calls: number
+          total_commission: number
+          triggers_met: Json | null
+          updated_at: string
+          user_id: string
+          won_deals: number
+          won_value: number
+        }
+        Insert: {
+          account_id: string
+          all_triggers_met?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          bonus_value?: number
+          commission_value?: number
+          conversion_rate?: number
+          created_at?: string
+          has_delinquency?: boolean
+          id?: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          plan_id: string
+          status?: string
+          tasks_completed?: number
+          tasks_total?: number
+          tier_achieved_id?: string | null
+          total_calls?: number
+          total_commission?: number
+          triggers_met?: Json | null
+          updated_at?: string
+          user_id: string
+          won_deals?: number
+          won_value?: number
+        }
+        Update: {
+          account_id?: string
+          all_triggers_met?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          bonus_value?: number
+          commission_value?: number
+          conversion_rate?: number
+          created_at?: string
+          has_delinquency?: boolean
+          id?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          plan_id?: string
+          status?: string
+          tasks_completed?: number
+          tasks_total?: number
+          tier_achieved_id?: string | null
+          total_calls?: number
+          total_commission?: number
+          triggers_met?: Json | null
+          updated_at?: string
+          user_id?: string
+          won_deals?: number
+          won_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_periods_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_periods_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_periods_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "commission_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_periods_tier_achieved_id_fkey"
+            columns: ["tier_achieved_id"]
+            isOneToOne: false
+            referencedRelation: "commission_tiers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_periods_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_plans: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          name: string
+          period_type: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          name: string
+          period_type?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          period_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_plans_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_plans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_tiers: {
+        Row: {
+          bonus_value: number | null
+          commission_percent: number
+          created_at: string
+          display_order: number
+          id: string
+          is_super_meta: boolean
+          max_value: number | null
+          min_value: number
+          plan_id: string
+          tier_name: string
+        }
+        Insert: {
+          bonus_value?: number | null
+          commission_percent?: number
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_super_meta?: boolean
+          max_value?: number | null
+          min_value?: number
+          plan_id: string
+          tier_name: string
+        }
+        Update: {
+          bonus_value?: number | null
+          commission_percent?: number
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_super_meta?: boolean
+          max_value?: number | null
+          min_value?: number
+          plan_id?: string
+          tier_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_tiers_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "commission_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_triggers: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          plan_id: string
+          trigger_type: string
+          trigger_value: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          plan_id: string
+          trigger_type: string
+          trigger_value?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          plan_id?: string
+          trigger_type?: string
+          trigger_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_triggers_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "commission_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       composition_presets: {
         Row: {
           account_id: string
