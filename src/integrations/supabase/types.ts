@@ -9104,6 +9104,54 @@ export type Database = {
           },
         ]
       }
+      sales_monthly_goals: {
+        Row: {
+          account_id: string
+          created_at: string
+          goal_value: number
+          id: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+          year_month: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          goal_value?: number
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+          year_month: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          goal_value?: number
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+          year_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_monthly_goals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_monthly_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_playbooks: {
         Row: {
           account_id: string
@@ -9267,6 +9315,54 @@ export type Database = {
           {
             foreignKeyName: "sales_scripts_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_team_careers: {
+        Row: {
+          account_id: string
+          career_level_name: string
+          contract_type: string
+          created_at: string
+          fixed_salary: number
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          career_level_name?: string
+          contract_type?: string
+          created_at?: string
+          fixed_salary?: number
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          career_level_name?: string
+          contract_type?: string
+          created_at?: string
+          fixed_salary?: number
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_team_careers_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_team_careers_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
