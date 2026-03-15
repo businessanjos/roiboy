@@ -15,7 +15,7 @@ export function CommissionTab() {
     loading,
     calculating,
     savePlan,
-    calculateWeeklyCommissions,
+    calculateMonthlyCommissions,
     updateDealEntryPayment,
     markCommissionAsPaid,
   } = useCommissionPlan();
