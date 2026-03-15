@@ -357,32 +357,50 @@ export function useThreeCPlus() {
 
   // Login to campaign
   const loginCampaign = useCallback(async (campaign: Campaign) => {
+    if (!isConnected) {
+      toast.error("Aguardando conexão do ramal", {
+        description: "Espere o socket e o WebRTC conectarem antes de entrar na campanha.",
+      });
+      return;
+    }
+
     setLoading(true);
     setAgentStatus("connecting");
+    setCurrentCall(null);
+
     try {
       const data = await invokeAgent("login", { campaign_id: campaign.id });
       if (data?.success) {
         setSelectedCampaign(campaign);
-        // Set idle immediately so manual call UI is available
-        setAgentStatus("idle");
-        // Fetch work breaks
+
         const campData = await invokeAgent("get_logged_campaign");
         if (campData?.success && campData.campaign?.work_breaks) {
           setWorkBreaks(campData.campaign.work_breaks);
         }
-        toast.success("Conectado à campanha", { description: campaign.name });
+
+        const becameIdle = await waitForAgentStatus(["idle"], 15000);
+
+        if (becameIdle) {
+          toast.success("Conectado à campanha", { description: campaign.name });
+        } else {
+          toast.info("Campanha conectada", {
+            description: "Aguardando o ramal WebRTC confirmar o login.",
+          });
+        }
       } else {
         toast.error("Falha ao entrar na campanha", { description: data?.error });
+        setSelectedCampaign(null);
         setAgentStatus("offline");
       }
     } catch (err) {
       console.error("[useThreeCPlus] loginCampaign error:", err);
       toast.error("Erro ao conectar na campanha");
+      setSelectedCampaign(null);
       setAgentStatus("offline");
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent]);
+  }, [invokeAgent, isConnected, waitForAgentStatus]);
 
   // Logout
   const logout = useCallback(async () => {
