@@ -157,6 +157,8 @@ export function useCommissionPlan(cargo: string = "Closer") {
   const [loading, setLoading] = useState(true);
   const [calculating, setCalculating] = useState(false);
 
+  const savePlanInFlightRef = useRef(false);
+
   const accountId = currentUser?.account_id;
 
   const fetchPlan = useCallback(async () => {
