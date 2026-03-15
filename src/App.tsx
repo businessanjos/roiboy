@@ -48,6 +48,7 @@ const TermsOfService = lazy(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
 const Download = lazy(() => import("./pages/Download"));
 const Home = lazy(() => import("./pages/Home"));
+const SalesScripts = lazy(() => import("./pages/SalesScripts"));
 const Reminders = lazy(() => import("./pages/Reminders"));
 const WhatsAppGroups = lazy(() => import("./pages/WhatsAppGroups"));
 const PublicMembersBook = lazy(() => import("./pages/PublicMembersBook"));
