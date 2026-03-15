@@ -233,7 +233,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
     } catch (err) {
       console.error("Error fetching periods:", err);
     }
-  }, [accountId]);
+  }, [accountId, plan]);
 
   const fetchDealEntries = useCallback(async () => {
     if (!accountId) return;
