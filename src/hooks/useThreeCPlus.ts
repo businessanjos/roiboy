@@ -395,7 +395,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent, isConnected, waitForAgentStatus]);
+  }, [invokeAgent, waitForAgentStatus]);
 
   // Logout
   const logout = useCallback(async () => {
