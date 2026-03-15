@@ -330,15 +330,14 @@ export function useCommissionPlan() {
         );
       }
 
-      const activeTriggers = triggers.filter((t) => t.is_active);
-      if (activeTriggers.length > 0) {
+      if (triggers.length > 0) {
         await supabase.from("commission_triggers").insert(
-          activeTriggers.map((t) => ({
+          triggers.map((t) => ({
             plan_id: planId!,
             trigger_type: t.trigger_type,
             trigger_value: t.trigger_value,
             description: t.description,
-            is_active: true,
+            is_active: !!t.is_active,
           }))
         );
       }
