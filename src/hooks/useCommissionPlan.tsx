@@ -259,7 +259,7 @@ export function useCommissionPlan() {
   }, [accountId]);
 
   const savePlan = async (
-    planData: { name: string; period_type: string; tier_mode: string },
+    planData: { name: string; period_type: string; tier_mode: string; monthly_quota: number; prospecting_commission_percent: number },
     tiers: CommissionTier[],
     triggers: CommissionTrigger[],
     salesLevels: CommissionSalesLevel[]
