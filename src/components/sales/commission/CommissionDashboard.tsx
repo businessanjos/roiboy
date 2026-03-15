@@ -30,6 +30,7 @@ interface CommissionDashboardProps {
   periods: CommissionPeriodResult[];
   calculating: boolean;
   onCalculate: () => Promise<void>;
+  compact?: boolean;
 }
 
 const formatCurrency = (value: number) =>
