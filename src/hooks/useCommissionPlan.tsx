@@ -254,9 +254,10 @@ export function useCommissionPlan() {
   }, [accountId]);
 
   const savePlan = async (
-    planData: { name: string; period_type: string },
+    planData: { name: string; period_type: string; tier_mode: string },
     tiers: CommissionTier[],
-    triggers: CommissionTrigger[]
+    triggers: CommissionTrigger[],
+    salesLevels: CommissionSalesLevel[]
   ) => {
     if (!accountId || !currentUser) return;
 
@@ -266,12 +267,13 @@ export function useCommissionPlan() {
       if (planId) {
         await supabase
           .from("commission_plans")
-          .update({ name: planData.name, period_type: planData.period_type, updated_at: new Date().toISOString() })
+          .update({ name: planData.name, period_type: planData.period_type, tier_mode: planData.tier_mode, updated_at: new Date().toISOString() })
           .eq("id", planId);
 
         await Promise.all([
           supabase.from("commission_tiers").delete().eq("plan_id", planId),
           supabase.from("commission_triggers").delete().eq("plan_id", planId),
+          supabase.from("commission_sales_levels").delete().eq("plan_id", planId),
         ]);
       } else {
         const { data: newPlan, error } = await supabase
@@ -280,6 +282,7 @@ export function useCommissionPlan() {
             account_id: accountId,
             name: planData.name,
             period_type: planData.period_type,
+            tier_mode: planData.tier_mode,
             created_by: currentUser.id,
           })
           .select()
@@ -287,6 +290,19 @@ export function useCommissionPlan() {
 
         if (error) throw error;
         planId = newPlan.id;
+      }
+
+      // Save sales levels
+      if (salesLevels.length > 0) {
+        await supabase.from("commission_sales_levels").insert(
+          salesLevels.map((l, i) => ({
+            account_id: accountId,
+            plan_id: planId!,
+            level_name: l.level_name,
+            monthly_target: l.monthly_target,
+            display_order: i,
+          }))
+        );
       }
 
       if (tiers.length > 0) {
