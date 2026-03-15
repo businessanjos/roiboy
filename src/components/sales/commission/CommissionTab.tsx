@@ -1,13 +1,19 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Settings2, BarChart3, Receipt } from "lucide-react";
+import { Settings2, BarChart3, Receipt, Target, Phone } from "lucide-react";
 import { useCommissionPlan } from "@/hooks/useCommissionPlan";
 import { CommissionPlanSetup } from "./CommissionPlanSetup";
 import { CommissionDashboard } from "./CommissionDashboard";
 import { CommissionDealView } from "./CommissionDealView";
+import { Badge } from "@/components/ui/badge";
 
-export function CommissionTab() {
+const CARGOS = [
+  { key: "Closer", label: "Closer", icon: Target },
+  { key: "SDR", label: "SDR", icon: Phone },
+];
+
+function CommissionCargoContent({ cargo }: { cargo: string }) {
   const {
     plan,
     periods,
@@ -18,7 +24,7 @@ export function CommissionTab() {
     calculateMonthlyCommissions,
     updateDealEntryPayment,
     markCommissionAsPaid,
-  } = useCommissionPlan();
+  } = useCommissionPlan(cargo);
 
   const [activeTab, setActiveTab] = useState(plan ? "deals" : "setup");
 
@@ -67,7 +73,7 @@ export function CommissionTab() {
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             <Settings2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="font-medium">Nenhum plano configurado</p>
+            <p className="font-medium">Nenhum plano configurado para {cargo}</p>
             <p className="text-sm mt-1">Configure um plano na aba "Configurar Plano".</p>
           </div>
         )}
@@ -84,7 +90,7 @@ export function CommissionTab() {
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             <Settings2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="font-medium">Nenhum plano configurado</p>
+            <p className="font-medium">Nenhum plano configurado para {cargo}</p>
             <p className="text-sm mt-1">Configure um plano na aba "Configurar Plano".</p>
           </div>
         )}
@@ -94,5 +100,40 @@ export function CommissionTab() {
         <CommissionPlanSetup plan={plan} onSave={savePlan as any} />
       </TabsContent>
     </Tabs>
+  );
+}
+
+export function CommissionTab() {
+  const [selectedCargo, setSelectedCargo] = useState("Closer");
+
+  return (
+    <div className="space-y-4">
+      {/* Cargo Tabs */}
+      <div className="flex gap-2">
+        {CARGOS.map((c) => {
+          const Icon = c.icon;
+          const isActive = selectedCargo === c.key;
+          return (
+            <button
+              key={c.key}
+              onClick={() => setSelectedCargo(c.key)}
+              className={`
+                flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all
+                ${isActive
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+                }
+              `}
+            >
+              <Icon className="h-4 w-4" />
+              {c.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Content for selected cargo */}
+      <CommissionCargoContent key={selectedCargo} cargo={selectedCargo} />
+    </div>
   );
 }
