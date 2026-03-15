@@ -30,6 +30,7 @@ interface CommissionDashboardProps {
   periods: CommissionPeriodResult[];
   calculating: boolean;
   onCalculate: () => Promise<void>;
+  compact?: boolean;
 }
 
 const formatCurrency = (value: number) =>
@@ -50,6 +51,7 @@ export function CommissionDashboard({
   periods,
   calculating,
   onCalculate,
+  compact = false,
 }: CommissionDashboardProps) {
   // Group periods by week
   const weekGroups = useMemo(() => {
@@ -159,7 +161,7 @@ export function CommissionDashboard({
       )}
 
       {/* Results Table */}
-      {weekGroups.length === 0 ? (
+      {!compact && (weekGroups.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
             <Calculator className="h-12 w-12 mx-auto mb-3 opacity-50" />
@@ -297,7 +299,7 @@ export function CommissionDashboard({
             </Card>
           );
         })
-      )}
+      ))}
     </div>
   );
 }
