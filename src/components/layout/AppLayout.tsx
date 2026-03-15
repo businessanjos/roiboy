@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PlanLimitsProvider } from "@/hooks/usePlanLimits";
 import { NotificationsProvider } from "@/hooks/useNotifications";
+import { ThreeCPlusPanel } from "@/components/threecplus/ThreeCPlusPanel";
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
@@ -98,6 +99,9 @@ export function AppLayout() {
 
           {/* Chat com agentes de IA - temporariamente oculto */}
           {/* {isAdmin && <GlobalAgentChat />} */}
+
+          {/* 3C Plus Embedded Panel */}
+          <ThreeCPlusPanel />
         </div>
       </NotificationsProvider>
     </PlanLimitsProvider>
