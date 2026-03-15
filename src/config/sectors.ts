@@ -1,4 +1,5 @@
 import {
+  ScrollText,
   LayoutDashboard,
   Users,
   CalendarDays,
