@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Settings2, BarChart3, Receipt } from "lucide-react";
+import { Settings2, BarChart3, Receipt, GraduationCap } from "lucide-react";
 import { useCommissionPlan } from "@/hooks/useCommissionPlan";
 import { CommissionPlanSetup } from "./CommissionPlanSetup";
 import { CommissionDashboard } from "./CommissionDashboard";
 import { CommissionDealView } from "./CommissionDealView";
+import { CareerPlanTab } from "./CareerPlanTab";
 
 export function CommissionTab() {
   const {
@@ -15,6 +16,7 @@ export function CommissionTab() {
     loading,
     calculating,
     savePlan,
+    saveSalesLevels,
     calculateWeeklyCommissions,
     updateDealEntryPayment,
     markCommissionAsPaid,
@@ -40,11 +42,15 @@ export function CommissionTab() {
         </TabsTrigger>
         <TabsTrigger value="dashboard" className="gap-1.5">
           <BarChart3 className="h-4 w-4" />
-          Resumo Semanal
+          Resumo Mensal
         </TabsTrigger>
         <TabsTrigger value="setup" className="gap-1.5">
           <Settings2 className="h-4 w-4" />
-          Configurar Plano
+          Comissionamento
+        </TabsTrigger>
+        <TabsTrigger value="career" className="gap-1.5">
+          <GraduationCap className="h-4 w-4" />
+          Plano de Carreira
         </TabsTrigger>
       </TabsList>
 
@@ -68,7 +74,7 @@ export function CommissionTab() {
           <div className="text-center py-12 text-muted-foreground">
             <Settings2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
             <p className="font-medium">Nenhum plano configurado</p>
-            <p className="text-sm mt-1">Configure um plano na aba "Configurar Plano".</p>
+            <p className="text-sm mt-1">Configure um plano na aba "Comissionamento".</p>
           </div>
         )}
       </TabsContent>
@@ -85,13 +91,17 @@ export function CommissionTab() {
           <div className="text-center py-12 text-muted-foreground">
             <Settings2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
             <p className="font-medium">Nenhum plano configurado</p>
-            <p className="text-sm mt-1">Configure um plano na aba "Configurar Plano".</p>
+            <p className="text-sm mt-1">Configure um plano na aba "Comissionamento".</p>
           </div>
         )}
       </TabsContent>
 
       <TabsContent value="setup">
         <CommissionPlanSetup plan={plan} onSave={savePlan as any} />
+      </TabsContent>
+
+      <TabsContent value="career">
+        <CareerPlanTab plan={plan} onSaveLevels={saveSalesLevels} />
       </TabsContent>
     </Tabs>
   );

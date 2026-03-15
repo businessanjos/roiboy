@@ -713,6 +713,35 @@ export function useCommissionPlan() {
     }
   }, [accountId, fetchPlan, fetchPeriods, fetchDealEntries]);
 
+  const saveSalesLevels = async (levels: CommissionSalesLevel[]) => {
+    if (!accountId || !plan?.id) {
+      toast.error("Salve o plano de comissão primeiro.");
+      return;
+    }
+    try {
+      await supabase.from("commission_sales_levels").delete().eq("plan_id", plan.id);
+      if (levels.length > 0) {
+        await supabase.from("commission_sales_levels").insert(
+          levels.map((l, i) => ({
+            account_id: accountId,
+            plan_id: plan.id,
+            level_name: l.level_name,
+            monthly_target: l.monthly_target,
+            fixed_salary: l.fixed_salary,
+            team_bonus_percent: l.team_bonus_percent,
+            total_compensation: l.total_compensation,
+            display_order: i,
+          }))
+        );
+      }
+      toast.success("Plano de carreira salvo com sucesso!");
+      await fetchPlan();
+    } catch (err) {
+      console.error("Error saving sales levels:", err);
+      toast.error("Erro ao salvar plano de carreira");
+    }
+  };
+
   return {
     plan,
     periods,
@@ -720,6 +749,7 @@ export function useCommissionPlan() {
     loading,
     calculating,
     savePlan,
+    saveSalesLevels,
     calculateWeeklyCommissions,
     updateDealEntryPayment,
     markCommissionAsPaid,
