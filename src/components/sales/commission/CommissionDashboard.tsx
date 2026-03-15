@@ -217,29 +217,26 @@ export function CommissionDashboard({
       )}
 
       {/* Results Table */}
-      {!compact && (weekGroups.length === 0 ? (
+      {!compact && (selectedPeriods.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
             <Calculator className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="font-medium">Nenhum cálculo realizado</p>
+            <p className="font-medium">Nenhum cálculo para {MONTH_NAMES[selectedMonth]} {selectedYear}</p>
             <p className="text-sm mt-1">
-              Clique em "Calcular Semana Atual" para apurar as comissões.
+              Clique em "{isCurrentMonth ? "Calcular Mês Atual" : "Recalcular"}" para apurar as comissões.
             </p>
           </CardContent>
         </Card>
       ) : (
-        weekGroups.map(([weekStart, weekPeriods]) => {
-          const firstPeriod = weekPeriods[0];
-          return (
-            <Card key={weekStart}>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  📅 {formatPeriod(firstPeriod.period_start, firstPeriod.period_end)}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              📅 {MONTH_NAMES[selectedMonth]} {selectedYear}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
                     <TableRow>
                       <TableHead>Vendedor</TableHead>
                       <TableHead className="text-right">Valor Ganho</TableHead>
