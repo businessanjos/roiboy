@@ -96,6 +96,7 @@ export function ThreeCPlusPanel() {
   const [showExtension, setShowExtension] = useState(false);
   const [manualPhone, setManualPhone] = useState("");
   const [initialized, setInitialized] = useState(false);
+  const [extensionLoaded, setExtensionLoaded] = useState(false);
 
   // Initialize connection
   const handleInit = useCallback(async () => {
@@ -116,10 +117,14 @@ export function ThreeCPlusPanel() {
     }
   }, [handleInit, initialized]);
 
+  useEffect(() => {
+    setExtensionLoaded(false);
+  }, [connectionInfo?.extension_url]);
+
   // Connect Socket.io after getting connection info
   useEffect(() => {
     if (connectionInfo && !isConnected) {
-      connectSocket(connectionInfo.domain, connectionInfo.api_token);
+      connectSocket(connectionInfo.socket_url ?? "https://socket.3c.fluxoti.com", connectionInfo.api_token);
       setShowExtension(true);
     }
   }, [connectionInfo, isConnected, connectSocket]);
@@ -145,6 +150,8 @@ export function ThreeCPlusPanel() {
   const statusInfo = getStatusInfo(agentStatus);
   const StatusIcon = statusInfo.icon;
   const isInCall = agentStatus === "on_call" || agentStatus === "manual_call_connected";
+  const canLogin = isConnected && extensionLoaded && !loading;
+  const canDialManually = agentStatus === "idle" || agentStatus === "manual_mode";
 
   // Floating button when panel is closed
   if (!isOpen) {

@@ -40,6 +40,7 @@ interface ConnectionInfo {
   domain: string;
   api_token: string;
   extension_url: string;
+  socket_url?: string;
 }
 
 export function useThreeCPlus() {
@@ -56,6 +57,7 @@ export function useThreeCPlus() {
   const socketRef = useRef<Socket | null>(null);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const callStartRef = useRef<Date | null>(null);
+  const agentStatusRef = useRef<AgentStatus>("offline");
 
   // Start call timer
   const startCallTimer = useCallback(() => {
@@ -76,6 +78,27 @@ export function useThreeCPlus() {
     callStartRef.current = null;
     setCallTimer(0);
   }, []);
+
+  useEffect(() => {
+    agentStatusRef.current = agentStatus;
+  }, [agentStatus]);
+
+  const waitForAgentStatus = useCallback(
+    async (statuses: AgentStatus[], timeoutMs = 10000, intervalMs = 250) => {
+      const startTime = Date.now();
+
+      while (Date.now() - startTime < timeoutMs) {
+        if (statuses.includes(agentStatusRef.current)) {
+          return true;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      }
+
+      return statuses.includes(agentStatusRef.current);
+    },
+    []
+  );
 
   // Invoke the unified edge function
   const invokeAgent = useCallback(async (action: string, body: Record<string, unknown> = {}) => {
