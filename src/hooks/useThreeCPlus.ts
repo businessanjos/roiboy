@@ -114,7 +114,7 @@ export function useThreeCPlus() {
 
     console.log("[useThreeCPlus] Connecting Socket.io to", domain);
     const socket = io(domain, {
-      query: { api_token: apiToken },
+      query: { token: apiToken },
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionAttempts: 10,
