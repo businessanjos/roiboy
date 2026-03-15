@@ -51,6 +51,7 @@ export function CommissionDashboard({
   periods,
   calculating,
   onCalculate,
+  compact = false,
 }: CommissionDashboardProps) {
   // Group periods by week
   const weekGroups = useMemo(() => {
