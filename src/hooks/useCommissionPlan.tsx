@@ -384,27 +384,27 @@ export function useCommissionPlan() {
 
       if (!users || users.length === 0) return;
 
-      // Fetch data for the week
+      // Fetch data for the month
       const [dealsRes, callsRes, tasksRes] = await Promise.all([
         supabase
           .from("deals")
           .select("id, responsible_user_id, status, value, title, won_at, created_at")
           .eq("account_id", accountId)
           .eq("status", "won")
-          .gte("won_at", monday.toISOString())
-          .lte("won_at", sunday.toISOString()),
+          .gte("won_at", firstDay.toISOString())
+          .lte("won_at", lastDay.toISOString()),
         supabase
           .from("zapp_calls")
           .select("user_id, status")
           .eq("account_id", accountId)
-          .gte("created_at", monday.toISOString())
-          .lte("created_at", sunday.toISOString()),
+          .gte("created_at", firstDay.toISOString())
+          .lte("created_at", lastDay.toISOString()),
         supabase
           .from("internal_tasks")
           .select("assigned_to, completed_at")
           .eq("account_id", accountId)
-          .gte("created_at", monday.toISOString())
-          .lte("created_at", sunday.toISOString()),
+          .gte("created_at", firstDay.toISOString())
+          .lte("created_at", lastDay.toISOString()),
       ]);
 
       const wonDeals = dealsRes.data || [];
