@@ -711,7 +711,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
       }
 
       toast.success("Comissões calculadas com sucesso!");
-      await Promise.all([fetchPeriods(plan.id, periodStart), fetchDealEntries()]);
+      await Promise.all([fetchPeriods(plan.id), fetchDealEntries()]);
     } catch (err) {
       console.error("Error calculating commissions:", err);
       toast.error("Erro ao calcular comissões");
