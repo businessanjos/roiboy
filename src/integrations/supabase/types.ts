@@ -10095,6 +10095,193 @@ export type Database = {
           },
         ]
       }
+      threecplus_agent_sessions: {
+        Row: {
+          account_id: string
+          campaign_id: string | null
+          campaign_name: string | null
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          pause_name: string | null
+          session_type: string
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          campaign_id?: string | null
+          campaign_name?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          pause_name?: string | null
+          session_type?: string
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          campaign_id?: string | null
+          campaign_name?: string | null
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          pause_name?: string | null
+          session_type?: string
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threecplus_agent_sessions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threecplus_agent_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      threecplus_call_logs: {
+        Row: {
+          account_id: string
+          acw_seconds: number | null
+          call_id: string | null
+          call_type: string
+          campaign_id: string | null
+          campaign_name: string | null
+          client_id: string | null
+          connected_at: string | null
+          contact_name: string | null
+          created_at: string
+          deal_id: string | null
+          direction: string
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          lead_id: string | null
+          metadata: Json | null
+          phone: string | null
+          qualification: string | null
+          qualification_name: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          wait_seconds: number | null
+        }
+        Insert: {
+          account_id: string
+          acw_seconds?: number | null
+          call_id?: string | null
+          call_type?: string
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_id?: string | null
+          connected_at?: string | null
+          contact_name?: string | null
+          created_at?: string
+          deal_id?: string | null
+          direction?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          phone?: string | null
+          qualification?: string | null
+          qualification_name?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          wait_seconds?: number | null
+        }
+        Update: {
+          account_id?: string
+          acw_seconds?: number | null
+          call_id?: string | null
+          call_type?: string
+          campaign_id?: string | null
+          campaign_name?: string | null
+          client_id?: string | null
+          connected_at?: string | null
+          contact_name?: string | null
+          created_at?: string
+          deal_id?: string | null
+          direction?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          lead_id?: string | null
+          metadata?: Json | null
+          phone?: string | null
+          qualification?: string | null
+          qualification_name?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          wait_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threecplus_call_logs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threecplus_call_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "threecplus_call_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threecplus_call_logs_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threecplus_call_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threecplus_call_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tiktok_credentials: {
         Row: {
           access_token: string | null
