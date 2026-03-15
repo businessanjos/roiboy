@@ -193,8 +193,9 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                   <Label className="text-xs">Valor mínimo (R$)</Label>
                   <Input
                     type="number"
-                    value={tier.min_value}
-                    onChange={(e) => updateTier(index, { min_value: Number(e.target.value) })}
+                    value={tier.min_value || ""}
+                    placeholder="0"
+                    onChange={(e) => updateTier(index, { min_value: e.target.value === "" ? 0 : Number(e.target.value) })}
                     className="h-8 text-sm"
                   />
                 </div>
@@ -217,8 +218,9 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                   <Input
                     type="number"
                     step="0.5"
-                    value={tier.commission_percent}
-                    onChange={(e) => updateTier(index, { commission_percent: Number(e.target.value) })}
+                    value={tier.commission_percent || ""}
+                    placeholder="0"
+                    onChange={(e) => updateTier(index, { commission_percent: e.target.value === "" ? 0 : Number(e.target.value) })}
                     className="h-8 text-sm"
                   />
                 </div>
@@ -227,8 +229,9 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                     <Label className="text-xs">Bônus fixo (R$)</Label>
                     <Input
                       type="number"
-                      value={tier.bonus_value}
-                      onChange={(e) => updateTier(index, { bonus_value: Number(e.target.value) })}
+                      value={tier.bonus_value || ""}
+                      placeholder="0"
+                      onChange={(e) => updateTier(index, { bonus_value: e.target.value === "" ? 0 : Number(e.target.value) })}
                       className="h-8 text-sm"
                     />
                   </div>
@@ -281,7 +284,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                 <Input
                   type="number"
                   value={trigger.trigger_value ?? ""}
-                  onChange={(e) => updateTrigger(index, { trigger_value: Number(e.target.value) })}
+                  onChange={(e) => updateTrigger(index, { trigger_value: e.target.value === "" ? null : Number(e.target.value) })}
                   className="w-24 h-8 text-sm"
                   disabled={!trigger.is_active}
                   placeholder={trigger.trigger_type === "min_calls" ? "Ex: 50" : "Ex: 20"}
