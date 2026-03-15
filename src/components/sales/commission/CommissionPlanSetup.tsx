@@ -284,7 +284,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                 <Input
                   type="number"
                   value={trigger.trigger_value ?? ""}
-                  onChange={(e) => updateTrigger(index, { trigger_value: Number(e.target.value) })}
+                  onChange={(e) => updateTrigger(index, { trigger_value: e.target.value === "" ? null : Number(e.target.value) })}
                   className="w-24 h-8 text-sm"
                   disabled={!trigger.is_active}
                   placeholder={trigger.trigger_type === "min_calls" ? "Ex: 50" : "Ex: 20"}
