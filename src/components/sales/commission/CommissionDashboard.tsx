@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -13,15 +12,23 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Calculator,
   CheckCircle2,
   XCircle,
   Trophy,
   TrendingUp,
   Phone,
-  Target,
   RefreshCw,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { CommissionPlan, CommissionPeriodResult } from "@/hooks/useCommissionPlan";
 
@@ -29,7 +36,7 @@ interface CommissionDashboardProps {
   plan: CommissionPlan;
   periods: CommissionPeriodResult[];
   calculating: boolean;
-  onCalculate: () => Promise<void>;
+  onCalculate: (year?: number, month?: number) => Promise<void>;
   compact?: boolean;
 }
 
@@ -39,12 +46,10 @@ const formatCurrency = (value: number) =>
 const getInitials = (name: string) =>
   name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 
-const TRIGGER_LABELS: Record<string, string> = {
-  min_calls: "Ligações",
-  min_conversion_rate: "Conversão",
-  no_delinquency: "Inadimplência",
-  tasks_completed: "Tarefas",
-};
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
 
 export function CommissionDashboard({
   plan,
@@ -53,7 +58,11 @@ export function CommissionDashboard({
   onCalculate,
   compact = false,
 }: CommissionDashboardProps) {
-  // Group periods by week
+  const now = new Date();
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth()); // 0-indexed
+
+  // Group periods by month
   const weekGroups = useMemo(() => {
     const groups: Record<string, CommissionPeriodResult[]> = {};
     for (const p of periods) {
@@ -64,11 +73,14 @@ export function CommissionDashboard({
     return Object.entries(groups).sort(([a], [b]) => b.localeCompare(a));
   }, [periods]);
 
-  const latestWeek = weekGroups[0];
-  const latestPeriods = latestWeek ? latestWeek[1] : [];
+  // Filter periods for selected month
+  const selectedMonthKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-01`;
+  const selectedPeriods = useMemo(() => {
+    return periods.filter((p) => p.period_start === selectedMonthKey);
+  }, [periods, selectedMonthKey]);
 
   const totals = useMemo(() => {
-    return latestPeriods.reduce(
+    return selectedPeriods.reduce(
       (acc, p) => ({
         wonValue: acc.wonValue + p.won_value,
         totalCommission: acc.totalCommission + p.total_commission,
@@ -77,12 +89,36 @@ export function CommissionDashboard({
       }),
       { wonValue: 0, totalCommission: 0, qualifiedCount: 0, totalCount: 0 }
     );
-  }, [latestPeriods]);
+  }, [selectedPeriods]);
 
-  const formatPeriod = (start: string, end: string) => {
-    const s = new Date(start + "T12:00:00");
-    return s.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  // Available months from existing data
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    for (const p of periods) {
+      months.add(p.period_start.slice(0, 7)); // YYYY-MM
+    }
+    return [...months].sort().reverse();
+  }, [periods]);
+
+  const goToPreviousMonth = () => {
+    if (selectedMonth === 0) {
+      setSelectedMonth(11);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
   };
+
+  const goToNextMonth = () => {
+    if (selectedMonth === 11) {
+      setSelectedMonth(0);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+  };
+
+  const isCurrentMonth = selectedYear === now.getFullYear() && selectedMonth === now.getMonth();
 
   return (
     <div className="space-y-6">
@@ -90,14 +126,36 @@ export function CommissionDashboard({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-semibold">{plan.name}</h3>
-          <p className="text-xs text-muted-foreground">
-            Apuração mensal
-          </p>
+          <p className="text-xs text-muted-foreground">Apuração mensal</p>
         </div>
-        <Button onClick={onCalculate} disabled={calculating}>
-          <Calculator className="h-4 w-4 mr-2" />
-          {calculating ? "Calculando..." : "Calcular Mês Atual"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Month navigator */}
+          <div className="flex items-center gap-1 bg-muted rounded-lg px-1 py-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToPreviousMonth}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-sm font-medium px-2 min-w-[140px] text-center">
+              {MONTH_NAMES[selectedMonth]} {selectedYear}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={goToNextMonth}
+              disabled={isCurrentMonth}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button
+            onClick={() => onCalculate(selectedYear, selectedMonth)}
+            disabled={calculating}
+            size="sm"
+          >
+            <Calculator className="h-4 w-4 mr-2" />
+            {calculating ? "Calculando..." : isCurrentMonth ? "Calcular Mês Atual" : "Recalcular"}
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
