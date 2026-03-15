@@ -255,7 +255,11 @@ export function CommissionDashboard({
                             )}
                           </TableCell>
                           <TableCell className="text-center">
-                            {period.all_triggers_met ? (
+                            {Object.keys(period.triggers_met || {}).length === 0 ? (
+                              <Badge variant="outline" className="text-muted-foreground text-[10px]">
+                                — Sem gatilhos
+                              </Badge>
+                            ) : period.all_triggers_met ? (
                               <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px]">
                                 ✅ OK
                               </Badge>
