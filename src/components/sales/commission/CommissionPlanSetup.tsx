@@ -193,8 +193,9 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                   <Label className="text-xs">Valor mínimo (R$)</Label>
                   <Input
                     type="number"
-                    value={tier.min_value}
-                    onChange={(e) => updateTier(index, { min_value: Number(e.target.value) })}
+                    value={tier.min_value || ""}
+                    placeholder="0"
+                    onChange={(e) => updateTier(index, { min_value: e.target.value === "" ? 0 : Number(e.target.value) })}
                     className="h-8 text-sm"
                   />
                 </div>
