@@ -67,6 +67,9 @@ export function TeamGoalsTab() {
     loadData();
   }, [currentUser?.account_id, selectedYear]);
 
+  // Sales team filter
+  const SALES_TEAM_NAMES = ["vanessa", "darlan", "george"];
+
   const loadData = async () => {
     if (!currentUser?.account_id) return;
     setLoading(true);
@@ -85,7 +88,12 @@ export function TeamGoalsTab() {
         .like("year_month", `${selectedYear}-%`),
     ]);
 
-    if (usersRes.data) setMembers(usersRes.data as TeamMember[]);
+    if (usersRes.data) {
+      const filtered = (usersRes.data as TeamMember[]).filter((u) =>
+        SALES_TEAM_NAMES.some((name) => u.name.toLowerCase().includes(name))
+      );
+      setMembers(filtered);
+    }
 
     if (goalsRes.data) {
       const map: Record<string, MonthlyGoal> = {};

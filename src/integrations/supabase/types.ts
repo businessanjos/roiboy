@@ -9324,7 +9324,9 @@ export type Database = {
       sales_team_careers: {
         Row: {
           account_id: string
+          area: string
           career_level_name: string
+          cargo: string
           contract_type: string
           created_at: string
           fixed_salary: number
@@ -9334,7 +9336,9 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          area?: string
           career_level_name?: string
+          cargo?: string
           contract_type?: string
           created_at?: string
           fixed_salary?: number
@@ -9344,7 +9348,9 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          area?: string
           career_level_name?: string
+          cargo?: string
           contract_type?: string
           created_at?: string
           fixed_salary?: number
