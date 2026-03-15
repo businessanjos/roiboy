@@ -414,13 +414,13 @@ export function TeamGoalsTab() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)}>
-            <TabsList className="h-8">
-              <TabsTrigger value="individual" className="text-[10px] h-6 px-2.5 gap-1">
-                <UserCog className="h-3 w-3" />
+            <TabsList className="h-10 p-1 bg-muted/60 gap-1">
+              <TabsTrigger value="individual" className="text-xs h-8 px-4 gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium">
+                <UserCog className="h-3.5 w-3.5" />
                 Individual
               </TabsTrigger>
-              <TabsTrigger value="bulk" className="text-[10px] h-6 px-2.5 gap-1">
-                <Users className="h-3 w-3" />
+              <TabsTrigger value="bulk" className="text-xs h-8 px-4 gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium">
+                <Users className="h-3.5 w-3.5" />
                 Por Cargo
               </TabsTrigger>
             </TabsList>
