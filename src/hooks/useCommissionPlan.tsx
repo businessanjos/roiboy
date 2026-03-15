@@ -427,15 +427,15 @@ export function useCommissionPlan() {
         }
       }
 
-      // Also get deals without won_at but with status=won in date range (fallback)
+      // Also get all deals created in the month (for conversion rate)
       const { data: dealsAllRes } = await supabase
         .from("deals")
         .select("id, responsible_user_id, status, value, title, created_at")
         .eq("account_id", accountId)
-        .gte("created_at", monday.toISOString())
-        .lte("created_at", sunday.toISOString());
+        .gte("created_at", firstDay.toISOString())
+        .lte("created_at", lastDay.toISOString());
 
-      const allDealsInWeek = dealsAllRes || [];
+      const allDealsInMonth = dealsAllRes || [];
 
       // Calculate for each user
       for (const user of users) {
