@@ -116,6 +116,7 @@ Deno.serve(async (req) => {
     // Fallback: manual call mode
     console.log("[threecplus-call] click2call failed, trying manual call");
     let enterSuccess = false;
+    let agentAlreadyReadyForManualDial = false;
     const maxRetries = 3;
     const retryDelay = 2000;
 
@@ -132,10 +133,17 @@ Deno.serve(async (req) => {
         enterSuccess = true;
         break;
       }
+
+      if (enterRes.status === 422 && /n[ãa]o\s+est[áa]\s+ocioso|modo manual|manual_call|j[áa]\s+est[áa]/i.test(enterText)) {
+        agentAlreadyReadyForManualDial = true;
+        console.log("[threecplus-call] Agent already in a callable state, dialing without enter");
+        break;
+      }
+
       if (attempt < maxRetries) await new Promise(r => setTimeout(r, retryDelay));
     }
 
-    if (enterSuccess) {
+    if (enterSuccess || agentAlreadyReadyForManualDial) {
       console.log("[threecplus-call] Dialing phone:", cleanPhone);
       const dialRes = await fetch(
         `${baseDomain}/api/v1/agent/manual_call/dial?api_token=${apiToken}`,

@@ -350,7 +350,15 @@ Deno.serve(async (req) => {
       const enterText = await enterRes.text();
       console.log("[threecplus-agent] place_call manual_call_enter:", enterRes.status, enterText);
 
-      if (enterRes.ok || enterRes.status === 204) {
+      const agentAlreadyReadyForManualDial =
+        enterRes.status === 422 &&
+        /n[ãa]o\s+est[áa]\s+ocioso|modo manual|manual_call|j[áa]\s+est[áa]/i.test(enterText);
+
+      if (enterRes.ok || enterRes.status === 204 || agentAlreadyReadyForManualDial) {
+        if (agentAlreadyReadyForManualDial) {
+          console.log("[threecplus-agent] place_call proceeding to dial even though enter returned a non-idle state");
+        }
+
         const dialRes = await fetch(`${apiBase}/agent/manual_call/dial?api_token=${apiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({ phone: cleanPhone }),
@@ -372,7 +380,7 @@ Deno.serve(async (req) => {
           success: false,
           error: click2callNeedsExtension
             ? "A 3C Plus exigiu o ramal do agente para a ligação direta, mas ele não foi identificado automaticamente."
-            : extractError(click2callText, extractError(enterText, "Não foi possível iniciar a chamada.")),
+            : extractError(enterText, extractError(click2callText, "Não foi possível iniciar a chamada.")),
           extension_resolved: Boolean(extension),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
