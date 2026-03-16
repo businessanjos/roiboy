@@ -135,17 +135,22 @@ export function useThreeCPlus() {
   const connectSocket = useCallback((socketUrl: string, apiToken: string) => {
     if (socketRef.current?.connected) return;
 
+    socketRef.current?.removeAllListeners();
     socketRef.current?.disconnect();
 
-    console.log("[useThreeCPlus] Connecting Socket.io to", socketUrl);
+    console.log("[useThreeCPlus] Connecting Socket.io to", socketUrl, "with polling -> websocket fallback");
     const socket = io(socketUrl, {
+      path: "/socket.io",
       query: { token: apiToken, api_token: apiToken },
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
+      upgrade: true,
+      rememberUpgrade: false,
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 2000,
       timeout: 10000,
       forceNew: true,
+      withCredentials: false,
     });
 
     const handleLoggedOut = () => {
@@ -166,8 +171,13 @@ export function useThreeCPlus() {
     };
 
     socket.on("connect", () => {
-      console.log("[useThreeCPlus] Socket.io connected");
+      const activeTransport = socket.io.engine.transport.name;
+      console.log("[useThreeCPlus] Socket.io connected via", activeTransport);
       setIsConnected(true);
+    });
+
+    socket.io.engine.on("upgrade", (transport: { name: string }) => {
+      console.log("[useThreeCPlus] Socket.io upgraded to", transport.name);
     });
 
     socket.on("connect_error", (error: unknown) => {
@@ -175,8 +185,8 @@ export function useThreeCPlus() {
       setIsConnected(false);
     });
 
-    socket.on("disconnect", () => {
-      console.log("[useThreeCPlus] Socket.io disconnected");
+    socket.on("disconnect", (reason) => {
+      console.log("[useThreeCPlus] Socket.io disconnected", reason);
       setIsConnected(false);
     });
 
