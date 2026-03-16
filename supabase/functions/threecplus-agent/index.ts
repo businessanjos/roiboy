@@ -27,6 +27,21 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
+function extractApiMessage(text: string, fallback: string): string {
+  try {
+    const parsed = JSON.parse(text);
+    return parsed?.detail || parsed?.title || parsed?.message || fallback;
+  } catch {
+    return text?.trim() || fallback;
+  }
+}
+
+function isAgentReadyForManualDial(status: number, text: string): boolean {
+  if (status !== 422) return false;
+  const message = extractApiMessage(text, "");
+  return /n[ãa]o\s+est[áa]\s+ocioso|modo manual|manual_call|j[áa]\s+est[áa]/i.test(message);
+}
+
 function normalizeExtension(value: unknown): string | null {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   if (typeof value !== "string") return null;
