@@ -493,7 +493,8 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
         </CardContent>
       </Card>
 
-      {/* Tiers — adapt labels per model */}
+      {/* Tiers — adapt labels per model (hidden for SDR) */}
+      {selectedModel !== "sdr_activity" && (
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
