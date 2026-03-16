@@ -616,7 +616,7 @@ export function useThreeCPlus() {
       const data = await invokeAgent("get_extension");
       if (data?.success && data.extension) {
         setSavedExtension(data.extension);
-        if (data.extension_password) setSavedExtensionPassword(data.extension_password);
+        if (data.has_password) setSavedExtensionPassword("configured");
       }
     } catch (err) {
       console.error("[useThreeCPlus] loadExtension error:", err);
