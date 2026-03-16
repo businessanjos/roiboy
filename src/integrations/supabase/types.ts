@@ -2865,6 +2865,7 @@ export type Database = {
         Row: {
           account_id: string
           cargo: string
+          commission_model: string | null
           created_at: string
           created_by: string
           id: string
@@ -2873,12 +2874,15 @@ export type Database = {
           name: string
           period_type: string
           prospecting_commission_percent: number
+          sdr_value_per_call: number | null
+          sdr_value_per_sale: number | null
           tier_mode: string
           updated_at: string
         }
         Insert: {
           account_id: string
           cargo?: string
+          commission_model?: string | null
           created_at?: string
           created_by: string
           id?: string
@@ -2887,12 +2891,15 @@ export type Database = {
           name: string
           period_type?: string
           prospecting_commission_percent?: number
+          sdr_value_per_call?: number | null
+          sdr_value_per_sale?: number | null
           tier_mode?: string
           updated_at?: string
         }
         Update: {
           account_id?: string
           cargo?: string
+          commission_model?: string | null
           created_at?: string
           created_by?: string
           id?: string
@@ -2901,6 +2908,8 @@ export type Database = {
           name?: string
           period_type?: string
           prospecting_commission_percent?: number
+          sdr_value_per_call?: number | null
+          sdr_value_per_sale?: number | null
           tier_mode?: string
           updated_at?: string
         }
@@ -3746,6 +3755,7 @@ export type Database = {
           notes: string | null
           probability: number | null
           responsible_user_id: string | null
+          sdr_user_id: string | null
           source: string | null
           source_contract_id: string | null
           stage_id: string | null
@@ -3772,6 +3782,7 @@ export type Database = {
           notes?: string | null
           probability?: number | null
           responsible_user_id?: string | null
+          sdr_user_id?: string | null
           source?: string | null
           source_contract_id?: string | null
           stage_id?: string | null
@@ -3798,6 +3809,7 @@ export type Database = {
           notes?: string | null
           probability?: number | null
           responsible_user_id?: string | null
+          sdr_user_id?: string | null
           source?: string | null
           source_contract_id?: string | null
           stage_id?: string | null
@@ -3840,6 +3852,13 @@ export type Database = {
           {
             foreignKeyName: "deals_responsible_user_id_fkey"
             columns: ["responsible_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_sdr_user_id_fkey"
+            columns: ["sdr_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
