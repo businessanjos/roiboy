@@ -91,7 +91,8 @@ async function resolveClick2CallExtension(
 
   const metadata = asRecord(userInt?.metadata);
   const storedExtension = extractExtension(metadata);
-  if (storedExtension) return { extension: storedExtension, source: "metadata" };
+  const storedPassword = metadata?.extension_password as string | null;
+  if (storedExtension) return { extension: storedExtension, password: storedPassword, source: "metadata" };
 
   const profile = await fetchAgentProfile(baseDomain, apiToken);
   const profileExtension = extractExtension(profile);
@@ -101,9 +102,9 @@ async function resolveClick2CallExtension(
     await supabaseAdmin
       .from("user_integrations")
       .upsert({ user_id: userId, provider: "3cplus", access_token: "account_level", metadata: nextMetadata }, { onConflict: "user_id,provider" });
-    return { extension: profileExtension, source: "profile" };
+    return { extension: profileExtension, password: null, source: "profile" };
   }
-  return { extension: null, source: null };
+  return { extension: null, password: null, source: null };
 }
 
 /** Get 3C Plus config from account-level integrations table */
@@ -169,7 +170,7 @@ Deno.serve(async (req) => {
 
     // Actions that don't need integration
     if (action === "save_extension") {
-      const { extension: ext } = body;
+      const { extension: ext, extension_password: extPwd } = body;
       if (!ext) {
         return new Response(
           JSON.stringify({ success: false, error: "extension é obrigatório" }),
@@ -184,7 +185,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       const prevMeta = asRecord(existing?.metadata) ?? {};
-      const nextMetadata = { ...prevMeta, extension: String(ext).trim() };
+      const nextMetadata = { ...prevMeta, extension: String(ext).trim(), ...(extPwd ? { extension_password: String(extPwd).trim() } : {}) };
 
       await supabaseAdmin
         .from("user_integrations")
@@ -206,9 +207,11 @@ Deno.serve(async (req) => {
         .eq("user_id", userData.id)
         .eq("provider", "3cplus")
         .maybeSingle();
-      const stored = extractExtension(userInt?.metadata);
+      const metadata = asRecord(userInt?.metadata);
+      const stored = extractExtension(metadata);
+      const storedPassword = metadata?.extension_password as string | null;
       return new Response(
-        JSON.stringify({ success: true, extension: stored }),
+        JSON.stringify({ success: true, extension: stored, extension_password: storedPassword ? "••••" : null, has_password: Boolean(storedPassword) }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -322,10 +325,11 @@ Deno.serve(async (req) => {
         try { const parsed = JSON.parse(text); return parsed?.detail || parsed?.title || parsed?.message || fallback; } catch { return text?.trim() || fallback; }
       };
 
-      const { extension } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, apiToken);
+      const { extension, password } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, apiToken);
 
       const click2callPayload: Record<string, string> = { phone: cleanPhone };
       if (extension) click2callPayload.extension = extension;
+      if (password) click2callPayload.password = password;
 
       const click2callRes = await fetch(`${apiBase}/click2call?api_token=${apiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },

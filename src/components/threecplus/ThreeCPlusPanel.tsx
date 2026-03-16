@@ -80,6 +80,7 @@ export function ThreeCPlusPanel() {
     loading,
     callTimer,
     savedExtension,
+    savedExtensionPassword,
     connect,
     connectSocket,
     fetchCampaigns,
@@ -102,6 +103,7 @@ export function ThreeCPlusPanel() {
   const [initialized, setInitialized] = useState(false);
   const [extensionLoaded, setExtensionLoaded] = useState(false);
   const [extensionInput, setExtensionInput] = useState("");
+  const [extensionPasswordInput, setExtensionPasswordInput] = useState("");
 
   // Initialize connection
   const handleInit = useCallback(async () => {
@@ -437,20 +439,28 @@ export function ThreeCPlusPanel() {
                 <p className="text-sm font-medium">Configure seu ramal</p>
               </div>
               <p className="text-xs text-muted-foreground">
-                Informe o número do seu ramal na 3C Plus para fazer ligações manuais.
+                Informe o número do seu ramal e a senha na 3C Plus para fazer ligações.
               </p>
-              <div className="flex gap-2">
+              <div className="space-y-2">
                 <Input
-                  placeholder="Ex: 1001"
+                  placeholder="Ramal (ex: 1001)"
                   value={extensionInput}
                   onChange={(e) => setExtensionInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && extensionInput.trim() && saveExtension(extensionInput.trim())}
+                  className="text-sm"
+                />
+                <Input
+                  type="password"
+                  placeholder="Senha do ramal"
+                  value={extensionPasswordInput}
+                  onChange={(e) => setExtensionPasswordInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && extensionInput.trim() && extensionPasswordInput.trim() && saveExtension(extensionInput.trim(), extensionPasswordInput.trim())}
                   className="text-sm"
                 />
                 <Button
                   size="sm"
-                  onClick={() => saveExtension(extensionInput.trim())}
-                  disabled={!extensionInput.trim() || loading}
+                  className="w-full"
+                  onClick={() => saveExtension(extensionInput.trim(), extensionPasswordInput.trim())}
+                  disabled={!extensionInput.trim() || !extensionPasswordInput.trim() || loading}
                 >
                   Salvar
                 </Button>
@@ -460,25 +470,40 @@ export function ThreeCPlusPanel() {
 
           {/* Saved extension display with edit */}
           {savedExtension && !isInCall && (
-            <div className="flex items-center justify-between bg-muted/50 rounded-lg px-3 py-2">
-              <div className="flex items-center gap-2">
-                <Headphones className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Ramal: <strong>{savedExtension}</strong></span>
+            <div className="space-y-2 bg-muted/50 rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Headphones className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Ramal: <strong>{savedExtension}</strong></span>
+                  {savedExtensionPassword && (
+                    <span className="text-xs text-green-600">• Senha configurada</span>
+                  )}
+                </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-2">
                 <Input
                   placeholder="Novo ramal"
                   value={extensionInput !== savedExtension ? extensionInput : ""}
                   onChange={(e) => setExtensionInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && extensionInput.trim() && extensionInput !== savedExtension && saveExtension(extensionInput.trim())}
-                  className="text-xs h-6 w-20"
+                  className="text-xs h-6 flex-1"
+                />
+                <Input
+                  type="password"
+                  placeholder="Nova senha"
+                  value={extensionPasswordInput}
+                  onChange={(e) => setExtensionPasswordInput(e.target.value)}
+                  className="text-xs h-6 flex-1"
                 />
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6"
-                  onClick={() => extensionInput.trim() && extensionInput !== savedExtension && saveExtension(extensionInput.trim())}
-                  disabled={!extensionInput.trim() || extensionInput === savedExtension}
+                  onClick={() => {
+                    const newExt = extensionInput.trim() && extensionInput !== savedExtension ? extensionInput.trim() : savedExtension;
+                    const newPwd = extensionPasswordInput.trim() || savedExtensionPassword || "";
+                    saveExtension(newExt, newPwd);
+                  }}
+                  disabled={(!extensionInput.trim() || extensionInput === savedExtension) && !extensionPasswordInput.trim()}
                 >
                   <Settings className="h-3 w-3" />
                 </Button>
