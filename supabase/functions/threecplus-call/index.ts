@@ -188,6 +188,8 @@ Deno.serve(async (req) => {
       const dialText = await dialRes.text();
       console.log("[threecplus-call] manual_call/dial response:", dialRes.status, dialText);
       if (dialRes.ok || dialRes.status === 204) {
+        // Log call to threecplus_call_logs
+        await logCall(supabaseAdmin, userData, cleanPhone, contactName, "manual", leadId, clientId, dealId);
         return new Response(JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
