@@ -52,6 +52,13 @@ const COMMISSION_MODELS: CommissionModel[] = [
     examples: "Ex: até 80% da cota = 0,5% · 81-99% = 0,8% · 100%+ = 2%",
   },
   {
+    key: "sdr_activity",
+    label: "SDR por Atividade",
+    description: "Valor fixo por call comparecida e por venda originada pelo SDR.",
+    icon: <Phone className="h-5 w-5 text-violet-600" />,
+    examples: "Ex: R$ 20 por call comparecida + R$ 300 por venda originada",
+  },
+  {
     key: "recurring",
     label: "Recorrente",
     description: "Comissão paga mensalmente enquanto o cliente mantiver contrato.",
