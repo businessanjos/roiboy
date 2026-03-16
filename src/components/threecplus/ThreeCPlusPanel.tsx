@@ -133,14 +133,14 @@ export function ThreeCPlusPanel() {
   // Login to selected campaign
   const handleLogin = useCallback(
     async (campaignId: string) => {
-      if (!extensionLoaded || !isConnected) return;
+      if (!extensionLoaded) return;
 
       const campaign = campaigns.find((c) => String(c.id) === campaignId);
       if (campaign) {
         await loginCampaign(campaign);
       }
     },
-    [campaigns, extensionLoaded, isConnected, loginCampaign]
+    [campaigns, extensionLoaded, loginCampaign]
   );
 
   // Make manual call
