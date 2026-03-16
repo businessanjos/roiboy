@@ -251,7 +251,7 @@ export function ThreeCPlusPanel() {
           {agentStatus === "offline" && (
             <div className="space-y-3">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Campanha
+                Campanha (opcional)
               </label>
               {campaigns.length === 0 ? (
                 <div className="text-sm text-muted-foreground text-center py-4">
