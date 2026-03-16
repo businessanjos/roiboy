@@ -340,20 +340,20 @@ export function IntegrationsContent() {
   const googleIntegration = getIntegration("google");
   const googleUserIntegration = getUserIntegration("google");
   const zoomUserIntegration = getUserIntegration("zoom");
-  const threeCPlusUserIntegration = getUserIntegration("3cplus");
+  const threeCPlusIntegration = getIntegration("3cplus");
 
   const handleSaveDomain = async () => {
-    if (!threeCPlusUserIntegration) return;
+    if (!threeCPlusIntegration) return;
     setConnecting3CPlus(true);
     try {
-      const existingMetadata = (threeCPlusUserIntegration as any).metadata || {};
+      const existingConfig = (threeCPlusIntegration as any).config || {};
       const { error } = await supabase
-        .from("user_integrations")
-        .update({ metadata: { ...existingMetadata, domain: threeCPlusDomain.trim() || null } })
-        .eq("id", (threeCPlusUserIntegration as any).id);
+        .from("integrations")
+        .update({ config: { ...existingConfig, domain: threeCPlusDomain.trim() || null } })
+        .eq("id", (threeCPlusIntegration as any).id);
       if (error) throw error;
       toast({ title: "Salvo!", description: "Domínio atualizado com sucesso." });
-      fetchUserIntegrations();
+      fetchIntegrations();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message || "Falha ao salvar domínio.", variant: "destructive" });
     } finally {
@@ -362,32 +362,22 @@ export function IntegrationsContent() {
   };
 
   const handle3CPlusConnect = async () => {
-    if (threeCPlusAuthMethod === "credentials") {
-      if (!threeCPlusEmail.trim() || !threeCPlusPassword) {
-        toast({ title: "Erro", description: "Informe e-mail e senha.", variant: "destructive" });
-        return;
-      }
-    } else {
-      if (!threeCPlusToken.trim()) {
-        toast({ title: "Erro", description: "Informe o token da API.", variant: "destructive" });
-        return;
-      }
+    if (!threeCPlusToken.trim()) {
+      toast({ title: "Erro", description: "Informe o token da API.", variant: "destructive" });
+      return;
     }
     setConnecting3CPlus(true);
     try {
-      const body = threeCPlusAuthMethod === "credentials"
-        ? { auth_method: "credentials", email: threeCPlusEmail.trim(), password: threeCPlusPassword, domain: threeCPlusDomain.trim() || null }
-        : { api_token: threeCPlusToken.trim(), domain: threeCPlusDomain.trim() || null };
-      const { data, error } = await supabase.functions.invoke("threecplus-auth", { body });
+      const { data, error } = await supabase.functions.invoke("threecplus-auth", {
+        body: { api_token: threeCPlusToken.trim(), domain: threeCPlusDomain.trim() || null },
+      });
       if (error) throw error;
       if (data?.error) {
         toast({ title: "Erro", description: data.error, variant: "destructive" });
       } else {
-        toast({ title: "Conectado!", description: `3C Plus conectado com sucesso.` });
+        toast({ title: "Conectado!", description: `3C Plus conectado com sucesso. Todos os agentes da conta podem usar.` });
         setThreeCPlusToken("");
-        setThreeCPlusEmail("");
-        setThreeCPlusPassword("");
-        fetchUserIntegrations();
+        fetchIntegrations();
       }
     } catch (err: any) {
       let msg = "Falha ao conectar.";
@@ -399,6 +389,20 @@ export function IntegrationsContent() {
       toast({ title: "Erro", description: msg, variant: "destructive" });
     } finally {
       setConnecting3CPlus(false);
+    }
+  };
+
+  const handle3CPlusDisconnect = async () => {
+    if (!threeCPlusIntegration) return;
+    const { error } = await supabase
+      .from("integrations")
+      .update({ status: "disconnected" as any, config: null })
+      .eq("id", (threeCPlusIntegration as any).id);
+    if (error) {
+      toast({ title: "Erro", description: "Não foi possível desconectar.", variant: "destructive" });
+    } else {
+      toast({ title: "Desconectado", description: "3C Plus desconectado com sucesso." });
+      fetchIntegrations();
     }
   };
 
