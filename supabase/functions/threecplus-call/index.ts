@@ -17,6 +17,27 @@ function getBaseDomain(domain: string | null): string {
   return base;
 }
 
+function extractApiMessage(text: string, fallback = ""): string {
+  try {
+    const parsed = JSON.parse(text);
+    return parsed?.detail || parsed?.title || parsed?.message || fallback;
+  } catch {
+    return text?.trim() || fallback;
+  }
+}
+
+function isManualModeAlreadyActive(status: number, text: string): boolean {
+  if (status !== 422) return false;
+  const message = extractApiMessage(text, "");
+  return /modo manual|manual_call|j[áa]\s+est[áa].*manual|j[áa]\s+est[áa].*disc/i.test(message);
+}
+
+function isAgentNotIdle(status: number, text: string): boolean {
+  if (status !== 422) return false;
+  const message = extractApiMessage(text, "");
+  return /n[ãa]o\s+est[áa]\s+ocioso/i.test(message);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -116,7 +137,9 @@ Deno.serve(async (req) => {
     // Fallback: manual call mode
     console.log("[threecplus-call] click2call failed, trying manual call");
     let enterSuccess = false;
-    let agentAlreadyReadyForManualDial = false;
+    let manualModeAlreadyActive = false;
+    let agentNotIdle = false;
+    let lastEnterMessage = "";
     const maxRetries = 3;
     const retryDelay = 2000;
 
@@ -127,6 +150,8 @@ Deno.serve(async (req) => {
         { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" } }
       );
       const enterText = await enterRes.text();
+      const enterMessage = extractApiMessage(enterText, "");
+      lastEnterMessage = enterMessage || lastEnterMessage;
       console.log(`[threecplus-call] manual_call/enter response: ${enterRes.status} ${enterText}`);
 
       if (enterRes.ok || enterRes.status === 204) {
@@ -134,16 +159,22 @@ Deno.serve(async (req) => {
         break;
       }
 
-      if (enterRes.status === 422 && /n[ãa]o\s+est[áa]\s+ocioso|modo manual|manual_call|j[áa]\s+est[áa]/i.test(enterText)) {
-        agentAlreadyReadyForManualDial = true;
-        console.log("[threecplus-call] Agent already in a callable state, dialing without enter");
+      if (isManualModeAlreadyActive(enterRes.status, enterText)) {
+        manualModeAlreadyActive = true;
+        console.log("[threecplus-call] Agent already in manual mode, dialing without enter");
+        break;
+      }
+
+      if (isAgentNotIdle(enterRes.status, enterText)) {
+        agentNotIdle = true;
+        console.log("[threecplus-call] Agent is not idle, aborting manual dial fallback");
         break;
       }
 
       if (attempt < maxRetries) await new Promise(r => setTimeout(r, retryDelay));
     }
 
-    if (enterSuccess || agentAlreadyReadyForManualDial) {
+    if (enterSuccess || manualModeAlreadyActive) {
       console.log("[threecplus-call] Dialing phone:", cleanPhone);
       const dialRes = await fetch(
         `${baseDomain}/api/v1/agent/manual_call/dial?api_token=${apiToken}`,
@@ -161,7 +192,14 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: false, error: "Não foi possível iniciar a chamada. Verifique se o ramal e senha estão configurados no painel 3C Plus.", code: "API_CALL_FAILED", fallback_url: baseDomain }),
+      JSON.stringify({
+        success: false,
+        error: agentNotIdle
+          ? "O agente não está ocioso no 3C Plus. Deixe o ramal livre ou coloque o agente em modo manual antes de discar."
+          : lastEnterMessage || "Não foi possível iniciar a chamada. Verifique se o ramal e senha estão configurados no painel 3C Plus.",
+        code: agentNotIdle ? "AGENT_NOT_IDLE" : "API_CALL_FAILED",
+        fallback_url: baseDomain,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

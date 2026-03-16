@@ -36,10 +36,16 @@ function extractApiMessage(text: string, fallback: string): string {
   }
 }
 
-function isAgentReadyForManualDial(status: number, text: string): boolean {
+function isManualModeAlreadyActive(status: number, text: string): boolean {
   if (status !== 422) return false;
   const message = extractApiMessage(text, "");
-  return /n[ãa]o\s+est[áa]\s+ocioso|modo manual|manual_call|j[áa]\s+est[áa]/i.test(message);
+  return /modo manual|manual_call|j[áa]\s+est[áa].*manual|j[áa]\s+est[áa].*disc/i.test(message);
+}
+
+function isAgentNotIdle(status: number, text: string): boolean {
+  if (status !== 422) return false;
+  const message = extractApiMessage(text, "");
+  return /n[ãa]o\s+est[áa]\s+ocioso/i.test(message);
 }
 
 function normalizeExtension(value: unknown): string | null {
@@ -362,10 +368,11 @@ Deno.serve(async (req) => {
       const enterText = await enterRes.text();
       console.log("[threecplus-agent] place_call manual_call_enter:", enterRes.status, enterText);
 
-      const agentAlreadyReadyForManualDial = isAgentReadyForManualDial(enterRes.status, enterText);
+      const manualModeAlreadyActive = isManualModeAlreadyActive(enterRes.status, enterText);
+      const agentNotIdle = isAgentNotIdle(enterRes.status, enterText);
 
-      if (enterRes.ok || enterRes.status === 204 || agentAlreadyReadyForManualDial) {
-        if (agentAlreadyReadyForManualDial) {
+      if (enterRes.ok || enterRes.status === 204 || manualModeAlreadyActive) {
+        if (manualModeAlreadyActive) {
           console.log("[threecplus-agent] place_call proceeding to dial because agent is already in manual dialing state");
         }
 
@@ -390,7 +397,9 @@ Deno.serve(async (req) => {
           success: false,
           error: click2callNeedsExtension
             ? "A 3C Plus exigiu o ramal do agente para a ligação direta, mas ele não foi identificado automaticamente."
-            : extractApiMessage(enterText, extractApiMessage(click2callText, "Não foi possível iniciar a chamada.")),
+            : agentNotIdle
+              ? "O agente não está ocioso no 3C Plus. Deixe o ramal livre ou coloque o agente em modo manual antes de discar."
+              : extractApiMessage(enterText, extractApiMessage(click2callText, "Não foi possível iniciar a chamada.")),
           extension_resolved: Boolean(extension),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
