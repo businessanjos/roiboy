@@ -67,7 +67,7 @@ export function CommissionTab() {
               compact
             />
             <CommissionDealView
-              dealEntries={[...closerHook.dealEntries, ...sdrHook.dealEntries]}
+              dealEntries={allDealEntries}
               onUpdatePayment={closerHook.updateDealEntryPayment}
               onMarkAsPaid={closerHook.markCommissionAsPaid}
             />

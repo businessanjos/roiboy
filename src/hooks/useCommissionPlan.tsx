@@ -149,6 +149,20 @@ const normalizeCommissionTiers = (rawTiers: CommissionTier[]): CommissionTier[] 
     .map((tier, index) => ({ ...tier, display_order: index }));
 };
 
+const SDR_NAMES = ["george"];
+const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
+
+const isSDRUserName = (name?: string | null) =>
+  SDR_NAMES.some((n) => name?.toLowerCase().includes(n));
+
+const isSalesTeamUserName = (name?: string | null) =>
+  SALES_TEAM_NAMES.some((n) => name?.toLowerCase().includes(n));
+
+const matchesCargoUser = (name: string | null | undefined, cargo: string) => {
+  if (!isSalesTeamUserName(name)) return false;
+  return cargo === "SDR" ? isSDRUserName(name) : !isSDRUserName(name);
+};
+
 export function useCommissionPlan(cargo: string = "Closer") {
   const { currentUser } = useCurrentUser();
   const [plan, setPlan] = useState<CommissionPlan | null>(null);
