@@ -132,12 +132,14 @@ export function ThreeCPlusPanel() {
   // Login to selected campaign
   const handleLogin = useCallback(
     async (campaignId: string) => {
+      if (!extensionLoaded || !isConnected) return;
+
       const campaign = campaigns.find((c) => String(c.id) === campaignId);
       if (campaign) {
         await loginCampaign(campaign);
       }
     },
-    [campaigns, loginCampaign]
+    [campaigns, extensionLoaded, isConnected, loginCampaign]
   );
 
   // Make manual call
@@ -150,7 +152,7 @@ export function ThreeCPlusPanel() {
   const statusInfo = getStatusInfo(agentStatus);
   const StatusIcon = statusInfo.icon;
   const isInCall = agentStatus === "on_call" || agentStatus === "manual_call_connected";
-  const canLogin = !loading;
+  const canLogin = !loading && extensionLoaded && isConnected;
   const canDialManually = agentStatus === "idle" || agentStatus === "manual_mode";
 
   // Floating button when panel is closed
