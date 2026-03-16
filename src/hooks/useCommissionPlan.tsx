@@ -543,6 +543,10 @@ export function useCommissionPlan(cargo: string = "Closer") {
 
       const allDealsInMonth = dealsAllRes || [];
 
+      const isSDRModel = (plan as any).commission_model === "sdr_activity";
+      const sdrValuePerCall = (plan as any).sdr_value_per_call || 0;
+      const sdrValuePerSale = (plan as any).sdr_value_per_sale || 0;
+
       // Calculate for each user
       for (const user of users) {
         const userWonDeals = wonDeals.filter((d: any) => d.responsible_user_id === user.id);
@@ -561,39 +565,58 @@ export function useCommissionPlan(cargo: string = "Closer") {
         const tasksCompleted = userTasks.filter((t: any) => t.completed_at).length;
         const tasksTotal = userTasks.length;
 
-        // Check triggers
+        // Check triggers (skip for SDR model)
         const triggersMet: Record<string, boolean> = {};
         let allTriggersMet = true;
 
-        for (const trigger of plan.triggers) {
-          if (!trigger.is_active) continue;
-          let met = false;
+        if (!isSDRModel) {
+          for (const trigger of plan.triggers) {
+            if (!trigger.is_active) continue;
+            let met = false;
 
-          switch (trigger.trigger_type) {
-            case "min_calls":
-              met = totalCalls >= (trigger.trigger_value || 0);
-              break;
-            case "min_conversion_rate":
-              met = conversionRate >= (trigger.trigger_value || 0);
-              break;
-            case "no_delinquency":
-              met = true;
-              break;
-            case "tasks_completed":
-              met = tasksTotal === 0 || tasksCompleted >= (trigger.trigger_value || 0);
-              break;
+            switch (trigger.trigger_type) {
+              case "min_calls":
+                met = totalCalls >= (trigger.trigger_value || 0);
+                break;
+              case "min_conversion_rate":
+                met = conversionRate >= (trigger.trigger_value || 0);
+                break;
+              case "no_delinquency":
+                met = true;
+                break;
+              case "tasks_completed":
+                met = tasksTotal === 0 || tasksCompleted >= (trigger.trigger_value || 0);
+                break;
+            }
+
+            triggersMet[trigger.trigger_type] = met;
+            if (!met) allTriggersMet = false;
           }
-
-          triggersMet[trigger.trigger_type] = met;
-          if (!met) allTriggersMet = false;
         }
 
-        // Find the achieved tier
+        // Find the achieved tier / calculate commission
         let achievedTier: CommissionTier | null = null;
         let commissionValue = 0;
         let bonusValue = 0;
 
-        if (allTriggersMet && wonValue > 0) {
+        if (isSDRModel) {
+          // SDR model: fixed value per attended call + fixed value per originated sale
+          const attendedCalls = userCalls.filter((c: any) => c.status === "completed" || c.answered_at);
+          const attendedCallsCount = attendedCalls.length;
+
+          // Deals originated by this SDR (won by Closers but sdr_user_id = this user)
+          const sdrOriginatedDeals = wonDeals.filter((d: any) => d.sdr_user_id === user.id);
+          const sdrOriginatedSalesCount = sdrOriginatedDeals.length;
+
+          commissionValue = (attendedCallsCount * sdrValuePerCall) + (sdrOriginatedSalesCount * sdrValuePerSale);
+          bonusValue = 0;
+
+          // Store SDR-specific data in triggers_met for display purposes
+          triggersMet["sdr_attended_calls"] = true;
+          triggersMet["sdr_attended_calls_count"] = attendedCallsCount as any;
+          triggersMet["sdr_originated_sales"] = true;
+          triggersMet["sdr_originated_sales_count"] = sdrOriginatedSalesCount as any;
+        } else if (allTriggersMet && wonValue > 0) {
           const sortedTiers = [...plan.tiers].sort((a, b) => b.min_value - a.min_value);
           for (const tier of sortedTiers) {
             if (wonValue >= tier.min_value) {
