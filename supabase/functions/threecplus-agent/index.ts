@@ -257,6 +257,39 @@ async function getAccountIntegration(supabaseAdmin: any, accountId: string): Pro
   return { apiToken, baseDomain: getBaseDomain(domain || null) };
 }
 
+/** Best-effort log a call to threecplus_call_logs */
+async function logCallToDb(
+  supabaseAdmin: any,
+  accountId: string,
+  userId: string,
+  callDetails: { id?: string | number; phone?: string; contact_name?: string } | null,
+  mode: string,
+  campaignName?: string,
+) {
+  try {
+    const callId = callDetails?.id ? String(callDetails.id) : `manual_${Date.now()}`;
+    await supabaseAdmin.from("threecplus_call_logs").upsert(
+      {
+        account_id: accountId,
+        user_id: userId,
+        call_id: callId,
+        call_type: mode === "click2call" ? "manual" : "manual",
+        direction: "outbound",
+        phone: callDetails?.phone || null,
+        contact_name: callDetails?.contact_name || null,
+        campaign_name: campaignName || null,
+        status: "connected",
+        started_at: new Date().toISOString(),
+        metadata: { source: "edge_function", mode },
+      },
+      { onConflict: "call_id" }
+    );
+    console.log("[threecplus-agent] logCallToDb: saved call", callId);
+  } catch (err) {
+    console.error("[threecplus-agent] logCallToDb error:", err);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
