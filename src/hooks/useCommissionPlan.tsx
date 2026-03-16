@@ -501,7 +501,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
           .lte("won_at", lastDay.toISOString()),
         supabase
           .from("zapp_calls")
-          .select("user_id, status")
+          .select("user_id, status, answered_at")
           .eq("account_id", accountId)
           .gte("created_at", firstDay.toISOString())
           .lte("created_at", lastDay.toISOString()),
