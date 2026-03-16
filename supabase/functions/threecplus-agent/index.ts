@@ -36,10 +36,16 @@ function extractApiMessage(text: string, fallback: string): string {
   }
 }
 
-function isAgentReadyForManualDial(status: number, text: string): boolean {
+function isManualModeAlreadyActive(status: number, text: string): boolean {
   if (status !== 422) return false;
   const message = extractApiMessage(text, "");
-  return /n[ãa]o\s+est[áa]\s+ocioso|modo manual|manual_call|j[áa]\s+est[áa]/i.test(message);
+  return /modo manual|manual_call|j[áa]\s+est[áa].*manual|j[áa]\s+est[áa].*disc/i.test(message);
+}
+
+function isAgentNotIdle(status: number, text: string): boolean {
+  if (status !== 422) return false;
+  const message = extractApiMessage(text, "");
+  return /n[ãa]o\s+est[áa]\s+ocioso/i.test(message);
 }
 
 function normalizeExtension(value: unknown): string | null {

@@ -17,6 +17,27 @@ function getBaseDomain(domain: string | null): string {
   return base;
 }
 
+function extractApiMessage(text: string, fallback = ""): string {
+  try {
+    const parsed = JSON.parse(text);
+    return parsed?.detail || parsed?.title || parsed?.message || fallback;
+  } catch {
+    return text?.trim() || fallback;
+  }
+}
+
+function isManualModeAlreadyActive(status: number, text: string): boolean {
+  if (status !== 422) return false;
+  const message = extractApiMessage(text, "");
+  return /modo manual|manual_call|j[áa]\s+est[áa].*manual|j[áa]\s+est[áa].*disc/i.test(message);
+}
+
+function isAgentNotIdle(status: number, text: string): boolean {
+  if (status !== 422) return false;
+  const message = extractApiMessage(text, "");
+  return /n[ãa]o\s+est[áa]\s+ocioso/i.test(message);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
