@@ -130,6 +130,8 @@ Deno.serve(async (req) => {
     console.log("[threecplus-call] click2call response:", click2callRes.status, click2callText);
 
     if (click2callRes.ok || click2callRes.status === 204) {
+      // Log call to threecplus_call_logs
+      await logCall(supabaseAdmin, userData, cleanPhone, contactName, "manual", leadId, clientId, dealId);
       return new Response(JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
