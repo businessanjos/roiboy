@@ -552,6 +552,7 @@ export function useThreeCPlus() {
   const hangup = useCallback(async () => {
     setLoading(true);
     try {
+      // Try with call_id if available
       if (currentCall?.id) {
         const data = await invokeAgent("hangup", { call_id: currentCall.id });
         if (!data?.success) {
@@ -560,22 +561,34 @@ export function useThreeCPlus() {
           });
           return false;
         }
-        return true;
-      }
-
-      if (agentStatusRef.current === "manual_mode" && currentCall?.phone) {
-        const data = await invokeAgent("manual_call_exit");
-        if (!data?.success) {
-          toast.error("Não foi possível cancelar a discagem");
-          return false;
-        }
+        stopCallTimer();
         setCurrentCall(null);
-        toast.success("Tentativa de ligação cancelada");
         return true;
       }
 
-      toast.error("Aguardando confirmação da chamada", {
-        description: "Assim que a 3C Plus enviar o identificador da ligação, o encerramento ficará disponível.",
+      // Fallback: try hangup without call_id (edge function will discover it)
+      console.log("[useThreeCPlus] hangup: no call_id, trying force hangup");
+      const data = await invokeAgent("hangup", {});
+      if (data?.success) {
+        stopCallTimer();
+        setCurrentCall(null);
+        toast.success("Chamada encerrada");
+        return true;
+      }
+
+      // Last resort for manual mode
+      if (agentStatusRef.current === "manual_mode" && currentCall?.phone) {
+        const exitData = await invokeAgent("manual_call_exit");
+        if (exitData?.success) {
+          stopCallTimer();
+          setCurrentCall(null);
+          toast.success("Tentativa de ligação cancelada");
+          return true;
+        }
+      }
+
+      toast.error("Não foi possível desligar", {
+        description: data?.error || "Tente desligar diretamente no painel do 3C Plus.",
       });
       return false;
     } catch (err) {
@@ -585,7 +598,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent, currentCall]);
+  }, [invokeAgent, currentCall, stopCallTimer]);
 
   // Qualify call
   const qualify = useCallback(async (qualificationId: number | string) => {
