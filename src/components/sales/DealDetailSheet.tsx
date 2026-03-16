@@ -75,6 +75,7 @@ import {
   Paperclip,
   Image,
   Download,
+  Headset,
   type LucideIcon,
 } from "lucide-react";
 import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
@@ -216,6 +217,8 @@ export function DealDetailSheet({
   const [newNote, setNewNote] = useState("");
   const [eventType, setEventType] = useState("note");
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
+  const [teamMembers, setTeamMembers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
+  const [updatingSDR, setUpdatingSDR] = useState(false);
   const [changingStage, setChangingStage] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
@@ -296,8 +299,28 @@ export function DealDetailSheet({
       fetchActivities();
       fetchCurrentUser();
       fetchDealCustomFields();
+      fetchTeamMembers();
     }
   }, [deal?.id, open]);
+
+  const fetchTeamMembers = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+      const { data: userData } = await supabase
+        .from("users")
+        .select("account_id")
+        .eq("auth_user_id", authUser.id)
+        .maybeSingle();
+      if (!userData?.account_id) return;
+      // Use RPC-style query to avoid deep type instantiation
+      const query = supabase.from("users").select("id, name, avatar_url");
+      const { data } = await query.eq("account_id", userData.account_id);
+      setTeamMembers((data as any[] || []).filter((u: any) => u.name));
+    } catch (err) {
+      console.error("Error fetching team members:", err);
+    }
+  };
 
   const fetchDealCustomFields = async () => {
     if (!deal?.id) return;
@@ -1028,6 +1051,58 @@ export function DealDetailSheet({
                         </Button>
                       </div>
                     )}
+                  </div>
+
+                  {/* SDR (Agendou) */}
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <Headset className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground min-w-[40px]">SDR</span>
+                    <div className="flex-1 min-w-0">
+                      <Select
+                        value={deal.sdr_user_id || "none"}
+                        onValueChange={async (value) => {
+                          const newValue = value === "none" ? null : value;
+                          setUpdatingSDR(true);
+                          try {
+                            const { error } = await supabase
+                              .from("deals")
+                              .update({ sdr_user_id: newValue })
+                              .eq("id", deal.id);
+                            if (error) throw error;
+                            toast.success("SDR atualizado");
+                            onDealUpdated?.();
+                          } catch (err: any) {
+                            toast.error("Erro ao atualizar SDR: " + err.message);
+                          } finally {
+                            setUpdatingSDR(false);
+                          }
+                        }}
+                        disabled={updatingSDR}
+                      >
+                        <SelectTrigger className="h-7 text-xs border-dashed">
+                          <SelectValue placeholder="Quem agendou?" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-popover">
+                          <SelectItem value="none">
+                            <span className="text-muted-foreground italic">Nenhum</span>
+                          </SelectItem>
+                          {teamMembers.map((member) => (
+                            <SelectItem key={member.id} value={member.id}>
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-4 w-4">
+                                  <AvatarImage src={member.avatar_url || undefined} />
+                                  <AvatarFallback className="text-[8px]">
+                                    {member.name?.split(" ").map((n: string) => n[0]).join("").slice(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                {member.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {updatingSDR && <Loader2 className="h-4 w-4 animate-spin flex-shrink-0" />}
                   </div>
 
                   {/* Item da Venda (Product) - Highlighted */}

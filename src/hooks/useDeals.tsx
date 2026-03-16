@@ -32,6 +32,7 @@ export interface Deal {
   probability: number;
   source: string | null;
   responsible_user_id: string | null;
+  sdr_user_id: string | null;
   notes: string | null;
   status: 'open' | 'won' | 'lost';
   won_at: string | null;
@@ -55,6 +56,11 @@ export interface Deal {
     avatar_url: string | null;
   } | null;
   responsible_user?: {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+  } | null;
+  sdr_user?: {
     id: string;
     name: string;
     avatar_url: string | null;
@@ -178,6 +184,7 @@ export function useDeals() {
           client:clients(id, full_name, phone_e164, avatar_url),
           lead:leads(id, full_name, phone, email, avatar_url),
           responsible_user:users!deals_responsible_user_id_fkey(id, name, avatar_url),
+          sdr_user:users!deals_sdr_user_id_fkey(id, name, avatar_url),
           stage:deal_stages(*)
         `)
         .eq('account_id', currentUser.account_id)
@@ -248,6 +255,7 @@ export function useDeals() {
           client:clients(id, full_name, phone_e164, avatar_url),
           lead:leads(id, full_name, phone, email, avatar_url),
           responsible_user:users!deals_responsible_user_id_fkey(id, name, avatar_url),
+          sdr_user:users!deals_sdr_user_id_fkey(id, name, avatar_url),
           stage:deal_stages(*)
         `)
         .single();
