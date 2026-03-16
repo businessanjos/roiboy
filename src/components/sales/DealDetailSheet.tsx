@@ -298,8 +298,27 @@ export function DealDetailSheet({
       fetchActivities();
       fetchCurrentUser();
       fetchDealCustomFields();
+      fetchTeamMembers();
     }
   }, [deal?.id, open]);
+
+  const fetchTeamMembers = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return;
+    const { data: userData } = await supabase
+      .from("users")
+      .select("account_id")
+      .eq("auth_user_id", authUser.id)
+      .maybeSingle();
+    if (!userData?.account_id) return;
+    const { data } = await supabase
+      .from("users")
+      .select("id, name, avatar_url")
+      .eq("account_id", userData.account_id)
+      .eq("is_active", true)
+      .order("name");
+    setTeamMembers(data || []);
+  };
 
   const fetchDealCustomFields = async () => {
     if (!deal?.id) return;
