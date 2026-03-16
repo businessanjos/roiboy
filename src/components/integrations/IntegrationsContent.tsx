@@ -154,14 +154,6 @@ export function IntegrationsContent() {
       console.error("Error fetching user integrations:", error);
     } else {
       setUserIntegrations(data || []);
-      // Populate 3C Plus domain from metadata
-      const threeCPlus = data?.find(i => i.provider === "3cplus");
-      if (threeCPlus?.metadata && typeof threeCPlus.metadata === "object" && !Array.isArray(threeCPlus.metadata)) {
-        const meta = threeCPlus.metadata as Record<string, unknown>;
-        if (meta.domain && typeof meta.domain === "string") {
-          setThreeCPlusDomain(meta.domain);
-        }
-      }
     }
   };
 
