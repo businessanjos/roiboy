@@ -149,6 +149,53 @@ const normalizeCommissionTiers = (rawTiers: CommissionTier[]): CommissionTier[] 
     .map((tier, index) => ({ ...tier, display_order: index }));
 };
 
+const SDR_NAMES = ["george"];
+const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
+
+const isSDRUserName = (name?: string | null) =>
+  SDR_NAMES.some((n) => name?.toLowerCase().includes(n));
+
+const isSalesTeamUserName = (name?: string | null) =>
+  SALES_TEAM_NAMES.some((n) => name?.toLowerCase().includes(n));
+
+const matchesCargoUser = (name: string | null | undefined, cargo: string) => {
+  if (!isSalesTeamUserName(name)) return false;
+  return cargo === "SDR" ? isSDRUserName(name) : !isSDRUserName(name);
+};
+
+const getRecordTimestamp = (record: any) => {
+  const value = record?.updated_at || record?.created_at;
+  return value ? new Date(value).getTime() : 0;
+};
+
+const dedupeRecords = <T extends Record<string, any>>(
+  items: T[],
+  getKey: (item: T) => string,
+) => {
+  const map = new Map<string, T>();
+
+  for (const item of items) {
+    const key = getKey(item);
+    const existing = map.get(key);
+
+    if (!existing) {
+      map.set(key, item);
+      continue;
+    }
+
+    const existingTimestamp = getRecordTimestamp(existing);
+    const nextTimestamp = getRecordTimestamp(item);
+    const existingValue = Number(existing.total_commission ?? existing.commission_total ?? 0);
+    const nextValue = Number(item.total_commission ?? item.commission_total ?? 0);
+
+    if (nextTimestamp > existingTimestamp || (nextTimestamp === existingTimestamp && nextValue >= existingValue)) {
+      map.set(key, item);
+    }
+  }
+
+  return Array.from(map.values());
+};
+
 export function useCommissionPlan(cargo: string = "Closer") {
   const { currentUser } = useCurrentUser();
   const [plan, setPlan] = useState<CommissionPlan | null>(null);
@@ -280,35 +327,37 @@ export function useCommissionPlan(cargo: string = "Closer") {
 
         const userMap = new Map((users || []).map((u: any) => [u.id, u]));
 
-        const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
+        const filteredPeriods = monthlyData
+          .map((d: any) => ({
+            ...d,
+            user_name: (userMap.get(d.user_id) as any)?.name || "Sem nome",
+            user_avatar: (userMap.get(d.user_id) as any)?.avatar_url || null,
+            triggers_met: d.triggers_met || {},
+          }))
+          .filter((d: any) => matchesCargoUser(d.user_name, cargo));
 
-        setPeriods(
-          monthlyData
-            .map((d: any) => ({
-              ...d,
-              user_name: (userMap.get(d.user_id) as any)?.name || "Sem nome",
-              user_avatar: (userMap.get(d.user_id) as any)?.avatar_url || null,
-              triggers_met: d.triggers_met || {},
-            }))
-            .filter((d: any) =>
-              SALES_TEAM_NAMES.some((n) => d.user_name?.toLowerCase().includes(n))
-            )
-        );
+        setPeriods(dedupeRecords(filteredPeriods, (period) => `${period.user_id}-${period.period_start}`));
       }
     } catch (err) {
       console.error("Error fetching periods:", err);
     }
   }, [accountId]);
 
-  const fetchDealEntries = useCallback(async () => {
+  const fetchDealEntries = useCallback(async (planId?: string) => {
     if (!accountId) return;
     try {
-      const { data } = await supabase
+      let query = supabase
         .from("commission_deal_entries")
         .select("*")
         .eq("account_id", accountId)
         .order("created_at", { ascending: false })
         .limit(200);
+
+      if (planId) {
+        query = query.eq("plan_id", planId);
+      }
+
+      const { data } = await query;
 
       if (data) {
         const userIds = [...new Set(data.map((d: any) => d.user_id))];
@@ -318,18 +367,20 @@ export function useCommissionPlan(cargo: string = "Closer") {
           .in("id", userIds);
         const userMap = new Map((users || []).map((u: any) => [u.id, u]));
 
-        setDealEntries(
-          data.map((d: any) => ({
+        const mappedEntries = data
+          .map((d: any) => ({
             ...d,
             user_name: (userMap.get(d.user_id) as any)?.name || "Sem nome",
             user_avatar: (userMap.get(d.user_id) as any)?.avatar_url || null,
           }))
-        );
+          .filter((d: any) => matchesCargoUser(d.user_name, cargo));
+
+        setDealEntries(dedupeRecords(mappedEntries, (entry) => `${entry.user_id}-${entry.deal_id || entry.contract_id || entry.id}`));
       }
     } catch (err) {
       console.error("Error fetching deal entries:", err);
     }
-  }, [accountId]);
+  }, [accountId, cargo]);
 
   const savePlan = async (
     planData: { name: string; period_type: string; tier_mode: string; monthly_quota: number; prospecting_commission_percent: number; commission_model?: string; sdr_value_per_call?: number; sdr_value_per_sale?: number },
@@ -478,17 +529,37 @@ export function useCommissionPlan(cargo: string = "Closer") {
       const periodEnd = `${year}-${monthStr}-${String(new Date(year, month + 1, 0).getDate()).padStart(2, "0")}`;
 
       // Get only sales team users (managed by Jonathan)
-      const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
       const { data: allUsers } = await supabase
         .from("users")
         .select("id, name")
         .eq("account_id", accountId);
 
-      const users = (allUsers || []).filter((u: any) =>
-        SALES_TEAM_NAMES.some((n) => u.name?.toLowerCase().includes(n))
-      );
+      const users = (allUsers || []).filter((u: any) => matchesCargoUser(u.name, cargo));
 
       if (!users || users.length === 0) return;
+
+      const userIdsForCargo = users.map((user: any) => user.id);
+
+      const { data: existingPeriodRows } = await supabase
+        .from("commission_periods")
+        .select("id")
+        .eq("plan_id", plan.id)
+        .eq("period_start", periodStart)
+        .in("user_id", userIdsForCargo);
+
+      const existingPeriodIds = (existingPeriodRows || []).map((row: any) => row.id);
+
+      if (existingPeriodIds.length > 0) {
+        await Promise.all([
+          supabase.from("commission_deal_entries").delete().in("period_id", existingPeriodIds),
+          supabase
+            .from("commission_periods")
+            .delete()
+            .eq("plan_id", plan.id)
+            .eq("period_start", periodStart)
+            .in("user_id", userIdsForCargo),
+        ]);
+      }
 
       // Fetch data for the month
       const [dealsRes, callsRes, tasksRes] = await Promise.all([
@@ -547,15 +618,8 @@ export function useCommissionPlan(cargo: string = "Closer") {
       const sdrValuePerCall = (plan as any).sdr_value_per_call || 0;
       const sdrValuePerSale = (plan as any).sdr_value_per_sale || 0;
 
-      // Filter users by cargo: SDR hook only processes SDR users, Closer hook only Closers
-      const SDR_NAMES = ["george"];
-      const filteredUsers = cargo === "SDR"
-        ? users.filter((u: any) => SDR_NAMES.some((n) => u.name?.toLowerCase().includes(n)))
-        : users.filter((u: any) => !SDR_NAMES.some((n) => u.name?.toLowerCase().includes(n)));
-
-      // Calculate for each user
-      for (const user of filteredUsers) {
-        // Determine if this specific user is an SDR (George) or Closer
+      // Calculate for each user in this cargo only
+      for (const user of users) {
         const isUserSDR = cargo === "SDR";
         const userWonDeals = wonDeals.filter((d: any) => d.responsible_user_id === user.id);
         const wonValue = userWonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
@@ -751,7 +815,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
       }
 
       toast.success("Comissões calculadas com sucesso!");
-      await Promise.all([fetchPeriods(plan.id), fetchDealEntries()]);
+      await Promise.all([fetchPeriods(plan.id), fetchDealEntries(plan.id)]);
     } catch (err) {
       console.error("Error calculating commissions:", err);
       toast.error("Erro ao calcular comissões");
@@ -825,7 +889,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
         .eq("id", entryId);
 
       toast.success("Status de pagamento atualizado!");
-      await fetchDealEntries();
+      await fetchDealEntries(plan?.id);
     } catch (err) {
       console.error("Error updating deal entry:", err);
       toast.error("Erro ao atualizar");
@@ -845,7 +909,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
         .eq("id", entryId);
 
       toast.success("Comissão marcada como paga!");
-      await fetchDealEntries();
+      await fetchDealEntries(plan?.id);
     } catch (err) {
       console.error("Error marking as paid:", err);
       toast.error("Erro ao marcar como paga");
@@ -903,16 +967,16 @@ export function useCommissionPlan(cargo: string = "Closer") {
   useEffect(() => {
     if (accountId) {
       fetchPlan();
-      fetchDealEntries();
     }
-  }, [accountId, fetchPlan, fetchDealEntries]);
+  }, [accountId, fetchPlan]);
 
-  // Fetch periods only after plan is loaded to filter by plan_id
+  // Fetch periods and deal entries only after plan is loaded to filter by plan_id
   useEffect(() => {
     if (plan?.id) {
       fetchPeriods(plan.id);
+      fetchDealEntries(plan.id);
     }
-  }, [plan?.id, fetchPeriods]);
+  }, [plan?.id, fetchPeriods, fetchDealEntries]);
 
   // Auto-calculate retroactive months after plan loads
   const retroCalcDone = useRef(false);
