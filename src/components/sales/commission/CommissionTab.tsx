@@ -6,27 +6,12 @@ import { useCommissionPlan } from "@/hooks/useCommissionPlan";
 import { CommissionPlanSetup } from "./CommissionPlanSetup";
 import { CommissionDashboard } from "./CommissionDashboard";
 import { CommissionDealView } from "./CommissionDealView";
-import { Badge } from "@/components/ui/badge";
 
-const CARGOS = [
-  { key: "Closer", label: "Closer", icon: Target },
-  { key: "SDR", label: "SDR", icon: Phone },
-];
+export function CommissionTab() {
+  const closerHook = useCommissionPlan("Closer");
+  const sdrHook = useCommissionPlan("SDR");
 
-function CommissionCargoContent({ cargo }: { cargo: string }) {
-  const {
-    plan,
-    periods,
-    dealEntries,
-    loading,
-    calculating,
-    savePlan,
-    calculateMonthlyCommissions,
-    updateDealEntryPayment,
-    markCommissionAsPaid,
-  } = useCommissionPlan(cargo);
-
-  const [activeTab, setActiveTab] = useState(plan ? "deals" : "setup");
+  const loading = closerHook.loading || sdrHook.loading;
 
   if (loading) {
     return (
@@ -37,8 +22,14 @@ function CommissionCargoContent({ cargo }: { cargo: string }) {
     );
   }
 
+  // Merge periods from both plans for the combined dashboard
+  const allPeriods = [...closerHook.periods, ...sdrHook.periods];
+
+  // Use closer plan as the primary for the dashboard (it has both SDR+Closer data now)
+  const primaryPlan = closerHook.plan || sdrHook.plan;
+
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+    <Tabs defaultValue="deals" className="space-y-4">
       <TabsList>
         <TabsTrigger value="deals" className="gap-1.5">
           <Receipt className="h-4 w-4" />
@@ -55,85 +46,118 @@ function CommissionCargoContent({ cargo }: { cargo: string }) {
       </TabsList>
 
       <TabsContent value="deals">
-        {plan ? (
+        {primaryPlan ? (
           <div className="space-y-4">
             <CommissionDashboard
-              plan={plan}
-              periods={periods}
-              calculating={calculating}
-              onCalculate={calculateMonthlyCommissions}
+              plan={primaryPlan}
+              periods={allPeriods}
+              calculating={closerHook.calculating || sdrHook.calculating}
+              onCalculate={async (year, month) => {
+                await Promise.all([
+                  closerHook.calculateMonthlyCommissions(year, month),
+                  sdrHook.calculateMonthlyCommissions(year, month),
+                ]);
+              }}
               compact
             />
             <CommissionDealView
-              dealEntries={dealEntries}
-              onUpdatePayment={updateDealEntryPayment}
-              onMarkAsPaid={markCommissionAsPaid}
+              dealEntries={[...closerHook.dealEntries, ...sdrHook.dealEntries]}
+              onUpdatePayment={closerHook.updateDealEntryPayment}
+              onMarkAsPaid={closerHook.markCommissionAsPaid}
             />
           </div>
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             <Settings2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="font-medium">Nenhum plano configurado para {cargo}</p>
-            <p className="text-sm mt-1">Configure um plano na aba "Configurar Plano".</p>
+            <p className="font-medium">Nenhum plano configurado</p>
+            <p className="text-sm mt-1">Configure um plano na aba &quot;Configurar Plano&quot;.</p>
           </div>
         )}
       </TabsContent>
 
       <TabsContent value="dashboard">
-        {plan ? (
+        {primaryPlan ? (
           <CommissionDashboard
-            plan={plan}
-            periods={periods}
-            calculating={calculating}
-            onCalculate={calculateMonthlyCommissions}
+            plan={primaryPlan}
+            periods={allPeriods}
+            calculating={closerHook.calculating || sdrHook.calculating}
+            onCalculate={async (year, month) => {
+              await Promise.all([
+                closerHook.calculateMonthlyCommissions(year, month),
+                sdrHook.calculateMonthlyCommissions(year, month),
+              ]);
+            }}
           />
         ) : (
           <div className="text-center py-12 text-muted-foreground">
             <Settings2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="font-medium">Nenhum plano configurado para {cargo}</p>
-            <p className="text-sm mt-1">Configure um plano na aba "Configurar Plano".</p>
+            <p className="font-medium">Nenhum plano configurado</p>
+            <p className="text-sm mt-1">Configure um plano na aba &quot;Configurar Plano&quot;.</p>
           </div>
         )}
       </TabsContent>
 
       <TabsContent value="setup">
-        <CommissionPlanSetup plan={plan} onSave={savePlan as any} />
+        <CommissionSetupTabs
+          closerPlan={closerHook.plan}
+          sdrPlan={sdrHook.plan}
+          onSaveCloser={closerHook.savePlan as any}
+          onSaveSDR={sdrHook.savePlan as any}
+        />
       </TabsContent>
     </Tabs>
   );
 }
 
-export function CommissionTab() {
-  const [selectedCargo, setSelectedCargo] = useState("Closer");
+function CommissionSetupTabs({
+  closerPlan,
+  sdrPlan,
+  onSaveCloser,
+  onSaveSDR,
+}: {
+  closerPlan: any;
+  sdrPlan: any;
+  onSaveCloser: any;
+  onSaveSDR: any;
+}) {
+  const [setupTab, setSetupTab] = useState("closer");
 
   return (
     <div className="space-y-4">
-      {/* Cargo Tabs */}
       <div className="flex gap-2">
-        {CARGOS.map((c) => {
-          const Icon = c.icon;
-          const isActive = selectedCargo === c.key;
-          return (
-            <button
-              key={c.key}
-              onClick={() => setSelectedCargo(c.key)}
-              className={`
-                flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all
-                ${isActive
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
-                }
-              `}
-            >
-              <Icon className="h-4 w-4" />
-              {c.label}
-            </button>
-          );
-        })}
+        <button
+          onClick={() => setSetupTab("closer")}
+          className={`
+            flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all
+            ${setupTab === "closer"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+            }
+          `}
+        >
+          <Target className="h-4 w-4" />
+          Closer
+        </button>
+        <button
+          onClick={() => setSetupTab("sdr")}
+          className={`
+            flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all
+            ${setupTab === "sdr"
+              ? "bg-violet-600 text-white shadow-sm"
+              : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+            }
+          `}
+        >
+          <Phone className="h-4 w-4" />
+          SDR
+        </button>
       </div>
 
-      {/* Content for selected cargo */}
-      <CommissionCargoContent key={selectedCargo} cargo={selectedCargo} />
+      {setupTab === "closer" ? (
+        <CommissionPlanSetup plan={closerPlan} onSave={onSaveCloser} />
+      ) : (
+        <CommissionPlanSetup plan={sdrPlan} onSave={onSaveSDR} />
+      )}
     </div>
   );
 }
