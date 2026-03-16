@@ -463,8 +463,6 @@ export function CommissionDashboard({
     </div>
   );
 }
-        /* SDR Table */
-        <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm flex items-center gap-2">
               📅 {MONTH_NAMES[selectedMonth]} {selectedYear} — SDR
