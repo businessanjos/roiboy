@@ -332,7 +332,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
   }, [accountId]);
 
   const savePlan = async (
-    planData: { name: string; period_type: string; tier_mode: string; monthly_quota: number; prospecting_commission_percent: number },
+    planData: { name: string; period_type: string; tier_mode: string; monthly_quota: number; prospecting_commission_percent: number; commission_model?: string; sdr_value_per_call?: number; sdr_value_per_sale?: number },
     tiers: CommissionTier[],
     triggers: CommissionTrigger[],
     salesLevels: CommissionSalesLevel[]
