@@ -445,6 +445,37 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                 <p className="text-xs text-muted-foreground">Adiantamento mensal descontado da comissão real apurada.</p>
               </div>
             )}
+
+            {selectedModel === "sdr_activity" && (
+              <>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5" />
+                    Valor por call comparecida (R$)
+                  </Label>
+                  <Input
+                    type="number"
+                    value={sdrValuePerCall || ""}
+                    onChange={(e) => setSdrValuePerCall(e.target.value === "" ? 0 : Number(e.target.value))}
+                    placeholder="Ex: 20"
+                  />
+                  <p className="text-xs text-muted-foreground">Valor pago por cada call em que o cliente compareceu.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <DollarSign className="h-3.5 w-3.5" />
+                    Valor por venda originada (R$)
+                  </Label>
+                  <Input
+                    type="number"
+                    value={sdrValuePerSale || ""}
+                    onChange={(e) => setSdrValuePerSale(e.target.value === "" ? 0 : Number(e.target.value))}
+                    placeholder="Ex: 300"
+                  />
+                  <p className="text-xs text-muted-foreground">Valor pago por cada venda feita pelo Closer a partir de agendamentos do SDR.</p>
+                </div>
+              </>
+            )}
           </div>
 
           <p className="text-xs text-muted-foreground">
@@ -454,6 +485,9 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
             )}
             {selectedModel === "draw_against" && drawAmount > 0 && (
               <> · Draw: <strong>{formatCurrency(drawAmount)}</strong>/mês</>
+            )}
+            {selectedModel === "sdr_activity" && (
+              <> · Call: <strong>{formatCurrency(sdrValuePerCall)}</strong> · Venda: <strong>{formatCurrency(sdrValuePerSale)}</strong></>
             )}
           </p>
         </CardContent>
