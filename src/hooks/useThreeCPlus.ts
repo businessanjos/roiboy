@@ -709,7 +709,10 @@ export function useThreeCPlus() {
 
   // Cleanup
   useEffect(() => {
+    mountedRef.current = true;
     return () => {
+      mountedRef.current = false;
+      socketRef.current?.removeAllListeners();
       socketRef.current?.disconnect();
       stopCallTimer();
     };
