@@ -330,11 +330,16 @@ Deno.serve(async (req) => {
 
     // Logout
     if (action === "logout") {
+      const manualExitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
+        method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+      });
+      console.log("[threecplus-agent] logout manual_call_exit:", manualExitRes.status);
+
       const res = await fetch(`${apiBase}/agent/logout?api_token=${apiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       console.log("[threecplus-agent] logout:", res.status);
-      return new Response(JSON.stringify({ success: res.ok || res.status === 204 }),
+      return new Response(JSON.stringify({ success: res.ok || res.status === 204, manual_exit_success: manualExitRes.ok || manualExitRes.status === 204 }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
