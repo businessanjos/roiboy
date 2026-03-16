@@ -161,20 +161,10 @@ export function useThreeCPlus() {
 
     let fallbackTried = false;
 
-    const markSocketUnsynced = () => {
-      setIsConnected(false);
-      setAgentStatus((current) => {
-        if (
-          current === "offline" ||
-          current === "on_call" ||
-          current === "manual_call_connected"
-        ) {
-          return current;
-        }
-
-        return "connecting";
-      });
-    };
+      const markSocketUnsynced = () => {
+        setIsConnected(false);
+        console.warn("[useThreeCPlus] Socket desconectado; mantendo último estado conhecido do agente.");
+      };
 
     const handleLoggedOut = () => {
       console.log("[useThreeCPlus] agent logged out");
