@@ -233,8 +233,8 @@ export function ThreeCPlusPanel() {
             variant="outline"
             className={cn("text-xs gap-1", isInCall && "border-red-500 text-red-500")}
           >
-            <span className={cn("h-1.5 w-1.5 rounded-full", statusInfo.color)} />
-            {statusInfo.label}
+            <span className={cn("h-1.5 w-1.5 rounded-full", displayStatusInfo.color)} />
+            {displayStatusInfo.label}
           </Badge>
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(true)}>
             <Minimize2 className="h-3.5 w-3.5" />
