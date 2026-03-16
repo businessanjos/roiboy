@@ -122,9 +122,14 @@ export function useThreeCPlus() {
       }
       setConnectionInfo(data);
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error("[useThreeCPlus] connect error:", err);
-      toast.error("Erro ao conectar ao 3C Plus");
+      const isFetchError = err?.message?.includes("Failed to fetch") || err?.context?.message?.includes("Failed to fetch");
+      toast.error("Erro ao conectar ao 3C Plus", {
+        description: isFetchError
+          ? "Serviço temporariamente indisponível. Tente novamente em alguns segundos."
+          : err?.message || "Erro desconhecido",
+      });
       return false;
     } finally {
       setLoading(false);
