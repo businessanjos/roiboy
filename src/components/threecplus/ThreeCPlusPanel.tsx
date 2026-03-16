@@ -158,7 +158,7 @@ export function ThreeCPlusPanel() {
     agentStatus !== "offline"
       ? statusInfo
       : extensionLoaded
-        ? { label: isConnected ? "Pronto para login" : "Ramal pronto", color: "bg-green-500", icon: Wifi }
+        ? { label: isConnected ? "Ramal carregado" : "Ramal carregado", color: "bg-green-500", icon: Wifi }
         : connectionInfo || loading
           ? { label: "Conectando...", color: "bg-blue-400", icon: Loader2 }
           : statusInfo;
