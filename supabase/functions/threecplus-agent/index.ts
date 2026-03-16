@@ -399,10 +399,23 @@ Deno.serve(async (req) => {
         }
       };
 
+      const { extension } = await resolveClick2CallExtension(
+        supabaseAdmin,
+        userData.id,
+        baseDomain,
+        apiToken,
+        integration.metadata
+      );
+
+      const click2callPayload: Record<string, string> = { phone: cleanPhone };
+      if (extension) {
+        click2callPayload.extension = extension;
+      }
+
       const click2callRes = await fetch(`${apiBase.replace(/\/api\/v1$/, "")}/api/v1/click2call?api_token=${apiToken}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ phone: cleanPhone }),
+        body: JSON.stringify(click2callPayload),
       });
       const click2callText = await click2callRes.text();
       console.log("[threecplus-agent] place_call click2call:", click2callRes.status, click2callText);
@@ -447,16 +460,23 @@ Deno.serve(async (req) => {
         );
       }
 
+      const click2callNeedsExtension =
+        click2callRes.status === 422 &&
+        /extension/i.test(click2callText);
+
       return new Response(
         JSON.stringify({
           success: false,
-          error: extractError(
-            click2callText,
-            extractError(enterText, "Não foi possível iniciar a chamada.")
-          ),
+          error: click2callNeedsExtension
+            ? "A 3C Plus exigiu o ramal do agente para a ligação direta, mas ele não foi identificado automaticamente."
+            : extractError(
+                click2callText,
+                extractError(enterText, "Não foi possível iniciar a chamada.")
+              ),
           status: click2callRes.status || enterRes.status,
           click2call_status: click2callRes.status,
           manual_enter_status: enterRes.status,
+          extension_resolved: Boolean(extension),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
