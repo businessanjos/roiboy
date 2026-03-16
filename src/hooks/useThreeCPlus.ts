@@ -490,17 +490,33 @@ export function useThreeCPlus() {
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      await invokeAgent("logout");
+      // Best-effort: if there may be a call, try hangup first but don't block logout
+      try {
+        await invokeAgent("hangup", currentCall?.id ? { call_id: currentCall.id } : {});
+      } catch {}
+
+      const data = await invokeAgent("logout");
+      if (!data?.success) {
+        toast.error("Não foi possível sair da campanha", {
+          description: "A 3C Plus recusou a saída. Tente novamente em alguns segundos.",
+        });
+        return false;
+      }
+
       setAgentStatus("offline");
       setSelectedCampaign(null);
       setCurrentCall(null);
       stopCallTimer();
+      toast.success("Saiu da campanha");
+      return true;
     } catch (err) {
       console.error("[useThreeCPlus] logout error:", err);
+      toast.error("Erro ao sair da campanha");
+      return false;
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent, stopCallTimer]);
+  }, [invokeAgent, stopCallTimer, currentCall?.id]);
 
   // Manual call - use direct call flow with backend fallback instead of requiring agent idle/manual mode first
   const manualCall = useCallback(async (phone: string) => {
