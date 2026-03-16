@@ -458,24 +458,31 @@ export function ThreeCPlusPanel() {
             </div>
           )}
 
-          {/* Saved extension display */}
+          {/* Saved extension display with edit */}
           {savedExtension && !isInCall && (
             <div className="flex items-center justify-between bg-muted/50 rounded-lg px-3 py-2">
               <div className="flex items-center gap-2">
                 <Headphones className="h-3.5 w-3.5 text-muted-foreground" />
                 <span className="text-xs text-muted-foreground">Ramal: <strong>{savedExtension}</strong></span>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={() => {
-                  setExtensionInput(savedExtension);
-                  setSavedExtensionLocal("");
-                }}
-              >
-                <Settings className="h-3 w-3" />
-              </Button>
+              <div className="flex gap-1">
+                <Input
+                  placeholder="Novo ramal"
+                  value={extensionInput !== savedExtension ? extensionInput : ""}
+                  onChange={(e) => setExtensionInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && extensionInput.trim() && extensionInput !== savedExtension && saveExtension(extensionInput.trim())}
+                  className="text-xs h-6 w-20"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => extensionInput.trim() && extensionInput !== savedExtension && saveExtension(extensionInput.trim())}
+                  disabled={!extensionInput.trim() || extensionInput === savedExtension}
+                >
+                  <Settings className="h-3 w-3" />
+                </Button>
+              </div>
             </div>
           )}
 
