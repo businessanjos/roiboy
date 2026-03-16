@@ -224,8 +224,23 @@ Deno.serve(async (req) => {
       const text = await res.text();
       console.log("[threecplus-agent] manual_call_dial:", res.status, text);
 
+      const success = res.ok || res.status === 204;
+      let errorMessage: string | null = null;
+
+      if (!success) {
+        errorMessage = "A 3C Plus recusou a chamada manual.";
+        try {
+          const parsed = JSON.parse(text);
+          errorMessage = parsed?.detail || parsed?.title || parsed?.message || errorMessage;
+        } catch {
+          if (text?.trim()) {
+            errorMessage = text.trim();
+          }
+        }
+      }
+
       return new Response(
-        JSON.stringify({ success: res.ok || res.status === 204 }),
+        JSON.stringify({ success, error: errorMessage, status: res.status, detail: success ? null : text }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -336,19 +351,28 @@ Deno.serve(async (req) => {
         method: "GET",
         headers: { Accept: "application/json" },
       });
+      const text = await res.text();
+      console.log("[threecplus-agent] get_logged_campaign:", res.status, text);
 
       if (!res.ok) {
         return new Response(
-          JSON.stringify({ success: false, error: "Agente não está logado em nenhuma campanha" }),
+          JSON.stringify({ success: false, error: "Agente não está logado em nenhuma campanha", status: res.status, detail: text }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const data = await res.json();
-      return new Response(
-        JSON.stringify({ success: true, campaign: data }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      try {
+        const data = text ? JSON.parse(text) : null;
+        return new Response(
+          JSON.stringify({ success: true, campaign: data }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch {
+        return new Response(
+          JSON.stringify({ success: false, error: "Resposta inválida ao consultar campanha logada", status: res.status, detail: text }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Get call history
