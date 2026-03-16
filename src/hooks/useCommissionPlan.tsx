@@ -562,15 +562,8 @@ export function useCommissionPlan(cargo: string = "Closer") {
       const sdrValuePerCall = (plan as any).sdr_value_per_call || 0;
       const sdrValuePerSale = (plan as any).sdr_value_per_sale || 0;
 
-      // Filter users by cargo: SDR hook only processes SDR users, Closer hook only Closers
-      const SDR_NAMES = ["george"];
-      const filteredUsers = cargo === "SDR"
-        ? users.filter((u: any) => SDR_NAMES.some((n) => u.name?.toLowerCase().includes(n)))
-        : users.filter((u: any) => !SDR_NAMES.some((n) => u.name?.toLowerCase().includes(n)));
-
-      // Calculate for each user
-      for (const user of filteredUsers) {
-        // Determine if this specific user is an SDR (George) or Closer
+      // Calculate for each user in this cargo only
+      for (const user of users) {
         const isUserSDR = cargo === "SDR";
         const userWonDeals = wonDeals.filter((d: any) => d.responsible_user_id === user.id);
         const wonValue = userWonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
