@@ -133,14 +133,14 @@ export function ThreeCPlusPanel() {
   // Login to selected campaign
   const handleLogin = useCallback(
     async (campaignId: string) => {
-      if (!extensionLoaded || !isConnected) return;
+      if (!extensionLoaded) return;
 
       const campaign = campaigns.find((c) => String(c.id) === campaignId);
       if (campaign) {
         await loginCampaign(campaign);
       }
     },
-    [campaigns, extensionLoaded, isConnected, loginCampaign]
+    [campaigns, extensionLoaded, loginCampaign]
   );
 
   // Make manual call
@@ -153,8 +153,8 @@ export function ThreeCPlusPanel() {
   const statusInfo = getStatusInfo(agentStatus);
   const StatusIcon = statusInfo.icon;
   const isInCall = agentStatus === "on_call" || agentStatus === "manual_call_connected";
-  const canLogin = !loading && extensionLoaded && isConnected;
-  const canDialManually = isConnected && (agentStatus === "idle" || agentStatus === "manual_mode");
+  const canLogin = !loading && extensionLoaded;
+  const canDialManually = agentStatus === "idle" || agentStatus === "manual_mode";
 
   // Floating button when panel is closed
   if (!isOpen) {
@@ -279,14 +279,11 @@ export function ThreeCPlusPanel() {
                       Carregando o ramal WebRTC antes de liberar o login.
                     </p>
                   )}
-                  {extensionLoaded && !isConnected && (
+                  {extensionLoaded && (
                     <p className="text-xs text-muted-foreground">
-                      Conectando os eventos em tempo real da 3C Plus.
-                    </p>
-                  )}
-                  {canLogin && (
-                    <p className="text-xs text-muted-foreground">
-                      Ramal e eventos prontos. Agora você já pode entrar na campanha.
+                      {isConnected
+                        ? "Ramal e eventos prontos. Selecione uma campanha para entrar."
+                        : "Ramal pronto. Selecione uma campanha para entrar."}
                     </p>
                   )}
                 </div>
