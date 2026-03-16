@@ -43,6 +43,12 @@ interface ConnectionInfo {
   socket_url?: string;
 }
 
+interface AgentRuntimeState {
+  logged_campaign?: boolean;
+  has_active_call?: boolean;
+  manual_mode?: boolean;
+}
+
 export function useThreeCPlus() {
   const [agentStatus, setAgentStatus] = useState<AgentStatus>("offline");
   const [currentCall, setCurrentCall] = useState<CallInfo | null>(null);

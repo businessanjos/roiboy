@@ -81,6 +81,71 @@ function extractCallDetails(value: unknown): { id?: string | number; phone?: str
   };
 }
 
+function extractAgentStatus(value: unknown, depth = 0): string | null {
+  if (!value || depth > 4) return null;
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const directKeys = ["status", "state", "agent_status", "agentStatus", "mode"];
+  for (const key of directKeys) {
+    const currentValue = record[key];
+    if (typeof currentValue === "string" && currentValue.trim()) {
+      return currentValue.trim().toLowerCase();
+    }
+  }
+
+  const nestedKeys = ["data", "agent", "call"];
+  for (const key of nestedKeys) {
+    const nestedStatus = extractAgentStatus(record[key], depth + 1);
+    if (nestedStatus) return nestedStatus;
+  }
+
+  return null;
+}
+
+async function fetchAgentRuntimeState(apiBase: string, apiToken: string) {
+  const runtime = {
+    logged_campaign: false,
+    has_active_call: false,
+    manual_mode: false,
+    call_id: null as string | number | null,
+    agent_status: null as string | null,
+  };
+
+  try {
+    const agentRes = await fetch(`${apiBase}/agent?api_token=${apiToken}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    const agentText = await agentRes.text();
+
+    if (agentRes.ok) {
+      const agentPayload = safeJsonParse(agentText);
+      const callDetails = extractCallDetails(agentPayload);
+      const agentStatus = extractAgentStatus(agentPayload);
+
+      runtime.has_active_call = Boolean(callDetails?.id || callDetails?.phone);
+      runtime.call_id = callDetails?.id ?? null;
+      runtime.agent_status = agentStatus;
+      runtime.manual_mode = Boolean(agentStatus && /manual/i.test(agentStatus));
+    }
+  } catch (error) {
+    console.error("[threecplus-agent] fetchAgentRuntimeState agent error:", error);
+  }
+
+  try {
+    const campaignRes = await fetch(`${apiBase}/campaigns/agent/loggedCampaign?api_token=${apiToken}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    runtime.logged_campaign = campaignRes.ok;
+  } catch (error) {
+    console.error("[threecplus-agent] fetchAgentRuntimeState campaign error:", error);
+  }
+
+  return runtime;
+}
+
 function isManualModeAlreadyActive(status: number, text: string): boolean {
   if (status !== 422) return false;
   const message = extractApiMessage(text, "");
