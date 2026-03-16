@@ -139,6 +139,12 @@ export function IntegrationsContent() {
         const config = zoomInt.config as Record<string, string>;
         setZoomSecretToken(config.secret_token || "");
       }
+      // Populate 3C Plus domain from account-level config
+      const threeCInt = data?.find(i => i.type === "3cplus");
+      if (threeCInt?.config && typeof threeCInt.config === 'object') {
+        const config = threeCInt.config as Record<string, string>;
+        if (config.domain) setThreeCPlusDomain(config.domain);
+      }
     }
     setLoading(false);
   };
