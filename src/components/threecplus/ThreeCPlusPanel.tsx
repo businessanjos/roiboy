@@ -429,6 +429,56 @@ export function ThreeCPlusPanel() {
             </div>
           )}
 
+          {/* Ramal / Extension Config */}
+          {extensionLoaded && !savedExtension && !isInCall && (
+            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Settings className="h-4 w-4 text-yellow-600" />
+                <p className="text-sm font-medium">Configure seu ramal</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Informe o número do seu ramal na 3C Plus para fazer ligações manuais.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Ex: 1001"
+                  value={extensionInput}
+                  onChange={(e) => setExtensionInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && extensionInput.trim() && saveExtension(extensionInput.trim())}
+                  className="text-sm"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => saveExtension(extensionInput.trim())}
+                  disabled={!extensionInput.trim() || loading}
+                >
+                  Salvar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Saved extension display */}
+          {savedExtension && !isInCall && (
+            <div className="flex items-center justify-between bg-muted/50 rounded-lg px-3 py-2">
+              <div className="flex items-center gap-2">
+                <Headphones className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">Ramal: <strong>{savedExtension}</strong></span>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => {
+                  setExtensionInput(savedExtension);
+                  setSavedExtensionLocal("");
+                }}
+              >
+                <Settings className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
+
           {/* Manual Call - available without campaign, just like native 3C Plus */}
           {canDialManually && !isInCall && (
             <div className="space-y-2">
@@ -456,6 +506,11 @@ export function ThreeCPlusPanel() {
                   )}
                 </Button>
               </div>
+              {!savedExtension && (
+                <p className="text-xs text-yellow-600">
+                  ⚠️ Configure seu ramal acima para ligações manuais funcionarem.
+                </p>
+              )}
             </div>
           )}
 
