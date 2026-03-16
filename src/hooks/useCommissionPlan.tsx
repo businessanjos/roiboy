@@ -494,7 +494,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
       const [dealsRes, callsRes, tasksRes] = await Promise.all([
         supabase
           .from("deals")
-          .select("id, responsible_user_id, status, value, title, won_at, created_at")
+          .select("id, responsible_user_id, sdr_user_id, status, value, title, won_at, created_at")
           .eq("account_id", accountId)
           .eq("status", "won")
           .gte("won_at", firstDay.toISOString())
