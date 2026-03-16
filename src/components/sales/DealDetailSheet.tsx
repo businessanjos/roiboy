@@ -303,21 +303,22 @@ export function DealDetailSheet({
   }, [deal?.id, open]);
 
   const fetchTeamMembers = async () => {
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    if (!authUser) return;
-    const { data: userData } = await supabase
-      .from("users")
-      .select("account_id")
-      .eq("auth_user_id", authUser.id)
-      .maybeSingle();
-    if (!userData?.account_id) return;
-    const { data } = await (supabase
-      .from("users")
-      .select("id, name, avatar_url")
-      .eq("account_id", userData.account_id as string)
-      .eq("is_active", true as any)
-      .order("name") as any);
-    setTeamMembers(data || []);
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+      const { data: userData } = await supabase
+        .from("users")
+        .select("account_id")
+        .eq("auth_user_id", authUser.id)
+        .maybeSingle();
+      if (!userData?.account_id) return;
+      // Use RPC-style query to avoid deep type instantiation
+      const query = supabase.from("users").select("id, name, avatar_url");
+      const { data } = await query.eq("account_id", userData.account_id);
+      setTeamMembers((data as any[] || []).filter((u: any) => u.name));
+    } catch (err) {
+      console.error("Error fetching team members:", err);
+    }
   };
 
   const fetchDealCustomFields = async () => {
