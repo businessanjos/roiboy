@@ -38,6 +38,38 @@ function isAgentNotIdle(status: number, text: string): boolean {
   return /n[ãa]o\s+est[áa]\s+ocioso/i.test(message);
 }
 
+async function logCall(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userData: { id: string; account_id: string },
+  phone: string,
+  contactName?: string,
+  callType = "manual",
+  leadId?: string,
+  clientId?: string,
+  dealId?: string,
+) {
+  try {
+    await supabaseAdmin.from("threecplus_call_logs").insert({
+      account_id: userData.account_id,
+      user_id: userData.id,
+      call_type: callType,
+      direction: "outbound",
+      phone,
+      contact_name: contactName || null,
+      status: "connected",
+      started_at: new Date().toISOString(),
+      connected_at: new Date().toISOString(),
+      lead_id: leadId || null,
+      client_id: clientId || null,
+      deal_id: dealId || null,
+      metadata: { source: "click2call_api" },
+    });
+    console.log("[threecplus-call] Call logged to threecplus_call_logs");
+  } catch (err) {
+    console.error("[threecplus-call] Failed to log call:", err);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
