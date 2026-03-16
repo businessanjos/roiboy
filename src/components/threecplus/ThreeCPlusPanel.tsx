@@ -167,9 +167,23 @@ export function ThreeCPlusPanel() {
 
   const statusInfo = getStatusInfo(agentStatus);
   const isInCall = agentStatus === "on_call" || agentStatus === "manual_call_connected";
+  const hasCallTarget = Boolean(currentCall?.phone || currentCall?.contact_name);
+  const hasCallActivity = isInCall || hasCallTarget;
+  const isDialing = hasCallTarget && !isInCall;
+  const callDisplayName = currentCall?.contact_name || currentCall?.phone || "Ligação em andamento";
+  const callDisplaySubtitle =
+    currentCall?.phone && currentCall?.contact_name
+      ? currentCall.phone
+      : isInCall
+        ? "Chamada conectada"
+        : agentStatus === "manual_mode"
+          ? "Aguardando conexão da chamada no 3C Plus"
+          : agentStatus === "connecting"
+            ? "Preparando o agente para discagem"
+            : "Aguardando atualização do status da ligação";
   const canLogin = !loading && extensionLoaded;
   const canDialManually = extensionLoaded && (agentStatus === "offline" || agentStatus === "idle" || agentStatus === "manual_mode" || agentStatus === "connecting");
-  const displayStatusInfo =
+  const defaultStatusInfo =
     agentStatus !== "offline"
       ? statusInfo
       : extensionLoaded
@@ -177,6 +191,13 @@ export function ThreeCPlusPanel() {
         : connectionInfo || loading
           ? { label: "Conectando...", color: "bg-blue-400", icon: Loader2 }
           : statusInfo;
+  const liveStatusInfo = hasCallActivity
+    ? {
+        label: isInCall ? "Em chamada" : "Discando...",
+        color: isInCall ? "bg-destructive" : "bg-primary",
+        icon: isInCall ? PhoneCall : PhoneForwarded,
+      }
+    : defaultStatusInfo;
 
   // Floating button when panel is closed
   if (!isOpen) {
@@ -185,14 +206,15 @@ export function ThreeCPlusPanel() {
         onClick={handleOpen}
         className={cn(
           "fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full px-4 py-3 shadow-lg transition-all hover:scale-105",
-          "bg-primary text-primary-foreground",
-          isInCall && "bg-red-600 text-white animate-pulse"
+          hasCallActivity
+            ? "bg-destructive text-destructive-foreground animate-pulse"
+            : "bg-primary text-primary-foreground"
         )}
       >
         <Phone className="h-5 w-5" />
         <span className="text-sm font-medium">3C Plus</span>
-        {(agentStatus !== "offline" || connectionInfo || loading) && (
-          <span className={cn("h-2.5 w-2.5 rounded-full", displayStatusInfo.color)} />
+        {(agentStatus !== "offline" || connectionInfo || loading || hasCallActivity) && (
+          <span className={cn("h-2.5 w-2.5 rounded-full", liveStatusInfo.color)} />
         )}
       </button>
     );
@@ -207,9 +229,12 @@ export function ThreeCPlusPanel() {
           "bg-card border border-b-0 border-border"
         )}
       >
-        <span className={cn("h-2.5 w-2.5 rounded-full", displayStatusInfo.color)} />
-        <span className="text-sm font-medium">{displayStatusInfo.label}</span>
-        {isInCall && (
+        <span className={cn("h-2.5 w-2.5 rounded-full", liveStatusInfo.color)} />
+        <span className="text-sm font-medium">{liveStatusInfo.label}</span>
+        {hasCallActivity && (
+          <span className="max-w-[120px] truncate text-xs text-muted-foreground">{callDisplayName}</span>
+        )}
+        {(callTimer > 0 || isInCall) && (
           <Badge variant="destructive" className="text-xs">
             {formatTime(callTimer)}
           </Badge>
@@ -246,10 +271,13 @@ export function ThreeCPlusPanel() {
         <div className="flex items-center gap-1">
           <Badge
             variant="outline"
-            className={cn("text-xs gap-1", isInCall && "border-red-500 text-red-500")}
+            className={cn(
+              "text-xs gap-1",
+              hasCallActivity && (isInCall ? "border-destructive text-destructive" : "border-primary text-primary")
+            )}
           >
-            <span className={cn("h-1.5 w-1.5 rounded-full", displayStatusInfo.color)} />
-            {displayStatusInfo.label}
+            <span className={cn("h-1.5 w-1.5 rounded-full", liveStatusInfo.color)} />
+            {liveStatusInfo.label}
           </Badge>
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(true)}>
             <Minimize2 className="h-3.5 w-3.5" />
