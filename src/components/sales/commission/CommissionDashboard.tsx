@@ -126,7 +126,7 @@ export function CommissionDashboard({
         <div>
           <h3 className="font-semibold">{plan.name}</h3>
           <p className="text-xs text-muted-foreground">
-            Apuração mensal {isSDRModel && "· Modelo SDR por Atividade"}
+           Apuração mensal {hasSDRModel && "· Inclui modelo SDR"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -158,113 +158,67 @@ export function CommissionDashboard({
         </div>
       </div>
 
-      {/* Summary Cards */}
-      {selectedPeriods.length > 0 && (
-        isSDRModel ? (
-          /* SDR Summary Cards */
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <Card>
+      {/* Closer Summary Cards */}
+      {closerPeriods.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-emerald-500/10">
+                  <Trophy className="h-5 w-5 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-emerald-600">{formatCurrency(closerTotals.wonValue)}</p>
+                  <p className="text-xs text-muted-foreground">Total vendido (Closers)</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-blue-500/10">
+                  <TrendingUp className="h-5 w-5 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{formatCurrency(closerTotals.totalCommission)}</p>
+                  <p className="text-xs text-muted-foreground">Comissão Closers</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-lg bg-green-500/10">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{closerTotals.qualifiedCount}</p>
+                  <p className="text-xs text-muted-foreground">Qualificados</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          {hasSDRModel && sdrPeriods.length > 0 && (
+            <Card className="border-violet-500/20 bg-violet-500/5">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-lg bg-violet-500/10">
-                    <Phone className="h-5 w-5 text-violet-500" />
+                    <DollarSign className="h-5 w-5 text-violet-500" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-violet-600">{(totals as any).attendedCalls}</p>
-                    <p className="text-xs text-muted-foreground">Calls comparecidas</p>
-                    <p className="text-[10px] text-muted-foreground/70">× {formatCurrency(sdrValuePerCall)} = {formatCurrency((totals as any).attendedCalls * sdrValuePerCall)}</p>
+                    <p className="text-2xl font-bold text-violet-600">{formatCurrency(sdrTotals.totalCommission)}</p>
+                    <p className="text-xs text-muted-foreground">Comissão SDR</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-lg bg-emerald-500/10">
-                    <CalendarCheck className="h-5 w-5 text-emerald-500" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-emerald-600">{(totals as any).originatedSales}</p>
-                    <p className="text-xs text-muted-foreground">Vendas originadas</p>
-                    <p className="text-[10px] text-muted-foreground/70">× {formatCurrency(sdrValuePerSale)} = {formatCurrency((totals as any).originatedSales * sdrValuePerSale)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-lg bg-blue-500/10">
-                    <DollarSign className="h-5 w-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{formatCurrency(totals.totalCommission)}</p>
-                    <p className="text-xs text-muted-foreground">Total comissão SDR</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          /* Closer Summary Cards */
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-lg bg-emerald-500/10">
-                    <Trophy className="h-5 w-5 text-emerald-500" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-emerald-600">{formatCurrency((totals as any).wonValue)}</p>
-                    <p className="text-xs text-muted-foreground">Total vendido</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-lg bg-blue-500/10">
-                    <TrendingUp className="h-5 w-5 text-blue-500" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{formatCurrency(totals.totalCommission)}</p>
-                    <p className="text-xs text-muted-foreground">Total comissão</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-lg bg-green-500/10">
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{(totals as any).qualifiedCount}</p>
-                    <p className="text-xs text-muted-foreground">Qualificados</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-lg bg-amber-500/10">
-                    <AlertTriangle className="h-5 w-5 text-amber-500" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{totals.totalCount - (totals as any).qualifiedCount}</p>
-                    <p className="text-xs text-muted-foreground">Sem gatilhos</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )
+          )}
+        </div>
       )}
 
-      {/* Results Table */}
+      {/* Results Tables */}
       {!compact && (selectedPeriods.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center text-muted-foreground">
@@ -275,7 +229,10 @@ export function CommissionDashboard({
             </p>
           </CardContent>
         </Card>
-      ) : isSDRModel ? (
+      ) : (
+        <div className="space-y-6">
+        {/* Closer Table */}
+        {closerPeriods.length > 0 && (
         /* SDR Table */
         <Card>
           <CardHeader className="pb-3">
