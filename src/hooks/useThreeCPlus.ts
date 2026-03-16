@@ -54,6 +54,7 @@ export function useThreeCPlus() {
   const [loading, setLoading] = useState(false);
   const [callTimer, setCallTimer] = useState(0);
   const [savedExtension, setSavedExtension] = useState<string | null>(null);
+  const [savedExtensionPassword, setSavedExtensionPassword] = useState<string | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
