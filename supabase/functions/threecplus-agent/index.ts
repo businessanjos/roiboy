@@ -398,14 +398,40 @@ Deno.serve(async (req) => {
       const manualExitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
-      console.log("[threecplus-agent] logout manual_call_exit:", manualExitRes.status);
+      const manualExitText = await manualExitRes.text();
+      console.log("[threecplus-agent] logout manual_call_exit:", manualExitRes.status, manualExitText);
 
       const res = await fetch(`${apiBase}/agent/logout?api_token=${apiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
-      console.log("[threecplus-agent] logout:", res.status);
-      return new Response(JSON.stringify({ success: res.ok || res.status === 204, manual_exit_success: manualExitRes.ok || manualExitRes.status === 204 }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const text = await res.text();
+      console.log("[threecplus-agent] logout:", res.status, text);
+
+      let runtime = null;
+      let success = res.ok || res.status === 204;
+
+      if (!success) {
+        runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+        if (!runtime.logged_campaign) {
+          success = true;
+        }
+      }
+
+      const manualExitSuccess =
+        manualExitRes.ok ||
+        manualExitRes.status === 204 ||
+        Boolean(runtime && !runtime.has_active_call);
+
+      return new Response(
+        JSON.stringify({
+          success,
+          manual_exit_success: manualExitSuccess,
+          method: success && !(res.ok || res.status === 204) ? "already_logged_out" : "logout",
+          runtime,
+          error: success ? null : extractApiMessage(text, "Falha ao sair da campanha"),
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Enter manual call mode
