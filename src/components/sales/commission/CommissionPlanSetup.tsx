@@ -30,6 +30,7 @@ import {
   Users,
   Shield,
   Award,
+  Phone,
 } from "lucide-react";
 import { CommissionPlan, CommissionTier, CommissionTrigger, CommissionSalesLevel } from "@/hooks/useCommissionPlan";
 import { motion, AnimatePresence } from "framer-motion";
