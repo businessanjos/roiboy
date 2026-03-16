@@ -311,12 +311,12 @@ export function DealDetailSheet({
       .eq("auth_user_id", authUser.id)
       .maybeSingle();
     if (!userData?.account_id) return;
-    const { data } = await supabase
+    const { data } = await (supabase
       .from("users")
       .select("id, name, avatar_url")
-      .eq("account_id", userData.account_id)
-      .eq("is_active", true)
-      .order("name") as any;
+      .eq("account_id", userData.account_id as string)
+      .eq("is_active", true as any)
+      .order("name") as any);
     setTeamMembers(data || []);
   };
 
