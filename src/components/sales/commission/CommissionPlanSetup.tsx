@@ -163,7 +163,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
   const [name, setName] = useState(plan?.name || "Plano de Comissão");
   const [tierMode, setTierMode] = useState<string>(plan?.tier_mode || "percent_of_target");
   const [monthlyQuota, setMonthlyQuota] = useState(plan?.monthly_quota || 450000);
-  const [prospectingPercent, setProspectingPercent] = useState(plan?.prospecting_commission_percent || 3);
+  const [prospectingPercent, setProspectingPercent] = useState(plan?.prospecting_commission_percent ?? 3);
   const [drawAmount, setDrawAmount] = useState(0);
   const [sdrValuePerCall, setSdrValuePerCall] = useState((plan as any)?.sdr_value_per_call || 20);
   const [sdrValuePerSale, setSdrValuePerSale] = useState((plan as any)?.sdr_value_per_sale || 300);
@@ -183,7 +183,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
       setName(plan.name);
       setTierMode(plan.tier_mode || "percent_of_target");
       setMonthlyQuota(plan.monthly_quota || 450000);
-      setProspectingPercent(plan.prospecting_commission_percent || 3);
+      setProspectingPercent(plan.prospecting_commission_percent ?? 3);
       setSdrValuePerCall((plan as any).sdr_value_per_call || 20);
       setSdrValuePerSale((plan as any).sdr_value_per_sale || 300);
       if (plan.tiers.length) setTiers(plan.tiers);
