@@ -254,7 +254,10 @@ export function ThreeCPlusPanel() {
                       Carregando...
                     </div>
                   ) : (
-                    "Nenhuma campanha disponível"
+                    <div className="space-y-1">
+                      <p>Nenhuma campanha disponível</p>
+                      <p className="text-xs">Ao reabrir o painel, a lista será consultada novamente.</p>
+                    </div>
                   )}
                 </div>
               ) : (
