@@ -853,7 +853,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
         .eq("id", entryId);
 
       toast.success("Comissão marcada como paga!");
-      await fetchDealEntries();
+      await fetchDealEntries(plan?.id);
     } catch (err) {
       console.error("Error marking as paid:", err);
       toast.error("Erro ao marcar como paga");
