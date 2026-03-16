@@ -496,15 +496,12 @@ export function useCommissionPlan(cargo: string = "Closer") {
       const periodEnd = `${year}-${monthStr}-${String(new Date(year, month + 1, 0).getDate()).padStart(2, "0")}`;
 
       // Get only sales team users (managed by Jonathan)
-      const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
       const { data: allUsers } = await supabase
         .from("users")
         .select("id, name")
         .eq("account_id", accountId);
 
-      const users = (allUsers || []).filter((u: any) =>
-        SALES_TEAM_NAMES.some((n) => u.name?.toLowerCase().includes(n))
-      );
+      const users = (allUsers || []).filter((u: any) => matchesCargoUser(u.name, cargo));
 
       if (!users || users.length === 0) return;
 
