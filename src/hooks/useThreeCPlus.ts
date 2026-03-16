@@ -138,20 +138,22 @@ export function useThreeCPlus() {
     socketRef.current?.removeAllListeners();
     socketRef.current?.disconnect();
 
-    console.log("[useThreeCPlus] Connecting Socket.io to", socketUrl, "with polling -> websocket fallback");
-    const socket = io(socketUrl, {
-      path: "/socket.io",
-      query: { token: apiToken, api_token: apiToken },
-      transports: ["polling", "websocket"],
-      upgrade: true,
-      rememberUpgrade: false,
-      reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 2000,
-      timeout: 10000,
-      forceNew: true,
-      withCredentials: false,
-    });
+    let fallbackTried = false;
+
+    const markSocketUnsynced = () => {
+      setIsConnected(false);
+      setAgentStatus((current) => {
+        if (
+          current === "offline" ||
+          current === "on_call" ||
+          current === "manual_call_connected"
+        ) {
+          return current;
+        }
+
+        return "connecting";
+      });
+    };
 
     const handleLoggedOut = () => {
       console.log("[useThreeCPlus] agent logged out");
@@ -170,146 +172,181 @@ export function useThreeCPlus() {
       toast.error("Falha ao entrar no modo manual");
     };
 
-    socket.on("connect", () => {
-      const activeTransport = socket.io.engine.transport.name;
-      console.log("[useThreeCPlus] Socket.io connected via", activeTransport);
-      setIsConnected(true);
-    });
+    const createSocket = (transports: Array<"websocket" | "polling">) => {
+      console.log(
+        "[useThreeCPlus] Connecting Socket.io to",
+        socketUrl,
+        "with transports",
+        transports.join(" -> ")
+      );
 
-    socket.io.engine.on("upgrade", (transport: { name: string }) => {
-      console.log("[useThreeCPlus] Socket.io upgraded to", transport.name);
-    });
-
-    socket.on("connect_error", (error: unknown) => {
-      console.error("[useThreeCPlus] Socket.io connect_error", error);
-      setIsConnected(false);
-    });
-
-    socket.on("disconnect", (reason) => {
-      console.log("[useThreeCPlus] Socket.io disconnected", reason);
-      setIsConnected(false);
-    });
-
-    // Agent events
-    socket.on("agent-is-idle", (data: any) => {
-      console.log("[useThreeCPlus] agent-is-idle", data);
-      setAgentStatus("idle");
-      setCurrentCall(null);
-      stopCallTimer();
-    });
-
-    socket.on("agent-in-acw", (data: any) => {
-      console.log("[useThreeCPlus] agent-in-acw", data);
-      setAgentStatus("acw");
-      stopCallTimer();
-    });
-
-    socket.on("agent-login-failed", (data: any) => {
-      console.log("[useThreeCPlus] agent-login-failed", data);
-      toast.error("Falha no login", { description: "Não foi possível conectar na campanha." });
-      setAgentStatus("offline");
-      setSelectedCampaign(null);
-    });
-
-    socket.on("agent-was-logged-out", handleLoggedOut);
-    socket.on("agent-logged-out", handleLoggedOut);
-    socket.on("agent-entered-manual", handleEnteredManualMode);
-    socket.on("agent-entered-manual-mode", handleEnteredManualMode);
-
-    socket.on("agent-left-manual-mode", () => {
-      console.log("[useThreeCPlus] agent-left-manual-mode");
-      setAgentStatus("idle");
-    });
-
-    socket.on("agent-failed-to-enter-manual", handleFailedManualMode);
-    socket.on("agent-entered-manual-mode-failed", handleFailedManualMode);
-
-    socket.on("agent-entered-work-break", (data: any) => {
-      console.log("[useThreeCPlus] agent-entered-work-break", data);
-      setAgentStatus("on_break");
-    });
-
-    socket.on("agent-left-work-break", () => {
-      console.log("[useThreeCPlus] agent-left-work-break");
-      setAgentStatus("idle");
-    });
-
-    // Call events - Dialer
-    socket.on("call-was-connected", (data: any) => {
-      console.log("[useThreeCPlus] call-was-connected", data);
-      setAgentStatus("on_call");
-      setCurrentCall({
-        id: data?.call?.id,
-        phone: data?.call?.phone || data?.mailing?.data?.phone,
-        contact_name: data?.mailing?.data?.name || data?.mailing?.data?.Nome,
-        qualifications: data?.qualifications,
-        mailing: data?.mailing,
+      const socket = io(socketUrl, {
+        path: "/socket.io",
+        query: { token: apiToken, api_token: apiToken },
+        transports,
+        upgrade: transports.includes("polling"),
+        rememberUpgrade: false,
+        reconnection: true,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 2000,
+        timeout: 10000,
+        forceNew: true,
+        withCredentials: false,
       });
-      startCallTimer();
-    });
 
-    socket.on("call-was-finished", (data: any) => {
-      console.log("[useThreeCPlus] call-was-finished", data);
-      // ACW handled by agent-in-acw event
-    });
+      socket.on("connect", () => {
+        const activeTransport = socket.io.engine.transport.name;
+        console.log("[useThreeCPlus] Socket.io connected via", activeTransport);
+        setIsConnected(true);
+      });
 
-    socket.on("call-was-hangup", (data: any) => {
-      console.log("[useThreeCPlus] call-was-hangup", data);
-      stopCallTimer();
-    });
+      socket.io.engine.on("upgrade", (transport: { name: string }) => {
+        console.log("[useThreeCPlus] Socket.io upgraded to", transport.name);
+      });
 
-    // Manual call events
-    socket.on("manual-call-was-connected", (data: any) => {
-      console.log("[useThreeCPlus] manual-call-was-connected", data);
-      setAgentStatus("manual_call_connected");
-      setCurrentCall((prev) => ({
-        ...prev,
-        id: data?.call?.id,
-      }));
-      startCallTimer();
-    });
+      socket.on("connect_error", (error: unknown) => {
+        console.error("[useThreeCPlus] Socket.io connect_error", error);
 
-    socket.on("manual-call-was-answered", (data: any) => {
-      console.log("[useThreeCPlus] manual-call-was-answered", data);
-    });
+        if (!fallbackTried && transports[0] === "websocket") {
+          fallbackTried = true;
+          console.warn("[useThreeCPlus] WebSocket falhou, tentando polling.");
+          socket.removeAllListeners();
+          socket.disconnect();
+          socketRef.current = createSocket(["polling", "websocket"]);
+          return;
+        }
 
-    socket.on("manual-call-was-hangup", (data: any) => {
-      console.log("[useThreeCPlus] manual-call-was-hangup", data);
-      stopCallTimer();
-    });
+        markSocketUnsynced();
+      });
 
-    socket.on("manual-call-was-finished", (data: any) => {
-      console.log("[useThreeCPlus] manual-call-was-finished", data);
-      setCurrentCall(null);
-      stopCallTimer();
-    });
+      socket.on("disconnect", (reason) => {
+        console.log("[useThreeCPlus] Socket.io disconnected", reason);
+        markSocketUnsynced();
+      });
 
-    socket.on("manual-call-was-unanswered", () => {
-      console.log("[useThreeCPlus] manual-call-was-unanswered");
-      toast.info("Chamada não atendida");
-      setCurrentCall(null);
-      stopCallTimer();
-    });
+      // Agent events
+      socket.on("agent-is-idle", (data: any) => {
+        console.log("[useThreeCPlus] agent-is-idle", data);
+        setAgentStatus("idle");
+        setCurrentCall(null);
+        stopCallTimer();
+      });
 
-    socket.on("manual-call-failed", () => {
-      console.log("[useThreeCPlus] manual-call-failed");
-      toast.error("Falha na chamada manual");
-      setCurrentCall(null);
-      stopCallTimer();
-    });
+      socket.on("agent-in-acw", (data: any) => {
+        console.log("[useThreeCPlus] agent-in-acw", data);
+        setAgentStatus("acw");
+        stopCallTimer();
+      });
 
-    // Call history event (for logging)
-    socket.on("call-history-was-created", (data: any) => {
-      console.log("[useThreeCPlus] call-history-was-created", data);
-      logCallEvent(data);
-    });
+      socket.on("agent-login-failed", (data: any) => {
+        console.log("[useThreeCPlus] agent-login-failed", data);
+        toast.error("Falha no login", { description: "Não foi possível conectar na campanha." });
+        setAgentStatus("offline");
+        setSelectedCampaign(null);
+      });
 
-    socket.on("manual-call-history-was-created", (data: any) => {
-      console.log("[useThreeCPlus] manual-call-history-was-created", data);
-      logCallEvent(data);
-    });
+      socket.on("agent-was-logged-out", handleLoggedOut);
+      socket.on("agent-logged-out", handleLoggedOut);
+      socket.on("agent-entered-manual", handleEnteredManualMode);
+      socket.on("agent-entered-manual-mode", handleEnteredManualMode);
 
-    socketRef.current = socket;
+      socket.on("agent-left-manual-mode", () => {
+        console.log("[useThreeCPlus] agent-left-manual-mode");
+        setAgentStatus("idle");
+      });
+
+      socket.on("agent-failed-to-enter-manual", handleFailedManualMode);
+      socket.on("agent-entered-manual-mode-failed", handleFailedManualMode);
+
+      socket.on("agent-entered-work-break", (data: any) => {
+        console.log("[useThreeCPlus] agent-entered-work-break", data);
+        setAgentStatus("on_break");
+      });
+
+      socket.on("agent-left-work-break", () => {
+        console.log("[useThreeCPlus] agent-left-work-break");
+        setAgentStatus("idle");
+      });
+
+      // Call events - Dialer
+      socket.on("call-was-connected", (data: any) => {
+        console.log("[useThreeCPlus] call-was-connected", data);
+        setAgentStatus("on_call");
+        setCurrentCall({
+          id: data?.call?.id,
+          phone: data?.call?.phone || data?.mailing?.data?.phone,
+          contact_name: data?.mailing?.data?.name || data?.mailing?.data?.Nome,
+          qualifications: data?.qualifications,
+          mailing: data?.mailing,
+        });
+        startCallTimer();
+      });
+
+      socket.on("call-was-finished", (data: any) => {
+        console.log("[useThreeCPlus] call-was-finished", data);
+        // ACW handled by agent-in-acw event
+      });
+
+      socket.on("call-was-hangup", (data: any) => {
+        console.log("[useThreeCPlus] call-was-hangup", data);
+        stopCallTimer();
+      });
+
+      // Manual call events
+      socket.on("manual-call-was-connected", (data: any) => {
+        console.log("[useThreeCPlus] manual-call-was-connected", data);
+        setAgentStatus("manual_call_connected");
+        setCurrentCall((prev) => ({
+          ...prev,
+          id: data?.call?.id,
+        }));
+        startCallTimer();
+      });
+
+      socket.on("manual-call-was-answered", (data: any) => {
+        console.log("[useThreeCPlus] manual-call-was-answered", data);
+      });
+
+      socket.on("manual-call-was-hangup", (data: any) => {
+        console.log("[useThreeCPlus] manual-call-was-hangup", data);
+        stopCallTimer();
+      });
+
+      socket.on("manual-call-was-finished", (data: any) => {
+        console.log("[useThreeCPlus] manual-call-was-finished", data);
+        setCurrentCall(null);
+        stopCallTimer();
+      });
+
+      socket.on("manual-call-was-unanswered", () => {
+        console.log("[useThreeCPlus] manual-call-was-unanswered");
+        toast.info("Chamada não atendida");
+        setCurrentCall(null);
+        stopCallTimer();
+      });
+
+      socket.on("manual-call-failed", () => {
+        console.log("[useThreeCPlus] manual-call-failed");
+        toast.error("Falha na chamada manual");
+        setCurrentCall(null);
+        stopCallTimer();
+      });
+
+      // Call history event (for logging)
+      socket.on("call-history-was-created", (data: any) => {
+        console.log("[useThreeCPlus] call-history-was-created", data);
+        logCallEvent(data);
+      });
+
+      socket.on("manual-call-history-was-created", (data: any) => {
+        console.log("[useThreeCPlus] manual-call-history-was-created", data);
+        logCallEvent(data);
+      });
+
+      return socket;
+    };
+
+    socketRef.current = createSocket(["websocket"]);
   }, [startCallTimer, stopCallTimer]);
 
   // Log call event to database
@@ -429,6 +466,13 @@ export function useThreeCPlus() {
   const manualCall = useCallback(async (phone: string) => {
     const currentStatus = agentStatusRef.current;
 
+    if (!isConnected) {
+      toast.error("Eventos da 3C Plus desconectados", {
+        description: "Aguarde a reconexão do ramal antes de tentar discar.",
+      });
+      return false;
+    }
+
     if (currentStatus !== "idle" && currentStatus !== "manual_mode") {
       toast.error("Agente não está pronto para discar", {
         description: "Aguarde o status ficar ocioso antes de iniciar a ligação manual.",
@@ -438,14 +482,29 @@ export function useThreeCPlus() {
 
     setLoading(true);
     try {
+      const campaignData = await invokeAgent("get_logged_campaign");
+      if (!campaignData?.success) {
+        setSelectedCampaign(null);
+        setAgentStatus("offline");
+        toast.error("Sua sessão da campanha caiu", {
+          description: "Entre novamente na campanha antes de discar.",
+        });
+        return false;
+      }
+
       if (currentStatus !== "manual_mode") {
         let entered = false;
+        let enterError = "Aguarde o discador liberar ou tente novamente em alguns segundos.";
 
         for (let attempt = 0; attempt < 3; attempt++) {
           const enterData = await invokeAgent("manual_call_enter");
           if (enterData?.success) {
             entered = true;
             break;
+          }
+
+          if (enterData?.error) {
+            enterError = enterData.error;
           }
 
           if (attempt < 2) {
@@ -455,14 +514,16 @@ export function useThreeCPlus() {
         }
 
         if (!entered) {
+          setAgentStatus("connecting");
           toast.error("Agente não está ocioso", {
-            description: "Aguarde o discador liberar ou tente novamente em alguns segundos.",
+            description: enterError,
           });
           return false;
         }
 
         const manualModeReady = await waitForAgentStatus(["manual_mode"], 5000);
         if (!manualModeReady) {
+          setAgentStatus("connecting");
           toast.error("Modo manual ainda não confirmou", {
             description: "Aguarde o ramal atualizar e tente novamente.",
           });
@@ -472,7 +533,9 @@ export function useThreeCPlus() {
 
       const dialData = await invokeAgent("manual_call_dial", { phone });
       if (!dialData?.success) {
-        toast.error("Não foi possível discar");
+        toast.error("Não foi possível discar", {
+          description: dialData?.error || "A 3C Plus recusou a chamada manual.",
+        });
         await invokeAgent("manual_call_exit");
         return false;
       }
@@ -486,7 +549,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent, waitForAgentStatus]);
+  }, [invokeAgent, isConnected, waitForAgentStatus]);
 
   // Hangup
   const hangup = useCallback(async () => {
