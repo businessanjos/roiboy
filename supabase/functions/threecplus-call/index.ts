@@ -38,6 +38,38 @@ function isAgentNotIdle(status: number, text: string): boolean {
   return /n[ãa]o\s+est[áa]\s+ocioso/i.test(message);
 }
 
+async function logCall(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userData: { id: string; account_id: string },
+  phone: string,
+  contactName?: string,
+  callType = "manual",
+  leadId?: string,
+  clientId?: string,
+  dealId?: string,
+) {
+  try {
+    await supabaseAdmin.from("threecplus_call_logs").insert({
+      account_id: userData.account_id,
+      user_id: userData.id,
+      call_type: callType,
+      direction: "outbound",
+      phone,
+      contact_name: contactName || null,
+      status: "connected",
+      started_at: new Date().toISOString(),
+      connected_at: new Date().toISOString(),
+      lead_id: leadId || null,
+      client_id: clientId || null,
+      deal_id: dealId || null,
+      metadata: { source: "click2call_api" },
+    });
+    console.log("[threecplus-call] Call logged to threecplus_call_logs");
+  } catch (err) {
+    console.error("[threecplus-call] Failed to log call:", err);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -75,7 +107,7 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { phone } = await req.json();
+    const { phone, contact_name: contactName, lead_id: leadId, client_id: clientId, deal_id: dealId } = await req.json();
     if (!phone || typeof phone !== "string") {
       return new Response(JSON.stringify({ success: false, error: "Número de telefone é obrigatório" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -130,6 +162,8 @@ Deno.serve(async (req) => {
     console.log("[threecplus-call] click2call response:", click2callRes.status, click2callText);
 
     if (click2callRes.ok || click2callRes.status === 204) {
+      // Log call to threecplus_call_logs
+      await logCall(supabaseAdmin, userData, cleanPhone, contactName, "manual", leadId, clientId, dealId);
       return new Response(JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
@@ -186,6 +220,8 @@ Deno.serve(async (req) => {
       const dialText = await dialRes.text();
       console.log("[threecplus-call] manual_call/dial response:", dialRes.status, dialText);
       if (dialRes.ok || dialRes.status === 204) {
+        // Log call to threecplus_call_logs
+        await logCall(supabaseAdmin, userData, cleanPhone, contactName, "manual", leadId, clientId, dealId);
         return new Response(JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
