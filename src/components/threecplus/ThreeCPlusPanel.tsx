@@ -192,8 +192,8 @@ export function ThreeCPlusPanel() {
           "bg-card border border-b-0 border-border"
         )}
       >
-        <span className={cn("h-2.5 w-2.5 rounded-full", statusInfo.color)} />
-        <span className="text-sm font-medium">{statusInfo.label}</span>
+        <span className={cn("h-2.5 w-2.5 rounded-full", displayStatusInfo.color)} />
+        <span className="text-sm font-medium">{displayStatusInfo.label}</span>
         {isInCall && (
           <Badge variant="destructive" className="text-xs">
             {formatTime(callTimer)}
