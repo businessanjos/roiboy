@@ -355,6 +355,9 @@ export function useCommissionPlan(cargo: string = "Closer") {
             tier_mode: planData.tier_mode,
             monthly_quota: planData.monthly_quota,
             prospecting_commission_percent: planData.prospecting_commission_percent,
+            commission_model: planData.commission_model || "percent_tiers",
+            sdr_value_per_call: planData.sdr_value_per_call || 0,
+            sdr_value_per_sale: planData.sdr_value_per_sale || 0,
             updated_at: new Date().toISOString(),
           })
           .eq("id", planId);
