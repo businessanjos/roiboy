@@ -22,8 +22,14 @@ export function CommissionTab() {
     );
   }
 
-  // Merge periods from both plans for the combined dashboard
-  const allPeriods = [...closerHook.periods, ...sdrHook.periods];
+  // Merge periods/entries from both plans without duplicates
+  const allPeriods = Array.from(
+    new Map([...closerHook.periods, ...sdrHook.periods].map((period) => [period.id, period])).values()
+  );
+
+  const allDealEntries = Array.from(
+    new Map([...closerHook.dealEntries, ...sdrHook.dealEntries].map((entry) => [entry.id, entry])).values()
+  );
 
   // Use closer plan as the primary for the dashboard (it has both SDR+Closer data now)
   const primaryPlan = closerHook.plan || sdrHook.plan;
