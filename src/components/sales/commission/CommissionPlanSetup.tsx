@@ -212,6 +212,10 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
         setTierMode("percent_of_target");
         if (!plan?.tiers?.length) setTiers(DEFAULT_TIERS);
         break;
+      case "sdr_activity":
+        setTierMode("absolute");
+        setTiers([]);
+        break;
     }
   };
 
