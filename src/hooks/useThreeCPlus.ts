@@ -91,6 +91,31 @@ export function useThreeCPlus() {
     agentStatusRef.current = agentStatus;
   }, [agentStatus]);
 
+  const reconcileTelephonyState = useCallback(
+    (runtime?: AgentRuntimeState | null, mode: "call_ended" | "manual_exit" | "logout" = "call_ended") => {
+      setCurrentCall(null);
+      stopCallTimer();
+
+      if (mode === "logout") {
+        setSelectedCampaign(null);
+        setAgentStatus("offline");
+        return;
+      }
+
+      const loggedCampaign = runtime?.logged_campaign ?? Boolean(selectedCampaign);
+      const manualMode = Boolean(runtime?.manual_mode);
+
+      if (!loggedCampaign) {
+        setSelectedCampaign(null);
+        setAgentStatus("offline");
+        return;
+      }
+
+      setAgentStatus(mode === "manual_exit" ? "idle" : manualMode ? "manual_mode" : "idle");
+    },
+    [selectedCampaign, stopCallTimer]
+  );
+
   const waitForAgentStatus = useCallback(
     async (statuses: AgentStatus[], timeoutMs = 10000, intervalMs = 250) => {
       const startTime = Date.now();
