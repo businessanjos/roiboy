@@ -601,7 +601,10 @@ export function useCommissionPlan(cargo: string = "Closer") {
         let commissionValue = 0;
         let bonusValue = 0;
 
-        if (isSDRModel) {
+        // Mark if user is SDR in triggers_met for dashboard display
+        triggersMet["is_sdr"] = isUserSDR as any;
+
+        if (isUserSDR) {
           // SDR model: fixed value per attended call + fixed value per originated sale
           const attendedCalls = userCalls.filter((c: any) => c.status === "completed" || c.answered_at);
           const attendedCallsCount = attendedCalls.length;
