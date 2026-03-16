@@ -158,7 +158,7 @@ export function ThreeCPlusPanel() {
     agentStatus !== "offline"
       ? statusInfo
       : extensionLoaded
-        ? { label: isConnected ? "Pronto para login" : "Ramal pronto", color: "bg-green-500", icon: Wifi }
+        ? { label: isConnected ? "Ramal carregado" : "Ramal carregado", color: "bg-green-500", icon: Wifi }
         : connectionInfo || loading
           ? { label: "Conectando...", color: "bg-blue-400", icon: Loader2 }
           : statusInfo;
@@ -251,7 +251,7 @@ export function ThreeCPlusPanel() {
           {agentStatus === "offline" && (
             <div className="space-y-3">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Campanha
+                Campanha (opcional)
               </label>
               {campaigns.length === 0 ? (
                 <div className="text-sm text-muted-foreground text-center py-4">
@@ -289,8 +289,8 @@ export function ThreeCPlusPanel() {
                   {extensionLoaded && (
                     <p className="text-xs text-muted-foreground">
                       {isConnected
-                        ? "Ramal e eventos prontos. Selecione uma campanha para entrar."
-                        : "Ramal pronto. Selecione uma campanha para entrar."}
+                        ? "Se quiser usar o discador de campanha, selecione uma campanha. Para ligação manual, disque direto abaixo."
+                        : "O ramal foi carregado. Para ligação manual, disque direto abaixo; campanha é opcional."}
                     </p>
                   )}
                 </div>

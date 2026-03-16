@@ -245,6 +245,89 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Place a direct call: try click2call first, then fallback to manual mode if available
+    if (action === "place_call") {
+      const { phone } = body;
+      if (!phone) {
+        return new Response(
+          JSON.stringify({ success: false, error: "phone é obrigatório" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const cleanPhone = phone.replace(/\D/g, "");
+      const extractError = (text: string, fallback: string) => {
+        try {
+          const parsed = JSON.parse(text);
+          return parsed?.detail || parsed?.title || parsed?.message || fallback;
+        } catch {
+          return text?.trim() || fallback;
+        }
+      };
+
+      const click2callRes = await fetch(`${apiBase.replace(/\/api\/v1$/, "")}/api/v1/click2call?api_token=${apiToken}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ phone: cleanPhone }),
+      });
+      const click2callText = await click2callRes.text();
+      console.log("[threecplus-agent] place_call click2call:", click2callRes.status, click2callText);
+
+      if (click2callRes.ok || click2callRes.status === 204) {
+        return new Response(
+          JSON.stringify({ success: true, mode: "click2call" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const enterRes = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${apiToken}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+      });
+      const enterText = await enterRes.text();
+      console.log("[threecplus-agent] place_call manual_call_enter:", enterRes.status, enterText);
+
+      if (enterRes.ok || enterRes.status === 204) {
+        const dialRes = await fetch(`${apiBase}/agent/manual_call/dial?api_token=${apiToken}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ phone: cleanPhone }),
+        });
+        const dialText = await dialRes.text();
+        console.log("[threecplus-agent] place_call manual_call_dial:", dialRes.status, dialText);
+
+        if (dialRes.ok || dialRes.status === 204) {
+          return new Response(
+            JSON.stringify({ success: true, mode: "manual_mode" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: extractError(dialText, "A 3C Plus recusou a chamada manual."),
+            status: dialRes.status,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: extractError(
+            click2callText,
+            extractError(enterText, "Não foi possível iniciar a chamada.")
+          ),
+          status: click2callRes.status || enterRes.status,
+          click2call_status: click2callRes.status,
+          manual_enter_status: enterRes.status,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Exit manual call mode
     if (action === "manual_call_exit") {
       const res = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {

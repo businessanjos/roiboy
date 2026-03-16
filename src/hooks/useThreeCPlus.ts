@@ -500,11 +500,10 @@ export function useThreeCPlus() {
     }
   }, [invokeAgent, stopCallTimer]);
 
-  // Manual call - no campaign required, just like native 3C Plus
+  // Manual call - use direct call flow with backend fallback instead of requiring agent idle/manual mode first
   const manualCall = useCallback(async (phone: string) => {
     const currentStatus = agentStatusRef.current;
 
-    // Allow manual call from most states except active call
     if (currentStatus === "on_call" || currentStatus === "manual_call_connected") {
       toast.error("Já existe uma chamada ativa");
       return false;
@@ -512,62 +511,27 @@ export function useThreeCPlus() {
 
     setLoading(true);
     try {
-      const wasAlreadyInManualMode = currentStatus === "manual_mode";
+      const dialData = await invokeAgent("place_call", { phone });
+      console.log("[useThreeCPlus] place_call result", dialData);
 
-      if (!wasAlreadyInManualMode) {
-        let entered = false;
-        let enterError = "Tente novamente em alguns segundos.";
-        const maxAttempts = 3;
-        const retryDelay = 2000;
-
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          const enterData = await invokeAgent("manual_call_enter");
-          console.log("[useThreeCPlus] manual_call_enter attempt", attempt + 1, "of", maxAttempts, enterData);
-
-          if (enterData?.success) {
-            entered = true;
-            break;
-          }
-
-          if (enterData?.error) {
-            enterError = enterData.error;
-          }
-
-          if (attempt < maxAttempts - 1) {
-            await new Promise((resolve) => setTimeout(resolve, retryDelay));
-          }
-        }
-
-        if (!entered) {
-          toast.error("Não foi possível entrar no modo manual", {
-            description: enterError,
-          });
-          return false;
-        }
-
-        setAgentStatus("manual_mode");
-      }
-
-      const dialData = await invokeAgent("manual_call_dial", { phone });
       if (!dialData?.success) {
         toast.error("Não foi possível discar", {
-          description: dialData?.error || "A 3C Plus recusou a chamada manual.",
+          description: dialData?.error || "A 3C Plus recusou a chamada.",
         });
-
-        if (!wasAlreadyInManualMode) {
-          try {
-            await invokeAgent("manual_call_exit");
-          } catch (exitError) {
-            console.warn("[useThreeCPlus] manual_call_exit after dial failure:", exitError);
-          }
-          setAgentStatus(selectedCampaign ? "idle" : "offline");
-        }
-
         return false;
       }
 
-      setAgentStatus("manual_mode");
+      if (dialData?.mode === "manual_mode") {
+        setAgentStatus("manual_mode");
+      }
+
       setCurrentCall({ phone, contact_name: undefined });
+      toast.success("Chamada iniciada", {
+        description:
+          dialData?.mode === "click2call"
+            ? "Ligação enviada pelo fluxo direto da 3C Plus."
+            : "Ligação enviada pelo modo manual da 3C Plus.",
+      });
       return true;
     } catch (err) {
       console.error("[useThreeCPlus] manualCall error:", err);
@@ -576,7 +540,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent, selectedCampaign]);
+  }, [invokeAgent]);
 
   // Hangup
   const hangup = useCallback(async () => {
