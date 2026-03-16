@@ -78,6 +78,7 @@ export function ThreeCPlusPanel() {
     isConnected,
     loading,
     callTimer,
+    savedExtension,
     connect,
     connectSocket,
     fetchCampaigns,
@@ -89,6 +90,8 @@ export function ThreeCPlusPanel() {
     enterPause,
     exitPause,
     exitManualMode,
+    saveExtension,
+    loadExtension,
   } = useThreeCPlus();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -97,6 +100,7 @@ export function ThreeCPlusPanel() {
   const [manualPhone, setManualPhone] = useState("");
   const [initialized, setInitialized] = useState(false);
   const [extensionLoaded, setExtensionLoaded] = useState(false);
+  const [extensionInput, setExtensionInput] = useState("");
 
   // Initialize connection
   const handleInit = useCallback(async () => {
