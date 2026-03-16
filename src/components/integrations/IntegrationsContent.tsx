@@ -274,7 +274,7 @@ export function IntegrationsContent() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const getIntegration = (type: "zoom" | "google") => {
+  const getIntegration = (type: "zoom" | "google" | "3cplus") => {
     return integrations.find((i) => i.type === type);
   };
 
