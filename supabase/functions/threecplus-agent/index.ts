@@ -6,6 +6,12 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type IntegrationData = {
+  apiToken: string;
+  baseDomain: string;
+  metadata: Record<string, unknown> | null;
+};
+
 function getBaseDomain(domain: string | null): string {
   if (!domain) return "https://app.3c.fluxoti.com";
   let base = domain.trim();
@@ -17,7 +23,135 @@ function getBaseDomain(domain: string | null): string {
   return base;
 }
 
-async function getIntegration(supabaseAdmin: any, userId: string, accountId: string) {
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function normalizeExtension(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const digits = trimmed.replace(/\D/g, "");
+  return digits || trimmed;
+}
+
+function extractExtension(value: unknown, depth = 0): string | null {
+  if (!value || depth > 4) return null;
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const match = extractExtension(item, depth + 1);
+      if (match) return match;
+    }
+    return null;
+  }
+
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const directKeys = [
+    "extension",
+    "ramal",
+    "agent_extension",
+    "agentExtension",
+    "extension_number",
+    "extensionNumber",
+    "voip_extension",
+    "voipExtension",
+  ];
+
+  for (const key of directKeys) {
+    const match = normalizeExtension(record[key]);
+    if (match) return match;
+  }
+
+  const nestedKeys = ["data", "user", "agent", "operator", "profile", "sip", "webrtc", "pbx"];
+  for (const key of nestedKeys) {
+    const match = extractExtension(record[key], depth + 1);
+    if (match) return match;
+  }
+
+  return null;
+}
+
+async function fetchAgentProfile(baseDomain: string, apiToken: string) {
+  const attempts = [
+    {
+      url: `${baseDomain}/api/v1/me`,
+      init: {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          Accept: "application/json",
+        },
+      },
+    },
+    {
+      url: `${baseDomain}/api/v1/me?api_token=${apiToken}`,
+      init: {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      },
+    },
+  ];
+
+  for (const attempt of attempts) {
+    try {
+      const response = await fetch(attempt.url, attempt.init);
+      const text = await response.text();
+      console.log("[threecplus-agent] fetchAgentProfile:", attempt.url, response.status);
+
+      if (!response.ok) continue;
+      return text ? JSON.parse(text) : null;
+    } catch (error) {
+      console.error("[threecplus-agent] fetchAgentProfile error:", error);
+    }
+  }
+
+  return null;
+}
+
+async function resolveClick2CallExtension(
+  supabaseAdmin: any,
+  userId: string,
+  baseDomain: string,
+  apiToken: string,
+  metadata: Record<string, unknown> | null
+) {
+  const storedExtension = extractExtension(metadata);
+  if (storedExtension) {
+    return { extension: storedExtension, source: "metadata" };
+  }
+
+  const profile = await fetchAgentProfile(baseDomain, apiToken);
+  const profileExtension = extractExtension(profile);
+
+  if (profileExtension) {
+    const nextMetadata = { ...(metadata ?? {}), extension: profileExtension };
+    const { error } = await supabaseAdmin
+      .from("user_integrations")
+      .update({ metadata: nextMetadata })
+      .eq("user_id", userId)
+      .eq("provider", "3cplus");
+
+    if (error) {
+      console.warn("[threecplus-agent] failed to persist extension metadata:", error.message);
+    }
+
+    return { extension: profileExtension, source: "profile" };
+  }
+
+  return { extension: null, source: null };
+}
+
+async function getIntegration(supabaseAdmin: any, userId: string, accountId: string): Promise<IntegrationData | null> {
   const { data: integration } = await supabaseAdmin
     .from("user_integrations")
     .select("access_token, metadata")
@@ -56,7 +190,7 @@ async function getIntegration(supabaseAdmin: any, userId: string, accountId: str
     }
   }
 
-  return { apiToken: integration.access_token, baseDomain };
+  return { apiToken: integration.access_token, baseDomain, metadata: meta };
 }
 
 Deno.serve(async (req) => {
@@ -265,10 +399,23 @@ Deno.serve(async (req) => {
         }
       };
 
+      const { extension } = await resolveClick2CallExtension(
+        supabaseAdmin,
+        userData.id,
+        baseDomain,
+        apiToken,
+        integration.metadata
+      );
+
+      const click2callPayload: Record<string, string> = { phone: cleanPhone };
+      if (extension) {
+        click2callPayload.extension = extension;
+      }
+
       const click2callRes = await fetch(`${apiBase.replace(/\/api\/v1$/, "")}/api/v1/click2call?api_token=${apiToken}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ phone: cleanPhone }),
+        body: JSON.stringify(click2callPayload),
       });
       const click2callText = await click2callRes.text();
       console.log("[threecplus-agent] place_call click2call:", click2callRes.status, click2callText);
@@ -313,16 +460,23 @@ Deno.serve(async (req) => {
         );
       }
 
+      const click2callNeedsExtension =
+        click2callRes.status === 422 &&
+        /extension/i.test(click2callText);
+
       return new Response(
         JSON.stringify({
           success: false,
-          error: extractError(
-            click2callText,
-            extractError(enterText, "Não foi possível iniciar a chamada.")
-          ),
+          error: click2callNeedsExtension
+            ? "A 3C Plus exigiu o ramal do agente para a ligação direta, mas ele não foi identificado automaticamente."
+            : extractError(
+                click2callText,
+                extractError(enterText, "Não foi possível iniciar a chamada.")
+              ),
           status: click2callRes.status || enterRes.status,
           click2call_status: click2callRes.status,
           manual_enter_status: enterRes.status,
+          extension_resolved: Boolean(extension),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
