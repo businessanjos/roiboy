@@ -25,32 +25,20 @@ async function fetchCampaignsFromDomain(domain: string, apiToken: string): Promi
   while (hasMore) {
     const apiResponse = await fetch(
       `${domain}/api/v1/agent/campaigns?api_token=${apiToken}&per_page=100&page=${currentPage}`,
-      {
-        method: "GET",
-        headers: { Accept: "application/json" },
-      }
+      { method: "GET", headers: { Accept: "application/json" } }
     );
-
     const responseText = await apiResponse.text();
     console.log(`[threecplus-campaigns] Page ${currentPage} from ${domain}:`, apiResponse.status, responseText.substring(0, 500));
 
     if (!apiResponse.ok) {
       return { campaigns: [], error: `Erro ao buscar campanhas (status ${apiResponse.status}).` };
     }
-
     if (responseText.trim().startsWith("<!DOCTYPE") || responseText.trim().startsWith("<html")) {
-      console.error("[threecplus-campaigns] API returned HTML instead of JSON. Domain:", domain);
       return { campaigns: [], error: "Erro de configuração: o domínio do 3C Plus parece incorreto." };
     }
 
     let parsed;
-    try {
-      parsed = JSON.parse(responseText);
-    } catch {
-      parsed = null;
-      hasMore = false;
-      break;
-    }
+    try { parsed = JSON.parse(responseText); } catch { parsed = null; hasMore = false; break; }
 
     if (Array.isArray(parsed)) {
       allCampaigns = parsed;
@@ -62,10 +50,8 @@ async function fetchCampaignsFromDomain(domain: string, apiToken: string): Promi
     } else {
       hasMore = false;
     }
-
     if (currentPage > 10) break;
   }
-
   return { campaigns: allCampaigns };
 }
 
@@ -78,8 +64,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -92,124 +77,69 @@ Deno.serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = user.id;
-
-
-    // Fetch user with account_id
     const { data: userData } = await supabaseAdmin
       .from("users")
       .select("id, account_id")
-      .eq("auth_user_id", userId)
+      .eq("auth_user_id", user.id)
       .single();
 
     if (!userData) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Usuário não encontrado" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: false, error: "Usuário não encontrado" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch user's own integration
+    // Get account-level 3C Plus integration
     const { data: integration } = await supabaseAdmin
-      .from("user_integrations")
-      .select("access_token, metadata")
-      .eq("user_id", userData.id)
-      .eq("provider", "3cplus")
+      .from("integrations")
+      .select("config")
+      .eq("account_id", userData.account_id)
+      .eq("type", "3cplus")
+      .eq("status", "connected")
       .maybeSingle();
 
-    if (!integration?.access_token) {
-      return new Response(
-        JSON.stringify({ success: false, code: "NO_INTEGRATION", error: "3C Plus não configurado." }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!integration?.config) {
+      return new Response(JSON.stringify({ success: false, code: "NO_INTEGRATION", error: "3C Plus não configurado." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const meta = integration.metadata as Record<string, unknown> | null;
-    const userDomain = (meta?.domain as string | null) || null;
-    const baseDomain = getBaseDomain(userDomain);
-    const apiToken = integration.access_token;
-
-    console.log("[threecplus-campaigns] User:", userData.id, "Domain:", baseDomain, "UserDomainRaw:", userDomain, "Token (last 6):", apiToken.slice(-6));
-
-    // Step 1: Try user's own domain
-    let result = await fetchCampaignsFromDomain(baseDomain, apiToken);
-
-    // Step 2: If 0 campaigns, try peer domain from same account
-    if (result.campaigns.length === 0 && userData.account_id) {
-      console.log("[threecplus-campaigns] No campaigns on user domain, searching peer integrations in account:", userData.account_id);
-
-      // Find other 3cplus integrations in the same account that have a domain configured
-      const { data: peerUsers } = await supabaseAdmin
-        .from("users")
-        .select("id")
-        .eq("account_id", userData.account_id)
-        .neq("id", userData.id);
-
-      if (peerUsers && peerUsers.length > 0) {
-        const peerUserIds = peerUsers.map((u: any) => u.id);
-
-        const { data: peerIntegrations } = await supabaseAdmin
-          .from("user_integrations")
-          .select("metadata")
-          .eq("provider", "3cplus")
-          .in("user_id", peerUserIds);
-
-        if (peerIntegrations) {
-          // Find a peer with a non-null domain that differs from what we already tried
-          for (const peer of peerIntegrations) {
-            const peerMeta = peer.metadata as Record<string, unknown> | null;
-            const peerDomainRaw = (peerMeta?.domain as string | null) || null;
-            if (!peerDomainRaw) continue;
-
-            const peerDomain = getBaseDomain(peerDomainRaw);
-            if (peerDomain === baseDomain) continue; // Already tried this domain
-
-            console.log("[threecplus-campaigns] Trying peer domain:", peerDomain);
-            const peerResult = await fetchCampaignsFromDomain(peerDomain, apiToken);
-            if (peerResult.campaigns.length > 0) {
-              result = peerResult;
-              console.log(`[threecplus-campaigns] Peer domain succeeded: ${peerResult.campaigns.length} campaigns from ${peerDomain}`);
-              break;
-            }
-          }
-        }
-      }
+    const config = integration.config as Record<string, unknown>;
+    const apiToken = config.api_token as string;
+    const domain = config.domain as string | null;
+    if (!apiToken) {
+      return new Response(JSON.stringify({ success: false, error: "Token da API não configurado." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Step 3: Final fallback to default domain if still 0
+    const baseDomain = getBaseDomain(domain);
+    console.log("[threecplus-campaigns] Account:", userData.account_id, "Domain:", baseDomain);
+
+    const result = await fetchCampaignsFromDomain(baseDomain, apiToken);
+
+    // Fallback to default domain
     const defaultDomain = "https://app.3c.fluxoti.com";
     if (result.campaigns.length === 0 && baseDomain !== defaultDomain) {
-      console.log("[threecplus-campaigns] No campaigns from any domain, trying default:", defaultDomain);
       const fallbackResult = await fetchCampaignsFromDomain(defaultDomain, apiToken);
       if (fallbackResult.campaigns.length > 0) {
-        result = fallbackResult;
         console.log(`[threecplus-campaigns] Default fallback succeeded: ${fallbackResult.campaigns.length} campaigns`);
+        return new Response(JSON.stringify({ success: true, campaigns: fallbackResult.campaigns }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
 
     if (result.error && result.campaigns.length === 0) {
-      return new Response(
-        JSON.stringify({ success: false, error: result.error }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: false, error: result.error }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    console.log(`[threecplus-campaigns] Total campaigns fetched: ${result.campaigns.length}`);
-
-    return new Response(
-      JSON.stringify({ success: true, campaigns: result.campaigns }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: true, campaigns: result.campaigns }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     console.error("[threecplus-campaigns] Error:", err);
-    return new Response(
-      JSON.stringify({ success: false, error: "Erro interno do servidor." }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ success: false, error: "Erro interno do servidor." }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
