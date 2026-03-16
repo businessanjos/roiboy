@@ -351,19 +351,28 @@ Deno.serve(async (req) => {
         method: "GET",
         headers: { Accept: "application/json" },
       });
+      const text = await res.text();
+      console.log("[threecplus-agent] get_logged_campaign:", res.status, text);
 
       if (!res.ok) {
         return new Response(
-          JSON.stringify({ success: false, error: "Agente não está logado em nenhuma campanha" }),
+          JSON.stringify({ success: false, error: "Agente não está logado em nenhuma campanha", status: res.status, detail: text }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const data = await res.json();
-      return new Response(
-        JSON.stringify({ success: true, campaign: data }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      try {
+        const data = text ? JSON.parse(text) : null;
+        return new Response(
+          JSON.stringify({ success: true, campaign: data }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch {
+        return new Response(
+          JSON.stringify({ success: false, error: "Resposta inválida ao consultar campanha logada", status: res.status, detail: text }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Get call history
