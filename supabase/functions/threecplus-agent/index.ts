@@ -184,8 +184,23 @@ Deno.serve(async (req) => {
       const text = await res.text();
       console.log("[threecplus-agent] manual_call_enter:", res.status, text);
 
+      if (res.ok || res.status === 204) {
+        return new Response(
+          JSON.stringify({ success: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      let errorMessage = "Falha ao entrar no modo manual";
+      try {
+        const parsed = JSON.parse(text);
+        errorMessage = parsed?.detail || parsed?.title || errorMessage;
+      } catch {
+        // keep default message
+      }
+
       return new Response(
-        JSON.stringify({ success: res.ok || res.status === 204 }),
+        JSON.stringify({ success: false, error: errorMessage, status: res.status, detail: text }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

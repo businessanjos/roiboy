@@ -466,6 +466,13 @@ export function useThreeCPlus() {
   const manualCall = useCallback(async (phone: string) => {
     const currentStatus = agentStatusRef.current;
 
+    if (!isConnected) {
+      toast.error("Eventos da 3C Plus desconectados", {
+        description: "Aguarde a reconexão do ramal antes de tentar discar.",
+      });
+      return false;
+    }
+
     if (currentStatus !== "idle" && currentStatus !== "manual_mode") {
       toast.error("Agente não está pronto para discar", {
         description: "Aguarde o status ficar ocioso antes de iniciar a ligação manual.",
@@ -475,14 +482,29 @@ export function useThreeCPlus() {
 
     setLoading(true);
     try {
+      const campaignData = await invokeAgent("get_logged_campaign");
+      if (!campaignData?.success) {
+        setSelectedCampaign(null);
+        setAgentStatus("offline");
+        toast.error("Sua sessão da campanha caiu", {
+          description: "Entre novamente na campanha antes de discar.",
+        });
+        return false;
+      }
+
       if (currentStatus !== "manual_mode") {
         let entered = false;
+        let enterError = "Aguarde o discador liberar ou tente novamente em alguns segundos.";
 
         for (let attempt = 0; attempt < 3; attempt++) {
           const enterData = await invokeAgent("manual_call_enter");
           if (enterData?.success) {
             entered = true;
             break;
+          }
+
+          if (enterData?.error) {
+            enterError = enterData.error;
           }
 
           if (attempt < 2) {
@@ -492,14 +514,16 @@ export function useThreeCPlus() {
         }
 
         if (!entered) {
+          setAgentStatus("connecting");
           toast.error("Agente não está ocioso", {
-            description: "Aguarde o discador liberar ou tente novamente em alguns segundos.",
+            description: enterError,
           });
           return false;
         }
 
         const manualModeReady = await waitForAgentStatus(["manual_mode"], 5000);
         if (!manualModeReady) {
+          setAgentStatus("connecting");
           toast.error("Modo manual ainda não confirmou", {
             description: "Aguarde o ramal atualizar e tente novamente.",
           });
@@ -509,7 +533,9 @@ export function useThreeCPlus() {
 
       const dialData = await invokeAgent("manual_call_dial", { phone });
       if (!dialData?.success) {
-        toast.error("Não foi possível discar");
+        toast.error("Não foi possível discar", {
+          description: dialData?.error || "A 3C Plus recusou a chamada manual.",
+        });
         await invokeAgent("manual_call_exit");
         return false;
       }
@@ -523,7 +549,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent, waitForAgentStatus]);
+  }, [invokeAgent, isConnected, waitForAgentStatus]);
 
   // Hangup
   const hangup = useCallback(async () => {

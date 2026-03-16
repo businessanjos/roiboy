@@ -153,7 +153,7 @@ export function ThreeCPlusPanel() {
   const StatusIcon = statusInfo.icon;
   const isInCall = agentStatus === "on_call" || agentStatus === "manual_call_connected";
   const canLogin = !loading && extensionLoaded && isConnected;
-  const canDialManually = agentStatus === "idle" || agentStatus === "manual_mode";
+  const canDialManually = isConnected && (agentStatus === "idle" || agentStatus === "manual_mode");
 
   // Floating button when panel is closed
   if (!isOpen) {
