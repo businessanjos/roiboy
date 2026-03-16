@@ -153,7 +153,7 @@ export function ThreeCPlusPanel() {
   const statusInfo = getStatusInfo(agentStatus);
   const isInCall = agentStatus === "on_call" || agentStatus === "manual_call_connected";
   const canLogin = !loading && extensionLoaded;
-  const canDialManually = agentStatus === "idle" || agentStatus === "manual_mode";
+  const canDialManually = Boolean(selectedCampaign) && (agentStatus === "idle" || agentStatus === "manual_mode" || agentStatus === "connecting");
   const displayStatusInfo =
     agentStatus !== "offline"
       ? statusInfo
@@ -324,10 +324,10 @@ export function ThreeCPlusPanel() {
             <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Finalizando sessão do agente
+                Aguardando agente ficar ocioso
               </div>
               <p className="text-xs text-muted-foreground">
-                Se os eventos em tempo real atrasarem, o painel libera automaticamente pela confirmação da API.
+                A 3C Plus ainda está finalizando o login do agente. Você já pode clicar em discar que o sistema tenta novamente automaticamente.
               </p>
             </div>
           )}

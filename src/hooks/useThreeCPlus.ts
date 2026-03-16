@@ -449,23 +449,25 @@ export function useThreeCPlus() {
       const data = await invokeAgent("login", { campaign_id: campaign.id });
       if (data?.success) {
         setSelectedCampaign(campaign);
-        setAgentStatus("idle");
+        setAgentStatus("connecting");
 
         const campData = await invokeAgent("get_logged_campaign");
         if (campData?.success && campData.campaign?.work_breaks) {
           setWorkBreaks(campData.campaign.work_breaks);
         }
 
-        toast.success("Conectado à campanha", { description: campaign.name });
+        toast.success("Conectado à campanha", {
+          description: "Aguardando o agente ficar ocioso para liberar a discagem.",
+        });
 
         if (socketRef.current?.connected) {
-          waitForAgentStatus(["idle"], 15000).then((becameIdle) => {
-            if (!becameIdle) {
-              console.warn("[useThreeCPlus] Socket não confirmou idle, mantendo sessão validada pela API.");
+          waitForAgentStatus(["idle", "manual_mode"], 15000).then((becameReady) => {
+            if (!becameReady) {
+              console.warn("[useThreeCPlus] 3C Plus não confirmou estado pronto após login; mantendo status de preparação.");
             }
           });
         } else {
-          console.log("[useThreeCPlus] Login sem socket — sessão validada pela API.");
+          console.log("[useThreeCPlus] Login confirmado pela API; aguardando agente ficar pronto para discagem.");
         }
       } else {
         toast.error("Falha ao entrar na campanha", { description: data?.error });
@@ -511,9 +513,9 @@ export function useThreeCPlus() {
       return false;
     }
 
-    if (currentStatus !== "idle" && currentStatus !== "manual_mode") {
+    if (currentStatus !== "idle" && currentStatus !== "manual_mode" && currentStatus !== "connecting") {
       toast.error("Agente não está pronto para discar", {
-        description: "Aguarde o status ficar ocioso antes de iniciar a ligação manual.",
+        description: "Aguarde o agente liberar a discagem antes de iniciar a ligação manual.",
       });
       return false;
     }
@@ -525,9 +527,18 @@ export function useThreeCPlus() {
       if (!wasAlreadyInManualMode) {
         let entered = false;
         let enterError = "Aguarde o discador liberar ou tente novamente em alguns segundos.";
+        const maxAttempts = currentStatus === "connecting" ? 5 : 3;
+        const retryDelay = 2000;
 
-        for (let attempt = 0; attempt < 3; attempt++) {
+        if (currentStatus === "connecting") {
+          toast.info("Preparando agente para discagem...", { duration: 2500 });
+          await new Promise((resolve) => setTimeout(resolve, retryDelay));
+        }
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
           const enterData = await invokeAgent("manual_call_enter");
+          console.log("[useThreeCPlus] manual_call_enter attempt", attempt + 1, "of", maxAttempts, enterData);
+
           if (enterData?.success) {
             entered = true;
             break;
@@ -537,9 +548,8 @@ export function useThreeCPlus() {
             enterError = enterData.error;
           }
 
-          if (attempt < 2) {
-            toast.info("Aguardando agente ficar ocioso...", { duration: 2000 });
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+          if (attempt < maxAttempts - 1) {
+            await new Promise((resolve) => setTimeout(resolve, retryDelay));
           }
         }
 
@@ -553,8 +563,8 @@ export function useThreeCPlus() {
             return false;
           }
 
-          setAgentStatus("idle");
-          toast.error("Agente não está ocioso", {
+          setAgentStatus("connecting");
+          toast.error("Agente ainda não ficou ocioso", {
             description: enterError,
           });
           return false;
