@@ -543,7 +543,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
 
       const allDealsInMonth = dealsAllRes || [];
 
-      const isSDRModel = (plan as any).commission_model === "sdr_activity";
+      const hasSDRModel = (plan as any).commission_model === "sdr_activity";
       const sdrValuePerCall = (plan as any).sdr_value_per_call || 0;
       const sdrValuePerSale = (plan as any).sdr_value_per_sale || 0;
 
