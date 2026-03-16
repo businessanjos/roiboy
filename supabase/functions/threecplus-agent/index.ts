@@ -533,6 +533,7 @@ Deno.serve(async (req) => {
       console.log("[threecplus-agent] place_call click2call:", click2callRes.status, click2callText);
 
       if (click2callRes.ok || click2callRes.status === 204) {
+        await logCallToDb(supabaseAdmin, userData.account_id, userData.id, click2callCall || { phone: cleanPhone }, "click2call");
         return new Response(JSON.stringify({ success: true, mode: "click2call", call: click2callCall }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
