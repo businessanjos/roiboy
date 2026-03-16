@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, ComponentType } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +13,26 @@ import { ImpersonationBanner } from "@/components/admin/ImpersonationBanner";
 import { SectorProvider } from "@/contexts/SectorContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingScreen } from "@/components/ui/loading-screen";
+
+// Retry wrapper for lazy imports to handle stale chunk errors after deploys
+function lazyRetry<T extends ComponentType<any>>(
+  factory: () => Promise<{ default: T }>,
+  retries = 2
+): React.LazyExoticComponent<T> {
+  return lazy(() =>
+    factory().catch((err) => {
+      if (retries > 0) {
+        // Force reload from server on chunk load failure
+        return new Promise<{ default: T }>((resolve) => {
+          setTimeout(() => resolve(lazyRetry(factory, retries - 1) as any), 500);
+        });
+      }
+      // Last resort: full page reload to get fresh asset manifest
+      window.location.reload();
+      return factory();
+    })
+  );
+}
 
 // Eager loaded pages (critical for UX)
 import Auth from "./pages/Auth";
