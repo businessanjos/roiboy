@@ -500,23 +500,13 @@ export function useThreeCPlus() {
     }
   }, [invokeAgent, stopCallTimer]);
 
-  // Manual call
+  // Manual call - no campaign required, just like native 3C Plus
   const manualCall = useCallback(async (phone: string) => {
     const currentStatus = agentStatusRef.current;
-    const hasCampaignSessionError = (message?: string | null) =>
-      Boolean(message && /(campanha|campaign|sess[aã]o|session|logad|logged)/i.test(message));
 
-    if (!selectedCampaign) {
-      toast.error("Selecione uma campanha", {
-        description: "Entre novamente em uma campanha antes de discar.",
-      });
-      return false;
-    }
-
-    if (currentStatus !== "idle" && currentStatus !== "manual_mode" && currentStatus !== "connecting") {
-      toast.error("Agente não está pronto para discar", {
-        description: "Aguarde o agente liberar a discagem antes de iniciar a ligação manual.",
-      });
+    // Allow manual call from most states except active call
+    if (currentStatus === "on_call" || currentStatus === "manual_call_connected") {
+      toast.error("Já existe uma chamada ativa");
       return false;
     }
 
