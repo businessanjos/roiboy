@@ -30,6 +30,7 @@ import {
   Users,
   Shield,
   Award,
+  Phone,
 } from "lucide-react";
 import { CommissionPlan, CommissionTier, CommissionTrigger, CommissionSalesLevel } from "@/hooks/useCommissionPlan";
 import { motion, AnimatePresence } from "framer-motion";
@@ -50,6 +51,13 @@ const COMMISSION_MODELS: CommissionModel[] = [
     description: "Percentual varia de acordo com a faixa de atingimento da meta.",
     icon: <TrendingUp className="h-5 w-5 text-emerald-600" />,
     examples: "Ex: até 80% da cota = 0,5% · 81-99% = 0,8% · 100%+ = 2%",
+  },
+  {
+    key: "sdr_activity",
+    label: "SDR por Atividade",
+    description: "Valor fixo por call comparecida e por venda originada pelo SDR.",
+    icon: <Phone className="h-5 w-5 text-violet-600" />,
+    examples: "Ex: R$ 20 por call comparecida + R$ 300 por venda originada",
   },
   {
     key: "recurring",
@@ -106,7 +114,7 @@ const COMMISSION_MODELS: CommissionModel[] = [
 interface CommissionPlanSetupProps {
   plan: CommissionPlan | null;
   onSave: (
-    planData: { name: string; period_type: string; tier_mode: string; monthly_quota: number; prospecting_commission_percent: number; commission_model?: string },
+    planData: { name: string; period_type: string; tier_mode: string; monthly_quota: number; prospecting_commission_percent: number; commission_model?: string; sdr_value_per_call?: number; sdr_value_per_sale?: number },
     tiers: CommissionTier[],
     triggers: CommissionTrigger[],
     salesLevels: CommissionSalesLevel[]
@@ -157,6 +165,8 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
   const [monthlyQuota, setMonthlyQuota] = useState(plan?.monthly_quota || 450000);
   const [prospectingPercent, setProspectingPercent] = useState(plan?.prospecting_commission_percent || 3);
   const [drawAmount, setDrawAmount] = useState(0);
+  const [sdrValuePerCall, setSdrValuePerCall] = useState((plan as any)?.sdr_value_per_call || 20);
+  const [sdrValuePerSale, setSdrValuePerSale] = useState((plan as any)?.sdr_value_per_sale || 300);
 
   const [tiers, setTiers] = useState<CommissionTier[]>(
     plan?.tiers?.length ? plan.tiers : DEFAULT_TIERS
@@ -174,6 +184,8 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
       setTierMode(plan.tier_mode || "percent_of_target");
       setMonthlyQuota(plan.monthly_quota || 450000);
       setProspectingPercent(plan.prospecting_commission_percent || 3);
+      setSdrValuePerCall((plan as any).sdr_value_per_call || 20);
+      setSdrValuePerSale((plan as any).sdr_value_per_sale || 300);
       if (plan.tiers.length) setTiers(plan.tiers);
       if (plan.triggers.length) setTriggers(plan.triggers);
     }
@@ -199,6 +211,10 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
       case "draw_against":
         setTierMode("percent_of_target");
         if (!plan?.tiers?.length) setTiers(DEFAULT_TIERS);
+        break;
+      case "sdr_activity":
+        setTierMode("absolute");
+        setTiers([]);
         break;
     }
   };
@@ -246,6 +262,8 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
           monthly_quota: monthlyQuota,
           prospecting_commission_percent: prospectingPercent,
           commission_model: selectedModel,
+          sdr_value_per_call: sdrValuePerCall,
+          sdr_value_per_sale: sdrValuePerSale,
         },
         tiers,
         triggers,
@@ -427,6 +445,37 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                 <p className="text-xs text-muted-foreground">Adiantamento mensal descontado da comissão real apurada.</p>
               </div>
             )}
+
+            {selectedModel === "sdr_activity" && (
+              <>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5" />
+                    Valor por call comparecida (R$)
+                  </Label>
+                  <Input
+                    type="number"
+                    value={sdrValuePerCall || ""}
+                    onChange={(e) => setSdrValuePerCall(e.target.value === "" ? 0 : Number(e.target.value))}
+                    placeholder="Ex: 20"
+                  />
+                  <p className="text-xs text-muted-foreground">Valor pago por cada call em que o cliente compareceu.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-1.5">
+                    <DollarSign className="h-3.5 w-3.5" />
+                    Valor por venda originada (R$)
+                  </Label>
+                  <Input
+                    type="number"
+                    value={sdrValuePerSale || ""}
+                    onChange={(e) => setSdrValuePerSale(e.target.value === "" ? 0 : Number(e.target.value))}
+                    placeholder="Ex: 300"
+                  />
+                  <p className="text-xs text-muted-foreground">Valor pago por cada venda feita pelo Closer a partir de agendamentos do SDR.</p>
+                </div>
+              </>
+            )}
           </div>
 
           <p className="text-xs text-muted-foreground">
@@ -437,11 +486,15 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
             {selectedModel === "draw_against" && drawAmount > 0 && (
               <> · Draw: <strong>{formatCurrency(drawAmount)}</strong>/mês</>
             )}
+            {selectedModel === "sdr_activity" && (
+              <> · Call: <strong>{formatCurrency(sdrValuePerCall)}</strong> · Venda: <strong>{formatCurrency(sdrValuePerSale)}</strong></>
+            )}
           </p>
         </CardContent>
       </Card>
 
-      {/* Tiers — adapt labels per model */}
+      {/* Tiers — adapt labels per model (hidden for SDR) */}
+      {selectedModel !== "sdr_activity" && (
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -675,8 +728,10 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Triggers */}
+      {selectedModel !== "sdr_activity" && (
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
@@ -722,6 +777,35 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
           ))}
         </CardContent>
       </Card>
+      )}
+
+      {/* SDR Summary */}
+      {selectedModel === "sdr_activity" && (
+        <Card className="border-violet-500/20 bg-violet-500/[0.02]">
+          <CardContent className="p-5">
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Phone className="h-4 w-4 text-violet-600" />
+                Resumo do Modelo SDR
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 border rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground">Por call comparecida</p>
+                  <p className="text-lg font-bold text-foreground">{formatCurrency(sdrValuePerCall)}</p>
+                </div>
+                <div className="p-3 border rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground">Por venda originada</p>
+                  <p className="text-lg font-bold text-foreground">{formatCurrency(sdrValuePerSale)}</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                O SDR recebe um valor fixo por cada call em que o cliente compareceu, 
+                e um valor por cada venda fechada pelo Closer originada de seus agendamentos.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Save */}
       <div className="flex justify-end">
