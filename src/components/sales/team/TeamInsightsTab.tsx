@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sparkles, RefreshCw, TrendingUp, AlertTriangle, Lightbulb, Activity,
-  User,
+  User, Users, Clock,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,6 +16,14 @@ interface Insight {
   category: "performance" | "comportamento" | "oportunidade" | "alerta";
   priority: "alta" | "média" | "baixa";
   related_member?: string;
+}
+
+interface InsightHistory {
+  id: string;
+  insights: Insight[];
+  generated_at: string;
+  scope: string;
+  member_name: string | null;
 }
 
 const categoryConfig = {
@@ -31,25 +39,81 @@ const priorityConfig = {
   baixa: "bg-green-100 text-green-700 border-green-200",
 };
 
-export function TeamInsightsTab() {
-  const [insights, setInsights] = useState<Insight[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
+const TABS = [
+  { key: "team", label: "Equipe", icon: Users, scope: "team", memberName: null },
+  { key: "george", label: "George", icon: User, scope: "individual", memberName: "George" },
+  { key: "darlan", label: "Darlan", icon: User, scope: "individual", memberName: "Darlan" },
+  { key: "vanessa", label: "Vanessa", icon: User, scope: "individual", memberName: "Vanessa" },
+];
 
-  const generateInsights = useCallback(async () => {
-    setLoading(true);
+export function TeamInsightsTab() {
+  const [activeTab, setActiveTab] = useState("team");
+  const [insightsMap, setInsightsMap] = useState<Record<string, { insights: Insight[]; generatedAt: string }>>({});
+  const [loading, setLoading] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(true);
+
+  // Load saved insights from history on mount
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = useCallback(async () => {
+    setLoadingHistory(true);
     try {
-      const { data, error } = await supabase.functions.invoke("team-insights");
+      // Get the most recent insight for each scope
+      const { data, error } = await supabase
+        .from("team_insights_history")
+        .select("*")
+        .order("generated_at", { ascending: false })
+        .limit(20);
 
       if (error) throw error;
 
+      const map: Record<string, { insights: Insight[]; generatedAt: string }> = {};
+
+      for (const row of (data || []) as any[]) {
+        const key = row.scope === "individual" && row.member_name
+          ? row.member_name.toLowerCase()
+          : "team";
+        
+        if (!map[key]) {
+          map[key] = {
+            insights: Array.isArray(row.insights) ? row.insights : [],
+            generatedAt: row.generated_at,
+          };
+        }
+      }
+
+      setInsightsMap(map);
+    } catch (err) {
+      console.error("Error loading insights history:", err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  }, []);
+
+  const generateInsights = useCallback(async () => {
+    const tab = TABS.find((t) => t.key === activeTab)!;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("team-insights", {
+        body: { scope: tab.scope, member_name: tab.memberName },
+      });
+
+      if (error) throw error;
       if (data?.error) {
         toast.error(data.error);
         return;
       }
 
-      setInsights(data.insights || []);
-      setGeneratedAt(data.generated_at);
+      const newInsights = data.insights || [];
+      const generatedAt = data.generated_at;
+
+      setInsightsMap((prev) => ({
+        ...prev,
+        [activeTab]: { insights: newInsights, generatedAt },
+      }));
+
       toast.success("Insights gerados com sucesso!");
     } catch (err: any) {
       console.error("Error generating insights:", err);
@@ -57,46 +121,131 @@ export function TeamInsightsTab() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeTab]);
 
-  if (!generatedAt && !loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 px-4">
-        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-          <Sparkles className="h-10 w-10 text-primary" />
-        </div>
-        <h3 className="text-xl font-semibold mb-2">Insights da Equipe</h3>
-        <p className="text-muted-foreground text-center max-w-md mb-8">
-          Gere insights inteligentes sobre a performance e comportamento dos vendedores e SDRs com base nos dados do mês atual.
-        </p>
-        <Button onClick={generateInsights} size="lg" className="gap-2">
-          <Sparkles className="h-5 w-5" />
-          Gerar Insights com IA
-        </Button>
-      </div>
-    );
-  }
+  const currentData = insightsMap[activeTab];
+  const currentTab = TABS.find((t) => t.key === activeTab)!;
 
-  if (loading) {
+  if (loadingHistory) {
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-3 mb-6">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-8 w-32" />
-        </div>
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-5">
-              <Skeleton className="h-5 w-48 mb-3" />
-              <Skeleton className="h-4 w-full mb-2" />
-              <Skeleton className="h-4 w-3/4" />
-            </CardContent>
-          </Card>
-        ))}
+        <Skeleton className="h-10 w-full max-w-md" />
+        <Skeleton className="h-48 w-full" />
       </div>
     );
   }
 
+  return (
+    <div className="space-y-5">
+      {/* Sub-tabs */}
+      <div className="flex gap-2 flex-wrap">
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.key;
+          const hasData = !!insightsMap[tab.key];
+          return (
+            <Button
+              key={tab.key}
+              variant={isActive ? "default" : "outline"}
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setActiveTab(tab.key)}
+            >
+              <Icon className="h-4 w-4" />
+              {tab.label}
+              {hasData && (
+                <span className="ml-1 w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+              )}
+            </Button>
+          );
+        })}
+      </div>
+
+      {/* Content */}
+      {!currentData && !loading ? (
+        <EmptyState
+          label={currentTab.label}
+          isIndividual={currentTab.scope === "individual"}
+          onGenerate={generateInsights}
+        />
+      ) : loading ? (
+        <LoadingSkeleton />
+      ) : currentData ? (
+        <InsightsGrid
+          insights={currentData.insights}
+          generatedAt={currentData.generatedAt}
+          label={currentTab.label}
+          loading={loading}
+          onRegenerate={generateInsights}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function EmptyState({
+  label,
+  isIndividual,
+  onGenerate,
+}: {
+  label: string;
+  isIndividual: boolean;
+  onGenerate: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-4">
+      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-5">
+        <Sparkles className="h-8 w-8 text-primary" />
+      </div>
+      <h3 className="text-lg font-semibold mb-2">
+        Insights {isIndividual ? `de ${label}` : "da Equipe"}
+      </h3>
+      <p className="text-muted-foreground text-center max-w-md mb-6 text-sm">
+        {isIndividual
+          ? `Gere insights individuais sobre a performance e comportamento de ${label} com base nos dados do mês atual.`
+          : "Gere insights comparativos sobre a performance e comportamento da equipe comercial com base nos dados do mês atual."}
+      </p>
+      <Button onClick={onGenerate} size="lg" className="gap-2">
+        <Sparkles className="h-5 w-5" />
+        Gerar Insights com IA
+      </Button>
+    </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 mb-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-8 w-32" />
+      </div>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <Card key={i}>
+          <CardContent className="p-5">
+            <Skeleton className="h-5 w-48 mb-3" />
+            <Skeleton className="h-4 w-full mb-2" />
+            <Skeleton className="h-4 w-3/4" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function InsightsGrid({
+  insights,
+  generatedAt,
+  label,
+  loading,
+  onRegenerate,
+}: {
+  insights: Insight[];
+  generatedAt: string;
+  label: string;
+  loading: boolean;
+  onRegenerate: () => void;
+}) {
   const sorted = [...insights].sort((a, b) => {
     const pOrder = { alta: 0, média: 1, baixa: 2 };
     return (pOrder[a.priority] ?? 2) - (pOrder[b.priority] ?? 2);
@@ -108,14 +257,15 @@ export function TeamInsightsTab() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Sparkles className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">Insights da Equipe</h2>
+          <h2 className="text-lg font-semibold">Insights — {label}</h2>
           {generatedAt && (
-            <span className="text-xs text-muted-foreground">
-              Gerado em {new Date(generatedAt).toLocaleString("pt-BR")}
-            </span>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Clock className="h-3 w-3" />
+              {new Date(generatedAt).toLocaleString("pt-BR")}
+            </div>
           )}
         </div>
-        <Button variant="outline" size="sm" onClick={generateInsights} disabled={loading} className="gap-2">
+        <Button variant="outline" size="sm" onClick={onRegenerate} disabled={loading} className="gap-2">
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Regenerar
         </Button>
