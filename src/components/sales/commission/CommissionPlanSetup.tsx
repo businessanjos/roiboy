@@ -165,6 +165,8 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
   const [monthlyQuota, setMonthlyQuota] = useState(plan?.monthly_quota || 450000);
   const [prospectingPercent, setProspectingPercent] = useState(plan?.prospecting_commission_percent || 3);
   const [drawAmount, setDrawAmount] = useState(0);
+  const [sdrValuePerCall, setSdrValuePerCall] = useState((plan as any)?.sdr_value_per_call || 20);
+  const [sdrValuePerSale, setSdrValuePerSale] = useState((plan as any)?.sdr_value_per_sale || 300);
 
   const [tiers, setTiers] = useState<CommissionTier[]>(
     plan?.tiers?.length ? plan.tiers : DEFAULT_TIERS
