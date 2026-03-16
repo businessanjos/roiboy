@@ -833,7 +833,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
         .eq("id", entryId);
 
       toast.success("Status de pagamento atualizado!");
-      await fetchDealEntries();
+      await fetchDealEntries(plan?.id);
     } catch (err) {
       console.error("Error updating deal entry:", err);
       toast.error("Erro ao atualizar");
