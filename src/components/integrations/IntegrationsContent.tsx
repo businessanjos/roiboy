@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -64,6 +65,9 @@ export function IntegrationsContent() {
   // 3C Plus state
   const [threeCPlusToken, setThreeCPlusToken] = useState("");
   const [threeCPlusDomain, setThreeCPlusDomain] = useState("");
+  const [threeCPlusEmail, setThreeCPlusEmail] = useState("");
+  const [threeCPlusPassword, setThreeCPlusPassword] = useState("");
+  const [threeCPlusAuthMethod, setThreeCPlusAuthMethod] = useState<"credentials" | "token">("credentials");
   const [connecting3CPlus, setConnecting3CPlus] = useState(false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -369,21 +373,31 @@ export function IntegrationsContent() {
   };
 
   const handle3CPlusConnect = async () => {
-    if (!threeCPlusToken.trim()) {
-      toast({ title: "Erro", description: "Informe o token da API.", variant: "destructive" });
-      return;
+    if (threeCPlusAuthMethod === "credentials") {
+      if (!threeCPlusEmail.trim() || !threeCPlusPassword) {
+        toast({ title: "Erro", description: "Informe e-mail e senha.", variant: "destructive" });
+        return;
+      }
+    } else {
+      if (!threeCPlusToken.trim()) {
+        toast({ title: "Erro", description: "Informe o token da API.", variant: "destructive" });
+        return;
+      }
     }
     setConnecting3CPlus(true);
     try {
-      const { data, error } = await supabase.functions.invoke("threecplus-auth", {
-        body: { api_token: threeCPlusToken.trim(), domain: threeCPlusDomain.trim() || null },
-      });
+      const body = threeCPlusAuthMethod === "credentials"
+        ? { auth_method: "credentials", email: threeCPlusEmail.trim(), password: threeCPlusPassword, domain: threeCPlusDomain.trim() || null }
+        : { api_token: threeCPlusToken.trim(), domain: threeCPlusDomain.trim() || null };
+      const { data, error } = await supabase.functions.invoke("threecplus-auth", { body });
       if (error) throw error;
       if (data?.error) {
         toast({ title: "Erro", description: data.error, variant: "destructive" });
       } else {
         toast({ title: "Conectado!", description: `3C Plus conectado com sucesso.` });
         setThreeCPlusToken("");
+        setThreeCPlusEmail("");
+        setThreeCPlusPassword("");
         fetchUserIntegrations();
       }
     } catch (err: any) {
@@ -867,25 +881,83 @@ export function IntegrationsContent() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+              <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Cole seu token de API da 3C Plus para conectar. Você pode encontrar seu token
-                    nas configurações da sua conta 3C Plus.
+                    Conecte sua conta 3C Plus usando e-mail e senha ou token de API.
                   </p>
-                  <p className="text-xs text-muted-foreground/70">
-                    ⚠️ Tokens de contas admin podem não funcionar. Use o token de um usuário operador/agente.
-                  </p>
-                  <div className="space-y-2">
-                    <Label htmlFor="3cplus-token">Token da API</Label>
-                    <Input
-                      id="3cplus-token"
-                      type="password"
-                      placeholder="Cole aqui seu token da API 3C Plus"
-                      value={threeCPlusToken}
-                      onChange={(e) => setThreeCPlusToken(e.target.value)}
-                      className="font-mono text-sm"
-                    />
+
+                  {/* Auth method toggle */}
+                  <div className="flex gap-2 p-1 bg-muted rounded-lg">
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex-1 text-sm py-1.5 px-3 rounded-md transition-colors font-medium",
+                        threeCPlusAuthMethod === "credentials"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      onClick={() => setThreeCPlusAuthMethod("credentials")}
+                    >
+                      E-mail e Senha
+                    </button>
+                    <button
+                      type="button"
+                      className={cn(
+                        "flex-1 text-sm py-1.5 px-3 rounded-md transition-colors font-medium",
+                        threeCPlusAuthMethod === "token"
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                      onClick={() => setThreeCPlusAuthMethod("token")}
+                    >
+                      Token da API
+                    </button>
                   </div>
+
+                  {threeCPlusAuthMethod === "credentials" ? (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="3cplus-email">E-mail da 3C Plus</Label>
+                        <Input
+                          id="3cplus-email"
+                          type="email"
+                          placeholder="seu@email.com"
+                          value={threeCPlusEmail}
+                          onChange={(e) => setThreeCPlusEmail(e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="3cplus-password">Senha</Label>
+                        <Input
+                          id="3cplus-password"
+                          type="password"
+                          placeholder="Sua senha da 3C Plus"
+                          value={threeCPlusPassword}
+                          onChange={(e) => setThreeCPlusPassword(e.target.value)}
+                          className="text-sm"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <p className="text-xs text-muted-foreground/70">
+                        ⚠️ Tokens de contas admin podem não funcionar. Use o token de um usuário operador/agente.
+                      </p>
+                      <div className="space-y-2">
+                        <Label htmlFor="3cplus-token">Token da API</Label>
+                        <Input
+                          id="3cplus-token"
+                          type="password"
+                          placeholder="Cole aqui seu token da API 3C Plus"
+                          value={threeCPlusToken}
+                          onChange={(e) => setThreeCPlusToken(e.target.value)}
+                          className="font-mono text-sm"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="3cplus-domain">Domínio</Label>
                     <Input
@@ -902,7 +974,7 @@ export function IntegrationsContent() {
                   </div>
                   <Button
                     onClick={handle3CPlusConnect}
-                    disabled={connecting3CPlus || !threeCPlusToken.trim()}
+                    disabled={connecting3CPlus || (threeCPlusAuthMethod === "token" ? !threeCPlusToken.trim() : !threeCPlusEmail.trim() || !threeCPlusPassword)}
                   >
                     {connecting3CPlus ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Conectando...</>

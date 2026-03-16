@@ -63,22 +63,68 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { api_token, domain } = await req.json();
+    const { api_token, domain, email, password, auth_method } = await req.json();
 
-    if (!api_token || typeof api_token !== "string" || api_token.trim().length === 0) {
-      return new Response(JSON.stringify({ error: "Token da API é obrigatório" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    const baseDomain = getBaseDomain(domain || null);
+    console.log("[threecplus-auth] Auth method:", auth_method || "token", "domain:", baseDomain);
+
+    let finalToken: string;
+
+    if (auth_method === "credentials") {
+      // Login via email/password
+      if (!email || !password) {
+        return new Response(JSON.stringify({ error: "E-mail e senha são obrigatórios" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const loginResponse = await fetch(`${baseDomain}/api/v1/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
       });
+
+      if (!loginResponse.ok) {
+        const status = loginResponse.status;
+        const body = await loginResponse.text();
+        console.error("3C Plus login error:", { status, body, domain: baseDomain });
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: status === 401 || status === 422
+              ? "E-mail ou senha inválidos. Verifique suas credenciais da 3C Plus."
+              : `Erro ao fazer login (status ${status}). Tente novamente.`,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const loginData = await loginResponse.json();
+      finalToken = loginData.token || loginData.access_token || loginData.api_token || "";
+
+      if (!finalToken) {
+        console.error("3C Plus login response missing token:", JSON.stringify(loginData).slice(0, 500));
+        return new Response(
+          JSON.stringify({ success: false, error: "Login bem-sucedido mas token não retornado pela API." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      // Token-based auth
+      if (!api_token || typeof api_token !== "string" || api_token.trim().length === 0) {
+        return new Response(JSON.stringify({ error: "Token da API é obrigatório" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      finalToken = api_token.trim();
     }
 
-    // Validate token against 3C Plus API using the user's domain
-    const baseDomain = getBaseDomain(domain || null);
-    console.log("[threecplus-auth] Validating token against domain:", baseDomain);
-
+    // Validate token against 3C Plus API
     const apiResponse = await fetch(`${baseDomain}/api/v1/me`, {
       headers: {
-        Authorization: `Bearer ${api_token.trim()}`,
+        Authorization: `Bearer ${finalToken}`,
         Accept: "application/json",
       },
     });
@@ -91,13 +137,12 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: false,
           error: status === 401 || status === 403
-            ? "Token inválido. Verifique seu token da API 3C Plus. Tokens de contas admin podem não funcionar — use um token de operador/agente."
+            ? auth_method === "credentials"
+              ? "Login realizado mas token retornado é inválido. Tente novamente."
+              : "Token inválido. Verifique seu token da API 3C Plus."
             : `Erro ao validar token (status ${status}). Tente novamente.`,
         }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -120,9 +165,9 @@ Deno.serve(async (req) => {
         {
           user_id: userData.id,
           provider: "3cplus",
-          access_token: api_token.trim(),
+          access_token: finalToken,
           user_email: userEmail,
-          metadata: { user_name: userName, domain: domain || null },
+          metadata: { user_name: userName, domain: domain || null, auth_method: auth_method || "token" },
         },
         { onConflict: "user_id,provider" }
       );
