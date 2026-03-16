@@ -81,6 +81,71 @@ function extractCallDetails(value: unknown): { id?: string | number; phone?: str
   };
 }
 
+function extractAgentStatus(value: unknown, depth = 0): string | null {
+  if (!value || depth > 4) return null;
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const directKeys = ["status", "state", "agent_status", "agentStatus", "mode"];
+  for (const key of directKeys) {
+    const currentValue = record[key];
+    if (typeof currentValue === "string" && currentValue.trim()) {
+      return currentValue.trim().toLowerCase();
+    }
+  }
+
+  const nestedKeys = ["data", "agent", "call"];
+  for (const key of nestedKeys) {
+    const nestedStatus = extractAgentStatus(record[key], depth + 1);
+    if (nestedStatus) return nestedStatus;
+  }
+
+  return null;
+}
+
+async function fetchAgentRuntimeState(apiBase: string, apiToken: string) {
+  const runtime = {
+    logged_campaign: false,
+    has_active_call: false,
+    manual_mode: false,
+    call_id: null as string | number | null,
+    agent_status: null as string | null,
+  };
+
+  try {
+    const agentRes = await fetch(`${apiBase}/agent?api_token=${apiToken}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    const agentText = await agentRes.text();
+
+    if (agentRes.ok) {
+      const agentPayload = safeJsonParse(agentText);
+      const callDetails = extractCallDetails(agentPayload);
+      const agentStatus = extractAgentStatus(agentPayload);
+
+      runtime.has_active_call = Boolean(callDetails?.id || callDetails?.phone);
+      runtime.call_id = callDetails?.id ?? null;
+      runtime.agent_status = agentStatus;
+      runtime.manual_mode = Boolean(agentStatus && /manual/i.test(agentStatus));
+    }
+  } catch (error) {
+    console.error("[threecplus-agent] fetchAgentRuntimeState agent error:", error);
+  }
+
+  try {
+    const campaignRes = await fetch(`${apiBase}/campaigns/agent/loggedCampaign?api_token=${apiToken}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    runtime.logged_campaign = campaignRes.ok;
+  } catch (error) {
+    console.error("[threecplus-agent] fetchAgentRuntimeState campaign error:", error);
+  }
+
+  return runtime;
+}
+
 function isManualModeAlreadyActive(status: number, text: string): boolean {
   if (status !== 422) return false;
   const message = extractApiMessage(text, "");
@@ -333,14 +398,40 @@ Deno.serve(async (req) => {
       const manualExitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
-      console.log("[threecplus-agent] logout manual_call_exit:", manualExitRes.status);
+      const manualExitText = await manualExitRes.text();
+      console.log("[threecplus-agent] logout manual_call_exit:", manualExitRes.status, manualExitText);
 
       const res = await fetch(`${apiBase}/agent/logout?api_token=${apiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
-      console.log("[threecplus-agent] logout:", res.status);
-      return new Response(JSON.stringify({ success: res.ok || res.status === 204, manual_exit_success: manualExitRes.ok || manualExitRes.status === 204 }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const text = await res.text();
+      console.log("[threecplus-agent] logout:", res.status, text);
+
+      let runtime = null;
+      let success = res.ok || res.status === 204;
+
+      if (!success) {
+        runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+        if (!runtime.logged_campaign) {
+          success = true;
+        }
+      }
+
+      const manualExitSuccess =
+        manualExitRes.ok ||
+        manualExitRes.status === 204 ||
+        Boolean(runtime && !runtime.has_active_call);
+
+      return new Response(
+        JSON.stringify({
+          success,
+          manual_exit_success: manualExitSuccess,
+          method: success && !(res.ok || res.status === 204) ? "already_logged_out" : "logout",
+          runtime,
+          error: success ? null : extractApiMessage(text, "Falha ao sair da campanha"),
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Enter manual call mode
@@ -465,80 +556,115 @@ Deno.serve(async (req) => {
       const res = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
-      console.log("[threecplus-agent] manual_call_exit:", res.status);
-      return new Response(JSON.stringify({ success: res.ok || res.status === 204 }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const text = await res.text();
+      console.log("[threecplus-agent] manual_call_exit:", res.status, text);
+
+      let runtime = null;
+      let success = res.ok || res.status === 204;
+
+      if (!success) {
+        runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+        if (!runtime.has_active_call && !runtime.manual_mode) {
+          success = true;
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success,
+          method: success && !(res.ok || res.status === 204) ? "already_exited_manual_mode" : "manual_call_exit",
+          runtime,
+          error: success ? null : extractApiMessage(text, "A 3C Plus não confirmou a saída do modo manual."),
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Hangup call
     if (action === "hangup") {
       const { call_id } = body;
 
-      // If no call_id provided, try to discover it from the API
-      let resolvedCallId = call_id;
+      let runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+      let resolvedCallId = call_id ?? runtime.call_id ?? undefined;
+
+      if (!resolvedCallId && !runtime.has_active_call) {
+        return new Response(
+          JSON.stringify({ success: true, method: "already_hung_up", runtime }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       if (!resolvedCallId) {
-        console.log("[threecplus-agent] hangup: no call_id, trying to discover current call");
-        
-        // Try getting agent status to find active call
-        try {
-          const statusRes = await fetch(`${apiBase}/agent?api_token=${apiToken}`, {
-            method: "GET", headers: { Accept: "application/json" },
-          });
-          const statusText = await statusRes.text();
-          console.log("[threecplus-agent] agent status for hangup:", statusRes.status, statusText);
-          if (statusRes.ok) {
-            try {
-              const agentData = JSON.parse(statusText);
-              const callData = agentData?.data?.call || agentData?.call || agentData?.data;
-              resolvedCallId = callData?.id || callData?.call_id;
-              console.log("[threecplus-agent] discovered call_id:", resolvedCallId);
-            } catch {}
-          }
-        } catch (e) {
-          console.error("[threecplus-agent] failed to get agent status:", e);
+        console.log("[threecplus-agent] hangup: trying manual_call/exit fallback");
+        const exitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
+          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        });
+        const exitText = await exitRes.text();
+        console.log("[threecplus-agent] manual_call/exit fallback:", exitRes.status, exitText);
+
+        runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+        const exitSuccess = exitRes.ok || exitRes.status === 204 || !runtime.has_active_call;
+        if (exitSuccess) {
+          return new Response(
+            JSON.stringify({ success: true, method: "manual_exit_fallback", runtime }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
         }
 
-        // If still no call_id, try manual_call/exit as fallback
-        if (!resolvedCallId) {
-          console.log("[threecplus-agent] hangup: trying manual_call/exit fallback");
-          const exitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
-            method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
-          });
-          console.log("[threecplus-agent] manual_call/exit fallback:", exitRes.status);
-          
-          // Also try logout as last resort
-          if (!exitRes.ok && exitRes.status !== 204) {
-            console.log("[threecplus-agent] hangup: trying logout as last resort");
-            const logoutRes = await fetch(`${apiBase}/agent/logout?api_token=${apiToken}`, {
-              method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
-            });
-            console.log("[threecplus-agent] logout fallback:", logoutRes.status);
-            return new Response(JSON.stringify({ success: logoutRes.ok || logoutRes.status === 204, method: "logout_fallback" }),
-              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-          }
-          
-          return new Response(JSON.stringify({ success: exitRes.ok || exitRes.status === 204, method: "manual_exit_fallback" }),
-            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        }
+        console.log("[threecplus-agent] hangup: trying logout as last resort");
+        const logoutRes = await fetch(`${apiBase}/agent/logout?api_token=${apiToken}`, {
+          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        });
+        const logoutText = await logoutRes.text();
+        console.log("[threecplus-agent] logout fallback:", logoutRes.status, logoutText);
+
+        runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+        const success = logoutRes.ok || logoutRes.status === 204 || !runtime.has_active_call;
+        return new Response(
+          JSON.stringify({
+            success,
+            method: success ? "already_hung_up" : "logout_fallback",
+            runtime,
+            error: success ? null : extractApiMessage(logoutText, "A 3C Plus não confirmou o encerramento da chamada."),
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
 
       const res = await fetch(`${apiBase}/agent/call/${resolvedCallId}/hangup?api_token=${apiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
-      console.log("[threecplus-agent] hangup:", res.status);
-      if (!res.ok && res.status !== 204) {
+      const text = await res.text();
+      console.log("[threecplus-agent] hangup:", res.status, text);
+
+      let success = res.ok || res.status === 204;
+      let manualExitSucceeded = false;
+
+      if (!success) {
         console.log("[threecplus-agent] hangup failed, trying manual_call/exit fallback after call_id attempt");
         const exitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         });
-        console.log("[threecplus-agent] post-hangup manual_call_exit fallback:", exitRes.status);
-        if (exitRes.ok || exitRes.status === 204) {
-          return new Response(JSON.stringify({ success: true, method: "manual_exit_after_hangup_failure", call_id: resolvedCallId }),
-            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-        }
+        const exitText = await exitRes.text();
+        console.log("[threecplus-agent] post-hangup manual_call_exit fallback:", exitRes.status, exitText);
+        manualExitSucceeded = exitRes.ok || exitRes.status === 204;
       }
-      return new Response(JSON.stringify({ success: res.ok || res.status === 204, method: "hangup", call_id: resolvedCallId }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+      runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+      if (!success && (manualExitSucceeded || !runtime.has_active_call)) {
+        success = true;
+      }
+
+      return new Response(
+        JSON.stringify({
+          success,
+          method: success && !(res.ok || res.status === 204) ? "already_hung_up" : "hangup",
+          call_id: resolvedCallId,
+          runtime,
+          error: success ? null : extractApiMessage(text, "A 3C Plus não confirmou o encerramento da chamada."),
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Qualify call
