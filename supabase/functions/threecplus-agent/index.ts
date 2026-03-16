@@ -36,6 +36,51 @@ function extractApiMessage(text: string, fallback: string): string {
   }
 }
 
+function safeJsonParse(text: string): unknown | null {
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizePhone(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function extractCallDetails(value: unknown): { id?: string | number; phone?: string; contact_name?: string } | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const callRecord = asRecord(record.call) ?? record;
+  const mailing = asRecord(record.mailing);
+  const mailingData = asRecord(mailing?.data);
+
+  const id = callRecord.id ?? callRecord.call_id ?? record.call_id;
+  const phone =
+    normalizePhone(callRecord.phone) ||
+    normalizePhone(callRecord.number) ||
+    normalizePhone(record.phone) ||
+    normalizePhone(record.number) ||
+    normalizePhone(mailingData?.phone);
+  const contact_name =
+    (typeof callRecord.contact_name === "string" && callRecord.contact_name) ||
+    (typeof record.contact_name === "string" && record.contact_name) ||
+    (typeof mailingData?.name === "string" && mailingData.name) ||
+    (typeof mailingData?.Nome === "string" && mailingData.Nome) ||
+    undefined;
+
+  if (!id && !phone && !contact_name) return null;
+  return {
+    ...(id ? { id: id as string | number } : {}),
+    ...(phone ? { phone } : {}),
+    ...(contact_name ? { contact_name } : {}),
+  };
+}
+
 function isManualModeAlreadyActive(status: number, text: string): boolean {
   if (status !== 422) return false;
   const message = extractApiMessage(text, "");
