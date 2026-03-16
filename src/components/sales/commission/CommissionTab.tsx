@@ -24,11 +24,17 @@ export function CommissionTab() {
 
   // Merge periods/entries from both plans without duplicates
   const allPeriods = Array.from(
-    new Map([...closerHook.periods, ...sdrHook.periods].map((period) => [period.id, period])).values()
+    new Map([
+      ...closerHook.periods.map((period) => [`closer-${period.user_id}-${period.period_start}`, period] as const),
+      ...sdrHook.periods.map((period) => [`sdr-${period.user_id}-${period.period_start}`, period] as const),
+    ]).values()
   );
 
   const allDealEntries = Array.from(
-    new Map([...closerHook.dealEntries, ...sdrHook.dealEntries].map((entry) => [entry.id, entry])).values()
+    new Map([
+      ...closerHook.dealEntries.map((entry) => [`closer-${entry.user_id}-${entry.deal_id || entry.contract_id || entry.id}`, entry] as const),
+      ...sdrHook.dealEntries.map((entry) => [`sdr-${entry.user_id}-${entry.deal_id || entry.contract_id || entry.id}`, entry] as const),
+    ]).values()
   );
 
   // Use closer plan as the primary for the dashboard (it has both SDR+Closer data now)

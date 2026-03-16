@@ -538,6 +538,29 @@ export function useCommissionPlan(cargo: string = "Closer") {
 
       if (!users || users.length === 0) return;
 
+      const userIdsForCargo = users.map((user: any) => user.id);
+
+      const { data: existingPeriodRows } = await supabase
+        .from("commission_periods")
+        .select("id")
+        .eq("plan_id", plan.id)
+        .eq("period_start", periodStart)
+        .in("user_id", userIdsForCargo);
+
+      const existingPeriodIds = (existingPeriodRows || []).map((row: any) => row.id);
+
+      if (existingPeriodIds.length > 0) {
+        await Promise.all([
+          supabase.from("commission_deal_entries").delete().in("period_id", existingPeriodIds),
+          supabase
+            .from("commission_periods")
+            .delete()
+            .eq("plan_id", plan.id)
+            .eq("period_start", periodStart)
+            .in("user_id", userIdsForCargo),
+        ]);
+      }
+
       // Fetch data for the month
       const [dealsRes, callsRes, tasksRes] = await Promise.all([
         supabase
