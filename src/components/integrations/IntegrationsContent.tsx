@@ -810,12 +810,12 @@ export function IntegrationsContent() {
                   <div>
                     <CardTitle>Conexão 3C Plus</CardTitle>
                     <CardDescription>
-                      Conecte sua conta 3C Plus para integrar telefonia ao ROY
+                      Configure a integração 3C Plus para toda a conta. Agentes logam pelo painel com ramal e senha.
                     </CardDescription>
                   </div>
                 </div>
-                <Badge variant={threeCPlusUserIntegration ? "default" : "secondary"}>
-                  {threeCPlusUserIntegration ? (
+                <Badge variant={threeCPlusIntegration?.status === "connected" ? "default" : "secondary"}>
+                  {threeCPlusIntegration?.status === "connected" ? (
                     <><CheckCircle2 className="h-3 w-3 mr-1" /> Conectado</>
                   ) : (
                     <><XCircle className="h-3 w-3 mr-1" /> Desconectado</>
@@ -824,20 +824,20 @@ export function IntegrationsContent() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {threeCPlusUserIntegration ? (
+              {threeCPlusIntegration?.status === "connected" ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
                     <CheckCircle2 className="h-5 w-5 text-green-500" />
                     <div className="flex-1">
-                      <p className="font-medium">Conectado como</p>
+                      <p className="font-medium">Conectado</p>
                       <p className="text-sm text-muted-foreground">
-                        {threeCPlusUserIntegration.user_email || "Conta 3C Plus"}
+                        {(threeCPlusIntegration.config as any)?.user_email || (threeCPlusIntegration.config as any)?.user_name || "Conta 3C Plus"}
                       </p>
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleDisconnect("3cplus")}
+                      onClick={handle3CPlusDisconnect}
                     >
                       <LogOut className="h-4 w-4 mr-2" />
                       Desconectar
@@ -853,104 +853,37 @@ export function IntegrationsContent() {
                       onChange={(e) => setThreeCPlusDomain(e.target.value)}
                       className="font-mono text-sm"
                     />
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleSaveDomain} disabled={connecting3CPlus}>
+                    {connecting3CPlus ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Salvando...</> : "Salvar domínio"}
+                  </Button>
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1">
+                    <p className="text-sm font-medium">Como os agentes usam?</p>
                     <p className="text-xs text-muted-foreground">
-                      URL de login do seu domínio 3C Plus. Usado como fallback quando a chamada via API não estiver disponível.
+                      Cada agente abre o painel 3C Plus (botão flutuante) e loga com seu <strong>ramal e senha</strong> direto no iframe — igual ao login na plataforma 3C Plus.
                     </p>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSaveDomain}
-                    disabled={connecting3CPlus}
-                  >
-                    {connecting3CPlus ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Salvando...</>
-                    ) : (
-                      "Salvar domínio"
-                    )}
-                  </Button>
-                  <p className="text-sm text-muted-foreground">
-                    Sua conta 3C Plus está conectada e pronta para uso.
-                  </p>
                 </div>
               ) : (
-              <div className="space-y-4">
+                <div className="space-y-4">
                   <p className="text-sm text-muted-foreground">
-                    Conecte sua conta 3C Plus usando e-mail e senha ou token de API.
+                    Configure o token de API da conta 3C Plus. Apenas o administrador precisa fazer isso uma vez.
+                    Os agentes logam pelo painel com ramal e senha.
                   </p>
-
-                  {/* Auth method toggle */}
-                  <div className="flex gap-2 p-1 bg-muted rounded-lg">
-                    <button
-                      type="button"
-                      className={cn(
-                        "flex-1 text-sm py-1.5 px-3 rounded-md transition-colors font-medium",
-                        threeCPlusAuthMethod === "credentials"
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                      onClick={() => setThreeCPlusAuthMethod("credentials")}
-                    >
-                      E-mail e Senha
-                    </button>
-                    <button
-                      type="button"
-                      className={cn(
-                        "flex-1 text-sm py-1.5 px-3 rounded-md transition-colors font-medium",
-                        threeCPlusAuthMethod === "token"
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                      onClick={() => setThreeCPlusAuthMethod("token")}
-                    >
-                      Token da API
-                    </button>
+                  <div className="space-y-2">
+                    <Label htmlFor="3cplus-token">Token da API (admin/supervisor)</Label>
+                    <Input
+                      id="3cplus-token"
+                      type="password"
+                      placeholder="Cole aqui o token da API 3C Plus"
+                      value={threeCPlusToken}
+                      onChange={(e) => setThreeCPlusToken(e.target.value)}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Use um token de supervisor ou admin da 3C Plus. Encontre em Configurações da sua conta 3C Plus.
+                    </p>
                   </div>
-
-                  {threeCPlusAuthMethod === "credentials" ? (
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="3cplus-email">E-mail da 3C Plus</Label>
-                        <Input
-                          id="3cplus-email"
-                          type="email"
-                          placeholder="seu@email.com"
-                          value={threeCPlusEmail}
-                          onChange={(e) => setThreeCPlusEmail(e.target.value)}
-                          className="text-sm"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="3cplus-password">Senha</Label>
-                        <Input
-                          id="3cplus-password"
-                          type="password"
-                          placeholder="Sua senha da 3C Plus"
-                          value={threeCPlusPassword}
-                          onChange={(e) => setThreeCPlusPassword(e.target.value)}
-                          className="text-sm"
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <p className="text-xs text-muted-foreground/70">
-                        ⚠️ Tokens de contas admin podem não funcionar. Use o token de um usuário operador/agente.
-                      </p>
-                      <div className="space-y-2">
-                        <Label htmlFor="3cplus-token">Token da API</Label>
-                        <Input
-                          id="3cplus-token"
-                          type="password"
-                          placeholder="Cole aqui seu token da API 3C Plus"
-                          value={threeCPlusToken}
-                          onChange={(e) => setThreeCPlusToken(e.target.value)}
-                          className="font-mono text-sm"
-                        />
-                      </div>
-                    </div>
-                  )}
-
                   <div className="space-y-2">
                     <Label htmlFor="3cplus-domain">Domínio</Label>
                     <Input
@@ -965,10 +898,7 @@ export function IntegrationsContent() {
                       URL de login do seu domínio 3C Plus (ex: https://anjosbusiness.3c.plus/login)
                     </p>
                   </div>
-                  <Button
-                    onClick={handle3CPlusConnect}
-                    disabled={connecting3CPlus || (threeCPlusAuthMethod === "token" ? !threeCPlusToken.trim() : !threeCPlusEmail.trim() || !threeCPlusPassword)}
-                  >
+                  <Button onClick={handle3CPlusConnect} disabled={connecting3CPlus || !threeCPlusToken.trim()}>
                     {connecting3CPlus ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Conectando...</>
                     ) : (
