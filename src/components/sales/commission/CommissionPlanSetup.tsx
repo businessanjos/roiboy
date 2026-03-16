@@ -184,6 +184,8 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
       setTierMode(plan.tier_mode || "percent_of_target");
       setMonthlyQuota(plan.monthly_quota || 450000);
       setProspectingPercent(plan.prospecting_commission_percent || 3);
+      setSdrValuePerCall((plan as any).sdr_value_per_call || 20);
+      setSdrValuePerSale((plan as any).sdr_value_per_sale || 300);
       if (plan.tiers.length) setTiers(plan.tiers);
       if (plan.triggers.length) setTriggers(plan.triggers);
     }
