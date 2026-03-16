@@ -79,7 +79,42 @@ Deno.serve(async (req) => {
     const baseDomain = getBaseDomain(config.domain as string | null);
     const cleanPhone = phone.replace(/\D/g, "");
 
-    // Step 1: Enter manual call mode with retry
+    // Get user's extension and password from user_integrations
+    const { data: userInt } = await supabaseAdmin
+      .from("user_integrations")
+      .select("metadata")
+      .eq("user_id", userData.id)
+      .eq("provider", "3cplus")
+      .maybeSingle();
+
+    const metadata = userInt?.metadata as Record<string, unknown> | null;
+    const userExtension = metadata?.extension as string | null;
+    const userPassword = metadata?.extension_password as string | null;
+
+    // Try click2call first (preferred, works without campaign login)
+    const click2callPayload: Record<string, string> = { phone: cleanPhone };
+    if (userExtension) click2callPayload.extension = userExtension;
+    if (userPassword) click2callPayload.password = userPassword;
+
+    console.log("[threecplus-call] Trying click2call with extension:", userExtension || "none");
+    const click2callRes = await fetch(
+      `${baseDomain}/api/v1/click2call?api_token=${apiToken}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify(click2callPayload),
+      }
+    );
+    const click2callText = await click2callRes.text();
+    console.log("[threecplus-call] click2call response:", click2callRes.status, click2callText);
+
+    if (click2callRes.ok || click2callRes.status === 204) {
+      return new Response(JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Fallback: manual call mode
+    console.log("[threecplus-call] click2call failed, trying manual call");
     let enterSuccess = false;
     const maxRetries = 3;
     const retryDelay = 2000;
@@ -117,25 +152,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fallback: click2call
-    console.log("[threecplus-call] Manual call failed, trying click2call fallback");
-    const fallbackRes = await fetch(
-      `${baseDomain}/api/v1/click2call?api_token=${apiToken}`,
-      {
-        method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ phone: cleanPhone }),
-      }
-    );
-    const fallbackText = await fallbackRes.text();
-    console.log("[threecplus-call] click2call fallback response:", fallbackRes.status, fallbackText);
-
-    if (fallbackRes.ok || fallbackRes.status === 204) {
-      return new Response(JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
     return new Response(
-      JSON.stringify({ success: false, error: "Não foi possível iniciar a chamada. Verifique se você está logado no 3C Plus.", code: "API_CALL_FAILED", fallback_url: baseDomain }),
+      JSON.stringify({ success: false, error: "Não foi possível iniciar a chamada. Verifique se o ramal e senha estão configurados no painel 3C Plus.", code: "API_CALL_FAILED", fallback_url: baseDomain }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
