@@ -257,6 +257,39 @@ async function getAccountIntegration(supabaseAdmin: any, accountId: string): Pro
   return { apiToken, baseDomain: getBaseDomain(domain || null) };
 }
 
+/** Best-effort log a call to threecplus_call_logs */
+async function logCallToDb(
+  supabaseAdmin: any,
+  accountId: string,
+  userId: string,
+  callDetails: { id?: string | number; phone?: string; contact_name?: string } | null,
+  mode: string,
+  campaignName?: string,
+) {
+  try {
+    const callId = callDetails?.id ? String(callDetails.id) : `manual_${Date.now()}`;
+    await supabaseAdmin.from("threecplus_call_logs").upsert(
+      {
+        account_id: accountId,
+        user_id: userId,
+        call_id: callId,
+        call_type: mode === "click2call" ? "manual" : "manual",
+        direction: "outbound",
+        phone: callDetails?.phone || null,
+        contact_name: callDetails?.contact_name || null,
+        campaign_name: campaignName || null,
+        status: "connected",
+        started_at: new Date().toISOString(),
+        metadata: { source: "edge_function", mode },
+      },
+      { onConflict: "call_id" }
+    );
+    console.log("[threecplus-agent] logCallToDb: saved call", callId);
+  } catch (err) {
+    console.error("[threecplus-agent] logCallToDb error:", err);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -470,6 +503,10 @@ Deno.serve(async (req) => {
       if (!success) {
         errorMessage = "A 3C Plus recusou a chamada manual.";
         try { const parsed = JSON.parse(text); errorMessage = parsed?.detail || parsed?.title || parsed?.message || errorMessage; } catch { if (text?.trim()) errorMessage = text.trim(); }
+      } else {
+        const dialPayload = safeJsonParse(text);
+        const callDetails = extractCallDetails(dialPayload) || { phone: cleanPhone };
+        await logCallToDb(supabaseAdmin, userData.account_id, userData.id, callDetails, "manual_dial");
       }
       return new Response(JSON.stringify({ success, error: errorMessage, status: res.status }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -500,6 +537,7 @@ Deno.serve(async (req) => {
       console.log("[threecplus-agent] place_call click2call:", click2callRes.status, click2callText);
 
       if (click2callRes.ok || click2callRes.status === 204) {
+        await logCallToDb(supabaseAdmin, userData.account_id, userData.id, click2callCall || { phone: cleanPhone }, "click2call");
         return new Response(JSON.stringify({ success: true, mode: "click2call", call: click2callCall }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
@@ -529,6 +567,7 @@ Deno.serve(async (req) => {
         console.log("[threecplus-agent] place_call manual_call_dial:", dialRes.status, dialText);
 
         if (dialRes.ok || dialRes.status === 204) {
+          await logCallToDb(supabaseAdmin, userData.account_id, userData.id, manualCall, "manual_mode");
           return new Response(JSON.stringify({ success: true, mode: "manual_mode", call: manualCall }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
