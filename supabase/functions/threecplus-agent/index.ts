@@ -224,8 +224,23 @@ Deno.serve(async (req) => {
       const text = await res.text();
       console.log("[threecplus-agent] manual_call_dial:", res.status, text);
 
+      const success = res.ok || res.status === 204;
+      let errorMessage: string | null = null;
+
+      if (!success) {
+        errorMessage = "A 3C Plus recusou a chamada manual.";
+        try {
+          const parsed = JSON.parse(text);
+          errorMessage = parsed?.detail || parsed?.title || parsed?.message || errorMessage;
+        } catch {
+          if (text?.trim()) {
+            errorMessage = text.trim();
+          }
+        }
+      }
+
       return new Response(
-        JSON.stringify({ success: res.ok || res.status === 204 }),
+        JSON.stringify({ success, error: errorMessage, status: res.status, detail: success ? null : text }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
