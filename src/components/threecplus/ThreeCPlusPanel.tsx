@@ -108,12 +108,20 @@ export function ThreeCPlusPanel() {
 
     if (ok && !initialized) {
       setInitialized(true);
+      loadExtension();
     }
 
     if (ok && campaigns.length === 0) {
       await fetchCampaigns();
     }
-  }, [campaigns.length, connect, fetchCampaigns, initialized]);
+  }, [campaigns.length, connect, fetchCampaigns, initialized, loadExtension]);
+
+  // Sync saved extension to input
+  useEffect(() => {
+    if (savedExtension && !extensionInput) {
+      setExtensionInput(savedExtension);
+    }
+  }, [savedExtension, extensionInput]);
 
   // Open panel
   const handleOpen = useCallback(async () => {
