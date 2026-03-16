@@ -91,7 +91,8 @@ async function resolveClick2CallExtension(
 
   const metadata = asRecord(userInt?.metadata);
   const storedExtension = extractExtension(metadata);
-  if (storedExtension) return { extension: storedExtension, source: "metadata" };
+  const storedPassword = metadata?.extension_password as string | null;
+  if (storedExtension) return { extension: storedExtension, password: storedPassword, source: "metadata" };
 
   const profile = await fetchAgentProfile(baseDomain, apiToken);
   const profileExtension = extractExtension(profile);
@@ -101,9 +102,9 @@ async function resolveClick2CallExtension(
     await supabaseAdmin
       .from("user_integrations")
       .upsert({ user_id: userId, provider: "3cplus", access_token: "account_level", metadata: nextMetadata }, { onConflict: "user_id,provider" });
-    return { extension: profileExtension, source: "profile" };
+    return { extension: profileExtension, password: null, source: "profile" };
   }
-  return { extension: null, source: null };
+  return { extension: null, password: null, source: null };
 }
 
 /** Get 3C Plus config from account-level integrations table */
