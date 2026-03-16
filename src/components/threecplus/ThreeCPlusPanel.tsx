@@ -151,10 +151,17 @@ export function ThreeCPlusPanel() {
   }, [manualCall, manualPhone]);
 
   const statusInfo = getStatusInfo(agentStatus);
-  const StatusIcon = statusInfo.icon;
   const isInCall = agentStatus === "on_call" || agentStatus === "manual_call_connected";
   const canLogin = !loading && extensionLoaded;
   const canDialManually = agentStatus === "idle" || agentStatus === "manual_mode";
+  const displayStatusInfo =
+    agentStatus !== "offline"
+      ? statusInfo
+      : extensionLoaded
+        ? { label: isConnected ? "Pronto para login" : "Ramal pronto", color: "bg-green-500", icon: Wifi }
+        : connectionInfo || loading
+          ? { label: "Conectando...", color: "bg-blue-400", icon: Loader2 }
+          : statusInfo;
 
   // Floating button when panel is closed
   if (!isOpen) {
@@ -169,8 +176,8 @@ export function ThreeCPlusPanel() {
       >
         <Phone className="h-5 w-5" />
         <span className="text-sm font-medium">3C Plus</span>
-        {agentStatus !== "offline" && (
-          <span className={cn("h-2.5 w-2.5 rounded-full", statusInfo.color)} />
+        {(agentStatus !== "offline" || connectionInfo || loading) && (
+          <span className={cn("h-2.5 w-2.5 rounded-full", displayStatusInfo.color)} />
         )}
       </button>
     );
@@ -185,8 +192,8 @@ export function ThreeCPlusPanel() {
           "bg-card border border-b-0 border-border"
         )}
       >
-        <span className={cn("h-2.5 w-2.5 rounded-full", statusInfo.color)} />
-        <span className="text-sm font-medium">{statusInfo.label}</span>
+        <span className={cn("h-2.5 w-2.5 rounded-full", displayStatusInfo.color)} />
+        <span className="text-sm font-medium">{displayStatusInfo.label}</span>
         {isInCall && (
           <Badge variant="destructive" className="text-xs">
             {formatTime(callTimer)}
@@ -226,8 +233,8 @@ export function ThreeCPlusPanel() {
             variant="outline"
             className={cn("text-xs gap-1", isInCall && "border-red-500 text-red-500")}
           >
-            <span className={cn("h-1.5 w-1.5 rounded-full", statusInfo.color)} />
-            {statusInfo.label}
+            <span className={cn("h-1.5 w-1.5 rounded-full", displayStatusInfo.color)} />
+            {displayStatusInfo.label}
           </Badge>
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(true)}>
             <Minimize2 className="h-3.5 w-3.5" />

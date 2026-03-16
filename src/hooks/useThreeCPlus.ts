@@ -110,26 +110,42 @@ export function useThreeCPlus() {
   }, []);
 
   // Get connection info (domain, token, extension URL)
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (retries = 2) => {
     setLoading(true);
     try {
-      const data = await invokeAgent("get_connection_info");
-      if (!data?.success) {
-        toast.error("3C Plus não configurado", {
-          description: "Vá em Configurações > Integrações para conectar sua conta 3C Plus.",
-        });
-        return false;
+      for (let attempt = 0; attempt <= retries; attempt++) {
+        try {
+          const data = await invokeAgent("get_connection_info");
+          if (!data?.success) {
+            toast.error("3C Plus não configurado", {
+              description: "Vá em Configurações > Integrações para conectar sua conta 3C Plus.",
+            });
+            return false;
+          }
+
+          setConnectionInfo(data);
+          return true;
+        } catch (err: any) {
+          console.error(`[useThreeCPlus] connect attempt ${attempt + 1} error:`, err);
+          const isFetchError =
+            err?.message?.includes("Failed to fetch") ||
+            err?.context?.message?.includes("Failed to fetch") ||
+            err?.message?.includes("Failed to send a request to the Edge Function");
+
+          if (isFetchError && attempt < retries) {
+            await new Promise((resolve) => setTimeout(resolve, 1500 * (attempt + 1)));
+            continue;
+          }
+
+          toast.error("Erro ao conectar ao 3C Plus", {
+            description: isFetchError
+              ? "Serviço temporariamente indisponível. Tente novamente em alguns segundos."
+              : err?.message || "Erro desconhecido",
+          });
+          return false;
+        }
       }
-      setConnectionInfo(data);
-      return true;
-    } catch (err: any) {
-      console.error("[useThreeCPlus] connect error:", err);
-      const isFetchError = err?.message?.includes("Failed to fetch") || err?.context?.message?.includes("Failed to fetch");
-      toast.error("Erro ao conectar ao 3C Plus", {
-        description: isFetchError
-          ? "Serviço temporariamente indisponível. Tente novamente em alguns segundos."
-          : err?.message || "Erro desconhecido",
-      });
+
       return false;
     } finally {
       setLoading(false);
