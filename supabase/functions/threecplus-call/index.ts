@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { phone } = await req.json();
+    const { phone, contact_name: contactName, lead_id: leadId, client_id: clientId, deal_id: dealId } = await req.json();
     if (!phone || typeof phone !== "string") {
       return new Response(JSON.stringify({ success: false, error: "Número de telefone é obrigatório" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
