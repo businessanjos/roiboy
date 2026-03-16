@@ -529,16 +529,13 @@ export function useThreeCPlus() {
       const data = await invokeAgent("logout");
       if (!data?.success) {
         toast.error("Não foi possível sair da campanha", {
-          description: "A 3C Plus recusou a saída. Tente novamente em alguns segundos.",
+          description: data?.error || "A 3C Plus recusou a saída. Tente novamente em alguns segundos.",
         });
         return false;
       }
 
-      setAgentStatus("offline");
-      setSelectedCampaign(null);
-      setCurrentCall(null);
-      stopCallTimer();
-      toast.success("Saiu da campanha");
+      reconcileTelephonyState(data?.runtime, "logout");
+      toast.success(data?.method === "already_logged_out" ? "Sessão liberada" : "Saiu da campanha");
       return true;
     } catch (err) {
       console.error("[useThreeCPlus] logout error:", err);
@@ -547,7 +544,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent, stopCallTimer, currentCall?.id]);
+  }, [invokeAgent, currentCall?.id, reconcileTelephonyState]);
 
   // Manual call - use direct call flow with backend fallback instead of requiring agent idle/manual mode first
   const manualCall = useCallback(async (phone: string) => {
@@ -599,45 +596,23 @@ export function useThreeCPlus() {
   const hangup = useCallback(async () => {
     setLoading(true);
     try {
-      // Try with call_id if available
-      if (currentCall?.id) {
-        const data = await invokeAgent("hangup", { call_id: currentCall.id });
-        if (!data?.success) {
-          toast.error("Não foi possível desligar", {
-            description: data?.error || "A 3C Plus não confirmou o encerramento da chamada.",
-          });
-          return false;
-        }
-        stopCallTimer();
-        setCurrentCall(null);
-        return true;
+      const data = await invokeAgent("hangup", currentCall?.id ? { call_id: currentCall.id } : {});
+      if (!data?.success) {
+        toast.error("Não foi possível desligar", {
+          description: data?.error || "A 3C Plus não confirmou o encerramento da chamada.",
+        });
+        return false;
       }
 
-      // Fallback: try hangup without call_id (edge function will discover it)
-      console.log("[useThreeCPlus] hangup: no call_id, trying force hangup");
-      const data = await invokeAgent("hangup", {});
-      if (data?.success) {
-        stopCallTimer();
-        setCurrentCall(null);
-        toast.success("Chamada encerrada");
-        return true;
-      }
-
-      // Last resort for manual mode
-      if (agentStatusRef.current === "manual_mode" && currentCall?.phone) {
-        const exitData = await invokeAgent("manual_call_exit");
-        if (exitData?.success) {
-          stopCallTimer();
-          setCurrentCall(null);
-          toast.success("Tentativa de ligação cancelada");
-          return true;
-        }
-      }
-
-      toast.error("Não foi possível desligar", {
-        description: data?.error || "Tente desligar diretamente no painel do 3C Plus.",
-      });
-      return false;
+      reconcileTelephonyState(data?.runtime, "call_ended");
+      toast.success(
+        data?.method === "already_hung_up"
+          ? "Chamada já estava encerrada"
+          : currentCall?.id
+            ? "Chamada encerrada"
+            : "Tentativa de ligação cancelada"
+      );
+      return true;
     } catch (err) {
       console.error("[useThreeCPlus] hangup error:", err);
       toast.error("Erro ao encerrar chamada");
@@ -645,7 +620,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent, currentCall, stopCallTimer]);
+  }, [invokeAgent, currentCall?.id, reconcileTelephonyState]);
 
   // Qualify call
   const qualify = useCallback(async (qualificationId: number | string) => {
@@ -677,12 +652,27 @@ export function useThreeCPlus() {
 
   // Exit manual mode
   const exitManualMode = useCallback(async () => {
+    setLoading(true);
     try {
-      await invokeAgent("manual_call_exit");
+      const data = await invokeAgent("manual_call_exit");
+      if (!data?.success) {
+        toast.error("Não foi possível sair do modo manual", {
+          description: data?.error || "A 3C Plus não confirmou a saída do discador manual.",
+        });
+        return false;
+      }
+
+      reconcileTelephonyState(data?.runtime, "manual_exit");
+      toast.success("Saiu do discador manual");
+      return true;
     } catch (err) {
       console.error("[useThreeCPlus] exitManualMode error:", err);
+      toast.error("Erro ao sair do discador manual");
+      return false;
+    } finally {
+      setLoading(false);
     }
-  }, [invokeAgent]);
+  }, [invokeAgent, reconcileTelephonyState]);
 
   // Save extension (ramal) to backend
   const saveExtension = useCallback(async (ext: string, password?: string) => {
