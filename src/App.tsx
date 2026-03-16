@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, ComponentType } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,84 +14,104 @@ import { SectorProvider } from "@/contexts/SectorContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 
+// Retry wrapper for lazy imports to handle stale chunk errors after deploys
+function lazyRetry<T extends ComponentType<any>>(
+  factory: () => Promise<{ default: T }>,
+  retries = 2
+): React.LazyExoticComponent<T> {
+  return lazy(() =>
+    factory().catch((err) => {
+      if (retries > 0) {
+        // Force reload from server on chunk load failure
+        return new Promise<{ default: T }>((resolve) => {
+          setTimeout(() => resolve(lazyRetry(factory, retries - 1) as any), 500);
+        });
+      }
+      // Last resort: full page reload to get fresh asset manifest
+      window.location.reload();
+      return factory();
+    })
+  );
+}
+
 // Eager loaded pages (critical for UX)
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 // Lazy loaded pages
-const Clients = lazy(() => import("./pages/Clients"));
-const ClientDetail = lazy(() => import("./pages/ClientDetail"));
-const Integrations = lazy(() => import("./pages/Integrations"));
-const Settings = lazy(() => import("./pages/Settings"));
-const AccountSettings = lazy(() => import("./pages/AccountSettings"));
-const Products = lazy(() => import("./pages/Products"));
-const Events = lazy(() => import("./pages/Events"));
-const EventDetail = lazy(() => import("./pages/EventDetail"));
+const Clients = lazyRetry(() => import("./pages/Clients"));
+const ClientDetail = lazyRetry(() => import("./pages/ClientDetail"));
+const Integrations = lazyRetry(() => import("./pages/Integrations"));
+const Settings = lazyRetry(() => import("./pages/Settings"));
+const AccountSettings = lazyRetry(() => import("./pages/AccountSettings"));
+const Products = lazyRetry(() => import("./pages/Products"));
+const Events = lazyRetry(() => import("./pages/Events"));
+const EventDetail = lazyRetry(() => import("./pages/EventDetail"));
 // Team moved to Settings
-const Tasks = lazy(() => import("./pages/Tasks"));
-const Profile = lazy(() => import("./pages/Profile"));
-const Notifications = lazy(() => import("./pages/Notifications"));
-const Forms = lazy(() => import("./pages/Forms"));
-const PublicForm = lazy(() => import("./pages/PublicForm"));
-const PublicRSVP = lazy(() => import("./pages/PublicRSVP"));
-const PublicEventRegistration = lazy(() => import("./pages/PublicEventRegistration"));
-const PublicEventFeedback = lazy(() => import("./pages/PublicEventFeedback"));
-const Presentation = lazy(() => import("./pages/Presentation"));
-const ExtensionPreview = lazy(() => import("./pages/ExtensionPreview"));
-const ApiDocs = lazy(() => import("./pages/ApiDocs"));
-const Admin = lazy(() => import("./pages/Admin"));
-const EventCheckin = lazy(() => import("./pages/EventCheckin"));
-const Onboarding = lazy(() => import("./pages/Onboarding"));
-const ChoosePlan = lazy(() => import("./pages/ChoosePlan"));
-const TermsOfService = lazy(() => import("./pages/TermsOfService"));
-const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
-const Download = lazy(() => import("./pages/Download"));
-const Home = lazy(() => import("./pages/Home"));
-const SalesScripts = lazy(() => import("./pages/SalesScripts"));
-const Reminders = lazy(() => import("./pages/Reminders"));
-const WhatsAppGroups = lazy(() => import("./pages/WhatsAppGroups"));
-const PublicMembersBook = lazy(() => import("./pages/PublicMembersBook"));
-const AIAgent = lazy(() => import("./pages/AIAgent"));
-const RoyZapp = lazy(() => import("./pages/RoyZapp"));
-const SharedInsightsDashboard = lazy(() => import("./pages/SharedInsightsDashboard"));
-const MentorAgenda = lazy(() => import("./pages/MentorAgenda"));
-const BillingPortal = lazy(() => import("./pages/BillingPortal"));
-const Sectors = lazy(() => import("./pages/Sectors"));
-const Contracts = lazy(() => import("./pages/Contracts"));
-const SalesPipeline = lazy(() => import("./pages/SalesPipeline"));
-const SalesTeam = lazy(() => import("./pages/SalesTeam"));
-const Leads = lazy(() => import("./pages/Leads"));
-const TeamChat = lazy(() => import("./pages/TeamChat"));
-const Marketing = lazy(() => import("./pages/Marketing"));
-const ContentCalendar = lazy(() => import("./pages/ContentCalendar"));
-const SocialMedia = lazy(() => import("./pages/SocialMedia"));
-const MarketingTasks = lazy(() => import("./pages/MarketingTasks"));
-const MarketingInsights = lazy(() => import("./pages/MarketingInsights"));
-const Insights = lazy(() => import("./pages/Insights"));
-const WhatsAppDiagnostics = lazy(() => import("./pages/admin/WhatsAppDiagnostics"));
+const Tasks = lazyRetry(() => import("./pages/Tasks"));
+const Profile = lazyRetry(() => import("./pages/Profile"));
+const Notifications = lazyRetry(() => import("./pages/Notifications"));
+const Forms = lazyRetry(() => import("./pages/Forms"));
+const PublicForm = lazyRetry(() => import("./pages/PublicForm"));
+const PublicRSVP = lazyRetry(() => import("./pages/PublicRSVP"));
+const PublicEventRegistration = lazyRetry(() => import("./pages/PublicEventRegistration"));
+const PublicEventFeedback = lazyRetry(() => import("./pages/PublicEventFeedback"));
+const Presentation = lazyRetry(() => import("./pages/Presentation"));
+const ExtensionPreview = lazyRetry(() => import("./pages/ExtensionPreview"));
+const ApiDocs = lazyRetry(() => import("./pages/ApiDocs"));
+const Admin = lazyRetry(() => import("./pages/Admin"));
+const EventCheckin = lazyRetry(() => import("./pages/EventCheckin"));
+const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
+const ChoosePlan = lazyRetry(() => import("./pages/ChoosePlan"));
+const TermsOfService = lazyRetry(() => import("./pages/TermsOfService"));
+const PrivacyPolicy = lazyRetry(() => import("./pages/PrivacyPolicy"));
+const Download = lazyRetry(() => import("./pages/Download"));
+const Home = lazyRetry(() => import("./pages/Home"));
+const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
+const Reminders = lazyRetry(() => import("./pages/Reminders"));
+const WhatsAppGroups = lazyRetry(() => import("./pages/WhatsAppGroups"));
+const PublicMembersBook = lazyRetry(() => import("./pages/PublicMembersBook"));
+const AIAgent = lazyRetry(() => import("./pages/AIAgent"));
+const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
+const SharedInsightsDashboard = lazyRetry(() => import("./pages/SharedInsightsDashboard"));
+const MentorAgenda = lazyRetry(() => import("./pages/MentorAgenda"));
+const BillingPortal = lazyRetry(() => import("./pages/BillingPortal"));
+const Sectors = lazyRetry(() => import("./pages/Sectors"));
+const Contracts = lazyRetry(() => import("./pages/Contracts"));
+const SalesPipeline = lazyRetry(() => import("./pages/SalesPipeline"));
+const SalesTeam = lazyRetry(() => import("./pages/SalesTeam"));
+const Leads = lazyRetry(() => import("./pages/Leads"));
+const TeamChat = lazyRetry(() => import("./pages/TeamChat"));
+const Marketing = lazyRetry(() => import("./pages/Marketing"));
+const ContentCalendar = lazyRetry(() => import("./pages/ContentCalendar"));
+const SocialMedia = lazyRetry(() => import("./pages/SocialMedia"));
+const MarketingTasks = lazyRetry(() => import("./pages/MarketingTasks"));
+const MarketingInsights = lazyRetry(() => import("./pages/MarketingInsights"));
+const Insights = lazyRetry(() => import("./pages/Insights"));
+const WhatsAppDiagnostics = lazyRetry(() => import("./pages/admin/WhatsAppDiagnostics"));
 // Financial module with sub-routes
 import { FinancialLayout } from "@/components/financial/FinancialLayout";
-const FinancialEntriesPage = lazy(() => import("./pages/financial/FinancialEntriesPage"));
-const FinancialCashFlowPage = lazy(() => import("./pages/financial/FinancialCashFlowPage"));
-const FinancialBankAccountsPage = lazy(() => import("./pages/financial/FinancialBankAccountsPage"));
-const FinancialCategoriesPage = lazy(() => import("./pages/financial/FinancialCategoriesPage"));
-const FinancialCostCentersPage = lazy(() => import("./pages/financial/FinancialCostCentersPage"));
-const FinancialSuppliersPage = lazy(() => import("./pages/financial/FinancialSuppliersPage"));
-const FinancialRecurringPage = lazy(() => import("./pages/financial/FinancialRecurringPage"));
-const FinancialBudgetPage = lazy(() => import("./pages/financial/FinancialBudgetPage"));
-const FinancialReconciliationPage = lazy(() => import("./pages/financial/FinancialReconciliationPage"));
-const FinancialSalesReconciliationPage = lazy(() => import("./pages/financial/FinancialSalesReconciliationPage"));
-const FinancialCommissionsPage = lazy(() => import("./pages/financial/FinancialCommissionsPage"));
-const FinancialAlertsPage = lazy(() => import("./pages/financial/FinancialAlertsPage"));
-const FinancialAgingPage = lazy(() => import("./pages/financial/FinancialAgingPage"));
-const FinancialProfitabilityPage = lazy(() => import("./pages/financial/FinancialProfitabilityPage"));
-const FinancialDREPage = lazy(() => import("./pages/financial/FinancialDREPage"));
-const FinancialDRFPage = lazy(() => import("./pages/financial/FinancialDRFPage"));
-const FinancialBoletosPage = lazy(() => import("./pages/financial/FinancialBoletosPage"));
-const FinancialNotasFiscaisPage = lazy(() => import("./pages/financial/FinancialNotasFiscaisPage"));
-const FinancialBalanceSheetPage = lazy(() => import("./pages/financial/FinancialBalanceSheetPage"));
-const FinancialInvoicesPage = lazy(() => import("./pages/financial/FinancialInvoicesPage"));
+const FinancialEntriesPage = lazyRetry(() => import("./pages/financial/FinancialEntriesPage"));
+const FinancialCashFlowPage = lazyRetry(() => import("./pages/financial/FinancialCashFlowPage"));
+const FinancialBankAccountsPage = lazyRetry(() => import("./pages/financial/FinancialBankAccountsPage"));
+const FinancialCategoriesPage = lazyRetry(() => import("./pages/financial/FinancialCategoriesPage"));
+const FinancialCostCentersPage = lazyRetry(() => import("./pages/financial/FinancialCostCentersPage"));
+const FinancialSuppliersPage = lazyRetry(() => import("./pages/financial/FinancialSuppliersPage"));
+const FinancialRecurringPage = lazyRetry(() => import("./pages/financial/FinancialRecurringPage"));
+const FinancialBudgetPage = lazyRetry(() => import("./pages/financial/FinancialBudgetPage"));
+const FinancialReconciliationPage = lazyRetry(() => import("./pages/financial/FinancialReconciliationPage"));
+const FinancialSalesReconciliationPage = lazyRetry(() => import("./pages/financial/FinancialSalesReconciliationPage"));
+const FinancialCommissionsPage = lazyRetry(() => import("./pages/financial/FinancialCommissionsPage"));
+const FinancialAlertsPage = lazyRetry(() => import("./pages/financial/FinancialAlertsPage"));
+const FinancialAgingPage = lazyRetry(() => import("./pages/financial/FinancialAgingPage"));
+const FinancialProfitabilityPage = lazyRetry(() => import("./pages/financial/FinancialProfitabilityPage"));
+const FinancialDREPage = lazyRetry(() => import("./pages/financial/FinancialDREPage"));
+const FinancialDRFPage = lazyRetry(() => import("./pages/financial/FinancialDRFPage"));
+const FinancialBoletosPage = lazyRetry(() => import("./pages/financial/FinancialBoletosPage"));
+const FinancialNotasFiscaisPage = lazyRetry(() => import("./pages/financial/FinancialNotasFiscaisPage"));
+const FinancialBalanceSheetPage = lazyRetry(() => import("./pages/financial/FinancialBalanceSheetPage"));
+const FinancialInvoicesPage = lazyRetry(() => import("./pages/financial/FinancialInvoicesPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
