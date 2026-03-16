@@ -50,23 +50,32 @@ interface AgentRuntimeState {
 }
 
 export function useThreeCPlus() {
-  const [agentStatus, setAgentStatus] = useState<AgentStatus>("offline");
-  const [currentCall, setCurrentCall] = useState<CallInfo | null>(null);
+  const [agentStatus, _setAgentStatus] = useState<AgentStatus>("offline");
+  const [currentCall, _setCurrentCall] = useState<CallInfo | null>(null);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [workBreaks, setWorkBreaks] = useState<WorkBreak[]>([]);
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [selectedCampaign, _setSelectedCampaign] = useState<Campaign | null>(null);
   const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [isConnected, _setIsConnected] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [callTimer, setCallTimer] = useState(0);
-  const [savedExtension, setSavedExtension] = useState<string | null>(null);
-  const [savedExtensionPassword, setSavedExtensionPassword] = useState<string | null>(null);
+  const [callTimer, _setCallTimer] = useState(0);
+  const [savedExtension, _setSavedExtension] = useState<string | null>(null);
+  const [savedExtensionPassword, _setSavedExtensionPassword] = useState<string | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const callStartRef = useRef<Date | null>(null);
   const agentStatusRef = useRef<AgentStatus>("offline");
   const mountedRef = useRef(true);
+
+  // Safe setters that guard against updates after unmount
+  const setAgentStatus = useCallback((v: AgentStatus | ((prev: AgentStatus) => AgentStatus)) => { if (mountedRef.current) _setAgentStatus(v); }, []);
+  const setCurrentCall = useCallback((v: CallInfo | null | ((prev: CallInfo | null) => CallInfo | null)) => { if (mountedRef.current) _setCurrentCall(v); }, []);
+  const setSelectedCampaign = useCallback((v: Campaign | null | ((prev: Campaign | null) => Campaign | null)) => { if (mountedRef.current) _setSelectedCampaign(v); }, []);
+  const setIsConnected = useCallback((v: boolean) => { if (mountedRef.current) _setIsConnected(v); }, []);
+  const setCallTimer = useCallback((v: number) => { if (mountedRef.current) _setCallTimer(v); }, []);
+  const setSavedExtension = useCallback((v: string | null) => { if (mountedRef.current) _setSavedExtension(v); }, []);
+  const setSavedExtensionPassword = useCallback((v: string | null) => { if (mountedRef.current) _setSavedExtensionPassword(v); }, []);
 
   // Start call timer
   const startCallTimer = useCallback(() => {
