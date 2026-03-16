@@ -53,6 +53,7 @@ export function useThreeCPlus() {
   const [isConnected, setIsConnected] = useState(false);
   const [loading, setLoading] = useState(false);
   const [callTimer, setCallTimer] = useState(0);
+  const [savedExtension, setSavedExtension] = useState<string | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -589,6 +590,36 @@ export function useThreeCPlus() {
     }
   }, [invokeAgent]);
 
+  // Save extension (ramal) to backend
+  const saveExtension = useCallback(async (ext: string) => {
+    try {
+      const data = await invokeAgent("save_extension", { extension: ext });
+      if (data?.success) {
+        setSavedExtension(data.extension);
+        toast.success("Ramal salvo com sucesso");
+        return true;
+      }
+      toast.error("Erro ao salvar ramal", { description: data?.error });
+      return false;
+    } catch (err) {
+      console.error("[useThreeCPlus] saveExtension error:", err);
+      toast.error("Erro ao salvar ramal");
+      return false;
+    }
+  }, [invokeAgent]);
+
+  // Load saved extension from backend
+  const loadExtension = useCallback(async () => {
+    try {
+      const data = await invokeAgent("get_extension");
+      if (data?.success && data.extension) {
+        setSavedExtension(data.extension);
+      }
+    } catch (err) {
+      console.error("[useThreeCPlus] loadExtension error:", err);
+    }
+  }, [invokeAgent]);
+
   // Cleanup
   useEffect(() => {
     return () => {
@@ -608,6 +639,7 @@ export function useThreeCPlus() {
     isConnected,
     loading,
     callTimer,
+    savedExtension,
     // Actions
     connect,
     connectSocket,
@@ -620,5 +652,7 @@ export function useThreeCPlus() {
     enterPause,
     exitPause,
     exitManualMode,
+    saveExtension,
+    loadExtension,
   };
 }

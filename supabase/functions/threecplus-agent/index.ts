@@ -642,6 +642,45 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Save extension (ramal) to user_integrations metadata
+    if (action === "save_extension") {
+      const { extension: ext } = body;
+      if (!ext) {
+        return new Response(
+          JSON.stringify({ success: false, error: "extension é obrigatório" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const nextMetadata = { ...(integration.metadata ?? {}), extension: String(ext).trim() };
+      const { error: updateError } = await supabaseAdmin
+        .from("user_integrations")
+        .update({ metadata: nextMetadata })
+        .eq("user_id", userData.id)
+        .eq("provider", "3cplus");
+
+      if (updateError) {
+        return new Response(
+          JSON.stringify({ success: false, error: "Erro ao salvar ramal: " + updateError.message }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ success: true, extension: String(ext).trim() }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get stored extension
+    if (action === "get_extension") {
+      const stored = extractExtension(integration.metadata);
+      return new Response(
+        JSON.stringify({ success: true, extension: stored }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ success: false, error: `Ação desconhecida: ${action}` }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
