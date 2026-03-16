@@ -354,10 +354,12 @@ Deno.serve(async (req) => {
         body: JSON.stringify(click2callPayload),
       });
       const click2callText = await click2callRes.text();
+      const click2callPayloadResponse = safeJsonParse(click2callText);
+      const click2callCall = extractCallDetails(click2callPayloadResponse);
       console.log("[threecplus-agent] place_call click2call:", click2callRes.status, click2callText);
 
       if (click2callRes.ok || click2callRes.status === 204) {
-        return new Response(JSON.stringify({ success: true, mode: "click2call" }),
+        return new Response(JSON.stringify({ success: true, mode: "click2call", call: click2callCall }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
@@ -381,10 +383,12 @@ Deno.serve(async (req) => {
           body: JSON.stringify({ phone: cleanPhone }),
         });
         const dialText = await dialRes.text();
+        const dialPayloadResponse = safeJsonParse(dialText);
+        const manualCall = extractCallDetails(dialPayloadResponse) || { phone: cleanPhone };
         console.log("[threecplus-agent] place_call manual_call_dial:", dialRes.status, dialText);
 
         if (dialRes.ok || dialRes.status === 204) {
-          return new Response(JSON.stringify({ success: true, mode: "manual_mode" }),
+          return new Response(JSON.stringify({ success: true, mode: "manual_mode", call: manualCall }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
         return new Response(JSON.stringify({ success: false, error: extractApiMessage(dialText, "A 3C Plus recusou a chamada manual."), status: dialRes.status }),

@@ -426,10 +426,14 @@ export function ThreeCPlusPanel() {
                   size="sm"
                   className="w-full"
                   onClick={hangup}
-                  disabled={loading || !currentCall?.id}
+                  disabled={loading || (!currentCall?.id && agentStatus !== "manual_mode")}
                 >
                   <PhoneOff className="h-4 w-4 mr-2" />
-                  {currentCall?.id ? "Desligar" : "Aguardando conexão da chamada"}
+                  {currentCall?.id
+                    ? "Desligar"
+                    : agentStatus === "manual_mode"
+                      ? "Cancelar tentativa de ligação"
+                      : "Aguardando conexão da chamada"}
                 </Button>
 
                 {agentStatus === "manual_mode" && !isInCall && (
@@ -448,7 +452,9 @@ export function ThreeCPlusPanel() {
 
               {!currentCall?.id && (
                 <p className="text-xs text-muted-foreground">
-                  Assim que a 3C Plus confirmar a ligação, o botão de desligar fica disponível aqui com o número em destaque.
+                  {agentStatus === "manual_mode"
+                    ? "Se a chamada ainda estiver só em discagem, você pode cancelar por aqui antes da conexão completa."
+                    : "Assim que a 3C Plus confirmar a ligação, o botão de desligar fica disponível aqui com o número em destaque."}
                 </p>
               )}
 

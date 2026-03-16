@@ -527,7 +527,11 @@ export function useThreeCPlus() {
         setAgentStatus("manual_mode");
       }
 
-      setCurrentCall({ phone, contact_name: undefined });
+      setCurrentCall({
+        id: dialData?.call?.id,
+        phone: dialData?.call?.phone || phone,
+        contact_name: dialData?.call?.contact_name,
+      });
       toast.success("Chamada iniciada", {
         description:
           dialData?.mode === "click2call"
@@ -546,11 +550,40 @@ export function useThreeCPlus() {
 
   // Hangup
   const hangup = useCallback(async () => {
-    if (!currentCall?.id) return;
+    setLoading(true);
     try {
-      await invokeAgent("hangup", { call_id: currentCall.id });
+      if (currentCall?.id) {
+        const data = await invokeAgent("hangup", { call_id: currentCall.id });
+        if (!data?.success) {
+          toast.error("Não foi possível desligar", {
+            description: data?.error || "A 3C Plus não confirmou o encerramento da chamada.",
+          });
+          return false;
+        }
+        return true;
+      }
+
+      if (agentStatusRef.current === "manual_mode" && currentCall?.phone) {
+        const data = await invokeAgent("manual_call_exit");
+        if (!data?.success) {
+          toast.error("Não foi possível cancelar a discagem");
+          return false;
+        }
+        setCurrentCall(null);
+        toast.success("Tentativa de ligação cancelada");
+        return true;
+      }
+
+      toast.error("Aguardando confirmação da chamada", {
+        description: "Assim que a 3C Plus enviar o identificador da ligação, o encerramento ficará disponível.",
+      });
+      return false;
     } catch (err) {
       console.error("[useThreeCPlus] hangup error:", err);
+      toast.error("Erro ao encerrar chamada");
+      return false;
+    } finally {
+      setLoading(false);
     }
   }, [invokeAgent, currentCall]);
 
