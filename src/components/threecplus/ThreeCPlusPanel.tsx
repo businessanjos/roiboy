@@ -100,22 +100,23 @@ export function ThreeCPlusPanel() {
 
   // Initialize connection
   const handleInit = useCallback(async () => {
-    if (initialized) return;
-    const ok = await connect();
-    if (ok) {
+    const ok = initialized ? true : await connect();
+
+    if (ok && !initialized) {
       setInitialized(true);
+    }
+
+    if (ok && campaigns.length === 0) {
       await fetchCampaigns();
     }
-  }, [connect, fetchCampaigns, initialized]);
+  }, [campaigns.length, connect, fetchCampaigns, initialized]);
 
   // Open panel
   const handleOpen = useCallback(async () => {
     setIsOpen(true);
     setIsMinimized(false);
-    if (!initialized) {
-      await handleInit();
-    }
-  }, [handleInit, initialized]);
+    await handleInit();
+  }, [handleInit]);
 
   useEffect(() => {
     setExtensionLoaded(false);
