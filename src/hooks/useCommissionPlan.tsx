@@ -310,15 +310,21 @@ export function useCommissionPlan(cargo: string = "Closer") {
     }
   }, [accountId]);
 
-  const fetchDealEntries = useCallback(async () => {
+  const fetchDealEntries = useCallback(async (planId?: string) => {
     if (!accountId) return;
     try {
-      const { data } = await supabase
+      let query = supabase
         .from("commission_deal_entries")
         .select("*")
         .eq("account_id", accountId)
         .order("created_at", { ascending: false })
         .limit(200);
+
+      if (planId) {
+        query = query.eq("plan_id", planId);
+      }
+
+      const { data } = await query;
 
       if (data) {
         const userIds = [...new Set(data.map((d: any) => d.user_id))];
@@ -329,17 +335,19 @@ export function useCommissionPlan(cargo: string = "Closer") {
         const userMap = new Map((users || []).map((u: any) => [u.id, u]));
 
         setDealEntries(
-          data.map((d: any) => ({
-            ...d,
-            user_name: (userMap.get(d.user_id) as any)?.name || "Sem nome",
-            user_avatar: (userMap.get(d.user_id) as any)?.avatar_url || null,
-          }))
+          data
+            .map((d: any) => ({
+              ...d,
+              user_name: (userMap.get(d.user_id) as any)?.name || "Sem nome",
+              user_avatar: (userMap.get(d.user_id) as any)?.avatar_url || null,
+            }))
+            .filter((d: any) => matchesCargoUser(d.user_name, cargo))
         );
       }
     } catch (err) {
       console.error("Error fetching deal entries:", err);
     }
-  }, [accountId]);
+  }, [accountId, cargo]);
 
   const savePlan = async (
     planData: { name: string; period_type: string; tier_mode: string; monthly_quota: number; prospecting_commission_percent: number; commission_model?: string; sdr_value_per_call?: number; sdr_value_per_sale?: number },
