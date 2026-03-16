@@ -449,29 +449,23 @@ export function useThreeCPlus() {
       const data = await invokeAgent("login", { campaign_id: campaign.id });
       if (data?.success) {
         setSelectedCampaign(campaign);
+        setAgentStatus("idle");
 
         const campData = await invokeAgent("get_logged_campaign");
         if (campData?.success && campData.campaign?.work_breaks) {
           setWorkBreaks(campData.campaign.work_breaks);
         }
 
-        // Try to wait for socket confirmation; if socket is not connected, trust the API response
-        const socketConnected = socketRef.current?.connected;
-        if (socketConnected) {
-          const becameIdle = await waitForAgentStatus(["idle"], 15000);
-          if (becameIdle) {
-            toast.success("Conectado à campanha", { description: campaign.name });
-          } else {
-            // API succeeded but socket didn't confirm — assume idle anyway
-            console.warn("[useThreeCPlus] Socket não confirmou idle, mas API aceitou o login.");
-            setAgentStatus("idle");
-            toast.success("Conectado à campanha", { description: campaign.name });
-          }
+        toast.success("Conectado à campanha", { description: campaign.name });
+
+        if (socketRef.current?.connected) {
+          waitForAgentStatus(["idle"], 15000).then((becameIdle) => {
+            if (!becameIdle) {
+              console.warn("[useThreeCPlus] Socket não confirmou idle, mantendo sessão validada pela API.");
+            }
+          });
         } else {
-          // No socket connection — trust API and set idle
-          console.log("[useThreeCPlus] Login sem socket — assumindo status idle via API.");
-          setAgentStatus("idle");
-          toast.success("Conectado à campanha", { description: campaign.name });
+          console.log("[useThreeCPlus] Login sem socket — sessão validada pela API.");
         }
       } else {
         toast.error("Falha ao entrar na campanha", { description: data?.error });
@@ -507,8 +501,6 @@ export function useThreeCPlus() {
   // Manual call
   const manualCall = useCallback(async (phone: string) => {
     const currentStatus = agentStatusRef.current;
-
-    // Socket connection is not required for manual dialing - we trust the API
 
     if (currentStatus !== "idle" && currentStatus !== "manual_mode") {
       toast.error("Agente não está pronto para discar", {
@@ -551,20 +543,21 @@ export function useThreeCPlus() {
         }
 
         if (!entered) {
-          setAgentStatus("connecting");
+          setAgentStatus("idle");
           toast.error("Agente não está ocioso", {
             description: enterError,
           });
           return false;
         }
 
-        const manualModeReady = await waitForAgentStatus(["manual_mode"], 5000);
-        if (!manualModeReady) {
-          setAgentStatus("connecting");
-          toast.error("Modo manual ainda não confirmou", {
-            description: "Aguarde o ramal atualizar e tente novamente.",
+        setAgentStatus("manual_mode");
+
+        if (socketRef.current?.connected) {
+          waitForAgentStatus(["manual_mode"], 5000).then((manualModeReady) => {
+            if (!manualModeReady) {
+              console.warn("[useThreeCPlus] Socket não confirmou modo manual, mantendo estado validado pela API.");
+            }
           });
-          return false;
         }
       }
 
@@ -574,6 +567,7 @@ export function useThreeCPlus() {
           description: dialData?.error || "A 3C Plus recusou a chamada manual.",
         });
         await invokeAgent("manual_call_exit");
+        setAgentStatus("idle");
         return false;
       }
 
@@ -586,7 +580,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent, isConnected, waitForAgentStatus]);
+  }, [invokeAgent, waitForAgentStatus]);
 
   // Hangup
   const hangup = useCallback(async () => {
