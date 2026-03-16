@@ -426,7 +426,7 @@ export function ThreeCPlusPanel() {
                   size="sm"
                   className="w-full"
                   onClick={hangup}
-                  disabled={loading || (!currentCall?.id && agentStatus !== "manual_mode")}
+                  disabled={loading}
                 >
                   <PhoneOff className="h-4 w-4 mr-2" />
                   {currentCall?.id
