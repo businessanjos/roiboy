@@ -521,6 +521,17 @@ Deno.serve(async (req) => {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       console.log("[threecplus-agent] hangup:", res.status);
+      if (!res.ok && res.status !== 204) {
+        console.log("[threecplus-agent] hangup failed, trying manual_call/exit fallback after call_id attempt");
+        const exitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
+          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        });
+        console.log("[threecplus-agent] post-hangup manual_call_exit fallback:", exitRes.status);
+        if (exitRes.ok || exitRes.status === 204) {
+          return new Response(JSON.stringify({ success: true, method: "manual_exit_after_hangup_failure", call_id: resolvedCallId }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+      }
       return new Response(JSON.stringify({ success: res.ok || res.status === 204, method: "hangup", call_id: resolvedCallId }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }

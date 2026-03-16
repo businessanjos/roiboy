@@ -355,7 +355,7 @@ export function ThreeCPlusPanel() {
                 size="sm"
                 className="text-destructive hover:text-destructive"
                 onClick={logout}
-                disabled={loading || hasCallActivity}
+                disabled={loading}
               >
                 <LogOut className="h-3.5 w-3.5 mr-1" />
                 Sair
