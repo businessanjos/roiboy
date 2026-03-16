@@ -19,7 +19,7 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
 
     try {
       const { data, error } = await supabase.functions.invoke("threecplus-call", {
-        body: { phone: contactPhone },
+        body: { phone: contactPhone, contact_name: contactName },
       });
 
       if (error) {
