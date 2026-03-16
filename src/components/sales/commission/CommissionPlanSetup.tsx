@@ -262,6 +262,8 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
           monthly_quota: monthlyQuota,
           prospecting_commission_percent: prospectingPercent,
           commission_model: selectedModel,
+          sdr_value_per_call: sdrValuePerCall,
+          sdr_value_per_sale: sdrValuePerSale,
         },
         tiers,
         triggers,
