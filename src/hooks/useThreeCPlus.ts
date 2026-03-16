@@ -518,12 +518,7 @@ export function useThreeCPlus() {
   const manualCall = useCallback(async (phone: string) => {
     const currentStatus = agentStatusRef.current;
 
-    if (!isConnected) {
-      toast.error("Eventos da 3C Plus desconectados", {
-        description: "Aguarde a reconexão do ramal antes de tentar discar.",
-      });
-      return false;
-    }
+    // Socket connection is not required for manual dialing - we trust the API
 
     if (currentStatus !== "idle" && currentStatus !== "manual_mode") {
       toast.error("Agente não está pronto para discar", {
