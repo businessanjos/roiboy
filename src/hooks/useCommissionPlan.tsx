@@ -571,7 +571,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
         const triggersMet: Record<string, boolean> = {};
         let allTriggersMet = true;
 
-        if (!isSDRModel) {
+        if (!isUserSDR) {
           for (const trigger of plan.triggers) {
             if (!trigger.is_active) continue;
             let met = false;
