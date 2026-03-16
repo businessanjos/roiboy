@@ -167,9 +167,23 @@ export function ThreeCPlusPanel() {
 
   const statusInfo = getStatusInfo(agentStatus);
   const isInCall = agentStatus === "on_call" || agentStatus === "manual_call_connected";
+  const hasCallTarget = Boolean(currentCall?.phone || currentCall?.contact_name);
+  const hasCallActivity = isInCall || hasCallTarget;
+  const isDialing = hasCallTarget && !isInCall;
+  const callDisplayName = currentCall?.contact_name || currentCall?.phone || "Ligação em andamento";
+  const callDisplaySubtitle =
+    currentCall?.phone && currentCall?.contact_name
+      ? currentCall.phone
+      : isInCall
+        ? "Chamada conectada"
+        : agentStatus === "manual_mode"
+          ? "Aguardando conexão da chamada no 3C Plus"
+          : agentStatus === "connecting"
+            ? "Preparando o agente para discagem"
+            : "Aguardando atualização do status da ligação";
   const canLogin = !loading && extensionLoaded;
   const canDialManually = extensionLoaded && (agentStatus === "offline" || agentStatus === "idle" || agentStatus === "manual_mode" || agentStatus === "connecting");
-  const displayStatusInfo =
+  const defaultStatusInfo =
     agentStatus !== "offline"
       ? statusInfo
       : extensionLoaded
@@ -177,6 +191,13 @@ export function ThreeCPlusPanel() {
         : connectionInfo || loading
           ? { label: "Conectando...", color: "bg-blue-400", icon: Loader2 }
           : statusInfo;
+  const liveStatusInfo = hasCallActivity
+    ? {
+        label: isInCall ? "Em chamada" : "Discando...",
+        color: isInCall ? "bg-destructive" : "bg-primary",
+        icon: isInCall ? PhoneCall : PhoneForwarded,
+      }
+    : defaultStatusInfo;
 
   // Floating button when panel is closed
   if (!isOpen) {
@@ -185,14 +206,15 @@ export function ThreeCPlusPanel() {
         onClick={handleOpen}
         className={cn(
           "fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full px-4 py-3 shadow-lg transition-all hover:scale-105",
-          "bg-primary text-primary-foreground",
-          isInCall && "bg-red-600 text-white animate-pulse"
+          hasCallActivity
+            ? "bg-destructive text-destructive-foreground animate-pulse"
+            : "bg-primary text-primary-foreground"
         )}
       >
         <Phone className="h-5 w-5" />
         <span className="text-sm font-medium">3C Plus</span>
-        {(agentStatus !== "offline" || connectionInfo || loading) && (
-          <span className={cn("h-2.5 w-2.5 rounded-full", displayStatusInfo.color)} />
+        {(agentStatus !== "offline" || connectionInfo || loading || hasCallActivity) && (
+          <span className={cn("h-2.5 w-2.5 rounded-full", liveStatusInfo.color)} />
         )}
       </button>
     );
@@ -207,9 +229,12 @@ export function ThreeCPlusPanel() {
           "bg-card border border-b-0 border-border"
         )}
       >
-        <span className={cn("h-2.5 w-2.5 rounded-full", displayStatusInfo.color)} />
-        <span className="text-sm font-medium">{displayStatusInfo.label}</span>
-        {isInCall && (
+        <span className={cn("h-2.5 w-2.5 rounded-full", liveStatusInfo.color)} />
+        <span className="text-sm font-medium">{liveStatusInfo.label}</span>
+        {hasCallActivity && (
+          <span className="max-w-[120px] truncate text-xs text-muted-foreground">{callDisplayName}</span>
+        )}
+        {(callTimer > 0 || isInCall) && (
           <Badge variant="destructive" className="text-xs">
             {formatTime(callTimer)}
           </Badge>
@@ -246,10 +271,13 @@ export function ThreeCPlusPanel() {
         <div className="flex items-center gap-1">
           <Badge
             variant="outline"
-            className={cn("text-xs gap-1", isInCall && "border-red-500 text-red-500")}
+            className={cn(
+              "text-xs gap-1",
+              hasCallActivity && (isInCall ? "border-destructive text-destructive" : "border-primary text-primary")
+            )}
           >
-            <span className={cn("h-1.5 w-1.5 rounded-full", displayStatusInfo.color)} />
-            {displayStatusInfo.label}
+            <span className={cn("h-1.5 w-1.5 rounded-full", liveStatusInfo.color)} />
+            {liveStatusInfo.label}
           </Badge>
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(true)}>
             <Minimize2 className="h-3.5 w-3.5" />
@@ -327,7 +355,7 @@ export function ThreeCPlusPanel() {
                 size="sm"
                 className="text-destructive hover:text-destructive"
                 onClick={logout}
-                disabled={loading || isInCall}
+                disabled={loading || hasCallActivity}
               >
                 <LogOut className="h-3.5 w-3.5 mr-1" />
                 Sair
@@ -335,7 +363,7 @@ export function ThreeCPlusPanel() {
             </div>
           )}
 
-          {selectedCampaign && agentStatus === "connecting" && (
+          {selectedCampaign && agentStatus === "connecting" && !hasCallActivity && (
             <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -347,41 +375,90 @@ export function ThreeCPlusPanel() {
             </div>
           )}
 
-          {/* In-Call Display */}
-          {isInCall && currentCall && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 rounded-full bg-red-500/20 flex items-center justify-center">
-                    <PhoneCall className="h-4 w-4 text-red-500 animate-pulse" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">
-                      {currentCall.contact_name || currentCall.phone || "Chamada ativa"}
-                    </p>
-                    {currentCall.phone && currentCall.contact_name && (
-                      <p className="text-xs text-muted-foreground">{currentCall.phone}</p>
+          {/* Call Activity Display */}
+          {hasCallActivity && (
+            <div
+              className={cn(
+                "rounded-lg border p-4 space-y-3",
+                isInCall ? "border-destructive/30 bg-destructive/5" : "border-primary/20 bg-primary/5"
+              )}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div
+                    className={cn(
+                      "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                      isInCall ? "bg-destructive/15" : "bg-primary/15"
+                    )}
+                  >
+                    {isInCall ? (
+                      <PhoneCall className="h-4 w-4 text-destructive animate-pulse" />
+                    ) : (
+                      <PhoneForwarded className="h-4 w-4 text-primary animate-pulse" />
                     )}
                   </div>
+
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold">
+                        {isInCall ? "Chamada ativa" : isDialing ? "Ligando agora" : "Ligação em andamento"}
+                      </p>
+                      <Badge variant={isInCall ? "destructive" : "secondary"} className="text-[11px]">
+                        {isInCall ? "Ao vivo" : liveStatusInfo.label}
+                      </Badge>
+                    </div>
+
+                    <p className="truncate text-sm font-medium">{callDisplayName}</p>
+                    <p className="text-xs text-muted-foreground">{callDisplaySubtitle}</p>
+                  </div>
                 </div>
-                <Badge variant="destructive" className="font-mono text-sm">
-                  {formatTime(callTimer)}
-                </Badge>
+
+                {(callTimer > 0 || isInCall) && (
+                  <Badge variant={isInCall ? "destructive" : "outline"} className="shrink-0 font-mono text-sm">
+                    {formatTime(callTimer)}
+                  </Badge>
+                )}
               </div>
 
-              <Button
-                variant="destructive"
-                size="sm"
-                className="w-full"
-                onClick={hangup}
-                disabled={loading}
-              >
-                <PhoneOff className="h-4 w-4 mr-2" />
-                Desligar
-              </Button>
+              <div className="grid gap-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="w-full"
+                  onClick={hangup}
+                  disabled={loading || (!currentCall?.id && agentStatus !== "manual_mode")}
+                >
+                  <PhoneOff className="h-4 w-4 mr-2" />
+                  {currentCall?.id
+                    ? "Desligar"
+                    : agentStatus === "manual_mode"
+                      ? "Cancelar tentativa de ligação"
+                      : "Aguardando conexão da chamada"}
+                </Button>
 
-              {/* Qualifications */}
-              {currentCall.qualifications && currentCall.qualifications.length > 0 && (
+                {agentStatus === "manual_mode" && !isInCall && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={exitManualMode}
+                    disabled={loading}
+                  >
+                    <Play className="h-3.5 w-3.5 mr-2" />
+                    Voltar ao discador
+                  </Button>
+                )}
+              </div>
+
+              {!currentCall?.id && (
+                <p className="text-xs text-muted-foreground">
+                  {agentStatus === "manual_mode"
+                    ? "Se a chamada ainda estiver só em discagem, você pode cancelar por aqui antes da conexão completa."
+                    : "Assim que a 3C Plus confirmar a ligação, o botão de desligar fica disponível aqui com o número em destaque."}
+                </p>
+              )}
+
+              {isInCall && currentCall?.qualifications && currentCall.qualifications.length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="w-full">
@@ -401,36 +478,8 @@ export function ThreeCPlusPanel() {
             </div>
           )}
 
-          {/* Fallback hangup button when in call but no currentCall data (socket didn't fire) */}
-          {isInCall && !currentCall && (
-            <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-full bg-red-500/20 flex items-center justify-center">
-                  <PhoneCall className="h-4 w-4 text-red-500 animate-pulse" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Chamada ativa</p>
-                  <p className="text-xs text-muted-foreground">Informações da chamada indisponíveis</p>
-                </div>
-                <Badge variant="destructive" className="font-mono text-sm ml-auto">
-                  {formatTime(callTimer)}
-                </Badge>
-              </div>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="w-full"
-                onClick={hangup}
-                disabled={loading}
-              >
-                <PhoneOff className="h-4 w-4 mr-2" />
-                Desligar
-              </Button>
-            </div>
-          )}
-
           {/* Emergency hangup - when agent is in a non-idle/non-offline state but not detected as "in call" */}
-          {agentStatus !== "offline" && agentStatus !== "idle" && agentStatus !== "on_break" && agentStatus !== "acw" && agentStatus !== "connecting" && agentStatus !== "manual_mode" && !isInCall && (
+          {agentStatus !== "offline" && agentStatus !== "idle" && agentStatus !== "on_break" && agentStatus !== "acw" && agentStatus !== "connecting" && agentStatus !== "manual_mode" && !isInCall && !hasCallTarget && (
             <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3">
               <Button
                 variant="outline"
@@ -476,7 +525,7 @@ export function ThreeCPlusPanel() {
           )}
 
           {/* Ramal / Extension Config */}
-          {extensionLoaded && !savedExtension && !isInCall && (
+          {extensionLoaded && !savedExtension && !hasCallActivity && (
             <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3 space-y-2">
               <div className="flex items-center gap-2">
                 <Settings className="h-4 w-4 text-yellow-600" />
@@ -513,7 +562,7 @@ export function ThreeCPlusPanel() {
           )}
 
           {/* Saved extension display with edit */}
-          {savedExtension && !isInCall && (
+          {savedExtension && !hasCallActivity && (
             <div className="space-y-2 bg-muted/50 rounded-lg px-3 py-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -556,7 +605,7 @@ export function ThreeCPlusPanel() {
           )}
 
           {/* Manual Call - available without campaign, just like native 3C Plus */}
-          {canDialManually && !isInCall && (
+          {canDialManually && !hasCallActivity && (
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Ligação Manual
@@ -591,7 +640,7 @@ export function ThreeCPlusPanel() {
           )}
 
           {/* Exit manual mode button */}
-          {agentStatus === "manual_mode" && !isInCall && (
+          {agentStatus === "manual_mode" && !hasCallActivity && (
             <Button
               variant="outline"
               size="sm"

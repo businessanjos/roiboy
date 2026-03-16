@@ -36,6 +36,51 @@ function extractApiMessage(text: string, fallback: string): string {
   }
 }
 
+function safeJsonParse(text: string): unknown | null {
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizePhone(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed || null;
+}
+
+function extractCallDetails(value: unknown): { id?: string | number; phone?: string; contact_name?: string } | null {
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const callRecord = asRecord(record.call) ?? record;
+  const mailing = asRecord(record.mailing);
+  const mailingData = asRecord(mailing?.data);
+
+  const id = callRecord.id ?? callRecord.call_id ?? record.call_id;
+  const phone =
+    normalizePhone(callRecord.phone) ||
+    normalizePhone(callRecord.number) ||
+    normalizePhone(record.phone) ||
+    normalizePhone(record.number) ||
+    normalizePhone(mailingData?.phone);
+  const contact_name =
+    (typeof callRecord.contact_name === "string" && callRecord.contact_name) ||
+    (typeof record.contact_name === "string" && record.contact_name) ||
+    (typeof mailingData?.name === "string" && mailingData.name) ||
+    (typeof mailingData?.Nome === "string" && mailingData.Nome) ||
+    undefined;
+
+  if (!id && !phone && !contact_name) return null;
+  return {
+    ...(id ? { id: id as string | number } : {}),
+    ...(phone ? { phone } : {}),
+    ...(contact_name ? { contact_name } : {}),
+  };
+}
+
 function isManualModeAlreadyActive(status: number, text: string): boolean {
   if (status !== 422) return false;
   const message = extractApiMessage(text, "");
@@ -354,10 +399,12 @@ Deno.serve(async (req) => {
         body: JSON.stringify(click2callPayload),
       });
       const click2callText = await click2callRes.text();
+      const click2callPayloadResponse = safeJsonParse(click2callText);
+      const click2callCall = extractCallDetails(click2callPayloadResponse);
       console.log("[threecplus-agent] place_call click2call:", click2callRes.status, click2callText);
 
       if (click2callRes.ok || click2callRes.status === 204) {
-        return new Response(JSON.stringify({ success: true, mode: "click2call" }),
+        return new Response(JSON.stringify({ success: true, mode: "click2call", call: click2callCall }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
@@ -381,10 +428,12 @@ Deno.serve(async (req) => {
           body: JSON.stringify({ phone: cleanPhone }),
         });
         const dialText = await dialRes.text();
+        const dialPayloadResponse = safeJsonParse(dialText);
+        const manualCall = extractCallDetails(dialPayloadResponse) || { phone: cleanPhone };
         console.log("[threecplus-agent] place_call manual_call_dial:", dialRes.status, dialText);
 
         if (dialRes.ok || dialRes.status === 204) {
-          return new Response(JSON.stringify({ success: true, mode: "manual_mode" }),
+          return new Response(JSON.stringify({ success: true, mode: "manual_mode", call: manualCall }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
         return new Response(JSON.stringify({ success: false, error: extractApiMessage(dialText, "A 3C Plus recusou a chamada manual."), status: dialRes.status }),
