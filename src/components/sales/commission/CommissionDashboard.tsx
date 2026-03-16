@@ -18,7 +18,6 @@ import {
   Trophy,
   TrendingUp,
   Phone,
-  RefreshCw,
   AlertTriangle,
   ChevronLeft,
   ChevronRight,
@@ -66,12 +65,12 @@ export function CommissionDashboard({
     return periods.filter((p) => p.period_start === selectedMonthKey);
   }, [periods, selectedMonthKey]);
 
-  // Split periods by role
-  const sdrPeriods = useMemo(() => 
+  // Split periods by role (SDR vs Closer)
+  const sdrPeriods = useMemo(() =>
     selectedPeriods.filter((p) => (p.triggers_met as any)?.is_sdr === true),
     [selectedPeriods]
   );
-  const closerPeriods = useMemo(() => 
+  const closerPeriods = useMemo(() =>
     selectedPeriods.filter((p) => (p.triggers_met as any)?.is_sdr !== true),
     [selectedPeriods]
   );
@@ -126,7 +125,7 @@ export function CommissionDashboard({
         <div>
           <h3 className="font-semibold">{plan.name}</h3>
           <p className="text-xs text-muted-foreground">
-           Apuração mensal {hasSDRModel && "· Inclui modelo SDR"}
+            Apuração mensal {hasSDRModel && "· Inclui modelo SDR"}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -158,8 +157,8 @@ export function CommissionDashboard({
         </div>
       </div>
 
-      {/* Closer Summary Cards */}
-      {closerPeriods.length > 0 && (
+      {/* Summary Cards */}
+      {selectedPeriods.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-4">
@@ -194,7 +193,7 @@ export function CommissionDashboard({
                   <CheckCircle2 className="h-5 w-5 text-green-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold">{closerTotals.qualifiedCount}</p>
+                  <p className="text-2xl font-bold">{closerTotals.qualifiedCount}/{closerTotals.totalCount}</p>
                   <p className="text-xs text-muted-foreground">Qualificados</p>
                 </div>
               </div>
@@ -459,228 +458,6 @@ export function CommissionDashboard({
             </Card>
           )}
         </div>
-      ))}
-    </div>
-  );
-}
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              📅 {MONTH_NAMES[selectedMonth]} {selectedYear} — SDR
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>SDR</TableHead>
-                  <TableHead className="text-center">Calls Comparecidas</TableHead>
-                  <TableHead className="text-right">Comissão Calls</TableHead>
-                  <TableHead className="text-center">Vendas Originadas</TableHead>
-                  <TableHead className="text-right">Comissão Vendas</TableHead>
-                  <TableHead className="text-right">Total Comissão</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {selectedPeriods
-                  .sort((a, b) => b.total_commission - a.total_commission)
-                  .map((period) => {
-                    const attendedCalls = Number((period.triggers_met as any)?.sdr_attended_calls_count) || 0;
-                    const originatedSales = Number((period.triggers_met as any)?.sdr_originated_sales_count) || 0;
-                    const commCalls = attendedCalls * sdrValuePerCall;
-                    const commSales = originatedSales * sdrValuePerSale;
-
-                    return (
-                      <TableRow key={period.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={period.user_avatar || undefined} />
-                              <AvatarFallback className="text-xs bg-violet-500/10 text-violet-600">
-                                {getInitials(period.user_name || "")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm font-medium">{period.user_name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <Phone className="h-3.5 w-3.5 text-violet-500" />
-                            <span className="text-sm font-semibold">{attendedCalls}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right text-sm">
-                          {formatCurrency(commCalls)}
-                          <span className="text-[10px] text-muted-foreground ml-1">
-                            ({attendedCalls} × {formatCurrency(sdrValuePerCall)})
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <CalendarCheck className="h-3.5 w-3.5 text-emerald-500" />
-                            <span className="text-sm font-semibold">{originatedSales}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right text-sm">
-                          {formatCurrency(commSales)}
-                          <span className="text-[10px] text-muted-foreground ml-1">
-                            ({originatedSales} × {formatCurrency(sdrValuePerSale)})
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <span className="font-bold text-emerald-600">
-                            {formatCurrency(period.total_commission)}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] ${
-                              period.status === "paid"
-                                ? "bg-green-500/10 text-green-600 border-green-500/30"
-                                : period.status === "approved"
-                                ? "bg-blue-500/10 text-blue-600 border-blue-500/30"
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {period.status === "paid" ? "Pago" : period.status === "approved" ? "Aprovado" : "Pendente"}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      ) : (
-        /* Closer Table */
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              📅 {MONTH_NAMES[selectedMonth]} {selectedYear}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                    <TableRow>
-                      <TableHead>Vendedor</TableHead>
-                      <TableHead className="text-right">Valor Ganho</TableHead>
-                      <TableHead className="text-center">Ligações</TableHead>
-                      <TableHead className="text-center">Conversão</TableHead>
-                      <TableHead className="text-center">Tarefas</TableHead>
-                      <TableHead className="text-center">Gatilhos</TableHead>
-                      <TableHead className="text-right">Comissão</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedPeriods
-                    .sort((a, b) => b.won_value - a.won_value)
-                    .map((period) => (
-                      <TableRow key={period.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={period.user_avatar || undefined} />
-                              <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                                {getInitials(period.user_name || "")}
-                              </AvatarFallback>
-                            </Avatar>
-                            <span className="text-sm font-medium">{period.user_name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(period.won_value)}
-                          <span className="text-xs text-muted-foreground ml-1">
-                            ({period.won_deals} neg.)
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <Phone className="h-3 w-3 text-muted-foreground" />
-                            <span className="text-sm">{period.total_calls}</span>
-                            {period.triggers_met?.min_calls !== undefined && (
-                              period.triggers_met.min_calls ? (
-                                <CheckCircle2 className="h-3 w-3 text-green-500" />
-                              ) : (
-                                <XCircle className="h-3 w-3 text-red-500" />
-                              )
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <span className="text-sm">{period.conversion_rate.toFixed(0)}%</span>
-                            {period.triggers_met?.min_conversion_rate !== undefined && (
-                              period.triggers_met.min_conversion_rate ? (
-                                <CheckCircle2 className="h-3 w-3 text-green-500" />
-                              ) : (
-                                <XCircle className="h-3 w-3 text-red-500" />
-                              )
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className="text-sm">
-                            {period.tasks_completed}/{period.tasks_total}
-                          </span>
-                          {period.triggers_met?.tasks_completed !== undefined && (
-                            period.triggers_met.tasks_completed ? (
-                              <CheckCircle2 className="h-3 w-3 text-green-500 inline ml-1" />
-                            ) : (
-                              <XCircle className="h-3 w-3 text-red-500 inline ml-1" />
-                            )
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {Object.keys(period.triggers_met || {}).length === 0 ? (
-                            <Badge variant="outline" className="text-muted-foreground text-[10px]">
-                              — Sem gatilhos
-                            </Badge>
-                          ) : period.all_triggers_met ? (
-                            <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px]">
-                              ✅ OK
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-red-500 border-red-500/30 text-[10px]">
-                              ❌ Pendente
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div>
-                            <span className={`font-bold ${period.all_triggers_met ? "text-emerald-600" : "text-muted-foreground line-through"}`}>
-                              {formatCurrency(period.total_commission)}
-                            </span>
-                            {period.bonus_value > 0 && (
-                              <p className="text-[10px] text-amber-600">
-                                +{formatCurrency(period.bonus_value)} bônus
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant="outline"
-                            className={`text-[10px] ${
-                              period.status === "paid"
-                                ? "bg-green-500/10 text-green-600 border-green-500/30"
-                                : period.status === "approved"
-                                ? "bg-blue-500/10 text-blue-600 border-blue-500/30"
-                                : "bg-muted text-muted-foreground"
-                            }`}
-                          >
-                            {period.status === "paid" ? "Pago" : period.status === "approved" ? "Aprovado" : "Pendente"}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
       ))}
     </div>
   );
