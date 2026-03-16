@@ -516,14 +516,9 @@ export function useThreeCPlus() {
 
       if (!wasAlreadyInManualMode) {
         let entered = false;
-        let enterError = "Aguarde o discador liberar ou tente novamente em alguns segundos.";
-        const maxAttempts = currentStatus === "connecting" ? 5 : 3;
+        let enterError = "Tente novamente em alguns segundos.";
+        const maxAttempts = 3;
         const retryDelay = 2000;
-
-        if (currentStatus === "connecting") {
-          toast.info("Preparando agente para discagem...", { duration: 2500 });
-          await new Promise((resolve) => setTimeout(resolve, retryDelay));
-        }
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
           const enterData = await invokeAgent("manual_call_enter");
@@ -544,44 +539,17 @@ export function useThreeCPlus() {
         }
 
         if (!entered) {
-          if (hasCampaignSessionError(enterError)) {
-            setSelectedCampaign(null);
-            setAgentStatus("offline");
-            toast.error("Sua sessão da campanha caiu", {
-              description: enterError || "Entre novamente na campanha antes de discar.",
-            });
-            return false;
-          }
-
-          setAgentStatus("connecting");
-          toast.error("Agente ainda não ficou ocioso", {
+          toast.error("Não foi possível entrar no modo manual", {
             description: enterError,
           });
           return false;
         }
 
         setAgentStatus("manual_mode");
-
-        if (socketRef.current?.connected) {
-          waitForAgentStatus(["manual_mode"], 5000).then((manualModeReady) => {
-            if (!manualModeReady) {
-              console.warn("[useThreeCPlus] Socket não confirmou modo manual, mantendo estado validado pela API.");
-            }
-          });
-        }
       }
 
       const dialData = await invokeAgent("manual_call_dial", { phone });
       if (!dialData?.success) {
-        if (hasCampaignSessionError(dialData?.error)) {
-          setSelectedCampaign(null);
-          setAgentStatus("offline");
-          toast.error("Sua sessão da campanha caiu", {
-            description: dialData?.error || "Entre novamente na campanha antes de discar.",
-          });
-          return false;
-        }
-
         toast.error("Não foi possível discar", {
           description: dialData?.error || "A 3C Plus recusou a chamada manual.",
         });
@@ -592,7 +560,7 @@ export function useThreeCPlus() {
           } catch (exitError) {
             console.warn("[useThreeCPlus] manual_call_exit after dial failure:", exitError);
           }
-          setAgentStatus("idle");
+          setAgentStatus(selectedCampaign ? "idle" : "offline");
         }
 
         return false;
