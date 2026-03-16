@@ -324,10 +324,10 @@ export function ThreeCPlusPanel() {
             <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Confirmando login do agente
+                Finalizando sessão do agente
               </div>
               <p className="text-xs text-muted-foreground">
-                A 3C Plus só libera a discagem depois do evento real de agente ocioso.
+                Se os eventos em tempo real atrasarem, o painel libera automaticamente pela confirmação da API.
               </p>
             </div>
           )}
