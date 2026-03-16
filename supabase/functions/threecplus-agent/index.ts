@@ -503,6 +503,10 @@ Deno.serve(async (req) => {
       if (!success) {
         errorMessage = "A 3C Plus recusou a chamada manual.";
         try { const parsed = JSON.parse(text); errorMessage = parsed?.detail || parsed?.title || parsed?.message || errorMessage; } catch { if (text?.trim()) errorMessage = text.trim(); }
+      } else {
+        const dialPayload = safeJsonParse(text);
+        const callDetails = extractCallDetails(dialPayload) || { phone: cleanPhone };
+        await logCallToDb(supabaseAdmin, userData.account_id, userData.id, callDetails, "manual_dial");
       }
       return new Response(JSON.stringify({ success, error: errorMessage, status: res.status }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
