@@ -581,6 +581,15 @@ export function useThreeCPlus() {
     }
   }, [invokeAgent]);
 
+  // Exit manual mode
+  const exitManualMode = useCallback(async () => {
+    try {
+      await invokeAgent("manual_call_exit");
+    } catch (err) {
+      console.error("[useThreeCPlus] exitManualMode error:", err);
+    }
+  }, [invokeAgent]);
+
   // Save extension (ramal) to backend
   const saveExtension = useCallback(async (ext: string) => {
     try {
