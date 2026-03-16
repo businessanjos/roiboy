@@ -206,9 +206,11 @@ Deno.serve(async (req) => {
         .eq("user_id", userData.id)
         .eq("provider", "3cplus")
         .maybeSingle();
-      const stored = extractExtension(userInt?.metadata);
+      const metadata = asRecord(userInt?.metadata);
+      const stored = extractExtension(metadata);
+      const storedPassword = metadata?.extension_password as string | null;
       return new Response(
-        JSON.stringify({ success: true, extension: stored }),
+        JSON.stringify({ success: true, extension: stored, extension_password: storedPassword ? "••••" : null, has_password: Boolean(storedPassword) }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
