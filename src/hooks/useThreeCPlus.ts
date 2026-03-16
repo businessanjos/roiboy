@@ -66,6 +66,7 @@ export function useThreeCPlus() {
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const callStartRef = useRef<Date | null>(null);
   const agentStatusRef = useRef<AgentStatus>("offline");
+  const mountedRef = useRef(true);
 
   // Start call timer
   const startCallTimer = useCallback(() => {
