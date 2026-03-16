@@ -151,10 +151,17 @@ export function ThreeCPlusPanel() {
   }, [manualCall, manualPhone]);
 
   const statusInfo = getStatusInfo(agentStatus);
-  const StatusIcon = statusInfo.icon;
   const isInCall = agentStatus === "on_call" || agentStatus === "manual_call_connected";
   const canLogin = !loading && extensionLoaded;
   const canDialManually = agentStatus === "idle" || agentStatus === "manual_mode";
+  const displayStatusInfo =
+    agentStatus !== "offline"
+      ? statusInfo
+      : extensionLoaded
+        ? { label: isConnected ? "Pronto para login" : "Ramal pronto", color: "bg-green-500", icon: Wifi }
+        : connectionInfo || loading
+          ? { label: "Conectando...", color: "bg-blue-400", icon: Loader2 }
+          : statusInfo;
 
   // Floating button when panel is closed
   if (!isOpen) {
