@@ -543,12 +543,14 @@ export function useCommissionPlan(cargo: string = "Closer") {
 
       const allDealsInMonth = dealsAllRes || [];
 
-      const isSDRModel = (plan as any).commission_model === "sdr_activity";
+      const hasSDRModel = (plan as any).commission_model === "sdr_activity";
       const sdrValuePerCall = (plan as any).sdr_value_per_call || 0;
       const sdrValuePerSale = (plan as any).sdr_value_per_sale || 0;
 
       // Calculate for each user
       for (const user of users) {
+        // Determine if this specific user is an SDR (George) or Closer
+        const isUserSDR = hasSDRModel && user.name?.toLowerCase().includes("george");
         const userWonDeals = wonDeals.filter((d: any) => d.responsible_user_id === user.id);
         const wonValue = userWonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
 
@@ -569,7 +571,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
         const triggersMet: Record<string, boolean> = {};
         let allTriggersMet = true;
 
-        if (!isSDRModel) {
+        if (!isUserSDR) {
           for (const trigger of plan.triggers) {
             if (!trigger.is_active) continue;
             let met = false;
@@ -599,7 +601,10 @@ export function useCommissionPlan(cargo: string = "Closer") {
         let commissionValue = 0;
         let bonusValue = 0;
 
-        if (isSDRModel) {
+        // Mark if user is SDR in triggers_met for dashboard display
+        triggersMet["is_sdr"] = isUserSDR as any;
+
+        if (isUserSDR) {
           // SDR model: fixed value per attended call + fixed value per originated sale
           const attendedCalls = userCalls.filter((c: any) => c.status === "completed" || c.answered_at);
           const attendedCallsCount = attendedCalls.length;
