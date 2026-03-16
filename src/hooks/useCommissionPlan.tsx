@@ -911,9 +911,8 @@ export function useCommissionPlan(cargo: string = "Closer") {
   useEffect(() => {
     if (accountId) {
       fetchPlan();
-      fetchDealEntries();
     }
-  }, [accountId, fetchPlan, fetchDealEntries]);
+  }, [accountId, fetchPlan]);
 
   // Fetch periods only after plan is loaded to filter by plan_id
   useEffect(() => {
