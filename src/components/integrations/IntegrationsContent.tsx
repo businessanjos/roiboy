@@ -65,9 +65,6 @@ export function IntegrationsContent() {
   // 3C Plus state
   const [threeCPlusToken, setThreeCPlusToken] = useState("");
   const [threeCPlusDomain, setThreeCPlusDomain] = useState("");
-  const [threeCPlusEmail, setThreeCPlusEmail] = useState("");
-  const [threeCPlusPassword, setThreeCPlusPassword] = useState("");
-  const [threeCPlusAuthMethod, setThreeCPlusAuthMethod] = useState<"credentials" | "token">("credentials");
   const [connecting3CPlus, setConnecting3CPlus] = useState(false);
 
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
