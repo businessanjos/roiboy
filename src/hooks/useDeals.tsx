@@ -255,6 +255,7 @@ export function useDeals() {
           client:clients(id, full_name, phone_e164, avatar_url),
           lead:leads(id, full_name, phone, email, avatar_url),
           responsible_user:users!deals_responsible_user_id_fkey(id, name, avatar_url),
+          sdr_user:users!deals_sdr_user_id_fkey(id, name, avatar_url),
           stage:deal_stages(*)
         `)
         .single();
