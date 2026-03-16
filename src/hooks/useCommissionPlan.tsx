@@ -327,16 +327,16 @@ export function useCommissionPlan(cargo: string = "Closer") {
 
         const userMap = new Map((users || []).map((u: any) => [u.id, u]));
 
-        setPeriods(
-          monthlyData
-            .map((d: any) => ({
-              ...d,
-              user_name: (userMap.get(d.user_id) as any)?.name || "Sem nome",
-              user_avatar: (userMap.get(d.user_id) as any)?.avatar_url || null,
-              triggers_met: d.triggers_met || {},
-            }))
-            .filter((d: any) => matchesCargoUser(d.user_name, cargo))
-        );
+        const filteredPeriods = monthlyData
+          .map((d: any) => ({
+            ...d,
+            user_name: (userMap.get(d.user_id) as any)?.name || "Sem nome",
+            user_avatar: (userMap.get(d.user_id) as any)?.avatar_url || null,
+            triggers_met: d.triggers_met || {},
+          }))
+          .filter((d: any) => matchesCargoUser(d.user_name, cargo));
+
+        setPeriods(dedupeRecords(filteredPeriods, (period) => `${period.user_id}-${period.period_start}`));
       }
     } catch (err) {
       console.error("Error fetching periods:", err);
