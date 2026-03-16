@@ -103,6 +103,7 @@ export function ThreeCPlusPanel() {
   const [initialized, setInitialized] = useState(false);
   const [extensionLoaded, setExtensionLoaded] = useState(false);
   const [extensionInput, setExtensionInput] = useState("");
+  const [extensionPasswordInput, setExtensionPasswordInput] = useState("");
 
   // Initialize connection
   const handleInit = useCallback(async () => {
