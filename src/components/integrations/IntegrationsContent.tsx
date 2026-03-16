@@ -372,21 +372,31 @@ export function IntegrationsContent() {
   };
 
   const handle3CPlusConnect = async () => {
-    if (!threeCPlusToken.trim()) {
-      toast({ title: "Erro", description: "Informe o token da API.", variant: "destructive" });
-      return;
+    if (threeCPlusAuthMethod === "credentials") {
+      if (!threeCPlusEmail.trim() || !threeCPlusPassword) {
+        toast({ title: "Erro", description: "Informe e-mail e senha.", variant: "destructive" });
+        return;
+      }
+    } else {
+      if (!threeCPlusToken.trim()) {
+        toast({ title: "Erro", description: "Informe o token da API.", variant: "destructive" });
+        return;
+      }
     }
     setConnecting3CPlus(true);
     try {
-      const { data, error } = await supabase.functions.invoke("threecplus-auth", {
-        body: { api_token: threeCPlusToken.trim(), domain: threeCPlusDomain.trim() || null },
-      });
+      const body = threeCPlusAuthMethod === "credentials"
+        ? { auth_method: "credentials", email: threeCPlusEmail.trim(), password: threeCPlusPassword, domain: threeCPlusDomain.trim() || null }
+        : { api_token: threeCPlusToken.trim(), domain: threeCPlusDomain.trim() || null };
+      const { data, error } = await supabase.functions.invoke("threecplus-auth", { body });
       if (error) throw error;
       if (data?.error) {
         toast({ title: "Erro", description: data.error, variant: "destructive" });
       } else {
         toast({ title: "Conectado!", description: `3C Plus conectado com sucesso.` });
         setThreeCPlusToken("");
+        setThreeCPlusEmail("");
+        setThreeCPlusPassword("");
         fetchUserIntegrations();
       }
     } catch (err: any) {
