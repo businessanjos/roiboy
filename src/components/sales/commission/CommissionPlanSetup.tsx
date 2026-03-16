@@ -777,6 +777,35 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
           ))}
         </CardContent>
       </Card>
+      )}
+
+      {/* SDR Summary */}
+      {selectedModel === "sdr_activity" && (
+        <Card className="border-violet-500/20 bg-violet-500/[0.02]">
+          <CardContent className="p-5">
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Phone className="h-4 w-4 text-violet-600" />
+                Resumo do Modelo SDR
+              </h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 border rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground">Por call comparecida</p>
+                  <p className="text-lg font-bold text-foreground">{formatCurrency(sdrValuePerCall)}</p>
+                </div>
+                <div className="p-3 border rounded-lg bg-muted/30">
+                  <p className="text-xs text-muted-foreground">Por venda originada</p>
+                  <p className="text-lg font-bold text-foreground">{formatCurrency(sdrValuePerSale)}</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                O SDR recebe um valor fixo por cada call em que o cliente compareceu, 
+                e um valor por cada venda fechada pelo Closer originada de seus agendamentos.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Save */}
       <div className="flex justify-end">
