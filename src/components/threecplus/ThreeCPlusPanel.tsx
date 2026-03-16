@@ -289,8 +289,8 @@ export function ThreeCPlusPanel() {
                   {extensionLoaded && (
                     <p className="text-xs text-muted-foreground">
                       {isConnected
-                        ? "Ramal e eventos prontos. Selecione uma campanha para entrar."
-                        : "Ramal pronto. Selecione uma campanha para entrar."}
+                        ? "Se quiser usar o discador de campanha, selecione uma campanha. Para ligação manual, disque direto abaixo."
+                        : "O ramal foi carregado. Para ligação manual, disque direto abaixo; campanha é opcional."}
                     </p>
                   )}
                 </div>
