@@ -75,6 +75,7 @@ import {
   Paperclip,
   Image,
   Download,
+  Headset,
   type LucideIcon,
 } from "lucide-react";
 import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
