@@ -401,6 +401,50 @@ export function ThreeCPlusPanel() {
             </div>
           )}
 
+          {/* Fallback hangup button when in call but no currentCall data (socket didn't fire) */}
+          {isInCall && !currentCall && (
+            <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                  <PhoneCall className="h-4 w-4 text-red-500 animate-pulse" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium">Chamada ativa</p>
+                  <p className="text-xs text-muted-foreground">Informações da chamada indisponíveis</p>
+                </div>
+                <Badge variant="destructive" className="font-mono text-sm ml-auto">
+                  {formatTime(callTimer)}
+                </Badge>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="w-full"
+                onClick={hangup}
+                disabled={loading}
+              >
+                <PhoneOff className="h-4 w-4 mr-2" />
+                Desligar
+              </Button>
+            </div>
+          )}
+
+          {/* Emergency hangup - when agent is in a non-idle/non-offline state but not detected as "in call" */}
+          {agentStatus !== "offline" && agentStatus !== "idle" && agentStatus !== "on_break" && agentStatus !== "acw" && agentStatus !== "connecting" && agentStatus !== "manual_mode" && !isInCall && (
+            <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3">
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full text-destructive hover:text-destructive"
+                onClick={hangup}
+                disabled={loading}
+              >
+                <PhoneOff className="h-4 w-4 mr-2" />
+                Forçar desligamento
+              </Button>
+            </div>
+          )}
+
           {/* TPA (After Call Work) */}
           {agentStatus === "acw" && (
             <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-3">
