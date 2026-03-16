@@ -395,16 +395,42 @@ export function useThreeCPlus() {
     }
   }
 
-  // Fetch campaigns
-  const fetchCampaigns = useCallback(async () => {
-    const { data, error } = await supabase.functions.invoke("threecplus-campaigns");
-    if (error || !data?.success) {
-      toast.error("Erro ao buscar campanhas");
-      return [];
+  // Fetch campaigns with retry
+  const fetchCampaigns = useCallback(async (retries = 2) => {
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const { data, error } = await supabase.functions.invoke("threecplus-campaigns");
+        if (error) {
+          console.warn(`[useThreeCPlus] fetchCampaigns attempt ${attempt + 1} failed:`, error);
+          if (attempt < retries) {
+            await new Promise((r) => setTimeout(r, 2000));
+            continue;
+          }
+          toast.error("Erro ao buscar campanhas", {
+            description: "Tente fechar e abrir o painel novamente.",
+          });
+          return [];
+        }
+        if (!data?.success) {
+          toast.error("Erro ao buscar campanhas", {
+            description: data?.error || "Erro desconhecido",
+          });
+          return [];
+        }
+        const list = data.campaigns || [];
+        setCampaigns(list);
+        return list;
+      } catch (err) {
+        console.warn(`[useThreeCPlus] fetchCampaigns attempt ${attempt + 1} exception:`, err);
+        if (attempt < retries) {
+          await new Promise((r) => setTimeout(r, 2000));
+          continue;
+        }
+        toast.error("Erro ao buscar campanhas");
+        return [];
+      }
     }
-    const list = data.campaigns || [];
-    setCampaigns(list);
-    return list;
+    return [];
   }, []);
 
   // Login to campaign
