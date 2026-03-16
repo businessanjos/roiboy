@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { phone, campaign_id } = await req.json();
+    const { phone } = await req.json();
 
     if (!phone || typeof phone !== "string") {
       return new Response(
@@ -99,41 +99,10 @@ Deno.serve(async (req) => {
     const apiToken = integration.access_token;
     const cleanPhone = phone.replace(/\D/g, "");
 
-    // Step 1: Login to campaign if campaign_id provided
-    if (campaign_id) {
-      console.log("[threecplus-call] Logging into campaign:", campaign_id);
-      const loginResponse = await fetch(
-        `${baseDomain}/api/v1/agent/login?api_token=${apiToken}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ campaign: campaign_id }),
-        }
-      );
-      const loginText = await loginResponse.text();
-      console.log("[threecplus-call] Login response:", loginResponse.status, loginText);
-
-      if (!loginResponse.ok) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: "Não foi possível entrar na campanha. Verifique se a campanha está ativa.",
-            code: "CAMPAIGN_LOGIN_FAILED",
-            fallback_url: baseDomain,
-          }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
-
-    // Step 2: Enter manual call mode with retry (agent needs time to become idle after login)
+    // Step 1: Enter manual call mode with retry
     let enterSuccess = false;
     const maxRetries = 3;
     const retryDelay = 2000;
-
-    // Initial delay after campaign login
-    console.log("[threecplus-call] Waiting 2s for agent to become idle...");
-    await new Promise(r => setTimeout(r, retryDelay));
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       console.log(`[threecplus-call] manual_call/enter attempt ${attempt}/${maxRetries}`);
@@ -149,19 +118,13 @@ Deno.serve(async (req) => {
         break;
       }
 
-      // If 422 and agent not idle, wait and retry
-      if (enterRes.status === 422 && attempt < maxRetries) {
-        console.log(`[threecplus-call] Agent not idle yet, retrying in ${retryDelay}ms...`);
+      if (attempt < maxRetries) {
         await new Promise(r => setTimeout(r, retryDelay));
-        continue;
       }
-
-      // Other error or last attempt - break
-      break;
     }
 
     if (enterSuccess) {
-      // Step 3: Dial the number
+      // Step 2: Dial the number
       console.log("[threecplus-call] Dialing phone:", cleanPhone);
       const dialRes = await fetch(
         `${baseDomain}/api/v1/agent/manual_call/dial?api_token=${apiToken}`,
@@ -182,7 +145,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Fallback: try click2call (requires Supervisor token)
+    // Fallback: try click2call
     console.log("[threecplus-call] Manual call failed, trying click2call fallback");
     const fallbackRes = await fetch(
       `${baseDomain}/api/v1/click2call?api_token=${apiToken}`,
@@ -205,7 +168,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: "Não foi possível iniciar a chamada. Verifique se você está logado e em uma campanha ativa no 3C Plus.",
+        error: "Não foi possível iniciar a chamada. Verifique se você está logado no 3C Plus.",
         code: "API_CALL_FAILED",
         fallback_url: baseDomain,
       }),
