@@ -176,8 +176,8 @@ export function ThreeCPlusPanel() {
       >
         <Phone className="h-5 w-5" />
         <span className="text-sm font-medium">3C Plus</span>
-        {agentStatus !== "offline" && (
-          <span className={cn("h-2.5 w-2.5 rounded-full", statusInfo.color)} />
+        {(agentStatus !== "offline" || connectionInfo || loading) && (
+          <span className={cn("h-2.5 w-2.5 rounded-full", displayStatusInfo.color)} />
         )}
       </button>
     );
