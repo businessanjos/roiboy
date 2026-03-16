@@ -563,6 +563,7 @@ Deno.serve(async (req) => {
         console.log("[threecplus-agent] place_call manual_call_dial:", dialRes.status, dialText);
 
         if (dialRes.ok || dialRes.status === 204) {
+          await logCallToDb(supabaseAdmin, userData.account_id, userData.id, manualCall, "manual_mode");
           return new Response(JSON.stringify({ success: true, mode: "manual_mode", call: manualCall }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
