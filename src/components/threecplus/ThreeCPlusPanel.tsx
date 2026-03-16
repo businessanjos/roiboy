@@ -519,7 +519,7 @@ export function ThreeCPlusPanel() {
           )}
 
           {/* Ramal / Extension Config */}
-          {extensionLoaded && !savedExtension && !isInCall && (
+          {extensionLoaded && !savedExtension && !hasCallActivity && (
             <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3 space-y-2">
               <div className="flex items-center gap-2">
                 <Settings className="h-4 w-4 text-yellow-600" />
@@ -556,7 +556,7 @@ export function ThreeCPlusPanel() {
           )}
 
           {/* Saved extension display with edit */}
-          {savedExtension && !isInCall && (
+          {savedExtension && !hasCallActivity && (
             <div className="space-y-2 bg-muted/50 rounded-lg px-3 py-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -599,7 +599,7 @@ export function ThreeCPlusPanel() {
           )}
 
           {/* Manual Call - available without campaign, just like native 3C Plus */}
-          {canDialManually && !isInCall && (
+          {canDialManually && !hasCallActivity && (
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Ligação Manual
@@ -634,7 +634,7 @@ export function ThreeCPlusPanel() {
           )}
 
           {/* Exit manual mode button */}
-          {agentStatus === "manual_mode" && !isInCall && (
+          {agentStatus === "manual_mode" && !hasCallActivity && (
             <Button
               variant="outline"
               size="sm"
