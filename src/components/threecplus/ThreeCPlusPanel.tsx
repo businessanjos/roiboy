@@ -279,14 +279,11 @@ export function ThreeCPlusPanel() {
                       Carregando o ramal WebRTC antes de liberar o login.
                     </p>
                   )}
-                  {extensionLoaded && !isConnected && (
+                  {extensionLoaded && (
                     <p className="text-xs text-muted-foreground">
-                      Conectando os eventos em tempo real da 3C Plus.
-                    </p>
-                  )}
-                  {canLogin && (
-                    <p className="text-xs text-muted-foreground">
-                      Ramal e eventos prontos. Agora você já pode entrar na campanha.
+                      {isConnected
+                        ? "Ramal e eventos prontos. Selecione uma campanha para entrar."
+                        : "Ramal pronto. Selecione uma campanha para entrar."}
                     </p>
                   )}
                 </div>
