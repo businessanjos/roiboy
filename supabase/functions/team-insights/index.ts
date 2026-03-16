@@ -23,6 +23,17 @@ serve(async (req) => {
       });
     }
 
+    // Parse request body for scope
+    let scope = "team";
+    let memberName: string | null = null;
+    try {
+      const body = await req.json();
+      scope = body.scope || "team";
+      memberName = body.member_name || null;
+    } catch {
+      // no body = default team scope
+    }
+
     // Get user from token
     const supabase = createClient(supabaseUrl, supabaseKey);
     const anonClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
@@ -68,7 +79,14 @@ serve(async (req) => {
     const teamUsers = (allUsers || []).filter((u: any) =>
       SALES_TEAM_NAMES.some((n) => u.name?.toLowerCase().includes(n))
     );
-    const teamUserIds = teamUsers.map((u: any) => u.id);
+
+    // If individual scope, filter to just that member
+    const targetUsers = scope === "individual" && memberName
+      ? teamUsers.filter((u: any) => u.name?.toLowerCase().includes(memberName!.toLowerCase()))
+      : teamUsers;
+
+    const teamUserIds = targetUsers.map((u: any) => u.id);
+    const allTeamUserIds = teamUsers.map((u: any) => u.id);
 
     if (teamUserIds.length === 0) {
       return new Response(JSON.stringify({ insights: [] }), {
@@ -81,7 +99,7 @@ serve(async (req) => {
       .from("sales_team_careers")
       .select("user_id, cargo")
       .eq("account_id", accountId)
-      .in("user_id", teamUserIds);
+      .in("user_id", allTeamUserIds);
 
     const cargoMap: Record<string, string> = {};
     for (const c of careers || []) cargoMap[(c as any).user_id] = (c as any).cargo || "Closer";
@@ -154,7 +172,7 @@ serve(async (req) => {
     // Build performance summary per user
     const summaries: string[] = [];
 
-    for (const u of teamUsers) {
+    for (const u of targetUsers) {
       const userId = u.id;
       const cargo = cargoMap[userId] || "Closer";
       const userDeals = (dealsThisMonth || []).filter((d: any) => d.responsible_user_id === userId);
@@ -196,7 +214,20 @@ serve(async (req) => {
 
     const monthName = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
-    const systemPrompt = `Você é um analista de performance comercial sênior. Analise os dados da equipe de vendas e gere insights acionáveis.
+    const isIndividual = scope === "individual" && memberName;
+
+    const systemPrompt = isIndividual
+      ? `Você é um analista de performance comercial sênior. Analise os dados individuais de ${memberName} e gere insights acionáveis e personalizados.
+
+REGRAS:
+- Responda APENAS em português brasileiro
+- Gere entre 4 e 6 insights focados exclusivamente neste vendedor
+- Cada insight deve ter: um título curto (máx 8 palavras), uma descrição detalhada (2-3 frases), uma categoria (performance | comportamento | oportunidade | alerta), e um nível de prioridade (alta | média | baixa)
+- Compare com o mês anterior quando relevante
+- Seja específico: aponte pontos fortes, fraquezas, oportunidades de melhoria e riscos
+- Sugira ações concretas quando possível
+- Não invente dados que não foram fornecidos`
+      : `Você é um analista de performance comercial sênior. Analise os dados da equipe de vendas e gere insights acionáveis.
 
 REGRAS:
 - Responda APENAS em português brasileiro
@@ -204,17 +235,18 @@ REGRAS:
 - Cada insight deve ter: um título curto (máx 8 palavras), uma descrição detalhada (2-3 frases), uma categoria (performance | comportamento | oportunidade | alerta), e um nível de prioridade (alta | média | baixa)
 - Compare com o mês anterior quando relevante
 - Identifique padrões de comportamento (quem liga mais, quem fecha mais, quem tem melhor taxa de conversão)
+- Compare performances entre os membros da equipe
 - Destaque riscos e oportunidades
 - Seja direto e específico, cite nomes e números
 - Não invente dados que não foram fornecidos`;
 
-    const userPrompt = `Dados da equipe comercial para ${monthName}:
+    const userPrompt = `Dados ${isIndividual ? `individuais de ${memberName}` : "da equipe comercial"} para ${monthName}:
 
 ${summaries.join("\n\n")}
 
 Dia atual do mês: ${now.getDate()}/${new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()} (${Math.round((now.getDate() / new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()) * 100)}% do mês)
 
-Gere insights sobre a performance e comportamento da equipe.`;
+Gere insights sobre a performance ${isIndividual ? `individual de ${memberName}` : "e comportamento da equipe"}.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -298,7 +330,18 @@ Gere insights sobre a performance e comportamento da equipe.`;
       }
     }
 
-    return new Response(JSON.stringify({ insights, generated_at: new Date().toISOString() }), {
+    const generatedAt = new Date().toISOString();
+
+    // Save to history
+    await supabase.from("team_insights_history").insert({
+      account_id: accountId,
+      scope: isIndividual ? "individual" : "team",
+      member_name: isIndividual ? memberName : null,
+      insights: insights,
+      generated_at: generatedAt,
+    });
+
+    return new Response(JSON.stringify({ insights, generated_at: generatedAt }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

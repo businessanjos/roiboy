@@ -10051,6 +10051,44 @@ export type Database = {
           },
         ]
       }
+      team_insights_history: {
+        Row: {
+          account_id: string
+          created_at: string
+          generated_at: string
+          id: string
+          insights: Json
+          member_name: string | null
+          scope: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          generated_at?: string
+          id?: string
+          insights?: Json
+          member_name?: string | null
+          scope?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          generated_at?: string
+          id?: string
+          insights?: Json
+          member_name?: string | null
+          scope?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_insights_history_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_roles: {
         Row: {
           account_id: string
