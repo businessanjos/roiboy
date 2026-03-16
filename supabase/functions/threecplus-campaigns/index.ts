@@ -99,10 +99,6 @@ Deno.serve(async (req) => {
 
     const userId = user.id;
 
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
 
     // Fetch user with account_id
     const { data: userData } = await supabaseAdmin
