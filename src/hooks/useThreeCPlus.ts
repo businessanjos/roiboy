@@ -176,7 +176,7 @@ export function useThreeCPlus() {
       setIsConnected(true);
     });
 
-    socket.io.on("upgrade", (transport) => {
+    socket.io.engine.on("upgrade", (transport: { name: string }) => {
       console.log("[useThreeCPlus] Socket.io upgraded to", transport.name);
     });
 
