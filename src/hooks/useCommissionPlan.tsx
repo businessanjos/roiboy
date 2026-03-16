@@ -549,6 +549,8 @@ export function useCommissionPlan(cargo: string = "Closer") {
 
       // Calculate for each user
       for (const user of users) {
+        // Determine if this specific user is an SDR (George) or Closer
+        const isUserSDR = hasSDRModel && user.name?.toLowerCase().includes("george");
         const userWonDeals = wonDeals.filter((d: any) => d.responsible_user_id === user.id);
         const wonValue = userWonDeals.reduce((sum: number, d: any) => sum + (d.value || 0), 0);
 
