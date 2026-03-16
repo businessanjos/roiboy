@@ -375,7 +375,7 @@ REGRAS CRÍTICAS:
 
 REGRAS:
 - Responda APENAS em português brasileiro
-- Gere entre 4 e 8 insights
+- Gere exatamente 10 insights
 - Compare performances entre os membros
 - Identifique padrões de comportamento
 - Seja direto e específico, cite nomes e números
