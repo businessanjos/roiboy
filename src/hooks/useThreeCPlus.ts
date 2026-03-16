@@ -630,6 +630,7 @@ export function useThreeCPlus() {
     isConnected,
     loading,
     callTimer,
+    savedExtension,
     // Actions
     connect,
     connectSocket,
@@ -642,5 +643,7 @@ export function useThreeCPlus() {
     enterPause,
     exitPause,
     exitManualMode,
+    saveExtension,
+    loadExtension,
   };
 }
