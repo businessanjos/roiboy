@@ -449,23 +449,25 @@ export function useThreeCPlus() {
       const data = await invokeAgent("login", { campaign_id: campaign.id });
       if (data?.success) {
         setSelectedCampaign(campaign);
-        setAgentStatus("idle");
+        setAgentStatus("connecting");
 
         const campData = await invokeAgent("get_logged_campaign");
         if (campData?.success && campData.campaign?.work_breaks) {
           setWorkBreaks(campData.campaign.work_breaks);
         }
 
-        toast.success("Conectado à campanha", { description: campaign.name });
+        toast.success("Conectado à campanha", {
+          description: "Aguardando o agente ficar ocioso para liberar a discagem.",
+        });
 
         if (socketRef.current?.connected) {
-          waitForAgentStatus(["idle"], 15000).then((becameIdle) => {
-            if (!becameIdle) {
-              console.warn("[useThreeCPlus] Socket não confirmou idle, mantendo sessão validada pela API.");
+          waitForAgentStatus(["idle", "manual_mode"], 15000).then((becameReady) => {
+            if (!becameReady) {
+              console.warn("[useThreeCPlus] 3C Plus não confirmou estado pronto após login; mantendo status de preparação.");
             }
           });
         } else {
-          console.log("[useThreeCPlus] Login sem socket — sessão validada pela API.");
+          console.log("[useThreeCPlus] Login confirmado pela API; aguardando agente ficar pronto para discagem.");
         }
       } else {
         toast.error("Falha ao entrar na campanha", { description: data?.error });
