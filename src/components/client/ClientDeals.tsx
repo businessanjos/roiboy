@@ -156,7 +156,7 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
       .select(`
         *,
         stage:deal_stages(id, name, color),
-        responsible_user:users(id, name)
+        responsible_user:users!deals_responsible_user_id_fkey(id, name)
       `)
       .in("client_id", linkedClientIds)
       .order("created_at", { ascending: false });
