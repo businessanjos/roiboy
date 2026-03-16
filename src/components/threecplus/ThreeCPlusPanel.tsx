@@ -416,8 +416,8 @@ export function ThreeCPlusPanel() {
             </div>
           )}
 
-          {/* Manual Call */}
-          {selectedCampaign && canDialManually && !isInCall && (
+          {/* Manual Call - available without campaign, just like native 3C Plus */}
+          {canDialManually && !isInCall && (
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Ligação Manual

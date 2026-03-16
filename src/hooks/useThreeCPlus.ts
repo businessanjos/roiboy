@@ -576,7 +576,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent, selectedCampaign, waitForAgentStatus]);
+  }, [invokeAgent, selectedCampaign]);
 
   // Hangup
   const hangup = useCallback(async () => {
