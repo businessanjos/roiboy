@@ -914,12 +914,13 @@ export function useCommissionPlan(cargo: string = "Closer") {
     }
   }, [accountId, fetchPlan]);
 
-  // Fetch periods only after plan is loaded to filter by plan_id
+  // Fetch periods and deal entries only after plan is loaded to filter by plan_id
   useEffect(() => {
     if (plan?.id) {
       fetchPeriods(plan.id);
+      fetchDealEntries(plan.id);
     }
-  }, [plan?.id, fetchPeriods]);
+  }, [plan?.id, fetchPeriods, fetchDealEntries]);
 
   // Auto-calculate retroactive months after plan loads
   const retroCalcDone = useRef(false);
