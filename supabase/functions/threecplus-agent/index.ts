@@ -325,10 +325,11 @@ Deno.serve(async (req) => {
         try { const parsed = JSON.parse(text); return parsed?.detail || parsed?.title || parsed?.message || fallback; } catch { return text?.trim() || fallback; }
       };
 
-      const { extension } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, apiToken);
+      const { extension, password } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, apiToken);
 
       const click2callPayload: Record<string, string> = { phone: cleanPhone };
       if (extension) click2callPayload.extension = extension;
+      if (password) click2callPayload.password = password;
 
       const click2callRes = await fetch(`${apiBase}/click2call?api_token=${apiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
