@@ -153,7 +153,7 @@ export function ThreeCPlusPanel() {
   const statusInfo = getStatusInfo(agentStatus);
   const isInCall = agentStatus === "on_call" || agentStatus === "manual_call_connected";
   const canLogin = !loading && extensionLoaded;
-  const canDialManually = Boolean(selectedCampaign) && (agentStatus === "idle" || agentStatus === "manual_mode" || agentStatus === "connecting");
+  const canDialManually = extensionLoaded && (agentStatus === "offline" || agentStatus === "idle" || agentStatus === "manual_mode" || agentStatus === "connecting");
   const displayStatusInfo =
     agentStatus !== "offline"
       ? statusInfo
