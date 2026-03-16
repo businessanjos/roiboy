@@ -216,6 +216,8 @@ export function DealDetailSheet({
   const [newNote, setNewNote] = useState("");
   const [eventType, setEventType] = useState("note");
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
+  const [teamMembers, setTeamMembers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
+  const [updatingSDR, setUpdatingSDR] = useState(false);
   const [changingStage, setChangingStage] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
