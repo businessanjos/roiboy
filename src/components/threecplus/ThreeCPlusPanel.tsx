@@ -132,12 +132,14 @@ export function ThreeCPlusPanel() {
   // Login to selected campaign
   const handleLogin = useCallback(
     async (campaignId: string) => {
+      if (!extensionLoaded || !isConnected) return;
+
       const campaign = campaigns.find((c) => String(c.id) === campaignId);
       if (campaign) {
         await loginCampaign(campaign);
       }
     },
-    [campaigns, loginCampaign]
+    [campaigns, extensionLoaded, isConnected, loginCampaign]
   );
 
   // Make manual call
@@ -150,7 +152,7 @@ export function ThreeCPlusPanel() {
   const statusInfo = getStatusInfo(agentStatus);
   const StatusIcon = statusInfo.icon;
   const isInCall = agentStatus === "on_call" || agentStatus === "manual_call_connected";
-  const canLogin = !loading;
+  const canLogin = !loading && extensionLoaded && isConnected;
   const canDialManually = agentStatus === "idle" || agentStatus === "manual_mode";
 
   // Floating button when panel is closed
@@ -278,6 +280,11 @@ export function ThreeCPlusPanel() {
                       Conectando os eventos em tempo real da 3C Plus.
                     </p>
                   )}
+                  {canLogin && (
+                    <p className="text-xs text-muted-foreground">
+                      Ramal e eventos prontos. Agora você já pode entrar na campanha.
+                    </p>
+                  )}
                 </div>
               )}
             </div>
@@ -309,10 +316,10 @@ export function ThreeCPlusPanel() {
             <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Aguardando ramal ficar ocioso
+                Confirmando login do agente
               </div>
               <p className="text-xs text-muted-foreground">
-                A discagem manual será liberada assim que a 3C Plus confirmar o login do agente.
+                A 3C Plus só libera a discagem depois do evento real de agente ocioso.
               </p>
             </div>
           )}

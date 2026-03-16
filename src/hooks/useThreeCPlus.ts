@@ -381,16 +381,18 @@ export function useThreeCPlus() {
           setWorkBreaks(campData.campaign.work_breaks);
         }
 
-        // Wait for socket to confirm idle; if it doesn't, force idle since API login succeeded (204)
-        const becameIdle = await waitForAgentStatus(["idle"], 10000);
+        // /agent/login is async in 3C Plus; only the socket event confirms the agent is really ready.
+        const becameIdle = await waitForAgentStatus(["idle"], 15000);
 
         if (becameIdle) {
           toast.success("Conectado à campanha", { description: campaign.name });
         } else {
-          // API returned 204 = login succeeded. Force idle so user can operate.
-          console.warn("[useThreeCPlus] Socket did not confirm idle within timeout. Forcing idle since API login succeeded.");
-          setAgentStatus("idle");
-          toast.success("Conectado à campanha", { description: campaign.name });
+          console.warn("[useThreeCPlus] Login aceito pela API, mas o ramal não confirmou agent-is-idle.");
+          setSelectedCampaign(null);
+          setAgentStatus("offline");
+          toast.error("Login da campanha não foi confirmado", {
+            description: "Aguarde o ramal WebRTC ficar pronto e entre novamente na campanha.",
+          });
         }
       } else {
         toast.error("Falha ao entrar na campanha", { description: data?.error });
