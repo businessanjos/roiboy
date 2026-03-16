@@ -294,8 +294,6 @@ export function useCommissionPlan(cargo: string = "Closer") {
 
         const userMap = new Map((users || []).map((u: any) => [u.id, u]));
 
-        const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
-
         setPeriods(
           monthlyData
             .map((d: any) => ({
@@ -304,9 +302,7 @@ export function useCommissionPlan(cargo: string = "Closer") {
               user_avatar: (userMap.get(d.user_id) as any)?.avatar_url || null,
               triggers_met: d.triggers_met || {},
             }))
-            .filter((d: any) =>
-              SALES_TEAM_NAMES.some((n) => d.user_name?.toLowerCase().includes(n))
-            )
+            .filter((d: any) => matchesCargoUser(d.user_name, cargo))
         );
       }
     } catch (err) {
