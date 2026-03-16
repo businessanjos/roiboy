@@ -316,7 +316,7 @@ export function DealDetailSheet({
       .select("id, name, avatar_url")
       .eq("account_id", userData.account_id)
       .eq("is_active", true)
-      .order("name");
+      .order("name") as any;
     setTeamMembers(data || []);
   };
 
