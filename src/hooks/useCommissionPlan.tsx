@@ -367,15 +367,15 @@ export function useCommissionPlan(cargo: string = "Closer") {
           .in("id", userIds);
         const userMap = new Map((users || []).map((u: any) => [u.id, u]));
 
-        setDealEntries(
-          data
-            .map((d: any) => ({
-              ...d,
-              user_name: (userMap.get(d.user_id) as any)?.name || "Sem nome",
-              user_avatar: (userMap.get(d.user_id) as any)?.avatar_url || null,
-            }))
-            .filter((d: any) => matchesCargoUser(d.user_name, cargo))
-        );
+        const mappedEntries = data
+          .map((d: any) => ({
+            ...d,
+            user_name: (userMap.get(d.user_id) as any)?.name || "Sem nome",
+            user_avatar: (userMap.get(d.user_id) as any)?.avatar_url || null,
+          }))
+          .filter((d: any) => matchesCargoUser(d.user_name, cargo));
+
+        setDealEntries(dedupeRecords(mappedEntries, (entry) => `${entry.user_id}-${entry.deal_id || entry.contract_id || entry.id}`));
       }
     } catch (err) {
       console.error("Error fetching deal entries:", err);
