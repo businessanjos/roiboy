@@ -336,9 +336,6 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const cleanPhone = phone.replace(/\D/g, "");
-      const extractError = (text: string, fallback: string) => {
-        try { const parsed = JSON.parse(text); return parsed?.detail || parsed?.title || parsed?.message || fallback; } catch { return text?.trim() || fallback; }
-      };
 
       const { extension, password } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, apiToken);
 
@@ -365,13 +362,11 @@ Deno.serve(async (req) => {
       const enterText = await enterRes.text();
       console.log("[threecplus-agent] place_call manual_call_enter:", enterRes.status, enterText);
 
-      const agentAlreadyReadyForManualDial =
-        enterRes.status === 422 &&
-        /n[ãa]o\s+est[áa]\s+ocioso|modo manual|manual_call|j[áa]\s+est[áa]/i.test(enterText);
+      const agentAlreadyReadyForManualDial = isAgentReadyForManualDial(enterRes.status, enterText);
 
       if (enterRes.ok || enterRes.status === 204 || agentAlreadyReadyForManualDial) {
         if (agentAlreadyReadyForManualDial) {
-          console.log("[threecplus-agent] place_call proceeding to dial even though enter returned a non-idle state");
+          console.log("[threecplus-agent] place_call proceeding to dial because agent is already in manual dialing state");
         }
 
         const dialRes = await fetch(`${apiBase}/agent/manual_call/dial?api_token=${apiToken}`, {
@@ -385,17 +380,17 @@ Deno.serve(async (req) => {
           return new Response(JSON.stringify({ success: true, mode: "manual_mode" }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
-        return new Response(JSON.stringify({ success: false, error: extractError(dialText, "A 3C Plus recusou a chamada manual."), status: dialRes.status }),
+        return new Response(JSON.stringify({ success: false, error: extractApiMessage(dialText, "A 3C Plus recusou a chamada manual."), status: dialRes.status }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      const click2callNeedsExtension = click2callRes.status === 422 && /extension/i.test(click2callText);
+      const click2callNeedsExtension = click2callRes.status === 422 && /extension/i.test(extractApiMessage(click2callText, click2callText));
       return new Response(
         JSON.stringify({
           success: false,
           error: click2callNeedsExtension
             ? "A 3C Plus exigiu o ramal do agente para a ligação direta, mas ele não foi identificado automaticamente."
-            : extractError(enterText, extractError(click2callText, "Não foi possível iniciar a chamada.")),
+            : extractApiMessage(enterText, extractApiMessage(click2callText, "Não foi possível iniciar a chamada.")),
           extension_resolved: Boolean(extension),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
