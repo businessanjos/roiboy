@@ -57,7 +57,7 @@ export function CommissionDashboard({
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
 
-  const isSDRModel = (plan as any).commission_model === "sdr_activity";
+  const hasSDRModel = (plan as any).commission_model === "sdr_activity";
   const sdrValuePerCall = (plan as any).sdr_value_per_call || 0;
   const sdrValuePerSale = (plan as any).sdr_value_per_sale || 0;
 
@@ -66,19 +66,29 @@ export function CommissionDashboard({
     return periods.filter((p) => p.period_start === selectedMonthKey);
   }, [periods, selectedMonthKey]);
 
-  const totals = useMemo(() => {
-    if (isSDRModel) {
-      return selectedPeriods.reduce(
-        (acc, p) => ({
-          totalCommission: acc.totalCommission + p.total_commission,
-          attendedCalls: acc.attendedCalls + (Number((p.triggers_met as any)?.sdr_attended_calls_count) || 0),
-          originatedSales: acc.originatedSales + (Number((p.triggers_met as any)?.sdr_originated_sales_count) || 0),
-          totalCount: acc.totalCount + 1,
-        }),
-        { totalCommission: 0, attendedCalls: 0, originatedSales: 0, totalCount: 0 }
-      );
-    }
-    return selectedPeriods.reduce(
+  // Split periods by role
+  const sdrPeriods = useMemo(() => 
+    selectedPeriods.filter((p) => (p.triggers_met as any)?.is_sdr === true),
+    [selectedPeriods]
+  );
+  const closerPeriods = useMemo(() => 
+    selectedPeriods.filter((p) => (p.triggers_met as any)?.is_sdr !== true),
+    [selectedPeriods]
+  );
+
+  const sdrTotals = useMemo(() => {
+    return sdrPeriods.reduce(
+      (acc, p) => ({
+        totalCommission: acc.totalCommission + p.total_commission,
+        attendedCalls: acc.attendedCalls + (Number((p.triggers_met as any)?.sdr_attended_calls_count) || 0),
+        originatedSales: acc.originatedSales + (Number((p.triggers_met as any)?.sdr_originated_sales_count) || 0),
+      }),
+      { totalCommission: 0, attendedCalls: 0, originatedSales: 0 }
+    );
+  }, [sdrPeriods]);
+
+  const closerTotals = useMemo(() => {
+    return closerPeriods.reduce(
       (acc, p) => ({
         wonValue: acc.wonValue + p.won_value,
         totalCommission: acc.totalCommission + p.total_commission,
@@ -87,7 +97,7 @@ export function CommissionDashboard({
       }),
       { wonValue: 0, totalCommission: 0, qualifiedCount: 0, totalCount: 0 }
     );
-  }, [selectedPeriods, isSDRModel]);
+  }, [closerPeriods]);
 
   const goToPreviousMonth = () => {
     if (selectedMonth === 0) {
