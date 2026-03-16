@@ -163,6 +163,39 @@ const matchesCargoUser = (name: string | null | undefined, cargo: string) => {
   return cargo === "SDR" ? isSDRUserName(name) : !isSDRUserName(name);
 };
 
+const getRecordTimestamp = (record: any) => {
+  const value = record?.updated_at || record?.created_at;
+  return value ? new Date(value).getTime() : 0;
+};
+
+const dedupeRecords = <T extends Record<string, any>>(
+  items: T[],
+  getKey: (item: T) => string,
+) => {
+  const map = new Map<string, T>();
+
+  for (const item of items) {
+    const key = getKey(item);
+    const existing = map.get(key);
+
+    if (!existing) {
+      map.set(key, item);
+      continue;
+    }
+
+    const existingTimestamp = getRecordTimestamp(existing);
+    const nextTimestamp = getRecordTimestamp(item);
+    const existingValue = Number(existing.total_commission ?? existing.commission_total ?? 0);
+    const nextValue = Number(item.total_commission ?? item.commission_total ?? 0);
+
+    if (nextTimestamp > existingTimestamp || (nextTimestamp === existingTimestamp && nextValue >= existingValue)) {
+      map.set(key, item);
+    }
+  }
+
+  return Array.from(map.values());
+};
+
 export function useCommissionPlan(cargo: string = "Closer") {
   const { currentUser } = useCurrentUser();
   const [plan, setPlan] = useState<CommissionPlan | null>(null);
