@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
 
     // Actions that don't need integration
     if (action === "save_extension") {
-      const { extension: ext } = body;
+      const { extension: ext, extension_password: extPwd } = body;
       if (!ext) {
         return new Response(
           JSON.stringify({ success: false, error: "extension é obrigatório" }),
@@ -184,7 +184,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       const prevMeta = asRecord(existing?.metadata) ?? {};
-      const nextMetadata = { ...prevMeta, extension: String(ext).trim() };
+      const nextMetadata = { ...prevMeta, extension: String(ext).trim(), ...(extPwd ? { extension_password: String(extPwd).trim() } : {}) };
 
       await supabaseAdmin
         .from("user_integrations")
