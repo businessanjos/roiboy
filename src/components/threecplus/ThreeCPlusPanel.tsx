@@ -80,6 +80,7 @@ export function ThreeCPlusPanel() {
     loading,
     callTimer,
     savedExtension,
+    savedExtensionPassword,
     connect,
     connectSocket,
     fetchCampaigns,

@@ -643,6 +643,7 @@ export function useThreeCPlus() {
     loading,
     callTimer,
     savedExtension,
+    savedExtensionPassword,
     // Actions
     connect,
     connectSocket,
