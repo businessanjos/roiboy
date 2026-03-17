@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useSector } from "@/contexts/SectorContext";
 import { sectors, SectorId } from "@/config/sectors";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+
+// Sectors accessible by SDR and Closer roles
+const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "roychat", "configuracoes"];
 
 export default function Sectors() {
   const navigate = useNavigate();
@@ -37,11 +40,33 @@ export default function Sectors() {
     navigate(defaultRoute);
   };
 
+  // Check if user is SDR or Closer (restricted view)
+  const isSalesRep = useMemo(() => {
+    const role = currentUser?.team_role_name;
+    return role === "SDR" || role === "Closer";
+  }, [currentUser?.team_role_name]);
+
+  // Check if user is admin/manager (full view)
+  const isManager = useMemo(() => {
+    const role = currentUser?.role;
+    const teamRole = currentUser?.team_role_name;
+    return role === "admin" || currentUser?.is_also_admin || 
+           teamRole === "Gestor" || teamRole === "Admin";
+  }, [currentUser?.role, currentUser?.is_also_admin, currentUser?.team_role_name]);
+
+  // Filter sectors based on role
+  const availableSectors = useMemo(() => {
+    if (isSalesRep && !isManager) {
+      return sectors.filter(s => SALES_REP_ALLOWED_SECTORS.includes(s.id));
+    }
+    return sectors;
+  }, [isSalesRep, isManager]);
+
   // Core 4 areas (Marketing, Vendas, Operações, Finanças)
   const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro"];
-  const coreSectors = coreAreas.map(id => sectors.find(s => s.id === id)!).filter(Boolean);
-  const otherSectors = sectors.filter(s => !coreAreas.includes(s.id) && s.id !== "royzapp" && s.id !== "roychat");
-  const toolSectors = sectors.filter(s => s.id === "royzapp" || s.id === "roychat");
+  const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);
+  const otherSectors = availableSectors.filter(s => !coreAreas.includes(s.id) && s.id !== "royzapp" && s.id !== "roychat");
+  const toolSectors = availableSectors.filter(s => s.id === "royzapp" || s.id === "roychat");
 
   return (
     <div className="min-h-screen bg-background">
