@@ -142,6 +142,10 @@
     --input: 20 8% 18%;
     --ring: 39 60% 55%;
 
+    /* Roy Brown highlight - lighter for dark mode */
+    --roy-brown: 24 60% 40%;
+    --roy-brown-foreground: 45 25% 95%;
+
     --success: 152 60% 42%;
     --success-muted: 152 35% 15%;
     --warning: 39 60% 55%;
