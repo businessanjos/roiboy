@@ -200,7 +200,14 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     
     // If we have a current sector, use its nav items
     if (currentSector) {
-      const sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
+      let sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
+      
+      // Hide "Gestão" (/sales-team) from sales reps (SDR, Closer, Vendas, Vendedor)
+      const isSalesRepRole = !!teamRoleName && SALES_REP_ROLES.includes(teamRoleName) && 
+        !(currentUser?.role === "admin" || currentUser?.is_also_admin);
+      if (isSalesRepRole) {
+        sectorItems = sectorItems.filter(item => item.to !== "/sales-team");
+      }
       
       // Admins, role-based access, or during loading - show all sector items
       if (showAllItems) return sectorItems;
