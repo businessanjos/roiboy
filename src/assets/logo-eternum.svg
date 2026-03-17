@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Camada_1" data-name="Camada 1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 822.05 822.05">
+  <defs>
+    <style>
+      .cls-1, .cls-2 {
+        fill: none;
+      }
+
+      .cls-3 {
+        clip-path: url(#clippath);
+      }
+
+      .cls-4 {
+        fill: url(#Gradiente_sem_nome_3);
+      }
+
+      .cls-5 {
+        fill: #d7b46a;
+      }
+
+      .cls-6 {
+        fill: #3c3c3b;
+      }
+
+      .cls-2 {
+        clip-rule: evenodd;
+      }
+
+      .cls-7 {
+        clip-path: url(#clippath-1);
+      }
+
+      .cls-8 {
+        clip-path: url(#clippath-3);
+      }
+
+      .cls-9 {
+        clip-path: url(#clippath-2);
+      }
+    </style>
+    <clipPath id="clippath">
+      <rect class="cls-1" width="822.05" height="822.05"/>
+    </clipPath>
+    <clipPath id="clippath-1">
+      <path class="cls-2" d="m490.79,415.01c-1.18-1.63-2.93-3.66-4.23-5.36-3.16-4.13-6.73-7.6-11.83-7.4-9.63.38-12.46,11.82-6.02,17.23,2.67,2.24,5.91,2.69,9.19,2.1,4.55-.82,9.42-3.76,12.9-6.57m30.64.45c1.5-2.35,1.57-5.06.15-7.94-.33-3.67-1.6-7-4.34-9.81-1.79-1.41-3.01-1.32-3.45.85l.04.03c-.49.7-3.19,2.2-6.29,3.92-4.27,2.37-9.19,5.1-11.45,8.27-.51.72-.34,1.71.37,2.22.72.51,1.71.34,2.22-.37,1.84-2.58,6.42-5.12,10.4-7.33,2.95-1.64,5.6-3.11,6.99-4.62l.45.42c.54.98.85,1.94.95,2.87.42,3.83-2.64,7.14-7.22,9.07,2.11-.09,4.23-.35,6.43-1.37,1.04-.5,2.11-1.17,3.2-2.03.21,3.74-2.24,6.14-6.11,7.85-.7.31-1.45.6-2.25.86,1.51.61,3.37.42,5.52-.4-.44,1.01-1.61,1.99-3.14,2.78-1.98,1.02-4.47,1.64-6.82,1.57-6.98-.21-11.19-5.91-15.29-11.45-4.29-5.8-8.47-11.45-15.73-11.77-.48-.03-.97-.03-1.47-.01-12.56.5-16.6,15.59-7.94,22.86,3.5,2.94,7.64,3.53,11.8,2.79,5.16-.93,10.32-3.98,14.14-7.07.07-.06.15-.13.26-.21,3.61,4.32,7.82,7.86,14.16,8.05,2.88.09,5.94-.67,8.36-1.92,2.4-1.24,4.25-3.02,4.84-5.03.47-.93.88-1.95,1.21-3.07Z"/>
+    </clipPath>
+    <linearGradient id="Gradiente_sem_nome_3" data-name="Gradiente sem nome 3" x1="435.1" y1="410.93" x2="513.31" y2="410.93" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1d1d1b"/>
+      <stop offset="1" stop-color="#d7b46a"/>
+    </linearGradient>
+    <clipPath id="clippath-2">
+      <polygon class="cls-2" points="490.79 415.01 492.85 417.42 488.97 420.26 486.38 418.11 490.79 415.01"/>
+    </clipPath>
+    <clipPath id="clippath-3">
+      <rect class="cls-1" x="486.38" y="415.01" width="6.47" height="5.26"/>
+    </clipPath>
+  </defs>
+  <g class="cls-3">
+    <g class="cls-7">
+      <rect class="cls-4" x="458" y="396.3" width="65.01" height="29.26"/>
+    </g>
+    <g class="cls-9">
+      <g class="cls-8">
+        <image width="28" height="23" transform="translate(486.38 415.01) scale(.23)" xlink:href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABoAAAAXCAYAAAAV1F8QAAAACXBIWXMAAC/7AAAv+wFonI+gAAAC1ElEQVRIiaWU3UtUQRjGnzl7Trurqwmi1i4KgqJmVLqmRRYtK0FGFH3cFFJ035/SVTdBBEZEF4rdSIEQGRXiBilWkKuVRqWilmLa7vmYN2bmrGh+dHZ9D4c5w3z85n3e5wwjIkKOQdzB08ed+DbxDkX5DIwxMBAYU/uJPohkq+cKWVqcxb07tzA6PgnbcnC8MYygn205P6eMku8H8Ojhffxe/gPT5kibNohzxJrC0H3YNKOsQJw7eNb7AInEACyLw7Qd2aYtW8ICfgOtB0ugMdoA8izd0sIMervvYmp6CrruQ+Z4oiVS/VTKxFByAdGa3RvWewJNJt+gv68LKyspGD5N5AaQpkASRuBEIDIw/2sZ498DqIr4vYO4Y2PoVReSHxIAJxg6czfXQCS+mcyE69qaDHV8+jqPULAUe4uN/4OWfk3jdV8nfs7NyOIKiJJJ7i+zEDBDQpV0JB4XOPxxBqHGCAoCqr+pGSZGB5F40QPLMiHP7bqIE2DZ5L4clkPqtRyYVsYYDmybI5W24Dgc8eYwdun/uC61soi3L3vwZWzEPQbWgSSMQ22+CoOCiG+bwzQd6UZTwm34NA2xaJmSTrDGRp5jeLAPZjqlbLlFSC9I24pxTWgCyhhDyGdkiqX2FcDJOUCfn/6MRH835mZ/bAtYG7oGkJ6Zy0BcwZQ25MpMsnaHD9XicsdN6E+6bq8OZhPiBpAQCGszWT+SfTkAn0/D6XPtiJ64qH5YIoLHRNYFc2HCeSobrqQER1FhIc5fuo6yivrVJTlfqiI0aXtVG07qtNVVVTh55gYCeetvhx2BFIxJmJDnyLEY6pvPblrrHYNEhEIhtMSuoLS8bss5OwbtiVSiOX4NgbzCbeflDBLy7I/GUdfU7um3yAkUzA/haPwqSiK1ntdkDQqXV6OlrQP+YEFW6zyDdMPAgaY21DScyvZs3kEVlfvQ0HoBeQXFOUEA4C/qzmkhvsFlBwAAAABJRU5ErkJggg=="/>
+      </g>
+    </g>
+    <polygon class="cls-6" points="189.07 421.62 189.07 424.82 170.34 424.82 170.34 399.02 188.55 399.02 188.55 402.22 174.03 402.22 174.03 410.15 186.97 410.15 186.97 413.28 174.03 413.28 174.03 421.62 189.07 421.62"/>
+    <polygon class="cls-6" points="216.22 402.22 207.37 402.22 207.37 399.02 228.72 399.02 228.72 402.22 219.87 402.22 219.87 424.82 216.22 424.82 216.22 402.22"/>
+    <polygon class="cls-6" points="267.51 421.62 267.51 424.82 248.79 424.82 248.79 399.02 267 399.02 267 402.22 252.47 402.22 252.47 410.15 265.41 410.15 265.41 413.28 252.47 413.28 252.47 421.62 267.51 421.62"/>
+    <path class="cls-6" d="m306.79,424.82l-5.57-7.93c-.52.04-1.07.07-1.62.07h-6.38v7.85h-3.69v-25.81h10.06c6.71,0,10.76,3.39,10.76,9,0,3.98-2.06,6.86-5.68,8.15l6.12,8.66h-4.02Zm-.11-16.81c0-3.69-2.47-5.79-7.19-5.79h-6.27v11.61h6.27c4.72,0,7.19-2.14,7.19-5.82Z"/>
+    <polygon class="cls-6" points="354.58 399.02 354.58 424.82 351.56 424.82 336.08 405.58 336.08 424.82 332.39 424.82 332.39 399.02 335.41 399.02 350.9 418.26 350.9 399.02 354.58 399.02"/>
+    <path class="cls-6" d="m378.15,413.69v-14.67h3.69v14.52c0,5.71,2.62,8.29,7.26,8.29s7.3-2.58,7.3-8.29v-14.52h3.58v14.67c0,7.48-4.09,11.43-10.91,11.43s-10.91-3.94-10.91-11.43Z"/>
+    <polygon class="cls-6" points="447.55 424.82 447.51 406.02 438.15 421.69 436.45 421.69 427.13 406.13 427.13 424.82 423.59 424.82 423.59 399.02 426.61 399.02 437.38 417.15 448.03 399.02 451.05 399.02 451.09 424.82 447.55 424.82"/>
+    <path class="cls-5" d="m532.8,411.92c0-7.56,5.75-13.12,13.53-13.12,3.76,0,7.15,1.25,9.44,3.76l-1.73,1.73c-2.1-2.14-4.68-3.06-7.63-3.06-6.23,0-10.91,4.57-10.91,10.69s4.68,10.69,10.91,10.69c2.95,0,5.53-.92,7.63-3.1l1.73,1.73c-2.29,2.51-5.68,3.8-9.47,3.8-7.74,0-13.49-5.57-13.49-13.12Z"/>
+    <polygon class="cls-5" points="567.56 399.02 570.29 399.02 570.29 422.46 584.74 422.46 584.74 424.82 567.56 424.82 567.56 399.02"/>
+    <path class="cls-5" d="m594.55,413.8v-14.78h2.73v14.67c0,6.12,2.88,8.92,7.89,8.92s7.93-2.8,7.93-8.92v-14.67h2.65v14.78c0,7.41-3.98,11.24-10.58,11.24s-10.62-3.83-10.62-11.24Z"/>
+    <path class="cls-5" d="m651.51,417.93c0,4.39-3.24,6.89-9.7,6.89h-11.87v-25.81h11.13c5.75,0,9.07,2.43,9.07,6.64,0,2.95-1.59,4.9-3.94,5.86,3.32.74,5.31,2.91,5.31,6.41Zm-18.84-16.66v9.36h8.22c4.13,0,6.53-1.59,6.53-4.68s-2.4-4.68-6.53-4.68h-8.22Zm16.11,16.44c0-3.35-2.47-4.83-7-4.83h-9.11v9.7h9.11c4.53,0,7-1.47,7-4.87Z"/>
+  </g>
+</svg>

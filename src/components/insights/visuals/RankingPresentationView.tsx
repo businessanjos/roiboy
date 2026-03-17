@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { FormatType, VisualConfig } from "../visual-builder/types";
 import { PresentationOptions } from "./RankingPresentationDialog";
-import { RoyLogo } from "@/components/ui/roy-logo";
+import logoEternum from "@/assets/logo-eternum.svg";
 import { cn } from "@/lib/utils";
 
 interface AggregatedDataPoint {
@@ -210,7 +210,7 @@ export function RankingPresentationView({
       {/* Header: Logo + Title + Clock */}
       <div className="flex items-center justify-between px-8 pt-6 pb-2 flex-shrink-0">
         <div className="flex items-center gap-4">
-          <RoyLogo size="lg" />
+          <img src={logoEternum} alt="Eternum" className="h-10 w-auto" />
           <div>
             <div className="flex items-center gap-2">
               <Trophy className="h-6 w-6 text-primary" />
