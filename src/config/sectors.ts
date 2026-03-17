@@ -24,6 +24,7 @@ import {
   UserCheck,
   Instagram,
   LayoutGrid,
+  Video,
   type LucideIcon,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
