@@ -320,16 +320,16 @@ export function ProfileContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="account-name">Nome / Razão Social *</Label>
-                  <Input id="account-name" value={accountForm.name} onChange={(e) => handleAccountChange("name", e.target.value)} placeholder="Nome da empresa ou pessoa" />
+                  <Input id="account-name" value={accountForm.name} onChange={(e) => handleAccountChange("name", e.target.value)} placeholder="Nome da empresa ou pessoa" disabled={isSalesRep} className={isSalesRep ? "bg-muted" : ""} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="contact_name">Nome do Responsável</Label>
-                  <Input id="contact_name" value={accountForm.contact_name} onChange={(e) => handleAccountChange("contact_name", e.target.value)} placeholder="Nome do contato principal" />
+                  <Input id="contact_name" value={accountForm.contact_name} onChange={(e) => handleAccountChange("contact_name", e.target.value)} placeholder="Nome do contato principal" disabled={isSalesRep} className={isSalesRep ? "bg-muted" : ""} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="document_type">Tipo de Documento</Label>
-                  <Select value={accountForm.document_type} onValueChange={(value) => handleAccountChange("document_type", value)}>
-                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <Select value={accountForm.document_type} onValueChange={(value) => handleAccountChange("document_type", value)} disabled={isSalesRep}>
+                    <SelectTrigger className={isSalesRep ? "bg-muted" : ""}><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="cpf">CPF</SelectItem>
                       <SelectItem value="cnpj">CNPJ</SelectItem>
@@ -338,7 +338,7 @@ export function ProfileContent() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="document">{accountForm.document_type === "cnpj" ? "CNPJ" : "CPF"}</Label>
-                  <Input id="document" value={accountForm.document} onChange={(e) => handleAccountChange("document", e.target.value)} placeholder={accountForm.document_type === "cnpj" ? "00.000.000/0000-00" : "000.000.000-00"} />
+                  <Input id="document" value={accountForm.document} onChange={(e) => handleAccountChange("document", e.target.value)} placeholder={accountForm.document_type === "cnpj" ? "00.000.000/0000-00" : "000.000.000-00"} disabled={isSalesRep} className={isSalesRep ? "bg-muted" : ""} />
                 </div>
               </div>
             </CardContent>
