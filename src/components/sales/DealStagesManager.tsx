@@ -37,6 +37,7 @@ interface DealStagesManagerProps {
   onOpenChange: (open: boolean) => void;
   stages: DealStage[];
   deals: Deal[];
+  pipelineName?: string;
   onCreateStage: (data: { name: string; color: string; probability?: number }) => Promise<DealStage | null>;
   onUpdateStage: (stageId: string, data: { name?: string; color?: string; probability?: number }) => Promise<boolean>;
   onDeleteStage: (stageId: string) => Promise<boolean>;
