@@ -323,7 +323,8 @@ export function TeamManager() {
           email: formEmail,
           password: formPassword,
           account_id: currentUser.account_id,
-          team_role_id: formRoleId || null,
+          team_role_ids: formRoleIds.length > 0 ? formRoleIds : null,
+          team_role_id: formRoleIds[0] || null,
           is_also_admin: formIsAlsoAdmin,
         },
       });
