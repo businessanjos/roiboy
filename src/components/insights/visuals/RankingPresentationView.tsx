@@ -64,16 +64,16 @@ function formatCompactCurrency(value: number): string {
 
 const MEDAL_EMOJI: Record<number, string> = { 0: "🥇", 1: "🥈", 2: "🥉" };
 const PODIUM_GRADIENTS: Record<number, string> = {
-  0: "from-primary to-primary/80",
-  1: "from-muted-foreground/60 to-muted-foreground/40",
-  2: "from-accent to-accent/80",
+  0: "from-amber-400 to-yellow-500",
+  1: "from-gray-300 to-slate-400",
+  2: "from-orange-600 to-amber-700",
 };
 const PODIUM_BORDER: Record<number, string> = {
-  0: "border-primary",
-  1: "border-muted-foreground/50",
-  2: "border-accent",
+  0: "border-amber-400",
+  1: "border-gray-300",
+  2: "border-orange-600",
 };
-const PODIUM_HEIGHTS: Record<number, number> = { 0: 200, 1: 150, 2: 110 };
+const PODIUM_HEIGHTS: Record<number, number> = { 0: 260, 1: 190, 2: 140 };
 
 function LiveClock() {
   const [now, setNow] = useState(new Date());
