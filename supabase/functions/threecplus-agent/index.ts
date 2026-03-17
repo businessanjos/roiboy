@@ -695,6 +695,70 @@ Deno.serve(async (req) => {
         success = true;
       }
 
+      // Update call log with ended_at and duration
+      if (success && resolvedCallId) {
+        try {
+          const endedAt = new Date().toISOString();
+          // Try to find the call log and update it
+          const { data: existingLog } = await supabaseAdmin
+            .from("threecplus_call_logs")
+            .select("id, started_at, call_id")
+            .or(`call_id.eq.${resolvedCallId}`)
+            .order("started_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (existingLog) {
+            const startedAt = existingLog.started_at ? new Date(existingLog.started_at).getTime() : null;
+            const endedAtMs = new Date(endedAt).getTime();
+            const durationSeconds = startedAt ? Math.round((endedAtMs - startedAt) / 1000) : 0;
+
+            const { error: updateError } = await supabaseAdmin
+              .from("threecplus_call_logs")
+              .update({
+                ended_at: endedAt,
+                duration_seconds: durationSeconds,
+                status: "finished",
+              })
+              .eq("id", existingLog.id);
+
+            if (updateError) {
+              console.error("[threecplus-agent] hangup: failed to update call log:", JSON.stringify(updateError));
+            } else {
+              console.log("[threecplus-agent] hangup: updated call log with duration", durationSeconds, "s");
+            }
+          } else {
+            // No log found by call_id, try updating the most recent call for this user
+            const { data: recentLog } = await supabaseAdmin
+              .from("threecplus_call_logs")
+              .select("id, started_at")
+              .eq("user_id", userData.id)
+              .is("ended_at", null)
+              .order("started_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (recentLog) {
+              const startedAt = recentLog.started_at ? new Date(recentLog.started_at).getTime() : null;
+              const endedAtMs = new Date(endedAt).getTime();
+              const durationSeconds = startedAt ? Math.round((endedAtMs - startedAt) / 1000) : 0;
+
+              await supabaseAdmin
+                .from("threecplus_call_logs")
+                .update({
+                  ended_at: endedAt,
+                  duration_seconds: durationSeconds,
+                  status: "finished",
+                })
+                .eq("id", recentLog.id);
+              console.log("[threecplus-agent] hangup: updated recent call log with duration", durationSeconds, "s");
+            }
+          }
+        } catch (err) {
+          console.error("[threecplus-agent] hangup: error updating call duration:", err);
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success,
