@@ -115,6 +115,7 @@ interface TeamUser {
   avatar_url: string | null;
   team_role_id: string | null;
   team_role?: TeamRole;
+  team_roles?: TeamRole[];
   is_also_admin?: boolean;
 }
 
@@ -172,7 +173,7 @@ export function TeamManager() {
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formPassword, setFormPassword] = useState("");
-  const [formRoleId, setFormRoleId] = useState<string>("");
+  const [formRoleIds, setFormRoleIds] = useState<string[]>([]);
   const [formIsAlsoAdmin, setFormIsAlsoAdmin] = useState(false);
   const [formAvatarUrl, setFormAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -257,10 +258,22 @@ export function TeamManager() {
 
       if (usersError) throw usersError;
 
-      const usersWithRoles = (usersData || []).map(user => ({
-        ...user,
-        team_role: rolesWithPermissions.find(r => r.id === user.team_role_id)
-      }));
+      // Fetch user_team_roles junction data
+      const { data: userRolesData } = await supabase
+        .from("user_team_roles")
+        .select("user_id, team_role_id");
+
+      const usersWithRoles = (usersData || []).map(user => {
+        const userRoleIds = (userRolesData || [])
+          .filter(ur => ur.user_id === user.id)
+          .map(ur => ur.team_role_id);
+        const userTeamRoles = rolesWithPermissions.filter(r => userRoleIds.includes(r.id));
+        return {
+          ...user,
+          team_role: userTeamRoles[0] || rolesWithPermissions.find(r => r.id === user.team_role_id),
+          team_roles: userTeamRoles.length > 0 ? userTeamRoles : (user.team_role_id ? [rolesWithPermissions.find(r => r.id === user.team_role_id)].filter(Boolean) : []),
+        };
+      });
 
       setUsers(usersWithRoles);
     } catch (error) {
@@ -310,7 +323,8 @@ export function TeamManager() {
           email: formEmail,
           password: formPassword,
           account_id: currentUser.account_id,
-          team_role_id: formRoleId || null,
+          team_role_ids: formRoleIds.length > 0 ? formRoleIds : null,
+          team_role_id: formRoleIds[0] || null,
           is_also_admin: formIsAlsoAdmin,
         },
       });
@@ -360,18 +374,34 @@ export function TeamManager() {
     setIsSubmitting(true);
 
     try {
-      // Update user profile
+      // Update user profile (keep team_role_id as primary for backward compat)
       const { error } = await supabase
         .from("users")
         .update({ 
           name: formName, 
           email: formEmail,
-          team_role_id: formRoleId || null,
+          team_role_id: formRoleIds[0] || null,
           is_also_admin: formIsAlsoAdmin,
         })
         .eq("id", selectedUser.id);
 
       if (error) throw error;
+
+      // Sync user_team_roles junction table
+      await supabase
+        .from("user_team_roles")
+        .delete()
+        .eq("user_id", selectedUser.id);
+
+      if (formRoleIds.length > 0) {
+        const { error: rolesError } = await supabase
+          .from("user_team_roles")
+          .insert(formRoleIds.map(roleId => ({
+            user_id: selectedUser.id,
+            team_role_id: roleId,
+          })));
+        if (rolesError) console.error("Error syncing user roles:", rolesError);
+      }
 
       // If password was provided, update it via edge function
       if (formPassword && formPassword.length >= 6 && selectedUser.auth_user_id) {
@@ -427,7 +457,7 @@ export function TeamManager() {
     setFormName("");
     setFormEmail("");
     setFormPassword("");
-    setFormRoleId("");
+    setFormRoleIds([]);
     setFormIsAlsoAdmin(false);
     setFormAvatarUrl(null);
   };
@@ -437,7 +467,7 @@ export function TeamManager() {
     setFormName(user.name);
     setFormEmail(user.email);
     setFormPassword("");
-    setFormRoleId(user.team_role_id || "");
+    setFormRoleIds((user.team_roles || []).map(r => r.id));
     setFormIsAlsoAdmin(user.is_also_admin || false);
     setFormAvatarUrl(user.avatar_url);
     setIsEditDialogOpen(true);
@@ -743,7 +773,7 @@ export function TeamManager() {
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-foreground">
-                        {users.filter((u) => u.team_role_id === role.id).length}
+                        {users.filter((u) => u.team_roles?.some(r => r.id === role.id)).length}
                       </p>
                       <p className="text-xs text-muted-foreground">{role.name}</p>
                     </div>
@@ -822,18 +852,23 @@ export function TeamManager() {
                           <Mail className="h-3 w-3" />
                           {user.email}
                         </p>
-                        {user.team_role && (
-                          <Badge 
-                            variant="secondary" 
-                            className="mt-2 text-xs font-medium"
-                            style={{ 
-                              backgroundColor: `${user.team_role.color}15`,
-                              color: user.team_role.color,
-                              borderColor: `${user.team_role.color}30`
-                            }}
-                          >
-                            {user.team_role.name}
-                          </Badge>
+                        {user.team_roles && user.team_roles.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {user.team_roles.map((role) => (
+                              <Badge 
+                                key={role.id}
+                                variant="secondary" 
+                                className="text-xs font-medium"
+                                style={{ 
+                                  backgroundColor: `${role.color}15`,
+                                  color: role.color,
+                                  borderColor: `${role.color}30`
+                                }}
+                              >
+                                {role.name}
+                              </Badge>
+                            ))}
+                          </div>
                         )}
                         {user.is_also_admin && (
                           <Badge variant="destructive" className="mt-2 text-xs font-medium ml-1">
@@ -891,19 +926,20 @@ export function TeamManager() {
                           {user.email}
                         </p>
                       </div>
-                      {user.team_role && (
+                      {user.team_roles && user.team_roles.length > 0 && user.team_roles.map((role) => (
                         <Badge 
+                          key={role.id}
                           variant="secondary" 
                           className="text-xs font-medium hidden sm:inline-flex"
                           style={{ 
-                            backgroundColor: `${user.team_role.color}15`,
-                            color: user.team_role.color,
-                            borderColor: `${user.team_role.color}30`
+                            backgroundColor: `${role.color}15`,
+                            color: role.color,
+                            borderColor: `${role.color}30`
                           }}
                         >
-                          {user.team_role.name}
+                          {role.name}
                         </Badge>
-                      )}
+                      ))}
                       {user.is_also_admin && (
                         <Badge variant="destructive" className="text-xs font-medium hidden sm:inline-flex">
                           Admin
@@ -985,7 +1021,7 @@ export function TeamManager() {
           {rolesViewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {roles.map((role) => {
-                const memberCount = users.filter(u => u.team_role_id === role.id).length;
+                const memberCount = users.filter(u => u.team_roles?.some(r => r.id === role.id)).length;
                 const permissionCount = role.permissions?.length || 0;
                 
                 return (
@@ -1113,7 +1149,7 @@ export function TeamManager() {
               <CardContent className="p-0">
                 <div className="divide-y divide-border">
                   {roles.map((role) => {
-                    const memberCount = users.filter(u => u.team_role_id === role.id).length;
+                    const memberCount = users.filter(u => u.team_roles?.some(r => r.id === role.id)).length;
                     const permissionCount = role.permissions?.length || 0;
                     
                     return (
@@ -1235,25 +1271,30 @@ export function TeamManager() {
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="role">Função</Label>
-              <Select value={formRoleId} onValueChange={setFormRoleId}>
-                <SelectTrigger className="bg-card">
-                  <SelectValue placeholder="Selecione uma função" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{ backgroundColor: role.color }}
-                        />
-                        {role.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Funções</Label>
+              <div className="rounded-lg border bg-card p-3 space-y-2 max-h-40 overflow-y-auto">
+                {roles.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhuma função cadastrada</p>
+                ) : roles.map((role) => (
+                  <div key={role.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`add-role-${role.id}`}
+                      checked={formRoleIds.includes(role.id)}
+                      onCheckedChange={(checked) => {
+                        setFormRoleIds(prev => 
+                          checked 
+                            ? [...prev, role.id] 
+                            : prev.filter(id => id !== role.id)
+                        );
+                      }}
+                    />
+                    <Label htmlFor={`add-role-${role.id}`} className="flex items-center gap-2 cursor-pointer text-sm font-normal">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: role.color }} />
+                      {role.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
             
             <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
@@ -1378,25 +1419,30 @@ export function TeamManager() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="edit-role">Função</Label>
-              <Select value={formRoleId} onValueChange={setFormRoleId}>
-                <SelectTrigger className="bg-card">
-                  <SelectValue placeholder="Selecione uma função" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{ backgroundColor: role.color }}
-                        />
-                        {role.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Funções</Label>
+              <div className="rounded-lg border bg-card p-3 space-y-2 max-h-40 overflow-y-auto">
+                {roles.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhuma função cadastrada</p>
+                ) : roles.map((role) => (
+                  <div key={role.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`edit-role-${role.id}`}
+                      checked={formRoleIds.includes(role.id)}
+                      onCheckedChange={(checked) => {
+                        setFormRoleIds(prev => 
+                          checked 
+                            ? [...prev, role.id] 
+                            : prev.filter(id => id !== role.id)
+                        );
+                      }}
+                    />
+                    <Label htmlFor={`edit-role-${role.id}`} className="flex items-center gap-2 cursor-pointer text-sm font-normal">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: role.color }} />
+                      {role.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
             
             <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">

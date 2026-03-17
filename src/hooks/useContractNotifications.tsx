@@ -34,15 +34,17 @@ export async function notifyContractCreated({
 
     const roleIds = teamRoles.map(r => r.id);
 
-    // Get all users with these roles (excluding the creator)
-    const { data: users } = await supabase
-      .from("users")
-      .select("id, team_role_id")
-      .eq("account_id", accountId)
-      .in("team_role_id", roleIds)
-      .neq("id", createdByUserId);
+    // Get all users with these roles via junction table (excluding the creator)
+    const { data: userRoleLinks } = await supabase
+      .from("user_team_roles")
+      .select("user_id")
+      .in("team_role_id", roleIds);
 
-    if (!users || users.length === 0) return;
+    const userIdsWithRoles = [...new Set((userRoleLinks || []).map(ur => ur.user_id))].filter(id => id !== createdByUserId);
+
+    if (userIdsWithRoles.length === 0) return;
+
+    const users = userIdsWithRoles.map(id => ({ id }));
 
     // Format value
     const formattedValue = new Intl.NumberFormat("pt-BR", {

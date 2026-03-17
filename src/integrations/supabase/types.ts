@@ -10965,6 +10965,42 @@ export type Database = {
           },
         ]
       }
+      user_team_roles: {
+        Row: {
+          created_at: string
+          id: string
+          team_role_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          team_role_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          team_role_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_team_roles_team_role_id_fkey"
+            columns: ["team_role_id"]
+            isOneToOne: false
+            referencedRelation: "team_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_team_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           account_id: string

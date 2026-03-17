@@ -86,8 +86,9 @@ export function useSectorAccess() {
     if (userRole === "admin") return true;
     
     // Bypass for operation team roles in operacoes sector
-    if (sectorId === "operacoes" && teamRoleName) {
-      if (OPERATION_TEAM_ROLES.includes(teamRoleName)) {
+    if (sectorId === "operacoes") {
+      const teamRoleNames = currentUser?.team_role_names || (teamRoleName ? [teamRoleName] : []);
+      if (teamRoleNames.some(name => OPERATION_TEAM_ROLES.includes(name))) {
         return true;
       }
     }

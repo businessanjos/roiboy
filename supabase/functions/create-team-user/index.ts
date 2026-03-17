@@ -13,6 +13,7 @@ interface CreateTeamUserRequest {
   password: string;
   account_id: string;
   team_role_id?: string;
+  team_role_ids?: string[];
   is_also_admin?: boolean;
 }
 
@@ -79,7 +80,7 @@ serve(async (req: Request) => {
     }
 
     const body: CreateTeamUserRequest = await req.json();
-    const { name, email, password, team_role_id, is_also_admin } = body;
+    const { name, email, password, team_role_id, team_role_ids, is_also_admin } = body;
 
     if (!name || !email || !password) {
       return new Response(
@@ -192,6 +193,20 @@ serve(async (req: Request) => {
         JSON.stringify({ error: "Erro ao criar perfil do usuário" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Insert into user_team_roles junction table
+    const roleIdsToInsert = team_role_ids || (team_role_id ? [team_role_id] : []);
+    if (roleIdsToInsert.length > 0 && newUser) {
+      const { error: junctionError } = await supabaseAdmin
+        .from("user_team_roles")
+        .insert(roleIdsToInsert.map((rid: string) => ({
+          user_id: newUser.id,
+          team_role_id: rid,
+        })));
+      if (junctionError) {
+        console.error("Error inserting user_team_roles:", junctionError);
+      }
     }
 
     return new Response(
