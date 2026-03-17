@@ -354,11 +354,11 @@ export function ProfileContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="account-email">E-mail</Label>
-                  <Input id="account-email" type="email" value={accountForm.email} onChange={(e) => handleAccountChange("email", e.target.value)} placeholder="contato@empresa.com" />
+                  <Input id="account-email" type="email" value={accountForm.email} onChange={(e) => handleAccountChange("email", e.target.value)} placeholder="contato@empresa.com" disabled={isSalesRep} className={isSalesRep ? "bg-muted" : ""} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="account-phone">Telefone</Label>
-                  <Input id="account-phone" value={accountForm.phone} onChange={(e) => handleAccountChange("phone", e.target.value)} placeholder="(00) 00000-0000" />
+                  <Input id="account-phone" value={accountForm.phone} onChange={(e) => handleAccountChange("phone", e.target.value)} placeholder="(00) 00000-0000" disabled={isSalesRep} className={isSalesRep ? "bg-muted" : ""} />
                 </div>
               </div>
             </CardContent>
@@ -368,38 +368,38 @@ export function ProfileContent() {
           <Card className="shadow-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2"><MapPin className="h-5 w-5" /> Endereço</CardTitle>
-              <CardDescription>Digite o CEP para preenchimento automático</CardDescription>
+              <CardDescription>{isSalesRep ? "Endereço da conta" : "Digite o CEP para preenchimento automático"}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="zip_code">CEP</Label>
-                  <Input id="zip_code" value={accountForm.zip_code} onChange={(e) => handleAccountChange("zip_code", e.target.value)} onBlur={(e) => fetchAddressByCep(e.target.value)} placeholder="00000-000" />
+                  <Input id="zip_code" value={accountForm.zip_code} onChange={(e) => handleAccountChange("zip_code", e.target.value)} onBlur={(e) => !isSalesRep && fetchAddressByCep(e.target.value)} placeholder="00000-000" disabled={isSalesRep} className={isSalesRep ? "bg-muted" : ""} />
                 </div>
                 <div className="space-y-2 col-span-2">
                   <Label htmlFor="street">Logradouro</Label>
-                  <Input id="street" value={accountForm.street} onChange={(e) => handleAccountChange("street", e.target.value)} placeholder="Rua, Avenida, etc." />
+                  <Input id="street" value={accountForm.street} onChange={(e) => handleAccountChange("street", e.target.value)} placeholder="Rua, Avenida, etc." disabled={isSalesRep} className={isSalesRep ? "bg-muted" : ""} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="street_number">Número</Label>
-                  <Input id="street_number" value={accountForm.street_number} onChange={(e) => handleAccountChange("street_number", e.target.value)} placeholder="123" />
+                  <Input id="street_number" value={accountForm.street_number} onChange={(e) => handleAccountChange("street_number", e.target.value)} placeholder="123" disabled={isSalesRep} className={isSalesRep ? "bg-muted" : ""} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="complement">Complemento</Label>
-                  <Input id="complement" value={accountForm.complement} onChange={(e) => handleAccountChange("complement", e.target.value)} placeholder="Sala, Apto, etc." />
+                  <Input id="complement" value={accountForm.complement} onChange={(e) => handleAccountChange("complement", e.target.value)} placeholder="Sala, Apto, etc." disabled={isSalesRep} className={isSalesRep ? "bg-muted" : ""} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="neighborhood">Bairro</Label>
-                  <Input id="neighborhood" value={accountForm.neighborhood} onChange={(e) => handleAccountChange("neighborhood", e.target.value)} placeholder="Bairro" />
+                  <Input id="neighborhood" value={accountForm.neighborhood} onChange={(e) => handleAccountChange("neighborhood", e.target.value)} placeholder="Bairro" disabled={isSalesRep} className={isSalesRep ? "bg-muted" : ""} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="city">Cidade</Label>
-                  <Input id="city" value={accountForm.city} onChange={(e) => handleAccountChange("city", e.target.value)} placeholder="Cidade" />
+                  <Input id="city" value={accountForm.city} onChange={(e) => handleAccountChange("city", e.target.value)} placeholder="Cidade" disabled={isSalesRep} className={isSalesRep ? "bg-muted" : ""} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="state">Estado</Label>
-                  <Select value={accountForm.state} onValueChange={(value) => handleAccountChange("state", value)}>
-                    <SelectTrigger><SelectValue placeholder="UF" /></SelectTrigger>
+                  <Select value={accountForm.state} onValueChange={(value) => handleAccountChange("state", value)} disabled={isSalesRep}>
+                    <SelectTrigger className={isSalesRep ? "bg-muted" : ""}><SelectValue placeholder="UF" /></SelectTrigger>
                     <SelectContent>
                       {["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map((state) => (
                         <SelectItem key={state} value={state}>{state}</SelectItem>
