@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VisualErrorBoundary } from "./VisualErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings, LineChart, PieChart, ArrowLeftRight } from "lucide-react";
+import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings, LineChart, PieChart, ArrowLeftRight, Monitor } from "lucide-react";
+import { RankingPresentationDialog, PresentationOptions } from "./RankingPresentationDialog";
+import { RankingPresentationView } from "./RankingPresentationView";
 import { useVisualData } from "@/hooks/useVisualData";
 import { useStackedVisualData } from "@/hooks/useStackedVisualData";
 import { useMapVisualData } from "@/hooks/useMapVisualData";
@@ -53,6 +55,8 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
   const [drilldownOpen, setDrilldownOpen] = useState(false);
   const [drilldownGroup, setDrilldownGroup] = useState<string | undefined>();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [presentDialogOpen, setPresentDialogOpen] = useState(false);
+  const [presentationOptions, setPresentationOptions] = useState<PresentationOptions | null>(null);
 
   // Days elapsed gauge doesn't need data from the database
   const isGaugeDaysElapsed = chartType === 'gauge' && config?.gaugeConfig?.subType === 'days_elapsed';
@@ -189,6 +193,21 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
                 <span className="truncate">{visual.title || "Visual"}</span>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
+                {chartType === 'ranking' && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setPresentDialogOpen(true)}
+                          className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                        >
+                          <Monitor className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Apresentar na TV</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
                 {SWITCHABLE_SET.has(chartType) && onUpdateVisual && (
                   <Popover>
                     <TooltipProvider>
@@ -294,6 +313,28 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
           overrideUpdateVisual={onUpdateVisual}
           overrideRemoveVisual={onRemoveVisual}
         />
+
+        {chartType === 'ranking' && (
+          <>
+            <RankingPresentationDialog
+              open={presentDialogOpen}
+              onOpenChange={setPresentDialogOpen}
+              onPresent={(opts) => {
+                setPresentDialogOpen(false);
+                setPresentationOptions(opts);
+              }}
+            />
+            {presentationOptions && (
+              <RankingPresentationView
+                title={visual.title || "Ranking"}
+                data={processedData}
+                formatting={config?.formatting || { type: 'number' as FormatType, decimals: 0 }}
+                options={presentationOptions}
+                onClose={() => setPresentationOptions(null)}
+              />
+            )}
+          </>
+        )}
       </>
     </VisualErrorBoundary>
   );
