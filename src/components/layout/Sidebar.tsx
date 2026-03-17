@@ -83,6 +83,7 @@ import {
 } from "@/components/ui/tooltip";
 import { RoyLogo } from "@/components/ui/roy-logo";
 import { useSidebarZappNavigation } from "@/hooks/useSidebarZappNavigation";
+import { SettingsSidebarNav } from "./SettingsSidebarNav";
 
 interface NavItem {
   to: string;
@@ -296,6 +297,12 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     navigate("/setores");
     onNavigate?.();
   };
+
+  // If on settings route, show settings navigation instead
+  const isOnSettings = location.pathname === "/settings";
+  if (isOnSettings) {
+    return <SettingsSidebarNav collapsed={collapsed} onNavigate={onNavigate} />;
+  }
 
   return (
     <>
