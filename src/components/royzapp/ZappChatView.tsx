@@ -1,4 +1,4 @@
-import { RefObject, useMemo } from "react";
+import { RefObject, useMemo, useCallback } from "react";
 import { MessageSquare, Clock } from "lucide-react";
 import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
@@ -7,6 +7,8 @@ import { ZappAIAssistBar } from "./ZappAIAssistBar";
 import { ConversationAssignment, ContactInfo } from "./types";
 import { Message } from "@/hooks/useZappData";
 import { useMessageAssistant } from "@/hooks/useMessageAssistant";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface ReplyingToMessage {
   id: string;
