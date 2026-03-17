@@ -275,8 +275,39 @@ export default function SalesPipeline() {
     }, 100);
   };
 
+  // Meeting schedule dialog state
+  const [meetingDialog, setMeetingDialog] = useState<{
+    open: boolean;
+    dealId?: string;
+    leadId?: string;
+    clientId?: string;
+    participantName?: string;
+    participantPhone?: string;
+    stageName?: string;
+  }>({ open: false });
+
   const handleDealMove = async (dealId: string, newStageId: string): Promise<boolean> => {
-    return await moveDeal(dealId, newStageId);
+    const result = await moveDeal(dealId, newStageId);
+    
+    if (result) {
+      // Check if target stage name contains "reunião" or "reuniao"
+      const targetStage = stages.find(s => s.id === newStageId);
+      const stageName = targetStage?.name?.toLowerCase() || "";
+      if (stageName.includes("reunião") || stageName.includes("reuniao")) {
+        const deal = deals.find(d => d.id === dealId);
+        setMeetingDialog({
+          open: true,
+          dealId,
+          leadId: deal?.lead_id || undefined,
+          clientId: deal?.client_id || undefined,
+          participantName: deal?.contact_name || deal?.lead?.full_name || deal?.client?.full_name || "",
+          participantPhone: deal?.contact_phone || deal?.lead?.phone || deal?.client?.phone_e164 || "",
+          stageName: targetStage?.name,
+        });
+      }
+    }
+    
+    return result;
   };
 
   const handleSaveDeal = async (data: any, sendNotification?: boolean) => {
