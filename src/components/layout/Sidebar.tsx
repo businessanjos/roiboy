@@ -462,7 +462,6 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
               <User className="mr-2 h-4 w-4" />
               Meu Perfil
             </DropdownMenuItem>
-            </DropdownMenuItem>
             <DropdownMenuItem onClick={toggleTheme}>
               {theme === "dark" ? (
                 <>
