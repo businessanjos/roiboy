@@ -300,10 +300,19 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     onNavigate?.();
   };
 
-  // If on settings route, show settings navigation instead
+  // Route-specific sidebar navigation
   const isOnSettings = location.pathname === "/settings";
+  const isOnAdmin = location.pathname === "/admin";
+  const clientDetailMatch = location.pathname.match(/^\/clients\/([^/]+)$/);
+
   if (isOnSettings) {
     return <SettingsSidebarNav collapsed={collapsed} onNavigate={onNavigate} />;
+  }
+  if (isOnAdmin) {
+    return <AdminSidebarNav collapsed={collapsed} onNavigate={onNavigate} />;
+  }
+  if (clientDetailMatch) {
+    return <ClientDetailSidebarNav collapsed={collapsed} onNavigate={onNavigate} />;
   }
 
   return (
