@@ -55,10 +55,9 @@ Deno.serve(async (req) => {
           name: roomName,
           privacy: "public",
           properties: {
-            enable_recording: "cloud",
             enable_chat: true,
             enable_screenshare: true,
-            exp: Math.floor(Date.now() / 1000) + 3600, // 1 hour expiry
+            exp: Math.floor(Date.now() / 1000) + 3600,
             max_participants: 10,
             enable_knocking: false,
             start_video_off: false,
