@@ -195,6 +195,20 @@ serve(async (req: Request) => {
       );
     }
 
+    // Insert into user_team_roles junction table
+    const roleIdsToInsert = team_role_ids || (team_role_id ? [team_role_id] : []);
+    if (roleIdsToInsert.length > 0 && newUser) {
+      const { error: junctionError } = await supabaseAdmin
+        .from("user_team_roles")
+        .insert(roleIdsToInsert.map((rid: string) => ({
+          user_id: newUser.id,
+          team_role_id: rid,
+        })));
+      if (junctionError) {
+        console.error("Error inserting user_team_roles:", junctionError);
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
