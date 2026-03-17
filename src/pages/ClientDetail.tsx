@@ -2058,663 +2058,510 @@ export default function ClientDetail() {
       {(() => {
         const activeTab = searchParams.get("tab") || "timeline";
         switch (activeTab) {
+          case "timeline":
+            return (
+              <Card className="shadow-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base">Histórico Completo</CardTitle>
+                  <CardDescription>
+                    Todas as interações e eventos do cliente em um só lugar
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <Timeline 
+                    events={timeline} 
+                    clientId={id!} 
+                    clientName={client?.full_name}
+                    onCommentAdded={fetchData}
+                  />
+                </CardContent>
+              </Card>
+            );
+          case "whatsapp":
+            return (
+              <Card className="shadow-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Conversas WhatsApp
+                  </CardTitle>
+                  <CardDescription>
+                    Histórico de mensagens do WhatsApp com o cliente
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <ConversationView 
+                    messages={timeline.filter(e => 
+                      e.type === "message" && 
+                      (e.metadata?.source === "whatsapp" || 
+                       e.metadata?.source === "whatsapp_audio_transcript")
+                    )} 
+                    clientName={client?.full_name}
+                  />
+                </CardContent>
+              </Card>
+            );
           case "deals":
             return (
-          <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Negócios
-              </CardTitle>
-              <CardDescription>
-                Negociações e oportunidades de vendas com este cliente
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <ClientDeals clientId={id!} clientName={client?.full_name} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="fichas">
-          <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Fichas
-              </CardTitle>
-              <CardDescription>
-                Formulários preenchidos pelo cliente
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <ClientFormResponses clientId={id!} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="agenda">
-          <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Agenda de Entregas
-              </CardTitle>
-              <CardDescription>
-                Eventos e materiais incluídos nos produtos do cliente
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <ClientAgenda 
-                key={id}
-                clientId={id!} 
-                clientProductIds={clientProducts.map(p => p.id)} 
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="cx">
-          <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Heart className="h-4 w-4" />
-                Momentos CX
-              </CardTitle>
-              <CardDescription>
-                Eventos importantes da vida do cliente para um atendimento humanizado
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <ClientLifeEvents clientId={id!} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="vinculos">
-          {accountId && (
-            <ClientRelationships clientId={id!} accountId={accountId} />
-          )}
-        </TabsContent>
-
-        <TabsContent value="contracts">
-          <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Contratos
-              </CardTitle>
-              <CardDescription>
-                Gerencie os contratos do cliente com arquivos PDF anexados
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <ClientContracts clientId={id!} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="subscriptions">
-          <Card className="shadow-card">
-            <CardContent className="p-6">
-              <ClientFinancial clientId={id!} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="sales">
-          <Card className="shadow-card">
-            <CardContent className="p-6">
-              <SalesPerformance clientId={id!} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="campos">
-          <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Campos Personalizados
-              </CardTitle>
-              <CardDescription>
-                Informações personalizadas do cliente
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <ClientFieldsSummary clientId={id!} expanded />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="timeline">
-          <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Histórico Completo</CardTitle>
-              <CardDescription>
-                Todas as interações e eventos do cliente em um só lugar
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <Timeline 
-                events={timeline} 
-                clientId={id!} 
-                clientName={client?.full_name}
-                onCommentAdded={fetchData}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="whatsapp">
-          <Card className="shadow-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <MessageSquare className="h-4 w-4" />
-                Conversas WhatsApp
-              </CardTitle>
-              <CardDescription>
-                Histórico de mensagens do WhatsApp com o cliente
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-4">
-              <ConversationView 
-                messages={timeline.filter(e => 
-                  e.type === "message" && 
-                  (e.metadata?.source === "whatsapp" || 
-                   e.metadata?.source === "whatsapp_audio_transcript")
-                )} 
-                clientName={client?.full_name}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="roi">
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="text-base">Eventos de ROI</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {roiEvents.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  Nenhum evento de ROI registrado. Clique em "Adicionar ROI" para começar.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {roiEvents.map((roi) => (
-                    <div
-                      key={roi.id}
-                      className="flex items-start justify-between p-4 rounded-lg border border-border"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <Badge
-                            variant={roi.roi_type === "tangible" ? "default" : "secondary"}
-                          >
-                            {roi.roi_type === "tangible" ? "Tangível" : "Intangível"}
-                          </Badge>
-                          <Badge variant="outline">{getCategoryLabel(roi.category)}</Badge>
-                          <Badge
-                            variant="outline"
-                            className={
-                              roi.impact === "high"
-                                ? "border-success text-success"
-                                : roi.impact === "medium"
-                                ? "border-warning text-warning"
-                                : "border-muted-foreground"
-                            }
-                          >
-                            {roi.impact === "high"
-                              ? "Alto"
-                              : roi.impact === "medium"
-                              ? "Médio"
-                              : "Baixo"}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs">
-                            {roi.source === "manual" ? "Manual" : roi.source === "financial" ? "Financeiro" : "Auto"}
-                          </Badge>
-                        </div>
-                        {roi.evidence_snippet && (
-                          <p className="text-sm text-muted-foreground mt-2">
-                            {roi.evidence_snippet}
-                          </p>
-                        )}
-                        {roi.image_url && (
-                          <a 
-                            href={roi.image_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="block mt-2"
-                          >
-                            <img
-                              src={roi.image_url}
-                              alt="Evidência"
-                              className="max-w-xs h-32 object-cover rounded-lg border hover:opacity-80 transition-opacity"
-                            />
-                          </a>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground">
-                          {format(new Date(roi.happened_at), "dd/MM/yyyy", { locale: ptBR })}
-                        </span>
-                        {roi.source === "manual" && (
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => openEditRoiDialog(roi)}
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive hover:text-destructive"
-                              onClick={() => setDeletingRoiId(roi.id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Edit ROI Dialog */}
-          <Dialog open={!!editingRoiId} onOpenChange={(open) => !open && setEditingRoiId(null)}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Editar ROI</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Tipo</Label>
-                    <Select value={editRoiType} onValueChange={setEditRoiType}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tangible">Tangível</SelectItem>
-                        <SelectItem value="intangible">Intangível</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Categoria</Label>
-                    <Select value={editRoiCategory} onValueChange={setEditRoiCategory}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {editRoiType === "tangible" ? (
-                          <>
-                            <SelectItem value="revenue">Receita</SelectItem>
-                            <SelectItem value="cost">Redução de Custo</SelectItem>
-                            <SelectItem value="time">Economia de Tempo</SelectItem>
-                            <SelectItem value="process">Melhoria de Processo</SelectItem>
-                          </>
-                        ) : (
-                          <>
-                            <SelectItem value="clarity">Clareza</SelectItem>
-                            <SelectItem value="confidence">Confiança</SelectItem>
-                            <SelectItem value="tranquility">Tranquilidade</SelectItem>
-                            <SelectItem value="status_direction">Direção</SelectItem>
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Impacto</Label>
-                  <Select value={editRoiImpact} onValueChange={setEditRoiImpact}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Baixo</SelectItem>
-                      <SelectItem value="medium">Médio</SelectItem>
-                      <SelectItem value="high">Alto</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Evidência</Label>
-                  <Textarea
-                    placeholder="Descreva a evidência de ROI..."
-                    value={editRoiEvidence}
-                    onChange={(e) => setEditRoiEvidence(e.target.value)}
+              <Card className="shadow-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Negócios
+                  </CardTitle>
+                  <CardDescription>
+                    Negociações e oportunidades de vendas com este cliente
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <ClientDeals clientId={id!} clientName={client?.full_name} />
+                </CardContent>
+              </Card>
+            );
+          case "fichas":
+            return (
+              <Card className="shadow-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Fichas
+                  </CardTitle>
+                  <CardDescription>
+                    Formulários preenchidos pelo cliente
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <ClientFormResponses clientId={id!} />
+                </CardContent>
+              </Card>
+            );
+          case "campos":
+            return (
+              <Card className="shadow-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Campos Personalizados
+                  </CardTitle>
+                  <CardDescription>
+                    Informações personalizadas do cliente
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <ClientFieldsSummary clientId={id!} expanded />
+                </CardContent>
+              </Card>
+            );
+          case "agenda":
+            return (
+              <Card className="shadow-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Agenda de Entregas
+                  </CardTitle>
+                  <CardDescription>
+                    Eventos e materiais incluídos nos produtos do cliente
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <ClientAgenda 
+                    key={id}
+                    clientId={id!} 
+                    clientProductIds={clientProducts.map(p => p.id)} 
                   />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setEditingRoiId(null)}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleSaveEditRoi} disabled={savingEditRoi}>
-                  {savingEditRoi ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    "Salvar"
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Delete ROI Confirmation */}
-          <AlertDialog open={!!deletingRoiId} onOpenChange={(open) => !open && !isDeleting && setDeletingRoiId(null)}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Excluir evento de ROI?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta ação não pode ser desfeita. O evento de ROI será permanentemente removido.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={handleDeleteRoi} 
-                  disabled={isDeleting}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  {isDeleting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Excluindo...
-                    </>
-                  ) : (
-                    "Excluir"
-                  )}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </TabsContent>
-
-        <TabsContent value="risks">
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="text-base">Eventos de Risco</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {riskEvents.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  Nenhum evento de risco registrado. Clique em "Adicionar Risco" para começar.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {riskEvents.map((risk) => (
-                    <div
-                      key={risk.id}
-                      className="p-4 rounded-lg border border-border"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1 flex-wrap">
-                            <AlertTriangle className={`h-4 w-4 ${
-                              risk.risk_level === "high"
-                                ? "text-red-500"
-                                : risk.risk_level === "medium"
-                                ? "text-amber-500"
-                                : "text-muted-foreground"
-                            }`} />
-                            <Badge
-                              variant="outline"
-                              className={
-                                risk.risk_level === "high"
-                                  ? "border-red-500 text-red-500"
-                                  : risk.risk_level === "medium"
-                                  ? "border-amber-500 text-amber-500"
-                                  : "border-muted-foreground"
-                              }
-                            >
-                              {risk.risk_level === "high"
-                                ? "Alto"
-                                : risk.risk_level === "medium"
-                                ? "Médio"
-                                : "Baixo"}
-                            </Badge>
-                            <Badge variant="secondary" className="text-xs">
-                              {risk.source === "whatsapp_text" ? "WhatsApp" 
-                                : risk.source === "whatsapp_audio" ? "Áudio"
-                                : risk.source === "zoom" ? "Zoom"
-                                : risk.source === "google_meet" ? "Google Meet"
-                                : risk.source === "financial" ? "Financeiro"
-                                : "Manual"}
-                            </Badge>
-                          </div>
-                          <p className="text-sm font-medium mt-2">{risk.reason}</p>
-                          {risk.evidence_snippet && (
-                            <p className="text-sm text-muted-foreground mt-1 italic">
-                              "{risk.evidence_snippet}"
-                            </p>
-                          )}
-                          {risk.image_url && (
-                            <a 
-                              href={risk.image_url} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="block mt-2"
-                            >
-                              <img
-                                src={risk.image_url}
-                                alt="Evidência"
-                                className="max-w-xs h-32 object-cover rounded-lg border hover:opacity-80 transition-opacity"
-                              />
-                            </a>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {format(new Date(risk.happened_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                          </span>
-                          {risk.source === "system" && (
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => openEditRiskDialog(risk)}
-                              >
-                                <Edit2 className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-destructive hover:text-destructive"
-                                onClick={() => setDeletingRiskId(risk.id)}
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                </CardContent>
+              </Card>
+            );
+          case "cx":
+            return (
+              <Card className="shadow-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Heart className="h-4 w-4" />
+                    Momentos CX
+                  </CardTitle>
+                  <CardDescription>
+                    Eventos importantes da vida do cliente para um atendimento humanizado
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <ClientLifeEvents clientId={id!} />
+                </CardContent>
+              </Card>
+            );
+          case "vinculos":
+            return accountId ? (
+              <ClientRelationships clientId={id!} accountId={accountId} />
+            ) : null;
+          case "contracts":
+            return (
+              <Card className="shadow-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Contratos
+                  </CardTitle>
+                  <CardDescription>
+                    Gerencie os contratos do cliente com arquivos PDF anexados
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  <ClientContracts clientId={id!} />
+                </CardContent>
+              </Card>
+            );
+          case "subscriptions":
+            return (
+              <Card className="shadow-card">
+                <CardContent className="p-6">
+                  <ClientFinancial clientId={id!} />
+                </CardContent>
+              </Card>
+            );
+          case "sales":
+            return (
+              <Card className="shadow-card">
+                <CardContent className="p-6">
+                  <SalesPerformance clientId={id!} />
+                </CardContent>
+              </Card>
+            );
+          case "roi":
+            return (
+              <>
+                <Card className="shadow-card">
+                  <CardHeader>
+                    <CardTitle className="text-base">Eventos de ROI</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {roiEvents.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-8">
+                        Nenhum evento de ROI registrado. Clique em "Adicionar ROI" para começar.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {roiEvents.map((roi) => (
+                          <div
+                            key={roi.id}
+                            className="flex items-start justify-between p-4 rounded-lg border border-border"
+                          >
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <Badge variant={roi.roi_type === "tangible" ? "default" : "secondary"}>
+                                  {roi.roi_type === "tangible" ? "Tangível" : "Intangível"}
+                                </Badge>
+                                <Badge variant="outline">{getCategoryLabel(roi.category)}</Badge>
+                                <Badge
+                                  variant="outline"
+                                  className={
+                                    roi.impact === "high"
+                                      ? "border-success text-success"
+                                      : roi.impact === "medium"
+                                      ? "border-warning text-warning"
+                                      : "border-muted-foreground"
+                                  }
+                                >
+                                  {roi.impact === "high" ? "Alto" : roi.impact === "medium" ? "Médio" : "Baixo"}
+                                </Badge>
+                                <Badge variant="secondary" className="text-xs">
+                                  {roi.source === "manual" ? "Manual" : roi.source === "financial" ? "Financeiro" : "Auto"}
+                                </Badge>
+                              </div>
+                              {roi.evidence_snippet && (
+                                <p className="text-sm text-muted-foreground mt-2">{roi.evidence_snippet}</p>
+                              )}
+                              {roi.image_url && (
+                                <a href={roi.image_url} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                                  <img src={roi.image_url} alt="Evidência" className="max-w-xs h-32 object-cover rounded-lg border hover:opacity-80 transition-opacity" />
+                                </a>
+                              )}
                             </div>
-                          )}
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(roi.happened_at), "dd/MM/yyyy", { locale: ptBR })}
+                              </span>
+                              {roi.source === "manual" && (
+                                <div className="flex items-center gap-1">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditRoiDialog(roi)}>
+                                    <Edit2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeletingRoiId(roi.id)}>
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Dialog open={!!editingRoiId} onOpenChange={(open) => !open && setEditingRoiId(null)}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Editar ROI</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Tipo</Label>
+                          <Select value={editRoiType} onValueChange={setEditRoiType}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="tangible">Tangível</SelectItem>
+                              <SelectItem value="intangible">Intangível</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Categoria</Label>
+                          <Select value={editRoiCategory} onValueChange={setEditRoiCategory}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {editRoiType === "tangible" ? (
+                                <>
+                                  <SelectItem value="revenue">Receita</SelectItem>
+                                  <SelectItem value="cost">Redução de Custo</SelectItem>
+                                  <SelectItem value="time">Economia de Tempo</SelectItem>
+                                  <SelectItem value="process">Melhoria de Processo</SelectItem>
+                                </>
+                              ) : (
+                                <>
+                                  <SelectItem value="clarity">Clareza</SelectItem>
+                                  <SelectItem value="confidence">Confiança</SelectItem>
+                                  <SelectItem value="tranquility">Tranquilidade</SelectItem>
+                                  <SelectItem value="status_direction">Direção</SelectItem>
+                                </>
+                              )}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Edit Risk Dialog */}
-          <Dialog open={!!editingRiskId} onOpenChange={(open) => !open && setEditingRiskId(null)}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Editar Risco</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <Label>Nível de Risco</Label>
-                  <Select value={editRiskLevel} onValueChange={setEditRiskLevel}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Baixo</SelectItem>
-                      <SelectItem value="medium">Médio</SelectItem>
-                      <SelectItem value="high">Alto</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Motivo *</Label>
-                  <Input
-                    placeholder="Ex: Cliente demonstrou frustração..."
-                    value={editRiskReason}
-                    onChange={(e) => setEditRiskReason(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Evidência (opcional)</Label>
-                  <Textarea
-                    placeholder="Trecho de conversa ou contexto adicional..."
-                    value={editRiskEvidence}
-                    onChange={(e) => setEditRiskEvidence(e.target.value)}
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setEditingRiskId(null)}>
-                  Cancelar
-                </Button>
-                <Button onClick={handleSaveEditRisk} disabled={savingEditRisk}>
-                  {savingEditRisk ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : (
-                    "Salvar"
-                  )}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-
-          {/* Delete Risk Confirmation */}
-          <AlertDialog open={!!deletingRiskId} onOpenChange={(open) => !open && !isDeleting && setDeletingRiskId(null)}>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Excluir evento de risco?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Esta ação não pode ser desfeita. O evento de risco será permanentemente removido.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-                <AlertDialogAction 
-                  onClick={handleDeleteRisk} 
-                  disabled={isDeleting}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  {isDeleting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Excluindo...
-                    </>
-                  ) : (
-                    "Excluir"
-                  )}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </TabsContent>
-
-        <TabsContent value="recommendations">
-          <Card className="shadow-card">
-            <CardHeader>
-              <CardTitle className="text-base">Recomendações</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {recommendations.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">
-                  Nenhuma recomendação gerada ainda.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {recommendations.map((rec) => (
-                    <div
-                      key={rec.id}
-                      className={`p-4 rounded-lg border ${
-                        rec.status === "done"
-                          ? "border-success/30 bg-success-muted/30"
-                          : rec.status === "dismissed"
-                          ? "border-muted bg-muted/30 opacity-60"
-                          : "border-border"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Lightbulb className="h-4 w-4 text-warning" />
-                            <span className="font-medium text-sm">{rec.title}</span>
-                            <Badge
-                              variant="outline"
-                              className={
-                                rec.priority === "high"
-                                  ? "border-danger text-danger"
-                                  : rec.priority === "medium"
-                                  ? "border-warning text-warning"
-                                  : ""
-                              }
-                            >
-                              {rec.priority === "high"
-                                ? "Alta"
-                                : rec.priority === "medium"
-                                ? "Média"
-                                : "Baixa"}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">{rec.action_text}</p>
-                        </div>
-                        {rec.status === "open" && (
-                          <div className="flex items-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
-                              onClick={() => handleUpdateRecommendation(rec.id, "done")}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-danger hover:bg-danger/10"
-                              onClick={() => handleUpdateRecommendation(rec.id, "dismissed")}
-                            >
-                              <X className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
-                        {rec.status !== "open" && (
-                          <Badge variant="secondary">
-                            {rec.status === "done" ? "Concluída" : "Descartada"}
-                          </Badge>
-                        )}
+                      <div className="space-y-2">
+                        <Label>Impacto</Label>
+                        <Select value={editRoiImpact} onValueChange={setEditRoiImpact}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Baixo</SelectItem>
+                            <SelectItem value="medium">Médio</SelectItem>
+                            <SelectItem value="high">Alto</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Evidência</Label>
+                        <Textarea placeholder="Descreva a evidência de ROI..." value={editRoiEvidence} onChange={(e) => setEditRoiEvidence(e.target.value)} />
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setEditingRoiId(null)}>Cancelar</Button>
+                      <Button onClick={handleSaveEditRoi} disabled={savingEditRoi}>
+                        {savingEditRoi ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</>) : "Salvar"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                <AlertDialog open={!!deletingRoiId} onOpenChange={(open) => !open && !isDeleting && setDeletingRoiId(null)}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir evento de ROI?</AlertDialogTitle>
+                      <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteRoi} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        {isDeleting ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Excluindo...</>) : "Excluir"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            );
+          case "risks":
+            return (
+              <>
+                <Card className="shadow-card">
+                  <CardHeader>
+                    <CardTitle className="text-base">Eventos de Risco</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {riskEvents.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-8">
+                        Nenhum evento de risco registrado.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {riskEvents.map((risk) => (
+                          <div key={risk.id} className="p-4 rounded-lg border border-border">
+                            <div className="flex items-start justify-between gap-4">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                  <AlertTriangle className={`h-4 w-4 ${
+                                    risk.risk_level === "high" ? "text-destructive" : risk.risk_level === "medium" ? "text-warning" : "text-muted-foreground"
+                                  }`} />
+                                  <Badge variant="outline" className={
+                                    risk.risk_level === "high" ? "border-destructive text-destructive" : risk.risk_level === "medium" ? "border-warning text-warning" : "border-muted-foreground"
+                                  }>
+                                    {risk.risk_level === "high" ? "Alto" : risk.risk_level === "medium" ? "Médio" : "Baixo"}
+                                  </Badge>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {risk.source === "whatsapp_text" ? "WhatsApp" : risk.source === "whatsapp_audio" ? "Áudio" : risk.source === "zoom" ? "Zoom" : risk.source === "google_meet" ? "Google Meet" : risk.source === "financial" ? "Financeiro" : "Manual"}
+                                  </Badge>
+                                </div>
+                                <p className="text-sm font-medium mt-2">{risk.reason}</p>
+                                {risk.evidence_snippet && (
+                                  <p className="text-sm text-muted-foreground mt-1 italic">"{risk.evidence_snippet}"</p>
+                                )}
+                                {risk.image_url && (
+                                  <a href={risk.image_url} target="_blank" rel="noopener noreferrer" className="block mt-2">
+                                    <img src={risk.image_url} alt="Evidência" className="max-w-xs h-32 object-cover rounded-lg border hover:opacity-80 transition-opacity" />
+                                  </a>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                  {format(new Date(risk.happened_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                                </span>
+                                {risk.source === "system" && (
+                                  <div className="flex items-center gap-1">
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditRiskDialog(risk)}>
+                                      <Edit2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeletingRiskId(risk.id)}>
+                                      <Trash2 className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Dialog open={!!editingRiskId} onOpenChange={(open) => !open && setEditingRiskId(null)}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Editar Risco</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label>Nível de Risco</Label>
+                        <Select value={editRiskLevel} onValueChange={setEditRiskLevel}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="low">Baixo</SelectItem>
+                            <SelectItem value="medium">Médio</SelectItem>
+                            <SelectItem value="high">Alto</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Motivo *</Label>
+                        <Input placeholder="Ex: Cliente demonstrou frustração..." value={editRiskReason} onChange={(e) => setEditRiskReason(e.target.value)} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Evidência (opcional)</Label>
+                        <Textarea placeholder="Trecho de conversa ou contexto adicional..." value={editRiskEvidence} onChange={(e) => setEditRiskEvidence(e.target.value)} />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setEditingRiskId(null)}>Cancelar</Button>
+                      <Button onClick={handleSaveEditRisk} disabled={savingEditRisk}>
+                        {savingEditRisk ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</>) : "Salvar"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                <AlertDialog open={!!deletingRiskId} onOpenChange={(open) => !open && !isDeleting && setDeletingRiskId(null)}>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Excluir evento de risco?</AlertDialogTitle>
+                      <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteRisk} disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        {isDeleting ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Excluindo...</>) : "Excluir"}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            );
+          case "recommendations":
+            return (
+              <Card className="shadow-card">
+                <CardHeader>
+                  <CardTitle className="text-base">Recomendações</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {recommendations.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">
+                      Nenhuma recomendação disponível.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {recommendations.map((rec) => (
+                        <div key={rec.id} className="p-4 rounded-lg border border-border">
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                <Lightbulb className="h-4 w-4 text-warning" />
+                                <Badge variant="outline">{rec.type}</Badge>
+                                <Badge variant={rec.status === "open" ? "default" : "secondary"}>
+                                  {rec.status === "open" ? "Aberta" : rec.status === "done" ? "Feita" : "Descartada"}
+                                </Badge>
+                              </div>
+                              <p className="text-sm font-medium mt-2">{rec.recommendation}</p>
+                              {rec.context && (
+                                <p className="text-sm text-muted-foreground mt-1">{rec.context}</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {format(new Date(rec.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                              </span>
+                              {rec.status === "open" && (
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-success hover:text-success"
+                                    onClick={() => handleRecommendationAction(rec.id, "done")}
+                                  >
+                                    <Check className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    onClick={() => handleRecommendationAction(rec.id, "dismissed")}
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          default:
+            return null;
+        }
+      })()}
     </div>
   );
 }
