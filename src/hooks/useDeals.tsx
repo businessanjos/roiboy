@@ -254,15 +254,20 @@ export function useDeals(pipelineId?: string | null) {
       const productId = cleanData.product_id;
       delete cleanData.product_id;
 
-      const { data: newDeal, error } = await supabase
-        .from('deals')
-        .insert({
+      const insertPayload: any = {
           ...cleanData,
           account_id: currentUser.account_id,
           tags: data.tags || [],
           // Auto-assign to current user if no responsible_user_id provided
           responsible_user_id: cleanData.responsible_user_id ?? currentUser.id,
-        })
+        };
+      if (pipelineId) {
+        insertPayload.pipeline_id = pipelineId;
+      }
+
+      const { data: newDeal, error } = await supabase
+        .from('deals')
+        .insert(insertPayload)
         .select(`
           *,
           client:clients(id, full_name, phone_e164, avatar_url),
