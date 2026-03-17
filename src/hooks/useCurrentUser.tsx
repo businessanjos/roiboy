@@ -51,20 +51,32 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       
       if (error) {
         console.error("Error fetching user profile:", error);
-        // Don't wait for timeout - set loading false immediately on error
         setCurrentUser(null);
         setLoading(false);
         return;
       }
       
       if (data) {
-        // Extract team role name from the joined data
+        // Extract team role name from the joined data (legacy single role)
         let teamRoleName = (data as any).team_role?.name;
         const teamRoleId = (data as any).team_role_id;
         
-        // Fallback: if JOIN failed but team_role_id exists, fetch name separately
+        // Fetch all roles from junction table
+        const { data: userRolesData } = await supabase
+          .from("user_team_roles")
+          .select("team_role_id, team_role:team_roles(name)")
+          .eq("user_id", data.id);
+        
+        const teamRoleNames = (userRolesData || []).map((ur: any) => ur.team_role?.name).filter(Boolean);
+        const teamRoleIds = (userRolesData || []).map((ur: any) => ur.team_role_id);
+        
+        // Use first role name as primary if available
+        if (teamRoleNames.length > 0 && !teamRoleName) {
+          teamRoleName = teamRoleNames[0];
+        }
+        
+        // Fallback: if no junction data but team_role_id exists, fetch name separately
         if (!teamRoleName && teamRoleId) {
-          console.warn("team_role JOIN returned null, fetching separately for team_role_id:", teamRoleId);
           try {
             const { data: roleData } = await supabase
               .from("team_roles")
@@ -72,15 +84,18 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
               .eq("id", teamRoleId)
               .maybeSingle();
             teamRoleName = roleData?.name || undefined;
+            if (teamRoleName) teamRoleNames.push(teamRoleName);
           } catch {
-            // Non-critical, continue without team role name
+            // Non-critical
           }
         }
         
         setCurrentUser({
           ...data,
           team_role_name: teamRoleName,
+          team_role_names: teamRoleNames,
           team_role_id: teamRoleId,
+          team_role_ids: teamRoleIds,
         } as CurrentUser);
       } else {
         setCurrentUser(null);
