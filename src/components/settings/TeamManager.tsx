@@ -80,7 +80,29 @@ interface TeamRole {
   is_system: boolean;
   display_order: number;
   permissions?: string[];
+  area?: string | null;
+  cargo?: string | null;
+  seniority?: string | null;
 }
+
+const ROLE_AREAS = [
+  "Comercial", "Marketing", "Pessoas", "Financeiro",
+  "Customer Success", "Customer Experience", "Administrativo", "Tech", "Jurídico",
+];
+
+const CARGOS_POR_AREA: Record<string, string[]> = {
+  "Comercial": ["SDR", "BDR", "Closer", "Vendedor", "Consultor", "Executivo de Contas", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Marketing": ["Social Media", "Designer", "Copywriter", "Analista de Mídia", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Pessoas": ["Recrutador", "Analista de RH", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Financeiro": ["Assistente Financeiro", "Analista Financeiro", "Controller", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Customer Success": ["CSM", "Onboarding Specialist", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Customer Experience": ["CX Analyst", "CX Specialist", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Administrativo": ["Recepcionista", "Assistente Administrativo", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Tech": ["Desenvolvedor", "DevOps", "QA", "Product Manager", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Jurídico": ["Advogado", "Paralegal", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+};
+
+const SENIORITY_LEVELS = ["Estagiário", "Júnior", "Pleno", "Sênior", "Especialista"];
 
 interface TeamUser {
   id: string;
