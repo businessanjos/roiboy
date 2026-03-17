@@ -61,6 +61,7 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
     // Super admin, account admin, Team Role "Admin", or "Também é Admin" can manage everything
     if (
       currentUser?.role === "admin" || 
+      currentUser?.team_role_names?.includes("Admin") || 
       currentUser?.team_role_name === "Admin" || 
       currentUser?.is_also_admin === true
     ) return true;
@@ -69,8 +70,9 @@ export function useUserSectorAccess(): UseUserSectorAccessReturn {
     if (!sectorId) return false;
 
     // Check if user has an operation team role and is accessing operacoes sector
-    if (sectorId === "operacoes" && currentUser?.team_role_name) {
-      if (OPERATION_TEAM_ROLES.includes(currentUser.team_role_name)) {
+    if (sectorId === "operacoes") {
+      const teamRoleNames = currentUser?.team_role_names || (currentUser?.team_role_name ? [currentUser.team_role_name] : []);
+      if (teamRoleNames.some(name => OPERATION_TEAM_ROLES.includes(name))) {
         return true;
       }
     }
