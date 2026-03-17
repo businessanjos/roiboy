@@ -1458,12 +1458,27 @@ export function TeamManager() {
               )}
               
               <div className="space-y-2">
-                <Label htmlFor="role-description" className="text-sm font-medium">Descrição</Label>
-                <Input
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="role-description" className="text-sm font-medium">Descrição</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateDescription}
+                    disabled={generatingDescription || !roleFormArea || !roleFormCargo}
+                    className="h-7 text-xs gap-1.5"
+                  >
+                    {generatingDescription ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                    Gerar com IA
+                  </Button>
+                </div>
+                <Textarea
                   id="role-description"
                   value={roleFormDescription}
                   onChange={(e) => setRoleFormDescription(e.target.value)}
                   placeholder="Descrição da função"
+                  rows={3}
+                  className="resize-none"
                 />
               </div>
 
