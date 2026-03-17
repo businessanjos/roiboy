@@ -66,8 +66,12 @@ export default function SalesScripts() {
   const queryClient = useQueryClient();
   const accountId = currentUser?.account_id;
   const isAdmin = currentUser?.role === 'admin' || currentUser?.is_also_admin || currentUser?.team_role_name === 'Admin';
+  const isSalesRep = (() => {
+    const role = currentUser?.team_role_name;
+    return !!role && ['SDR', 'Closer', 'Vendas', 'Vendedor'].includes(role) && !isAdmin;
+  })();
 
-  const [activeTab, setActiveTab] = useState('materials');
+  const [activeTab, setActiveTab] = useState(isSalesRep ? 'playbooks' : 'materials');
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<SalesMaterial | null>(null);
   const [materialForm, setMaterialForm] = useState({ title: '', content: '', material_type: '' });
@@ -229,18 +233,24 @@ export default function SalesScripts() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1"><MessageSquareText className="w-7 h-7 text-primary" /><h1 className="text-xl font-bold">Scripts de Vendas</h1></div>
-          <p className="text-muted-foreground text-xs">Materiais, playbooks, análise de calls, comissões e scripts</p>
+          <p className="text-muted-foreground text-xs">{isSalesRep ? "Playbooks de vendas" : "Materiais, playbooks, análise de calls, comissões e scripts"}</p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 mb-4">
-          <TabsTrigger value="materials" className="gap-1.5"><Package className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Materiais</span></TabsTrigger>
-          <TabsTrigger value="playbooks" className="gap-1.5"><Sparkles className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Playbooks</span></TabsTrigger>
-          <TabsTrigger value="analysis" className="gap-1.5"><BarChart3 className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Calls</span></TabsTrigger>
-          <TabsTrigger value="commission" className="gap-1.5"><DollarSign className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Comissões</span></TabsTrigger>
-          <TabsTrigger value="scripts" className="gap-1.5"><BookOpen className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Scripts</span></TabsTrigger>
-        </TabsList>
+        {isSalesRep ? (
+          <TabsList className="grid w-full grid-cols-1 mb-4">
+            <TabsTrigger value="playbooks" className="gap-1.5"><Sparkles className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Playbooks</span></TabsTrigger>
+          </TabsList>
+        ) : (
+          <TabsList className="grid w-full grid-cols-5 mb-4">
+            <TabsTrigger value="materials" className="gap-1.5"><Package className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Materiais</span></TabsTrigger>
+            <TabsTrigger value="playbooks" className="gap-1.5"><Sparkles className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Playbooks</span></TabsTrigger>
+            <TabsTrigger value="analysis" className="gap-1.5"><BarChart3 className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Calls</span></TabsTrigger>
+            <TabsTrigger value="commission" className="gap-1.5"><DollarSign className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Comissões</span></TabsTrigger>
+            <TabsTrigger value="scripts" className="gap-1.5"><BookOpen className="w-4 h-4 hidden sm:inline" /><span className="text-xs">Scripts</span></TabsTrigger>
+          </TabsList>
+        )}
 
         {/* MATERIALS */}
         <TabsContent value="materials">
