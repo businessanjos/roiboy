@@ -150,7 +150,7 @@ const normalizeCommissionTiers = (rawTiers: CommissionTier[]): CommissionTier[] 
 };
 
 const SDR_NAMES = ["george"];
-const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
+const SALES_TEAM_NAMES = ["everton", "jonathan", "vanessa", "darlan", "george"];
 
 const isSDRUserName = (name?: string | null) =>
   SDR_NAMES.some((n) => name?.toLowerCase().includes(n));
