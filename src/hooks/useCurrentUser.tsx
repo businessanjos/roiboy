@@ -13,7 +13,9 @@ interface CurrentUser {
   zapp_signature: string | null;
   zapp_signature_enabled: boolean;
   team_role_name?: string;
+  team_role_names?: string[];
   team_role_id?: string | null;
+  team_role_ids?: string[];
 }
 
 interface CurrentUserContextType {
