@@ -5,8 +5,7 @@ export default function BillingPortal() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redirect to profile page with billing tab
-    navigate("/profile?tab=billing", { replace: true });
+    navigate("/settings?tab=billing", { replace: true });
   }, [navigate]);
 
   return null;
