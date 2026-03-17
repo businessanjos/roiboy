@@ -1142,6 +1142,18 @@ export default function SalesPipeline() {
         onComplete={handleOutcomeRequiredFieldsComplete}
         outcomeType={outcomeRequiredFieldsModal.outcomeType}
       />
+
+      {/* Meeting Schedule Dialog - opens when deal moves to "reunião agendada" */}
+      <MeetingScheduleDialog
+        open={meetingDialog.open}
+        onOpenChange={(open) => setMeetingDialog(prev => ({ ...prev, open }))}
+        dealId={meetingDialog.dealId}
+        leadId={meetingDialog.leadId}
+        clientId={meetingDialog.clientId}
+        participantName={meetingDialog.participantName}
+        participantPhone={meetingDialog.participantPhone}
+        stageName={meetingDialog.stageName}
+      />
     </>
   );
 }
