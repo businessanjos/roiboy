@@ -69,6 +69,10 @@ export default function SalesTeam() {
             <CommissionTab />
           </TabsContent>
 
+          <TabsContent value="videocall">
+            <VideoCallTab />
+          </TabsContent>
+
           <TabsContent value="career">
             <CareerPlanTab plan={plan} onSaveLevels={saveSalesLevels} />
           </TabsContent>
