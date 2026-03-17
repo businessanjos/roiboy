@@ -2054,30 +2054,12 @@ export default function ClientDetail() {
         </Card>
       )}
 
-      {/* Tabs */}
-      <Tabs defaultValue="timeline" className="space-y-4">
-        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <TabsList className="w-max sm:w-auto">
-            <TabsTrigger value="timeline">Timeline</TabsTrigger>
-            <TabsTrigger value="whatsapp">WhatsApp</TabsTrigger>
-            <TabsTrigger value="deals">Negócios</TabsTrigger>
-            <TabsTrigger value="fichas">Fichas</TabsTrigger>
-            <TabsTrigger value="campos">Campos</TabsTrigger>
-            <TabsTrigger value="agenda">Agenda</TabsTrigger>
-            <TabsTrigger value="cx">Momentos CX</TabsTrigger>
-            <TabsTrigger value="vinculos">Vínculos</TabsTrigger>
-            <TabsTrigger value="contracts">Contratos</TabsTrigger>
-            <TabsTrigger value="subscriptions">Financeiro</TabsTrigger>
-            <TabsTrigger value="sales">Metas & Vendas</TabsTrigger>
-            <TabsTrigger value="roi">ROI ({roiEvents.length})</TabsTrigger>
-            <TabsTrigger value="risks">Riscos ({riskEvents.length})</TabsTrigger>
-            <TabsTrigger value="recommendations">
-              Recomendações ({recommendations.filter((r) => r.status === "open").length})
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
-        <TabsContent value="deals">
+      {/* Content based on active tab from sidebar */}
+      {(() => {
+        const activeTab = searchParams.get("tab") || "timeline";
+        switch (activeTab) {
+          case "deals":
+            return (
           <Card className="shadow-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-base flex items-center gap-2">
