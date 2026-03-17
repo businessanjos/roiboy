@@ -103,7 +103,7 @@ export function RankingPresentationView({
   data,
   formatting,
   options,
-  goalValue,
+  dashboardId,
   onClose,
 }: RankingPresentationViewProps) {
   const { currentUser } = useCurrentUser();
