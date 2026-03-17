@@ -182,6 +182,9 @@ export function TeamManager() {
   const [roleFormDescription, setRoleFormDescription] = useState("");
   const [roleFormColor, setRoleFormColor] = useState("hsl(39, 55%, 63%)");
   const [roleFormPermissions, setRoleFormPermissions] = useState<string[]>([]);
+  const [roleFormArea, setRoleFormArea] = useState("");
+  const [roleFormCargo, setRoleFormCargo] = useState("");
+  const [roleFormSeniority, setRoleFormSeniority] = useState("");
 
   useEffect(() => {
     fetchData();
