@@ -205,7 +205,7 @@ export function ThreeCPlusPanel() {
       <button
         onClick={handleOpen}
         className={cn(
-          "fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full px-4 py-3 shadow-lg transition-all hover:scale-105",
+          "fixed bottom-20 right-6 z-50 flex items-center gap-2 rounded-full px-4 py-3 shadow-lg transition-all hover:scale-105",
           hasCallActivity
             ? "bg-destructive text-destructive-foreground animate-pulse"
             : "bg-primary text-primary-foreground"
