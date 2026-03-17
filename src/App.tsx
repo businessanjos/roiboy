@@ -69,6 +69,7 @@ const PrivacyPolicy = lazyRetry(() => import("./pages/PrivacyPolicy"));
 const Download = lazyRetry(() => import("./pages/Download"));
 const Home = lazyRetry(() => import("./pages/Home"));
 const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
+const SalesMeetings = lazyRetry(() => import("./pages/SalesMeetings"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
 const WhatsAppGroups = lazyRetry(() => import("./pages/WhatsAppGroups"));
 const PublicMembersBook = lazyRetry(() => import("./pages/PublicMembersBook"));
@@ -221,6 +222,7 @@ const App = () => (
                             <Route path="/admin" element={<Admin />} />
                             <Route path="/admin/whatsapp-diagnostics" element={<WhatsAppDiagnostics />} />
                             <Route path="/sales-scripts" element={<SalesScripts />} />
+                            <Route path="/sales-meetings" element={<SalesMeetings />} />
                           </Route>
                           <Route path="*" element={<NotFound />} />
                         </Routes>
