@@ -322,23 +322,28 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-        {filteredNavItems.map((item) => {
+        {filteredNavItems.map((item, idx) => {
           const isActive = location.pathname.startsWith(item.to);
+          const isHighlighted = item.to === '/sales-team';
           return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={onNavigate}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                isActive
-                  ? "bg-accent text-accent-foreground"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </NavLink>
+            <div key={item.to}>
+              <NavLink
+                to={item.to}
+                onClick={onNavigate}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                  isHighlighted && !isActive
+                    ? "bg-primary/10 text-primary hover:bg-primary/20 border border-primary/20"
+                    : isActive
+                      ? "bg-accent text-accent-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <item.icon className={cn("h-5 w-5 flex-shrink-0", isHighlighted && !isActive && "text-primary")} />
+                {!collapsed && <span>{item.label}</span>}
+              </NavLink>
+              {isHighlighted && <div className={cn("my-1.5 border-t border-border/50", collapsed && "mx-1")} />}
+            </div>
           );
         })}
 
