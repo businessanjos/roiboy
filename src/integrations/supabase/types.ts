@@ -10218,6 +10218,8 @@ export type Database = {
       team_roles: {
         Row: {
           account_id: string
+          area: string | null
+          cargo: string | null
           color: string
           created_at: string
           description: string | null
@@ -10225,10 +10227,13 @@ export type Database = {
           id: string
           is_system: boolean
           name: string
+          seniority: string | null
           updated_at: string
         }
         Insert: {
           account_id: string
+          area?: string | null
+          cargo?: string | null
           color?: string
           created_at?: string
           description?: string | null
@@ -10236,10 +10241,13 @@ export type Database = {
           id?: string
           is_system?: boolean
           name: string
+          seniority?: string | null
           updated_at?: string
         }
         Update: {
           account_id?: string
+          area?: string | null
+          cargo?: string | null
           color?: string
           created_at?: string
           description?: string | null
@@ -10247,6 +10255,7 @@ export type Database = {
           id?: string
           is_system?: boolean
           name?: string
+          seniority?: string | null
           updated_at?: string
         }
         Relationships: [

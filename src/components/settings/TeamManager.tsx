@@ -80,7 +80,29 @@ interface TeamRole {
   is_system: boolean;
   display_order: number;
   permissions?: string[];
+  area?: string | null;
+  cargo?: string | null;
+  seniority?: string | null;
 }
+
+const ROLE_AREAS = [
+  "Comercial", "Marketing", "Pessoas", "Financeiro",
+  "Customer Success", "Customer Experience", "Administrativo", "Tech", "Jurídico",
+];
+
+const CARGOS_POR_AREA: Record<string, string[]> = {
+  "Comercial": ["SDR", "BDR", "Closer", "Vendedor", "Consultor", "Executivo de Contas", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Marketing": ["Social Media", "Designer", "Copywriter", "Analista de Mídia", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Pessoas": ["Recrutador", "Analista de RH", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Financeiro": ["Assistente Financeiro", "Analista Financeiro", "Controller", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Customer Success": ["CSM", "Onboarding Specialist", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Customer Experience": ["CX Analyst", "CX Specialist", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Administrativo": ["Recepcionista", "Assistente Administrativo", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Tech": ["Desenvolvedor", "DevOps", "QA", "Product Manager", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+  "Jurídico": ["Advogado", "Paralegal", "Assistente", "Analista", "Coordenador", "Gerente", "Diretor", "Head"],
+};
+
+const SENIORITY_LEVELS = ["Estagiário", "Júnior", "Pleno", "Sênior", "Especialista"];
 
 interface TeamUser {
   id: string;
@@ -160,6 +182,9 @@ export function TeamManager() {
   const [roleFormDescription, setRoleFormDescription] = useState("");
   const [roleFormColor, setRoleFormColor] = useState("hsl(39, 55%, 63%)");
   const [roleFormPermissions, setRoleFormPermissions] = useState<string[]>([]);
+  const [roleFormArea, setRoleFormArea] = useState("");
+  const [roleFormCargo, setRoleFormCargo] = useState("");
+  const [roleFormSeniority, setRoleFormSeniority] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -487,12 +512,18 @@ export function TeamManager() {
       setRoleFormDescription(role.description || "");
       setRoleFormColor(role.color);
       setRoleFormPermissions(role.permissions || []);
+      setRoleFormArea((role as any).area || "");
+      setRoleFormCargo((role as any).cargo || "");
+      setRoleFormSeniority((role as any).seniority || "");
     } else {
       setSelectedRole(null);
       setRoleFormName("");
       setRoleFormDescription("");
       setRoleFormColor(DEFAULT_ROLE_COLORS[roles.length % DEFAULT_ROLE_COLORS.length]);
       setRoleFormPermissions([]);
+      setRoleFormArea("");
+      setRoleFormCargo("");
+      setRoleFormSeniority("");
     }
     setIsRoleDialogOpen(true);
   };
@@ -535,7 +566,10 @@ export function TeamManager() {
             name: roleFormName,
             description: roleFormDescription,
             color: roleFormColor,
-          })
+            area: roleFormArea || null,
+            cargo: roleFormCargo || null,
+            seniority: roleFormSeniority || null,
+          } as any)
           .eq("id", selectedRole.id)
           .select();
 
@@ -550,7 +584,10 @@ export function TeamManager() {
             description: roleFormDescription,
             color: roleFormColor,
             display_order: roles.length + 1,
-          })
+            area: roleFormArea || null,
+            cargo: roleFormCargo || null,
+            seniority: roleFormSeniority || null,
+          } as any)
           .select()
           .single();
 
@@ -959,9 +996,9 @@ export function TeamManager() {
                                 </Badge>
                               )}
                             </CardTitle>
-                            {role.description && (
+                            {((role as any).area || role.description) && (
                               <CardDescription className="mt-1 text-xs line-clamp-1">
-                                {role.description}
+                                {[(role as any).area, (role as any).cargo, (role as any).seniority].filter(Boolean).join(" · ") || role.description}
                               </CardDescription>
                             )}
                           </div>
@@ -1379,7 +1416,7 @@ export function TeamManager() {
                 {selectedRole ? "Editar Função" : "Nova Função"}
               </DialogTitle>
               <DialogDescription className="text-sm">
-                Defina nome, cor e permissões
+                Defina área, cargo, senioridade e permissões
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -1406,7 +1443,51 @@ export function TeamManager() {
                   placeholder="Descrição da função"
                 />
               </div>
-              
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Área *</Label>
+                  <Select value={roleFormArea} onValueChange={(v) => { setRoleFormArea(v); setRoleFormCargo(""); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a área" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLE_AREAS.map((area) => (
+                        <SelectItem key={area} value={area}>{area}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Cargo</Label>
+                  <Select value={roleFormCargo} onValueChange={setRoleFormCargo} disabled={!roleFormArea}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={roleFormArea ? "Selecione o cargo" : "Selecione a área primeiro"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(CARGOS_POR_AREA[roleFormArea] || []).map((cargo) => (
+                        <SelectItem key={cargo} value={cargo}>{cargo}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Senioridade</Label>
+                <Select value={roleFormSeniority} onValueChange={setRoleFormSeniority}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a senioridade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SENIORITY_LEVELS.map((level) => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Cor</Label>
                 <div className="flex gap-2">
