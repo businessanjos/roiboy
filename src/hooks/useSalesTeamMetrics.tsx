@@ -91,10 +91,10 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
 
       // Fetch all metrics in parallel
       const [callsData, dealsData, tasksData, leadsData] = await Promise.all([
-        // Calls
+        // Calls - from threecplus_call_logs (3C Plus telephony)
         supabase
-          .from("zapp_calls")
-          .select("user_id, status, duration_seconds")
+          .from("threecplus_call_logs")
+          .select("user_id, status, duration_seconds, started_at, ended_at")
           .eq("account_id", currentUser.account_id)
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
@@ -152,13 +152,20 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         };
       }
 
-      // Aggregate calls
+      // Aggregate calls (threecplus_call_logs uses "finished" status)
       if (callsData.data) {
         for (const call of callsData.data) {
           if (call.user_id && metricsMap[call.user_id]) {
             metricsMap[call.user_id].total_calls++;
-            metricsMap[call.user_id].total_call_duration += call.duration_seconds || 0;
-            if (call.status === "completed") {
+            // Calculate duration from started_at/ended_at if duration_seconds is missing
+            let duration = call.duration_seconds || 0;
+            if (!duration && call.started_at && call.ended_at) {
+              duration = Math.round(
+                (new Date(call.ended_at).getTime() - new Date(call.started_at).getTime()) / 1000
+              );
+            }
+            metricsMap[call.user_id].total_call_duration += duration;
+            if (call.status === "finished") {
               metricsMap[call.user_id].answered_calls++;
             } else if (call.status === "missed" || call.status === "no_answer") {
               metricsMap[call.user_id].missed_calls++;
