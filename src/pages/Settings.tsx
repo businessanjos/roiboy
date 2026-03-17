@@ -47,7 +47,7 @@ export default function Settings() {
               </TabsTrigger>
             </>
           )}
-          {hasVendasAccess && (
+          {hasVendasAccess && !isSalesRep && (
             <TabsTrigger value="sales" className="gap-2">
               <Target className="h-4 w-4" />
               Vendas
