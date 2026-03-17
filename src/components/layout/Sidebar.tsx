@@ -342,6 +342,35 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
           );
         })}
 
+        {/* Quick sector navigation for sales reps */}
+        {isSalesRep && currentSector && salesRepOtherSectors.length > 0 && (
+          <>
+            <div className={cn("my-3 border-t border-border", collapsed && "mx-1")} />
+            {!collapsed && (
+              <p className="px-3 mb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                Outros setores
+              </p>
+            )}
+            {salesRepOtherSectors.map((sector) => (
+              <button
+                key={sector.id}
+                onClick={() => {
+                  setCurrentSector(sector.id);
+                  navigate(sector.defaultRoute);
+                  onNavigate?.();
+                }}
+                className={cn(
+                  "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                  "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <sector.icon className={cn("h-4 w-4 flex-shrink-0", sector.color)} />
+                {!collapsed && <span>{sector.name}</span>}
+              </button>
+            ))}
+          </>
+        )}
+
         {/* Notifications - hide for super admins (unless impersonating) */}
         {showRegularUI && (
           <TooltipProvider>
