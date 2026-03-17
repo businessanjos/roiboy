@@ -1143,7 +1143,7 @@ export function TeamManager() {
               <CardContent className="p-0">
                 <div className="divide-y divide-border">
                   {roles.map((role) => {
-                    const memberCount = users.filter(u => u.team_role_id === role.id).length;
+                    const memberCount = users.filter(u => u.team_roles?.some(r => r.id === role.id)).length;
                     const permissionCount = role.permissions?.length || 0;
                     
                     return (
