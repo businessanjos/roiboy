@@ -268,25 +268,26 @@ async function logCallToDb(
 ) {
   try {
     const callId = callDetails?.id ? String(callDetails.id) : `manual_${Date.now()}`;
-    await supabaseAdmin.from("threecplus_call_logs").upsert(
-      {
-        account_id: accountId,
-        user_id: userId,
-        call_id: callId,
-        call_type: mode === "click2call" ? "manual" : "manual",
-        direction: "outbound",
-        phone: callDetails?.phone || null,
-        contact_name: callDetails?.contact_name || null,
-        campaign_name: campaignName || null,
-        status: "connected",
-        started_at: new Date().toISOString(),
-        metadata: { source: "edge_function", mode },
-      },
-      { onConflict: "call_id" }
-    );
-    console.log("[threecplus-agent] logCallToDb: saved call", callId);
+    const { error } = await supabaseAdmin.from("threecplus_call_logs").insert({
+      account_id: accountId,
+      user_id: userId,
+      call_id: callId,
+      call_type: "manual",
+      direction: "outbound",
+      phone: callDetails?.phone || null,
+      contact_name: callDetails?.contact_name || null,
+      campaign_name: campaignName || null,
+      status: "connected",
+      started_at: new Date().toISOString(),
+      metadata: { source: "edge_function", mode },
+    });
+    if (error) {
+      console.error("[threecplus-agent] logCallToDb DB error:", JSON.stringify(error));
+    } else {
+      console.log("[threecplus-agent] logCallToDb: saved call", callId);
+    }
   } catch (err) {
-    console.error("[threecplus-agent] logCallToDb error:", err);
+    console.error("[threecplus-agent] logCallToDb exception:", err);
   }
 }
 
