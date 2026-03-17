@@ -80,7 +80,7 @@ serve(async (req: Request) => {
     }
 
     const body: CreateTeamUserRequest = await req.json();
-    const { name, email, password, team_role_id, is_also_admin } = body;
+    const { name, email, password, team_role_id, team_role_ids, is_also_admin } = body;
 
     if (!name || !email || !password) {
       return new Response(
