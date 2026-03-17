@@ -64,6 +64,17 @@ import { MeetingScheduleDialog } from "@/components/sales/videocall/MeetingSched
 export default function SalesPipeline() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser } = useCurrentUser();
+  
+  const {
+    pipelines,
+    activePipelineId,
+    activePipeline,
+    setActivePipelineId,
+    createPipeline,
+    updatePipeline,
+    deletePipeline,
+  } = usePipelines();
+
   const {
     stages,
     deals,
@@ -87,7 +98,7 @@ export default function SalesPipeline() {
     updateStage,
     deleteStage,
     reorderStages,
-  } = useDeals();
+  } = useDeals(activePipelineId);
   
   const { users: salesUsers } = useSectorUsers({ sectorId: "vendas" });
   const { isAdmin } = usePermissions();
