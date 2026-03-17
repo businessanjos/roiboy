@@ -235,6 +235,7 @@ export default function SalesMeetings() {
       meeting_url: m.meeting_url || "",
       meeting_type: m.meeting_type || "scheduled",
       notes: m.notes || "",
+      use_daily: !m.meeting_url,
     });
     setDialogOpen(true);
   };
