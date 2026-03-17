@@ -467,7 +467,7 @@ export function TeamManager() {
     setFormName(user.name);
     setFormEmail(user.email);
     setFormPassword("");
-    setFormRoleId(user.team_role_id || "");
+    setFormRoleIds((user.team_roles || []).map(r => r.id));
     setFormIsAlsoAdmin(user.is_also_admin || false);
     setFormAvatarUrl(user.avatar_url);
     setIsEditDialogOpen(true);
