@@ -445,6 +445,74 @@ export function useDeals(pipelineId?: string | null) {
     const newStage = stages.find(s => s.id === newStageId);
 
     try {
+      // Check if moving to "Reunião Agendada" in SDR pipeline → auto-transfer to Closer
+      if (newStage?.name === 'Reunião Agendada' && pipelineId) {
+        // Get current pipeline info
+        const { data: currentPipeline } = await supabase
+          .from('pipelines')
+          .select('name')
+          .eq('id', pipelineId)
+          .single();
+
+        if (currentPipeline?.name === 'SDR') {
+          // Find the Closer pipeline
+          const { data: closerPipeline } = await supabase
+            .from('pipelines')
+            .select('id')
+            .eq('account_id', currentUser.account_id)
+            .eq('name', 'Closer')
+            .eq('is_active', true)
+            .single();
+
+          if (closerPipeline) {
+            // Find "Reunião Agendada" stage in Closer pipeline
+            const { data: closerStage } = await supabase
+              .from('deal_stages')
+              .select('id, name, probability')
+              .eq('pipeline_id', closerPipeline.id)
+              .eq('name', 'Reunião Agendada')
+              .single();
+
+            if (closerStage) {
+              // Transfer deal to Closer pipeline
+              const { error } = await supabase
+                .from('deals')
+                .update({
+                  pipeline_id: closerPipeline.id,
+                  stage_id: closerStage.id,
+                  probability: closerStage.probability || 0,
+                })
+                .eq('id', dealId)
+                .eq('account_id', currentUser.account_id);
+
+              if (error) throw error;
+
+              // Log the transfer activity
+              await supabase.from('deal_activities').insert({
+                account_id: currentUser.account_id,
+                deal_id: dealId,
+                type: 'stage_change',
+                title: 'Transferido do SDR para Closer',
+                old_value: oldStage?.name || 'Sem etapa',
+                new_value: `Reunião Agendada (Closer)`,
+                user_id: currentUser.id,
+              });
+
+              // Remove from local state (it's now in another pipeline)
+              setDeals(prev => prev.filter(d => d.id !== dealId));
+
+              toast({
+                title: "Deal transferido para o Closer",
+                description: `"${deal?.title}" foi movido para Reunião Agendada no pipeline Closer.`,
+              });
+
+              return true;
+            }
+          }
+        }
+      }
+
+      // Normal stage move (same pipeline)
       const { error } = await supabase
         .from('deals')
         .update({ 
