@@ -90,7 +90,9 @@ export default function SalesMeetings() {
     meeting_url: "",
     meeting_type: "scheduled",
     notes: "",
+    use_daily: true,
   });
+  const [creatingRoom, setCreatingRoom] = useState(false);
 
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ["sales-meetings", accountId],
