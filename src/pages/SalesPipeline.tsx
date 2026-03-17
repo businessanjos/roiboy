@@ -58,6 +58,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import LeadsTab from "@/components/sales/LeadsTab";
+import { MeetingScheduleDialog } from "@/components/sales/videocall/MeetingScheduleDialog";
 
 export default function SalesPipeline() {
   const [searchParams, setSearchParams] = useSearchParams();
