@@ -834,11 +834,23 @@ export default function SalesPipeline() {
       <div className="p-4 space-y-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold">Comercial</h1>
-            <p className="text-muted-foreground text-xs">
-              Gerencie prospecção e negociações
-            </p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-xl font-bold">Comercial</h1>
+              <p className="text-muted-foreground text-xs">
+                Gerencie prospecção e negociações
+              </p>
+            </div>
+            {mainTab === 'pipeline' && (
+              <PipelineSelector
+                pipelines={pipelines}
+                activePipelineId={activePipelineId}
+                onSelect={setActivePipelineId}
+                onCreate={createPipeline}
+                onUpdate={updatePipeline}
+                onDelete={deletePipeline}
+              />
+            )}
           </div>
           <div className="flex items-center gap-2">
             {mainTab === 'pipeline' && (
