@@ -1416,7 +1416,7 @@ export function TeamManager() {
                 {selectedRole ? "Editar Função" : "Nova Função"}
               </DialogTitle>
               <DialogDescription className="text-sm">
-                Defina nome, cor e permissões
+                Defina área, cargo, senioridade e permissões
               </DialogDescription>
             </DialogHeader>
           </div>
