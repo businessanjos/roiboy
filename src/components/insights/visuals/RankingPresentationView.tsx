@@ -295,7 +295,7 @@ export function RankingPresentationView({
       <div className="flex-1 flex flex-col lg:flex-row gap-6 px-8 pb-6 overflow-hidden min-h-0">
         {/* Podium */}
         {top3.length >= 2 && (
-          <div className="lg:w-[40%] flex items-end justify-center gap-3 shrink-0 pb-4">
+          <div className="lg:w-[45%] flex items-end justify-center gap-4 shrink-0 pb-4">
             {podiumOrder.map((item) => {
               const originalIndex = top3.indexOf(item);
               const gradient = PODIUM_GRADIENTS[originalIndex];
