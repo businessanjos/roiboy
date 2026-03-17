@@ -295,6 +295,7 @@ export function useDeals(pipelineId?: string | null) {
           tags: data.tags || [],
           responsible_user_id: cleanData.responsible_user_id ?? currentUser.id,
           stage_id: targetStageId,
+          ...(isGeorgeCreating ? { sdr_user_id: GEORGE_USER_ID } : {}),
         };
       if (targetPipelineId) {
         insertPayload.pipeline_id = targetPipelineId;
