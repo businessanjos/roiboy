@@ -324,7 +324,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {filteredNavItems.map((item, idx) => {
           const isActive = location.pathname.startsWith(item.to);
-          const isHighlighted = item.to === '/sales-team';
+          const isHighlighted = item.to === "/sales-team";
           return (
             <div key={item.to}>
               <NavLink
@@ -332,8 +332,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
                 onClick={onNavigate}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
-                  isHighlighted && !isActive
-                    ? "bg-foreground/10 text-foreground hover:bg-foreground/15"
+                  isHighlighted
+                    ? "bg-foreground text-background shadow-sm hover:bg-foreground/90"
                     : isActive
                       ? "bg-accent text-accent-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
