@@ -75,7 +75,7 @@ export function TrialExpiredGuard({ children }: TrialExpiredGuardProps) {
             </p>
           </div>
           <Button 
-            onClick={() => navigate("/profile?tab=subscription")} 
+            onClick={() => navigate("/settings?tab=subscription")} 
             className="w-full"
             size="lg"
           >

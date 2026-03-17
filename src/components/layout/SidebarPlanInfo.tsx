@@ -89,7 +89,7 @@ export function SidebarPlanInfo({ collapsed }: { collapsed: boolean }) {
 
   return (
     <Link
-      to="/profile?tab=subscription"
+      to="/settings?tab=subscription"
       className={cn(
         "flex items-center gap-3 p-3 mx-3 mb-2 rounded-lg transition-all hover:opacity-80",
         isExpiring 
