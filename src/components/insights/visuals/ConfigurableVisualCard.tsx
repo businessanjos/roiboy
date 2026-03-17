@@ -331,6 +331,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
                 data={processedData}
                 formatting={config?.formatting || { type: 'number' as FormatType, decimals: 0 }}
                 options={presentationOptions}
+                dashboardId={visual.dashboard_id}
                 onClose={() => setPresentationOptions(null)}
               />
             )}
