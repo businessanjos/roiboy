@@ -2515,14 +2515,14 @@ export default function ClientDetail() {
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1 flex-wrap">
                                 <Lightbulb className="h-4 w-4 text-warning" />
-                                <Badge variant="outline">{rec.type}</Badge>
+                                <Badge variant="outline">{rec.priority}</Badge>
                                 <Badge variant={rec.status === "open" ? "default" : "secondary"}>
                                   {rec.status === "open" ? "Aberta" : rec.status === "done" ? "Feita" : "Descartada"}
                                 </Badge>
                               </div>
-                              <p className="text-sm font-medium mt-2">{rec.recommendation}</p>
-                              {rec.context && (
-                                <p className="text-sm text-muted-foreground mt-1">{rec.context}</p>
+                              <p className="text-sm font-medium mt-2">{rec.title}</p>
+                              {rec.action_text && (
+                                <p className="text-sm text-muted-foreground mt-1">{rec.action_text}</p>
                               )}
                             </div>
                             <div className="flex items-center gap-2">
@@ -2535,7 +2535,7 @@ export default function ClientDetail() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-success hover:text-success"
-                                    onClick={() => handleRecommendationAction(rec.id, "done")}
+                                    onClick={() => handleUpdateRecommendation(rec.id, "done")}
                                   >
                                     <Check className="h-3.5 w-3.5" />
                                   </Button>
@@ -2543,7 +2543,7 @@ export default function ClientDetail() {
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-destructive hover:text-destructive"
-                                    onClick={() => handleRecommendationAction(rec.id, "dismissed")}
+                                    onClick={() => handleUpdateRecommendation(rec.id, "dismissed")}
                                   >
                                     <X className="h-3.5 w-3.5" />
                                   </Button>
