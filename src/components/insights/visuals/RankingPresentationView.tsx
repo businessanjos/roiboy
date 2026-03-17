@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { FormatType, VisualConfig } from "../visual-builder/types";
 import { PresentationOptions } from "./RankingPresentationDialog";
-import { RoyLogo } from "@/components/ui/roy-logo";
+import logoEternum from "@/assets/logo-eternum.svg";
 import { cn } from "@/lib/utils";
 
 interface AggregatedDataPoint {
