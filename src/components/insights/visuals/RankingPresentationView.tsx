@@ -108,6 +108,40 @@ export function RankingPresentationView({
 }: RankingPresentationViewProps) {
   const { currentUser } = useCurrentUser();
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
+  const [goalValue, setGoalValue] = useState<number | null>(null);
+
+  // Fetch goal from sibling gauge visuals in the same dashboard
+  useEffect(() => {
+    if (!dashboardId) return;
+    const fetchGoal = async () => {
+      const { data: visuals } = await supabase
+        .from("insights_visuals")
+        .select("config")
+        .eq("dashboard_id", dashboardId)
+        .eq("chart_type", "gauge");
+      if (visuals) {
+        for (const v of visuals) {
+          const cfg = v.config as VisualConfig | null;
+          if (cfg?.gaugeConfig?.monthlyGoals) {
+            const now = new Date();
+            const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+            const val = cfg.gaugeConfig.monthlyGoals[key];
+            if (val && val > 0) {
+              setGoalValue(val);
+              return;
+            }
+            // Fallback: use any goal value
+            const allGoals = Object.values(cfg.gaugeConfig.monthlyGoals);
+            if (allGoals.length > 0) {
+              setGoalValue(allGoals[allGoals.length - 1]);
+              return;
+            }
+          }
+        }
+      }
+    };
+    fetchGoal();
+  }, [dashboardId]);
 
   useEffect(() => {
     if (!currentUser?.account_id || data.length === 0) return;
