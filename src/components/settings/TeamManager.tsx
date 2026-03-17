@@ -28,8 +28,9 @@ import { toast } from "sonner";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { 
   Plus, Search, Pencil, User, Users, Camera, Loader2, 
-  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye, EyeOff, Lock
+  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye, EyeOff, Lock, Sparkles
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 // Password input component with toggle visibility
 function PasswordInput({ 
@@ -185,6 +186,30 @@ export function TeamManager() {
   const [roleFormArea, setRoleFormArea] = useState("");
   const [roleFormCargo, setRoleFormCargo] = useState("");
   const [roleFormSeniority, setRoleFormSeniority] = useState("");
+  const [generatingDescription, setGeneratingDescription] = useState(false);
+
+  const handleGenerateDescription = async () => {
+    if (!roleFormArea || !roleFormCargo) {
+      toast.error("Selecione Área e Cargo antes de gerar a descrição");
+      return;
+    }
+    setGeneratingDescription(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-role-description", {
+        body: { area: roleFormArea, cargo: roleFormCargo, seniority: roleFormSeniority || null },
+      });
+      if (error) throw error;
+      if (data?.description) {
+        setRoleFormDescription(data.description);
+        toast.success("Descrição gerada com sucesso!");
+      }
+    } catch (err: any) {
+      console.error("Error generating description:", err);
+      toast.error("Erro ao gerar descrição");
+    } finally {
+      setGeneratingDescription(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -1433,12 +1458,27 @@ export function TeamManager() {
               )}
               
               <div className="space-y-2">
-                <Label htmlFor="role-description" className="text-sm font-medium">Descrição</Label>
-                <Input
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="role-description" className="text-sm font-medium">Descrição</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateDescription}
+                    disabled={generatingDescription || !roleFormArea || !roleFormCargo}
+                    className="h-7 text-xs gap-1.5"
+                  >
+                    {generatingDescription ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                    Gerar com IA
+                  </Button>
+                </div>
+                <Textarea
                   id="role-description"
                   value={roleFormDescription}
                   onChange={(e) => setRoleFormDescription(e.target.value)}
                   placeholder="Descrição da função"
+                  rows={3}
+                  className="resize-none"
                 />
               </div>
 
