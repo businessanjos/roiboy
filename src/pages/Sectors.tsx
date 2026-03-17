@@ -6,8 +6,9 @@ import { sectors, SectorId } from "@/config/sectors";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
-// Sectors accessible by SDR and Closer roles
+// Sectors accessible by sales rep roles (SDR, Closer, Vendas, Vendedor)
 const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "roychat", "configuracoes"];
+const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 
 export default function Sectors() {
   const navigate = useNavigate();
