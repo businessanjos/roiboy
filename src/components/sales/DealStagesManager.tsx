@@ -37,6 +37,7 @@ interface DealStagesManagerProps {
   onOpenChange: (open: boolean) => void;
   stages: DealStage[];
   deals: Deal[];
+  pipelineName?: string;
   onCreateStage: (data: { name: string; color: string; probability?: number }) => Promise<DealStage | null>;
   onUpdateStage: (stageId: string, data: { name?: string; color?: string; probability?: number }) => Promise<boolean>;
   onDeleteStage: (stageId: string) => Promise<boolean>;
@@ -53,6 +54,7 @@ export function DealStagesManager({
   onOpenChange,
   stages,
   deals,
+  pipelineName,
   onCreateStage,
   onUpdateStage,
   onDeleteStage,
@@ -272,7 +274,7 @@ export function DealStagesManager({
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Etapa</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir a etapa "{selectedStage?.name}"? 
+              Tem certeza que deseja excluir a etapa "{selectedStage?.name}" do pipeline "{pipelineName}"? 
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>

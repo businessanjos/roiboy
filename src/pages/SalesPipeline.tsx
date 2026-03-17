@@ -1134,6 +1134,7 @@ export default function SalesPipeline() {
         onOpenChange={setIsStagesManagerOpen}
         stages={stages}
         deals={deals}
+        pipelineName={activePipeline?.name}
         onCreateStage={createStage}
         onUpdateStage={updateStage}
         onDeleteStage={deleteStage}
