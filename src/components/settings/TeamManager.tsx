@@ -173,7 +173,7 @@ export function TeamManager() {
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formPassword, setFormPassword] = useState("");
-  const [formRoleId, setFormRoleId] = useState<string>("");
+  const [formRoleIds, setFormRoleIds] = useState<string[]>([]);
   const [formIsAlsoAdmin, setFormIsAlsoAdmin] = useState(false);
   const [formAvatarUrl, setFormAvatarUrl] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
