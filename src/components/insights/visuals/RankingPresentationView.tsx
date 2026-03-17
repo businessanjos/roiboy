@@ -26,7 +26,7 @@ interface RankingPresentationViewProps {
   data: AggregatedDataPoint[];
   formatting: { type: FormatType; decimals: number };
   options: PresentationOptions;
-  goalValue?: number;
+  dashboardId?: string;
   onClose: () => void;
 }
 
