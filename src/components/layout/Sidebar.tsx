@@ -298,6 +298,12 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     onNavigate?.();
   };
 
+  // If on settings route, show settings navigation instead
+  const isOnSettings = location.pathname === "/settings";
+  if (isOnSettings) {
+    return <SettingsSidebarNav collapsed={collapsed} onNavigate={onNavigate} />;
+  }
+
   return (
     <>
       {/* Back to Sectors Button */}
