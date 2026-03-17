@@ -348,7 +348,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             <div className={cn("my-3 border-t border-border", collapsed && "mx-1")} />
             {!collapsed && (
               <p className="px-3 mb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Outros setores
+                Atalhos
               </p>
             )}
             {salesRepOtherSectors.map((sector) => (
