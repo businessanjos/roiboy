@@ -333,7 +333,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                   isHighlighted
-                    ? "bg-foreground text-background shadow-sm hover:bg-foreground/90"
+                    ? "bg-roy-brown text-roy-brown-foreground shadow-sm hover:bg-roy-brown/90"
                     : isActive
                       ? "bg-accent text-accent-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"

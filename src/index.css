@@ -39,6 +39,10 @@
 
     --radius: 0.625rem;
 
+    /* Roy Brown highlight */
+    --roy-brown: 24 68% 25%; /* #6a3714 */
+    --roy-brown-foreground: 47 30% 92%; /* #efede6 */
+
     /* ROY Custom Tokens */
     --success: 152 69% 31%;
     --success-foreground: 0 0% 100%;
