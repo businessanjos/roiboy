@@ -43,6 +43,10 @@ export default function SalesTeam() {
               <DollarSign className="h-4 w-4" />
               Comissionamento
             </TabsTrigger>
+            <TabsTrigger value="videocall" className="gap-1.5">
+              <Video className="h-4 w-4" />
+              Videochamadas
+            </TabsTrigger>
             <TabsTrigger value="career" className="gap-1.5">
               <GraduationCap className="h-4 w-4" />
               Plano de Carreira
