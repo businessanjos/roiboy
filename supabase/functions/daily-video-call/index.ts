@@ -86,8 +86,6 @@ Deno.serve(async (req) => {
             room_name: roomName,
             user_name: userData.name || "Vendedor",
             is_owner: true,
-            enable_recording: "cloud",
-            start_cloud_recording: false,
           },
         }),
       });
