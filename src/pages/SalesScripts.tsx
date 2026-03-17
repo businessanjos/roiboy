@@ -233,7 +233,7 @@ export default function SalesScripts() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 mb-1"><MessageSquareText className="w-7 h-7 text-primary" /><h1 className="text-xl font-bold">Scripts de Vendas</h1></div>
-          <p className="text-muted-foreground text-xs">Materiais, playbooks, análise de calls, comissões e scripts</p>
+          <p className="text-muted-foreground text-xs">{isSalesRep ? "Playbooks de vendas" : "Materiais, playbooks, análise de calls, comissões e scripts"}</p>
         </div>
       </div>
 
