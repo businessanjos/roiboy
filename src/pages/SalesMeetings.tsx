@@ -123,12 +123,33 @@ export default function SalesMeetings() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      let meetingUrl = form.meeting_url || null;
+
+      // Create Daily.co room if use_daily is enabled and it's a new meeting
+      if (form.use_daily && !editing) {
+        setCreatingRoom(true);
+        try {
+          const { data: roomData, error: roomError } = await supabase.functions.invoke("daily-video-call", {
+            body: {
+              action: "create-room",
+              participant_name: form.title,
+            },
+          });
+          if (roomError) throw new Error("Erro ao criar sala de vídeo");
+          if (roomData?.room_url) {
+            meetingUrl = roomData.room_url;
+          }
+        } finally {
+          setCreatingRoom(false);
+        }
+      }
+
       const payload = {
         account_id: accountId!,
         title: form.title,
         scheduled_at: form.scheduled_at,
         duration_minutes: parseInt(form.duration_minutes) || 30,
-        meeting_url: form.meeting_url || null,
+        meeting_url: meetingUrl,
         meeting_type: form.meeting_type,
         notes: form.notes || null,
         created_by: editing ? undefined : currentUser?.id,
@@ -148,7 +169,7 @@ export default function SalesMeetings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-meetings"] });
-      toast.success(editing ? "Reunião atualizada!" : "Reunião criada!");
+      toast.success(editing ? "Reunião atualizada!" : "Reunião criada com sala de vídeo!");
       setDialogOpen(false);
       setEditing(null);
       resetForm();
