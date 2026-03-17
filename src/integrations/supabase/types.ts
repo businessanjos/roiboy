@@ -3703,6 +3703,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          pipeline_id: string
           probability: number | null
           updated_at: string
         }
@@ -3714,6 +3715,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          pipeline_id: string
           probability?: number | null
           updated_at?: string
         }
@@ -3725,6 +3727,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          pipeline_id?: string
           probability?: number | null
           updated_at?: string
         }
@@ -3734,6 +3737,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_stages_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
             referencedColumns: ["id"]
           },
         ]
@@ -3753,6 +3763,7 @@ export type Database = {
           lost_at: string | null
           lost_reason: string | null
           notes: string | null
+          pipeline_id: string | null
           probability: number | null
           responsible_user_id: string | null
           sdr_user_id: string | null
@@ -3780,6 +3791,7 @@ export type Database = {
           lost_at?: string | null
           lost_reason?: string | null
           notes?: string | null
+          pipeline_id?: string | null
           probability?: number | null
           responsible_user_id?: string | null
           sdr_user_id?: string | null
@@ -3807,6 +3819,7 @@ export type Database = {
           lost_at?: string | null
           lost_reason?: string | null
           notes?: string | null
+          pipeline_id?: string | null
           probability?: number | null
           responsible_user_id?: string | null
           sdr_user_id?: string | null
@@ -3847,6 +3860,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
             referencedColumns: ["id"]
           },
           {
@@ -8026,6 +8046,50 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pipelines: {
+        Row: {
+          account_id: string
+          color: string
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pipelines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
         ]
