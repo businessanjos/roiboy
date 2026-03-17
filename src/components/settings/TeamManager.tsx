@@ -512,12 +512,18 @@ export function TeamManager() {
       setRoleFormDescription(role.description || "");
       setRoleFormColor(role.color);
       setRoleFormPermissions(role.permissions || []);
+      setRoleFormArea((role as any).area || "");
+      setRoleFormCargo((role as any).cargo || "");
+      setRoleFormSeniority((role as any).seniority || "");
     } else {
       setSelectedRole(null);
       setRoleFormName("");
       setRoleFormDescription("");
       setRoleFormColor(DEFAULT_ROLE_COLORS[roles.length % DEFAULT_ROLE_COLORS.length]);
       setRoleFormPermissions([]);
+      setRoleFormArea("");
+      setRoleFormCargo("");
+      setRoleFormSeniority("");
     }
     setIsRoleDialogOpen(true);
   };
