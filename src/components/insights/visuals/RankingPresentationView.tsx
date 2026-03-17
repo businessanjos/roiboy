@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { createPortal } from "react-dom";
-import { X, Trophy } from "lucide-react";
+import { X, Trophy, TrendingUp, ShoppingCart, Target, DollarSign } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { FormatType } from "../visual-builder/types";
+import { FormatType, VisualConfig } from "../visual-builder/types";
 import { PresentationOptions } from "./RankingPresentationDialog";
+import { RoyLogo } from "@/components/ui/roy-logo";
 import { cn } from "@/lib/utils";
 
 interface AggregatedDataPoint {
@@ -25,6 +26,7 @@ interface RankingPresentationViewProps {
   data: AggregatedDataPoint[];
   formatting: { type: FormatType; decimals: number };
   options: PresentationOptions;
+  dashboardId?: string;
   onClose: () => void;
 }
 
@@ -54,6 +56,12 @@ function formatValue(value: number, type: FormatType, decimals: number): string 
   });
 }
 
+function formatCompactCurrency(value: number): string {
+  if (value >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `R$ ${(value / 1_000).toFixed(0)}k`;
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+}
+
 const MEDAL_EMOJI: Record<number, string> = { 0: "🥇", 1: "🥈", 2: "🥉" };
 const PODIUM_GRADIENTS: Record<number, string> = {
   0: "from-primary to-primary/80",
@@ -65,17 +73,75 @@ const PODIUM_BORDER: Record<number, string> = {
   1: "border-muted-foreground/50",
   2: "border-accent",
 };
-const PODIUM_HEIGHTS: Record<number, number> = { 0: 220, 1: 160, 2: 120 };
+const PODIUM_HEIGHTS: Record<number, number> = { 0: 200, 1: 150, 2: 110 };
+
+function LiveClock() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const time = now.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const date = now.toLocaleDateString("pt-BR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  return (
+    <div className="text-right">
+      <div className="text-2xl font-bold tabular-nums text-foreground">{time}</div>
+      <div className="text-xs text-muted-foreground capitalize">{date}</div>
+    </div>
+  );
+}
 
 export function RankingPresentationView({
   title,
   data,
   formatting,
   options,
+  dashboardId,
   onClose,
 }: RankingPresentationViewProps) {
   const { currentUser } = useCurrentUser();
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
+  const [goalValue, setGoalValue] = useState<number | null>(null);
+
+  // Fetch goal from sibling gauge visuals in the same dashboard
+  useEffect(() => {
+    if (!dashboardId) return;
+    const fetchGoal = async () => {
+      const { data: visuals } = await supabase
+        .from("insights_visuals")
+        .select("config")
+        .eq("dashboard_id", dashboardId)
+        .eq("chart_type", "gauge");
+      if (visuals) {
+        for (const v of visuals) {
+          const cfg = v.config as unknown as VisualConfig | null;
+          if (cfg?.gaugeConfig?.monthlyGoals) {
+            const now = new Date();
+            const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+            const val = cfg.gaugeConfig.monthlyGoals[key];
+            if (val && val > 0) {
+              setGoalValue(val);
+              return;
+            }
+            // Fallback: use any goal value
+            const allGoals = Object.values(cfg.gaugeConfig.monthlyGoals);
+            if (allGoals.length > 0) {
+              setGoalValue(allGoals[allGoals.length - 1]);
+              return;
+            }
+          }
+        }
+      }
+    };
+    fetchGoal();
+  }, [dashboardId]);
 
   useEffect(() => {
     if (!currentUser?.account_id || data.length === 0) return;
@@ -110,6 +176,16 @@ export function RankingPresentationView({
     };
   }, []);
 
+  // Compute KPIs
+  const kpis = useMemo(() => {
+    const totalRevenue = data.reduce((sum, d) => sum + d.value, 0);
+    const totalSales = data.reduce((sum, d) => sum + (d.count || 0), 0);
+    const avgTicket = totalSales > 0 ? totalRevenue / totalSales : 0;
+    return { totalRevenue, totalSales, avgTicket };
+  }, [data]);
+
+  const goalProgress = goalValue && goalValue > 0 ? Math.min((kpis.totalRevenue / goalValue) * 100, 100) : null;
+
   const maxValue = Math.max(...data.map((d) => d.value), 1);
   const top3 = data.slice(0, 3);
 
@@ -131,19 +207,95 @@ export function RankingPresentationView({
         <X className="h-5 w-5 text-muted-foreground" />
       </button>
 
-      {/* Header */}
-      <div className="text-center pt-8 pb-4 flex-shrink-0">
-        <div className="flex items-center justify-center gap-3 mb-1">
-          <Trophy className="h-8 w-8 text-primary" />
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
+      {/* Header: Logo + Title + Clock */}
+      <div className="flex items-center justify-between px-8 pt-6 pb-2 flex-shrink-0">
+        <div className="flex items-center gap-4">
+          <RoyLogo size="lg" />
+          <div>
+            <div className="flex items-center gap-2">
+              <Trophy className="h-6 w-6 text-primary" />
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">Atualizado em tempo real</p>
+          </div>
         </div>
-        <p className="text-muted-foreground text-sm">Atualizado em tempo real</p>
+        <LiveClock />
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-6 px-8 pb-8 overflow-hidden">
+      {/* KPI Cards + Goal Progress */}
+      <div className="px-8 py-3 flex-shrink-0 space-y-3">
+        {/* KPI Row */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="bg-card rounded-xl p-4 border border-border flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <DollarSign className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Total Faturado</p>
+              <p className={cn("text-lg font-bold text-foreground tabular-nums", options.blurNumbers && "blur-md select-none")}>
+                {formatCompactCurrency(kpis.totalRevenue)}
+              </p>
+            </div>
+          </div>
+          <div className="bg-card rounded-xl p-4 border border-border flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">
+              <ShoppingCart className="h-5 w-5 text-accent" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Nº de Vendas</p>
+              <p className={cn("text-lg font-bold text-foreground tabular-nums", options.blurNumbers && "blur-md select-none")}>
+                {kpis.totalSales}
+              </p>
+            </div>
+          </div>
+          <div className="bg-card rounded-xl p-4 border border-border flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <TrendingUp className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Ticket Médio</p>
+              <p className={cn("text-lg font-bold text-foreground tabular-nums", options.blurNumbers && "blur-md select-none")}>
+                {formatCompactCurrency(kpis.avgTicket)}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Goal Progress */}
+        {goalProgress !== null && goalValue && (
+          <div className="bg-card rounded-xl p-4 border border-border">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Target className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium text-foreground">Meta do Mês</span>
+              </div>
+              <span className={cn("text-sm font-semibold text-foreground tabular-nums", options.blurNumbers && "blur-md select-none")}>
+                {formatCompactCurrency(kpis.totalRevenue)} / {formatCompactCurrency(goalValue)}
+              </span>
+            </div>
+            <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-primary/80 to-primary transition-all duration-700"
+                style={{ width: `${goalProgress}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-1">
+              <span className={cn("text-xs text-muted-foreground tabular-nums", options.blurNumbers && "blur-md select-none")}>
+                {goalProgress.toFixed(0)}% alcançado
+              </span>
+              <span className={cn("text-xs text-muted-foreground tabular-nums", options.blurNumbers && "blur-md select-none")}>
+                Faltam {formatCompactCurrency(Math.max(goalValue - kpis.totalRevenue, 0))}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Main content: Podium + Table */}
+      <div className="flex-1 flex flex-col lg:flex-row gap-6 px-8 pb-6 overflow-hidden min-h-0">
         {/* Podium */}
         {top3.length >= 2 && (
-          <div className="lg:w-[45%] flex items-end justify-center gap-3 shrink-0 pb-4">
+          <div className="lg:w-[40%] flex items-end justify-center gap-3 shrink-0 pb-4">
             {podiumOrder.map((item) => {
               const originalIndex = top3.indexOf(item);
               const gradient = PODIUM_GRADIENTS[originalIndex];
@@ -153,43 +305,31 @@ export function RankingPresentationView({
               const avatar = avatars[item.name];
 
               return (
-                <div
-                  key={item.name}
-                  className="flex flex-col items-center"
-                  style={{ order }}
-                >
+                <div key={item.name} className="flex flex-col items-center" style={{ order }}>
                   {options.showPhotos ? (
-                    <Avatar className={cn("h-16 w-16 border-[3px] mb-2", border)}>
+                    <Avatar className={cn("h-14 w-14 border-[3px] mb-2", border)}>
                       <AvatarImage src={avatar?.avatar_url || undefined} alt={item.name} />
                       <AvatarFallback className="text-sm font-semibold bg-primary/10 text-primary">
                         {getInitials(item.name)}
                       </AvatarFallback>
                     </Avatar>
                   ) : (
-                    <div className="h-16 w-16 mb-2" />
+                    <div className="h-14 w-14 mb-2" />
                   )}
 
                   <span className="font-medium text-sm text-foreground truncate max-w-[100px] text-center">
                     {options.showNames ? item.name.split(" ")[0] : "• • •"}
                   </span>
 
-                  <span
-                    className={cn(
-                      "text-sm text-muted-foreground font-medium tabular-nums mb-2",
-                      options.blurNumbers && "blur-md select-none"
-                    )}
-                  >
+                  <span className={cn("text-xs text-muted-foreground font-medium tabular-nums mb-2", options.blurNumbers && "blur-md select-none")}>
                     {formatValue(item.value, formatting.type, formatting.decimals)}
                   </span>
 
                   <div
-                    className={cn(
-                      "w-[90px] rounded-t-xl bg-gradient-to-t flex items-center justify-center",
-                      gradient
-                    )}
+                    className={cn("w-[85px] rounded-t-xl bg-gradient-to-t flex items-center justify-center", gradient)}
                     style={{ height: `${height}px` }}
                   >
-                    <span className="text-primary-foreground font-bold text-2xl drop-shadow-sm">
+                    <span className="text-primary-foreground font-bold text-xl drop-shadow-sm">
                       {originalIndex + 1}º
                     </span>
                   </div>
@@ -200,14 +340,14 @@ export function RankingPresentationView({
         )}
 
         {/* Ranking table */}
-        <div className="flex-1 overflow-auto">
-          <table className="w-full text-base">
+        <div className="flex-1 overflow-auto min-h-0">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="text-muted-foreground border-b border-border text-sm">
-                <th className="text-left py-3 px-2 w-12">#</th>
-                {options.showPhotos && <th className="w-12" />}
-                <th className="text-left py-3 px-2">Vendedor</th>
-                <th className="text-right py-3 px-2">Faturamento</th>
+              <tr className="text-muted-foreground border-b border-border text-xs">
+                <th className="text-left py-2.5 px-2 w-10">#</th>
+                {options.showPhotos && <th className="w-10" />}
+                <th className="text-left py-2.5 px-2">Vendedor</th>
+                <th className="text-right py-2.5 px-2">Faturamento</th>
               </tr>
             </thead>
             <tbody>
@@ -224,18 +364,18 @@ export function RankingPresentationView({
                       index < 3 ? "bg-primary/5" : "hover:bg-muted/50"
                     )}
                   >
-                    <td className="py-3 px-2">
+                    <td className="py-2.5 px-2">
                       {medal ? (
-                        <span className="text-xl">{medal}</span>
+                        <span className="text-lg">{medal}</span>
                       ) : (
-                        <span className="text-muted-foreground font-medium text-sm ml-0.5">
+                        <span className="text-muted-foreground font-medium text-xs ml-0.5">
                           {index + 1}º
                         </span>
                       )}
                     </td>
                     {options.showPhotos && (
-                      <td className="py-3">
-                        <Avatar className="h-9 w-9">
+                      <td className="py-2.5">
+                        <Avatar className="h-8 w-8">
                           <AvatarImage src={avatar?.avatar_url || undefined} alt={item.name} />
                           <AvatarFallback className="text-[10px] font-medium bg-primary/10 text-primary">
                             {getInitials(item.name)}
@@ -243,12 +383,12 @@ export function RankingPresentationView({
                         </Avatar>
                       </td>
                     )}
-                    <td className="py-3 px-2">
+                    <td className="py-2.5 px-2">
                       <div className="flex-1 min-w-0">
                         <span className="font-medium text-foreground block truncate">
                           {displayName(item.name)}
                         </span>
-                        <div className="w-full max-w-[300px] h-1.5 bg-muted rounded-full mt-1">
+                        <div className="w-full max-w-[250px] h-1.5 bg-muted rounded-full mt-1">
                           <div
                             className="h-full rounded-full bg-primary/70 transition-all duration-500"
                             style={{ width: `${progress}%` }}
@@ -256,13 +396,8 @@ export function RankingPresentationView({
                         </div>
                       </div>
                     </td>
-                    <td className="py-3 px-2 text-right">
-                      <span
-                        className={cn(
-                          "font-semibold tabular-nums text-foreground",
-                          options.blurNumbers && "blur-md select-none"
-                        )}
-                      >
+                    <td className="py-2.5 px-2 text-right">
+                      <span className={cn("font-semibold tabular-nums text-foreground", options.blurNumbers && "blur-md select-none")}>
                         {formatValue(item.value, formatting.type, formatting.decimals)}
                       </span>
                     </td>

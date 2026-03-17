@@ -38,6 +38,7 @@ const SWITCHABLE_SET = new Set(SWITCHABLE_TYPES.map(t => t.type));
 
 interface InsightsVisual {
   id: string;
+  dashboard_id?: string;
   title: string | null;
   chart_type: string | null;
   config: unknown;
@@ -330,6 +331,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
                 data={processedData}
                 formatting={config?.formatting || { type: 'number' as FormatType, decimals: 0 }}
                 options={presentationOptions}
+                dashboardId={visual.dashboard_id}
                 onClose={() => setPresentationOptions(null)}
               />
             )}
