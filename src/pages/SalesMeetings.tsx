@@ -168,11 +168,45 @@ export default function SalesMeetings() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      // Get the meeting to check if it has a deal_id
+      const { data: meeting } = await supabase
+        .from("sales_meetings")
+        .select("deal_id")
+        .eq("id", id)
+        .single();
+
       const { error } = await supabase
         .from("sales_meetings")
         .update({ status })
         .eq("id", id);
       if (error) throw error;
+
+      // If cancelled and has a deal, move deal back to "Em Qualificação"
+      if (status === "cancelled" && meeting?.deal_id) {
+        // Find the deal to get its pipeline_id
+        const { data: deal } = await supabase
+          .from("deals")
+          .select("pipeline_id")
+          .eq("id", meeting.deal_id)
+          .single();
+
+        if (deal?.pipeline_id) {
+          // Find the "Em Qualificação" stage in the same pipeline
+          const { data: qualStage } = await supabase
+            .from("deal_stages")
+            .select("id")
+            .eq("pipeline_id", deal.pipeline_id)
+            .eq("name", "Em Qualificação")
+            .single();
+
+          if (qualStage) {
+            await supabase
+              .from("deals")
+              .update({ stage_id: qualStage.id })
+              .eq("id", meeting.deal_id);
+          }
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-meetings"] });
