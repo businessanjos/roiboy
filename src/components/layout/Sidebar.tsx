@@ -84,6 +84,8 @@ import {
 import { RoyLogo } from "@/components/ui/roy-logo";
 import { useSidebarZappNavigation } from "@/hooks/useSidebarZappNavigation";
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
+import { AdminSidebarNav } from "./AdminSidebarNav";
+import { ClientDetailSidebarNav } from "./ClientDetailSidebarNav";
 
 interface NavItem {
   to: string;
