@@ -125,7 +125,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const { isImpersonating } = useImpersonation();
   const { setTheme, theme } = useTheme();
-  const { currentSector, clearSector } = useSector();
+  const { currentSector, clearSector, setCurrentSector } = useSector();
   const navigate = useNavigate();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   
