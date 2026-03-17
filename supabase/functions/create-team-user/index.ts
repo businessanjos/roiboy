@@ -13,6 +13,7 @@ interface CreateTeamUserRequest {
   password: string;
   account_id: string;
   team_role_id?: string;
+  team_role_ids?: string[];
   is_also_admin?: boolean;
 }
 
