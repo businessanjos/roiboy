@@ -33,16 +33,20 @@ export default function Settings() {
         </p>
       </div>
 
-      <Tabs defaultValue="team" className="space-y-4">
+      <Tabs defaultValue={isSalesRep ? "integrations" : "team"} className="space-y-4">
         <TabsList className="flex-wrap">
-          <TabsTrigger value="team" className="gap-2">
-            <UserCircle className="h-4 w-4" />
-            Equipe
-          </TabsTrigger>
-          <TabsTrigger value="sectors" className="gap-2">
-            <Users className="h-4 w-4" />
-            Setores
-          </TabsTrigger>
+          {!isSalesRep && (
+            <>
+              <TabsTrigger value="team" className="gap-2">
+                <UserCircle className="h-4 w-4" />
+                Equipe
+              </TabsTrigger>
+              <TabsTrigger value="sectors" className="gap-2">
+                <Users className="h-4 w-4" />
+                Setores
+              </TabsTrigger>
+            </>
+          )}
           {hasVendasAccess && (
             <TabsTrigger value="sales" className="gap-2">
               <Target className="h-4 w-4" />
@@ -63,14 +67,18 @@ export default function Settings() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="team" className="space-y-4">
-          <TeamManager />
-        </TabsContent>
+        {!isSalesRep && (
+          <>
+            <TabsContent value="team" className="space-y-4">
+              <TeamManager />
+            </TabsContent>
 
-        <TabsContent value="sectors" className="space-y-4">
-          <UserSectorAccessManager />
-          <SectorPinSettings />
-        </TabsContent>
+            <TabsContent value="sectors" className="space-y-4">
+              <UserSectorAccessManager />
+              <SectorPinSettings />
+            </TabsContent>
+          </>
+        )}
 
         {hasVendasAccess && (
           <TabsContent value="sales" className="space-y-4">
