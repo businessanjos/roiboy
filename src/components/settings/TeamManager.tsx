@@ -529,10 +529,11 @@ export function TeamManager() {
   };
 
   const handleSaveRole = async () => {
-    console.log("[TeamManager] handleSaveRole called", { roleFormName, roleFormPermissions, selectedRole });
+    const generatedName = [roleFormArea, roleFormCargo, roleFormSeniority].filter(Boolean).join(" · ");
+    console.log("[TeamManager] handleSaveRole called", { generatedName, roleFormPermissions, selectedRole });
     
-    if (!roleFormName) {
-      toast.error("Nome da função é obrigatório");
+    if (!roleFormArea || !roleFormCargo) {
+      toast.error("Área e Cargo são obrigatórios");
       return;
     }
 
