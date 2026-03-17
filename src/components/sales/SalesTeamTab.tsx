@@ -1,8 +1,11 @@
 import { useState, useMemo } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Select,
   SelectContent,
@@ -10,6 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { 
   Phone, 
   Target, 
@@ -19,20 +27,28 @@ import {
   Users,
   Clock,
   RefreshCw,
+  CalendarIcon,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { useSalesTeamMetrics, SalesRepMetrics } from "@/hooks/useSalesTeamMetrics";
 import { SalesRepCard } from "./SalesRepCard";
 import { SalesRepDetailSheet } from "./SalesRepDetailSheet";
 
-type PeriodOption = "7d" | "30d" | "90d" | "all";
+type PeriodOption = "7d" | "30d" | "90d" | "all" | "custom";
 
 export function SalesTeamTab() {
   const [period, setPeriod] = useState<PeriodOption>("30d");
+  const [customStart, setCustomStart] = useState<Date | undefined>(undefined);
+  const [customEnd, setCustomEnd] = useState<Date | undefined>(undefined);
   const [selectedRep, setSelectedRep] = useState<SalesRepMetrics | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // Memoize date range to prevent infinite re-renders
   const dateRange = useMemo(() => {
+    if (period === "custom" && customStart && customEnd) {
+      return { startDate: customStart, endDate: customEnd };
+    }
+
     const end = new Date();
     const start = new Date();
     
@@ -49,10 +65,14 @@ export function SalesTeamTab() {
       case "all":
         start.setFullYear(2020);
         break;
+      case "custom":
+        // fallback while dates aren't set
+        start.setDate(start.getDate() - 30);
+        break;
     }
     
     return { startDate: start, endDate: end };
-  }, [period]);
+  }, [period, customStart, customEnd]);
 
   const { metrics, totals, loading, refetch } = useSalesTeamMetrics(dateRange);
 
