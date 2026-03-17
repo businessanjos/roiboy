@@ -1424,16 +1424,13 @@ export function TeamManager() {
           
           <ScrollArea className="max-h-[60vh]">
             <div className="px-6 pb-6 space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="role-name" className="text-sm font-medium">Nome *</Label>
-                <Input
-                  id="role-name"
-                  value={roleFormName}
-                  onChange={(e) => setRoleFormName(e.target.value)}
-                  placeholder="Ex: Suporte"
-                  disabled={selectedRole?.is_system}
-                />
-              </div>
+              {/* Nome gerado automaticamente a partir de Área + Cargo + Senioridade */}
+              {(roleFormArea || roleFormCargo || roleFormSeniority) && (
+                <div className="rounded-lg border bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Nome gerado</p>
+                  <p className="text-sm font-medium">{[roleFormArea, roleFormCargo, roleFormSeniority].filter(Boolean).join(" · ")}</p>
+                </div>
+              )}
               
               <div className="space-y-2">
                 <Label htmlFor="role-description" className="text-sm font-medium">Descrição</Label>
