@@ -56,14 +56,14 @@ function formatValue(value: number, type: FormatType, decimals: number): string 
 
 const MEDAL_EMOJI: Record<number, string> = { 0: "🥇", 1: "🥈", 2: "🥉" };
 const PODIUM_GRADIENTS: Record<number, string> = {
-  0: "from-amber-400 to-amber-500",
-  1: "from-slate-300 to-slate-400",
-  2: "from-orange-400 to-orange-500",
+  0: "from-primary to-primary/80",
+  1: "from-muted-foreground/60 to-muted-foreground/40",
+  2: "from-accent to-accent/80",
 };
 const PODIUM_BORDER: Record<number, string> = {
-  0: "border-amber-400",
-  1: "border-slate-400",
-  2: "border-orange-400",
+  0: "border-primary",
+  1: "border-muted-foreground/50",
+  2: "border-accent",
 };
 const PODIUM_HEIGHTS: Record<number, number> = { 0: 220, 1: 160, 2: 120 };
 
@@ -77,7 +77,6 @@ export function RankingPresentationView({
   const { currentUser } = useCurrentUser();
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
 
-  // Fetch avatars
   useEffect(() => {
     if (!currentUser?.account_id || data.length === 0) return;
     const fetchAvatars = async () => {
@@ -96,7 +95,6 @@ export function RankingPresentationView({
     fetchAvatars();
   }, [currentUser?.account_id, data]);
 
-  // ESC to close
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -105,7 +103,6 @@ export function RankingPresentationView({
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  // Request fullscreen
   useEffect(() => {
     document.documentElement.requestFullscreen?.().catch(() => {});
     return () => {
@@ -115,9 +112,7 @@ export function RankingPresentationView({
 
   const maxValue = Math.max(...data.map((d) => d.value), 1);
   const top3 = data.slice(0, 3);
-  const rest = data.slice(3);
 
-  // Podium order: 2nd, 1st, 3rd
   const podiumOrder =
     top3.length >= 2
       ? [top3[1], top3[0], ...(top3[2] ? [top3[2]] : [])]
@@ -127,22 +122,22 @@ export function RankingPresentationView({
     options.showNames ? name : "• • •";
 
   const content = (
-    <div className="fixed inset-0 z-[9999] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-[9999] bg-background text-foreground flex flex-col overflow-hidden">
       {/* Close button */}
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors z-10"
+        className="absolute top-4 right-4 p-2 rounded-full bg-muted hover:bg-muted/80 transition-colors z-10"
       >
-        <X className="h-5 w-5" />
+        <X className="h-5 w-5 text-muted-foreground" />
       </button>
 
       {/* Header */}
       <div className="text-center pt-8 pb-4 flex-shrink-0">
         <div className="flex items-center justify-center gap-3 mb-1">
-          <Trophy className="h-8 w-8 text-amber-400" />
-          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+          <Trophy className="h-8 w-8 text-primary" />
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">{title}</h1>
         </div>
-        <p className="text-white/50 text-sm">Atualizado em tempo real</p>
+        <p className="text-muted-foreground text-sm">Atualizado em tempo real</p>
       </div>
 
       <div className="flex-1 flex flex-col lg:flex-row gap-6 px-8 pb-8 overflow-hidden">
@@ -163,19 +158,10 @@ export function RankingPresentationView({
                   className="flex flex-col items-center"
                   style={{ order }}
                 >
-                  {/* Avatar */}
                   {options.showPhotos ? (
-                    <Avatar
-                      className={cn(
-                        "h-16 w-16 border-[3px] mb-2",
-                        border
-                      )}
-                    >
-                      <AvatarImage
-                        src={avatar?.avatar_url || undefined}
-                        alt={item.name}
-                      />
-                      <AvatarFallback className="text-sm font-semibold bg-white/10 text-white">
+                    <Avatar className={cn("h-16 w-16 border-[3px] mb-2", border)}>
+                      <AvatarImage src={avatar?.avatar_url || undefined} alt={item.name} />
+                      <AvatarFallback className="text-sm font-semibold bg-primary/10 text-primary">
                         {getInitials(item.name)}
                       </AvatarFallback>
                     </Avatar>
@@ -183,22 +169,19 @@ export function RankingPresentationView({
                     <div className="h-16 w-16 mb-2" />
                   )}
 
-                  {/* Name */}
-                  <span className="font-medium text-sm text-white/90 truncate max-w-[100px] text-center">
+                  <span className="font-medium text-sm text-foreground truncate max-w-[100px] text-center">
                     {options.showNames ? item.name.split(" ")[0] : "• • •"}
                   </span>
 
-                  {/* Value */}
                   <span
                     className={cn(
-                      "text-sm text-white/60 font-medium tabular-nums mb-2",
+                      "text-sm text-muted-foreground font-medium tabular-nums mb-2",
                       options.blurNumbers && "blur-md select-none"
                     )}
                   >
                     {formatValue(item.value, formatting.type, formatting.decimals)}
                   </span>
 
-                  {/* Podium base */}
                   <div
                     className={cn(
                       "w-[90px] rounded-t-xl bg-gradient-to-t flex items-center justify-center",
@@ -206,7 +189,7 @@ export function RankingPresentationView({
                     )}
                     style={{ height: `${height}px` }}
                   >
-                    <span className="text-white font-bold text-2xl drop-shadow-md">
+                    <span className="text-primary-foreground font-bold text-2xl drop-shadow-sm">
                       {originalIndex + 1}º
                     </span>
                   </div>
@@ -220,7 +203,7 @@ export function RankingPresentationView({
         <div className="flex-1 overflow-auto">
           <table className="w-full text-base">
             <thead>
-              <tr className="text-white/40 border-b border-white/10 text-sm">
+              <tr className="text-muted-foreground border-b border-border text-sm">
                 <th className="text-left py-3 px-2 w-12">#</th>
                 {options.showPhotos && <th className="w-12" />}
                 <th className="text-left py-3 px-2">Vendedor</th>
@@ -237,15 +220,15 @@ export function RankingPresentationView({
                   <tr
                     key={item.name}
                     className={cn(
-                      "border-b border-white/5 transition-colors",
-                      index < 3 ? "bg-white/5" : "hover:bg-white/5"
+                      "border-b border-border/50 transition-colors",
+                      index < 3 ? "bg-primary/5" : "hover:bg-muted/50"
                     )}
                   >
                     <td className="py-3 px-2">
                       {medal ? (
                         <span className="text-xl">{medal}</span>
                       ) : (
-                        <span className="text-white/40 font-medium text-sm ml-0.5">
+                        <span className="text-muted-foreground font-medium text-sm ml-0.5">
                           {index + 1}º
                         </span>
                       )}
@@ -253,11 +236,8 @@ export function RankingPresentationView({
                     {options.showPhotos && (
                       <td className="py-3">
                         <Avatar className="h-9 w-9">
-                          <AvatarImage
-                            src={avatar?.avatar_url || undefined}
-                            alt={item.name}
-                          />
-                          <AvatarFallback className="text-[10px] font-medium bg-white/10 text-white">
+                          <AvatarImage src={avatar?.avatar_url || undefined} alt={item.name} />
+                          <AvatarFallback className="text-[10px] font-medium bg-primary/10 text-primary">
                             {getInitials(item.name)}
                           </AvatarFallback>
                         </Avatar>
@@ -265,10 +245,10 @@ export function RankingPresentationView({
                     )}
                     <td className="py-3 px-2">
                       <div className="flex-1 min-w-0">
-                        <span className="font-medium text-white/90 block truncate">
+                        <span className="font-medium text-foreground block truncate">
                           {displayName(item.name)}
                         </span>
-                        <div className="w-full max-w-[300px] h-1.5 bg-white/10 rounded-full mt-1">
+                        <div className="w-full max-w-[300px] h-1.5 bg-muted rounded-full mt-1">
                           <div
                             className="h-full rounded-full bg-primary/70 transition-all duration-500"
                             style={{ width: `${progress}%` }}
@@ -279,15 +259,11 @@ export function RankingPresentationView({
                     <td className="py-3 px-2 text-right">
                       <span
                         className={cn(
-                          "font-semibold tabular-nums text-white/90",
+                          "font-semibold tabular-nums text-foreground",
                           options.blurNumbers && "blur-md select-none"
                         )}
                       >
-                        {formatValue(
-                          item.value,
-                          formatting.type,
-                          formatting.decimals
-                        )}
+                        {formatValue(item.value, formatting.type, formatting.decimals)}
                       </span>
                     </td>
                   </tr>
