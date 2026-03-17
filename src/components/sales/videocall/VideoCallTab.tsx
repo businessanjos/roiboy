@@ -227,9 +227,7 @@ export function VideoCallTab() {
               <ScrollArea className="flex-1 min-h-0 max-h-[50vh]">
                 {viewMode === "analysis" ? (
                   selectedSession.analysis ? (
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
-                      <ReactMarkdown>{selectedSession.analysis}</ReactMarkdown>
-                    </div>
+                    <MarkdownRenderer content={selectedSession.analysis} />
                   ) : (
                     <div className="flex flex-col items-center justify-center py-8 text-center">
                       {selectedSession.analysis_status === "analyzing" ||
