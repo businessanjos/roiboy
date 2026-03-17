@@ -529,10 +529,11 @@ export function TeamManager() {
   };
 
   const handleSaveRole = async () => {
-    console.log("[TeamManager] handleSaveRole called", { roleFormName, roleFormPermissions, selectedRole });
+    const generatedName = [roleFormArea, roleFormCargo, roleFormSeniority].filter(Boolean).join(" · ");
+    console.log("[TeamManager] handleSaveRole called", { generatedName, roleFormPermissions, selectedRole });
     
-    if (!roleFormName) {
-      toast.error("Nome da função é obrigatório");
+    if (!roleFormArea || !roleFormCargo) {
+      toast.error("Área e Cargo são obrigatórios");
       return;
     }
 
@@ -563,7 +564,7 @@ export function TeamManager() {
         const { data: updateData, error } = await supabase
           .from("team_roles")
           .update({
-            name: roleFormName,
+            name: generatedName,
             description: roleFormDescription,
             color: roleFormColor,
             area: roleFormArea || null,
@@ -580,7 +581,7 @@ export function TeamManager() {
           .from("team_roles")
           .insert({
             account_id: currentUser.account_id,
-            name: roleFormName,
+            name: generatedName,
             description: roleFormDescription,
             color: roleFormColor,
             display_order: roles.length + 1,
@@ -1423,16 +1424,13 @@ export function TeamManager() {
           
           <ScrollArea className="max-h-[60vh]">
             <div className="px-6 pb-6 space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="role-name" className="text-sm font-medium">Nome *</Label>
-                <Input
-                  id="role-name"
-                  value={roleFormName}
-                  onChange={(e) => setRoleFormName(e.target.value)}
-                  placeholder="Ex: Suporte"
-                  disabled={selectedRole?.is_system}
-                />
-              </div>
+              {/* Nome gerado automaticamente a partir de Área + Cargo + Senioridade */}
+              {(roleFormArea || roleFormCargo || roleFormSeniority) && (
+                <div className="rounded-lg border bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground mb-1">Nome gerado</p>
+                  <p className="text-sm font-medium">{[roleFormArea, roleFormCargo, roleFormSeniority].filter(Boolean).join(" · ")}</p>
+                </div>
+              )}
               
               <div className="space-y-2">
                 <Label htmlFor="role-description" className="text-sm font-medium">Descrição</Label>
@@ -1460,7 +1458,7 @@ export function TeamManager() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Cargo</Label>
+                  <Label className="text-sm font-medium">Cargo *</Label>
                   <Select value={roleFormCargo} onValueChange={setRoleFormCargo} disabled={!roleFormArea}>
                     <SelectTrigger>
                       <SelectValue placeholder={roleFormArea ? "Selecione o cargo" : "Selecione a área primeiro"} />
