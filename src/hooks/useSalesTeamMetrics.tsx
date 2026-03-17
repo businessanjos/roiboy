@@ -91,10 +91,10 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
 
       // Fetch all metrics in parallel
       const [callsData, dealsData, tasksData, leadsData] = await Promise.all([
-        // Calls
+        // Calls - from threecplus_call_logs (3C Plus telephony)
         supabase
-          .from("zapp_calls")
-          .select("user_id, status, duration_seconds")
+          .from("threecplus_call_logs")
+          .select("user_id, status, duration_seconds, started_at, ended_at")
           .eq("account_id", currentUser.account_id)
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
