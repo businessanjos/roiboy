@@ -54,6 +54,7 @@ export function DealStagesManager({
   onOpenChange,
   stages,
   deals,
+  pipelineName,
   onCreateStage,
   onUpdateStage,
   onDeleteStage,
