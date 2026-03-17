@@ -121,7 +121,7 @@ export function RankingPresentationView({
         .eq("chart_type", "gauge");
       if (visuals) {
         for (const v of visuals) {
-          const cfg = v.config as VisualConfig | null;
+          const cfg = v.config as unknown as VisualConfig | null;
           if (cfg?.gaugeConfig?.monthlyGoals) {
             const now = new Date();
             const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
