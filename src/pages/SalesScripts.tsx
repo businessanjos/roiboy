@@ -66,8 +66,12 @@ export default function SalesScripts() {
   const queryClient = useQueryClient();
   const accountId = currentUser?.account_id;
   const isAdmin = currentUser?.role === 'admin' || currentUser?.is_also_admin || currentUser?.team_role_name === 'Admin';
+  const isSalesRep = (() => {
+    const role = currentUser?.team_role_name;
+    return !!role && ['SDR', 'Closer', 'Vendas', 'Vendedor'].includes(role) && !isAdmin;
+  })();
 
-  const [activeTab, setActiveTab] = useState('materials');
+  const [activeTab, setActiveTab] = useState(isSalesRep ? 'playbooks' : 'materials');
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<SalesMaterial | null>(null);
   const [materialForm, setMaterialForm] = useState({ title: '', content: '', material_type: '' });
