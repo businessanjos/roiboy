@@ -996,9 +996,9 @@ export function TeamManager() {
                                 </Badge>
                               )}
                             </CardTitle>
-                            {role.description && (
+                            {((role as any).area || role.description) && (
                               <CardDescription className="mt-1 text-xs line-clamp-1">
-                                {role.description}
+                                {[(role as any).area, (role as any).cargo, (role as any).seniority].filter(Boolean).join(" · ") || role.description}
                               </CardDescription>
                             )}
                           </div>
