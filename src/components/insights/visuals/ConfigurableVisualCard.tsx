@@ -55,6 +55,8 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
   const [drilldownOpen, setDrilldownOpen] = useState(false);
   const [drilldownGroup, setDrilldownGroup] = useState<string | undefined>();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [presentDialogOpen, setPresentDialogOpen] = useState(false);
+  const [presentationOptions, setPresentationOptions] = useState<PresentationOptions | null>(null);
 
   // Days elapsed gauge doesn't need data from the database
   const isGaugeDaysElapsed = chartType === 'gauge' && config?.gaugeConfig?.subType === 'days_elapsed';
