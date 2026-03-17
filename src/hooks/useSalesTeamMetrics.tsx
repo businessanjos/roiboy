@@ -157,13 +157,10 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         for (const call of callsData.data) {
           if (call.user_id && metricsMap[call.user_id]) {
             metricsMap[call.user_id].total_calls++;
-            // Calculate duration from started_at/ended_at if duration_seconds is missing
-            let duration = call.duration_seconds || 0;
-            if (!duration && call.started_at && call.ended_at) {
-              duration = Math.round(
-                (new Date(call.ended_at).getTime() - new Date(call.started_at).getTime()) / 1000
-              );
-            }
+            // Use duration_seconds directly (don't fallback to started_at/ended_at 
+            // as stale call cleanup can set misleading ended_at values)
+            const duration = call.duration_seconds || 0;
+
             metricsMap[call.user_id].total_call_duration += duration;
             if (call.status === "finished") {
               metricsMap[call.user_id].answered_calls++;
