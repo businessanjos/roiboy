@@ -10,6 +10,7 @@ const PUBLIC_ROUTES = [
   "/choose-plan",
   "/account-settings",
   "/profile",
+  "/settings",
   "/f/",
   "/checkin/",
   "/sobre",
