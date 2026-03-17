@@ -307,29 +307,29 @@ export function RankingPresentationView({
               return (
                 <div key={item.name} className="flex flex-col items-center" style={{ order }}>
                   {options.showPhotos ? (
-                    <Avatar className={cn("h-14 w-14 border-[3px] mb-2", border)}>
+                    <Avatar className={cn("h-16 w-16 border-[3px] mb-2", border)}>
                       <AvatarImage src={avatar?.avatar_url || undefined} alt={item.name} />
                       <AvatarFallback className="text-sm font-semibold bg-primary/10 text-primary">
                         {getInitials(item.name)}
                       </AvatarFallback>
                     </Avatar>
                   ) : (
-                    <div className="h-14 w-14 mb-2" />
+                    <div className="h-16 w-16 mb-2" />
                   )}
 
-                  <span className="font-medium text-sm text-foreground truncate max-w-[100px] text-center">
+                  <span className="font-semibold text-base text-foreground truncate max-w-[120px] text-center">
                     {options.showNames ? item.name.split(" ")[0] : "• • •"}
                   </span>
 
-                  <span className={cn("text-xs text-muted-foreground font-medium tabular-nums mb-2", options.blurNumbers && "blur-md select-none")}>
+                  <span className={cn("text-sm text-muted-foreground font-medium tabular-nums mb-2", options.blurNumbers && "blur-md select-none")}>
                     {formatValue(item.value, formatting.type, formatting.decimals)}
                   </span>
 
                   <div
-                    className={cn("w-[85px] rounded-t-xl bg-gradient-to-t flex items-center justify-center", gradient)}
+                    className={cn("w-[100px] rounded-t-xl bg-gradient-to-t flex items-center justify-center shadow-lg", gradient)}
                     style={{ height: `${height}px` }}
                   >
-                    <span className="text-primary-foreground font-bold text-xl drop-shadow-sm">
+                    <span className="text-white font-bold text-2xl drop-shadow-md">
                       {originalIndex + 1}º
                     </span>
                   </div>
