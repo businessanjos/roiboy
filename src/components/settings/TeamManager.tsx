@@ -566,7 +566,10 @@ export function TeamManager() {
             name: roleFormName,
             description: roleFormDescription,
             color: roleFormColor,
-          })
+            area: roleFormArea || null,
+            cargo: roleFormCargo || null,
+            seniority: roleFormSeniority || null,
+          } as any)
           .eq("id", selectedRole.id)
           .select();
 
@@ -581,7 +584,10 @@ export function TeamManager() {
             description: roleFormDescription,
             color: roleFormColor,
             display_order: roles.length + 1,
-          })
+            area: roleFormArea || null,
+            cargo: roleFormCargo || null,
+            seniority: roleFormSeniority || null,
+          } as any)
           .select()
           .single();
 
