@@ -186,6 +186,30 @@ export function TeamManager() {
   const [roleFormArea, setRoleFormArea] = useState("");
   const [roleFormCargo, setRoleFormCargo] = useState("");
   const [roleFormSeniority, setRoleFormSeniority] = useState("");
+  const [generatingDescription, setGeneratingDescription] = useState(false);
+
+  const handleGenerateDescription = async () => {
+    if (!roleFormArea || !roleFormCargo) {
+      toast.error("Selecione Área e Cargo antes de gerar a descrição");
+      return;
+    }
+    setGeneratingDescription(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-role-description", {
+        body: { area: roleFormArea, cargo: roleFormCargo, seniority: roleFormSeniority || null },
+      });
+      if (error) throw error;
+      if (data?.description) {
+        setRoleFormDescription(data.description);
+        toast.success("Descrição gerada com sucesso!");
+      }
+    } catch (err: any) {
+      console.error("Error generating description:", err);
+      toast.error("Erro ao gerar descrição");
+    } finally {
+      setGeneratingDescription(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
