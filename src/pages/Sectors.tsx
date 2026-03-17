@@ -44,7 +44,7 @@ export default function Sectors() {
   // Check if user is SDR or Closer (restricted view)
   const isSalesRep = useMemo(() => {
     const role = currentUser?.team_role_name;
-    return role === "SDR" || role === "Closer";
+    return !!role && SALES_REP_ROLES.includes(role);
   }, [currentUser?.team_role_name]);
 
   // Check if user is admin/manager (full view)
