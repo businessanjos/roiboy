@@ -313,6 +313,28 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
           overrideUpdateVisual={onUpdateVisual}
           overrideRemoveVisual={onRemoveVisual}
         />
+
+        {chartType === 'ranking' && (
+          <>
+            <RankingPresentationDialog
+              open={presentDialogOpen}
+              onOpenChange={setPresentDialogOpen}
+              onPresent={(opts) => {
+                setPresentDialogOpen(false);
+                setPresentationOptions(opts);
+              }}
+            />
+            {presentationOptions && (
+              <RankingPresentationView
+                title={visual.title || "Ranking"}
+                data={processedData}
+                formatting={config?.formatting || { type: 'number' as FormatType, decimals: 0 }}
+                options={presentationOptions}
+                onClose={() => setPresentationOptions(null)}
+              />
+            )}
+          </>
+        )}
       </>
     </VisualErrorBoundary>
   );
