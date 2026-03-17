@@ -852,18 +852,23 @@ export function TeamManager() {
                           <Mail className="h-3 w-3" />
                           {user.email}
                         </p>
-                        {user.team_role && (
-                          <Badge 
-                            variant="secondary" 
-                            className="mt-2 text-xs font-medium"
-                            style={{ 
-                              backgroundColor: `${user.team_role.color}15`,
-                              color: user.team_role.color,
-                              borderColor: `${user.team_role.color}30`
-                            }}
-                          >
-                            {user.team_role.name}
-                          </Badge>
+                        {user.team_roles && user.team_roles.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {user.team_roles.map((role) => (
+                              <Badge 
+                                key={role.id}
+                                variant="secondary" 
+                                className="text-xs font-medium"
+                                style={{ 
+                                  backgroundColor: `${role.color}15`,
+                                  color: role.color,
+                                  borderColor: `${role.color}30`
+                                }}
+                              >
+                                {role.name}
+                              </Badge>
+                            ))}
+                          </div>
                         )}
                         {user.is_also_admin && (
                           <Badge variant="destructive" className="mt-2 text-xs font-medium ml-1">
