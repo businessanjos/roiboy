@@ -1413,25 +1413,30 @@ export function TeamManager() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="edit-role">Função</Label>
-              <Select value={formRoleId} onValueChange={setFormRoleId}>
-                <SelectTrigger className="bg-card">
-                  <SelectValue placeholder="Selecione uma função" />
-                </SelectTrigger>
-                <SelectContent>
-                  {roles.map((role) => (
-                    <SelectItem key={role.id} value={role.id}>
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-2.5 h-2.5 rounded-full"
-                          style={{ backgroundColor: role.color }}
-                        />
-                        {role.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Funções</Label>
+              <div className="rounded-lg border bg-card p-3 space-y-2 max-h-40 overflow-y-auto">
+                {roles.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhuma função cadastrada</p>
+                ) : roles.map((role) => (
+                  <div key={role.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`edit-role-${role.id}`}
+                      checked={formRoleIds.includes(role.id)}
+                      onCheckedChange={(checked) => {
+                        setFormRoleIds(prev => 
+                          checked 
+                            ? [...prev, role.id] 
+                            : prev.filter(id => id !== role.id)
+                        );
+                      }}
+                    />
+                    <Label htmlFor={`edit-role-${role.id}`} className="flex items-center gap-2 cursor-pointer text-sm font-normal">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: role.color }} />
+                      {role.name}
+                    </Label>
+                  </div>
+                ))}
+              </div>
             </div>
             
             <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 border">
