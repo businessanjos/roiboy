@@ -38,6 +38,7 @@ const SWITCHABLE_SET = new Set(SWITCHABLE_TYPES.map(t => t.type));
 
 interface InsightsVisual {
   id: string;
+  dashboard_id?: string;
   title: string | null;
   chart_type: string | null;
   config: unknown;
