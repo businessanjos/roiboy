@@ -90,7 +90,9 @@ export default function SalesMeetings() {
     meeting_url: "",
     meeting_type: "scheduled",
     notes: "",
+    use_daily: true,
   });
+  const [creatingRoom, setCreatingRoom] = useState(false);
 
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ["sales-meetings", accountId],
@@ -121,12 +123,33 @@ export default function SalesMeetings() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      let meetingUrl = form.meeting_url || null;
+
+      // Create Daily.co room if use_daily is enabled and it's a new meeting
+      if (form.use_daily && !editing) {
+        setCreatingRoom(true);
+        try {
+          const { data: roomData, error: roomError } = await supabase.functions.invoke("daily-video-call", {
+            body: {
+              action: "create-room",
+              participant_name: form.title,
+            },
+          });
+          if (roomError) throw new Error("Erro ao criar sala de vídeo");
+          if (roomData?.room_url) {
+            meetingUrl = roomData.room_url;
+          }
+        } finally {
+          setCreatingRoom(false);
+        }
+      }
+
       const payload = {
         account_id: accountId!,
         title: form.title,
         scheduled_at: form.scheduled_at,
         duration_minutes: parseInt(form.duration_minutes) || 30,
-        meeting_url: form.meeting_url || null,
+        meeting_url: meetingUrl,
         meeting_type: form.meeting_type,
         notes: form.notes || null,
         created_by: editing ? undefined : currentUser?.id,
@@ -146,7 +169,7 @@ export default function SalesMeetings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales-meetings"] });
-      toast.success(editing ? "Reunião atualizada!" : "Reunião criada!");
+      toast.success(editing ? "Reunião atualizada!" : "Reunião criada com sala de vídeo!");
       setDialogOpen(false);
       setEditing(null);
       resetForm();
@@ -215,7 +238,7 @@ export default function SalesMeetings() {
   });
 
   const resetForm = () => {
-    setForm({ title: "", scheduled_at: "", duration_minutes: "30", meeting_url: "", meeting_type: "scheduled", notes: "" });
+    setForm({ title: "", scheduled_at: "", duration_minutes: "30", meeting_url: "", meeting_type: "scheduled", notes: "", use_daily: true });
   };
 
   const openAdd = () => {
@@ -233,6 +256,7 @@ export default function SalesMeetings() {
       meeting_url: m.meeting_url || "",
       meeting_type: m.meeting_type || "scheduled",
       notes: m.notes || "",
+      use_daily: !m.meeting_url,
     });
     setDialogOpen(true);
   };
@@ -409,14 +433,56 @@ export default function SalesMeetings() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Link da Reunião</Label>
-              <Input
-                value={form.meeting_url}
-                onChange={(e) => setForm((p) => ({ ...p, meeting_url: e.target.value }))}
-                placeholder="https://meet.google.com/..."
-              />
-            </div>
+            {!editing && (
+              <div className="space-y-2">
+                <Label>Sala de Vídeo</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={form.use_daily ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setForm((p) => ({ ...p, use_daily: true, meeting_url: "" }))}
+                  >
+                    <Video className="w-4 h-4 mr-1.5" />
+                    Criar sala automática
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={!form.use_daily ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setForm((p) => ({ ...p, use_daily: false }))}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-1.5" />
+                    Link externo
+                  </Button>
+                </div>
+                {!form.use_daily && (
+                  <Input
+                    value={form.meeting_url}
+                    onChange={(e) => setForm((p) => ({ ...p, meeting_url: e.target.value }))}
+                    placeholder="https://meet.google.com/..."
+                    className="mt-2"
+                  />
+                )}
+                {form.use_daily && (
+                  <p className="text-xs text-muted-foreground">
+                    Uma sala de vídeo será criada automaticamente via Daily.co ao salvar.
+                  </p>
+                )}
+              </div>
+            )}
+            {editing && (
+              <div className="space-y-2">
+                <Label>Link da Reunião</Label>
+                <Input
+                  value={form.meeting_url}
+                  onChange={(e) => setForm((p) => ({ ...p, meeting_url: e.target.value }))}
+                  placeholder="https://..."
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Tipo</Label>
               <Select value={form.meeting_type} onValueChange={(v) => setForm((p) => ({ ...p, meeting_type: v }))}>
@@ -448,10 +514,10 @@ export default function SalesMeetings() {
             </Button>
             <Button
               onClick={() => saveMutation.mutate()}
-              disabled={!form.title.trim() || !form.scheduled_at || saveMutation.isPending}
+              disabled={!form.title.trim() || !form.scheduled_at || saveMutation.isPending || creatingRoom}
             >
-              {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              {editing ? "Salvar" : "Criar"}
+              {(saveMutation.isPending || creatingRoom) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {creatingRoom ? "Criando sala..." : editing ? "Salvar" : form.use_daily ? "Criar com sala de vídeo" : "Criar"}
             </Button>
           </DialogFooter>
         </DialogContent>
