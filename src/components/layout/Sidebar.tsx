@@ -339,7 +339,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
                       : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <item.icon className={cn("h-5 w-5 flex-shrink-0", isHighlighted && !isActive && "text-primary")} />
+                <item.icon className="h-5 w-5 flex-shrink-0" />
                 {!collapsed && <span>{item.label}</span>}
               </NavLink>
               {isHighlighted && <div className={cn("my-1.5 border-t border-border/50", collapsed && "mx-1")} />}
