@@ -49,6 +49,7 @@ import { useImpersonation } from "@/hooks/useImpersonation";
 import { useTheme } from "next-themes";
 import { SidebarPlanInfo } from "./SidebarPlanInfo";
 import { useSector } from "@/contexts/SectorContext";
+import { sectors as allSectors, SectorId } from "@/config/sectors";
 import {
   Sheet,
   SheetContent,
