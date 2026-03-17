@@ -4,7 +4,7 @@ import { X, Trophy, TrendingUp, ShoppingCart, Target, DollarSign } from "lucide-
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { FormatType } from "../visual-builder/types";
+import { FormatType, VisualConfig } from "../visual-builder/types";
 import { PresentationOptions } from "./RankingPresentationDialog";
 import { RoyLogo } from "@/components/ui/roy-logo";
 import { cn } from "@/lib/utils";
