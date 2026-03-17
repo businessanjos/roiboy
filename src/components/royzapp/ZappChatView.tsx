@@ -206,6 +206,37 @@ export function ZappChatView({
     selectSuggestion(suggestion);
     messageInputRef.current?.focus();
   };
+
+  // 3C Plus call handler
+  const handleCall = useCallback(async () => {
+    const phone = contactInfo.phone;
+    if (!phone) {
+      toast.error("Número de telefone não disponível");
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke("threecplus-call", {
+        body: { phone, contact_name: contactInfo.name },
+      });
+      if (error) {
+        toast.error("Erro ao iniciar chamada", { description: "Não foi possível conectar ao serviço de chamadas." });
+        return;
+      }
+      if (data?.code === "NO_INTEGRATION") {
+        toast.error("3C Plus não configurado", { description: "Vá em Configurações > Integrações para conectar sua conta 3C Plus." });
+        return;
+      }
+      if (data?.success) {
+        toast.success("Chamada iniciada no 3C Plus", { description: `Ligando para ${contactInfo.name}...` });
+        return;
+      }
+      toast.error("Erro", { description: data?.error || "Erro desconhecido" });
+    } catch (err) {
+      console.error("[ZappChatView] 3C Plus call error:", err);
+      toast.error("Erro ao iniciar chamada");
+    }
+  }, [contactInfo.phone, contactInfo.name]);
+
   if (!selectedConversation) {
     return (
       <div className="flex flex-col flex-1 min-h-0 w-full items-center justify-center bg-zapp-bg-dark relative overflow-hidden">
