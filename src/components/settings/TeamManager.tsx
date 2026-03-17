@@ -581,7 +581,7 @@ export function TeamManager() {
           .from("team_roles")
           .insert({
             account_id: currentUser.account_id,
-            name: roleFormName,
+            name: generatedName,
             description: roleFormDescription,
             color: roleFormColor,
             display_order: roles.length + 1,
