@@ -121,7 +121,7 @@ const DEFAULT_STAGES: Omit<DealStage, 'id' | 'account_id' | 'created_at' | 'upda
   { name: 'Fechamento', color: '#10b981', display_order: 4, is_active: true, probability: 90 },
 ];
 
-export function useDeals() {
+export function useDeals(pipelineId?: string | null) {
   const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const [stages, setStages] = useState<DealStage[]>([]);
@@ -134,19 +134,26 @@ export function useDeals() {
     
     setStagesLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('deal_stages')
         .select('*')
         .eq('account_id', currentUser.account_id)
         .order('display_order', { ascending: true });
 
+      if (pipelineId) {
+        query = query.eq('pipeline_id', pipelineId);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
 
-      // If no stages exist, create defaults
-      if (!data || data.length === 0) {
+      // If no stages exist for this pipeline, create defaults
+      if ((!data || data.length === 0) && pipelineId) {
         const stagesToCreate = DEFAULT_STAGES.map((stage, index) => ({
           ...stage,
           account_id: currentUser.account_id,
+          pipeline_id: pipelineId,
           display_order: index,
         }));
 
@@ -158,7 +165,7 @@ export function useDeals() {
         if (createError) throw createError;
         setStages(createdStages || []);
       } else {
-        setStages(data);
+        setStages(data || []);
       }
     } catch (error: any) {
       console.error('Error fetching stages:', error);
@@ -170,14 +177,14 @@ export function useDeals() {
     } finally {
       setStagesLoading(false);
     }
-  }, [currentUser?.account_id, toast]);
+  }, [currentUser?.account_id, pipelineId, toast]);
 
   const fetchDeals = useCallback(async () => {
     if (!currentUser?.account_id) return;
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('deals')
         .select(`
           *,
@@ -189,6 +196,12 @@ export function useDeals() {
         `)
         .eq('account_id', currentUser.account_id)
         .order('created_at', { ascending: false });
+
+      if (pipelineId) {
+        query = query.eq('pipeline_id', pipelineId);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -209,7 +222,7 @@ export function useDeals() {
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.account_id, toast]);
+  }, [currentUser?.account_id, pipelineId, toast]);
 
   useEffect(() => {
     fetchStages();
@@ -241,15 +254,20 @@ export function useDeals() {
       const productId = cleanData.product_id;
       delete cleanData.product_id;
 
-      const { data: newDeal, error } = await supabase
-        .from('deals')
-        .insert({
+      const insertPayload: any = {
           ...cleanData,
           account_id: currentUser.account_id,
           tags: data.tags || [],
           // Auto-assign to current user if no responsible_user_id provided
           responsible_user_id: cleanData.responsible_user_id ?? currentUser.id,
-        })
+        };
+      if (pipelineId) {
+        insertPayload.pipeline_id = pipelineId;
+      }
+
+      const { data: newDeal, error } = await supabase
+        .from('deals')
+        .insert(insertPayload)
         .select(`
           *,
           client:clients(id, full_name, phone_e164, avatar_url),
@@ -600,15 +618,20 @@ export function useDeals() {
     try {
       const maxOrder = Math.max(...stages.map(s => s.display_order), -1);
 
-      const { data: newStage, error } = await supabase
-        .from('deal_stages')
-        .insert({
+      const insertData: any = {
           account_id: currentUser.account_id,
           name: data.name,
           color: data.color,
           probability: data.probability || 0,
           display_order: maxOrder + 1,
-        })
+        };
+      if (pipelineId) {
+        insertData.pipeline_id = pipelineId;
+      }
+
+      const { data: newStage, error } = await supabase
+        .from('deal_stages')
+        .insert(insertData)
         .select()
         .single();
 

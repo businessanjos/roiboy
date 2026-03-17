@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
+import { usePipelines } from "@/hooks/usePipelines";
 import { useLeads } from "@/hooks/useLeads";
 import { useSectorUsers } from "@/hooks/useSectorUsers";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -23,6 +24,7 @@ import { DealStagesManager } from "@/components/sales/DealStagesManager";
 import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { PipelineFilterButton } from "@/components/sales/PipelineFilterButton";
+import { PipelineSelector } from "@/components/sales/PipelineSelector";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
 import { PipelineExportDialog } from "@/components/sales/PipelineExportDialog";
 import { ActiveFilter, applyFilterToDeals } from "@/hooks/usePipelineFilters";
@@ -63,6 +65,17 @@ import { MeetingScheduleDialog } from "@/components/sales/videocall/MeetingSched
 export default function SalesPipeline() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { currentUser } = useCurrentUser();
+  
+  const {
+    pipelines,
+    activePipelineId,
+    activePipeline,
+    setActivePipelineId,
+    createPipeline,
+    updatePipeline,
+    deletePipeline,
+  } = usePipelines();
+
   const {
     stages,
     deals,
@@ -86,7 +99,7 @@ export default function SalesPipeline() {
     updateStage,
     deleteStage,
     reorderStages,
-  } = useDeals();
+  } = useDeals(activePipelineId);
   
   const { users: salesUsers } = useSectorUsers({ sectorId: "vendas" });
   const { isAdmin } = usePermissions();
@@ -821,11 +834,23 @@ export default function SalesPipeline() {
       <div className="p-4 space-y-4">
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold">Comercial</h1>
-            <p className="text-muted-foreground text-xs">
-              Gerencie prospecção e negociações
-            </p>
+          <div className="flex items-center gap-3">
+            <div>
+              <h1 className="text-xl font-bold">Comercial</h1>
+              <p className="text-muted-foreground text-xs">
+                Gerencie prospecção e negociações
+              </p>
+            </div>
+            {mainTab === 'pipeline' && (
+              <PipelineSelector
+                pipelines={pipelines}
+                activePipelineId={activePipelineId}
+                onSelect={setActivePipelineId}
+                onCreate={createPipeline}
+                onUpdate={updatePipeline}
+                onDelete={deletePipeline}
+              />
+            )}
           </div>
           <div className="flex items-center gap-2">
             {mainTab === 'pipeline' && (
