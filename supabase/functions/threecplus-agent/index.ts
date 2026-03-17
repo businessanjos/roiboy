@@ -696,20 +696,39 @@ Deno.serve(async (req) => {
       }
 
       // Update call log with ended_at and duration
-      if (success && resolvedCallId) {
+      if (success) {
         try {
           const endedAt = new Date().toISOString();
-          // Try to find the call log and update it
-          const { data: existingLog } = await supabaseAdmin
-            .from("threecplus_call_logs")
-            .select("id, started_at, call_id")
-            .or(`call_id.eq.${resolvedCallId}`)
-            .order("started_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+          
+          // Find the call log: first try exact call_id, then fallback to most recent for this user
+          let logToUpdate: { id: string; started_at: string | null } | null = null;
+          
+          if (resolvedCallId) {
+            const { data } = await supabaseAdmin
+              .from("threecplus_call_logs")
+              .select("id, started_at")
+              .eq("call_id", resolvedCallId)
+              .eq("user_id", userData.id)
+              .is("ended_at", null)
+              .maybeSingle();
+            logToUpdate = data;
+          }
+          
+          if (!logToUpdate) {
+            // Fallback: most recent call for this user that hasn't ended yet
+            const { data } = await supabaseAdmin
+              .from("threecplus_call_logs")
+              .select("id, started_at")
+              .eq("user_id", userData.id)
+              .is("ended_at", null)
+              .order("started_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            logToUpdate = data;
+          }
 
-          if (existingLog) {
-            const startedAt = existingLog.started_at ? new Date(existingLog.started_at).getTime() : null;
+          if (logToUpdate) {
+            const startedAt = logToUpdate.started_at ? new Date(logToUpdate.started_at).getTime() : null;
             const endedAtMs = new Date(endedAt).getTime();
             const durationSeconds = startedAt ? Math.round((endedAtMs - startedAt) / 1000) : 0;
 
@@ -720,40 +739,25 @@ Deno.serve(async (req) => {
                 duration_seconds: durationSeconds,
                 status: "finished",
               })
-              .eq("id", existingLog.id);
+              .eq("id", logToUpdate.id);
 
             if (updateError) {
               console.error("[threecplus-agent] hangup: failed to update call log:", JSON.stringify(updateError));
             } else {
-              console.log("[threecplus-agent] hangup: updated call log with duration", durationSeconds, "s");
+              console.log("[threecplus-agent] hangup: updated call", logToUpdate.id, "duration", durationSeconds, "s");
             }
           } else {
-            // No log found by call_id, try updating the most recent call for this user
-            const { data: recentLog } = await supabaseAdmin
-              .from("threecplus_call_logs")
-              .select("id, started_at")
-              .eq("user_id", userData.id)
-              .is("ended_at", null)
-              .order("started_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-
-            if (recentLog) {
-              const startedAt = recentLog.started_at ? new Date(recentLog.started_at).getTime() : null;
-              const endedAtMs = new Date(endedAt).getTime();
-              const durationSeconds = startedAt ? Math.round((endedAtMs - startedAt) / 1000) : 0;
-
-              await supabaseAdmin
-                .from("threecplus_call_logs")
-                .update({
-                  ended_at: endedAt,
-                  duration_seconds: durationSeconds,
-                  status: "finished",
-                })
-                .eq("id", recentLog.id);
-              console.log("[threecplus-agent] hangup: updated recent call log with duration", durationSeconds, "s");
-            }
+            console.log("[threecplus-agent] hangup: no open call log found to update");
           }
+          
+          // Also mark any other stale open calls for this user as missed/finished
+          await supabaseAdmin
+            .from("threecplus_call_logs")
+            .update({ ended_at: endedAt, status: "finished" })
+            .eq("user_id", userData.id)
+            .is("ended_at", null)
+            .neq("id", logToUpdate?.id ?? "00000000-0000-0000-0000-000000000000");
+            
         } catch (err) {
           console.error("[threecplus-agent] hangup: error updating call duration:", err);
         }
