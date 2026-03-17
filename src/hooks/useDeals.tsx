@@ -254,15 +254,50 @@ export function useDeals(pipelineId?: string | null) {
       const productId = cleanData.product_id;
       delete cleanData.product_id;
 
+      // George's user ID - his manually created deals go to SDR pipeline
+      const GEORGE_USER_ID = 'cefc44c7-d2e2-4937-94ac-069c1c94731b';
+      const isGeorgeCreating = currentUser.id === GEORGE_USER_ID;
+
+      // Determine pipeline: George's manual deals → SDR, others → current pipeline
+      let targetPipelineId = pipelineId;
+      let targetStageId = cleanData.stage_id;
+
+      if (isGeorgeCreating) {
+        // Find SDR pipeline
+        const { data: sdrPipeline } = await supabase
+          .from('pipelines')
+          .select('id')
+          .eq('account_id', currentUser.account_id)
+          .eq('name', 'SDR')
+          .eq('is_active', true)
+          .single();
+
+        if (sdrPipeline) {
+          targetPipelineId = sdrPipeline.id;
+
+          // Get first stage of SDR pipeline if no stage specified or stage belongs to another pipeline
+          if (!targetStageId) {
+            const { data: firstStage } = await supabase
+              .from('deal_stages')
+              .select('id')
+              .eq('pipeline_id', sdrPipeline.id)
+              .order('display_order', { ascending: true })
+              .limit(1)
+              .single();
+            if (firstStage) targetStageId = firstStage.id;
+          }
+        }
+      }
+
       const insertPayload: any = {
           ...cleanData,
           account_id: currentUser.account_id,
           tags: data.tags || [],
-          // Auto-assign to current user if no responsible_user_id provided
           responsible_user_id: cleanData.responsible_user_id ?? currentUser.id,
+          stage_id: targetStageId,
         };
-      if (pipelineId) {
-        insertPayload.pipeline_id = pipelineId;
+      if (targetPipelineId) {
+        insertPayload.pipeline_id = targetPipelineId;
       }
 
       const { data: newDeal, error } = await supabase
