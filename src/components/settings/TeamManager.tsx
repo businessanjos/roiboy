@@ -926,19 +926,20 @@ export function TeamManager() {
                           {user.email}
                         </p>
                       </div>
-                      {user.team_role && (
+                      {user.team_roles && user.team_roles.length > 0 && user.team_roles.map((role) => (
                         <Badge 
+                          key={role.id}
                           variant="secondary" 
                           className="text-xs font-medium hidden sm:inline-flex"
                           style={{ 
-                            backgroundColor: `${user.team_role.color}15`,
-                            color: user.team_role.color,
-                            borderColor: `${user.team_role.color}30`
+                            backgroundColor: `${role.color}15`,
+                            color: role.color,
+                            borderColor: `${role.color}30`
                           }}
                         >
-                          {user.team_role.name}
+                          {role.name}
                         </Badge>
-                      )}
+                      ))}
                       {user.is_also_admin && (
                         <Badge variant="destructive" className="text-xs font-medium hidden sm:inline-flex">
                           Admin
