@@ -10958,6 +10958,7 @@ export type Database = {
           participant_phone: string | null
           recording_id: string | null
           recording_url: string | null
+          scheduled_at: string | null
           started_at: string | null
           status: string
           transcription: string | null
@@ -10982,6 +10983,7 @@ export type Database = {
           participant_phone?: string | null
           recording_id?: string | null
           recording_url?: string | null
+          scheduled_at?: string | null
           started_at?: string | null
           status?: string
           transcription?: string | null
@@ -11006,6 +11008,7 @@ export type Database = {
           participant_phone?: string | null
           recording_id?: string | null
           recording_url?: string | null
+          scheduled_at?: string | null
           started_at?: string | null
           status?: string
           transcription?: string | null
