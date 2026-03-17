@@ -457,7 +457,7 @@ export function TeamManager() {
     setFormName("");
     setFormEmail("");
     setFormPassword("");
-    setFormRoleId("");
+    setFormRoleIds([]);
     setFormIsAlsoAdmin(false);
     setFormAvatarUrl(null);
   };
