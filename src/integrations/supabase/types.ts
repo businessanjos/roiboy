@@ -10939,6 +10939,124 @@ export type Database = {
         }
         Relationships: []
       }
+      video_call_sessions: {
+        Row: {
+          account_id: string
+          analysis: string | null
+          analysis_status: string | null
+          client_id: string | null
+          created_at: string
+          daily_room_name: string
+          daily_room_url: string
+          deal_id: string | null
+          duration_seconds: number | null
+          ended_at: string | null
+          id: string
+          lead_id: string | null
+          notes: string | null
+          participant_name: string | null
+          participant_phone: string | null
+          recording_id: string | null
+          recording_url: string | null
+          started_at: string | null
+          status: string
+          transcription: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          analysis?: string | null
+          analysis_status?: string | null
+          client_id?: string | null
+          created_at?: string
+          daily_room_name: string
+          daily_room_url: string
+          deal_id?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          participant_name?: string | null
+          participant_phone?: string | null
+          recording_id?: string | null
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string
+          transcription?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          analysis?: string | null
+          analysis_status?: string | null
+          client_id?: string | null
+          created_at?: string
+          daily_room_name?: string
+          daily_room_url?: string
+          deal_id?: string | null
+          duration_seconds?: number | null
+          ended_at?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          participant_name?: string | null
+          participant_phone?: string | null
+          recording_id?: string | null
+          recording_url?: string | null
+          started_at?: string | null
+          status?: string
+          transcription?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_call_sessions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_call_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "video_call_sessions_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_call_sessions_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_call_sessions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_call_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vnps_snapshots: {
         Row: {
           account_id: string
