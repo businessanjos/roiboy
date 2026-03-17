@@ -1,0 +1,131 @@
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import {
+  LayoutDashboard, Activity, Package, Building2, Users, Wallet,
+  FileText, Cpu, Cloud, Tag, Headset, Briefcase, DollarSign,
+  TrendingUp, Map, ArrowLeft, Shield,
+} from "lucide-react";
+
+interface NavItem {
+  id: string;
+  label: string;
+  icon: React.ElementType;
+}
+
+interface NavGroup {
+  title: string;
+  items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    title: "Geral",
+    items: [
+      { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { id: "status", label: "Status", icon: Activity },
+      { id: "map", label: "Mapa do Sistema", icon: Map },
+    ],
+  },
+  {
+    title: "Gestão",
+    items: [
+      { id: "plans", label: "Planos", icon: Package },
+      { id: "accounts", label: "Contas", icon: Building2 },
+      { id: "users", label: "Usuários", icon: Users },
+      { id: "payments", label: "Pagamentos", icon: Wallet },
+      { id: "coupons", label: "Cupons", icon: Tag },
+    ],
+  },
+  {
+    title: "Infraestrutura",
+    items: [
+      { id: "costs", label: "Custos IA", icon: Cpu },
+      { id: "cloud", label: "Cloud", icon: Cloud },
+      { id: "audit", label: "Auditoria", icon: FileText },
+    ],
+  },
+  {
+    title: "Suporte",
+    items: [
+      { id: "support", label: "Suporte", icon: Headset },
+    ],
+  },
+  {
+    title: "Agentes IA (Zad)",
+    items: [
+      { id: "zad-operacoes", label: "Operações", icon: Briefcase },
+      { id: "zad-financas", label: "Finanças", icon: DollarSign },
+      { id: "zad-vendas", label: "Vendas", icon: TrendingUp },
+    ],
+  },
+];
+
+export function AdminSidebarNav({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const activeTab = searchParams.get("tab") || "dashboard";
+
+  const handleTabChange = (tab: string) => {
+    setSearchParams({ tab });
+    onNavigate?.();
+  };
+
+  return (
+    <>
+      <div className="p-3 border-b border-border">
+        <button
+          onClick={() => { navigate(-1); onNavigate?.(); }}
+          className={cn(
+            "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+            "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <ArrowLeft className="h-5 w-5 flex-shrink-0" />
+          {!collapsed && (
+            <div className="flex flex-col items-start">
+              <span className="text-xs text-muted-foreground">Voltar</span>
+              <span className="font-semibold text-foreground flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Administração
+              </span>
+            </div>
+          )}
+        </button>
+      </div>
+
+      <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
+        {navGroups.map((group) => (
+          <div key={group.title}>
+            {!collapsed && (
+              <p className="px-3 mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                {group.title}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleTabChange(item.id)}
+                    className={cn(
+                      "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                      isActive
+                        ? "bg-accent text-accent-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      collapsed && "justify-center px-2"
+                    )}
+                  >
+                    <Icon className="h-5 w-5 flex-shrink-0" />
+                    {!collapsed && <span>{item.label}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </nav>
+    </>
+  );
+}
