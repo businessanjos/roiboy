@@ -49,6 +49,7 @@ import { useImpersonation } from "@/hooks/useImpersonation";
 import { useTheme } from "next-themes";
 import { SidebarPlanInfo } from "./SidebarPlanInfo";
 import { useSector } from "@/contexts/SectorContext";
+import { sectors as allSectors, SectorId } from "@/config/sectors";
 import {
   Sheet,
   SheetContent,
@@ -115,6 +116,8 @@ const superAdminNavItems: NavItem[] = [
   { to: "/admin?tab=status", icon: Activity, label: "Status do Sistema" },
 ];
 
+const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
+
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { currentUser, updateUser } = useCurrentUser();
   const { user } = useAuth();
@@ -123,7 +126,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const { isImpersonating } = useImpersonation();
   const { setTheme, theme } = useTheme();
-  const { currentSector, clearSector } = useSector();
+  const { currentSector, clearSector, setCurrentSector } = useSector();
   const navigate = useNavigate();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   
@@ -214,7 +217,22 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     });
   }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role, currentUser?.team_role_name]);
 
-  // Super admins should always see the full UI
+  const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "roychat", "configuracoes"];
+
+  const isSalesRep = useMemo(() => {
+    const role = currentUser?.team_role_name;
+    const isAdminUser = currentUser?.role === "admin" || currentUser?.is_also_admin;
+    return !!role && SALES_REP_ROLES.includes(role) && !isAdminUser;
+  }, [currentUser]);
+
+  const salesRepOtherSectors = useMemo(() => {
+    if (!isSalesRep || !currentSector) return [];
+    return SALES_REP_ALLOWED_SECTORS
+      .filter(id => id !== currentSector.id)
+      .map(id => allSectors.find(s => s.id === id))
+      .filter(Boolean) as typeof allSectors;
+  }, [isSalesRep, currentSector]);
+
   const showRegularUI = true;
 
   // Total badge count = unread notifications + pending tasks
@@ -323,6 +341,35 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             </NavLink>
           );
         })}
+
+        {/* Quick sector navigation for sales reps */}
+        {isSalesRep && currentSector && salesRepOtherSectors.length > 0 && (
+          <>
+            <div className={cn("my-3 border-t border-border", collapsed && "mx-1")} />
+            {!collapsed && (
+              <p className="px-3 mb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                Outros setores
+              </p>
+            )}
+            {salesRepOtherSectors.map((sector) => (
+              <button
+                key={sector.id}
+                onClick={() => {
+                  setCurrentSector(sector.id);
+                  navigate(sector.defaultRoute);
+                  onNavigate?.();
+                }}
+                className={cn(
+                  "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium transition-all",
+                  "text-muted-foreground hover:bg-muted hover:text-foreground"
+                )}
+              >
+                <sector.icon className={cn("h-4 w-4 flex-shrink-0", sector.color)} />
+                {!collapsed && <span>{sector.name}</span>}
+              </button>
+            ))}
+          </>
+        )}
 
         {/* Notifications - hide for super admins (unless impersonating) */}
         {showRegularUI && (
