@@ -115,6 +115,7 @@ interface TeamUser {
   avatar_url: string | null;
   team_role_id: string | null;
   team_role?: TeamRole;
+  team_roles?: TeamRole[];
   is_also_admin?: boolean;
 }
 
