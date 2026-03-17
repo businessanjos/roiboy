@@ -307,13 +307,13 @@ export function ProfileContent() {
                 <div>
                   <CardTitle className="flex items-center gap-2"><Building2 className="h-5 w-5" /> Identificação</CardTitle>
                   <CardDescription>Dados principais da conta</CardDescription>
-              )}
-              </div>
+                </div>
                 {!isSalesRep && (
-                <Button onClick={handleSaveAccount} disabled={!hasAccountChanges || savingAccount}>
-                  {savingAccount ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                  Salvar
-                </Button>
+                  <Button onClick={handleSaveAccount} disabled={!hasAccountChanges || savingAccount}>
+                    {savingAccount ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                    Salvar
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
