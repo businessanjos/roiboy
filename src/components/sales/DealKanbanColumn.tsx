@@ -4,7 +4,7 @@ import { Deal, DealStage } from "@/hooks/useDeals";
 import { DealCard } from "./DealCard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Users, Clock, MessageSquare, CheckCircle, XCircle } from "lucide-react";
+import { Users, Clock, MessageSquare, CheckCircle, XCircle, ArrowDown } from "lucide-react";
 
 interface DealKanbanColumnProps {
   stage: DealStage;
@@ -13,6 +13,7 @@ interface DealKanbanColumnProps {
   conversionRate?: number;
   faturamentoMap?: Record<string, string>;
   itemVendaMap?: Record<string, string>;
+  isDragActive?: boolean;
 }
 
 const getStageIcon = (stageName: string, color: string) => {
@@ -37,7 +38,7 @@ const getStageIcon = (stageName: string, color: string) => {
   return <Users className={iconClass} style={{ color }} />;
 };
 
-export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap, itemVendaMap }: DealKanbanColumnProps) {
+export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap, itemVendaMap, isDragActive = false }: DealKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
   });
@@ -56,17 +57,41 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
     <div
       ref={setNodeRef}
       className={cn(
-        "flex-1 min-w-[200px] max-w-[320px] flex flex-col transition-all",
-        isOver && "scale-[1.01]"
+        "flex-1 min-w-[200px] max-w-[320px] flex flex-col transition-all duration-200",
+        // When drag is active but NOT over this column — subtle pulse hint
+        isDragActive && !isOver && "opacity-80",
+        // When hovering over this column — strong highlight
+        isOver && "opacity-100 scale-[1.02]"
       )}
     >
       {/* Column Header */}
-      <div className="flex items-center gap-1.5 mb-2 px-1 h-5">
+      <div 
+        className={cn(
+          "flex items-center gap-1.5 mb-2 px-2 py-1.5 rounded-lg transition-all duration-200",
+          isOver && "shadow-md",
+        )}
+        style={isOver ? {
+          backgroundColor: `${stage.color}25`,
+          boxShadow: `0 0 0 2px ${stage.color}60`,
+        } : undefined}
+      >
         {getStageIcon(stage.name, stage.color)}
-        <span className="font-medium text-xs truncate flex-1 min-w-0">{stage.name}</span>
+        <span className={cn(
+          "font-medium text-xs truncate flex-1 min-w-0 transition-colors",
+          isOver && "font-semibold"
+        )}>{stage.name}</span>
+        {isOver && (
+          <ArrowDown 
+            className="h-3.5 w-3.5 animate-bounce flex-shrink-0" 
+            style={{ color: stage.color }} 
+          />
+        )}
         <Badge 
           variant="secondary" 
-          className="text-[10px] w-5 h-5 p-0 font-semibold rounded-full flex items-center justify-center flex-shrink-0"
+          className={cn(
+            "text-[10px] w-5 h-5 p-0 font-semibold rounded-full flex items-center justify-center flex-shrink-0 transition-all",
+            isOver && "scale-110"
+          )}
           style={{ 
             backgroundColor: `${stage.color}20`,
             color: stage.color,
@@ -86,17 +111,32 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
       {/* Cards Container */}
       <div 
         className={cn(
-          "flex-1 space-y-2 p-1 rounded-lg transition-colors overflow-y-auto overflow-x-hidden",
-          isOver && "bg-primary/5 ring-1 ring-primary/20"
+          "flex-1 space-y-2 p-1.5 rounded-lg transition-all duration-200 overflow-y-auto overflow-x-hidden border-2 border-transparent",
+          // Drop target highlight
+          isOver && "border-dashed bg-primary/5",
+          // Drag active but not over — show it's a valid drop target
+          isDragActive && !isOver && "border-dashed border-border/40 bg-muted/5"
         )}
+        style={isOver ? {
+          borderColor: `${stage.color}50`,
+          backgroundColor: `${stage.color}08`,
+        } : undefined}
       >
         <SortableContext
           items={deals.map(d => d.id)}
           strategy={verticalListSortingStrategy}
         >
           {deals.length === 0 ? (
-            <div className="flex items-center justify-center h-20 text-[10px] text-muted-foreground border border-dashed border-border/40 rounded-md bg-muted/10">
-              Arraste negociações aqui
+            <div className={cn(
+              "flex items-center justify-center h-20 text-[10px] border border-dashed rounded-md transition-all duration-200",
+              isOver 
+                ? "text-foreground font-medium bg-primary/5 border-primary/30" 
+                : "text-muted-foreground border-border/40 bg-muted/10",
+              isDragActive && !isOver && "bg-muted/20 border-border/60"
+            )}
+            style={isOver ? { borderColor: `${stage.color}40`, color: stage.color } : undefined}
+            >
+              {isOver ? "Solte aqui!" : "Arraste negociações aqui"}
             </div>
           ) : (
             deals.map(deal => (
