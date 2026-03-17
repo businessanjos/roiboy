@@ -42,6 +42,7 @@ import { ZappSidebarNav } from "./ZappSidebarNav";
 import { ZappPlaybookList } from "./ZappPlaybookList";
 import { ZappMarketingList } from "./ZappMarketingList";
 import { ZappCRMPanel } from "./ZappCRMPanel";
+import { MeetingsPanel } from "@/components/sales/videocall/MeetingsPanel";
 import { ZappFinancePanel } from "./ZappFinancePanel";
 import { getInitials } from "./types";
 import type { ConversationAssignment, Agent, ZappTag, Department } from "./types";
