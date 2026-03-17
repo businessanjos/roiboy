@@ -1015,7 +1015,7 @@ export function TeamManager() {
           {rolesViewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {roles.map((role) => {
-                const memberCount = users.filter(u => u.team_role_id === role.id).length;
+                const memberCount = users.filter(u => u.team_roles?.some(r => r.id === role.id)).length;
                 const permissionCount = role.permissions?.length || 0;
                 
                 return (
