@@ -191,7 +191,26 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
         </Tooltip>
       )}
 
-      {/* Conversation Type Filter: All | Individual | Group */}
+      {/* Meetings button for vendas sector */}
+      {sectorId === "vendas" && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "rounded-full h-10 w-10",
+                activeView === "meetings" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
+              )}
+              onClick={() => setActiveView("meetings")}
+            >
+              <Video className="h-5 w-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Reuniões</TooltipContent>
+        </Tooltip>
+      )}
+
       <div className="flex items-center bg-zapp-input rounded-full p-0.5">
         <Tooltip>
           <TooltipTrigger asChild>
