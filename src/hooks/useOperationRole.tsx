@@ -21,22 +21,22 @@ export function useOperationRole() {
         return { isOperationRole: false, roleName: "Admin" };
       }
 
-      // Fetch user's team role
-      const { data: userData, error } = await supabase
-        .from("users")
+      // Fetch user's team roles from junction table
+      const { data: userRolesData, error } = await supabase
+        .from("user_team_roles")
         .select("team_role_id, team_role:team_roles(id, name)")
-        .eq("id", currentUser.id)
-        .maybeSingle();
+        .eq("user_id", currentUser.id);
 
-      if (error || !userData?.team_role) {
-        // No role assigned - default to seeing all (not restricted)
+      if (error || !userRolesData || userRolesData.length === 0) {
+        // No roles assigned - default to seeing all (not restricted)
         return { isOperationRole: false, roleName: null };
       }
 
-      const roleName = (userData.team_role as any)?.name || "";
-      const isOperationRole = OPERATION_ROLE_NAMES.includes(roleName);
+      const roleNames = userRolesData.map((ur: any) => ur.team_role?.name || "").filter(Boolean);
+      const isOperationRole = roleNames.some(name => OPERATION_ROLE_NAMES.includes(name));
+      const isManagement = roleNames.some(name => MANAGEMENT_ROLE_NAMES.includes(name));
 
-      return { isOperationRole, roleName };
+      return { isOperationRole: isOperationRole && !isManagement, roleName: roleNames[0] || null };
     },
     enabled: !!currentUser && !userLoading,
     staleTime: 1000 * 60 * 10, // 10 minutes
