@@ -433,14 +433,56 @@ export default function SalesMeetings() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Link da Reunião</Label>
-              <Input
-                value={form.meeting_url}
-                onChange={(e) => setForm((p) => ({ ...p, meeting_url: e.target.value }))}
-                placeholder="https://meet.google.com/..."
-              />
-            </div>
+            {!editing && (
+              <div className="space-y-2">
+                <Label>Sala de Vídeo</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant={form.use_daily ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setForm((p) => ({ ...p, use_daily: true, meeting_url: "" }))}
+                  >
+                    <Video className="w-4 h-4 mr-1.5" />
+                    Criar sala automática
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={!form.use_daily ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setForm((p) => ({ ...p, use_daily: false }))}
+                  >
+                    <ExternalLink className="w-4 h-4 mr-1.5" />
+                    Link externo
+                  </Button>
+                </div>
+                {!form.use_daily && (
+                  <Input
+                    value={form.meeting_url}
+                    onChange={(e) => setForm((p) => ({ ...p, meeting_url: e.target.value }))}
+                    placeholder="https://meet.google.com/..."
+                    className="mt-2"
+                  />
+                )}
+                {form.use_daily && (
+                  <p className="text-xs text-muted-foreground">
+                    Uma sala de vídeo será criada automaticamente via Daily.co ao salvar.
+                  </p>
+                )}
+              </div>
+            )}
+            {editing && (
+              <div className="space-y-2">
+                <Label>Link da Reunião</Label>
+                <Input
+                  value={form.meeting_url}
+                  onChange={(e) => setForm((p) => ({ ...p, meeting_url: e.target.value }))}
+                  placeholder="https://..."
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Tipo</Label>
               <Select value={form.meeting_type} onValueChange={(v) => setForm((p) => ({ ...p, meeting_type: v }))}>
