@@ -183,6 +183,9 @@ export function SalesTeamTab() {
               </Popover>
             </div>
           )}
+          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => refetch()}>
+            <RefreshCw className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
