@@ -613,15 +613,20 @@ export function useDeals(pipelineId?: string | null) {
     try {
       const maxOrder = Math.max(...stages.map(s => s.display_order), -1);
 
-      const { data: newStage, error } = await supabase
-        .from('deal_stages')
-        .insert({
+      const insertData: any = {
           account_id: currentUser.account_id,
           name: data.name,
           color: data.color,
           probability: data.probability || 0,
           display_order: maxOrder + 1,
-        })
+        };
+      if (pipelineId) {
+        insertData.pipeline_id = pipelineId;
+      }
+
+      const { data: newStage, error } = await supabase
+        .from('deal_stages')
+        .insert(insertData)
         .select()
         .single();
 
