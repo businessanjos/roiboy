@@ -564,7 +564,7 @@ export function TeamManager() {
         const { data: updateData, error } = await supabase
           .from("team_roles")
           .update({
-            name: roleFormName,
+            name: generatedName,
             description: roleFormDescription,
             color: roleFormColor,
             area: roleFormArea || null,
