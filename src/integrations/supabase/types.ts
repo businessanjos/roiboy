@@ -9176,6 +9176,113 @@ export type Database = {
           },
         ]
       }
+      sales_meetings: {
+        Row: {
+          account_id: string
+          client_id: string | null
+          created_at: string
+          created_by: string | null
+          deal_id: string | null
+          duration_minutes: number | null
+          id: string
+          lead_id: string | null
+          meeting_type: string | null
+          meeting_url: string | null
+          notes: string | null
+          responsible_user_id: string | null
+          scheduled_at: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          duration_minutes?: number | null
+          id?: string
+          lead_id?: string | null
+          meeting_type?: string | null
+          meeting_url?: string | null
+          notes?: string | null
+          responsible_user_id?: string | null
+          scheduled_at: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          duration_minutes?: number | null
+          id?: string
+          lead_id?: string | null
+          meeting_type?: string | null
+          meeting_url?: string | null
+          notes?: string | null
+          responsible_user_id?: string | null
+          scheduled_at?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_meetings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_meetings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "sales_meetings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_meetings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_meetings_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_meetings_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_meetings_responsible_user_id_fkey"
+            columns: ["responsible_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_monthly_goals: {
         Row: {
           account_id: string
