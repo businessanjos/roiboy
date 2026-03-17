@@ -9,9 +9,20 @@ import { TeamManager } from "@/components/settings/TeamManager";
 import { ActivityTypesManager } from "@/components/sales";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { SectorPinSettings } from "@/components/settings/SectorPinSettings";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useMemo } from "react";
+
+const RESTRICTED_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 
 export default function Settings() {
   const { hasVendasAccess } = useSectorAccess();
+  const { currentUser } = useCurrentUser();
+
+  const isSalesRep = useMemo(() => {
+    const role = currentUser?.team_role_name;
+    const isAdmin = currentUser?.role === "admin" || currentUser?.is_also_admin;
+    return !!role && RESTRICTED_ROLES.includes(role) && !isAdmin;
+  }, [currentUser?.team_role_name, currentUser?.role, currentUser?.is_also_admin]);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 animate-fade-in">
