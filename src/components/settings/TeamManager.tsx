@@ -773,7 +773,7 @@ export function TeamManager() {
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-foreground">
-                        {users.filter((u) => u.team_role_id === role.id).length}
+                        {users.filter((u) => u.team_roles?.some(r => r.id === role.id)).length}
                       </p>
                       <p className="text-xs text-muted-foreground">{role.name}</p>
                     </div>
