@@ -78,11 +78,16 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         end: new Date().toISOString()
       };
 
-      // Fetch all team users
-      const { data: users } = await supabase
+      // Fetch all team users and filter to sales team only
+      const SALES_TEAM_NAMES = ["everton", "jonathan", "darlan", "george", "vanessa"];
+      const { data: allUsers } = await supabase
         .from("users")
         .select("id, name, email, avatar_url")
         .eq("account_id", currentUser.account_id);
+
+      const users = (allUsers || []).filter((u) =>
+        SALES_TEAM_NAMES.some((name) => u.name?.toLowerCase().includes(name))
+      );
 
       if (!users || users.length === 0) {
         setMetrics([]);
