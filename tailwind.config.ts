@@ -107,6 +107,10 @@ export default {
           input: "hsl(var(--zapp-input))",
           hover: "hsl(var(--zapp-hover))",
         },
+        "roy-brown": {
+          DEFAULT: "hsl(var(--roy-brown))",
+          foreground: "hsl(var(--roy-brown-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
