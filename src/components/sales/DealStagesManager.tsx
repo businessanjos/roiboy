@@ -274,7 +274,7 @@ export function DealStagesManager({
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Etapa</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir a etapa "{selectedStage?.name}"? 
+              Tem certeza que deseja excluir a etapa "{selectedStage?.name}" do pipeline "{pipelineName}"? 
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
