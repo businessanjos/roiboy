@@ -115,6 +115,8 @@ const superAdminNavItems: NavItem[] = [
   { to: "/admin?tab=status", icon: Activity, label: "Status do Sistema" },
 ];
 
+const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
+
 function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { currentUser, updateUser } = useCurrentUser();
   const { user } = useAuth();
