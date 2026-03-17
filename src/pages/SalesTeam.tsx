@@ -3,11 +3,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommissionTab } from "@/components/sales/commission/CommissionTab";
 import { CareerPlanTab } from "@/components/sales/commission/CareerPlanTab";
 import { SalesTeamWrapper } from "@/components/sales/team/SalesTeamWrapper";
-import { Users, DollarSign, GraduationCap, Phone, Activity } from "lucide-react";
+import { Users, DollarSign, GraduationCap, Phone, Activity, Video } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCommissionPlan } from "@/hooks/useCommissionPlan";
 import { ThreeCPlusMetrics } from "@/components/threecplus/ThreeCPlusMetrics";
 import { ThreeCPlusLiveMonitor } from "@/components/threecplus/ThreeCPlusLiveMonitor";
+import { VideoCallTab } from "@/components/sales/videocall/VideoCallTab";
 
 export default function SalesTeam() {
   const { currentUser } = useCurrentUser();
@@ -42,6 +43,10 @@ export default function SalesTeam() {
               <DollarSign className="h-4 w-4" />
               Comissionamento
             </TabsTrigger>
+            <TabsTrigger value="videocall" className="gap-1.5">
+              <Video className="h-4 w-4" />
+              Videochamadas
+            </TabsTrigger>
             <TabsTrigger value="career" className="gap-1.5">
               <GraduationCap className="h-4 w-4" />
               Plano de Carreira
@@ -62,6 +67,10 @@ export default function SalesTeam() {
 
           <TabsContent value="commission">
             <CommissionTab />
+          </TabsContent>
+
+          <TabsContent value="videocall">
+            <VideoCallTab />
           </TabsContent>
 
           <TabsContent value="career">
