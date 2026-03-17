@@ -374,18 +374,34 @@ export function TeamManager() {
     setIsSubmitting(true);
 
     try {
-      // Update user profile
+      // Update user profile (keep team_role_id as primary for backward compat)
       const { error } = await supabase
         .from("users")
         .update({ 
           name: formName, 
           email: formEmail,
-          team_role_id: formRoleId || null,
+          team_role_id: formRoleIds[0] || null,
           is_also_admin: formIsAlsoAdmin,
         })
         .eq("id", selectedUser.id);
 
       if (error) throw error;
+
+      // Sync user_team_roles junction table
+      await supabase
+        .from("user_team_roles")
+        .delete()
+        .eq("user_id", selectedUser.id);
+
+      if (formRoleIds.length > 0) {
+        const { error: rolesError } = await supabase
+          .from("user_team_roles")
+          .insert(formRoleIds.map(roleId => ({
+            user_id: selectedUser.id,
+            team_role_id: roleId,
+          })));
+        if (rolesError) console.error("Error syncing user roles:", rolesError);
+      }
 
       // If password was provided, update it via edge function
       if (formPassword && formPassword.length >= 6 && selectedUser.auth_user_id) {
