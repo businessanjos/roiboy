@@ -24,7 +24,7 @@ import { useVideoCallSessions, VideoCallSession } from "@/hooks/useVideoCallSess
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { VideoCallDialog } from "./VideoCallDialog";
-import ReactMarkdown from "react-markdown";
+import MarkdownRenderer from "@/components/sales/MarkdownRenderer";
 
 function formatDuration(seconds: number): string {
   if (!seconds) return "0s";
