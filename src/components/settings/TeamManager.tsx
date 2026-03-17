@@ -28,8 +28,9 @@ import { toast } from "sonner";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { 
   Plus, Search, Pencil, User, Users, Camera, Loader2, 
-  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye, EyeOff, Lock
+  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye, EyeOff, Lock, Sparkles
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 
 // Password input component with toggle visibility
 function PasswordInput({ 
