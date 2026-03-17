@@ -56,8 +56,15 @@ const STATES = [
   "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"
 ];
 
+const RESTRICTED_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
+
 export function ProfileContent() {
-  const { updateUser } = useCurrentUser();
+  const { currentUser, updateUser } = useCurrentUser();
+  const isSalesRep = (() => {
+    const role = currentUser?.team_role_name;
+    const isAdmin = currentUser?.role === "admin" || currentUser?.is_also_admin;
+    return !!role && RESTRICTED_ROLES.includes(role) && !isAdmin;
+  })();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(true);
