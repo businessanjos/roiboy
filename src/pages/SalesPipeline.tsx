@@ -24,6 +24,7 @@ import { DealStagesManager } from "@/components/sales/DealStagesManager";
 import { CustomFieldsManager } from "@/components/custom-fields/CustomFieldsManager";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { PipelineFilterButton } from "@/components/sales/PipelineFilterButton";
+import { PipelineSelector } from "@/components/sales/PipelineSelector";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
 import { PipelineExportDialog } from "@/components/sales/PipelineExportDialog";
 import { ActiveFilter, applyFilterToDeals } from "@/hooks/usePipelineFilters";
