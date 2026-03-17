@@ -266,6 +266,7 @@ export function ZappChatView({
         onDismissConversation={onDismissConversation}
         onOpenEditGroup={onOpenEditGroup}
         accountId={accountId}
+        onCall={handleCall}
       />
 
       {/* Messages */}
