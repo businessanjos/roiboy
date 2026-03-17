@@ -1443,7 +1443,51 @@ export function TeamManager() {
                   placeholder="Descrição da função"
                 />
               </div>
-              
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Área *</Label>
+                  <Select value={roleFormArea} onValueChange={(v) => { setRoleFormArea(v); setRoleFormCargo(""); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a área" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ROLE_AREAS.map((area) => (
+                        <SelectItem key={area} value={area}>{area}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Cargo</Label>
+                  <Select value={roleFormCargo} onValueChange={setRoleFormCargo} disabled={!roleFormArea}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={roleFormArea ? "Selecione o cargo" : "Selecione a área primeiro"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(CARGOS_POR_AREA[roleFormArea] || []).map((cargo) => (
+                        <SelectItem key={cargo} value={cargo}>{cargo}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Senioridade</Label>
+                <Select value={roleFormSeniority} onValueChange={setRoleFormSeniority}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a senioridade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SENIORITY_LEVELS.map((level) => (
+                      <SelectItem key={level} value={level}>{level}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Cor</Label>
                 <div className="flex gap-2">
