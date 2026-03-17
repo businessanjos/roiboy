@@ -7,7 +7,8 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  closestCorners,
+  closestCenter,
+  MeasuringStrategy,
 } from "@dnd-kit/core";
 import { Deal, DealStage } from "@/hooks/useDeals";
 import { DealKanbanColumn } from "./DealKanbanColumn";
@@ -54,7 +55,6 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
 
     const dealIds = deals.map(d => d.id);
 
-    // Split array into chunks to avoid URL length limits
     const chunk = <T,>(arr: T[], size: number): T[][] => {
       const chunks: T[][] = [];
       for (let i = 0; i < arr.length; i += size) {
@@ -155,20 +155,24 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 5,
       },
     })
   );
 
+  const measuring = {
+    droppable: {
+      strategy: MeasuringStrategy.Always,
+    },
+  };
+
   const dealsByStage = useMemo(() => {
     const grouped: Record<string, Deal[]> = {};
     
-    // Initialize all stages
     stages.forEach(stage => {
       grouped[stage.id] = [];
     });
     
-    // Add deals without stage to first stage
     const noStageDealsList: Deal[] = [];
     
     deals.forEach(deal => {
@@ -179,7 +183,6 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
       }
     });
     
-    // Add no-stage deals to first stage
     if (stages.length > 0 && noStageDealsList.length > 0) {
       grouped[stages[0].id] = [...noStageDealsList, ...grouped[stages[0].id]];
     }
@@ -187,7 +190,6 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
     return grouped;
   }, [stages, deals]);
 
-  // Calculate conversion rates
   const conversionRates = useMemo(() => {
     const rates: Record<string, number> = {};
     const totalDeals = deals.length;
@@ -195,10 +197,8 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
     stages.forEach((stage, index) => {
       const dealsInStage = dealsByStage[stage.id]?.length || 0;
       if (index === 0) {
-        // First stage: percentage of total
         rates[stage.id] = totalDeals > 0 ? Math.round((dealsInStage / totalDeals) * 100) : 0;
       } else {
-        // Other stages: percentage from previous stage
         const prevStageDeals = dealsByStage[stages[index - 1].id]?.length || 0;
         rates[stage.id] = prevStageDeals > 0 ? Math.round((dealsInStage / prevStageDeals) * 100) : 0;
       }
@@ -244,7 +244,6 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
     const validation = await validateDealMove(dealId, targetStage.id, deal.account_id);
     
     if (!validation.canMoveToStage) {
-      // Open modal to fill missing required fields
       setRequiredFieldsModal({
         open: true,
         dealId,
@@ -257,7 +256,6 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
       return;
     }
     
-    // Move normally
     await onDealMove(dealId, targetStage.id);
   };
 
@@ -276,13 +274,16 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
     );
   }
 
+  const isDragActive = !!activeDeal;
+
   return (
     <ZappNavigationProvider>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCorners}
+        collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        measuring={measuring}
       >
         <div className="w-full h-[calc(100vh-220px)] overflow-x-auto">
           <div className="flex gap-3 h-full min-w-max pr-4">
@@ -295,14 +296,22 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
                 conversionRate={index > 0 ? conversionRates[stage.id] : undefined}
                 faturamentoMap={faturamentoMap}
                 itemVendaMap={itemVendaMap}
+                isDragActive={isDragActive}
               />
             ))}
           </div>
         </div>
 
-        <DragOverlay>
+        <DragOverlay
+          dropAnimation={{
+            duration: 200,
+            easing: "cubic-bezier(0.18, 0.67, 0.6, 1.22)",
+          }}
+        >
           {activeDeal && (
-            <DealCard deal={activeDeal} onClick={() => {}} isDragging />
+            <div className="rotate-2 scale-105 opacity-90">
+              <DealCard deal={activeDeal} onClick={() => {}} isDragging />
+            </div>
           )}
         </DragOverlay>
       </DndContext>
