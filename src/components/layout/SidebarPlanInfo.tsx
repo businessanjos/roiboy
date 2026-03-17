@@ -71,7 +71,7 @@ export function SidebarPlanInfo({ collapsed }: { collapsed: boolean }) {
   if (collapsed) {
     return (
       <Link 
-        to="/profile?tab=subscription"
+        to="/settings?tab=subscription"
         className={cn(
           "flex items-center justify-center p-2 mx-3 mb-2 rounded-lg transition-colors",
           isExpiring 
