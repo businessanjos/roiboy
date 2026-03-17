@@ -80,6 +80,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   onDeleteConversation,
   onDismissConversation,
   onOpenEditGroup,
+  onCall,
 }: ZappChatHeaderProps) {
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const conversationId = assignment.zapp_conversation_id || assignment.zapp_conversation?.id;
