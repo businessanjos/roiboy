@@ -458,9 +458,10 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
               <Pencil className="mr-2 h-4 w-4" />
               Editar Nome
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => { navigate("/profile"); onNavigate?.(); }}>
+            <DropdownMenuItem onClick={() => { navigate("/settings?tab=profile"); onNavigate?.(); }}>
               <User className="mr-2 h-4 w-4" />
               Meu Perfil
+            </DropdownMenuItem>
             </DropdownMenuItem>
             <DropdownMenuItem onClick={toggleTheme}>
               {theme === "dark" ? (

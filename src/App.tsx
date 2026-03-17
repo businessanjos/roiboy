@@ -198,7 +198,7 @@ const App = () => (
                             <Route path="/forms" element={<Forms />} />
                             <Route path="/integrations" element={<Integrations />} />
                             <Route path="/team" element={<Navigate to="/settings" replace />} />
-                            <Route path="/profile" element={<Profile />} />
+                            <Route path="/profile" element={<Navigate to="/settings?tab=profile" replace />} />
                             <Route path="/notifications" element={<Notifications />} />
                             <Route path="/api-docs" element={<ApiDocs />} />
                             <Route path="/settings" element={<Settings />} />
