@@ -1458,7 +1458,7 @@ export function TeamManager() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium">Cargo</Label>
+                  <Label className="text-sm font-medium">Cargo *</Label>
                   <Select value={roleFormCargo} onValueChange={setRoleFormCargo} disabled={!roleFormArea}>
                     <SelectTrigger>
                       <SelectValue placeholder={roleFormArea ? "Selecione o cargo" : "Selecione a área primeiro"} />
