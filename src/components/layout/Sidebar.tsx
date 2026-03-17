@@ -217,7 +217,22 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     });
   }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role, currentUser?.team_role_name]);
 
-  // Super admins should always see the full UI
+  const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "roychat", "configuracoes"];
+
+  const isSalesRep = useMemo(() => {
+    const role = currentUser?.team_role_name;
+    const isAdminUser = currentUser?.role === "admin" || currentUser?.is_also_admin;
+    return !!role && SALES_REP_ROLES.includes(role) && !isAdminUser;
+  }, [currentUser]);
+
+  const salesRepOtherSectors = useMemo(() => {
+    if (!isSalesRep || !currentSector) return [];
+    return SALES_REP_ALLOWED_SECTORS
+      .filter(id => id !== currentSector.id)
+      .map(id => allSectors.find(s => s.id === id))
+      .filter(Boolean) as typeof allSectors;
+  }, [isSalesRep, currentSector]);
+
   const showRegularUI = true;
 
   // Total badge count = unread notifications + pending tasks
