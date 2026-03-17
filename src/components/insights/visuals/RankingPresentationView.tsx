@@ -210,7 +210,7 @@ export function RankingPresentationView({
       {/* Header: Logo + Title + Clock */}
       <div className="flex items-center justify-between px-8 pt-6 pb-2 flex-shrink-0">
         <div className="flex items-center gap-4">
-          <img src={logoEternum} alt="Eternum" className="h-10 w-auto" />
+          <img src={logoEternum} alt="Eternum" className="h-12 w-auto dark:invert dark:brightness-200" />
           <div>
             <div className="flex items-center gap-2">
               <Trophy className="h-6 w-6 text-primary" />
