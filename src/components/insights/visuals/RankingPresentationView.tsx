@@ -341,9 +341,9 @@ export function RankingPresentationView({
 
         {/* Ranking table */}
         <div className="flex-1 overflow-auto min-h-0">
-          <table className="w-full text-sm">
+          <table className="w-full text-base">
             <thead>
-              <tr className="text-muted-foreground border-b border-border text-xs">
+              <tr className="text-muted-foreground border-b border-border text-sm">
                 <th className="text-left py-2.5 px-2 w-10">#</th>
                 {options.showPhotos && <th className="w-10" />}
                 <th className="text-left py-2.5 px-2">Vendedor</th>
