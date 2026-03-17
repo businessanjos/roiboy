@@ -258,10 +258,22 @@ export function TeamManager() {
 
       if (usersError) throw usersError;
 
-      const usersWithRoles = (usersData || []).map(user => ({
-        ...user,
-        team_role: rolesWithPermissions.find(r => r.id === user.team_role_id)
-      }));
+      // Fetch user_team_roles junction data
+      const { data: userRolesData } = await supabase
+        .from("user_team_roles")
+        .select("user_id, team_role_id");
+
+      const usersWithRoles = (usersData || []).map(user => {
+        const userRoleIds = (userRolesData || [])
+          .filter(ur => ur.user_id === user.id)
+          .map(ur => ur.team_role_id);
+        const userTeamRoles = rolesWithPermissions.filter(r => userRoleIds.includes(r.id));
+        return {
+          ...user,
+          team_role: userTeamRoles[0] || rolesWithPermissions.find(r => r.id === user.team_role_id),
+          team_roles: userTeamRoles.length > 0 ? userTeamRoles : (user.team_role_id ? [rolesWithPermissions.find(r => r.id === user.team_role_id)].filter(Boolean) : []),
+        };
+      });
 
       setUsers(usersWithRoles);
     } catch (error) {
