@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
+import { usePipelines } from "@/hooks/usePipelines";
 import { useLeads } from "@/hooks/useLeads";
 import { useSectorUsers } from "@/hooks/useSectorUsers";
 import { usePermissions } from "@/hooks/usePermissions";
