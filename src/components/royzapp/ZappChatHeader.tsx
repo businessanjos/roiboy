@@ -280,7 +280,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                     <ArrowRightLeft className="h-4 w-4 mr-2" />
                     Transferir
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover">
+                  <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={onCall}>
                     <Phone className="h-4 w-4 mr-2" />
                     Ligar
                   </DropdownMenuItem>
