@@ -83,6 +83,7 @@ import {
 } from "@/components/ui/tooltip";
 import { RoyLogo } from "@/components/ui/roy-logo";
 import { useSidebarZappNavigation } from "@/hooks/useSidebarZappNavigation";
+import { SettingsSidebarNav } from "./SettingsSidebarNav";
 
 interface NavItem {
   to: string;
