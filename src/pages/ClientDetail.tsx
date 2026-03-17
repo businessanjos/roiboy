@@ -185,6 +185,7 @@ export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const { currentUser, loading: userLoading } = useCurrentUser();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [client, setClient] = useState<Client | null>(null);
   const [clientProducts, setClientProducts] = useState<ClientProduct[]>([]);
   const [score, setScore] = useState<ScoreSnapshot | null>(null);
