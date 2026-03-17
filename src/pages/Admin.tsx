@@ -255,151 +255,62 @@ export default function Admin() {
     );
   }
 
-  return (
-    <div className="p-6 lg:p-8 space-y-8 max-w-7xl mx-auto">
-      <div className="flex items-center gap-4">
-        <div className="p-3 rounded-xl bg-primary/10">
-          <Shield className="h-6 w-6 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Administração</h1>
-          <p className="text-sm text-muted-foreground">Gerencie contas, planos e usuários da plataforma</p>
-        </div>
-      </div>
+  const activeTab = searchParams.get('tab') || 'dashboard';
 
-      <Tabs defaultValue={initialTab} className="space-y-6">
-        <TabsList className="bg-muted/50 p-1">
-          <TabsTrigger value="dashboard" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <LayoutDashboard className="h-4 w-4" />
-            Dashboard
-          </TabsTrigger>
-          <TabsTrigger value="status" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <ActivityIcon className="h-4 w-4" />
-            Status
-          </TabsTrigger>
-          <TabsTrigger value="plans" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Package className="h-4 w-4" />
-            Planos
-          </TabsTrigger>
-          <TabsTrigger value="accounts" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Building2 className="h-4 w-4" />
-            Contas
-          </TabsTrigger>
-          <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Users className="h-4 w-4" />
-            Usuários
-          </TabsTrigger>
-          <TabsTrigger value="payments" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Wallet className="h-4 w-4" />
-            Pagamentos
-          </TabsTrigger>
-          <TabsTrigger value="audit" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <FileText className="h-4 w-4" />
-            Auditoria
-          </TabsTrigger>
-          <TabsTrigger value="costs" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Cpu className="h-4 w-4" />
-            Custos IA
-          </TabsTrigger>
-          <TabsTrigger value="cloud" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Cloud className="h-4 w-4" />
-            Cloud
-          </TabsTrigger>
-          <TabsTrigger value="coupons" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Tag className="h-4 w-4" />
-            Cupons
-          </TabsTrigger>
-          <TabsTrigger value="support" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Headset className="h-4 w-4" />
-            Suporte
-          </TabsTrigger>
-          <TabsTrigger value="zad-operacoes" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Briefcase className="h-4 w-4" />
-            Zad Operações
-          </TabsTrigger>
-          <TabsTrigger value="zad-financas" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <DollarSignIcon className="h-4 w-4" />
-            Zad Finanças
-          </TabsTrigger>
-          <TabsTrigger value="zad-vendas" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <TrendingUpIcon className="h-4 w-4" />
-            Zad Vendas
-          </TabsTrigger>
-          <TabsTrigger value="map" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-            <Map className="h-4 w-4" />
-            Mapa
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="dashboard" className="mt-0">
-          <DashboardTab accounts={accounts} users={allUsers} plans={plans} />
-        </TabsContent>
-
-        <TabsContent value="status" className="mt-0">
-          <SystemStatusMonitor />
-        </TabsContent>
-
-        <TabsContent value="plans" className="mt-0">
-          <PlansTab plans={plans} isLoading={loadingPlans} />
-        </TabsContent>
-
-        <TabsContent value="accounts" className="mt-0">
-          <AccountsTab accounts={accounts} plans={plans} allUsers={allUsers} isLoading={loadingAccounts} />
-        </TabsContent>
-
-        <TabsContent value="users" className="mt-0">
-          <UsersTab users={allUsers} accounts={accounts} isLoading={loadingUsers} />
-        </TabsContent>
-
-        <TabsContent value="payments" className="mt-0">
-          <AdminPaymentsManager />
-        </TabsContent>
-
-        <TabsContent value="audit" className="mt-0">
-          <AuditLogViewer />
-        </TabsContent>
-
-        <TabsContent value="costs" className="mt-0">
-          <AICostsTab accounts={accounts} />
-        </TabsContent>
-
-        <TabsContent value="coupons" className="mt-0">
-          <CouponsManager />
-        </TabsContent>
-
-        <TabsContent value="cloud" className="mt-0">
-          <CloudUsageMonitor />
-        </TabsContent>
-
-        <TabsContent value="support" className="mt-0 space-y-6">
-          <Tabs defaultValue="tickets" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="tickets" className="gap-2">
-                <Headset className="h-4 w-4" />
-                Tickets
-              </TabsTrigger>
-              <TabsTrigger value="knowledge" className="gap-2">
-                <BookOpen className="h-4 w-4" />
-                Base de Conhecimento
-              </TabsTrigger>
-              <TabsTrigger value="config" className="gap-2">
-                <Settings className="h-4 w-4" />
-                Configuração
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="tickets">
-              <SupportTicketsManager />
-            </TabsContent>
-            <TabsContent value="knowledge">
-              <SupportKnowledgeBase />
-            </TabsContent>
-            <TabsContent value="config">
-              <SupportWhatsAppConfig />
-            </TabsContent>
-          </Tabs>
-        </TabsContent>
-
-        <TabsContent value="zad-operacoes" className="mt-0">
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return <DashboardTab accounts={accounts} users={allUsers} plans={plans} />;
+      case 'status':
+        return <SystemStatusMonitor />;
+      case 'plans':
+        return <PlansTab plans={plans} isLoading={loadingPlans} />;
+      case 'accounts':
+        return <AccountsTab accounts={accounts} plans={plans} allUsers={allUsers} isLoading={loadingAccounts} />;
+      case 'users':
+        return <UsersTab users={allUsers} accounts={accounts} isLoading={loadingUsers} />;
+      case 'payments':
+        return <AdminPaymentsManager />;
+      case 'audit':
+        return <AuditLogViewer />;
+      case 'costs':
+        return <AICostsTab accounts={accounts} />;
+      case 'coupons':
+        return <CouponsManager />;
+      case 'cloud':
+        return <CloudUsageMonitor />;
+      case 'support':
+        return (
+          <div className="space-y-6">
+            <Tabs defaultValue="tickets" className="space-y-4">
+              <TabsList>
+                <TabsTrigger value="tickets" className="gap-2">
+                  <Headset className="h-4 w-4" />
+                  Tickets
+                </TabsTrigger>
+                <TabsTrigger value="knowledge" className="gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Base de Conhecimento
+                </TabsTrigger>
+                <TabsTrigger value="config" className="gap-2">
+                  <Settings className="h-4 w-4" />
+                  Configuração
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="tickets">
+                <SupportTicketsManager />
+              </TabsContent>
+              <TabsContent value="knowledge">
+                <SupportKnowledgeBase />
+              </TabsContent>
+              <TabsContent value="config">
+                <SupportWhatsAppConfig />
+              </TabsContent>
+            </Tabs>
+          </div>
+        );
+      case 'zad-operacoes':
+        return (
           <SectorAgentConfig
             sectorId="operacoes"
             sectorName="Operações (CX/CS)"
@@ -416,9 +327,9 @@ export default function Admin() {
               { key: "cs_support", label: "Suporte ao CS/CX", description: "Auxiliar equipe de experiência", icon: <Lightbulb className="h-5 w-5 text-yellow-500" /> },
             ]}
           />
-        </TabsContent>
-
-        <TabsContent value="zad-financas" className="mt-0">
+        );
+      case 'zad-financas':
+        return (
           <SectorAgentConfig
             sectorId="financas"
             sectorName="Finanças"
@@ -439,9 +350,9 @@ export default function Admin() {
               { key: "canManageSuppliers", label: "Fornecedores", description: "Gerenciar fornecedores", icon: <Building2Icon className="h-5 w-5 text-slate-500" /> },
             ]}
           />
-        </TabsContent>
-
-        <TabsContent value="zad-vendas" className="mt-0">
+        );
+      case 'zad-vendas':
+        return (
           <SectorAgentConfig
             sectorId="vendas"
             sectorName="Vendas"
@@ -456,12 +367,17 @@ export default function Admin() {
               { key: "canSuggestStrategies", label: "Estratégias", description: "Sugerir táticas de venda", icon: <Lightbulb className="h-5 w-5 text-yellow-500" /> },
             ]}
           />
-        </TabsContent>
+        );
+      case 'map':
+        return <SystemMap />;
+      default:
+        return <DashboardTab accounts={accounts} users={allUsers} plans={plans} />;
+    }
+  };
 
-        <TabsContent value="map" className="mt-0">
-          <SystemMap />
-        </TabsContent>
-      </Tabs>
+  return (
+    <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+      {renderContent()}
     </div>
   );
 }

@@ -84,6 +84,8 @@ import {
 import { RoyLogo } from "@/components/ui/roy-logo";
 import { useSidebarZappNavigation } from "@/hooks/useSidebarZappNavigation";
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
+import { AdminSidebarNav } from "./AdminSidebarNav";
+import { ClientDetailSidebarNav } from "./ClientDetailSidebarNav";
 
 interface NavItem {
   to: string;
@@ -298,10 +300,19 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     onNavigate?.();
   };
 
-  // If on settings route, show settings navigation instead
+  // Route-specific sidebar navigation
   const isOnSettings = location.pathname === "/settings";
+  const isOnAdmin = location.pathname === "/admin";
+  const clientDetailMatch = location.pathname.match(/^\/clients\/([^/]+)$/);
+
   if (isOnSettings) {
     return <SettingsSidebarNav collapsed={collapsed} onNavigate={onNavigate} />;
+  }
+  if (isOnAdmin) {
+    return <AdminSidebarNav collapsed={collapsed} onNavigate={onNavigate} />;
+  }
+  if (clientDetailMatch) {
+    return <ClientDetailSidebarNav collapsed={collapsed} onNavigate={onNavigate} />;
   }
 
   return (
