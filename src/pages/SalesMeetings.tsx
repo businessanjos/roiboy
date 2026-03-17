@@ -514,10 +514,10 @@ export default function SalesMeetings() {
             </Button>
             <Button
               onClick={() => saveMutation.mutate()}
-              disabled={!form.title.trim() || !form.scheduled_at || saveMutation.isPending}
+              disabled={!form.title.trim() || !form.scheduled_at || saveMutation.isPending || creatingRoom}
             >
-              {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              {editing ? "Salvar" : "Criar"}
+              {(saveMutation.isPending || creatingRoom) ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              {creatingRoom ? "Criando sala..." : editing ? "Salvar" : form.use_daily ? "Criar com sala de vídeo" : "Criar"}
             </Button>
           </DialogFooter>
         </DialogContent>
