@@ -193,6 +193,21 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
                 <span className="truncate">{visual.title || "Visual"}</span>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
+                {chartType === 'ranking' && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => setPresentDialogOpen(true)}
+                          className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                        >
+                          <Monitor className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Apresentar na TV</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
                 {SWITCHABLE_SET.has(chartType) && onUpdateVisual && (
                   <Popover>
                     <TooltipProvider>
