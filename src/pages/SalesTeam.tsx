@@ -3,11 +3,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommissionTab } from "@/components/sales/commission/CommissionTab";
 import { CareerPlanTab } from "@/components/sales/commission/CareerPlanTab";
 import { SalesTeamWrapper } from "@/components/sales/team/SalesTeamWrapper";
-import { Users, DollarSign, GraduationCap, Phone, Activity } from "lucide-react";
+import { Users, DollarSign, GraduationCap, Phone, Activity, Video } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCommissionPlan } from "@/hooks/useCommissionPlan";
 import { ThreeCPlusMetrics } from "@/components/threecplus/ThreeCPlusMetrics";
 import { ThreeCPlusLiveMonitor } from "@/components/threecplus/ThreeCPlusLiveMonitor";
+import { VideoCallTab } from "@/components/sales/videocall/VideoCallTab";
 
 export default function SalesTeam() {
   const { currentUser } = useCurrentUser();
