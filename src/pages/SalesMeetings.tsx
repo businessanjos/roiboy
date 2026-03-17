@@ -217,7 +217,7 @@ export default function SalesMeetings() {
   });
 
   const resetForm = () => {
-    setForm({ title: "", scheduled_at: "", duration_minutes: "30", meeting_url: "", meeting_type: "scheduled", notes: "" });
+    setForm({ title: "", scheduled_at: "", duration_minutes: "30", meeting_url: "", meeting_type: "scheduled", notes: "", use_daily: true });
   };
 
   const openAdd = () => {
