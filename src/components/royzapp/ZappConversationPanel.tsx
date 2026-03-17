@@ -42,6 +42,7 @@ import { ZappSidebarNav } from "./ZappSidebarNav";
 import { ZappPlaybookList } from "./ZappPlaybookList";
 import { ZappMarketingList } from "./ZappMarketingList";
 import { ZappCRMPanel } from "./ZappCRMPanel";
+import { MeetingsPanel } from "@/components/sales/videocall/MeetingsPanel";
 import { ZappFinancePanel } from "./ZappFinancePanel";
 import { getInitials } from "./types";
 import type { ConversationAssignment, Agent, ZappTag, Department } from "./types";
@@ -49,8 +50,8 @@ import { ZappAIAgentItem, type AIAgent } from "./ZappAIAgentItem";
 
 interface ZappConversationPanelProps {
   currentUser: { name: string; avatar_url: string | null; role?: string } | null;
-  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector";
-  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector") => void;
+  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings";
+  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings") => void;
   inboxTab: "mine" | "queue";
   setInboxTab: (tab: "mine" | "queue") => void;
   searchQuery: string;
@@ -849,6 +850,9 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         )}
         {activeView === "sector" && sectorId === "financeiro" && (
           <ZappFinancePanel sectorId={sectorId} />
+        )}
+        {activeView === "meetings" && (
+          <MeetingsPanel />
         )}
       </ScrollArea>
     </div>

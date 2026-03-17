@@ -1,0 +1,1 @@
+ALTER TABLE public.video_call_sessions ADD COLUMN IF NOT EXISTS scheduled_at timestamptz DEFAULT NULL;

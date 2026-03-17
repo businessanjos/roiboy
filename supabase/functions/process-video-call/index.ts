@@ -153,6 +153,20 @@ IMPORTANTE: Seja DIRETO e ESPECÍFICO. Use exemplos reais da transcrição.`;
             .eq("id", session_id);
 
           console.log("[process-video-call] Analysis completed successfully");
+
+          // Also save to sales_call_analyses for the Script de Vendas area
+          try {
+            const preview = transcription.substring(0, 200);
+            await supabase.from("sales_call_analyses").insert({
+              account_id: session.account_id,
+              user_id: session.user_id,
+              analysis: analysis,
+              transcript_preview: preview || null,
+            });
+            console.log("[process-video-call] Saved to sales_call_analyses");
+          } catch (saveErr) {
+            console.error("[process-video-call] Failed to save to sales_call_analyses:", saveErr);
+          }
         } else {
           console.error("[process-video-call] AI analysis error:", await aiRes.text());
           await supabase

@@ -58,6 +58,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import LeadsTab from "@/components/sales/LeadsTab";
+import { MeetingScheduleDialog } from "@/components/sales/videocall/MeetingScheduleDialog";
 
 export default function SalesPipeline() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -274,8 +275,39 @@ export default function SalesPipeline() {
     }, 100);
   };
 
+  // Meeting schedule dialog state
+  const [meetingDialog, setMeetingDialog] = useState<{
+    open: boolean;
+    dealId?: string;
+    leadId?: string;
+    clientId?: string;
+    participantName?: string;
+    participantPhone?: string;
+    stageName?: string;
+  }>({ open: false });
+
   const handleDealMove = async (dealId: string, newStageId: string): Promise<boolean> => {
-    return await moveDeal(dealId, newStageId);
+    const result = await moveDeal(dealId, newStageId);
+    
+    if (result) {
+      // Check if target stage name contains "reunião" or "reuniao"
+      const targetStage = stages.find(s => s.id === newStageId);
+      const stageName = targetStage?.name?.toLowerCase() || "";
+      if (stageName.includes("reunião") || stageName.includes("reuniao")) {
+        const deal = deals.find(d => d.id === dealId);
+        setMeetingDialog({
+          open: true,
+          dealId,
+          leadId: deal?.lead_id || undefined,
+          clientId: deal?.client_id || undefined,
+          participantName: deal?.contact_name || deal?.lead?.full_name || deal?.client?.full_name || "",
+          participantPhone: deal?.contact_phone || deal?.lead?.phone || deal?.client?.phone_e164 || "",
+          stageName: targetStage?.name,
+        });
+      }
+    }
+    
+    return result;
   };
 
   const handleSaveDeal = async (data: any, sendNotification?: boolean) => {
@@ -1109,6 +1141,18 @@ export default function SalesPipeline() {
         accountId={currentUser?.account_id || ""}
         onComplete={handleOutcomeRequiredFieldsComplete}
         outcomeType={outcomeRequiredFieldsModal.outcomeType}
+      />
+
+      {/* Meeting Schedule Dialog - opens when deal moves to "reunião agendada" */}
+      <MeetingScheduleDialog
+        open={meetingDialog.open}
+        onOpenChange={(open) => setMeetingDialog(prev => ({ ...prev, open }))}
+        dealId={meetingDialog.dealId}
+        leadId={meetingDialog.leadId}
+        clientId={meetingDialog.clientId}
+        participantName={meetingDialog.participantName}
+        participantPhone={meetingDialog.participantPhone}
+        stageName={meetingDialog.stageName}
       />
     </>
   );

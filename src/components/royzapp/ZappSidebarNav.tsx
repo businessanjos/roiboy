@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { MessageSquare, Users, Building2, Tags, Settings, BookOpen, Megaphone, Briefcase, CheckSquare, DollarSign, User, Users2 } from "lucide-react";
+import { MessageSquare, Users, Building2, Tags, Settings, BookOpen, Megaphone, Briefcase, CheckSquare, DollarSign, User, Users2, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,8 +10,8 @@ import {
 import { cn } from "@/lib/utils";
 
 interface ZappSidebarNavProps {
-  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector";
-  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector") => void;
+  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings";
+  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings") => void;
   filterConversationType: "all" | "individual" | "group";
   setFilterConversationType: (type: "all" | "individual" | "group") => void;
   onlineAgents: number;
@@ -191,7 +191,26 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
         </Tooltip>
       )}
 
-      {/* Conversation Type Filter: All | Individual | Group */}
+      {/* Meetings button for vendas sector */}
+      {sectorId === "vendas" && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "rounded-full h-10 w-10",
+                activeView === "meetings" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
+              )}
+              onClick={() => setActiveView("meetings")}
+            >
+              <Video className="h-5 w-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Reuniões</TooltipContent>
+        </Tooltip>
+      )}
+
       <div className="flex items-center bg-zapp-input rounded-full p-0.5">
         <Tooltip>
           <TooltipTrigger asChild>
