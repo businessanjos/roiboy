@@ -6,6 +6,25 @@ interface RequiredFieldValidation {
   missingFields: CustomField[];
 }
 
+// Known custom field ID for "Telefone principal" that maps to deal.contact_phone
+const PHONE_FIELD_ID = '521b553f-071d-418d-ae1c-1382356d7d9a';
+
+/**
+ * Check if a required custom field is already filled via a native deal column.
+ * Returns true if the native field has a value, making the custom field validation pass.
+ */
+async function isFilledViaNativeField(fieldId: string, dealId: string): Promise<boolean> {
+  if (fieldId === PHONE_FIELD_ID) {
+    const { data } = await supabase
+      .from('deals')
+      .select('contact_phone')
+      .eq('id', dealId)
+      .single();
+    return !!data?.contact_phone && data.contact_phone.trim() !== '';
+  }
+  return false;
+}
+
 export function useRequiredFieldsValidation() {
   const validateDealMove = async (
     dealId: string,
@@ -65,10 +84,21 @@ export function useRequiredFieldsValidation() {
         .map(v => v.field_id)
     );
     
-    // 4. Find missing fields
-    const missingFields = requiredForStage.filter(
+    // 4. Find missing fields (also check native field mappings)
+    const missingFieldsRaw = requiredForStage.filter(
       field => !filledFieldIds.has(field.id)
-    ).map(f => ({
+    );
+
+    // 5. Filter out fields that are filled via native deal columns
+    const missingFieldsFiltered: typeof missingFieldsRaw = [];
+    for (const field of missingFieldsRaw) {
+      const filledNatively = await isFilledViaNativeField(field.id, dealId);
+      if (!filledNatively) {
+        missingFieldsFiltered.push(field);
+      }
+    }
+
+    const missingFields = missingFieldsFiltered.map(f => ({
       id: f.id,
       name: f.name,
       field_type: f.field_type as CustomField["field_type"],
