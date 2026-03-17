@@ -64,16 +64,16 @@ function formatCompactCurrency(value: number): string {
 
 const MEDAL_EMOJI: Record<number, string> = { 0: "🥇", 1: "🥈", 2: "🥉" };
 const PODIUM_GRADIENTS: Record<number, string> = {
-  0: "from-primary to-primary/80",
-  1: "from-muted-foreground/60 to-muted-foreground/40",
-  2: "from-accent to-accent/80",
+  0: "from-amber-400 to-yellow-500",
+  1: "from-gray-300 to-slate-400",
+  2: "from-orange-600 to-amber-700",
 };
 const PODIUM_BORDER: Record<number, string> = {
-  0: "border-primary",
-  1: "border-muted-foreground/50",
-  2: "border-accent",
+  0: "border-amber-400",
+  1: "border-gray-300",
+  2: "border-orange-600",
 };
-const PODIUM_HEIGHTS: Record<number, number> = { 0: 200, 1: 150, 2: 110 };
+const PODIUM_HEIGHTS: Record<number, number> = { 0: 260, 1: 190, 2: 140 };
 
 function LiveClock() {
   const [now, setNow] = useState(new Date());
@@ -295,7 +295,7 @@ export function RankingPresentationView({
       <div className="flex-1 flex flex-col lg:flex-row gap-6 px-8 pb-6 overflow-hidden min-h-0">
         {/* Podium */}
         {top3.length >= 2 && (
-          <div className="lg:w-[40%] flex items-end justify-center gap-3 shrink-0 pb-4">
+          <div className="lg:w-[45%] flex items-end justify-center gap-4 shrink-0 pb-4">
             {podiumOrder.map((item) => {
               const originalIndex = top3.indexOf(item);
               const gradient = PODIUM_GRADIENTS[originalIndex];
@@ -307,29 +307,29 @@ export function RankingPresentationView({
               return (
                 <div key={item.name} className="flex flex-col items-center" style={{ order }}>
                   {options.showPhotos ? (
-                    <Avatar className={cn("h-14 w-14 border-[3px] mb-2", border)}>
+                    <Avatar className={cn("h-16 w-16 border-[3px] mb-2", border)}>
                       <AvatarImage src={avatar?.avatar_url || undefined} alt={item.name} />
                       <AvatarFallback className="text-sm font-semibold bg-primary/10 text-primary">
                         {getInitials(item.name)}
                       </AvatarFallback>
                     </Avatar>
                   ) : (
-                    <div className="h-14 w-14 mb-2" />
+                    <div className="h-16 w-16 mb-2" />
                   )}
 
-                  <span className="font-medium text-sm text-foreground truncate max-w-[100px] text-center">
+                  <span className="font-semibold text-base text-foreground truncate max-w-[120px] text-center">
                     {options.showNames ? item.name.split(" ")[0] : "• • •"}
                   </span>
 
-                  <span className={cn("text-xs text-muted-foreground font-medium tabular-nums mb-2", options.blurNumbers && "blur-md select-none")}>
+                  <span className={cn("text-sm text-muted-foreground font-medium tabular-nums mb-2", options.blurNumbers && "blur-md select-none")}>
                     {formatValue(item.value, formatting.type, formatting.decimals)}
                   </span>
 
                   <div
-                    className={cn("w-[85px] rounded-t-xl bg-gradient-to-t flex items-center justify-center", gradient)}
+                    className={cn("w-[100px] rounded-t-xl bg-gradient-to-t flex items-center justify-center shadow-lg", gradient)}
                     style={{ height: `${height}px` }}
                   >
-                    <span className="text-primary-foreground font-bold text-xl drop-shadow-sm">
+                    <span className="text-white font-bold text-2xl drop-shadow-md">
                       {originalIndex + 1}º
                     </span>
                   </div>
@@ -341,9 +341,9 @@ export function RankingPresentationView({
 
         {/* Ranking table */}
         <div className="flex-1 overflow-auto min-h-0">
-          <table className="w-full text-sm">
+          <table className="w-full text-base">
             <thead>
-              <tr className="text-muted-foreground border-b border-border text-xs">
+              <tr className="text-muted-foreground border-b border-border text-sm">
                 <th className="text-left py-2.5 px-2 w-10">#</th>
                 {options.showPhotos && <th className="w-10" />}
                 <th className="text-left py-2.5 px-2">Vendedor</th>
