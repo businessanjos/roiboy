@@ -510,7 +510,7 @@ export function useDeals(pipelineId?: string | null) {
     }
   };
 
-  const moveDeal = async (dealId: string, newStageId: string): Promise<boolean> => {
+  const moveDeal = async (dealId: string, newStageId: string, newPipelineId?: string): Promise<boolean> => {
     if (!currentUser?.account_id) return false;
 
     const deal = deals.find(d => d.id === dealId);
