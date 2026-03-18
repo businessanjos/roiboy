@@ -641,17 +641,7 @@ function MeetingCard({
                 variant="outline"
                 size="sm"
                 className="h-8 gap-1.5 text-xs"
-                onClick={() => {
-                  if (meeting.meeting_url?.includes("daily.co")) {
-                    setActiveEmbeddedCall({
-                      meetingUrl: meeting.meeting_url!,
-                      sessionId: meeting.id,
-                      title: meeting.title,
-                    });
-                  } else {
-                    window.open(meeting.meeting_url!, "_blank");
-                  }
-                }}
+                onClick={() => onJoin(meeting)}
               >
                 <Video className="w-3 h-3" />
                 Entrar
