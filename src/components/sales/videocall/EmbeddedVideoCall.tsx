@@ -57,18 +57,19 @@ export function EmbeddedVideoCall({
     setCallActive(false);
 
     try {
-      // Get the room name from the session
+      // Try to find video_call_session by ID or by room URL
       const { data: session } = await supabase
         .from("video_call_sessions")
-        .select("daily_room_name")
-        .eq("id", sessionId)
-        .single();
+        .select("id, daily_room_name")
+        .or(`id.eq.${sessionId},daily_room_url.eq.${roomUrl}`)
+        .limit(1)
+        .maybeSingle();
 
       if (session?.daily_room_name) {
         const { data, error } = await supabase.functions.invoke("daily-video-call", {
           body: {
             action: "end-call",
-            session_id: sessionId,
+            session_id: session.id,
             room_name: session.daily_room_name,
           },
         });
@@ -84,14 +85,17 @@ export function EmbeddedVideoCall({
               : "Processando gravação e análise...",
           });
         }
+      } else {
+        toast({ title: "Chamada encerrada" });
       }
     } catch (err) {
       console.error("Error ending call:", err);
+      toast({ title: "Chamada encerrada" });
     } finally {
       setIsEnding(false);
       onCallEnded?.();
     }
-  }, [sessionId, isEnding, callActive, toast, onCallEnded]);
+  }, [sessionId, roomUrl, isEnding, callActive, toast, onCallEnded]);
 
   const toggleFullscreen = () => {
     setIsFullscreen((prev) => !prev);
