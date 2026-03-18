@@ -1,9 +1,10 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, GraduationCap, Target, Sparkles } from "lucide-react";
+import { BarChart3, GraduationCap, Target, Sparkles, MessageSquareText } from "lucide-react";
 import { SalesTeamTab } from "@/components/sales/SalesTeamTab";
 import { TeamCareerTab } from "./TeamCareerTab";
 import { TeamGoalsTab } from "./TeamGoalsTab";
 import { TeamInsightsTab } from "./TeamInsightsTab";
+import { TeamConversationAnalysisTab } from "./TeamConversationAnalysisTab";
 
 interface SalesTeamWrapperProps {
   showManagement?: boolean;
@@ -33,6 +34,10 @@ export function SalesTeamWrapper({ showManagement = false }: SalesTeamWrapperPro
           <Sparkles className="h-4 w-4" />
           Insights
         </TabsTrigger>
+        <TabsTrigger value="conversations" className="gap-2 text-sm px-5 h-9 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium">
+          <MessageSquareText className="h-4 w-4" />
+          Conversas
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="performance">
@@ -49,6 +54,10 @@ export function SalesTeamWrapper({ showManagement = false }: SalesTeamWrapperPro
 
       <TabsContent value="insights">
         <TeamInsightsTab />
+      </TabsContent>
+
+      <TabsContent value="conversations">
+        <TeamConversationAnalysisTab />
       </TabsContent>
     </Tabs>
   );
