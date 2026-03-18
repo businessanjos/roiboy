@@ -155,6 +155,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           pending_tasks: 0,
           assigned_leads: 0,
           converted_leads: 0,
+          entry_value_total: 0,
         };
       }
 
