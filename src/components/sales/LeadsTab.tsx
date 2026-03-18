@@ -479,7 +479,10 @@ export default function LeadsTab() {
 
   const openDealDialogForLead = (lead: Lead) => {
     setLeadForDeal(lead);
-    const firstStage = stages.sort((a, b) => a.display_order - b.display_order)[0];
+    const defaultPipeline = allPipelines[0];
+    const pipelineStages = allStages.filter(s => s.pipeline_id === defaultPipeline?.id).sort((a, b) => a.display_order - b.display_order);
+    const firstStage = pipelineStages[0];
+    setSelectedPipelineId(defaultPipeline?.id || "");
     setDealFormData({
       title: `Novo negócio - ${lead.full_name}`,
       value: "",
