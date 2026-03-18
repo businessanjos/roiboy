@@ -11,11 +11,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { agent_id, start_date, end_date, analysis_type } = await req.json();
+    const { user_id, start_date, end_date, analysis_type } = await req.json();
 
-    if (!agent_id) {
+    if (!user_id) {
       return new Response(
-        JSON.stringify({ error: "agent_id é obrigatório" }),
+        JSON.stringify({ error: "user_id é obrigatório" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -30,11 +30,37 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // 1. Fetch assignments for this agent in the date range
+    // 1. Resolve user_id → zapp_agent.id
+    const { data: agent, error: agentError } = await supabase
+      .from("zapp_agents")
+      .select("id")
+      .eq("user_id", user_id)
+      .maybeSingle();
+
+    if (agentError) {
+      console.error("Error fetching agent:", agentError);
+      throw new Error("Erro ao buscar agente");
+    }
+
+    if (!agent) {
+      console.log("No zapp_agent found for user_id:", user_id);
+      return new Response(
+        JSON.stringify({
+          metrics: { total: 0, with_response_data: 0, avg_response_time_min: 0, median_response_time_min: 0, p90_response_time_min: 0, fast_responses_pct: 0, slow_responses_pct: 0, avg_duration_min: 0, outcomes: {}, closed_count: 0, open_count: 0 },
+          ai_analysis: null,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const agentId = agent.id;
+    console.log("Resolved agent_id:", agentId, "for user_id:", user_id);
+
+    // 2. Fetch assignments for this agent in the date range
     let assignmentsQuery = supabase
       .from("zapp_conversation_assignments")
-      .select("id, zapp_conversation_id, first_message_at, first_response_at, last_client_message_at, assigned_at, closed_at, close_outcome, close_ai_summary, service_duration_minutes, status")
-      .eq("agent_id", agent_id)
+      .select("id, zapp_conversation_id, first_message_at, first_response_at, assigned_at, closed_at, close_outcome, close_ai_summary, service_duration_minutes, status")
+      .eq("agent_id", agentId)
       .order("created_at", { ascending: false });
 
     if (start_date) {
@@ -51,36 +77,74 @@ Deno.serve(async (req) => {
       throw new Error("Erro ao buscar atendimentos");
     }
 
+    console.log("Found", assignments?.length || 0, "assignments");
+
     if (!assignments || assignments.length === 0) {
       return new Response(
-        JSON.stringify({ 
-          metrics: { total: 0, avg_response_time_min: 0, conversations_analyzed: 0 },
-          ai_analysis: null 
+        JSON.stringify({
+          metrics: { total: 0, with_response_data: 0, avg_response_time_min: 0, median_response_time_min: 0, p90_response_time_min: 0, fast_responses_pct: 0, slow_responses_pct: 0, avg_duration_min: 0, outcomes: {}, closed_count: 0, open_count: 0 },
+          ai_analysis: null,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 2. Calculate response time metrics
+    // 3. Calculate response times from actual messages (since first_message_at/first_response_at may be NULL)
+    const convIds = assignments
+      .filter(a => a.zapp_conversation_id)
+      .map(a => a.zapp_conversation_id!);
+
     const responseTimes: number[] = [];
+
+    if (convIds.length > 0) {
+      // Fetch messages grouped by conversation to calculate response times
+      const { data: messages } = await supabase
+        .from("zapp_messages")
+        .select("direction, sent_at, zapp_conversation_id")
+        .in("zapp_conversation_id", convIds.slice(0, 100))
+        .eq("message_type", "text")
+        .not("content", "is", null)
+        .order("sent_at", { ascending: true })
+        .limit(1000);
+
+      if (messages && messages.length > 0) {
+        // Group messages by conversation
+        const convMessages: Record<string, { direction: string; sent_at: string }[]> = {};
+        for (const m of messages) {
+          if (!convMessages[m.zapp_conversation_id]) convMessages[m.zapp_conversation_id] = [];
+          convMessages[m.zapp_conversation_id].push({ direction: m.direction, sent_at: m.sent_at });
+        }
+
+        // For each conversation, find first inbound → first outbound response time
+        for (const msgs of Object.values(convMessages)) {
+          let firstInbound: string | null = null;
+          for (const m of msgs) {
+            if (m.direction === "inbound" && !firstInbound) {
+              firstInbound = m.sent_at;
+            }
+            if (m.direction === "outbound" && firstInbound) {
+              const diff = (new Date(m.sent_at).getTime() - new Date(firstInbound).getTime()) / 60000;
+              if (diff >= 0 && diff < 1440) { // Ignore outliers > 24h
+                responseTimes.push(diff);
+              }
+              break; // Only first response matters
+            }
+          }
+        }
+      }
+    }
+
+    console.log("Calculated response times for", responseTimes.length, "conversations");
+
+    // 4. Calculate metrics
     const outcomes: Record<string, number> = {};
     let totalDuration = 0;
     let durationCount = 0;
 
     for (const a of assignments) {
-      // Response time calculation
-      if (a.first_message_at && a.first_response_at) {
-        const diff = (new Date(a.first_response_at).getTime() - new Date(a.first_message_at).getTime()) / 60000;
-        if (diff >= 0 && diff < 1440) { // Ignore outliers > 24h
-          responseTimes.push(diff);
-        }
-      }
-
-      // Outcomes
       const outcome = a.close_outcome || (a.status === "closed" ? "fechado_sem_resultado" : "em_aberto");
       outcomes[outcome] = (outcomes[outcome] || 0) + 1;
 
-      // Duration
       if (a.service_duration_minutes && a.service_duration_minutes > 0) {
         totalDuration += a.service_duration_minutes;
         durationCount++;
@@ -88,8 +152,8 @@ Deno.serve(async (req) => {
     }
 
     const sortedTimes = [...responseTimes].sort((a, b) => a - b);
-    const avgResponseTime = responseTimes.length > 0 
-      ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length 
+    const avgResponseTime = responseTimes.length > 0
+      ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
       : 0;
     const medianResponseTime = sortedTimes.length > 0
       ? sortedTimes[Math.floor(sortedTimes.length / 2)]
@@ -98,7 +162,6 @@ Deno.serve(async (req) => {
       ? sortedTimes[Math.floor(sortedTimes.length * 0.9)]
       : 0;
 
-    // Count fast vs slow responses
     const fastResponses = responseTimes.filter(t => t <= 5).length;
     const slowResponses = responseTimes.filter(t => t > 30).length;
 
@@ -116,41 +179,30 @@ Deno.serve(async (req) => {
       open_count: assignments.filter(a => a.status !== "closed").length,
     };
 
-    // 3. If AI analysis is requested, fetch messages and analyze
+    // 5. AI analysis if requested
     let aiAnalysis = null;
 
     if (analysis_type === "full" || analysis_type === "objections" || analysis_type === "quality") {
-      // Get conversation IDs
-      const convIds = assignments
-        .filter(a => a.zapp_conversation_id)
-        .slice(0, 20) // Limit to 20 most recent conversations
-        .map(a => a.zapp_conversation_id!);
+      const analysisConvIds = convIds.slice(0, 20);
 
-      if (convIds.length > 0) {
-        // Fetch messages from these conversations
-        const { data: messages, error: messagesError } = await supabase
+      if (analysisConvIds.length > 0) {
+        const { data: aiMessages } = await supabase
           .from("zapp_messages")
           .select("content, direction, sender_name, created_at, message_type, zapp_conversation_id")
-          .in("zapp_conversation_id", convIds)
+          .in("zapp_conversation_id", analysisConvIds)
           .eq("message_type", "text")
           .not("content", "is", null)
           .order("created_at", { ascending: true })
           .limit(500);
 
-        if (messagesError) {
-          console.error("Error fetching messages:", messagesError);
-        }
-
-        if (messages && messages.length > 0) {
-          // Group messages by conversation
+        if (aiMessages && aiMessages.length > 0) {
           const convMap: Record<string, string[]> = {};
-          for (const m of messages) {
+          for (const m of aiMessages) {
             if (!convMap[m.zapp_conversation_id]) convMap[m.zapp_conversation_id] = [];
             const sender = m.direction === "inbound" ? (m.sender_name || "Lead") : "Vendedor";
             convMap[m.zapp_conversation_id].push(`${sender}: ${m.content}`);
           }
 
-          // Build conversation samples for AI
           const samples = Object.entries(convMap)
             .slice(0, 15)
             .map(([id, msgs], i) => {
