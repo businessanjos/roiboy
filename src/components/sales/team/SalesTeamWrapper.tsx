@@ -39,6 +39,10 @@ export function SalesTeamWrapper({ showManagement = false }: SalesTeamWrapperPro
           <MessageSquareText className="h-4 w-4" />
           Conversas
         </TabsTrigger>
+        <TabsTrigger value="telephony" className="gap-2 text-sm px-5 h-9 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium">
+          <Phone className="h-4 w-4" />
+          Telefonia
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="performance">
