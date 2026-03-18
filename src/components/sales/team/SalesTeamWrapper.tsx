@@ -34,6 +34,10 @@ export function SalesTeamWrapper({ showManagement = false }: SalesTeamWrapperPro
           <Sparkles className="h-4 w-4" />
           Insights
         </TabsTrigger>
+        <TabsTrigger value="conversations" className="gap-2 text-sm px-5 h-9 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium">
+          <MessageSquareText className="h-4 w-4" />
+          Conversas
+        </TabsTrigger>
       </TabsList>
 
       <TabsContent value="performance">
