@@ -239,7 +239,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         .sort((a, b) => {
           const diff = b.won_value - a.won_value;
           if (diff !== 0) return diff;
-          return (b as any).entry_value_total - (a as any).entry_value_total;
+          return b.entry_value_total - a.entry_value_total;
         });
 
       setMetrics(metricsArray);
