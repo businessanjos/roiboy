@@ -30,6 +30,7 @@ export interface SalesRepMetrics {
   // Lead metrics
   assigned_leads: number;
   converted_leads: number;
+  entry_value_total: number;
 }
 
 interface UseSalesTeamMetricsOptions {
