@@ -96,7 +96,16 @@ export function MeetingsPanel() {
   };
 
   const handleJoinMeeting = (meeting: Meeting) => {
-    window.open(meeting.daily_room_url, "_blank");
+    setActiveCall({
+      roomUrl: meeting.daily_room_url,
+      sessionId: meeting.id,
+      participantName: meeting.participant_name || "Reunião",
+    });
+  };
+
+  const handleCallEnded = () => {
+    setActiveCall(null);
+    fetchMeetings();
   };
 
   return (
