@@ -83,17 +83,8 @@ export function ROIEventsFeed({ className }: ROIEventsFeedProps) {
 
   useEffect(() => {
     fetchEvents();
-
-    // Subscribe to real-time updates (no unfiltered subscription - just refetch on interval)
-    // Removed unfiltered realtime to reduce Cloud consumption
-  }, []);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    // Removed unfiltered realtime subscription to reduce Cloud consumption
+    // ROI events are refreshed when the dashboard mounts
   }, []);
 
   if (loading) {
