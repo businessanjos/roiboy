@@ -108,7 +108,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         // Deals
         supabase
           .from("deals")
-          .select("responsible_user_id, status, value")
+          .select("responsible_user_id, status, value, entry_value")
           .eq("account_id", currentUser.account_id)
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
