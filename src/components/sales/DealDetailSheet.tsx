@@ -240,6 +240,36 @@ export function DealDetailSheet({
   const [localWonAt, setLocalWonAt] = useState<string | null>(deal?.won_at || null);
   const [resolvedLeadId, setResolvedLeadId] = useState<string | null>(null);
   
+  // Pipeline/stage state for cross-pipeline moves
+  const [allPipelines, setAllPipelines] = useState<{ id: string; name: string }[]>([]);
+  const [allPipelineStages, setAllPipelineStages] = useState<DealStage[]>([]);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string>("");
+
+  // Fetch all pipelines and stages
+  useEffect(() => {
+    if (!open || !deal) return;
+    const fetchAll = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+      const { data: userData } = await supabase.from("users").select("account_id").eq("auth_user_id", authUser.id).single();
+      if (!userData?.account_id) return;
+
+      const [{ data: pipelines }, { data: stagesData }] = await Promise.all([
+        supabase.from("pipelines").select("id, name").eq("account_id", userData.account_id).eq("is_active", true).order("display_order"),
+        supabase.from("deal_stages").select("*").eq("account_id", userData.account_id).eq("is_active", true).order("display_order"),
+      ]);
+      if (pipelines) setAllPipelines(pipelines);
+      if (stagesData) setAllPipelineStages(stagesData as DealStage[]);
+      
+      // Determine current pipeline from deal's stage
+      if (deal.stage_id && stagesData) {
+        const currentStage = stagesData.find((s: any) => s.id === deal.stage_id);
+        if (currentStage) setSelectedPipelineId((currentStage as any).pipeline_id || "");
+      }
+    };
+    fetchAll();
+  }, [open, deal?.id, deal?.stage_id]);
+  
   // Sincronizar estado local com prop quando deal muda
   useEffect(() => {
     setLocalWonAt(deal?.won_at || null);
