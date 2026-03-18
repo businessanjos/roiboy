@@ -354,7 +354,7 @@ export function TeamConversationAnalysisTab() {
             </Card>
 
             {/* Outcomes */}
-            {Object.keys(metrics.outcomes).length > 0 && (
+            {metrics.outcomes && Object.keys(metrics.outcomes).length > 0 && (
               <Card className="col-span-2">
                 <CardContent className="pt-5 pb-4">
                   <div className="flex items-center justify-between mb-2">
