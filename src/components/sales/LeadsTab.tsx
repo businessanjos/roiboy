@@ -135,6 +135,11 @@ export default function LeadsTab() {
   // Product state for deal creation
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
+  
+  // Pipeline state for deal creation
+  const [allPipelines, setAllPipelines] = useState<{ id: string; name: string }[]>([]);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string>("");
+  const [allStages, setAllStages] = useState<{ id: string; name: string; display_order: number; pipeline_id: string; color: string }[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOwnerFilter, setSelectedOwnerFilter] = useState<string>("all");
