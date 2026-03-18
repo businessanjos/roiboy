@@ -1,29 +1,41 @@
 
 
-## Problem
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-The `list-clients` edge function always orders clients by `full_name` ascending (alphabetical). The frontend tries to sort locally by `created_at` descending, but this only reorders the current page — it doesn't fix which clients appear on page 1. New clients (recently triaged) end up on later pages because alphabetically they're not in the first batch.
+### O que será feito
 
-## Solution
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-1. **Edge function (`supabase/functions/list-clients/index.ts`)**: Accept a `sort` query parameter (`recent` or `alphabetical`). Default to `recent` (i.e., `created_at` descending). Change the `.order()` call accordingly.
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-2. **Frontend hook (`src/hooks/useOptimizedClients.tsx`)**: Pass the sort parameter to the edge function URL. Add `sortOrder` to the options interface and query key.
+### Alterações por arquivo
 
-3. **Frontend page (`src/pages/Clients.tsx`)**: Pass `sortOrder` to `useOptimizedClients` and remove the local `.sort()` since sorting is now server-side.
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
 
-## Changes
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
 
-### `supabase/functions/list-clients/index.ts`
-- Parse `sort` query param (default: `"recent"`)
-- Change `.order("full_name", { ascending: true })` to conditionally order by `created_at desc` or `full_name asc`
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
 
-### `src/hooks/useOptimizedClients.tsx`
-- Add `sortOrder?: "recent" | "alphabetical"` to options
-- Pass `sort` param in the fetch URL
-- Add to query key and useEffect reset dependencies
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
 
-### `src/pages/Clients.tsx`
-- Pass `sortOrder` to `useOptimizedClients`
-- Remove the local `.sort()` logic since server handles it
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+
+### Arquivos alterados
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 

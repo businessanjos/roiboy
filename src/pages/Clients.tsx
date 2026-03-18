@@ -367,6 +367,7 @@ export default function Clients() {
       if (filterVNPS !== "all") baseParams["vnps_class"] = filterVNPS;
       if (filterContract !== "all") baseParams["contract_filter"] = filterContract;
       if (filterClientStatus !== "all") baseParams["client_status"] = filterClientStatus;
+      baseParams["sort"] = sortOrder;
 
       const PAGE_SIZE = 200;
       let allClients: any[] = [];
@@ -520,6 +521,7 @@ export default function Clients() {
       if (filterVNPS !== "all") params.set("vnps_class", filterVNPS);
       if (filterContract !== "all") params.set("contract_filter", filterContract);
       if (filterClientStatus !== "all") params.set("client_status", filterClientStatus);
+      params.set("sort", sortOrder);
       
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/list-clients?${params.toString()}`,
@@ -750,7 +752,7 @@ export default function Clients() {
       fetchClients();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterVNPS, filterContract, filterClientStatus]);
+  }, [searchQuery, filterResponsible, filterProduct, filterVNPS, filterContract, filterClientStatus, sortOrder]);
 
   // Fetch client stages when account is available
   useEffect(() => {
@@ -1271,14 +1273,8 @@ export default function Clients() {
     setFilterResponsible("all");
   };
 
-  // Since filtering is now done server-side, we only apply local sorting
-  const filtered = clients.sort((a, b) => {
-    if (sortOrder === "alphabetical") {
-      return a.full_name.localeCompare(b.full_name, 'pt-BR');
-    }
-    // Default: recent first (by created_at)
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
+  // Sorting is now handled server-side via the sort param
+  const filtered = clients;
 
   const handleFieldValueChange = (clientId: string, fieldId: string, newValue: any) => {
     setFieldValues(prev => ({

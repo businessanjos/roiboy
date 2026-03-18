@@ -86,6 +86,7 @@ Deno.serve(async (req) => {
     const vnpsClass = url.searchParams.get("vnps_class") || "";
     const contractFilter = url.searchParams.get("contract_filter") || "";
     const clientStatus = url.searchParams.get("client_status") || "";
+    const sortParam = url.searchParams.get("sort") || "recent";
 
     console.log(
       `Listing clients for account ${accountId}, auth_method: ${auth.method}, search: "${search}", limit: ${limit}, offset: ${offset}`
@@ -226,7 +227,7 @@ Deno.serve(async (req) => {
         { count: "exact" }
       )
       .eq("account_id", accountId)
-      .order("full_name", { ascending: true })
+      .order(sortParam === "alphabetical" ? "full_name" : "created_at", { ascending: sortParam === "alphabetical" })
       .range(offset, offset + limit - 1);
 
     // Add search filter if provided
