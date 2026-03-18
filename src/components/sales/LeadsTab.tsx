@@ -1628,7 +1628,7 @@ export default function LeadsTab() {
         deal={selectedDeal}
         stages={stages}
         onEdit={() => {}}
-        onStageChange={async (dealId, stageId) => { return await moveDeal(dealId, stageId); }}
+        onStageChange={async (dealId, stageId, pipelineId) => { return await moveDeal(dealId, stageId, pipelineId); }}
         onMarkAsWon={async (dealId) => { await markAsWon(dealId); }}
         onMarkAsLost={async (dealId, reason) => { await markAsLost(dealId, reason); }}
         onReopen={async (dealId) => { await reopenDeal(dealId); }}
