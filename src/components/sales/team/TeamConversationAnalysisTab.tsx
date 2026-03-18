@@ -101,7 +101,7 @@ export function TeamConversationAnalysisTab() {
       const { start, end } = getDateRange();
       const { data, error } = await supabase.functions.invoke("analyze-zapp-conversations", {
         body: {
-          agent_id: selectedMember,
+          user_id: selectedMember,
           start_date: start,
           end_date: end,
           analysis_type: "metrics_only",
