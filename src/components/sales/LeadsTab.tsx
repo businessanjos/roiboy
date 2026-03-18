@@ -255,6 +255,7 @@ export default function LeadsTab() {
       stage_id: "",
       notes: "",
     });
+    setSelectedPipelineId("");
     setSelectedLead(null);
     setExistingClient(null);
     setLeadForDeal(null);
