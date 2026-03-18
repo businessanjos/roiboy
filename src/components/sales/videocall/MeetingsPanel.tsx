@@ -20,6 +20,7 @@ import {
 import { format, isToday, isTomorrow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MeetingScheduleDialog } from "./MeetingScheduleDialog";
+import { EmbeddedVideoCall } from "./EmbeddedVideoCall";
 import { useVideoCall } from "@/hooks/useVideoCall";
 import { useToast } from "@/hooks/use-toast";
 
