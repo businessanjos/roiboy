@@ -55,6 +55,10 @@ export function SalesTeamWrapper({ showManagement = false }: SalesTeamWrapperPro
       <TabsContent value="insights">
         <TeamInsightsTab />
       </TabsContent>
+
+      <TabsContent value="conversations">
+        <TeamConversationAnalysisTab />
+      </TabsContent>
     </Tabs>
   );
 }
