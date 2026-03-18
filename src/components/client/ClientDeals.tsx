@@ -313,11 +313,14 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
     setIsDetailSheetOpen(true);
   };
 
-  const handleStageChange = async (dealId: string, newStageId: string): Promise<boolean> => {
+  const handleStageChange = async (dealId: string, newStageId: string, pipelineId?: string): Promise<boolean> => {
     try {
+      const updateData: any = { stage_id: newStageId };
+      if (pipelineId) updateData.pipeline_id = pipelineId;
+      
       const { error } = await supabase
         .from("deals")
-        .update({ stage_id: newStageId })
+        .update(updateData)
         .eq("id", dealId);
       
       if (error) throw error;
