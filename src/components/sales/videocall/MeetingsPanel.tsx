@@ -108,6 +108,27 @@ export function MeetingsPanel() {
     fetchMeetings();
   };
 
+  if (activeCall) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="p-3 border-b border-border flex items-center justify-between">
+          <h3 className="font-semibold text-sm flex items-center gap-2">
+            <Video className="h-4 w-4 text-primary" />
+            Reunião em andamento
+          </h3>
+        </div>
+        <div className="flex-1 p-2">
+          <EmbeddedVideoCall
+            roomUrl={activeCall.roomUrl}
+            sessionId={activeCall.sessionId}
+            participantName={activeCall.participantName}
+            onCallEnded={handleCallEnded}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
