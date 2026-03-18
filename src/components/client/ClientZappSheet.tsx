@@ -415,12 +415,25 @@ export function ClientZappSheet({
 
       const selectedStage = stages.find(s => s.id === newDealForm.stage_id);
 
+      if (!newDealForm.stage_id) {
+        throw new Error("Selecione uma etapa para criar o negócio");
+      }
+
+      const { data: stageData, error: stageError } = await supabase
+        .from("deal_stages")
+        .select("pipeline_id")
+        .eq("id", newDealForm.stage_id)
+        .single();
+
+      if (stageError) throw stageError;
+
       const { error } = await supabase.from("deals").insert({
         account_id: userData.account_id,
         client_id: clientId,
         title: newDealForm.title.trim(),
         value: parseFloat(newDealForm.value.replace(/\D/g, "") || "0") / 100,
-        stage_id: newDealForm.stage_id || null,
+        stage_id: newDealForm.stage_id,
+        pipeline_id: stageData.pipeline_id,
         probability: selectedStage?.probability || 0,
         responsible_user_id: userData.id,
         status: "open",
