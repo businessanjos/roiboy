@@ -712,14 +712,14 @@ export function DealDetailSheet({
   };
 
 
-  const handleStageChange = async (newStageId: string) => {
+  const handleStageChange = async (newStageId: string, pipelineId?: string) => {
     if (!deal || newStageId === deal.stage_id) return;
     
     // Validate required fields before moving
     const result = await validateDealMove(deal.id, newStageId, deal.account_id);
     
     if (!result.canMoveToStage) {
-      const targetStage = stages.find(s => s.id === newStageId);
+      const targetStage = allPipelineStages.find(s => s.id === newStageId) || stages.find(s => s.id === newStageId);
       setPendingStageId(newStageId);
       setMissingFields(result.missingFields);
       setPendingStageName(targetStage?.name || "");
@@ -729,9 +729,17 @@ export function DealDetailSheet({
     
     setChangingStage(true);
     try {
-      const success = await onStageChange(deal.id, newStageId);
+      // Determine if cross-pipeline
+      const currentStageObj = allPipelineStages.find(s => s.id === deal.stage_id);
+      const newStageObj = allPipelineStages.find(s => s.id === newStageId);
+      const isCrossPipeline = currentStageObj && newStageObj && (currentStageObj as any).pipeline_id !== (newStageObj as any).pipeline_id;
+      
+      const success = await onStageChange(deal.id, newStageId, isCrossPipeline ? pipelineId : undefined);
       if (success) {
         fetchActivities();
+        if (isCrossPipeline) {
+          onDealUpdated?.();
+        }
       }
     } finally {
       setChangingStage(false);
@@ -742,7 +750,7 @@ export function DealDetailSheet({
     if (!deal || !pendingStageId) return;
     setChangingStage(true);
     try {
-      const success = await onStageChange(deal.id, pendingStageId);
+      const success = await onStageChange(deal.id, pendingStageId, selectedPipelineId || undefined);
       if (success) {
         fetchActivities();
       }
