@@ -66,6 +66,21 @@ Deno.serve(async (req) => {
 
     console.log(`[process-video-call] Recording downloaded, size: ${audioBlob.size} bytes`);
 
+    // Whisper has a 25MB file size limit
+    const MAX_WHISPER_SIZE = 25 * 1024 * 1024;
+    if (audioBlob.size > MAX_WHISPER_SIZE) {
+      console.warn(`[process-video-call] Recording too large for Whisper (${(audioBlob.size / (1024 * 1024)).toFixed(1)}MB > 25MB), skipping transcription`);
+      await supabase
+        .from("video_call_sessions")
+        .update({ analysis_status: "file_too_large" })
+        .eq("id", session_id);
+
+      return new Response(
+        JSON.stringify({ status: "file_too_large", size_mb: (audioBlob.size / (1024 * 1024)).toFixed(1) }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Step 2: Transcribe with OpenAI Whisper
     const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
     let transcription = "";
