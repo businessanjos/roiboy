@@ -258,12 +258,11 @@ export function useDeals(pipelineId?: string | null) {
       const GEORGE_USER_ID = 'cefc44c7-d2e2-4937-94ac-069c1c94731b';
       const isGeorgeCreating = currentUser.id === GEORGE_USER_ID;
 
-      // Determine pipeline: George's manual deals → SDR, others → current pipeline
+      // Determine pipeline/stage and guarantee both are always persisted together
       let targetPipelineId = pipelineId;
       let targetStageId = cleanData.stage_id;
 
       if (isGeorgeCreating) {
-        // Find SDR pipeline
         const { data: sdrPipeline } = await supabase
           .from('pipelines')
           .select('id')
@@ -275,7 +274,6 @@ export function useDeals(pipelineId?: string | null) {
         if (sdrPipeline) {
           targetPipelineId = sdrPipeline.id;
 
-          // Get first stage of SDR pipeline if no stage specified or stage belongs to another pipeline
           if (!targetStageId) {
             const { data: firstStage } = await supabase
               .from('deal_stages')
@@ -284,22 +282,61 @@ export function useDeals(pipelineId?: string | null) {
               .order('display_order', { ascending: true })
               .limit(1)
               .single();
+
             if (firstStage) targetStageId = firstStage.id;
           }
         }
       }
 
-      const insertPayload: any = {
-          ...cleanData,
-          account_id: currentUser.account_id,
-          tags: data.tags || [],
-          responsible_user_id: cleanData.responsible_user_id ?? currentUser.id,
-          stage_id: targetStageId,
-          ...(isGeorgeCreating ? { sdr_user_id: GEORGE_USER_ID } : {}),
-        };
-      if (targetPipelineId) {
-        insertPayload.pipeline_id = targetPipelineId;
+      if (!targetPipelineId && targetStageId) {
+        const { data: stageData, error: stageError } = await supabase
+          .from('deal_stages')
+          .select('pipeline_id')
+          .eq('id', targetStageId)
+          .eq('account_id', currentUser.account_id)
+          .single();
+
+        if (stageError) throw stageError;
+        targetPipelineId = stageData.pipeline_id;
       }
+
+      if (!targetPipelineId) {
+        const { data: fallbackPipeline, error: pipelineError } = await supabase
+          .from('pipelines')
+          .select('id')
+          .eq('account_id', currentUser.account_id)
+          .eq('is_active', true)
+          .order('display_order', { ascending: true })
+          .limit(1)
+          .single();
+
+        if (pipelineError) throw pipelineError;
+        targetPipelineId = fallbackPipeline.id;
+      }
+
+      if (!targetStageId) {
+        const { data: firstStage, error: firstStageError } = await supabase
+          .from('deal_stages')
+          .select('id')
+          .eq('account_id', currentUser.account_id)
+          .eq('pipeline_id', targetPipelineId)
+          .order('display_order', { ascending: true })
+          .limit(1)
+          .single();
+
+        if (firstStageError) throw firstStageError;
+        targetStageId = firstStage.id;
+      }
+
+      const insertPayload: any = {
+        ...cleanData,
+        account_id: currentUser.account_id,
+        pipeline_id: targetPipelineId,
+        tags: data.tags || [],
+        responsible_user_id: cleanData.responsible_user_id ?? currentUser.id,
+        stage_id: targetStageId,
+        ...(isGeorgeCreating ? { sdr_user_id: GEORGE_USER_ID } : {}),
+      };
 
       const { data: newDeal, error } = await supabase
         .from('deals')

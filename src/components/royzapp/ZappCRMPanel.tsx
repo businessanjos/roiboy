@@ -334,7 +334,15 @@ export function ZappCRMPanel({
   const createDeal = useMutation({
     mutationFn: async () => {
       if (!currentUser?.account_id || !stages[0]) throw new Error("Dados insuficientes");
-      
+
+      const { data: stageData, error: stageError } = await supabase
+        .from("deal_stages")
+        .select("pipeline_id")
+        .eq("id", stages[0].id)
+        .single();
+
+      if (stageError) throw stageError;
+
       const { data: newDeal, error } = await supabase
         .from("deals")
         .insert({
@@ -342,6 +350,7 @@ export function ZappCRMPanel({
           title: newDealTitle || conversationContactName || "Novo negócio",
           value: parseFloat(newDealValue.replace(/\D/g, "")) / 100 || 0,
           stage_id: stages[0].id,
+          pipeline_id: stageData.pipeline_id,
           lead_id: conversationLeadId || null,
           client_id: conversationClientId || null,
           status: "open",
