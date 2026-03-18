@@ -13,6 +13,7 @@ export interface AggregatedDataPoint {
   value: number;
   count?: number;
   color?: string;
+  secondaryValue?: number;
 }
 
 interface UseVisualDataParams {
