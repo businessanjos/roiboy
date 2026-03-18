@@ -232,7 +232,11 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       // Convert to array and sort by won value
       const metricsArray = Object.values(metricsMap)
         .filter(m => m.total_deals > 0 || m.total_calls > 0 || m.total_tasks > 0 || m.assigned_leads > 0)
-        .sort((a, b) => b.won_value - a.won_value);
+        .sort((a, b) => {
+          const diff = b.won_value - a.won_value;
+          if (diff !== 0) return diff;
+          return (b as any).entry_value_total - (a as any).entry_value_total;
+        });
 
       setMetrics(metricsArray);
     } catch (err) {
