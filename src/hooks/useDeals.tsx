@@ -585,35 +585,59 @@ export function useDeals(pipelineId?: string | null) {
         }
       }
 
-      // Normal stage move (same pipeline)
+      // Cross-pipeline or same-pipeline stage move
+      const updatePayload: any = { 
+        stage_id: newStageId,
+        probability: newStage?.probability || 0,
+      };
+
+      // If a new pipeline is specified, update pipeline_id too
+      if (newPipelineId) {
+        updatePayload.pipeline_id = newPipelineId;
+      }
+
       const { error } = await supabase
         .from('deals')
-        .update({ 
-          stage_id: newStageId,
-          probability: newStage?.probability || 0,
-        })
+        .update(updatePayload)
         .eq('id', dealId)
         .eq('account_id', currentUser.account_id);
 
       if (error) throw error;
 
+      // Fetch the new stage info if cross-pipeline (newStage may be null since it's from another pipeline)
+      let resolvedNewStage = newStage;
+      if (!resolvedNewStage && newStageId) {
+        const { data: stageInfo } = await supabase
+          .from('deal_stages')
+          .select('*')
+          .eq('id', newStageId)
+          .single();
+        resolvedNewStage = stageInfo || undefined;
+      }
+
       // Log stage change activity
+      const isOtherPipeline = newPipelineId && newPipelineId !== pipelineId;
       await supabase.from('deal_activities').insert({
         account_id: currentUser.account_id,
         deal_id: dealId,
         type: 'stage_change',
-        title: 'Mudança de etapa',
+        title: isOtherPipeline ? 'Transferido entre funis' : 'Mudança de etapa',
         old_value: oldStage?.name || 'Sem etapa',
-        new_value: newStage?.name || 'Sem etapa',
+        new_value: resolvedNewStage?.name || 'Sem etapa',
         user_id: currentUser.id,
       });
 
-      // Update local state immediately for better UX
-      setDeals(prev => prev.map(d => 
-        d.id === dealId 
-          ? { ...d, stage_id: newStageId, stage: newStage, probability: newStage?.probability || 0 }
-          : d
-      ));
+      if (isOtherPipeline) {
+        // Remove from local state since it moved to another pipeline
+        setDeals(prev => prev.filter(d => d.id !== dealId));
+      } else {
+        // Update local state immediately for better UX
+        setDeals(prev => prev.map(d => 
+          d.id === dealId 
+            ? { ...d, stage_id: newStageId, stage: resolvedNewStage, probability: resolvedNewStage?.probability || 0 }
+            : d
+        ));
+      }
 
       return true;
     } catch (error: any) {
