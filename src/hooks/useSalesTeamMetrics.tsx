@@ -217,6 +217,8 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
             } else if (deal.status === "won") {
               metricsMap[deal.responsible_user_id].won_deals++;
               metricsMap[deal.responsible_user_id].won_value += value;
+              const entryValue = receivedValueMap.get(deal.id) || 0;
+              metricsMap[deal.responsible_user_id].entry_value_total += entryValue;
             } else if (deal.status === "lost") {
               metricsMap[deal.responsible_user_id].lost_deals++;
             }
