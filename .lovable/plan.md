@@ -1,22 +1,41 @@
 
 
-## Problem
+## Plano: Adicionar filtro e segmentação por Status do Negócio
 
-The network request shows `sort=alphabetical` being sent even though "Mais recentes" is selected. Looking at the edge function code, the sorting logic is already correctly implemented (using `sortParam` to conditionally sort by `created_at DESC` or `full_name ASC`). 
+### O que será feito
 
-The most likely cause is that the **edge function needs to be redeployed** — the code file was updated but the running function may still be an older version without the sort parameter support.
+1. **Filtro por Status** na seção "Filtro por Negócio" do painel de ajustes do visual — adicionar uma opção fixa "Status" (Ganho, Em Aberto, Perdido) como primeiro item antes dos campos personalizados.
 
-Additionally, there may be a **stale persisted filter** issue: the `usePersistedFilter` hook stores "alphabetical" in localStorage from a previous session, and when the user switches to "Mais recentes", the debounced fetch (800ms delay) means there's a lag before the new data loads.
+2. **Segmentação por Status** no dropdown "Segmentar por Campo (Legenda)" — adicionar uma opção fixa "Status do Negócio" que divide as barras/linhas por Ganho/Em Aberto/Perdido.
 
-## Plan
+### Alterações por arquivo
 
-1. **Redeploy the `list-clients` edge function** — this ensures the deployed version matches the code with the sort parameter support.
+**`src/components/insights/visuals/DealFieldFilterSection.tsx`**
+- Adicionar uma seção fixa de filtro por Status (3 checkboxes: Ganho, Em Aberto, Perdido) acima dos filtros de campos personalizados
+- Mapear os valores selecionados para o formato `statusFilter` do config (ou usar um novo campo `dealStatusFilter` com array de valores)
+- Expandir as props para incluir `statusFilter` e `onStatusFilterChange`
 
-2. **Verify the edge function sorting logic** — the current code on line 230 already has:
-   ```
-   .order(sortParam === "alphabetical" ? "full_name" : "created_at", { ascending: sortParam === "alphabetical" })
-   ```
-   This is correct — when `sort=recent`, it orders by `created_at` descending.
+**`src/components/insights/visuals/VisualQuickSettings.tsx`**
+- Adicionar estado para `dealStatusFilter` (array de strings: 'won', 'open', 'lost')
+- Passar para `DealFieldFilterSection` como prop
+- No `handleSave`, converter o array de status selecionados para o campo adequado no config
+- Na seção de segmentação, adicionar opção fixa "Status do Negócio" com valor especial `_status` antes dos campos personalizados
 
-No code changes needed — just a redeployment of the edge function.
+**`src/components/insights/visual-builder/types.ts`**
+- Adicionar campo `dealStatusFilter?: string[]` ao `VisualConfig` para suportar filtro multi-valor de status (ex: `['won', 'open']`)
+- Adicionar valor especial para `stackByCustomField` quando source é `_status`
+
+**`src/hooks/useVisualData.ts`**
+- Na função `fetchDealsData`, aplicar filtro `.in('status', dealStatusFilter)` quando o array estiver presente (substituindo o `statusFilter` simples se ambos existirem)
+
+**`src/hooks/useStackedVisualData.ts`**
+- Quando `stackByCustomField` tiver source `_status`, agrupar por `deal.status` ao invés de buscar campo personalizado
+- Mapear valores internos para labels: `won` → "Ganho", `open` → "Em Aberto", `lost` → "Perdido"
+
+### Arquivos alterados
+- `src/components/insights/visual-builder/types.ts`
+- `src/components/insights/visuals/DealFieldFilterSection.tsx`
+- `src/components/insights/visuals/VisualQuickSettings.tsx`
+- `src/hooks/useVisualData.ts`
+- `src/hooks/useStackedVisualData.ts`
 

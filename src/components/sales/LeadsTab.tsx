@@ -122,7 +122,7 @@ export default function LeadsTab() {
     deleteLeadWithDeals,
     markAsConvertedToDeal,
   } = useLeads();
-  const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
+  const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal, fetchDeals } = useDeals();
   const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
   const { users: salesUsers, loading: usersLoading } = useSectorUsers({ sectorId: "vendas" });
   const { duplicates: leadDuplicates, checkDuplicates: checkLeadDuplicates, clearDuplicates: clearLeadDuplicates } = useLeadDuplicateDetection();
@@ -1569,6 +1569,12 @@ export default function LeadsTab() {
         onMarkAsWon={async (dealId) => { await markAsWon(dealId); }}
         onMarkAsLost={async (dealId, reason) => { await markAsLost(dealId, reason); }}
         onReopen={async (dealId) => { await reopenDeal(dealId); }}
+        onDealUpdated={() => {
+          fetchDeals();
+          // Close the detail sheet since the deal may have moved to another user
+          setIsDealDetailOpen(false);
+          setSelectedDeal(null);
+        }}
       />
 
       {/* Delete Confirmation */}

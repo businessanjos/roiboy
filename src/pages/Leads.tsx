@@ -122,7 +122,7 @@ export default function Leads() {
     markAsConvertedToDeal,
     refetch: refetchLeads,
   } = useLeads();
-  const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
+  const { deals, createDeal, stages, moveDeal, markAsWon, markAsLost, reopenDeal, fetchDeals } = useDeals();
   const { openZappConversation, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useZappNavigation();
   const [phonePickerOpen, setPhonePickerOpen] = useState(false);
   const [phonePickerLead, setPhonePickerLead] = useState<Lead | null>(null);
@@ -1930,6 +1930,11 @@ export default function Leads() {
         }}
         onStageChange={async (dealId, stageId) => {
           return await moveDeal(dealId, stageId);
+        }}
+        onDealUpdated={() => {
+          fetchDeals();
+          setIsDealDetailOpen(false);
+          setSelectedDeal(null);
         }}
       />
 
