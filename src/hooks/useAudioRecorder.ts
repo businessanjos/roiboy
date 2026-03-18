@@ -18,7 +18,6 @@ export function useAudioRecorder({ sessionId }: UseAudioRecorderOptions) {
   const startRecording = useCallback(async () => {
     try {
       let stream: MediaStream;
-      let isDisplayMedia = false;
 
       try {
         // getDisplayMedia requires video: true in most browsers
@@ -27,7 +26,6 @@ export function useAudioRecorder({ sessionId }: UseAudioRecorderOptions) {
           audio: true,
           video: true,
         });
-        isDisplayMedia = true;
 
         // Stop video tracks immediately — we only need audio
         stream.getVideoTracks().forEach((track) => track.stop());
