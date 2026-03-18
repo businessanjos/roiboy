@@ -13,19 +13,31 @@ export function useAudioRecorder({ sessionId }: UseAudioRecorderOptions) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
+  const uploadPromiseRef = useRef<Promise<void> | null>(null);
 
   const startRecording = useCallback(async () => {
     try {
-      // Try getDisplayMedia first (captures both sides with headphones)
       let stream: MediaStream;
-      
+      let isDisplayMedia = false;
+
       try {
+        // getDisplayMedia requires video: true in most browsers
+        // We request both, then immediately discard the video track
         stream = await navigator.mediaDevices.getDisplayMedia({
           audio: true,
-          video: false, // We only need audio
+          video: true,
         });
+        isDisplayMedia = true;
+
+        // Stop video tracks immediately — we only need audio
+        stream.getVideoTracks().forEach((track) => track.stop());
+
+        // Verify we actually got audio tracks
+        if (stream.getAudioTracks().length === 0) {
+          throw new Error("No audio track from display media");
+        }
       } catch {
-        // Fallback: if user cancels tab share, try mic-only
+        // Fallback: if user cancels tab share or no audio, try mic-only
         console.warn("[AudioRecorder] getDisplayMedia failed, falling back to getUserMedia");
         stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         toast({
@@ -37,7 +49,7 @@ export function useAudioRecorder({ sessionId }: UseAudioRecorderOptions) {
       streamRef.current = stream;
       chunksRef.current = [];
 
-      // Try to get the best audio codec available
+      // Pick best audio codec available
       const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
         : MediaRecorder.isTypeSupported("audio/webm")
@@ -55,21 +67,22 @@ export function useAudioRecorder({ sessionId }: UseAudioRecorderOptions) {
         }
       };
 
-      mediaRecorder.onstop = async () => {
+      mediaRecorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
         chunksRef.current = [];
 
-        // Stop all tracks
+        // Stop all remaining tracks
         stream.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
 
         if (blob.size > 0) {
-          await uploadAndProcess(blob, mimeType);
+          // Store the upload promise so handleEndCall can await it
+          uploadPromiseRef.current = uploadAndProcess(blob, mimeType);
         }
       };
 
-      // Listen for track ended (user stops sharing)
-      stream.getTracks().forEach((track) => {
+      // Listen for track ended (user stops sharing tab)
+      stream.getAudioTracks().forEach((track) => {
         track.onended = () => {
           if (mediaRecorderRef.current?.state === "recording") {
             mediaRecorderRef.current.stop();
@@ -79,7 +92,7 @@ export function useAudioRecorder({ sessionId }: UseAudioRecorderOptions) {
       });
 
       mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start(1000); // Collect data every second
+      mediaRecorder.start(1000);
       setIsRecording(true);
 
       toast({ title: "🔴 Gravação iniciada" });
@@ -100,6 +113,17 @@ export function useAudioRecorder({ sessionId }: UseAudioRecorderOptions) {
       toast({ title: "⏹️ Gravação finalizada", description: "Processando áudio..." });
     }
   }, [toast]);
+
+  /**
+   * Wait for any in-progress upload to complete.
+   * Called by EmbeddedVideoCall before ending the call to avoid race conditions.
+   */
+  const waitForUpload = useCallback(async () => {
+    if (uploadPromiseRef.current) {
+      await uploadPromiseRef.current;
+      uploadPromiseRef.current = null;
+    }
+  }, []);
 
   const uploadAndProcess = useCallback(
     async (blob: Blob, mimeType: string) => {
@@ -168,5 +192,6 @@ export function useAudioRecorder({ sessionId }: UseAudioRecorderOptions) {
     isUploading,
     startRecording,
     stopRecording,
+    waitForUpload,
   };
 }

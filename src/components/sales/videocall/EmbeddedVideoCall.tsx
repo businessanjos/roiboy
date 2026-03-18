@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import {
-  X,
   Maximize2,
   Minimize2,
   Phone,
@@ -33,34 +32,26 @@ export function EmbeddedVideoCall({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isEnding, setIsEnding] = useState(false);
   const [callActive, setCallActive] = useState(true);
+  const endingRef = useRef(false);
 
-  const { isRecording, isUploading, startRecording, stopRecording } =
+  const { isRecording, isUploading, startRecording, stopRecording, waitForUpload } =
     useAudioRecorder({ sessionId });
 
-  // Build iframe URL with token
   const iframeUrl = token ? `${roomUrl}?t=${token}` : roomUrl;
 
-  // Listen for Daily.co postMessage events
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data?.action === "left-meeting" || event.data?.action === "meeting-ended") {
-        handleEndCall();
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [sessionId]);
-
   const handleEndCall = useCallback(async () => {
-    if (isEnding || !callActive) return;
+    // Use ref to prevent double-calls (useEffect + button click)
+    if (endingRef.current) return;
+    endingRef.current = true;
     setIsEnding(true);
     setCallActive(false);
 
-    // Stop recording if active
+    // Stop recording if active and wait for upload to finish
     if (isRecording) {
       stopRecording();
     }
+    // Wait for any pending upload before ending the call
+    await waitForUpload();
 
     try {
       const { data: session } = await supabase
@@ -100,7 +91,19 @@ export function EmbeddedVideoCall({
       setIsEnding(false);
       onCallEnded?.();
     }
-  }, [sessionId, roomUrl, isEnding, callActive, isRecording, stopRecording, toast, onCallEnded]);
+  }, [sessionId, roomUrl, isRecording, stopRecording, waitForUpload, toast, onCallEnded]);
+
+  // Listen for Daily.co postMessage events
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.action === "left-meeting" || event.data?.action === "meeting-ended") {
+        handleEndCall();
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [handleEndCall]);
 
   const toggleFullscreen = () => {
     setIsFullscreen((prev) => !prev);
@@ -149,7 +152,7 @@ export function EmbeddedVideoCall({
               size="sm"
               className="h-8 gap-1.5 text-white hover:bg-white/20 text-xs"
               onClick={startRecording}
-              disabled={isUploading}
+              disabled={isUploading || isEnding}
             >
               <Circle className="h-3.5 w-3.5 text-red-400 fill-red-400" />
               Gravar
