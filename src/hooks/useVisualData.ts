@@ -751,7 +751,10 @@ async function fetchDealsData(
     return aggregateData(enrichedData, measure, normalizedDimension, dateDisplayFormat);
   }
 
-  return aggregateData(filteredData, measure, dimension, dateDisplayFormat);
+  // Enrich deals with "Valor Recebido da Venda" custom field for tiebreaker
+  const enrichedWithEntryValue = await enrichDealsWithReceivedValue(accountId, filteredData);
+
+  return aggregateData(enrichedWithEntryValue, measure, dimension, dateDisplayFormat);
 }
 
 // Calculate conversion rate as (won deals / total deals) * 100
