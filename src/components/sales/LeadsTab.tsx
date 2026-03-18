@@ -1525,27 +1525,55 @@ export default function LeadsTab() {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Etapa</Label>
-                <Select
-                  value={dealFormData.stage_id}
-                  onValueChange={(v) =>
-                    setDealFormData({ ...dealFormData, stage_id: v })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stages
-                      .sort((a, b) => a.display_order - b.display_order)
-                      .map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Funil</Label>
+                  <Select
+                    value={selectedPipelineId}
+                    onValueChange={(v) => {
+                      setSelectedPipelineId(v);
+                      const pipelineStages = allStages.filter(s => s.pipeline_id === v).sort((a, b) => a.display_order - b.display_order);
+                      setDealFormData({ ...dealFormData, stage_id: pipelineStages[0]?.id || "" });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o funil" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allPipelines.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
                         </SelectItem>
                       ))}
-                  </SelectContent>
-                </Select>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Etapa</Label>
+                  <Select
+                    value={dealFormData.stage_id}
+                    onValueChange={(v) =>
+                      setDealFormData({ ...dealFormData, stage_id: v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allStages
+                        .filter(s => s.pipeline_id === selectedPipelineId)
+                        .sort((a, b) => a.display_order - b.display_order)
+                        .map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                              {s.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Observações</Label>
