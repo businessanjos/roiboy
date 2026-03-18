@@ -1570,8 +1570,10 @@ export default function LeadsTab() {
         onMarkAsLost={async (dealId, reason) => { await markAsLost(dealId, reason); }}
         onReopen={async (dealId) => { await reopenDeal(dealId); }}
         onDealUpdated={() => {
-          // Re-fetch deals to reflect transfer changes
           fetchDeals();
+          // Close the detail sheet since the deal may have moved to another user
+          setIsDealDetailOpen(false);
+          setSelectedDeal(null);
         }}
       />
 
