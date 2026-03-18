@@ -2,16 +2,15 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import {
   X,
   Maximize2,
   Minimize2,
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
   Phone,
   Loader2,
+  Circle,
+  Square,
 } from "lucide-react";
 
 interface EmbeddedVideoCallProps {
@@ -35,13 +34,15 @@ export function EmbeddedVideoCall({
   const [isEnding, setIsEnding] = useState(false);
   const [callActive, setCallActive] = useState(true);
 
+  const { isRecording, isUploading, startRecording, stopRecording } =
+    useAudioRecorder({ sessionId });
+
   // Build iframe URL with token
   const iframeUrl = token ? `${roomUrl}?t=${token}` : roomUrl;
 
   // Listen for Daily.co postMessage events
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Daily.co sends postMessage events
       if (event.data?.action === "left-meeting" || event.data?.action === "meeting-ended") {
         handleEndCall();
       }
@@ -56,8 +57,12 @@ export function EmbeddedVideoCall({
     setIsEnding(true);
     setCallActive(false);
 
+    // Stop recording if active
+    if (isRecording) {
+      stopRecording();
+    }
+
     try {
-      // Try to find video_call_session by ID or by room URL
       const { data: session } = await supabase
         .from("video_call_sessions")
         .select("id, daily_room_name")
@@ -95,7 +100,7 @@ export function EmbeddedVideoCall({
       setIsEnding(false);
       onCallEnded?.();
     }
-  }, [sessionId, roomUrl, isEnding, callActive, toast, onCallEnded]);
+  }, [sessionId, roomUrl, isEnding, callActive, isRecording, stopRecording, toast, onCallEnded]);
 
   const toggleFullscreen = () => {
     setIsFullscreen((prev) => !prev);
@@ -122,9 +127,45 @@ export function EmbeddedVideoCall({
           {participantName && (
             <span className="text-white/80 text-xs">{participantName}</span>
           )}
+          {isRecording && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-600/90 text-white text-xs font-medium animate-pulse">
+              <Circle className="h-2.5 w-2.5 fill-current" />
+              Gravando
+            </div>
+          )}
+          {isUploading && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-500/90 text-white text-xs font-medium">
+              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+              Enviando...
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-1">
+          {/* Record button */}
+          {!isRecording ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 text-white hover:bg-white/20 text-xs"
+              onClick={startRecording}
+              disabled={isUploading}
+            >
+              <Circle className="h-3.5 w-3.5 text-red-400 fill-red-400" />
+              Gravar
+            </Button>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 text-white hover:bg-white/20 text-xs"
+              onClick={stopRecording}
+            >
+              <Square className="h-3.5 w-3.5 text-red-400 fill-red-400" />
+              Parar
+            </Button>
+          )}
+
           <Button
             variant="ghost"
             size="icon"
