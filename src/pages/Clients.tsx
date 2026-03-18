@@ -520,6 +520,7 @@ export default function Clients() {
       if (filterVNPS !== "all") params.set("vnps_class", filterVNPS);
       if (filterContract !== "all") params.set("contract_filter", filterContract);
       if (filterClientStatus !== "all") params.set("client_status", filterClientStatus);
+      params.set("sort", sortOrder);
       
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/list-clients?${params.toString()}`,
