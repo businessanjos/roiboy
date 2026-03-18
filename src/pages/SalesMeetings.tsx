@@ -390,11 +390,21 @@ export default function SalesMeetings() {
                     onEdit={() => openEdit(m)}
                     onDelete={() => setDeleteDialog(m)}
                     onStatusChange={(status) => updateStatusMutation.mutate({ id: m.id, status })}
-                    onJoin={(meeting) => {
+                    onJoin={async (meeting) => {
                       if (meeting.meeting_url?.includes("daily.co")) {
-                        setActiveEmbeddedCall({ meetingUrl: meeting.meeting_url!, sessionId: meeting.id, title: meeting.title });
-                      } else {
-                        window.open(meeting.meeting_url!, "_blank");
+                        // Look up the video_call_sessions record by room URL
+                        const { data: vcs } = await supabase
+                          .from("video_call_sessions")
+                          .select("id")
+                          .eq("daily_room_url", meeting.meeting_url)
+                          .order("created_at", { ascending: false })
+                          .limit(1)
+                          .maybeSingle();
+
+                        const sessionId = vcs?.id || meeting.id;
+                        setActiveEmbeddedCall({ meetingUrl: meeting.meeting_url!, sessionId, title: meeting.title });
+                      } else if (meeting.meeting_url) {
+                        window.open(meeting.meeting_url, "_blank");
                       }
                     }}
                     canEdit={!isSalesRep}
