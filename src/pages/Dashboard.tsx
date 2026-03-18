@@ -408,8 +408,11 @@ export default function Dashboard() {
     },
   };
 
-  // Real-time subscription for client changes
+  // Real-time subscription for client changes (filtered by account_id)
   useEffect(() => {
+    if (!currentUser?.account_id) return;
+    
+    const accountFilter = `account_id=eq.${currentUser.account_id}`;
     const channel = supabase
       .channel("dashboard-realtime")
       .on(
@@ -418,6 +421,7 @@ export default function Dashboard() {
           event: "*",
           schema: "public",
           table: "clients",
+          filter: accountFilter,
         },
         () => {
           refetchAll();
@@ -429,6 +433,7 @@ export default function Dashboard() {
           event: "*",
           schema: "public",
           table: "client_products",
+          filter: accountFilter,
         },
         () => {
           refetchAll();
@@ -440,6 +445,7 @@ export default function Dashboard() {
           event: "*",
           schema: "public",
           table: "client_contracts",
+          filter: accountFilter,
         },
         () => {
           refetchAll();
@@ -450,7 +456,7 @@ export default function Dashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetchAll]);
+  }, [refetchAll, currentUser?.account_id]);
 
   const filteredClients = useMemo(() => clients.filter((client) => {
     const matchesSearch =

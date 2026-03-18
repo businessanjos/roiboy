@@ -84,30 +84,9 @@ export function ROIEventsFeed({ className }: ROIEventsFeedProps) {
   useEffect(() => {
     fetchEvents();
 
-    // Subscribe to real-time updates
-    const channel = supabase
-      .channel("roi-events-feed")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "roi_events",
-        },
-        async (payload) => {
-          // Fetch client name for the new event
-          const { data: clientData } = await supabase
-            .from("clients")
-            .select("full_name")
-            .eq("id", payload.new.client_id)
-            .single();
-
-          const newEvent: ROIEvent = {
-            ...payload.new as any,
-            client_name: clientData?.full_name || "Cliente",
-          };
-
-          setEvents((prev) => [newEvent, ...prev].slice(0, 50));
+    // Subscribe to real-time updates (no unfiltered subscription - just refetch on interval)
+    // Removed unfiltered realtime to reduce Cloud consumption
+  }, []);
         }
       )
       .subscribe();
