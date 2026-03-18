@@ -39,14 +39,31 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Step 1: Download audio from recording
-    console.log("[process-video-call] Downloading recording...");
-    const audioResponse = await fetch(session.recording_url);
-    if (!audioResponse.ok) {
-      throw new Error(`Failed to download recording: ${audioResponse.status}`);
+    // Step 1: Download audio from recording (supports both external URLs and storage paths)
+    console.log("[process-video-call] Downloading recording from:", session.recording_url);
+    let audioBlob: Blob;
+
+    // Check if it's a Supabase storage URL
+    if (session.recording_url.includes("/storage/v1/object/public/call-recordings/")) {
+      // Download from storage using service role
+      const storagePath = session.recording_url.split("/call-recordings/")[1];
+      const { data: storageData, error: storageError } = await supabase.storage
+        .from("call-recordings")
+        .download(storagePath);
+
+      if (storageError || !storageData) {
+        throw new Error(`Failed to download from storage: ${storageError?.message}`);
+      }
+      audioBlob = storageData;
+    } else {
+      // External URL (Daily.co recording etc)
+      const audioResponse = await fetch(session.recording_url);
+      if (!audioResponse.ok) {
+        throw new Error(`Failed to download recording: ${audioResponse.status}`);
+      }
+      audioBlob = await audioResponse.blob();
     }
 
-    const audioBlob = await audioResponse.blob();
     console.log(`[process-video-call] Recording downloaded, size: ${audioBlob.size} bytes`);
 
     // Step 2: Transcribe with OpenAI Whisper
@@ -56,7 +73,9 @@ Deno.serve(async (req) => {
     if (openaiApiKey) {
       console.log("[process-video-call] Transcribing with Whisper...");
       const formData = new FormData();
-      formData.append("file", audioBlob, "recording.mp4");
+      // Detect file extension from URL
+      const fileExt = session.recording_url.includes(".webm") ? "audio.webm" : "recording.mp4";
+      formData.append("file", audioBlob, fileExt);
       formData.append("model", "whisper-1");
       formData.append("language", "pt");
 
