@@ -751,7 +751,7 @@ export default function Clients() {
       fetchClients();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterVNPS, filterContract, filterClientStatus]);
+  }, [searchQuery, filterResponsible, filterProduct, filterVNPS, filterContract, filterClientStatus, sortOrder]);
 
   // Fetch client stages when account is available
   useEffect(() => {
