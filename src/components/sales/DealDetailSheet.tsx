@@ -730,16 +730,13 @@ export function DealDetailSheet({
     setChangingStage(true);
     try {
       // Determine if cross-pipeline
-      const currentStageObj = allPipelineStages.find(s => s.id === deal.stage_id);
-      const newStageObj = allPipelineStages.find(s => s.id === newStageId);
-      const isCrossPipeline = currentStageObj && newStageObj && (currentStageObj as any).pipeline_id !== (newStageObj as any).pipeline_id;
+      // Always pass the selected pipeline to ensure pipeline_id is updated
+      const targetPipelineId = pipelineId || selectedPipelineId;
       
-      const success = await onStageChange(deal.id, newStageId, isCrossPipeline ? pipelineId : undefined);
+      const success = await onStageChange(deal.id, newStageId, targetPipelineId || undefined);
       if (success) {
         fetchActivities();
-        if (isCrossPipeline) {
-          onDealUpdated?.();
-        }
+        onDealUpdated?.();
       }
     } finally {
       setChangingStage(false);
