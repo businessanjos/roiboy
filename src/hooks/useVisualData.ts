@@ -641,6 +641,7 @@ async function fetchDealsData(
       id,
       lead_id,
       value,
+      entry_value,
       probability,
       status,
       source,
