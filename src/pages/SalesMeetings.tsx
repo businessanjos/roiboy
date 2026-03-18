@@ -84,6 +84,7 @@ export default function SalesMeetings() {
   const [deleteDialog, setDeleteDialog] = useState<SalesMeeting | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [activeEmbeddedCall, setActiveEmbeddedCall] = useState<{ meetingUrl: string; sessionId: string; title: string } | null>(null);
   const [form, setForm] = useState({
     title: "",
     scheduled_at: "",
