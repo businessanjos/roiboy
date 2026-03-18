@@ -191,13 +191,27 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
       if (!userData) throw new Error("Perfil de usuário não encontrado");
 
       const firstStage = stages.sort((a, b) => a.display_order - b.display_order)[0];
+      const targetStageId = formData.stage_id || firstStage?.id;
+
+      if (!targetStageId) {
+        throw new Error("Nenhuma etapa disponível para criar o negócio");
+      }
+
+      const { data: stageData, error: stageError } = await supabase
+        .from("deal_stages")
+        .select("pipeline_id")
+        .eq("id", targetStageId)
+        .single();
+
+      if (stageError) throw stageError;
 
       const { data: newDeal, error } = await supabase.from("deals").insert({
         account_id: userData.account_id,
         client_id: clientId,
         title: formData.title.trim(),
         value: formData.value ? parseFloat(formData.value) : 0,
-        stage_id: formData.stage_id || firstStage?.id,
+        stage_id: targetStageId,
+        pipeline_id: stageData.pipeline_id,
         expected_close_date: formData.expected_close_date || null,
         source: formData.source || null,
         notes: formData.notes || null,
