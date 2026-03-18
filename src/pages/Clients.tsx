@@ -367,6 +367,7 @@ export default function Clients() {
       if (filterVNPS !== "all") baseParams["vnps_class"] = filterVNPS;
       if (filterContract !== "all") baseParams["contract_filter"] = filterContract;
       if (filterClientStatus !== "all") baseParams["client_status"] = filterClientStatus;
+      baseParams["sort"] = sortOrder;
 
       const PAGE_SIZE = 200;
       let allClients: any[] = [];
