@@ -1,10 +1,11 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, GraduationCap, Target, Sparkles, MessageSquareText } from "lucide-react";
+import { BarChart3, GraduationCap, Target, Sparkles, MessageSquareText, Phone } from "lucide-react";
 import { SalesTeamTab } from "@/components/sales/SalesTeamTab";
 import { TeamCareerTab } from "./TeamCareerTab";
 import { TeamGoalsTab } from "./TeamGoalsTab";
 import { TeamInsightsTab } from "./TeamInsightsTab";
 import { TeamConversationAnalysisTab } from "./TeamConversationAnalysisTab";
+import { ThreeCPlusMetrics } from "@/components/threecplus/ThreeCPlusMetrics";
 
 interface SalesTeamWrapperProps {
   showManagement?: boolean;
