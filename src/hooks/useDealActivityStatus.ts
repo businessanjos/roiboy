@@ -1,5 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, isBefore } from "date-fns";
 import { parseLocalDate } from "@/lib/dateUtils";
@@ -45,40 +44,17 @@ const fetchActivityStatus = async (dealId: string): Promise<ActivityStatus> => {
 };
 
 export function useDealActivityStatus(dealId: string) {
-  const queryClient = useQueryClient();
-
   const query = useQuery({
     queryKey: ["deal-activity-status", dealId],
     queryFn: () => fetchActivityStatus(dealId),
-    staleTime: 5 * 1000,
+    staleTime: 30 * 1000, // 30s - avoids per-card realtime channels
+    gcTime: 5 * 60 * 1000,
     refetchOnWindowFocus: true,
     refetchOnMount: 'always',
   });
 
-  // Realtime fallback for changes from other users
-  useEffect(() => {
-    const channel = supabase
-      .channel(`deal-card-tasks-${dealId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "internal_tasks",
-          filter: `deal_id=eq.${dealId}`,
-        },
-        () => {
-          queryClient.invalidateQueries({
-            queryKey: ["deal-activity-status", dealId],
-          });
-        }
-      )
-      .subscribe();
+  // Removed per-deal realtime channel to reduce Cloud consumption
+  // Pipeline-level refetch handles updates instead
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [dealId, queryClient]);
-
-  return query.data ?? { pendingCount: 0, hasOverdue: false, totalActivities: 0 };
+  return query.data || { pendingCount: 0, hasOverdue: false, totalActivities: 0 };
 }
