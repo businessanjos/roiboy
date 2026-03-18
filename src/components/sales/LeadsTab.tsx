@@ -135,6 +135,11 @@ export default function LeadsTab() {
   // Product state for deal creation
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>("");
+  
+  // Pipeline state for deal creation
+  const [allPipelines, setAllPipelines] = useState<{ id: string; name: string }[]>([]);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string>("");
+  const [allStages, setAllStages] = useState<{ id: string; name: string; display_order: number; pipeline_id: string; color: string }[]>([]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedOwnerFilter, setSelectedOwnerFilter] = useState<string>("all");
@@ -189,6 +194,29 @@ export default function LeadsTab() {
     return phones;
   }, []);
 
+  // Fetch all pipelines and stages for pipeline selector
+  useEffect(() => {
+    const fetchPipelines = async () => {
+      if (!currentUser?.account_id) return;
+      const { data: pipelines } = await supabase
+        .from("pipelines")
+        .select("id, name")
+        .eq("account_id", currentUser.account_id)
+        .eq("is_active", true)
+        .order("display_order");
+      if (pipelines) setAllPipelines(pipelines);
+
+      const { data: stagesData } = await supabase
+        .from("deal_stages")
+        .select("id, name, display_order, pipeline_id, color")
+        .eq("account_id", currentUser.account_id)
+        .eq("is_active", true)
+        .order("display_order");
+      if (stagesData) setAllStages(stagesData);
+    };
+    fetchPipelines();
+  }, [currentUser?.account_id]);
+
   // Get deals for the current lead
   const getLeadDeals = useCallback((leadId: string) => {
     return deals.filter(d => d.lead_id === leadId);
@@ -227,6 +255,7 @@ export default function LeadsTab() {
       stage_id: "",
       notes: "",
     });
+    setSelectedPipelineId("");
     setSelectedLead(null);
     setExistingClient(null);
     setLeadForDeal(null);
@@ -292,7 +321,10 @@ export default function LeadsTab() {
       
       if (data && data.length > 0) {
         setExistingClient(data[0]);
-        const firstStage = stages.sort((a, b) => a.display_order - b.display_order)[0];
+        const defaultPipeline = allPipelines[0];
+        const pipelineStages = allStages.filter(s => s.pipeline_id === defaultPipeline?.id).sort((a, b) => a.display_order - b.display_order);
+        const firstStage = pipelineStages[0];
+        setSelectedPipelineId(defaultPipeline?.id || "");
         setDealFormData({
           title: `Novo negócio - ${data[0].full_name}`,
           value: "",
@@ -447,7 +479,10 @@ export default function LeadsTab() {
 
   const openDealDialogForLead = (lead: Lead) => {
     setLeadForDeal(lead);
-    const firstStage = stages.sort((a, b) => a.display_order - b.display_order)[0];
+    const defaultPipeline = allPipelines[0];
+    const pipelineStages = allStages.filter(s => s.pipeline_id === defaultPipeline?.id).sort((a, b) => a.display_order - b.display_order);
+    const firstStage = pipelineStages[0];
+    setSelectedPipelineId(defaultPipeline?.id || "");
     setDealFormData({
       title: `Novo negócio - ${lead.full_name}`,
       value: "",
@@ -1490,27 +1525,55 @@ export default function LeadsTab() {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label>Etapa</Label>
-                <Select
-                  value={dealFormData.stage_id}
-                  onValueChange={(v) =>
-                    setDealFormData({ ...dealFormData, stage_id: v })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stages
-                      .sort((a, b) => a.display_order - b.display_order)
-                      .map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Funil</Label>
+                  <Select
+                    value={selectedPipelineId}
+                    onValueChange={(v) => {
+                      setSelectedPipelineId(v);
+                      const pipelineStages = allStages.filter(s => s.pipeline_id === v).sort((a, b) => a.display_order - b.display_order);
+                      setDealFormData({ ...dealFormData, stage_id: pipelineStages[0]?.id || "" });
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o funil" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allPipelines.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name}
                         </SelectItem>
                       ))}
-                  </SelectContent>
-                </Select>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Etapa</Label>
+                  <Select
+                    value={dealFormData.stage_id}
+                    onValueChange={(v) =>
+                      setDealFormData({ ...dealFormData, stage_id: v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allStages
+                        .filter(s => s.pipeline_id === selectedPipelineId)
+                        .sort((a, b) => a.display_order - b.display_order)
+                        .map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full" style={{ backgroundColor: s.color }} />
+                              {s.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Observações</Label>
@@ -1565,7 +1628,7 @@ export default function LeadsTab() {
         deal={selectedDeal}
         stages={stages}
         onEdit={() => {}}
-        onStageChange={async (dealId, stageId) => { return await moveDeal(dealId, stageId); }}
+        onStageChange={async (dealId, stageId, pipelineId) => { return await moveDeal(dealId, stageId, pipelineId); }}
         onMarkAsWon={async (dealId) => { await markAsWon(dealId); }}
         onMarkAsLost={async (dealId, reason) => { await markAsLost(dealId, reason); }}
         onReopen={async (dealId) => { await reopenDeal(dealId); }}

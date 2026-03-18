@@ -150,7 +150,7 @@ interface DealDetailSheetProps {
   onMarkAsWon: (dealId: string) => Promise<void>;
   onMarkAsLost: (dealId: string, reason?: string) => Promise<void>;
   onReopen: (dealId: string) => Promise<void>;
-  onStageChange: (dealId: string, stageId: string) => Promise<boolean>;
+  onStageChange: (dealId: string, stageId: string, pipelineId?: string) => Promise<boolean>;
   onDealUpdated?: () => void;
   processingWonDealId?: string | null;
 }
@@ -239,6 +239,36 @@ export function DealDetailSheet({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [localWonAt, setLocalWonAt] = useState<string | null>(deal?.won_at || null);
   const [resolvedLeadId, setResolvedLeadId] = useState<string | null>(null);
+  
+  // Pipeline/stage state for cross-pipeline moves
+  const [allPipelines, setAllPipelines] = useState<{ id: string; name: string }[]>([]);
+  const [allPipelineStages, setAllPipelineStages] = useState<DealStage[]>([]);
+  const [selectedPipelineId, setSelectedPipelineId] = useState<string>("");
+
+  // Fetch all pipelines and stages
+  useEffect(() => {
+    if (!open || !deal) return;
+    const fetchAll = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+      const { data: userData } = await supabase.from("users").select("account_id").eq("auth_user_id", authUser.id).single();
+      if (!userData?.account_id) return;
+
+      const [{ data: pipelines }, { data: stagesData }] = await Promise.all([
+        supabase.from("pipelines").select("id, name").eq("account_id", userData.account_id).eq("is_active", true).order("display_order"),
+        supabase.from("deal_stages").select("*").eq("account_id", userData.account_id).eq("is_active", true).order("display_order"),
+      ]);
+      if (pipelines) setAllPipelines(pipelines);
+      if (stagesData) setAllPipelineStages(stagesData as DealStage[]);
+      
+      // Determine current pipeline from deal's stage
+      if (deal.stage_id && stagesData) {
+        const currentStage = stagesData.find((s: any) => s.id === deal.stage_id);
+        if (currentStage) setSelectedPipelineId((currentStage as any).pipeline_id || "");
+      }
+    };
+    fetchAll();
+  }, [open, deal?.id, deal?.stage_id]);
   
   // Sincronizar estado local com prop quando deal muda
   useEffect(() => {
@@ -682,14 +712,14 @@ export function DealDetailSheet({
   };
 
 
-  const handleStageChange = async (newStageId: string) => {
+  const handleStageChange = async (newStageId: string, pipelineId?: string) => {
     if (!deal || newStageId === deal.stage_id) return;
     
     // Validate required fields before moving
     const result = await validateDealMove(deal.id, newStageId, deal.account_id);
     
     if (!result.canMoveToStage) {
-      const targetStage = stages.find(s => s.id === newStageId);
+      const targetStage = allPipelineStages.find(s => s.id === newStageId) || stages.find(s => s.id === newStageId);
       setPendingStageId(newStageId);
       setMissingFields(result.missingFields);
       setPendingStageName(targetStage?.name || "");
@@ -699,9 +729,17 @@ export function DealDetailSheet({
     
     setChangingStage(true);
     try {
-      const success = await onStageChange(deal.id, newStageId);
+      // Determine if cross-pipeline
+      const currentStageObj = allPipelineStages.find(s => s.id === deal.stage_id);
+      const newStageObj = allPipelineStages.find(s => s.id === newStageId);
+      const isCrossPipeline = currentStageObj && newStageObj && (currentStageObj as any).pipeline_id !== (newStageObj as any).pipeline_id;
+      
+      const success = await onStageChange(deal.id, newStageId, isCrossPipeline ? pipelineId : undefined);
       if (success) {
         fetchActivities();
+        if (isCrossPipeline) {
+          onDealUpdated?.();
+        }
       }
     } finally {
       setChangingStage(false);
@@ -712,7 +750,7 @@ export function DealDetailSheet({
     if (!deal || !pendingStageId) return;
     setChangingStage(true);
     try {
-      const success = await onStageChange(deal.id, pendingStageId);
+      const success = await onStageChange(deal.id, pendingStageId, selectedPipelineId || undefined);
       if (success) {
         fetchActivities();
       }
@@ -979,34 +1017,61 @@ export function DealDetailSheet({
 
                 {/* Details Card */}
                 <div className="rounded-lg border p-3 space-y-3">
-                  {/* Stage Selector (only for open deals) */}
+                  {/* Pipeline + Stage Selector (only for open deals) */}
                   {!isClosed && (
-                    <div className="flex items-center gap-2">
-                      <ArrowRightLeft className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <span className="text-xs text-muted-foreground min-w-[50px]">Etapa</span>
-                      <Select
-                        value={deal.stage_id || ""}
-                        onValueChange={handleStageChange}
-                        disabled={changingStage}
-                      >
-                        <SelectTrigger className="h-8 text-sm flex-1 bg-background">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover">
-                          {stages.map(stage => (
-                            <SelectItem key={stage.id} value={stage.id}>
-                              <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-2 h-2 rounded-full"
-                                  style={{ backgroundColor: stage.color }}
-                                />
-                                {stage.name}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {changingStage && <Loader2 className="h-4 w-4 animate-spin" />}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <ArrowRightLeft className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-xs text-muted-foreground min-w-[40px]">Funil</span>
+                        <Select
+                          value={selectedPipelineId}
+                          onValueChange={(v) => {
+                            setSelectedPipelineId(v);
+                          }}
+                          disabled={changingStage}
+                        >
+                          <SelectTrigger className="h-8 text-sm flex-1 bg-background">
+                            <SelectValue placeholder="Funil" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover">
+                            {allPipelines.map(p => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-4 flex-shrink-0" />
+                        <span className="text-xs text-muted-foreground min-w-[40px]">Etapa</span>
+                        <Select
+                          value={deal.stage_id || ""}
+                          onValueChange={(v) => handleStageChange(v, selectedPipelineId)}
+                          disabled={changingStage}
+                        >
+                          <SelectTrigger className="h-8 text-sm flex-1 bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover">
+                            {allPipelineStages
+                              .filter(s => s.id ? (s as any).pipeline_id === selectedPipelineId : false)
+                              .sort((a, b) => a.display_order - b.display_order)
+                              .map(stage => (
+                                <SelectItem key={stage.id} value={stage.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div 
+                                      className="w-2 h-2 rounded-full"
+                                      style={{ backgroundColor: stage.color }}
+                                    />
+                                    {stage.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        {changingStage && <Loader2 className="h-4 w-4 animate-spin" />}
+                      </div>
                     </div>
                   )}
 
