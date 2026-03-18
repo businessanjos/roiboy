@@ -210,8 +210,6 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           if (deal.responsible_user_id && metricsMap[deal.responsible_user_id]) {
             metricsMap[deal.responsible_user_id].total_deals++;
             const value = deal.value || 0;
-            const entryValue = receivedValueMap.get(deal.id) || 0;
-            metricsMap[deal.responsible_user_id].entry_value_total += entryValue;
             
             if (deal.status === "open") {
               metricsMap[deal.responsible_user_id].open_deals++;
