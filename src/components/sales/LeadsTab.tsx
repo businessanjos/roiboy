@@ -194,6 +194,29 @@ export default function LeadsTab() {
     return phones;
   }, []);
 
+  // Fetch all pipelines and stages for pipeline selector
+  useEffect(() => {
+    const fetchPipelines = async () => {
+      if (!currentUser?.account_id) return;
+      const { data: pipelines } = await supabase
+        .from("pipelines")
+        .select("id, name")
+        .eq("account_id", currentUser.account_id)
+        .eq("is_active", true)
+        .order("display_order");
+      if (pipelines) setAllPipelines(pipelines);
+
+      const { data: stagesData } = await supabase
+        .from("deal_stages")
+        .select("id, name, display_order, pipeline_id, color")
+        .eq("account_id", currentUser.account_id)
+        .eq("is_active", true)
+        .order("display_order");
+      if (stagesData) setAllStages(stagesData);
+    };
+    fetchPipelines();
+  }, [currentUser?.account_id]);
+
   // Get deals for the current lead
   const getLeadDeals = useCallback((leadId: string) => {
     return deals.filter(d => d.lead_id === leadId);
