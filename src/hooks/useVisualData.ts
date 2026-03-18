@@ -432,6 +432,43 @@ async function enrichLeadsWithOwner(accountId: string, leads: any[]): Promise<an
 
 const DEAL_CANAL_FIELD_ID = '16ebda9f-cd3b-412c-bb06-0950001963c5';
 const DEAL_ITEM_VENDA_FIELD_ID = '033b91fb-3add-4c96-aec9-567fefbd0fb2';
+const DEAL_VALOR_RECEBIDO_FIELD_ID = '924c04a5-9824-443b-8122-8fc8c2ad727e';
+
+async function enrichDealsWithReceivedValue(accountId: string, deals: any[]): Promise<any[]> {
+  if (deals.length === 0) return deals;
+
+  const dealIds = deals.map(d => d.id);
+  let allValues: any[] = [];
+  const batchSize = 500;
+
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batch = dealIds.slice(i, i + batchSize);
+    const { data, error } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, value_number')
+      .eq('field_id', DEAL_VALOR_RECEBIDO_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('deal_id', batch);
+
+    if (error) {
+      console.error('Error fetching deal received values:', error);
+      continue;
+    }
+    allValues = allValues.concat(data || []);
+  }
+
+  const valueMap = new Map<string, number>();
+  for (const row of allValues) {
+    if (row.value_number != null) {
+      valueMap.set(row.deal_id, row.value_number);
+    }
+  }
+
+  return deals.map(deal => ({
+    ...deal,
+    entry_value: valueMap.get(deal.id) || 0,
+  }));
+}
 
 export async function enrichDealsWithCanal(accountId: string, deals: any[]): Promise<any[]> {
   if (deals.length === 0) return deals;
@@ -751,7 +788,10 @@ async function fetchDealsData(
     return aggregateData(enrichedData, measure, normalizedDimension, dateDisplayFormat);
   }
 
-  return aggregateData(filteredData, measure, dimension, dateDisplayFormat);
+  // Enrich deals with "Valor Recebido da Venda" custom field for tiebreaker
+  const enrichedWithEntryValue = await enrichDealsWithReceivedValue(accountId, filteredData);
+
+  return aggregateData(enrichedWithEntryValue, measure, dimension, dateDisplayFormat);
 }
 
 // Calculate conversion rate as (won deals / total deals) * 100

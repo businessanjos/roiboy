@@ -108,7 +108,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         // Deals
         supabase
           .from("deals")
-          .select("responsible_user_id, status, value, entry_value")
+          .select("id, responsible_user_id, status, value")
           .eq("account_id", currentUser.account_id)
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
@@ -178,13 +178,39 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         }
       }
 
+      // Fetch "Valor Recebido da Venda" custom field for tiebreaker
+      const VALOR_RECEBIDO_FIELD_ID = '924c04a5-9824-443b-8122-8fc8c2ad727e';
+      const dealIds = (dealsData.data || []).map((d: any) => d.id).filter(Boolean);
+      let receivedValueMap = new Map<string, number>();
+      
+      if (dealIds.length > 0) {
+        const batchSize = 500;
+        for (let i = 0; i < dealIds.length; i += batchSize) {
+          const batch = dealIds.slice(i, i + batchSize);
+          const { data: fieldValues } = await supabase
+            .from('deal_field_values')
+            .select('deal_id, value_number')
+            .eq('field_id', VALOR_RECEBIDO_FIELD_ID)
+            .eq('account_id', currentUser.account_id)
+            .in('deal_id', batch);
+          
+          if (fieldValues) {
+            for (const fv of fieldValues) {
+              if (fv.value_number != null) {
+                receivedValueMap.set(fv.deal_id, fv.value_number);
+              }
+            }
+          }
+        }
+      }
+
       // Aggregate deals
       if (dealsData.data) {
-        for (const deal of dealsData.data) {
+        for (const deal of dealsData.data as any[]) {
           if (deal.responsible_user_id && metricsMap[deal.responsible_user_id]) {
             metricsMap[deal.responsible_user_id].total_deals++;
             const value = deal.value || 0;
-            const entryValue = (deal as any).entry_value || 0;
+            const entryValue = receivedValueMap.get(deal.id) || 0;
             metricsMap[deal.responsible_user_id].entry_value_total += entryValue;
             
             if (deal.status === "open") {
