@@ -127,6 +127,15 @@ export function useAudioRecorder({ sessionId }: UseAudioRecorderOptions) {
     async (blob: Blob, mimeType: string) => {
       setIsUploading(true);
       try {
+        // Whisper has a 25MB limit — warn if file is too large
+        const MAX_SIZE_MB = 25;
+        if (blob.size > MAX_SIZE_MB * 1024 * 1024) {
+          toast({
+            title: "⚠️ Arquivo muito grande",
+            description: `A gravação tem ${(blob.size / (1024 * 1024)).toFixed(1)}MB. O limite para transcrição é ${MAX_SIZE_MB}MB. A gravação será salva mas a transcrição pode falhar.`,
+          });
+        }
+
         const ext = mimeType.includes("webm") ? "webm" : "mp4";
         const filePath = `${sessionId}/recording.${ext}`;
 

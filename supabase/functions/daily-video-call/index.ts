@@ -216,52 +216,62 @@ Deno.serve(async (req) => {
         headers: { Authorization: `Bearer ${DAILY_API_KEY}` },
       });
 
-      // Check for recordings and trigger processing
-      try {
-        const recordingsRes = await fetch(
-          `https://api.daily.co/v1/recordings?room_name=${room_name}`,
-          { headers: { Authorization: `Bearer ${DAILY_API_KEY}` } }
-        );
-        
-        if (recordingsRes.ok) {
-          const recordings = await recordingsRes.json();
-          if (recordings.data && recordings.data.length > 0) {
-            const recording = recordings.data[0];
-            
-            // Get download link
-            const accessRes = await fetch(
-              `https://api.daily.co/v1/recordings/${recording.id}/access-link`,
-              { headers: { Authorization: `Bearer ${DAILY_API_KEY}` } }
-            );
-            
-            if (accessRes.ok) {
-              const accessData = await accessRes.json();
-              
-              await supabase
-                .from("video_call_sessions")
-                .update({
-                  recording_id: recording.id,
-                  recording_url: accessData.download_link,
-                  analysis_status: "transcribing",
-                })
-                .eq("id", session_id);
+      // Check for Daily.co cloud recordings ONLY if no browser recording was uploaded
+      const { data: currentSession } = await supabase
+        .from("video_call_sessions")
+        .select("recording_url")
+        .eq("id", session_id)
+        .single();
 
-              // Trigger transcription + analysis pipeline
-              const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-              await fetch(`${supabaseUrl}/functions/v1/process-video-call`, {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${supabaseAnonKey}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ session_id }),
-              });
+      const hasBrowserRecording = currentSession?.recording_url &&
+        currentSession.recording_url.includes("/storage/v1/object/public/call-recordings/");
+
+      if (!hasBrowserRecording) {
+        try {
+          const recordingsRes = await fetch(
+            `https://api.daily.co/v1/recordings?room_name=${room_name}`,
+            { headers: { Authorization: `Bearer ${DAILY_API_KEY}` } }
+          );
+          
+          if (recordingsRes.ok) {
+            const recordings = await recordingsRes.json();
+            if (recordings.data && recordings.data.length > 0) {
+              const recording = recordings.data[0];
+              
+              const accessRes = await fetch(
+                `https://api.daily.co/v1/recordings/${recording.id}/access-link`,
+                { headers: { Authorization: `Bearer ${DAILY_API_KEY}` } }
+              );
+              
+              if (accessRes.ok) {
+                const accessData = await accessRes.json();
+                
+                await supabase
+                  .from("video_call_sessions")
+                  .update({
+                    recording_id: recording.id,
+                    recording_url: accessData.download_link,
+                    analysis_status: "transcribing",
+                  })
+                  .eq("id", session_id);
+
+                const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+                await fetch(`${supabaseUrl}/functions/v1/process-video-call`, {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${supabaseAnonKey}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ session_id }),
+                });
+              }
             }
           }
+        } catch (e) {
+          console.error("Recording processing error:", e);
         }
-      } catch (e) {
-        console.error("Recording processing error:", e);
-        // Non-blocking - call still ended successfully
+      } else {
+        console.log("[daily-video-call] Browser recording already uploaded, skipping Daily.co recording check");
       }
 
       return new Response(
