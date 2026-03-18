@@ -31,10 +31,6 @@ export default function SalesTeam() {
               <Users className="h-4 w-4" />
               Equipe
             </TabsTrigger>
-            <TabsTrigger value="telephony" className="gap-1.5">
-              <Phone className="h-4 w-4" />
-              Telefonia
-            </TabsTrigger>
             <TabsTrigger value="live" className="gap-1.5">
               <Activity className="h-4 w-4" />
               Ao Vivo
@@ -57,9 +53,6 @@ export default function SalesTeam() {
             <SalesTeamWrapper showManagement />
           </TabsContent>
 
-          <TabsContent value="telephony">
-            <ThreeCPlusMetrics />
-          </TabsContent>
 
           <TabsContent value="live">
             <ThreeCPlusLiveMonitor />
