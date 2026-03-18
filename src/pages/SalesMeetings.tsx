@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import { format, isPast, isToday, isTomorrow, addHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { EmbeddedVideoCall } from "@/components/sales/videocall/EmbeddedVideoCall";
 
 interface SalesMeeting {
   id: string;
@@ -83,6 +84,7 @@ export default function SalesMeetings() {
   const [deleteDialog, setDeleteDialog] = useState<SalesMeeting | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [activeEmbeddedCall, setActiveEmbeddedCall] = useState<{ meetingUrl: string; sessionId: string; title: string } | null>(null);
   const [form, setForm] = useState({
     title: "",
     scheduled_at: "",
@@ -304,6 +306,29 @@ export default function SalesMeetings() {
         )}
       </div>
 
+      {/* Embedded Video Call */}
+      {activeEmbeddedCall && (
+        <Card className="overflow-hidden">
+          <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Video className="h-4 w-4 text-primary" />
+              {activeEmbeddedCall.title}
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => { setActiveEmbeddedCall(null); queryClient.invalidateQueries({ queryKey: ["sales-meetings"] }); }}>
+              Fechar
+            </Button>
+          </CardHeader>
+          <CardContent className="p-3">
+            <EmbeddedVideoCall
+              roomUrl={activeEmbeddedCall.meetingUrl}
+              sessionId={activeEmbeddedCall.sessionId}
+              participantName={activeEmbeddedCall.title}
+              onCallEnded={() => { setActiveEmbeddedCall(null); queryClient.invalidateQueries({ queryKey: ["sales-meetings"] }); }}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -365,6 +390,13 @@ export default function SalesMeetings() {
                     onEdit={() => openEdit(m)}
                     onDelete={() => setDeleteDialog(m)}
                     onStatusChange={(status) => updateStatusMutation.mutate({ id: m.id, status })}
+                    onJoin={(meeting) => {
+                      if (meeting.meeting_url?.includes("daily.co")) {
+                        setActiveEmbeddedCall({ meetingUrl: meeting.meeting_url!, sessionId: meeting.id, title: meeting.title });
+                      } else {
+                        window.open(meeting.meeting_url!, "_blank");
+                      }
+                    }}
                     canEdit={!isSalesRep}
                   />
                 ))}
@@ -388,6 +420,13 @@ export default function SalesMeetings() {
                     onEdit={() => openEdit(m)}
                     onDelete={() => setDeleteDialog(m)}
                     onStatusChange={(status) => updateStatusMutation.mutate({ id: m.id, status })}
+                    onJoin={(meeting) => {
+                      if (meeting.meeting_url?.includes("daily.co")) {
+                        setActiveEmbeddedCall({ meetingUrl: meeting.meeting_url!, sessionId: meeting.id, title: meeting.title });
+                      } else {
+                        window.open(meeting.meeting_url!, "_blank");
+                      }
+                    }}
                     canEdit={!isSalesRep}
                   />
                 ))}
@@ -557,6 +596,7 @@ function MeetingCard({
   onEdit,
   onDelete,
   onStatusChange,
+  onJoin,
   canEdit,
 }: {
   meeting: SalesMeeting;
@@ -565,6 +605,7 @@ function MeetingCard({
   onEdit: () => void;
   onDelete: () => void;
   onStatusChange: (status: string) => void;
+  onJoin: (meeting: SalesMeeting) => void;
   canEdit: boolean;
 }) {
   const statusConf = STATUS_CONFIG[meeting.status] || STATUS_CONFIG.scheduled;
@@ -623,9 +664,9 @@ function MeetingCard({
                 variant="outline"
                 size="sm"
                 className="h-8 gap-1.5 text-xs"
-                onClick={() => window.open(meeting.meeting_url!, "_blank")}
+                onClick={() => onJoin(meeting)}
               >
-                <ExternalLink className="w-3 h-3" />
+                <Video className="w-3 h-3" />
                 Entrar
               </Button>
             )}

@@ -20,6 +20,7 @@ import {
 import { format, isToday, isTomorrow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MeetingScheduleDialog } from "./MeetingScheduleDialog";
+import { EmbeddedVideoCall } from "./EmbeddedVideoCall";
 import { useVideoCall } from "@/hooks/useVideoCall";
 import { useToast } from "@/hooks/use-toast";
 
@@ -51,6 +52,7 @@ export function MeetingsPanel() {
   const [loading, setLoading] = useState(true);
   const [showNewMeeting, setShowNewMeeting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activeCall, setActiveCall] = useState<{ roomUrl: string; sessionId: string; participantName?: string } | null>(null);
 
   const {
     createRoom,
@@ -94,8 +96,38 @@ export function MeetingsPanel() {
   };
 
   const handleJoinMeeting = (meeting: Meeting) => {
-    window.open(meeting.daily_room_url, "_blank");
+    setActiveCall({
+      roomUrl: meeting.daily_room_url,
+      sessionId: meeting.id,
+      participantName: meeting.participant_name || "Reunião",
+    });
   };
+
+  const handleCallEnded = () => {
+    setActiveCall(null);
+    fetchMeetings();
+  };
+
+  if (activeCall) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="p-3 border-b border-border flex items-center justify-between">
+          <h3 className="font-semibold text-sm flex items-center gap-2">
+            <Video className="h-4 w-4 text-primary" />
+            Reunião em andamento
+          </h3>
+        </div>
+        <div className="flex-1 p-2">
+          <EmbeddedVideoCall
+            roomUrl={activeCall.roomUrl}
+            sessionId={activeCall.sessionId}
+            participantName={activeCall.participantName}
+            onCallEnded={handleCallEnded}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
