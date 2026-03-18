@@ -197,7 +197,7 @@ export function SystemStatusMonitor() {
       if (error) throw error;
       return data as { pending: number; processing: number; completed_today: number; failed_today: number };
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 60000, // Refresh every 60 seconds (was 30s)
   });
 
   // Query database health
@@ -216,7 +216,7 @@ export function SystemStatusMonitor() {
         error: error?.message,
       };
     },
-    refetchInterval: 30000,
+    refetchInterval: 60000, // Refresh every 60 seconds (was 30s)
   });
 
   const checkFunction = async (func: SystemFunction): Promise<FunctionStatus> => {
