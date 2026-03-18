@@ -306,6 +306,29 @@ export default function SalesMeetings() {
         )}
       </div>
 
+      {/* Embedded Video Call */}
+      {activeEmbeddedCall && (
+        <Card className="overflow-hidden">
+          <CardHeader className="p-3 pb-0 flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Video className="h-4 w-4 text-primary" />
+              {activeEmbeddedCall.title}
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => { setActiveEmbeddedCall(null); queryClient.invalidateQueries({ queryKey: ["sales-meetings"] }); }}>
+              Fechar
+            </Button>
+          </CardHeader>
+          <CardContent className="p-3">
+            <EmbeddedVideoCall
+              roomUrl={activeEmbeddedCall.meetingUrl}
+              sessionId={activeEmbeddedCall.sessionId}
+              participantName={activeEmbeddedCall.title}
+              onCallEnded={() => { setActiveEmbeddedCall(null); queryClient.invalidateQueries({ queryKey: ["sales-meetings"] }); }}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
