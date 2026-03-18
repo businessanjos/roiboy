@@ -150,7 +150,7 @@ interface DealDetailSheetProps {
   onMarkAsWon: (dealId: string) => Promise<void>;
   onMarkAsLost: (dealId: string, reason?: string) => Promise<void>;
   onReopen: (dealId: string) => Promise<void>;
-  onStageChange: (dealId: string, stageId: string) => Promise<boolean>;
+  onStageChange: (dealId: string, stageId: string, pipelineId?: string) => Promise<boolean>;
   onDealUpdated?: () => void;
   processingWonDealId?: string | null;
 }
