@@ -1569,6 +1569,10 @@ export default function LeadsTab() {
         onMarkAsWon={async (dealId) => { await markAsWon(dealId); }}
         onMarkAsLost={async (dealId, reason) => { await markAsLost(dealId, reason); }}
         onReopen={async (dealId) => { await reopenDeal(dealId); }}
+        onDealUpdated={() => {
+          // Re-fetch deals to reflect transfer changes
+          fetchDeals();
+        }}
       />
 
       {/* Delete Confirmation */}
