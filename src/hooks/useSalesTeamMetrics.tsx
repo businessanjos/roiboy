@@ -30,6 +30,7 @@ export interface SalesRepMetrics {
   // Lead metrics
   assigned_leads: number;
   converted_leads: number;
+  entry_value_total: number;
 }
 
 interface UseSalesTeamMetricsOptions {
@@ -107,7 +108,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         // Deals
         supabase
           .from("deals")
-          .select("responsible_user_id, status, value")
+          .select("responsible_user_id, status, value, entry_value")
           .eq("account_id", currentUser.account_id)
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
@@ -154,6 +155,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           pending_tasks: 0,
           assigned_leads: 0,
           converted_leads: 0,
+          entry_value_total: 0,
         };
       }
 
@@ -182,6 +184,8 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           if (deal.responsible_user_id && metricsMap[deal.responsible_user_id]) {
             metricsMap[deal.responsible_user_id].total_deals++;
             const value = deal.value || 0;
+            const entryValue = (deal as any).entry_value || 0;
+            metricsMap[deal.responsible_user_id].entry_value_total += entryValue;
             
             if (deal.status === "open") {
               metricsMap[deal.responsible_user_id].open_deals++;
@@ -232,7 +236,11 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       // Convert to array and sort by won value
       const metricsArray = Object.values(metricsMap)
         .filter(m => m.total_deals > 0 || m.total_calls > 0 || m.total_tasks > 0 || m.assigned_leads > 0)
-        .sort((a, b) => b.won_value - a.won_value);
+        .sort((a, b) => {
+          const diff = b.won_value - a.won_value;
+          if (diff !== 0) return diff;
+          return b.entry_value_total - a.entry_value_total;
+        });
 
       setMetrics(metricsArray);
     } catch (err) {

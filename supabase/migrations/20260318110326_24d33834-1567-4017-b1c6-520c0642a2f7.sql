@@ -1,0 +1,1 @@
+ALTER TABLE public.deals ADD COLUMN IF NOT EXISTS entry_value numeric DEFAULT 0;

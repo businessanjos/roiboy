@@ -13,6 +13,7 @@ export interface AggregatedDataPoint {
   value: number;
   count?: number;
   color?: string;
+  secondaryValue?: number;
 }
 
 interface UseVisualDataParams {
@@ -640,6 +641,7 @@ async function fetchDealsData(
       id,
       lead_id,
       value,
+      entry_value,
       probability,
       status,
       source,
@@ -1169,14 +1171,14 @@ function aggregateData(
   dimension: VisualConfig['dimension'],
   dateDisplayFormat: DateDisplayFormat
 ): AggregatedDataPoint[] {
-  const groups = new Map<string, { values: number[]; color?: string; count: number }>();
+  const groups = new Map<string, { values: number[]; color?: string; count: number; entryValues: number[] }>();
 
   for (const item of data) {
     const groupKey = getGroupKey(item, dimension, dateDisplayFormat);
     const groupColor = getGroupColor(item, dimension);
     
     if (!groups.has(groupKey)) {
-      groups.set(groupKey, { values: [], color: groupColor, count: 0 });
+      groups.set(groupKey, { values: [], color: groupColor, count: 0, entryValues: [] });
     }
 
     const group = groups.get(groupKey)!;
@@ -1188,6 +1190,12 @@ function aggregateData(
       if (value !== null && !isNaN(value)) {
         group.values.push(value);
       }
+    }
+
+    // Track entry_value for tiebreaking in rankings
+    const entryVal = getMeasureValue(item, 'entry_value');
+    if (entryVal > 0) {
+      group.entryValues.push(entryVal);
     }
   }
 
@@ -1218,14 +1226,19 @@ function aggregateData(
       value,
       count: group.count,
       color: group.color,
+      secondaryValue: group.entryValues.reduce((a, b) => a + b, 0),
     });
   }
 
-  // Sort results
+  // Sort results: primary by value, tiebreaker by secondaryValue (entry_value)
   if (dimension.type === 'date') {
     result.sort((a, b) => a.name.localeCompare(b.name));
   } else {
-    result.sort((a, b) => b.value - a.value);
+    result.sort((a, b) => {
+      const diff = b.value - a.value;
+      if (diff !== 0) return diff;
+      return (b.secondaryValue || 0) - (a.secondaryValue || 0);
+    });
   }
 
   // Filter out "Sem Responsável" from user-based dimensions
