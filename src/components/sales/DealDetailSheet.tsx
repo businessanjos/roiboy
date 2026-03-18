@@ -1017,34 +1017,61 @@ export function DealDetailSheet({
 
                 {/* Details Card */}
                 <div className="rounded-lg border p-3 space-y-3">
-                  {/* Stage Selector (only for open deals) */}
+                  {/* Pipeline + Stage Selector (only for open deals) */}
                   {!isClosed && (
-                    <div className="flex items-center gap-2">
-                      <ArrowRightLeft className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <span className="text-xs text-muted-foreground min-w-[50px]">Etapa</span>
-                      <Select
-                        value={deal.stage_id || ""}
-                        onValueChange={handleStageChange}
-                        disabled={changingStage}
-                      >
-                        <SelectTrigger className="h-8 text-sm flex-1 bg-background">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover">
-                          {stages.map(stage => (
-                            <SelectItem key={stage.id} value={stage.id}>
-                              <div className="flex items-center gap-2">
-                                <div 
-                                  className="w-2 h-2 rounded-full"
-                                  style={{ backgroundColor: stage.color }}
-                                />
-                                {stage.name}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {changingStage && <Loader2 className="h-4 w-4 animate-spin" />}
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <ArrowRightLeft className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-xs text-muted-foreground min-w-[40px]">Funil</span>
+                        <Select
+                          value={selectedPipelineId}
+                          onValueChange={(v) => {
+                            setSelectedPipelineId(v);
+                          }}
+                          disabled={changingStage}
+                        >
+                          <SelectTrigger className="h-8 text-sm flex-1 bg-background">
+                            <SelectValue placeholder="Funil" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover">
+                            {allPipelines.map(p => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-4 flex-shrink-0" />
+                        <span className="text-xs text-muted-foreground min-w-[40px]">Etapa</span>
+                        <Select
+                          value={deal.stage_id || ""}
+                          onValueChange={(v) => handleStageChange(v, selectedPipelineId)}
+                          disabled={changingStage}
+                        >
+                          <SelectTrigger className="h-8 text-sm flex-1 bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-popover">
+                            {allPipelineStages
+                              .filter(s => s.id ? (s as any).pipeline_id === selectedPipelineId : false)
+                              .sort((a, b) => a.display_order - b.display_order)
+                              .map(stage => (
+                                <SelectItem key={stage.id} value={stage.id}>
+                                  <div className="flex items-center gap-2">
+                                    <div 
+                                      className="w-2 h-2 rounded-full"
+                                      style={{ backgroundColor: stage.color }}
+                                    />
+                                    {stage.name}
+                                  </div>
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                        {changingStage && <Loader2 className="h-4 w-4 animate-spin" />}
+                      </div>
                     </div>
                   )}
 
