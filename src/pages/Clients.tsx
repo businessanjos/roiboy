@@ -1272,14 +1272,8 @@ export default function Clients() {
     setFilterResponsible("all");
   };
 
-  // Since filtering is now done server-side, we only apply local sorting
-  const filtered = clients.sort((a, b) => {
-    if (sortOrder === "alphabetical") {
-      return a.full_name.localeCompare(b.full_name, 'pt-BR');
-    }
-    // Default: recent first (by created_at)
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
+  // Sorting is now handled server-side via the sort param
+  const filtered = clients;
 
   const handleFieldValueChange = (clientId: string, fieldId: string, newValue: any) => {
     setFieldValues(prev => ({

@@ -227,7 +227,7 @@ Deno.serve(async (req) => {
         { count: "exact" }
       )
       .eq("account_id", accountId)
-      .order("full_name", { ascending: true })
+      .order(sortParam === "alphabetical" ? "full_name" : "created_at", { ascending: sortParam === "alphabetical" })
       .range(offset, offset + limit - 1);
 
     // Add search filter if provided
