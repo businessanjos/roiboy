@@ -3757,6 +3757,7 @@ export type Database = {
           contact_phone: string | null
           created_at: string
           currency: string | null
+          entry_value: number | null
           expected_close_date: string | null
           id: string
           lead_id: string | null
@@ -3785,6 +3786,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           currency?: string | null
+          entry_value?: number | null
           expected_close_date?: string | null
           id?: string
           lead_id?: string | null
@@ -3813,6 +3815,7 @@ export type Database = {
           contact_phone?: string | null
           created_at?: string
           currency?: string | null
+          entry_value?: number | null
           expected_close_date?: string | null
           id?: string
           lead_id?: string | null
