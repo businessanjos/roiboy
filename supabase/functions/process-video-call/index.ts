@@ -73,7 +73,9 @@ Deno.serve(async (req) => {
     if (openaiApiKey) {
       console.log("[process-video-call] Transcribing with Whisper...");
       const formData = new FormData();
-      formData.append("file", audioBlob, "recording.mp4");
+      // Detect file extension from URL
+      const fileExt = session.recording_url.includes(".webm") ? "audio.webm" : "recording.mp4";
+      formData.append("file", audioBlob, fileExt);
       formData.append("model", "whisper-1");
       formData.append("language", "pt");
 
