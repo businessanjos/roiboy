@@ -698,6 +698,11 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
         onMarkAsLost={handleMarkAsLost}
         onReopen={handleReopen}
         onStageChange={handleStageChange}
+        onDealUpdated={() => {
+          fetchDeals();
+          setIsDetailSheetOpen(false);
+          setSelectedDeal(null);
+        }}
       />
     </div>
   );

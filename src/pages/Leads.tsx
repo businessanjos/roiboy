@@ -1931,6 +1931,11 @@ export default function Leads() {
         onStageChange={async (dealId, stageId) => {
           return await moveDeal(dealId, stageId);
         }}
+        onDealUpdated={() => {
+          fetchDeals();
+          setIsDealDetailOpen(false);
+          setSelectedDeal(null);
+        }}
       />
 
       {/* Import Preview */}
