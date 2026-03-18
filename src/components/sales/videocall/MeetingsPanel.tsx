@@ -52,6 +52,7 @@ export function MeetingsPanel() {
   const [loading, setLoading] = useState(true);
   const [showNewMeeting, setShowNewMeeting] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activeCall, setActiveCall] = useState<{ roomUrl: string; sessionId: string; participantName?: string } | null>(null);
 
   const {
     createRoom,
