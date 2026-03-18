@@ -559,6 +559,7 @@ function MeetingCard({
   onEdit,
   onDelete,
   onStatusChange,
+  onJoin,
   canEdit,
 }: {
   meeting: SalesMeeting;
@@ -567,6 +568,7 @@ function MeetingCard({
   onEdit: () => void;
   onDelete: () => void;
   onStatusChange: (status: string) => void;
+  onJoin: (meeting: SalesMeeting) => void;
   canEdit: boolean;
 }) {
   const statusConf = STATUS_CONFIG[meeting.status] || STATUS_CONFIG.scheduled;
