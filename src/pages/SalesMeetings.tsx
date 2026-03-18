@@ -41,6 +41,7 @@ import { toast } from "sonner";
 import { format, isPast, isToday, isTomorrow, addHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { EmbeddedVideoCall } from "@/components/sales/videocall/EmbeddedVideoCall";
 
 interface SalesMeeting {
   id: string;
