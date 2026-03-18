@@ -367,6 +367,13 @@ export default function SalesMeetings() {
                     onEdit={() => openEdit(m)}
                     onDelete={() => setDeleteDialog(m)}
                     onStatusChange={(status) => updateStatusMutation.mutate({ id: m.id, status })}
+                    onJoin={(meeting) => {
+                      if (meeting.meeting_url?.includes("daily.co")) {
+                        setActiveEmbeddedCall({ meetingUrl: meeting.meeting_url!, sessionId: meeting.id, title: meeting.title });
+                      } else {
+                        window.open(meeting.meeting_url!, "_blank");
+                      }
+                    }}
                     canEdit={!isSalesRep}
                   />
                 ))}
