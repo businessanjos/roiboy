@@ -64,6 +64,10 @@ export function SalesTeamWrapper({ showManagement = false }: SalesTeamWrapperPro
       <TabsContent value="conversations">
         <TeamConversationAnalysisTab />
       </TabsContent>
+
+      <TabsContent value="telephony">
+        <ThreeCPlusMetrics />
+      </TabsContent>
     </Tabs>
   );
 }

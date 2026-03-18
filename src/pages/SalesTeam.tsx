@@ -53,9 +53,6 @@ export default function SalesTeam() {
             <SalesTeamWrapper showManagement />
           </TabsContent>
 
-          <TabsContent value="telephony">
-            <ThreeCPlusMetrics />
-          </TabsContent>
 
           <TabsContent value="live">
             <ThreeCPlusLiveMonitor />
