@@ -1001,20 +1001,20 @@ export default function SalesPipeline() {
                 )}
               </TabsContent>
 
-              <TabsContent value="won" className="mt-0 space-y-4">
+              <TabsContent value="won" className="mt-0 space-y-3 sm:space-y-4">
                 {/* Summary and Month Filter */}
-                <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 sm:p-4">
                   <div className="flex items-center gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Total de Ganhas</p>
-                      <p className="text-2xl font-bold text-emerald-600">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Total de Ganhas</p>
+                      <p className="text-lg sm:text-2xl font-bold text-emerald-600">
                         {formatCurrency(filteredWonTotal)}
                       </p>
                     </div>
-                    <div className="h-10 w-px bg-emerald-500/20" />
+                    <div className="h-8 sm:h-10 w-px bg-emerald-500/20" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Negócios</p>
-                      <p className="text-xl font-semibold">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Negócios</p>
+                      <p className="text-lg sm:text-xl font-semibold">
                         {filteredWonDealsByMonth.length}
                       </p>
                     </div>
@@ -1022,7 +1022,7 @@ export default function SalesPipeline() {
                   
                   {/* Month Filter */}
                   <Select value={wonMonthFilter} onValueChange={setWonMonthFilter}>
-                    <SelectTrigger className="w-[200px] bg-background">
+                    <SelectTrigger className="w-full sm:w-[200px] bg-background">
                       <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                       <SelectValue placeholder="Todos os meses" />
                     </SelectTrigger>
