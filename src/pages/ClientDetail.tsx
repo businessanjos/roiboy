@@ -898,7 +898,7 @@ export default function ClientDetail() {
 
       // Sort by timestamp
       timelineItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setTimeline(timelineItems.slice(0, 300));
+      setTimeline(timelineItems);
 
     } catch (error: any) {
       console.error("Error fetching client data:", error);
