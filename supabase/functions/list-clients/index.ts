@@ -535,34 +535,9 @@ Deno.serve(async (req) => {
       }).map(({ _relevance, ...client }) => client);
     }
 
-    // Apply remaining post-query filters (date-based contract filters and no_contract)
+    // Date-based contract filters are already handled by the SQL pre-filter above
+    // No need to re-filter here — the pre-filter already restricts client IDs correctly
     let filteredClients = sortedClients;
-
-    // Date-based contract filters (not handled by SQL pre-filter)
-    const dateBasedContractFilters = ["expired", "urgent", "warning", "ok", "none"];
-    if (contractFilter && dateBasedContractFilters.includes(contractFilter)) {
-      if (contractFilter === "none") {
-        filteredClients = filteredClients.filter((c) => !c.contract);
-      } else {
-        filteredClients = filteredClients.filter((c) => {
-          if (!c.contract) return false;
-          const endDate = c.contract.end_date;
-          if (!endDate) return contractFilter === "ok";
-
-          const now = new Date();
-          const end = new Date(endDate);
-          const diffDays = Math.floor(
-            (end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-          );
-
-          if (contractFilter === "expired") return diffDays < 0;
-          if (contractFilter === "urgent") return diffDays >= 0 && diffDays <= 30;
-          if (contractFilter === "warning") return diffDays > 30 && diffDays <= 90;
-          if (contractFilter === "ok") return diffDays > 90 || !endDate;
-          return true;
-        });
-      }
-    }
 
     // Apply client status filter for "no_contract"
     if (clientStatus === "no_contract") {
