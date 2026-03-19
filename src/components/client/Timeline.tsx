@@ -918,22 +918,24 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     const items = e.clipboardData?.items;
     if (!items) return;
     
+    const newFiles: { file: File; url: string; type: "image" | "file" }[] = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.type.startsWith("image/")) {
         e.preventDefault();
         const file = item.getAsFile();
         if (file) {
-          // Validate max file size (100MB)
           if (file.size > 100 * 1024 * 1024) {
             toast.error("Imagem muito grande. Máximo 100MB.");
-            return;
+            continue;
           }
           const previewUrl = URL.createObjectURL(file);
-          setFilePreview({ file, url: previewUrl, type: "image" });
+          newFiles.push({ file, url: previewUrl, type: "image" });
         }
-        break;
       }
+    }
+    if (newFiles.length > 0) {
+      setFilePreviews(prev => [...prev, ...newFiles]);
     }
   };
 
@@ -952,14 +954,19 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     e.preventDefault();
     setIsDragging(false);
     
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) {
+    const files = Array.from(e.dataTransfer.files);
+    const newFiles: { file: File; url: string; type: "image" | "file" }[] = [];
+    for (const file of files) {
       if (file.size > 100 * 1024 * 1024) {
-        toast.error("Imagem muito grande. Máximo 100MB.");
-        return;
+        toast.error(`${file.name}: muito grande. Máximo 100MB.`);
+        continue;
       }
-      const previewUrl = URL.createObjectURL(file);
-      setFilePreview({ file, url: previewUrl, type: "image" });
+      const isImage = file.type.startsWith("image/");
+      const previewUrl = isImage ? URL.createObjectURL(file) : "";
+      newFiles.push({ file, url: previewUrl, type: isImage ? "image" : "file" });
+    }
+    if (newFiles.length > 0) {
+      setFilePreviews(prev => [...prev, ...newFiles]);
     }
   };
 
