@@ -2263,7 +2263,7 @@ export default function ClientDetail() {
                     events={timeline} 
                     clientId={id!} 
                     clientName={client?.full_name}
-                    onCommentAdded={fetchData}
+                    onCommentAdded={refreshTimeline}
                   />
                 </CardContent>
               </Card>
