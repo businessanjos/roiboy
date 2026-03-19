@@ -984,44 +984,54 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     }
   };
 
-  // Send file with optional comment
+  // Send files with optional comment
   const sendFileWithComment = async () => {
-    if (!filePreview || !currentUser || !clientId) return;
+    if (filePreviews.length === 0 || !currentUser || !clientId) return;
     
     setUploading(true);
     try {
-      const fileData = await uploadFile(filePreview.file);
-      
-      const { data: newFollowup, error } = await supabase
-        .from("client_followups")
-        .insert({
+      // Upload all files and create followup entries
+      const insertRows = [];
+      for (const fp of filePreviews) {
+        const fileData = await uploadFile(fp.file);
+        insertRows.push({
           account_id: currentUser.account_id!,
           client_id: clientId,
           user_id: currentUser.id,
-          type: filePreview.type,
-          content: comment.trim() || null,
+          type: fp.type,
+          content: insertRows.length === 0 ? (comment.trim() || null) : null, // comment only on first
           file_url: fileData.url,
           file_name: fileData.name,
           file_size: fileData.size,
-        })
-        .select("id")
-        .single();
+        });
+      }
+
+      const { data: newFollowups, error } = await supabase
+        .from("client_followups")
+        .insert(insertRows)
+        .select("id");
 
       if (error) throw error;
       
-      // Create notifications for mentioned users
-      if (mentionedUsers.length > 0 && newFollowup) {
-        await createNotificationsWithAnchor(mentionedUsers.map((u) => u.id), comment.trim(), newFollowup.id);
+      // Create notifications for mentioned users (use first followup)
+      if (mentionedUsers.length > 0 && newFollowups?.[0]) {
+        await createNotificationsWithAnchor(mentionedUsers.map((u) => u.id), comment.trim(), newFollowups[0].id);
       }
       
-      toast.success(filePreview.type === "image" ? "Imagem enviada!" : "Arquivo enviado!");
+      const imageCount = filePreviews.filter(f => f.type === "image").length;
+      const fileCount = filePreviews.filter(f => f.type === "file").length;
+      const parts = [];
+      if (imageCount > 0) parts.push(`${imageCount} ${imageCount === 1 ? "imagem enviada" : "imagens enviadas"}`);
+      if (fileCount > 0) parts.push(`${fileCount} ${fileCount === 1 ? "arquivo enviado" : "arquivos enviados"}`);
+      toast.success(parts.join(" e ") + "!");
+      
       discardFilePreview();
       setComment("");
       setMentionedUsers([]);
       onCommentAdded?.();
     } catch (error: any) {
-      console.error("Error sending file:", error);
-      toast.error(error?.message || "Erro ao enviar arquivo");
+      console.error("Error sending files:", error);
+      toast.error(error?.message || "Erro ao enviar arquivos");
     } finally {
       setUploading(false);
     }
