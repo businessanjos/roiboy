@@ -78,12 +78,34 @@ serve(async (req) => {
 
     const accountId = auth.accountId!;
 
-    // Auto-assign first stage (lowest display_order)
+    // Find Closer pipeline (default for traffic/API leads)
+    const { data: closerPipeline } = await supabase
+      .from("pipelines")
+      .select("id")
+      .eq("account_id", accountId)
+      .eq("is_active", true)
+      .ilike("name", "%closer%")
+      .limit(1)
+      .maybeSingle();
+
+    // Fallback to first active pipeline if Closer not found
+    const targetPipelineId = closerPipeline?.id || (await supabase
+      .from("pipelines")
+      .select("id")
+      .eq("account_id", accountId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle()
+    ).data?.id;
+
+    // Auto-assign first stage of the target pipeline
     const { data: firstStage } = await supabase
       .from("deal_stages")
       .select("id")
       .eq("account_id", accountId)
       .eq("is_active", true)
+      .eq("pipeline_id", targetPipelineId)
       .order("display_order", { ascending: true })
       .limit(1)
       .maybeSingle();
@@ -96,6 +118,7 @@ serve(async (req) => {
       .from("deals")
       .insert({
         account_id: accountId,
+        pipeline_id: targetPipelineId || null,
         title: payload.title.trim(),
         lead_id: payload.lead_id || null,
         contact_name: payload.contact_name?.trim() || null,
@@ -109,7 +132,7 @@ serve(async (req) => {
         status: "open",
         responsible_user_id: payload.responsible_user_id || null,
       })
-      .select("id, title, lead_id, status, stage_id")
+      .select("id, title, lead_id, status, stage_id, pipeline_id")
       .single();
 
     if (insertError) {
