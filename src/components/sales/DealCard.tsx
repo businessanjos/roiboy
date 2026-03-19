@@ -164,13 +164,13 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
       onClick={onClick}
     >
       {/* Activity Status Indicator - Positioned on right center */}
-      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+      <div className="absolute right-1.5 sm:right-2 top-2 sm:top-1/2 sm:-translate-y-1/2 flex items-center gap-1">
         <span className={cn(
-          "h-3 w-3 rounded-full",
+          "h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full",
           statusIndicator.bgColor
         )} />
         <span className={cn(
-          "text-xs font-medium",
+          "text-[9px] sm:text-xs font-medium hidden sm:inline",
           statusIndicator.textColor
         )}>
           {statusIndicator.label}

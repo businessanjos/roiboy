@@ -103,15 +103,15 @@ export function SalesTeamTab() {
 
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="grid grid-cols-4 gap-4">
+      <div className="space-y-3 sm:space-y-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-24" />
+            <Skeleton key={i} className="h-20 sm:h-24" />
           ))}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-64" />
+            <Skeleton key={i} className="h-56 sm:h-64" />
           ))}
         </div>
       </div>
@@ -119,17 +119,17 @@ export function SalesTeamTab() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
         <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-muted-foreground" />
-          <h2 className="font-semibold">Equipe de Vendas</h2>
-          <Badge variant="secondary">{metrics.length} vendedores</Badge>
+          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+          <h2 className="font-semibold text-sm sm:text-base">Equipe de Vendas</h2>
+          <Badge variant="secondary" className="text-[10px] sm:text-xs">{metrics.length} vendedores</Badge>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           <Select value={period} onValueChange={(v) => setPeriod(v as PeriodOption)}>
-            <SelectTrigger className="w-[160px] h-9">
+            <SelectTrigger className="w-[140px] sm:w-[160px] h-8 sm:h-9 text-xs sm:text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -144,8 +144,8 @@ export function SalesTeamTab() {
             <div className="flex items-center gap-1.5">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className={cn("h-9 gap-1.5 text-xs", !customStart && "text-muted-foreground")}>
-                    <CalendarIcon className="h-3.5 w-3.5" />
+                  <Button variant="outline" size="sm" className={cn("h-8 sm:h-9 gap-1 sm:gap-1.5 text-xs", !customStart && "text-muted-foreground")}>
+                    <CalendarIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     {customStart ? format(customStart, "dd/MM/yy") : "Início"}
                   </Button>
                 </PopoverTrigger>
@@ -164,8 +164,8 @@ export function SalesTeamTab() {
               <span className="text-xs text-muted-foreground">até</span>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className={cn("h-9 gap-1.5 text-xs", !customEnd && "text-muted-foreground")}>
-                    <CalendarIcon className="h-3.5 w-3.5" />
+                  <Button variant="outline" size="sm" className={cn("h-8 sm:h-9 gap-1 sm:gap-1.5 text-xs", !customEnd && "text-muted-foreground")}>
+                    <CalendarIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     {customEnd ? format(customEnd, "dd/MM/yy") : "Fim"}
                   </Button>
                 </PopoverTrigger>
@@ -183,23 +183,23 @@ export function SalesTeamTab() {
               </Popover>
             </div>
           )}
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4" />
+          <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={() => refetch()}>
+            <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-blue-500/10">
-                <Phone className="h-5 w-5 text-blue-500" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-blue-500/10">
+                <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{totals.total_calls}</p>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">{totals.total_calls}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                   Ligações ({formatDuration(totals.total_call_duration)})
                 </p>
               </div>
@@ -208,14 +208,14 @@ export function SalesTeamTab() {
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-purple-500/10">
-                <Target className="h-5 w-5 text-purple-500" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-purple-500/10">
+                <Target className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{totals.total_deals}</p>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">{totals.total_deals}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                   Pipeline: {formatCurrency(totals.pipeline_value)}
                 </p>
               </div>
@@ -224,14 +224,14 @@ export function SalesTeamTab() {
         </Card>
 
         <Card className="bg-emerald-500/5 border-emerald-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-emerald-500/10">
-                <Trophy className="h-5 w-5 text-emerald-500" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-emerald-500/10">
+                <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-emerald-600">{totals.won_deals}</p>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-emerald-600">{totals.won_deals}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                   Ganhos: {formatCurrency(totals.won_value)}
                 </p>
               </div>
@@ -240,14 +240,14 @@ export function SalesTeamTab() {
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-amber-500/10">
-                <CheckCircle2 className="h-5 w-5 text-amber-500" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-amber-500/10">
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{totals.completed_tasks}</p>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">{totals.completed_tasks}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                   Tarefas concluídas
                 </p>
               </div>
@@ -259,16 +259,16 @@ export function SalesTeamTab() {
       {/* Team Grid */}
       {metrics.length === 0 ? (
         <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="font-medium">Nenhuma atividade no período</p>
-            <p className="text-sm mt-1">
+          <CardContent className="p-6 sm:p-8 text-center text-muted-foreground">
+            <Users className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
+            <p className="font-medium text-sm sm:text-base">Nenhuma atividade no período</p>
+            <p className="text-xs sm:text-sm mt-1">
               Os vendedores aparecerão aqui quando tiverem ligações, negócios ou tarefas registradas.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {metrics.map((rep) => (
             <SalesRepCard
               key={rep.user_id}

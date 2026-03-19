@@ -285,8 +285,8 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
         onDragEnd={handleDragEnd}
         measuring={measuring}
       >
-        <div className="w-full h-[calc(100vh-220px)] overflow-x-auto">
-          <div className="flex gap-3 h-full min-w-max pr-4">
+        <div className="w-full h-[calc(100vh-280px)] sm:h-[calc(100vh-220px)] overflow-x-auto -mx-1 px-1">
+          <div className="flex gap-2 sm:gap-3 h-full min-w-max pr-2 sm:pr-4">
             {stages.map((stage, index) => (
               <DealKanbanColumn
                 key={stage.id}

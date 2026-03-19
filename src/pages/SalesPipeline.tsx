@@ -810,19 +810,19 @@ export default function SalesPipeline() {
 
   if (loading || stagesLoading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
         <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-8 w-36 sm:w-48" />
+          <Skeleton className="h-8 sm:h-10 w-24 sm:w-32" />
         </div>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-24" />
+            <Skeleton key={i} className="h-20 sm:h-24" />
           ))}
         </div>
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-[500px] w-[300px] flex-shrink-0" />
+        <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-[400px] sm:h-[500px] w-[200px] sm:w-[300px] flex-shrink-0" />
           ))}
         </div>
       </div>
@@ -831,123 +831,128 @@ export default function SalesPipeline() {
 
   return (
     <>
-      <div className="p-4 space-y-4">
+      <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-xl font-bold">Comercial</h1>
-              <p className="text-muted-foreground text-xs">
-                Gerencie prospecção e negociações
-              </p>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl font-bold">Comercial</h1>
+                <p className="text-muted-foreground text-xs hidden sm:block">
+                  Gerencie prospecção e negociações
+                </p>
+              </div>
+              {mainTab === 'pipeline' && (
+                <PipelineSelector
+                  pipelines={pipelines}
+                  activePipelineId={activePipelineId}
+                  onSelect={setActivePipelineId}
+                  onCreate={createPipeline}
+                  onUpdate={updatePipeline}
+                  onDelete={deletePipeline}
+                />
+              )}
             </div>
-            {mainTab === 'pipeline' && (
-              <PipelineSelector
-                pipelines={pipelines}
-                activePipelineId={activePipelineId}
-                onSelect={setActivePipelineId}
-                onCreate={createPipeline}
-                onUpdate={updatePipeline}
-                onDelete={deletePipeline}
-              />
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {mainTab === 'pipeline' && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsStagesManagerOpen(true)}
-                >
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Etapas
-                </Button>
-                {isAdmin && (
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              {mainTab === 'pipeline' && (
+                <>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsFieldsDialogOpen(true)}
+                    className="h-8 sm:h-9 px-2 sm:px-3"
+                    onClick={() => setIsStagesManagerOpen(true)}
                   >
-                    <Settings2 className="h-4 w-4 mr-2" />
-                    Campos
+                    <Settings2 className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Etapas</span>
                   </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsExportDialogOpen(true)}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar
-                </Button>
-                <div className="flex items-center border rounded-lg overflow-hidden">
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 sm:h-9 px-2 sm:px-3"
+                      onClick={() => setIsFieldsDialogOpen(true)}
+                    >
+                      <Settings2 className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Campos</span>
+                    </Button>
+                  )}
                   <Button
-                    variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                    variant="outline"
                     size="sm"
-                    className="rounded-none"
-                    onClick={() => setViewMode('kanban')}
+                    className="h-8 sm:h-9 px-2 sm:px-3"
+                    onClick={() => setIsExportDialogOpen(true)}
                   >
-                    <LayoutGrid className="h-4 w-4" />
+                    <Download className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Exportar</span>
                   </Button>
-                  <Button
-                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="rounded-none"
-                    onClick={() => setViewMode('list')}
-                  >
-                    <List className="h-4 w-4" />
+                  <div className="hidden sm:flex items-center border rounded-lg overflow-hidden">
+                    <Button
+                      variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="rounded-none"
+                      onClick={() => setViewMode('kanban')}
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="rounded-none"
+                      onClick={() => setViewMode('list')}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button size="sm" className="h-8 sm:h-9 px-2 sm:px-3" onClick={() => setIsNewDealOpen(true)}>
+                    <Plus className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Nova Negociação</span>
                   </Button>
-                </div>
-                <Button onClick={() => setIsNewDealOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Negociação
-                </Button>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Main Tabs */}
         <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}>
-          <TabsList>
-            <TabsTrigger value="prospeccao" className="gap-2">
-              <Users className="h-4 w-4" />
+          <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:flex">
+            <TabsTrigger value="prospeccao" className="gap-1.5 text-xs sm:text-sm">
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Prospecção
-              <Badge variant="secondary">{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
+              <Badge variant="secondary" className="text-[10px] sm:text-xs">{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="pipeline" className="gap-2">
-              <Target className="h-4 w-4" />
+            <TabsTrigger value="pipeline" className="gap-1.5 text-xs sm:text-sm">
+              <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Pipeline
-              <Badge variant="secondary">{openDeals.length}</Badge>
+              <Badge variant="secondary" className="text-[10px] sm:text-xs">{openDeals.length}</Badge>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="prospeccao" className="mt-4">
+          <TabsContent value="prospeccao" className="mt-3 sm:mt-4">
             <LeadsTab />
           </TabsContent>
 
-          <TabsContent value="pipeline" className="mt-4 space-y-4">
-            {/* Tag Filter and Tabs */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <TabsContent value="pipeline" className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
+            {/* Sub-tabs and Filters */}
+            <div className="space-y-2 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-3">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
-                <TabsList>
-                  <TabsTrigger value="open" className="gap-2">
-                    <TrendingUp className="h-4 w-4" />
-                    Em Aberto
-                    <Badge variant="secondary">{filteredOpenDeals.length}</Badge>
+                <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
+                  <TabsTrigger value="open" className="gap-1 text-xs sm:text-sm sm:gap-2">
+                    <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="hidden xs:inline">Em </span>Aberto
+                    <Badge variant="secondary" className="text-[10px] sm:text-xs">{filteredOpenDeals.length}</Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="won" className="gap-2">
-                    <Trophy className="h-4 w-4" />
+                  <TabsTrigger value="won" className="gap-1 text-xs sm:text-sm sm:gap-2">
+                    <Trophy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     Ganhas
-                    <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-700">
+                    <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-700 text-[10px] sm:text-xs">
                       {filteredWonDeals.length}
                     </Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="lost" className="gap-2">
-                    <XCircle className="h-4 w-4" />
+                  <TabsTrigger value="lost" className="gap-1 text-xs sm:text-sm sm:gap-2">
+                    <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     Perdidas
-                    <Badge variant="secondary" className="bg-red-500/20 text-red-700">
+                    <Badge variant="secondary" className="bg-red-500/20 text-red-700 text-[10px] sm:text-xs">
                       {filteredLostDeals.length}
                     </Badge>
                   </TabsTrigger>
@@ -955,7 +960,7 @@ export default function SalesPipeline() {
               </Tabs>
 
               {/* Filters */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 {/* Unified Filter Button */}
                 <PipelineFilterButton
                   salesUsers={salesUsers}
@@ -966,13 +971,13 @@ export default function SalesPipeline() {
                 />
                 
                 {/* Search bar */}
-                <div className="relative">
+                <div className="relative flex-1 sm:flex-initial">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar nome ou telefone..."
+                    placeholder="Buscar..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 h-9 w-[220px] bg-background border-border"
+                    className="pl-9 h-9 w-full sm:w-[220px] bg-background border-border"
                   />
                 </div>
               </div>
@@ -996,20 +1001,20 @@ export default function SalesPipeline() {
                 )}
               </TabsContent>
 
-              <TabsContent value="won" className="mt-0 space-y-4">
+              <TabsContent value="won" className="mt-0 space-y-3 sm:space-y-4">
                 {/* Summary and Month Filter */}
-                <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 sm:p-4">
                   <div className="flex items-center gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Total de Ganhas</p>
-                      <p className="text-2xl font-bold text-emerald-600">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Total de Ganhas</p>
+                      <p className="text-lg sm:text-2xl font-bold text-emerald-600">
                         {formatCurrency(filteredWonTotal)}
                       </p>
                     </div>
-                    <div className="h-10 w-px bg-emerald-500/20" />
+                    <div className="h-8 sm:h-10 w-px bg-emerald-500/20" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Negócios</p>
-                      <p className="text-xl font-semibold">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Negócios</p>
+                      <p className="text-lg sm:text-xl font-semibold">
                         {filteredWonDealsByMonth.length}
                       </p>
                     </div>
@@ -1017,7 +1022,7 @@ export default function SalesPipeline() {
                   
                   {/* Month Filter */}
                   <Select value={wonMonthFilter} onValueChange={setWonMonthFilter}>
-                    <SelectTrigger className="w-[200px] bg-background">
+                    <SelectTrigger className="w-full sm:w-[200px] bg-background">
                       <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                       <SelectValue placeholder="Todos os meses" />
                     </SelectTrigger>
@@ -1040,20 +1045,20 @@ export default function SalesPipeline() {
                 />
               </TabsContent>
 
-              <TabsContent value="lost" className="mt-0 space-y-4">
+              <TabsContent value="lost" className="mt-0 space-y-3 sm:space-y-4">
                 {/* Summary and Month Filter - Red Style */}
-                <div className="flex items-center justify-between bg-red-500/10 border border-red-500/20 rounded-lg p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-red-500/10 border border-red-500/20 rounded-lg p-3 sm:p-4">
                   <div className="flex items-center gap-4">
                     <div>
-                      <p className="text-sm text-muted-foreground">Total de Perdidas</p>
-                      <p className="text-2xl font-bold text-red-600">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Total de Perdidas</p>
+                      <p className="text-lg sm:text-2xl font-bold text-red-600">
                         {formatCurrency(filteredLostTotal)}
                       </p>
                     </div>
-                    <div className="h-10 w-px bg-red-500/20" />
+                    <div className="h-8 sm:h-10 w-px bg-red-500/20" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Negócios</p>
-                      <p className="text-xl font-semibold">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Negócios</p>
+                      <p className="text-lg sm:text-xl font-semibold">
                         {filteredLostDealsByMonth.length}
                       </p>
                     </div>
@@ -1061,7 +1066,7 @@ export default function SalesPipeline() {
                   
                   {/* Month Filter */}
                   <Select value={lostMonthFilter} onValueChange={setLostMonthFilter}>
-                    <SelectTrigger className="w-[200px] bg-background">
+                    <SelectTrigger className="w-full sm:w-[200px] bg-background">
                       <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                       <SelectValue placeholder="Todos os meses" />
                     </SelectTrigger>
@@ -1239,14 +1244,14 @@ function DealListView({
             return (
               <div
                 key={deal.id}
-                className="p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                className="p-3 sm:p-4 hover:bg-muted/50 cursor-pointer transition-colors"
                 onClick={() => onDealClick(deal)}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
                       <AvatarImage src={deal.responsible_user?.avatar_url || undefined} />
-                      <AvatarFallback className="bg-primary/10 text-primary">
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm">
                         {deal.responsible_user?.name
                           ?.split(" ")
                           .map(n => n[0])
@@ -1256,20 +1261,21 @@ function DealListView({
                       </AvatarFallback>
                     </Avatar>
                     <div
-                      className="w-2 h-8 rounded-full"
+                      className="w-1.5 sm:w-2 h-7 sm:h-8 rounded-full flex-shrink-0"
                       style={{ backgroundColor: stage?.color || '#6b7280' }}
                     />
-                    <div>
-                      <p className="font-medium">{deal.title}</p>
-                      <p className="text-sm text-muted-foreground">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm sm:text-base truncate">{deal.title}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">
                         {deal.client?.full_name || deal.lead?.full_name || deal.contact_name || 'Sem contato'}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 sm:gap-4 ml-[42px] sm:ml-0 flex-wrap">
                     {stage && (
                       <Badge
                         variant="outline"
+                        className="text-[10px] sm:text-xs"
                         style={{ 
                           borderColor: stage.color,
                           color: stage.color,
@@ -1281,21 +1287,21 @@ function DealListView({
                     {showStatus && (
                       <Badge
                         variant={deal.status === 'won' ? 'default' : 'destructive'}
-                        className={deal.status === 'won' ? 'bg-emerald-500' : ''}
+                        className={cn("text-[10px] sm:text-xs", deal.status === 'won' ? 'bg-emerald-500' : '')}
                       >
                         {deal.status === 'won' ? 'Ganha' : 'Perdida'}
                       </Badge>
                     )}
                     {/* Won date - shown only for won deals */}
                     {deal.status === 'won' && deal.won_at && (
-                      <div className="flex items-center gap-1 text-sm text-emerald-600">
-                        <Calendar className="h-3.5 w-3.5" />
+                      <div className="flex items-center gap-1 text-xs sm:text-sm text-emerald-600">
+                        <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         <span>
                           {new Date(deal.won_at).toLocaleDateString('pt-BR')}
                         </span>
                       </div>
                     )}
-                    <span className="font-semibold">
+                    <span className="font-semibold text-sm sm:text-base ml-auto sm:ml-0">
                       {formatCurrency(deal.value)}
                     </span>
                   </div>
@@ -1303,10 +1309,10 @@ function DealListView({
                 
                 {/* Loss Reason - shown only for lost deals */}
                 {deal.status === 'lost' && deal.lost_reason && (
-                  <div className="mt-3 ml-[52px]">
+                  <div className="mt-2 sm:mt-3 ml-[42px] sm:ml-[52px]">
                     <div 
                       className={cn(
-                        "text-xs text-muted-foreground bg-destructive/10 rounded px-2.5 py-2 border border-destructive/20",
+                        "text-xs text-muted-foreground bg-destructive/10 rounded px-2 sm:px-2.5 py-1.5 sm:py-2 border border-destructive/20",
                         !isExpanded && "line-clamp-1"
                       )}
                     >
@@ -1319,7 +1325,7 @@ function DealListView({
                           e.stopPropagation();
                           toggleExpanded(deal.id);
                         }}
-                        className="text-xs text-muted-foreground hover:text-foreground mt-1.5 hover:underline"
+                        className="text-xs text-muted-foreground hover:text-foreground mt-1 sm:mt-1.5 hover:underline"
                       >
                         {isExpanded ? "Ver menos" : "Ver mais"}
                       </button>
