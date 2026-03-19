@@ -1374,37 +1374,32 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            {/* File preview (image or document) */}
-            {filePreview && (
-              <div className="flex items-center gap-3 p-3 mb-2 bg-muted/50 rounded-lg border">
-                {filePreview.type === "image" && filePreview.url ? (
-                  <img 
-                    src={filePreview.url} 
-                    alt="Preview" 
-                    className="h-16 w-16 object-cover rounded"
-                  />
-                ) : (
-                  <div className="h-16 w-16 flex items-center justify-center bg-primary/10 rounded">
-                    <FileText className="h-6 w-6 text-primary" />
+            {/* File previews (multiple files) */}
+            {filePreviews.length > 0 && (
+              <div className="flex flex-wrap gap-2 p-2 mb-2 bg-muted/50 rounded-lg border">
+                {filePreviews.map((fp, idx) => (
+                  <div key={idx} className="relative group">
+                    {fp.type === "image" && fp.url ? (
+                      <img src={fp.url} alt="Preview" className="h-16 w-16 object-cover rounded" />
+                    ) : (
+                      <div className="h-16 w-16 flex flex-col items-center justify-center bg-primary/10 rounded">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <span className="text-[9px] text-muted-foreground mt-0.5 truncate max-w-[56px]">{fp.file.name.split('.').pop()}</span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => discardFilePreview(idx)}
+                      disabled={uploading}
+                      className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">
-                    {filePreview.type === "image" ? "Imagem pronta para envio" : "Arquivo pronto para envio"}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {filePreview.file.name} · {formatFileSize(filePreview.file.size)}
-                  </p>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={discardFilePreview}
-                  disabled={uploading}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                ))}
+                <p className="w-full text-xs text-muted-foreground">
+                  {filePreviews.length} {filePreviews.length === 1 ? "arquivo pronto" : "arquivos prontos"} para envio
+                </p>
               </div>
             )}
             
