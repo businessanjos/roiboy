@@ -1317,7 +1317,7 @@ export default function ClientDetail() {
             };
             const updated = [newEvent, ...prev.filter(e => e.id !== followup.id)];
             updated.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-            return updated.slice(0, 50);
+            return updated;
           });
         }
       )
