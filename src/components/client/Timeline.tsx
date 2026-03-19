@@ -1133,19 +1133,25 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     };
   };
 
-  // Handle file selection from input - now sets preview instead of immediate upload
+  // Handle file selection from input - supports multiple files
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "file") => {
-    const file = e.target.files?.[0];
-    if (!file || !currentUser || !clientId) return;
+    const files = e.target.files;
+    if (!files || files.length === 0 || !currentUser || !clientId) return;
 
-    // Validate max file size (100MB)
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo 100MB.");
-      return;
+    const newFiles: { file: File; url: string; type: "image" | "file" }[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > 100 * 1024 * 1024) {
+        toast.error(`${file.name}: muito grande. Máximo 100MB.`);
+        continue;
+      }
+      const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : "";
+      newFiles.push({ file, url: previewUrl, type });
     }
-
-    const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : "";
-    setFilePreview({ file, url: previewUrl, type });
+    
+    if (newFiles.length > 0) {
+      setFilePreviews(prev => [...prev, ...newFiles]);
+    }
     
     // Clear input so same file can be re-selected
     if (type === "image" && imageInputRef.current) imageInputRef.current.value = "";
