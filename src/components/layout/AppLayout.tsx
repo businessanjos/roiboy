@@ -22,6 +22,8 @@ export function AppLayout() {
   const { open: searchOpen, setOpen: setSearchOpen } = useGlobalSearch();
   const { helpOpen, setHelpOpen } = useKeyboardShortcuts();
   const [loadingTimeout, setLoadingTimeout] = useState(false);
+  const location = useLocation();
+  const isInVendas = routeBelongsToSector(location.pathname, "vendas");
 
   const isLoading = authLoading || subLoading;
 
