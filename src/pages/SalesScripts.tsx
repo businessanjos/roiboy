@@ -96,7 +96,8 @@ export default function SalesScripts() {
   const [transcriptText, setTranscriptText] = useState('');
   const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
   const [transcriptAnalysis, setTranscriptAnalysis] = useState<string | null>(null);
-  const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string } | null>(null);
+  const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
+  const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string; deal_id?: string | null; deal_name?: string | null } | null>(null);
   const [deleteAnalysisDialog, setDeleteAnalysisDialog] = useState<{ id: string; created_at: string } | null>(null);
 
   // Queries
