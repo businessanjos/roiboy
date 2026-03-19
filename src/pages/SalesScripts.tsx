@@ -289,12 +289,26 @@ export default function SalesScripts() {
           <div className="space-y-6">
             <div><h2 className="text-lg font-semibold mb-1">Análise de Calls de Vendas</h2><p className="text-sm text-muted-foreground">Envie transcrições para identificar objeções, erros e melhorias</p></div>
             <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Mic className="w-5 h-5 text-primary" />Transcrição da Call</CardTitle></CardHeader><CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Vincular a um card do pipeline (opcional)</Label>
+                <Select value={selectedDealId || 'none'} onValueChange={v => setSelectedDealId(v === 'none' ? null : v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione um card..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum (sem vínculo)</SelectItem>
+                    {deals.map((d: any) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.title}{d.lead?.full_name ? ` — ${d.lead.full_name}` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="border border-dashed border-border rounded-lg p-4">{transcriptFile ? (<div className="flex items-center justify-between"><div className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /><span className="text-sm truncate">{transcriptFile.name}</span></div><Button variant="ghost" size="sm" onClick={() => setTranscriptFile(null)}><Trash2 className="w-4 h-4" /></Button></div>) : (<label htmlFor="transcript-file" className="flex flex-col items-center gap-2 cursor-pointer py-2"><Upload className="w-8 h-8 text-muted-foreground" /><span className="text-sm text-muted-foreground">Clique para enviar</span><span className="text-xs text-muted-foreground">TXT, PDF, Word</span><input id="transcript-file" type="file" className="hidden" accept=".txt,.pdf,.doc,.docx" onChange={e => { if (e.target.files?.[0]) setTranscriptFile(e.target.files[0]); }} /></label>)}</div>
               <Textarea placeholder="Ou cole a transcrição aqui..." value={transcriptText} onChange={e => setTranscriptText(e.target.value)} className="min-h-[200px] font-mono text-sm" />
               <Button onClick={() => analyzeTranscriptMutation.mutate()} disabled={analyzeTranscriptMutation.isPending || (!transcriptText.trim() && !transcriptFile)} className="w-full">{analyzeTranscriptMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analisando...</> : <><BarChart3 className="w-4 h-4 mr-2" />Analisar Call</>}</Button>
             </CardContent></Card>
             {transcriptAnalysis && <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-primary" />Resultado da Análise</CardTitle></CardHeader><CardContent><MarkdownRenderer content={transcriptAnalysis} /><div className="flex gap-2 mt-4"><Button variant="outline" size="sm" onClick={() => handleCopy(transcriptAnalysis)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" onClick={() => exportSalesCallToPDF({ analysis: transcriptAnalysis, createdAt: new Date().toISOString() })}><Download className="w-4 h-4 mr-2" />PDF</Button></div></CardContent></Card>}
-            {savedAnalyses.length > 0 && <div><h3 className="text-base font-semibold mb-3">Análises Salvas ({savedAnalyses.length})</h3><div className="space-y-2">{savedAnalyses.map(a => (<Card key={a.id} className="cursor-pointer hover:border-primary/30" onClick={() => setViewingAnalysis(a)}><CardContent className="p-4 flex items-center justify-between"><div className="flex-1 min-w-0"><p className="text-sm font-medium">{new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>{a.transcript_preview && <p className="text-xs text-muted-foreground truncate mt-1">{a.transcript_preview}</p>}</div><div className="flex gap-1" onClick={e => e.stopPropagation()}><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteAnalysisDialog(a)}><Trash2 className="w-4 h-4" /></Button></div></CardContent></Card>))}</div></div>}
+            {savedAnalyses.length > 0 && <div><h3 className="text-base font-semibold mb-3">Análises Salvas ({savedAnalyses.length})</h3><div className="space-y-2">{savedAnalyses.map(a => (<Card key={a.id} className="cursor-pointer hover:border-primary/30" onClick={() => setViewingAnalysis(a)}><CardContent className="p-4 flex items-center justify-between"><div className="flex-1 min-w-0"><p className="text-sm font-medium">{new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>{a.deal_name && <Badge variant="secondary" className="text-xs mt-1"><Target className="w-3 h-3 mr-1" />{a.deal_name}</Badge>}{a.transcript_preview && <p className="text-xs text-muted-foreground truncate mt-1">{a.transcript_preview}</p>}</div><div className="flex gap-1" onClick={e => e.stopPropagation()}><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteAnalysisDialog(a)}><Trash2 className="w-4 h-4" /></Button></div></CardContent></Card>))}</div></div>}
           </div>
         </TabsContent>
 
