@@ -916,6 +916,11 @@ export function IntegrationsContent() {
               )}
             </CardContent>
           </Card>
+
+          {/* Agent Extension Config - visible when 3C Plus is connected */}
+          {threeCPlusIntegration?.status === "connected" && (
+            <ThreeCPlusAgentConfig />
+          )}
         </TabsContent>
 
         {/* Omie Tab */}
