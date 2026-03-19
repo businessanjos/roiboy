@@ -22,6 +22,7 @@ import {
 import { WhatsAppIntegrationCard } from "@/components/integrations/WhatsAppIntegrationCard";
 import { WhatsAppSectorManager } from "@/components/integrations/WhatsAppSectorManager";
 import { WebhooksTab } from "./webhooks/WebhooksTab";
+import { ThreeCPlusAgentConfig } from "./ThreeCPlusAgentConfig";
 import { OmieIntegrationTab } from "./OmieIntegrationTab";
 
 import type { Tables } from "@/integrations/supabase/types";
@@ -915,6 +916,11 @@ export function IntegrationsContent() {
               )}
             </CardContent>
           </Card>
+
+          {/* Agent Extension Config - visible when 3C Plus is connected */}
+          {threeCPlusIntegration?.status === "connected" && (
+            <ThreeCPlusAgentConfig />
+          )}
         </TabsContent>
 
         {/* Omie Tab */}
