@@ -19,19 +19,19 @@ function lazyRetry<T extends ComponentType<any>>(
   factory: () => Promise<{ default: T }>,
   retries = 2
 ): React.LazyExoticComponent<T> {
-  return lazy(() =>
+  const retryFactory = (attempt: number): Promise<{ default: T }> =>
     factory().catch((err) => {
-      if (retries > 0) {
-        // Force reload from server on chunk load failure
+      if (attempt > 0) {
         return new Promise<{ default: T }>((resolve) => {
-          setTimeout(() => resolve(lazyRetry(factory, retries - 1) as any), 500);
+          setTimeout(() => resolve(retryFactory(attempt - 1)), 500);
         });
       }
       // Last resort: full page reload to get fresh asset manifest
       window.location.reload();
       return factory();
-    })
-  );
+    });
+
+  return lazy(() => retryFactory(retries));
 }
 
 // Eager loaded pages (critical for UX)
