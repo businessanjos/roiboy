@@ -762,8 +762,8 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
-  // File preview state (supports both images and documents)
-  const [filePreview, setFilePreview] = useState<{ file: File; url: string; type: "image" | "file" } | null>(null);
+  // File preview state (supports multiple files)
+  const [filePreviews, setFilePreviews] = useState<{ file: File; url: string; type: "image" | "file" }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   // Track mentioned users from MentionTextarea callback (IDs are reliable, not regex-based)
   const [mentionedUsers, setMentionedUsers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
@@ -905,7 +905,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (filePreview) {
+      if (filePreviews.length > 0) {
         sendFileWithComment();
       } else {
         handleSubmitComment();
@@ -918,22 +918,24 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     const items = e.clipboardData?.items;
     if (!items) return;
     
+    const newFiles: { file: File; url: string; type: "image" | "file" }[] = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.type.startsWith("image/")) {
         e.preventDefault();
         const file = item.getAsFile();
         if (file) {
-          // Validate max file size (100MB)
           if (file.size > 100 * 1024 * 1024) {
             toast.error("Imagem muito grande. Máximo 100MB.");
-            return;
+            continue;
           }
           const previewUrl = URL.createObjectURL(file);
-          setFilePreview({ file, url: previewUrl, type: "image" });
+          newFiles.push({ file, url: previewUrl, type: "image" });
         }
-        break;
       }
+    }
+    if (newFiles.length > 0) {
+      setFilePreviews(prev => [...prev, ...newFiles]);
     }
   };
 
@@ -952,63 +954,84 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     e.preventDefault();
     setIsDragging(false);
     
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith("image/")) {
+    const files = Array.from(e.dataTransfer.files);
+    const newFiles: { file: File; url: string; type: "image" | "file" }[] = [];
+    for (const file of files) {
       if (file.size > 100 * 1024 * 1024) {
-        toast.error("Imagem muito grande. Máximo 100MB.");
-        return;
+        toast.error(`${file.name}: muito grande. Máximo 100MB.`);
+        continue;
       }
-      const previewUrl = URL.createObjectURL(file);
-      setFilePreview({ file, url: previewUrl, type: "image" });
+      const isImage = file.type.startsWith("image/");
+      const previewUrl = isImage ? URL.createObjectURL(file) : "";
+      newFiles.push({ file, url: previewUrl, type: isImage ? "image" : "file" });
+    }
+    if (newFiles.length > 0) {
+      setFilePreviews(prev => [...prev, ...newFiles]);
     }
   };
 
-  // Discard file preview
-  const discardFilePreview = () => {
-    if (filePreview) {
-      URL.revokeObjectURL(filePreview.url);
+  // Discard file preview - single or all
+  const discardFilePreview = (index?: number) => {
+    if (index !== undefined) {
+      setFilePreviews(prev => {
+        const item = prev[index];
+        if (item?.url) URL.revokeObjectURL(item.url);
+        return prev.filter((_, i) => i !== index);
+      });
+    } else {
+      filePreviews.forEach(fp => { if (fp.url) URL.revokeObjectURL(fp.url); });
+      setFilePreviews([]);
     }
-    setFilePreview(null);
   };
 
-  // Send file with optional comment
+  // Send files with optional comment
   const sendFileWithComment = async () => {
-    if (!filePreview || !currentUser || !clientId) return;
+    if (filePreviews.length === 0 || !currentUser || !clientId) return;
     
     setUploading(true);
     try {
-      const fileData = await uploadFile(filePreview.file);
-      
-      const { data: newFollowup, error } = await supabase
-        .from("client_followups")
-        .insert({
+      // Upload all files and create followup entries
+      const insertRows = [];
+      for (const fp of filePreviews) {
+        const fileData = await uploadFile(fp.file);
+        insertRows.push({
           account_id: currentUser.account_id!,
           client_id: clientId,
           user_id: currentUser.id,
-          type: filePreview.type,
-          content: comment.trim() || null,
+          type: fp.type,
+          content: insertRows.length === 0 ? (comment.trim() || null) : null, // comment only on first
           file_url: fileData.url,
           file_name: fileData.name,
           file_size: fileData.size,
-        })
-        .select("id")
-        .single();
+        });
+      }
+
+      const { data: newFollowups, error } = await supabase
+        .from("client_followups")
+        .insert(insertRows)
+        .select("id");
 
       if (error) throw error;
       
-      // Create notifications for mentioned users
-      if (mentionedUsers.length > 0 && newFollowup) {
-        await createNotificationsWithAnchor(mentionedUsers.map((u) => u.id), comment.trim(), newFollowup.id);
+      // Create notifications for mentioned users (use first followup)
+      if (mentionedUsers.length > 0 && newFollowups?.[0]) {
+        await createNotificationsWithAnchor(mentionedUsers.map((u) => u.id), comment.trim(), newFollowups[0].id);
       }
       
-      toast.success(filePreview.type === "image" ? "Imagem enviada!" : "Arquivo enviado!");
+      const imageCount = filePreviews.filter(f => f.type === "image").length;
+      const fileCount = filePreviews.filter(f => f.type === "file").length;
+      const parts = [];
+      if (imageCount > 0) parts.push(`${imageCount} ${imageCount === 1 ? "imagem enviada" : "imagens enviadas"}`);
+      if (fileCount > 0) parts.push(`${fileCount} ${fileCount === 1 ? "arquivo enviado" : "arquivos enviados"}`);
+      toast.success(parts.join(" e ") + "!");
+      
       discardFilePreview();
       setComment("");
       setMentionedUsers([]);
       onCommentAdded?.();
     } catch (error: any) {
-      console.error("Error sending file:", error);
-      toast.error(error?.message || "Erro ao enviar arquivo");
+      console.error("Error sending files:", error);
+      toast.error(error?.message || "Erro ao enviar arquivos");
     } finally {
       setUploading(false);
     }
@@ -1110,19 +1133,25 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     };
   };
 
-  // Handle file selection from input - now sets preview instead of immediate upload
+  // Handle file selection from input - supports multiple files
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, type: "image" | "file") => {
-    const file = e.target.files?.[0];
-    if (!file || !currentUser || !clientId) return;
+    const files = e.target.files;
+    if (!files || files.length === 0 || !currentUser || !clientId) return;
 
-    // Validate max file size (100MB)
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error("Arquivo muito grande. Máximo 100MB.");
-      return;
+    const newFiles: { file: File; url: string; type: "image" | "file" }[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      if (file.size > 100 * 1024 * 1024) {
+        toast.error(`${file.name}: muito grande. Máximo 100MB.`);
+        continue;
+      }
+      const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : "";
+      newFiles.push({ file, url: previewUrl, type });
     }
-
-    const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : "";
-    setFilePreview({ file, url: previewUrl, type });
+    
+    if (newFiles.length > 0) {
+      setFilePreviews(prev => [...prev, ...newFiles]);
+    }
     
     // Clear input so same file can be re-selected
     if (type === "image" && imageInputRef.current) imageInputRef.current.value = "";
@@ -1171,37 +1200,32 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
-              {/* File preview (image or document) */}
-              {filePreview && (
-                <div className="flex items-center gap-3 p-3 mb-2 bg-muted/50 rounded-lg border">
-                  {filePreview.type === "image" && filePreview.url ? (
-                    <img 
-                      src={filePreview.url} 
-                      alt="Preview" 
-                      className="h-16 w-16 object-cover rounded"
-                    />
-                  ) : (
-                    <div className="h-16 w-16 flex items-center justify-center bg-primary/10 rounded">
-                      <FileText className="h-6 w-6 text-primary" />
+              {/* File previews (multiple files) */}
+              {filePreviews.length > 0 && (
+                <div className="flex flex-wrap gap-2 p-2 mb-2 bg-muted/50 rounded-lg border">
+                  {filePreviews.map((fp, idx) => (
+                    <div key={idx} className="relative group">
+                      {fp.type === "image" && fp.url ? (
+                        <img src={fp.url} alt="Preview" className="h-16 w-16 object-cover rounded" />
+                      ) : (
+                        <div className="h-16 w-16 flex flex-col items-center justify-center bg-primary/10 rounded">
+                          <FileText className="h-5 w-5 text-primary" />
+                          <span className="text-[9px] text-muted-foreground mt-0.5 truncate max-w-[56px]">{fp.file.name.split('.').pop()}</span>
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => discardFilePreview(idx)}
+                        disabled={uploading}
+                        className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">
-                      {filePreview.type === "image" ? "Imagem pronta para envio" : "Arquivo pronto para envio"}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {filePreview.file.name} · {formatFileSize(filePreview.file.size)}
-                    </p>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={discardFilePreview}
-                    disabled={uploading}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  ))}
+                  <p className="w-full text-xs text-muted-foreground">
+                    {filePreviews.length} {filePreviews.length === 1 ? "arquivo pronto" : "arquivos prontos"} para envio
+                  </p>
                 </div>
               )}
               
@@ -1219,6 +1243,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
                 ref={imageInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
                 onChange={(e) => handleFileSelect(e, "image")}
               />
@@ -1259,10 +1284,10 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
                     <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                {(comment.trim() || filePreview) && (
+                {(comment.trim() || filePreviews.length > 0) && (
                   <button
                     type="button"
-                    onClick={filePreview ? sendFileWithComment : handleSubmitComment}
+                    onClick={filePreviews.length > 0 ? sendFileWithComment : handleSubmitComment}
                     disabled={submitting || uploading}
                     className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
                   >
@@ -1349,37 +1374,32 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            {/* File preview (image or document) */}
-            {filePreview && (
-              <div className="flex items-center gap-3 p-3 mb-2 bg-muted/50 rounded-lg border">
-                {filePreview.type === "image" && filePreview.url ? (
-                  <img 
-                    src={filePreview.url} 
-                    alt="Preview" 
-                    className="h-16 w-16 object-cover rounded"
-                  />
-                ) : (
-                  <div className="h-16 w-16 flex items-center justify-center bg-primary/10 rounded">
-                    <FileText className="h-6 w-6 text-primary" />
+            {/* File previews (multiple files) */}
+            {filePreviews.length > 0 && (
+              <div className="flex flex-wrap gap-2 p-2 mb-2 bg-muted/50 rounded-lg border">
+                {filePreviews.map((fp, idx) => (
+                  <div key={idx} className="relative group">
+                    {fp.type === "image" && fp.url ? (
+                      <img src={fp.url} alt="Preview" className="h-16 w-16 object-cover rounded" />
+                    ) : (
+                      <div className="h-16 w-16 flex flex-col items-center justify-center bg-primary/10 rounded">
+                        <FileText className="h-5 w-5 text-primary" />
+                        <span className="text-[9px] text-muted-foreground mt-0.5 truncate max-w-[56px]">{fp.file.name.split('.').pop()}</span>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => discardFilePreview(idx)}
+                      disabled={uploading}
+                      className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">
-                    {filePreview.type === "image" ? "Imagem pronta para envio" : "Arquivo pronto para envio"}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {filePreview.file.name} · {formatFileSize(filePreview.file.size)}
-                  </p>
-                </div>
-                <Button 
-                  variant="ghost" 
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                  onClick={discardFilePreview}
-                  disabled={uploading}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                ))}
+                <p className="w-full text-xs text-muted-foreground">
+                  {filePreviews.length} {filePreviews.length === 1 ? "arquivo pronto" : "arquivos prontos"} para envio
+                </p>
               </div>
             )}
             
@@ -1397,6 +1417,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
               ref={imageInputRef}
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
               onChange={(e) => handleFileSelect(e, "image")}
             />
@@ -1437,10 +1458,10 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
                   <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              {(comment.trim() || filePreview) && (
+              {(comment.trim() || filePreviews.length > 0) && (
                 <button
                   type="button"
-                  onClick={filePreview ? sendFileWithComment : handleSubmitComment}
+                  onClick={filePreviews.length > 0 ? sendFileWithComment : handleSubmitComment}
                   disabled={submitting || uploading}
                   className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
                 >
