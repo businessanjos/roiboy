@@ -119,17 +119,17 @@ export function SalesTeamTab() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
         <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-muted-foreground" />
-          <h2 className="font-semibold">Equipe de Vendas</h2>
-          <Badge variant="secondary">{metrics.length} vendedores</Badge>
+          <Users className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+          <h2 className="font-semibold text-sm sm:text-base">Equipe de Vendas</h2>
+          <Badge variant="secondary" className="text-[10px] sm:text-xs">{metrics.length} vendedores</Badge>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           <Select value={period} onValueChange={(v) => setPeriod(v as PeriodOption)}>
-            <SelectTrigger className="w-[160px] h-9">
+            <SelectTrigger className="w-[140px] sm:w-[160px] h-8 sm:h-9 text-xs sm:text-sm">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -144,8 +144,8 @@ export function SalesTeamTab() {
             <div className="flex items-center gap-1.5">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className={cn("h-9 gap-1.5 text-xs", !customStart && "text-muted-foreground")}>
-                    <CalendarIcon className="h-3.5 w-3.5" />
+                  <Button variant="outline" size="sm" className={cn("h-8 sm:h-9 gap-1 sm:gap-1.5 text-xs", !customStart && "text-muted-foreground")}>
+                    <CalendarIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     {customStart ? format(customStart, "dd/MM/yy") : "Início"}
                   </Button>
                 </PopoverTrigger>
@@ -164,8 +164,8 @@ export function SalesTeamTab() {
               <span className="text-xs text-muted-foreground">até</span>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="sm" className={cn("h-9 gap-1.5 text-xs", !customEnd && "text-muted-foreground")}>
-                    <CalendarIcon className="h-3.5 w-3.5" />
+                  <Button variant="outline" size="sm" className={cn("h-8 sm:h-9 gap-1 sm:gap-1.5 text-xs", !customEnd && "text-muted-foreground")}>
+                    <CalendarIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     {customEnd ? format(customEnd, "dd/MM/yy") : "Fim"}
                   </Button>
                 </PopoverTrigger>
@@ -183,8 +183,8 @@ export function SalesTeamTab() {
               </Popover>
             </div>
           )}
-          <Button variant="outline" size="icon" className="h-9 w-9" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4" />
+          <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" onClick={() => refetch()}>
+            <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           </Button>
         </div>
       </div>

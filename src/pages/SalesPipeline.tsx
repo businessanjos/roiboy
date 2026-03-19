@@ -810,19 +810,19 @@ export default function SalesPipeline() {
 
   if (loading || stagesLoading) {
     return (
-      <div className="p-6 space-y-6">
+      <div className="p-3 sm:p-6 space-y-4 sm:space-y-6">
         <div className="flex items-center justify-between">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-10 w-32" />
+          <Skeleton className="h-8 w-36 sm:w-48" />
+          <Skeleton className="h-8 sm:h-10 w-24 sm:w-32" />
         </div>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-24" />
+            <Skeleton key={i} className="h-20 sm:h-24" />
           ))}
         </div>
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-[500px] w-[300px] flex-shrink-0" />
+        <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-[400px] sm:h-[500px] w-[200px] sm:w-[300px] flex-shrink-0" />
           ))}
         </div>
       </div>
