@@ -193,8 +193,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     setLoading(true);
     
     try {
-      // FIXED: Only fetch events where this client (or linked clients) has deliveries
-      // This ensures proper data isolation per client
+      // Fetch events where this client (or linked clients) has deliveries
       const { data: clientDeliveryEventIds } = await supabase
         .from("client_event_deliveries")
         .select("event_id")
@@ -206,30 +205,18 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         .in("client_id", linkedClientIds)
         .not("event_id", "is", null);
 
-      // Get unique event IDs from both sources
+      // Fetch events where this client is an explicit participant
+      const { data: clientParticipantEventIds } = await supabase
+        .from("event_participants")
+        .select("event_id")
+        .in("client_id", linkedClientIds);
+
+      // Get unique event IDs from all client-specific sources
       const eventIdsFromDeliveries = (clientDeliveryEventIds || []).map(d => d.event_id);
       const eventIdsFromAttendances = (clientAttendanceEventIds || []).map(a => a.event_id).filter(Boolean);
-      
-      // Also get events linked to client's products (for events they haven't participated yet)
-      const { data: productEvents } = await supabase
-        .from("events")
-        .select(`
-          id,
-          event_products (product_id)
-        `)
-        .is("client_id", null)
-        .order("scheduled_at", { ascending: true, nullsFirst: false });
+      const eventIdsFromParticipants = (clientParticipantEventIds || []).map(p => p.event_id);
 
-      const eventIdsFromProducts = (productEvents || [])
-        .filter((event: any) => {
-          if (!event.event_products || event.event_products.length === 0) return false;
-          return event.event_products.some((ep: any) => 
-            clientProductIds.includes(ep.product_id)
-          );
-        })
-        .map((event: any) => event.id);
-
-      // Fetch individual events for this client (client_id set)
+      // Fetch individual events for this client (client_id set on the event itself)
       const { data: individualEvents } = await supabase
         .from("events")
         .select("id")
@@ -237,11 +224,11 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
 
       const eventIdsFromIndividual = (individualEvents || []).map(e => e.id);
 
-      // Combine all unique event IDs
+      // Combine all unique event IDs — only events explicitly tied to this client
       const allEventIds = [...new Set([
         ...eventIdsFromDeliveries,
         ...eventIdsFromAttendances,
-        ...eventIdsFromProducts,
+        ...eventIdsFromParticipants,
         ...eventIdsFromIndividual,
       ])];
 
