@@ -905,7 +905,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (filePreview) {
+      if (filePreviews.length > 0) {
         sendFileWithComment();
       } else {
         handleSubmitComment();
