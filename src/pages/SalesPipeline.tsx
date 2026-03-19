@@ -1244,14 +1244,14 @@ function DealListView({
             return (
               <div
                 key={deal.id}
-                className="p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                className="p-3 sm:p-4 hover:bg-muted/50 cursor-pointer transition-colors"
                 onClick={() => onDealClick(deal)}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                    <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
                       <AvatarImage src={deal.responsible_user?.avatar_url || undefined} />
-                      <AvatarFallback className="bg-primary/10 text-primary">
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs sm:text-sm">
                         {deal.responsible_user?.name
                           ?.split(" ")
                           .map(n => n[0])
@@ -1261,20 +1261,21 @@ function DealListView({
                       </AvatarFallback>
                     </Avatar>
                     <div
-                      className="w-2 h-8 rounded-full"
+                      className="w-1.5 sm:w-2 h-7 sm:h-8 rounded-full flex-shrink-0"
                       style={{ backgroundColor: stage?.color || '#6b7280' }}
                     />
-                    <div>
-                      <p className="font-medium">{deal.title}</p>
-                      <p className="text-sm text-muted-foreground">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm sm:text-base truncate">{deal.title}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">
                         {deal.client?.full_name || deal.lead?.full_name || deal.contact_name || 'Sem contato'}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2 sm:gap-4 ml-[42px] sm:ml-0 flex-wrap">
                     {stage && (
                       <Badge
                         variant="outline"
+                        className="text-[10px] sm:text-xs"
                         style={{ 
                           borderColor: stage.color,
                           color: stage.color,
@@ -1286,21 +1287,21 @@ function DealListView({
                     {showStatus && (
                       <Badge
                         variant={deal.status === 'won' ? 'default' : 'destructive'}
-                        className={deal.status === 'won' ? 'bg-emerald-500' : ''}
+                        className={cn("text-[10px] sm:text-xs", deal.status === 'won' ? 'bg-emerald-500' : '')}
                       >
                         {deal.status === 'won' ? 'Ganha' : 'Perdida'}
                       </Badge>
                     )}
                     {/* Won date - shown only for won deals */}
                     {deal.status === 'won' && deal.won_at && (
-                      <div className="flex items-center gap-1 text-sm text-emerald-600">
-                        <Calendar className="h-3.5 w-3.5" />
+                      <div className="flex items-center gap-1 text-xs sm:text-sm text-emerald-600">
+                        <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         <span>
                           {new Date(deal.won_at).toLocaleDateString('pt-BR')}
                         </span>
                       </div>
                     )}
-                    <span className="font-semibold">
+                    <span className="font-semibold text-sm sm:text-base ml-auto sm:ml-0">
                       {formatCurrency(deal.value)}
                     </span>
                   </div>
@@ -1308,10 +1309,10 @@ function DealListView({
                 
                 {/* Loss Reason - shown only for lost deals */}
                 {deal.status === 'lost' && deal.lost_reason && (
-                  <div className="mt-3 ml-[52px]">
+                  <div className="mt-2 sm:mt-3 ml-[42px] sm:ml-[52px]">
                     <div 
                       className={cn(
-                        "text-xs text-muted-foreground bg-destructive/10 rounded px-2.5 py-2 border border-destructive/20",
+                        "text-xs text-muted-foreground bg-destructive/10 rounded px-2 sm:px-2.5 py-1.5 sm:py-2 border border-destructive/20",
                         !isExpanded && "line-clamp-1"
                       )}
                     >
@@ -1324,7 +1325,7 @@ function DealListView({
                           e.stopPropagation();
                           toggleExpanded(deal.id);
                         }}
-                        className="text-xs text-muted-foreground hover:text-foreground mt-1.5 hover:underline"
+                        className="text-xs text-muted-foreground hover:text-foreground mt-1 sm:mt-1.5 hover:underline"
                       >
                         {isExpanded ? "Ver menos" : "Ver mais"}
                       </button>
