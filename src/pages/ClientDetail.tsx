@@ -1112,6 +1112,8 @@ export default function ClientDetail() {
       // Don't clear existing timeline data on error
     }
   };
+
+  useEffect(() => {
     const maxRetries = 2;
     
     const fetchWithRetry = async () => {
