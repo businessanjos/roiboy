@@ -831,80 +831,85 @@ export default function SalesPipeline() {
 
   return (
     <>
-      <div className="p-4 space-y-4">
+      <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div>
-              <h1 className="text-xl font-bold">Comercial</h1>
-              <p className="text-muted-foreground text-xs">
-                Gerencie prospecção e negociações
-              </p>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-xl font-bold">Comercial</h1>
+                <p className="text-muted-foreground text-xs hidden sm:block">
+                  Gerencie prospecção e negociações
+                </p>
+              </div>
+              {mainTab === 'pipeline' && (
+                <PipelineSelector
+                  pipelines={pipelines}
+                  activePipelineId={activePipelineId}
+                  onSelect={setActivePipelineId}
+                  onCreate={createPipeline}
+                  onUpdate={updatePipeline}
+                  onDelete={deletePipeline}
+                />
+              )}
             </div>
-            {mainTab === 'pipeline' && (
-              <PipelineSelector
-                pipelines={pipelines}
-                activePipelineId={activePipelineId}
-                onSelect={setActivePipelineId}
-                onCreate={createPipeline}
-                onUpdate={updatePipeline}
-                onDelete={deletePipeline}
-              />
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {mainTab === 'pipeline' && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsStagesManagerOpen(true)}
-                >
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Etapas
-                </Button>
-                {isAdmin && (
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              {mainTab === 'pipeline' && (
+                <>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsFieldsDialogOpen(true)}
+                    className="h-8 sm:h-9 px-2 sm:px-3"
+                    onClick={() => setIsStagesManagerOpen(true)}
                   >
-                    <Settings2 className="h-4 w-4 mr-2" />
-                    Campos
+                    <Settings2 className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Etapas</span>
                   </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsExportDialogOpen(true)}
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Exportar
-                </Button>
-                <div className="flex items-center border rounded-lg overflow-hidden">
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 sm:h-9 px-2 sm:px-3"
+                      onClick={() => setIsFieldsDialogOpen(true)}
+                    >
+                      <Settings2 className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Campos</span>
+                    </Button>
+                  )}
                   <Button
-                    variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                    variant="outline"
                     size="sm"
-                    className="rounded-none"
-                    onClick={() => setViewMode('kanban')}
+                    className="h-8 sm:h-9 px-2 sm:px-3"
+                    onClick={() => setIsExportDialogOpen(true)}
                   >
-                    <LayoutGrid className="h-4 w-4" />
+                    <Download className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Exportar</span>
                   </Button>
-                  <Button
-                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="rounded-none"
-                    onClick={() => setViewMode('list')}
-                  >
-                    <List className="h-4 w-4" />
+                  <div className="hidden sm:flex items-center border rounded-lg overflow-hidden">
+                    <Button
+                      variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="rounded-none"
+                      onClick={() => setViewMode('kanban')}
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="rounded-none"
+                      onClick={() => setViewMode('list')}
+                    >
+                      <List className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button size="sm" className="h-8 sm:h-9 px-2 sm:px-3" onClick={() => setIsNewDealOpen(true)}>
+                    <Plus className="h-4 w-4 sm:mr-2" />
+                    <span className="hidden sm:inline">Nova Negociação</span>
                   </Button>
-                </div>
-                <Button onClick={() => setIsNewDealOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Negociação
-                </Button>
-              </>
-            )}
+                </>
+              )}
+            </div>
           </div>
         </div>
 
