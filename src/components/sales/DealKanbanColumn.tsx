@@ -57,7 +57,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
     <div
       ref={setNodeRef}
       className={cn(
-        "flex-1 min-w-[200px] max-w-[320px] flex flex-col transition-all duration-200",
+        "flex-1 min-w-[180px] sm:min-w-[200px] max-w-[280px] sm:max-w-[320px] flex flex-col transition-all duration-200",
         // When drag is active but NOT over this column — subtle pulse hint
         isDragActive && !isOver && "opacity-80",
         // When hovering over this column — strong highlight
