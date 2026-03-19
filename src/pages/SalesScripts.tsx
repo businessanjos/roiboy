@@ -385,7 +385,13 @@ export default function SalesScripts() {
       {/* View Analysis Dialog */}
       <Dialog open={!!viewingAnalysis} onOpenChange={open => { if (!open) setViewingAnalysis(null); }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><BarChart3 className="w-5 h-5 text-primary" />Análise de Call</DialogTitle><DialogDescription>{viewingAnalysis && new Date(viewingAnalysis.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</DialogDescription></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><BarChart3 className="w-5 h-5 text-primary" />Análise de Call</DialogTitle>
+            <DialogDescription>
+              {viewingAnalysis && new Date(viewingAnalysis.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+              {viewingAnalysis?.deal_name && <Badge variant="secondary" className="ml-2 text-xs"><Target className="w-3 h-3 mr-1" />{viewingAnalysis.deal_name}</Badge>}
+            </DialogDescription>
+          </DialogHeader>
           <div className="max-w-none"><MarkdownRenderer content={viewingAnalysis?.analysis || ''} /></div>
           <DialogFooter><Button variant="outline" size="sm" onClick={() => viewingAnalysis && handleCopy(viewingAnalysis.analysis)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" onClick={() => { if (viewingAnalysis) exportSalesCallToPDF({ analysis: viewingAnalysis.analysis, createdAt: viewingAnalysis.created_at }); }}><Download className="w-4 h-4 mr-2" />PDF</Button></DialogFooter>
         </DialogContent>
