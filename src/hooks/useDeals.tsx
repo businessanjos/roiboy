@@ -515,16 +515,43 @@ export function useDeals(pipelineId?: string | null) {
 
     const deal = deals.find(d => d.id === dealId);
     const oldStage = stages.find(s => s.id === deal?.stage_id);
-    const newStage = stages.find(s => s.id === newStageId);
+    // Look up newStage from local stages first, then query DB if not found (cross-pipeline)
+    let newStage = stages.find(s => s.id === newStageId);
+    if (!newStage) {
+      const { data: dbStage } = await supabase
+        .from('deal_stages')
+        .select('id, name, display_order, is_active, probability, color, account_id, created_at, updated_at')
+        .eq('id', newStageId)
+        .single();
+      if (dbStage) newStage = dbStage as DealStage;
+    }
 
     try {
+      // Resolve the deal's current pipeline: use hook pipelineId, or newPipelineId, or query from deal's stage
+      const resolvedPipelineId = pipelineId || newPipelineId || deal?.stage_id
+        ? await (async () => {
+            if (pipelineId) return pipelineId;
+            if (newPipelineId) return newPipelineId;
+            // Fallback: get pipeline from deal's current stage
+            if (deal?.stage_id) {
+              const { data: stageData } = await supabase
+                .from('deal_stages')
+                .select('pipeline_id')
+                .eq('id', deal.stage_id)
+                .single();
+              return stageData?.pipeline_id || null;
+            }
+            return null;
+          })()
+        : null;
+
       // Check if moving to "Reunião Agendada" in SDR pipeline → auto-transfer to Closer
-      if (newStage?.name === 'Reunião Agendada' && pipelineId) {
+      if (newStage?.name === 'Reunião Agendada' && resolvedPipelineId) {
         // Get current pipeline info
         const { data: currentPipeline } = await supabase
           .from('pipelines')
           .select('name')
-          .eq('id', pipelineId)
+          .eq('id', resolvedPipelineId)
           .single();
 
         if (currentPipeline?.name === 'SDR') {
