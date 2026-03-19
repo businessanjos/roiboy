@@ -915,44 +915,44 @@ export default function SalesPipeline() {
 
         {/* Main Tabs */}
         <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}>
-          <TabsList>
-            <TabsTrigger value="prospeccao" className="gap-2">
-              <Users className="h-4 w-4" />
+          <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:flex">
+            <TabsTrigger value="prospeccao" className="gap-1.5 text-xs sm:text-sm">
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Prospecção
-              <Badge variant="secondary">{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
+              <Badge variant="secondary" className="text-[10px] sm:text-xs">{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="pipeline" className="gap-2">
-              <Target className="h-4 w-4" />
+            <TabsTrigger value="pipeline" className="gap-1.5 text-xs sm:text-sm">
+              <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               Pipeline
-              <Badge variant="secondary">{openDeals.length}</Badge>
+              <Badge variant="secondary" className="text-[10px] sm:text-xs">{openDeals.length}</Badge>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="prospeccao" className="mt-4">
+          <TabsContent value="prospeccao" className="mt-3 sm:mt-4">
             <LeadsTab />
           </TabsContent>
 
-          <TabsContent value="pipeline" className="mt-4 space-y-4">
-            {/* Tag Filter and Tabs */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <TabsContent value="pipeline" className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
+            {/* Sub-tabs and Filters */}
+            <div className="space-y-2 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-3">
               <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full sm:w-auto">
-                <TabsList>
-                  <TabsTrigger value="open" className="gap-2">
-                    <TrendingUp className="h-4 w-4" />
-                    Em Aberto
-                    <Badge variant="secondary">{filteredOpenDeals.length}</Badge>
+                <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex">
+                  <TabsTrigger value="open" className="gap-1 text-xs sm:text-sm sm:gap-2">
+                    <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="hidden xs:inline">Em </span>Aberto
+                    <Badge variant="secondary" className="text-[10px] sm:text-xs">{filteredOpenDeals.length}</Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="won" className="gap-2">
-                    <Trophy className="h-4 w-4" />
+                  <TabsTrigger value="won" className="gap-1 text-xs sm:text-sm sm:gap-2">
+                    <Trophy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     Ganhas
-                    <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-700">
+                    <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-700 text-[10px] sm:text-xs">
                       {filteredWonDeals.length}
                     </Badge>
                   </TabsTrigger>
-                  <TabsTrigger value="lost" className="gap-2">
-                    <XCircle className="h-4 w-4" />
+                  <TabsTrigger value="lost" className="gap-1 text-xs sm:text-sm sm:gap-2">
+                    <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     Perdidas
-                    <Badge variant="secondary" className="bg-red-500/20 text-red-700">
+                    <Badge variant="secondary" className="bg-red-500/20 text-red-700 text-[10px] sm:text-xs">
                       {filteredLostDeals.length}
                     </Badge>
                   </TabsTrigger>
@@ -960,7 +960,7 @@ export default function SalesPipeline() {
               </Tabs>
 
               {/* Filters */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 {/* Unified Filter Button */}
                 <PipelineFilterButton
                   salesUsers={salesUsers}
@@ -971,13 +971,13 @@ export default function SalesPipeline() {
                 />
                 
                 {/* Search bar */}
-                <div className="relative">
+                <div className="relative flex-1 sm:flex-initial">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Buscar nome ou telefone..."
+                    placeholder="Buscar..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-9 h-9 w-[220px] bg-background border-border"
+                    className="pl-9 h-9 w-full sm:w-[220px] bg-background border-border"
                   />
                 </div>
               </div>
