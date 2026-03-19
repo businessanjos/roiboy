@@ -104,7 +104,7 @@ export function AppLayout() {
           {/* {isAdmin && <GlobalAgentChat />} */}
 
           {/* 3C Plus Embedded Panel */}
-          <ThreeCPlusPanel />
+          {isInVendas && <ThreeCPlusPanel />}
         </div>
       </NotificationsProvider>
     </PlanLimitsProvider>
