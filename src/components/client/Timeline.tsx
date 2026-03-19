@@ -1243,6 +1243,7 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
                 ref={imageInputRef}
                 type="file"
                 accept="image/*"
+                multiple
                 className="hidden"
                 onChange={(e) => handleFileSelect(e, "image")}
               />
