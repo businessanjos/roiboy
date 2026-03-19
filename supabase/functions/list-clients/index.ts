@@ -554,7 +554,7 @@ Deno.serve(async (req) => {
 
     // Use count from SQL when no post-query filters were applied, otherwise use filtered length
     const hasPostQueryFilters =
-      (contractFilter && dateBasedContractFilters.includes(contractFilter)) ||
+      (contractFilter && contractFilter !== "all") ||
       clientStatus === "no_contract" ||
       userRole === "operation";
 
