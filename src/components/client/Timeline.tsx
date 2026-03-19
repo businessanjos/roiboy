@@ -1458,10 +1458,10 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
                   <TooltipContent side="top" className="text-xs">Arquivo</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              {(comment.trim() || filePreview) && (
+              {(comment.trim() || filePreviews.length > 0) && (
                 <button
                   type="button"
-                  onClick={filePreview ? sendFileWithComment : handleSubmitComment}
+                  onClick={filePreviews.length > 0 ? sendFileWithComment : handleSubmitComment}
                   disabled={submitting || uploading}
                   className="p-1.5 rounded-full text-primary hover:bg-primary/10 transition-colors disabled:opacity-50"
                 >
