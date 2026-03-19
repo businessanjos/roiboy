@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     const sortParam = url.searchParams.get("sort") || "recent";
 
     console.log(
-      `Listing clients for account ${accountId}, auth_method: ${auth.method}, search: "${search}", limit: ${limit}, offset: ${offset}`
+      `Listing clients for account ${accountId}, auth_method: ${auth.method}, search: "${search}", limit: ${limit}, offset: ${offset}, contractFilter: "${contractFilter}"`
     );
 
     const emptyResponse = (teamUsers: any[] = []) =>
