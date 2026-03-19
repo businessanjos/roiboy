@@ -153,7 +153,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
       fetchParticipations();
       fetchFeedbacks();
     }
-  }, [accountId, clientProductIds, clientId, linkedClientIds]);
+  }, [accountId, clientId, linkedClientIds]);
 
   const fetchAccountId = async () => {
     try {
