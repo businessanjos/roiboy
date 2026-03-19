@@ -190,16 +190,16 @@ export function SalesTeamTab() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-blue-500/10">
-                <Phone className="h-5 w-5 text-blue-500" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-blue-500/10">
+                <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{totals.total_calls}</p>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">{totals.total_calls}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                   Ligações ({formatDuration(totals.total_call_duration)})
                 </p>
               </div>
@@ -208,14 +208,14 @@ export function SalesTeamTab() {
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-purple-500/10">
-                <Target className="h-5 w-5 text-purple-500" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-purple-500/10">
+                <Target className="h-4 w-4 sm:h-5 sm:w-5 text-purple-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{totals.total_deals}</p>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">{totals.total_deals}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                   Pipeline: {formatCurrency(totals.pipeline_value)}
                 </p>
               </div>
@@ -224,14 +224,14 @@ export function SalesTeamTab() {
         </Card>
 
         <Card className="bg-emerald-500/5 border-emerald-500/20">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-emerald-500/10">
-                <Trophy className="h-5 w-5 text-emerald-500" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-emerald-500/10">
+                <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold text-emerald-600">{totals.won_deals}</p>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold text-emerald-600">{totals.won_deals}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                   Ganhos: {formatCurrency(totals.won_value)}
                 </p>
               </div>
@@ -240,14 +240,14 @@ export function SalesTeamTab() {
         </Card>
 
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-lg bg-amber-500/10">
-                <CheckCircle2 className="h-5 w-5 text-amber-500" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-2.5 rounded-lg bg-amber-500/10">
+                <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500" />
               </div>
-              <div>
-                <p className="text-2xl font-bold">{totals.completed_tasks}</p>
-                <p className="text-xs text-muted-foreground">
+              <div className="min-w-0">
+                <p className="text-xl sm:text-2xl font-bold">{totals.completed_tasks}</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                   Tarefas concluídas
                 </p>
               </div>
