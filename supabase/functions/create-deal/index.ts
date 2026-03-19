@@ -21,7 +21,7 @@ interface CreateDealPayload {
   source?: string;
   tags?: string[];
   notes?: string;
-  product_id?: string; // fuzzy name match
+  product_id?: string;
   value?: number;
   canal_de_venda?: string;
   mql?: string;
@@ -31,9 +31,88 @@ interface CreateDealPayload {
   observacoes?: string;
   data_primeiro_contato?: string;
   responsible_user_id?: string;
+  pipeline_name?: string; // optional: "Closer" or "SDR"
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Resolves the pipeline and first stage for a deal.
+ * Priority: 1) payload.pipeline_name  2) "Closer" pipeline  3) first active pipeline
+ * ALWAYS returns both pipeline_id and stage_id, or throws.
+ */
+async function resolvePipelineAndStage(
+  supabase: ReturnType<typeof createClient>,
+  accountId: string,
+  preferredPipelineName?: string
+): Promise<{ pipelineId: string; stageId: string }> {
+  let pipeline: { id: string; name: string } | null = null;
+
+  // 1. Try preferred pipeline name from payload
+  if (preferredPipelineName?.trim()) {
+    const { data } = await supabase
+      .from("pipelines")
+      .select("id, name")
+      .eq("account_id", accountId)
+      .eq("is_active", true)
+      .ilike("name", `%${preferredPipelineName.trim()}%`)
+      .limit(1)
+      .maybeSingle();
+    pipeline = data;
+    if (pipeline) console.log(`[PIPELINE] Matched by payload name: "${pipeline.name}" (${pipeline.id})`);
+  }
+
+  // 2. Default to Closer pipeline
+  if (!pipeline) {
+    const { data } = await supabase
+      .from("pipelines")
+      .select("id, name")
+      .eq("account_id", accountId)
+      .eq("is_active", true)
+      .ilike("name", "%closer%")
+      .limit(1)
+      .maybeSingle();
+    pipeline = data;
+    if (pipeline) console.log(`[PIPELINE] Using Closer pipeline: "${pipeline.name}" (${pipeline.id})`);
+  }
+
+  // 3. Fallback: first active pipeline by display order
+  if (!pipeline) {
+    const { data } = await supabase
+      .from("pipelines")
+      .select("id, name")
+      .eq("account_id", accountId)
+      .eq("is_active", true)
+      .order("display_order", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    pipeline = data;
+    if (pipeline) console.log(`[PIPELINE] Fallback to first pipeline: "${pipeline.name}" (${pipeline.id})`);
+  }
+
+  if (!pipeline) {
+    throw new Error(`No active pipeline found for account ${accountId}. Create a pipeline first.`);
+  }
+
+  // Resolve first stage in the chosen pipeline
+  const { data: firstStage } = await supabase
+    .from("deal_stages")
+    .select("id, name")
+    .eq("account_id", accountId)
+    .eq("pipeline_id", pipeline.id)
+    .eq("is_active", true)
+    .order("display_order", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!firstStage) {
+    throw new Error(`No active stage found in pipeline "${pipeline.name}" (${pipeline.id}). Create at least one stage.`);
+  }
+
+  console.log(`[PIPELINE] Resolved: pipeline="${pipeline.name}", stage="${firstStage.name}"`);
+
+  return { pipelineId: pipeline.id, stageId: firstStage.id };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -78,47 +157,23 @@ serve(async (req) => {
 
     const accountId = auth.accountId!;
 
-    // Find Closer pipeline (default for traffic/API leads)
-    const { data: closerPipeline } = await supabase
-      .from("pipelines")
-      .select("id")
-      .eq("account_id", accountId)
-      .eq("is_active", true)
-      .ilike("name", "%closer%")
-      .limit(1)
-      .maybeSingle();
-
-    // Fallback to first active pipeline if Closer not found
-    const targetPipelineId = closerPipeline?.id || (await supabase
-      .from("pipelines")
-      .select("id")
-      .eq("account_id", accountId)
-      .eq("is_active", true)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle()
-    ).data?.id;
-
-    // Auto-assign first stage of the target pipeline
-    const { data: firstStage } = await supabase
-      .from("deal_stages")
-      .select("id")
-      .eq("account_id", accountId)
-      .eq("is_active", true)
-      .eq("pipeline_id", targetPipelineId)
-      .order("display_order", { ascending: true })
-      .limit(1)
-      .maybeSingle();
+    // ── Pipeline & Stage Resolution (guaranteed non-null) ──
+    const { pipelineId, stageId } = await resolvePipelineAndStage(
+      supabase,
+      accountId,
+      payload.pipeline_name
+    );
 
     // Build tags array filtering empty strings
     const tags = (payload.tags || []).filter((t) => t && t.trim());
 
-    // Insert deal
+    // Insert deal — pipeline_id and stage_id are ALWAYS set
     const { data: newDeal, error: insertError } = await supabase
       .from("deals")
       .insert({
         account_id: accountId,
-        pipeline_id: targetPipelineId || null,
+        pipeline_id: pipelineId,
+        stage_id: stageId,
         title: payload.title.trim(),
         lead_id: payload.lead_id || null,
         contact_name: payload.contact_name?.trim() || null,
@@ -127,7 +182,6 @@ serve(async (req) => {
         source: payload.source?.trim() || null,
         notes: payload.notes?.trim() || null,
         tags: tags.length > 0 ? tags : [],
-        stage_id: firstStage?.id || null,
         value: payload.value || 0,
         status: "open",
         responsible_user_id: payload.responsible_user_id || null,
@@ -143,71 +197,58 @@ serve(async (req) => {
       );
     }
 
-    // Fuzzy match product and save to deal_field_values
-    let productMatchResult: { id: string; name: string; price?: number } | null = null;
+    console.log(`[DEAL] Created: "${newDeal.title}" → pipeline=${newDeal.pipeline_id}, stage=${newDeal.stage_id}`);
+
+    // ── Fuzzy match product and save to deal_field_values ──
     if (payload.product_id && payload.product_id.trim()) {
       try {
-        // Sanitize: remove \n literals, actual newlines, and extra whitespace
-        const productName = payload.product_id.trim().replace(/\\n/g, '').replace(/\n/g, '').trim();
-
+        const productName = payload.product_id.trim().replace(/\\n/g, "").replace(/\n/g, "").trim();
         const fieldId = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
 
-        // 1. Fetch select options for "Item da Venda" field
         const { data: fieldDef } = await supabase
           .from("custom_fields")
           .select("options")
           .eq("id", fieldId)
           .maybeSingle();
 
-        // 2. Match input against select option labels (case-insensitive)
-        let selectValue: string = productName; // fallback
+        let selectValue: string = productName;
         if (fieldDef?.options && Array.isArray(fieldDef.options)) {
           const options = fieldDef.options as Array<{ label: string; value: string }>;
           const lower = productName.toLowerCase();
-          const match = options.find((o) => o.label.toLowerCase() === lower)
-            || options.find((o) => o.label.toLowerCase().includes(lower) || lower.includes(o.label.toLowerCase()));
+          const match =
+            options.find((o) => o.label.toLowerCase() === lower) ||
+            options.find((o) => o.label.toLowerCase().includes(lower) || lower.includes(o.label.toLowerCase()));
           if (match) selectValue = match.value;
         }
 
-        // 3. Save the select option value to deal_field_values
-        await supabase.from("deal_field_values").upsert({
-          account_id: accountId,
-          deal_id: newDeal.id,
-          field_id: fieldId,
-          value_text: selectValue,
-        }, { onConflict: "deal_id,field_id" });
+        await supabase.from("deal_field_values").upsert(
+          {
+            account_id: accountId,
+            deal_id: newDeal.id,
+            field_id: fieldId,
+            value_text: selectValue,
+          },
+          { onConflict: "deal_id,field_id" }
+        );
 
-        // 4. Also match against products table for price auto-fill
-        const { data: exact } = await supabase
+        // Auto-fill deal value with product price when not provided
+        const { data: productMatch } = await supabase
           .from("products")
           .select("id, name, price")
           .eq("account_id", accountId)
-          .ilike("name", productName)
+          .or(`name.ilike.${productName},name.ilike.%${productName}%`)
           .limit(1)
           .maybeSingle();
 
-        productMatchResult = exact || null;
-        if (!productMatchResult) {
-          const { data: partial } = await supabase
-            .from("products")
-            .select("id, name, price")
-            .eq("account_id", accountId)
-            .ilike("name", `%${productName}%`)
-            .limit(1)
-            .maybeSingle();
-          productMatchResult = partial;
-        }
-
-        // 5. Auto-fill deal value with product price when not provided
-        if (productMatchResult?.price && (!payload.value || payload.value === 0)) {
-          await supabase.from("deals").update({ value: productMatchResult.price }).eq("id", newDeal.id);
+        if (productMatch?.price && (!payload.value || payload.value === 0)) {
+          await supabase.from("deals").update({ value: productMatch.price }).eq("id", newDeal.id);
         }
       } catch (err) {
         console.error("Error matching product:", err);
       }
     }
 
-    // Save custom field values in batch
+    // ── Save custom field values in batch ──
     try {
       const fieldMappings: Array<{ param: string; fieldId: string; column: "value_text" | "value_json" | "value_date" }> = [
         { param: "canal_de_venda", fieldId: "16ebda9f-cd3b-412c-bb06-0950001963c5", column: "value_text" },
@@ -219,7 +260,6 @@ serve(async (req) => {
         { param: "data_primeiro_contato", fieldId: "166fe351-b29b-4f08-b330-88f82c65f625", column: "value_date" },
       ];
 
-      // Fetch custom field definitions to resolve label -> value for select/multi_select
       const selectFieldIds = fieldMappings.map((f) => f.fieldId);
       const { data: customFields } = await supabase
         .from("custom_fields")
@@ -238,22 +278,17 @@ serve(async (req) => {
         }
       }
 
-      // Helper: match input text to option value
       function matchOptionValue(options: Array<{ label: string; value: string }>, input: string): string {
         const trimmed = input.trim();
         const lower = trimmed.toLowerCase();
-        // 1. Exact label match (case-insensitive)
         const exactLabel = options.find((o) => o.label.toLowerCase() === lower);
         if (exactLabel) return exactLabel.value;
-        // 2. Exact value match
         const exactValue = options.find((o) => o.value.toLowerCase() === lower);
         if (exactValue) return exactValue.value;
-        // 3. Partial match (label contains input or input contains label)
         const partial = options.find(
           (o) => o.label.toLowerCase().includes(lower) || lower.includes(o.label.toLowerCase())
         );
         if (partial) return partial.value;
-        // 4. Fallback: return original
         return trimmed;
       }
 
@@ -282,7 +317,6 @@ serve(async (req) => {
           } else if (column === "value_date") {
             row.value_date = raw.trim();
           } else {
-            // value_text - check if it's a select field needing conversion
             if (fieldDef && fieldDef.field_type === "select") {
               row.value_text = matchOptionValue(fieldDef.options, raw.trim());
             } else {
@@ -300,7 +334,7 @@ serve(async (req) => {
       console.error("Error saving custom fields:", err);
     }
 
-    // Register activity
+    // ── Register activity ──
     try {
       await supabase.from("deal_activities").insert({
         account_id: accountId,
