@@ -762,8 +762,8 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editContent, setEditContent] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
-  // File preview state (supports both images and documents)
-  const [filePreview, setFilePreview] = useState<{ file: File; url: string; type: "image" | "file" } | null>(null);
+  // File preview state (supports multiple files)
+  const [filePreviews, setFilePreviews] = useState<{ file: File; url: string; type: "image" | "file" }[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   // Track mentioned users from MentionTextarea callback (IDs are reliable, not regex-based)
   const [mentionedUsers, setMentionedUsers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
