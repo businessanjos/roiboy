@@ -259,16 +259,16 @@ export function SalesTeamTab() {
       {/* Team Grid */}
       {metrics.length === 0 ? (
         <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="font-medium">Nenhuma atividade no período</p>
-            <p className="text-sm mt-1">
+          <CardContent className="p-6 sm:p-8 text-center text-muted-foreground">
+            <Users className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 opacity-50" />
+            <p className="font-medium text-sm sm:text-base">Nenhuma atividade no período</p>
+            <p className="text-xs sm:text-sm mt-1">
               Os vendedores aparecerão aqui quando tiverem ligações, negócios ou tarefas registradas.
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {metrics.map((rep) => (
             <SalesRepCard
               key={rep.user_id}
