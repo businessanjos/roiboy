@@ -898,7 +898,7 @@ export default function ClientDetail() {
 
       // Sort by timestamp
       timelineItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setTimeline(timelineItems.slice(0, 300));
+      setTimeline(timelineItems);
 
     } catch (error: any) {
       console.error("Error fetching client data:", error);
@@ -919,6 +919,197 @@ export default function ClientDetail() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Lightweight timeline-only refresh (no full page loading state)
+  const refreshTimeline = async () => {
+    if (!id || !accountId) return;
+    
+    try {
+      const [
+        messagesResult,
+        followupsResult,
+        lifeEventsResult,
+        formResponsesResult,
+        attendanceResult,
+        subscriptionsResult,
+        allRiskResult,
+        roiResult,
+        recResult,
+      ] = await Promise.all([
+        supabase.from("message_events").select("*").eq("client_id", id).order("sent_at", { ascending: false }).limit(200),
+        supabase.from("client_followups").select("*, users(name, avatar_url)").eq("client_id", id).order("created_at", { ascending: false }),
+        supabase.from("client_life_events").select("*").eq("client_id", id).order("created_at", { ascending: false }).limit(100),
+        supabase.from("form_responses").select("*, forms(title)").eq("client_id", id).order("submitted_at", { ascending: false }).limit(100),
+        supabase.from("attendance").select("*, events(title, address, scheduled_at)").eq("client_id", id).not("event_id", "is", null).order("join_time", { ascending: false }).limit(100),
+        supabase.from("client_subscriptions").select("*").eq("client_id", id).order("created_at", { ascending: false }).limit(100),
+        supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }).limit(100),
+        supabase.from("roi_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
+        supabase.from("recommendations").select("*").eq("client_id", id).order("created_at", { ascending: false }),
+      ]);
+
+      const timelineItems: TimelineEvent[] = [];
+
+      // Add messages
+      (messagesResult.data || []).forEach((msg: any) => {
+        const isGroup = msg.is_group === true;
+        timelineItems.push({
+          id: msg.id,
+          type: "message",
+          title: isGroup 
+            ? `Mensagem no grupo ${msg.group_name || ""}` 
+            : msg.direction === "client_to_team" ? "Mensagem do cliente" : "Mensagem para cliente",
+          description: msg.content_text || "(Áudio transcrito)",
+          timestamp: msg.sent_at,
+          metadata: { 
+            source: msg.source, 
+            direction: msg.direction,
+            is_group: msg.is_group,
+            group_name: msg.group_name,
+          },
+        });
+      });
+
+      // Add ROI events
+      (roiResult.data || []).forEach((roi: any) => {
+        timelineItems.push({
+          id: roi.id,
+          type: "roi",
+          title: `ROI ${roi.roi_type === "tangible" ? "Tangível" : "Intangível"}: ${getCategoryLabel(roi.category)}`,
+          description: roi.evidence_snippet,
+          timestamp: roi.happened_at,
+          metadata: { 
+            impact: roi.impact, 
+            category: roi.category, 
+            roi_type: roi.roi_type,
+            source: roi.source,
+            image_url: roi.image_url,
+          },
+        });
+      });
+
+      // Add risk events
+      (allRiskResult.data || []).forEach((risk: any) => {
+        timelineItems.push({
+          id: risk.id,
+          type: "risk",
+          title: "Sinal de Risco Detectado",
+          description: risk.reason + (risk.evidence_snippet ? `: "${risk.evidence_snippet}"` : ""),
+          timestamp: risk.happened_at,
+          metadata: { level: risk.risk_level, source: risk.source, image_url: risk.image_url },
+        });
+      });
+
+      // Add recommendations
+      (recResult.data || []).forEach((rec: any) => {
+        timelineItems.push({
+          id: rec.id,
+          type: "recommendation",
+          title: rec.title,
+          description: rec.action_text,
+          timestamp: rec.created_at,
+          metadata: { priority: rec.priority, status: rec.status },
+        });
+      });
+
+      // Add followups
+      (followupsResult.data || []).forEach((followup: any) => {
+        const isNote = followup.type === "note";
+        const isFinancialNote = followup.type === "financial_note";
+        const isSalesNote = followup.type === "sales_note";
+        timelineItems.push({
+          id: followup.id,
+          type: isSalesNote ? "sales" : isFinancialNote ? "financial" : isNote ? "comment" : "followup",
+          title: followup.title || (isNote ? "Comentário" : isFinancialNote ? "Nota Financeira" : isSalesNote ? "Nota de Vendas" : followup.file_name || "Arquivo anexado"),
+          description: followup.content,
+          timestamp: followup.created_at,
+          metadata: {
+            user_id: followup.user_id,
+            user_name: followup.users?.name || "Usuário",
+            user_avatar: followup.users?.avatar_url,
+            file_url: followup.file_url,
+            file_name: followup.file_name,
+            file_size: followup.file_size,
+            followup_type: followup.type as "note" | "file" | "image" | "financial_note" | "sales_note",
+            updated_at: followup.updated_at,
+          },
+        });
+      });
+
+      // Add life events
+      (lifeEventsResult.data || []).forEach((event: any) => {
+        timelineItems.push({
+          id: event.id,
+          type: "life_event",
+          title: event.title,
+          description: event.description,
+          timestamp: event.created_at,
+          metadata: {
+            event_type: event.event_type,
+            is_recurring: event.is_recurring,
+            source: event.source,
+          },
+        });
+      });
+
+      // Add form responses
+      (formResponsesResult.data || []).forEach((response: any) => {
+        const responseCount = Object.keys(response.responses || {}).length;
+        timelineItems.push({
+          id: response.id,
+          type: "form_response",
+          title: response.forms?.title || "Formulário",
+          description: `${responseCount} campo(s) preenchido(s)`,
+          timestamp: response.submitted_at,
+          metadata: {
+            form_title: response.forms?.title,
+            form_responses: response.responses,
+          },
+        });
+      });
+
+      // Add attendance records
+      (attendanceResult.data || []).forEach((att: any) => {
+        timelineItems.push({
+          id: att.id,
+          type: "attendance",
+          title: `Presença confirmada: ${att.events?.title || "Evento"}`,
+          description: att.events?.address || undefined,
+          timestamp: att.join_time,
+          metadata: {
+            event_title: att.events?.title,
+            event_address: att.events?.address,
+          },
+        });
+      });
+
+      // Add subscriptions
+      (subscriptionsResult.data || []).forEach((sub: any) => {
+        timelineItems.push({
+          id: sub.id,
+          type: "financial",
+          title: sub.product_name,
+          description: `Status: ${sub.payment_status === "active" ? "Ativo" : sub.payment_status === "overdue" ? "Em atraso" : sub.payment_status}`,
+          timestamp: sub.created_at,
+          metadata: {
+            payment_status: sub.payment_status,
+            amount: sub.amount,
+            currency: sub.currency,
+          },
+        });
+      });
+
+      // Sort by timestamp - no limit, show all
+      timelineItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setTimeline(timelineItems);
+
+      // Also update ROI and recommendations state
+      setRoiEvents(roiResult.data || []);
+      setRecommendations((recResult.data || []) as Recommendation[]);
+    } catch (error) {
+      console.error("Error refreshing timeline:", error);
+      // Don't clear existing timeline data on error
     }
   };
 
@@ -2072,7 +2263,7 @@ export default function ClientDetail() {
                     events={timeline} 
                     clientId={id!} 
                     clientName={client?.full_name}
-                    onCommentAdded={fetchData}
+                    onCommentAdded={refreshTimeline}
                   />
                 </CardContent>
               </Card>
