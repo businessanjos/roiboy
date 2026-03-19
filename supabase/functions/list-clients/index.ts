@@ -152,9 +152,106 @@ Deno.serve(async (req) => {
 
     // Pre-filter by contract status if needed
     let statusContractClientIds: string[] | null = null;
-    const statusBasedFilters = ["active", "cancelled", "suspended", "pending"];
+    const statusBasedFilters = ["active", "cancelled", "suspended", "pending", "paused", "ended", "dismissed", "dropout_7d", "scheduled"];
 
-    if (statusBasedFilters.includes(contractFilter)) {
+    if (contractFilter === "none") {
+      // Clients WITHOUT any contract
+      const { data: allClientsWithContracts } = await supabase
+        .from("client_contracts")
+        .select("client_id")
+        .eq("account_id", accountId);
+      
+      const clientsWithContracts = new Set(
+        (allClientsWithContracts || []).map((c) => c.client_id)
+      );
+      
+      const { data: allAccountClients } = await supabase
+        .from("clients")
+        .select("id")
+        .eq("account_id", accountId);
+      
+      statusContractClientIds = (allAccountClients || [])
+        .filter((c) => !clientsWithContracts.has(c.id))
+        .map((c) => c.id);
+
+      if (statusContractClientIds.length === 0) {
+        if (auth.method === "api_key" && auth.apiKeyId) {
+          await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
+        }
+        return emptyResponse();
+      }
+    } else if (contractFilter === "expired") {
+      // Clients with active contracts where end_date < today
+      const { data: expiredContracts } = await supabase
+        .from("client_contracts")
+        .select("client_id")
+        .eq("account_id", accountId)
+        .eq("status", "active")
+        .lt("end_date", new Date().toISOString().split("T")[0]);
+
+      statusContractClientIds = [
+        ...new Set((expiredContracts || []).map((c) => c.client_id)),
+      ];
+
+      if (statusContractClientIds.length === 0) {
+        if (auth.method === "api_key" && auth.apiKeyId) {
+          await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
+        }
+        return emptyResponse();
+      }
+    } else if (contractFilter === "urgent" || contractFilter === "warning") {
+      // Clients with contracts expiring within 30 or 60 days
+      const daysAhead = contractFilter === "urgent" ? 30 : 60;
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + daysAhead);
+      const today = new Date().toISOString().split("T")[0];
+      const futureDateStr = futureDate.toISOString().split("T")[0];
+
+      const { data: expiringContracts } = await supabase
+        .from("client_contracts")
+        .select("client_id")
+        .eq("account_id", accountId)
+        .eq("status", "active")
+        .gte("end_date", today)
+        .lte("end_date", futureDateStr);
+
+      statusContractClientIds = [
+        ...new Set((expiringContracts || []).map((c) => c.client_id)),
+      ];
+
+      if (statusContractClientIds.length === 0) {
+        if (auth.method === "api_key" && auth.apiKeyId) {
+          await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
+        }
+        return emptyResponse();
+      }
+    } else if (contractFilter === "ok") {
+      // Clients with active contracts that are NOT expiring within 60 days
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 60);
+      const futureDateStr = futureDate.toISOString().split("T")[0];
+
+      const { data: okContracts } = await supabase
+        .from("client_contracts")
+        .select("client_id, end_date")
+        .eq("account_id", accountId)
+        .eq("status", "active");
+
+      statusContractClientIds = [
+        ...new Set(
+          (okContracts || [])
+            .filter((c) => !c.end_date || c.end_date > futureDateStr)
+            .map((c) => c.client_id)
+        ),
+      ];
+
+      if (statusContractClientIds.length === 0) {
+        if (auth.method === "api_key" && auth.apiKeyId) {
+          await logApiKeyUsage(supabase, auth.apiKeyId, req, 200);
+        }
+        return emptyResponse();
+      }
+    } else if (statusBasedFilters.includes(contractFilter)) {
       const { data: statusContracts } = await supabase
         .from("client_contracts")
         .select("client_id")
