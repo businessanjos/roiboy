@@ -970,12 +970,18 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
     }
   };
 
-  // Discard file preview
-  const discardFilePreview = () => {
-    if (filePreview) {
-      URL.revokeObjectURL(filePreview.url);
+  // Discard file preview - single or all
+  const discardFilePreview = (index?: number) => {
+    if (index !== undefined) {
+      setFilePreviews(prev => {
+        const item = prev[index];
+        if (item?.url) URL.revokeObjectURL(item.url);
+        return prev.filter((_, i) => i !== index);
+      });
+    } else {
+      filePreviews.forEach(fp => { if (fp.url) URL.revokeObjectURL(fp.url); });
+      setFilePreviews([]);
     }
-    setFilePreview(null);
   };
 
   // Send file with optional comment
