@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { PlanLimitsProvider } from "@/hooks/usePlanLimits";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { ThreeCPlusPanel } from "@/components/threecplus/ThreeCPlusPanel";
-import { routeBelongsToSector } from "@/config/sectors";
+import { useSector } from "@/contexts/SectorContext";
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
@@ -22,8 +22,8 @@ export function AppLayout() {
   const { open: searchOpen, setOpen: setSearchOpen } = useGlobalSearch();
   const { helpOpen, setHelpOpen } = useKeyboardShortcuts();
   const [loadingTimeout, setLoadingTimeout] = useState(false);
-  const location = useLocation();
-  const isInVendas = routeBelongsToSector(location.pathname, "vendas");
+  const { currentSector } = useSector();
+  const isInVendas = currentSector?.id === "vendas";
 
   const isLoading = authLoading || subLoading;
 
