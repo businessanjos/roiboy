@@ -11,6 +11,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { notifyContractCreated } from "@/hooks/useContractNotifications";
 import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
+import { useLossReasons } from "@/hooks/useLossReasons";
 import {
   fetchDealCustomFieldValues,
   updateClientWithDealData,
