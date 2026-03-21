@@ -21,18 +21,18 @@ Deno.serve(async (req) => {
     const FOLLOW_UP_STAGE_ID = "76e4dadc-286b-4302-a6d0-59698f45b70d";
     const REPESCAGEM_PIPELINE_ID = "205ffb2f-ecba-40a2-a583-591205a24f66";
     const ENTRADA_REPESCAGEM_STAGE_ID = "16919b90-9f5d-42ef-b7f9-752dd2cd2a0e";
-    const DAYS_THRESHOLD = 31;
+    const DAYS_IN_STAGE_THRESHOLD = 10;
 
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - DAYS_THRESHOLD);
+    cutoffDate.setDate(cutoffDate.getDate() - DAYS_IN_STAGE_THRESHOLD);
 
-    // Find open deals in Follow Up stage older than threshold
+    // Find open deals in Follow Up stage for 10+ days (using stage_changed_at)
     const { data: deals, error: fetchError } = await supabase
       .from("deals")
       .select("id, title")
       .eq("stage_id", FOLLOW_UP_STAGE_ID)
       .eq("status", "open")
-      .lt("updated_at", cutoffDate.toISOString());
+      .lt("stage_changed_at", cutoffDate.toISOString());
 
     if (fetchError) throw fetchError;
 
@@ -52,7 +52,6 @@ Deno.serve(async (req) => {
       .update({
         pipeline_id: REPESCAGEM_PIPELINE_ID,
         stage_id: ENTRADA_REPESCAGEM_STAGE_ID,
-        updated_at: new Date().toISOString(),
       })
       .in("id", dealIds);
 
@@ -63,7 +62,7 @@ Deno.serve(async (req) => {
       deal_id: deal.id,
       account_id: "796e7970-fd93-4574-a871-6090624cace6",
       type: "note",
-      content: `Movido automaticamente para Repescagem (${DAYS_THRESHOLD}+ dias em Follow Up)`,
+      content: `Movido automaticamente para Repescagem (${DAYS_IN_STAGE_THRESHOLD}+ dias em Follow Up)`,
       created_at: new Date().toISOString(),
     }));
 
