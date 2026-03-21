@@ -50,6 +50,9 @@ interface Deal {
   won_at: string | null;
   lost_at: string | null;
   lost_reason: string | null;
+  loss_reason_id?: string | null;
+  loss_sub_reason_id?: string | null;
+  loss_notes?: string | null;
   notes: string | null;
   source: string | null;
   created_at: string;
@@ -280,6 +283,9 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
       won_at: deal.won_at,
       lost_at: deal.lost_at,
       lost_reason: deal.lost_reason,
+      loss_reason_id: deal.loss_reason_id ?? null,
+      loss_sub_reason_id: deal.loss_sub_reason_id ?? null,
+      loss_notes: deal.loss_notes ?? null,
       notes: deal.notes,
       source: deal.source,
       tags: [],
