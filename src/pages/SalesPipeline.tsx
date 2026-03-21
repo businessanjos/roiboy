@@ -152,8 +152,32 @@ export default function SalesPipeline() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
+  const [wonSellerFilter, setWonSellerFilter] = usePersistedFilter<string>("salesPipeline", "wonSellerFilter", "all");
+  const [wonProductFilter, setWonProductFilter] = usePersistedFilter<string>("salesPipeline", "wonProductFilter", "all");
   const [lostMonthFilter, setLostMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostMonthFilter", "all");
   const [lostReasonFilter, setLostReasonFilter] = usePersistedFilter<string>("salesPipeline", "lostReasonFilter", "all");
+  
+  // Fetch deal→product mapping from contracts for won deals
+  const [dealProductMap, setDealProductMap] = useState<Record<string, { productId: string; productName: string }>>({});
+  
+  useEffect(() => {
+    if (!currentUser?.account_id || wonDeals.length === 0) return;
+    const dealIds = wonDeals.map(d => d.id);
+    supabase
+      .from('client_contracts')
+      .select('deal_id, product_id, product:products!client_contracts_product_id_fkey(id, name)')
+      .in('deal_id', dealIds)
+      .not('product_id', 'is', null)
+      .then(({ data }) => {
+        const map: Record<string, { productId: string; productName: string }> = {};
+        (data || []).forEach((c: any) => {
+          if (c.deal_id && c.product) {
+            map[c.deal_id] = { productId: c.product.id, productName: c.product.name };
+          }
+        });
+        setDealProductMap(map);
+      });
+  }, [currentUser?.account_id, wonDeals]);
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
   
