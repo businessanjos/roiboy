@@ -1099,7 +1099,7 @@ export function DealDetailSheet({
                         <span className="text-sm text-muted-foreground italic">Sem responsável</span>
                       )}
                     </div>
-                    {!isClosed && (
+                    {(!isClosed || canAlwaysChangeResponsible) && (
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <Button
                           variant="ghost"
