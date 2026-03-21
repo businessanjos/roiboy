@@ -3770,6 +3770,7 @@ export type Database = {
           sdr_user_id: string | null
           source: string | null
           source_contract_id: string | null
+          stage_changed_at: string | null
           stage_id: string | null
           status: string
           tags: Json | null
@@ -3799,6 +3800,7 @@ export type Database = {
           sdr_user_id?: string | null
           source?: string | null
           source_contract_id?: string | null
+          stage_changed_at?: string | null
           stage_id?: string | null
           status?: string
           tags?: Json | null
@@ -3828,6 +3830,7 @@ export type Database = {
           sdr_user_id?: string | null
           source?: string | null
           source_contract_id?: string | null
+          stage_changed_at?: string | null
           stage_id?: string | null
           status?: string
           tags?: Json | null
