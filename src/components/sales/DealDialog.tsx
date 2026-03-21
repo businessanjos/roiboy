@@ -318,11 +318,10 @@ export function DealDialog({
     }
   };
 
-  const handleMarkAsLost = async () => {
+  const handleMarkAsLost = async (data: { lossReasonId: string; lossSubReasonId?: string; lossNotes: string; lostReason: string }) => {
     if (deal && onMarkAsLost) {
-      await onMarkAsLost(deal.id, lostReason);
+      await onMarkAsLost(deal.id, data.lostReason);
       setLostDialogOpen(false);
-      setLostReason("");
     }
   };
 
