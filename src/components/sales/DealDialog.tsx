@@ -144,6 +144,16 @@ export function DealDialog({
   const isEditing = !!deal;
   const isClosed = deal?.status !== 'open';
 
+  // Users who can always change the responsible, regardless of deal status
+  const RESPONSIBLE_OVERRIDE_USER_IDS = [
+    "d20201f6-a9bd-4934-ae50-07ce7a47574b", // Maikol Parnow
+    "de43a643-0109-4afb-ac35-be768dbf4090", // Everton Pieri
+    "1232ec15-5f66-4b5f-9e74-f40d436f9d0f", // Jonathan Marcato
+  ];
+  const canAlwaysChangeResponsible = RESPONSIBLE_OVERRIDE_USER_IDS.includes(currentUser?.id || "")
+    || currentUser?.role === "admin"
+    || currentUser?.is_also_admin === true;
+
   const form = useForm<DealFormValues>({
     resolver: zodResolver(dealSchema),
     defaultValues: {
