@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
+import { MarkAsLostDialog } from "@/components/sales/MarkAsLostDialog";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";

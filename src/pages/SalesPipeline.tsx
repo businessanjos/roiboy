@@ -784,7 +784,11 @@ export default function SalesPipeline() {
     }
   };
 
-  const handleMarkAsLost = async (dealId: string, reason?: string, skipValidation = false) => {
+  const handleMarkAsLost = async (dealId: string, reason?: string, lossData?: { lossReasonId?: string; lossSubReasonId?: string; lossNotes?: string } | boolean) => {
+    // Handle backward compat: if lossData is boolean, it's the old skipValidation flag
+    const skipValidation = typeof lossData === 'boolean' ? lossData : false;
+    const structuredLossData = typeof lossData === 'object' ? lossData : undefined;
+
     // Find the deal for validation
     const deal = deals.find(d => d.id === dealId);
     if (!deal) {
@@ -808,7 +812,7 @@ export default function SalesPipeline() {
       }
     }
 
-    await markAsLost(dealId, reason);
+    await markAsLost(dealId, reason, structuredLossData);
     setIsDetailOpen(false);
     setSelectedDeal(null);
   };
