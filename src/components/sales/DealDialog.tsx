@@ -985,30 +985,11 @@ export function DealDialog({
       </AlertDialog>
 
       {/* Lost Reason Dialog */}
-      <AlertDialog open={lostDialogOpen} onOpenChange={setLostDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Marcar como Perdida</AlertDialogTitle>
-            <AlertDialogDescription>
-              Qual foi o motivo da perda? (opcional)
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <Textarea
-            value={lostReason}
-            onChange={(e) => setLostReason(e.target.value)}
-            placeholder="Ex: Preço, concorrente, timing..."
-            className="min-h-[80px]"
-          />
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setLostReason("")}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleMarkAsLost} className="bg-destructive text-destructive-foreground">
-              Confirmar Perda
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <MarkAsLostDialog
+        open={lostDialogOpen}
+        onOpenChange={setLostDialogOpen}
+        onConfirm={handleMarkAsLost}
+      />
     </>
   );
 }
