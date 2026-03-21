@@ -59,6 +59,7 @@ interface Deal {
     color: string;
   } | null;
   lead_id: string | null;
+  pipeline_id?: string | null;
   responsible_user?: {
     id: string;
     name: string;
