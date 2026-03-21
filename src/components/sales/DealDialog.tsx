@@ -134,7 +134,6 @@ export function DealDialog({
   const [saving, setSaving] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
-  const [lostReason, setLostReason] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
