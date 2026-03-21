@@ -150,6 +150,7 @@ export default function SalesPipeline() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
   const [lostMonthFilter, setLostMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostMonthFilter", "all");
+  const [lostReasonFilter, setLostReasonFilter] = usePersistedFilter<string>("salesPipeline", "lostReasonFilter", "all");
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
   
@@ -265,16 +266,35 @@ export default function SalesPipeline() {
       .sort((a, b) => b[0].localeCompare(a[0]));
   }, [lostDeals]);
 
-  // Filter lost deals by selected month
-  const filteredLostDealsByMonth = useMemo(() => {
-    if (lostMonthFilter === 'all') return filteredLostDeals;
-    return filteredLostDeals.filter(deal => {
-      if (!deal.lost_at) return false;
-      const date = new Date(deal.lost_at);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      return key === lostMonthFilter;
+  // Available lost reasons for filter
+  const availableLostReasons = useMemo(() => {
+    const reasonsSet = new Set<string>();
+    lostDeals.forEach(deal => {
+      const reason = deal.lost_reason || "Não informado";
+      reasonsSet.add(reason);
     });
-  }, [filteredLostDeals, lostMonthFilter]);
+    return Array.from(reasonsSet).sort();
+  }, [lostDeals]);
+
+  // Filter lost deals by selected month and reason
+  const filteredLostDealsByMonth = useMemo(() => {
+    let result = filteredLostDeals;
+    if (lostMonthFilter !== 'all') {
+      result = result.filter(deal => {
+        if (!deal.lost_at) return false;
+        const date = new Date(deal.lost_at);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        return key === lostMonthFilter;
+      });
+    }
+    if (lostReasonFilter !== 'all') {
+      result = result.filter(deal => {
+        const reason = deal.lost_reason || "Não informado";
+        return reason === lostReasonFilter;
+      });
+    }
+    return result;
+  }, [filteredLostDeals, lostMonthFilter, lostReasonFilter]);
 
   const filteredLostTotal = useMemo(() => {
     return filteredLostDealsByMonth.reduce((sum, deal) => sum + (deal.value || 0), 0);
@@ -1089,21 +1109,39 @@ export default function SalesPipeline() {
                     </div>
                   </div>
                   
-                  {/* Month Filter */}
-                  <Select value={lostMonthFilter} onValueChange={setLostMonthFilter}>
-                    <SelectTrigger className="w-full sm:w-[200px] bg-background">
-                      <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <SelectValue placeholder="Todos os meses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os meses</SelectItem>
-                      {availableLostMonths.map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {/* Month Filter */}
+                    <Select value={lostMonthFilter} onValueChange={setLostMonthFilter}>
+                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
+                        <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os meses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os meses</SelectItem>
+                        {availableLostMonths.map(([key, label]) => (
+                          <SelectItem key={key} value={key}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Reason Filter */}
+                    <Select value={lostReasonFilter} onValueChange={setLostReasonFilter}>
+                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
+                        <XCircle className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os motivos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os motivos</SelectItem>
+                        {availableLostReasons.map((reason) => (
+                          <SelectItem key={reason} value={reason}>
+                            {reason}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <DealListView 
