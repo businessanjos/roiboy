@@ -6,6 +6,7 @@ import { Deal, DealStage } from "@/hooks/useDeals";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MarkAsLostDialog } from "@/components/sales/MarkAsLostDialog";
 import {
   Dialog,
   DialogContent,
@@ -133,7 +134,6 @@ export function DealDialog({
   const [saving, setSaving] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
-  const [lostReason, setLostReason] = useState("");
   const [clients, setClients] = useState<Client[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
@@ -318,11 +318,10 @@ export function DealDialog({
     }
   };
 
-  const handleMarkAsLost = async () => {
+  const handleMarkAsLost = async (data: { lossReasonId: string; lossSubReasonId?: string; lossNotes: string; lostReason: string }) => {
     if (deal && onMarkAsLost) {
-      await onMarkAsLost(deal.id, lostReason);
+      await onMarkAsLost(deal.id, data.lostReason);
       setLostDialogOpen(false);
-      setLostReason("");
     }
   };
 
@@ -986,30 +985,11 @@ export function DealDialog({
       </AlertDialog>
 
       {/* Lost Reason Dialog */}
-      <AlertDialog open={lostDialogOpen} onOpenChange={setLostDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Marcar como Perdida</AlertDialogTitle>
-            <AlertDialogDescription>
-              Qual foi o motivo da perda? (opcional)
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <Textarea
-            value={lostReason}
-            onChange={(e) => setLostReason(e.target.value)}
-            placeholder="Ex: Preço, concorrente, timing..."
-            className="min-h-[80px]"
-          />
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setLostReason("")}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleMarkAsLost} className="bg-destructive text-destructive-foreground">
-              Confirmar Perda
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <MarkAsLostDialog
+        open={lostDialogOpen}
+        onOpenChange={setLostDialogOpen}
+        onConfirm={handleMarkAsLost}
+      />
     </>
   );
 }

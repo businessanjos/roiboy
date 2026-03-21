@@ -11,6 +11,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { notifyContractCreated } from "@/hooks/useContractNotifications";
 import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
+import { useLossReasons } from "@/hooks/useLossReasons";
 import {
   fetchDealCustomFieldValues,
   updateClientWithDealData,
@@ -266,15 +267,8 @@ export default function SalesPipeline() {
       .sort((a, b) => b[0].localeCompare(a[0]));
   }, [lostDeals]);
 
-  // Available lost reasons for filter
-  const availableLostReasons = useMemo(() => {
-    const reasonsSet = new Set<string>();
-    lostDeals.forEach(deal => {
-      const reason = deal.lost_reason || "Não informado";
-      reasonsSet.add(reason);
-    });
-    return Array.from(reasonsSet).sort();
-  }, [lostDeals]);
+  // Use structured loss reasons from hook
+  const { reasons: lossReasons } = useLossReasons();
 
   // Filter lost deals by selected month and reason
   const filteredLostDealsByMonth = useMemo(() => {
@@ -289,12 +283,16 @@ export default function SalesPipeline() {
     }
     if (lostReasonFilter !== 'all') {
       result = result.filter(deal => {
-        const reason = deal.lost_reason || "Não informado";
-        return reason === lostReasonFilter;
+        // Match by structured loss_reason_id or legacy lost_reason text
+        if ((deal as any).loss_reason_id === lostReasonFilter) return true;
+        // Fallback: match by reason name in legacy field
+        const matchedReason = lossReasons.find(r => r.id === lostReasonFilter);
+        if (matchedReason && deal.lost_reason?.includes(matchedReason.name)) return true;
+        return false;
       });
     }
     return result;
-  }, [filteredLostDeals, lostMonthFilter, lostReasonFilter]);
+  }, [filteredLostDeals, lostMonthFilter, lostReasonFilter, lossReasons]);
 
   const filteredLostTotal = useMemo(() => {
     return filteredLostDealsByMonth.reduce((sum, deal) => sum + (deal.value || 0), 0);
@@ -784,7 +782,11 @@ export default function SalesPipeline() {
     }
   };
 
-  const handleMarkAsLost = async (dealId: string, reason?: string, skipValidation = false) => {
+  const handleMarkAsLost = async (dealId: string, reason?: string, lossData?: { lossReasonId?: string; lossSubReasonId?: string; lossNotes?: string } | boolean) => {
+    // Handle backward compat: if lossData is boolean, it's the old skipValidation flag
+    const skipValidation = typeof lossData === 'boolean' ? lossData : false;
+    const structuredLossData = typeof lossData === 'object' ? lossData : undefined;
+
     // Find the deal for validation
     const deal = deals.find(d => d.id === dealId);
     if (!deal) {
@@ -808,7 +810,7 @@ export default function SalesPipeline() {
       }
     }
 
-    await markAsLost(dealId, reason);
+    await markAsLost(dealId, reason, structuredLossData);
     setIsDetailOpen(false);
     setSelectedDeal(null);
   };
@@ -1134,9 +1136,9 @@ export default function SalesPipeline() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos os motivos</SelectItem>
-                        {availableLostReasons.map((reason) => (
-                          <SelectItem key={reason} value={reason}>
-                            {reason}
+                        {lossReasons.map((reason) => (
+                          <SelectItem key={reason.id} value={reason.id}>
+                            {reason.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

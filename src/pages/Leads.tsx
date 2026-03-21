@@ -1918,8 +1918,8 @@ export default function Leads() {
           setIsDealDetailOpen(false);
           setSelectedDeal(null);
         }}
-        onMarkAsLost={async (dealId, reason) => {
-          await markAsLost(dealId, reason);
+        onMarkAsLost={async (dealId, reason, lossData) => {
+          await markAsLost(dealId, reason, typeof lossData === 'object' ? lossData : undefined);
           setIsDealDetailOpen(false);
           setSelectedDeal(null);
         }}

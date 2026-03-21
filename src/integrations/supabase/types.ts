@@ -3694,6 +3694,92 @@ export type Database = {
           },
         ]
       }
+      deal_loss_reasons: {
+        Row: {
+          account_id: string
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_loss_reasons_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      deal_loss_sub_reasons: {
+        Row: {
+          account_id: string
+          created_at: string
+          display_order: number
+          id: string
+          is_active: boolean
+          loss_reason_id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          loss_reason_id: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          loss_reason_id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deal_loss_sub_reasons_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deal_loss_sub_reasons_loss_reason_id_fkey"
+            columns: ["loss_reason_id"]
+            isOneToOne: false
+            referencedRelation: "deal_loss_reasons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       deal_stages: {
         Row: {
           account_id: string
@@ -3761,6 +3847,9 @@ export type Database = {
           expected_close_date: string | null
           id: string
           lead_id: string | null
+          loss_notes: string | null
+          loss_reason_id: string | null
+          loss_sub_reason_id: string | null
           lost_at: string | null
           lost_reason: string | null
           notes: string | null
@@ -3791,6 +3880,9 @@ export type Database = {
           expected_close_date?: string | null
           id?: string
           lead_id?: string | null
+          loss_notes?: string | null
+          loss_reason_id?: string | null
+          loss_sub_reason_id?: string | null
           lost_at?: string | null
           lost_reason?: string | null
           notes?: string | null
@@ -3821,6 +3913,9 @@ export type Database = {
           expected_close_date?: string | null
           id?: string
           lead_id?: string | null
+          loss_notes?: string | null
+          loss_reason_id?: string | null
+          loss_sub_reason_id?: string | null
           lost_at?: string | null
           lost_reason?: string | null
           notes?: string | null
@@ -3866,6 +3961,20 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_loss_reason_id_fkey"
+            columns: ["loss_reason_id"]
+            isOneToOne: false
+            referencedRelation: "deal_loss_reasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_loss_sub_reason_id_fkey"
+            columns: ["loss_sub_reason_id"]
+            isOneToOne: false
+            referencedRelation: "deal_loss_sub_reasons"
             referencedColumns: ["id"]
           },
           {

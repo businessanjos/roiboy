@@ -718,8 +718,12 @@ export function useDeals(pipelineId?: string | null) {
     return updateDeal(dealId, { status: 'won' });
   };
 
-  const markAsLost = async (dealId: string, reason?: string): Promise<boolean> => {
-    return updateDeal(dealId, { status: 'lost', lost_reason: reason });
+  const markAsLost = async (dealId: string, reason?: string, lossData?: { lossReasonId?: string; lossSubReasonId?: string; lossNotes?: string }): Promise<boolean> => {
+    const updates: Record<string, any> = { status: 'lost', lost_reason: reason };
+    if (lossData?.lossReasonId) updates.loss_reason_id = lossData.lossReasonId;
+    if (lossData?.lossSubReasonId) updates.loss_sub_reason_id = lossData.lossSubReasonId;
+    if (lossData?.lossNotes) updates.loss_notes = lossData.lossNotes;
+    return updateDeal(dealId, updates);
   };
 
   const reopenDeal = async (dealId: string): Promise<boolean> => {
