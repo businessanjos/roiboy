@@ -50,6 +50,9 @@ interface Deal {
   won_at: string | null;
   lost_at: string | null;
   lost_reason: string | null;
+  loss_reason_id?: string | null;
+  loss_sub_reason_id?: string | null;
+  loss_notes?: string | null;
   notes: string | null;
   source: string | null;
   created_at: string;
