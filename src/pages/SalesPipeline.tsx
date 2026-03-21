@@ -69,6 +69,8 @@ import {
   SlidersHorizontal,
   DollarSign,
   BarChart3,
+  Package,
+  User,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -150,8 +152,32 @@ export default function SalesPipeline() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
+  const [wonSellerFilter, setWonSellerFilter] = usePersistedFilter<string>("salesPipeline", "wonSellerFilter", "all");
+  const [wonProductFilter, setWonProductFilter] = usePersistedFilter<string>("salesPipeline", "wonProductFilter", "all");
   const [lostMonthFilter, setLostMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostMonthFilter", "all");
   const [lostReasonFilter, setLostReasonFilter] = usePersistedFilter<string>("salesPipeline", "lostReasonFilter", "all");
+  
+  // Fetch deal→product mapping from contracts for won deals
+  const [dealProductMap, setDealProductMap] = useState<Record<string, { productId: string; productName: string }>>({});
+  
+  useEffect(() => {
+    if (!currentUser?.account_id || wonDeals.length === 0) return;
+    const dealIds = wonDeals.map(d => d.id);
+    supabase
+      .from('client_contracts')
+      .select('deal_id, product_id, product:products!client_contracts_product_id_fkey(id, name)')
+      .in('deal_id', dealIds)
+      .not('product_id', 'is', null)
+      .then(({ data }) => {
+        const map: Record<string, { productId: string; productName: string }> = {};
+        (data || []).forEach((c: any) => {
+          if (c.deal_id && c.product) {
+            map[c.deal_id] = { productId: c.product.id, productName: c.product.name };
+          }
+        });
+        setDealProductMap(map);
+      });
+  }, [currentUser?.account_id, wonDeals]);
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
   
@@ -227,7 +253,32 @@ export default function SalesPipeline() {
       .sort((a, b) => b[0].localeCompare(a[0]));
   }, [wonDeals]);
 
-  // Filter won deals by selected month
+  // Available sellers for won deals filter
+  const availableWonSellers = useMemo(() => {
+    const sellersMap = new Map<string, string>();
+    wonDeals.forEach(deal => {
+      if (deal.responsible_user_id && deal.responsible_user?.name) {
+        sellersMap.set(deal.responsible_user_id, deal.responsible_user.name);
+      }
+    });
+    return Array.from(sellersMap.entries())
+      .sort((a, b) => a[1].localeCompare(b[1]));
+  }, [wonDeals]);
+
+  // Available products for won deals filter
+  const availableWonProducts = useMemo(() => {
+    const productsMap = new Map<string, string>();
+    wonDeals.forEach(deal => {
+      const product = dealProductMap[deal.id];
+      if (product) {
+        productsMap.set(product.productId, product.productName);
+      }
+    });
+    return Array.from(productsMap.entries())
+      .sort((a, b) => a[1].localeCompare(b[1]));
+  }, [wonDeals, dealProductMap]);
+
+  // Filter won deals by selected month, seller, and product
   const filteredWonDealsByMonth = useMemo(() => {
     let result = filteredWonDeals;
     
@@ -239,6 +290,17 @@ export default function SalesPipeline() {
         return key === wonMonthFilter;
       });
     }
+
+    if (wonSellerFilter !== 'all') {
+      result = result.filter(deal => deal.responsible_user_id === wonSellerFilter);
+    }
+
+    if (wonProductFilter !== 'all') {
+      result = result.filter(deal => {
+        const product = dealProductMap[deal.id];
+        return product?.productId === wonProductFilter;
+      });
+    }
     
     // Sort by won_at descending (most recent first)
     return [...result].sort((a, b) => {
@@ -246,7 +308,7 @@ export default function SalesPipeline() {
       const dateB = b.won_at ? new Date(b.won_at).getTime() : 0;
       return dateB - dateA;
     });
-  }, [filteredWonDeals, wonMonthFilter]);
+  }, [filteredWonDeals, wonMonthFilter, wonSellerFilter, wonProductFilter, dealProductMap]);
 
   const filteredWonTotal = useMemo(() => {
     return filteredWonDealsByMonth.reduce((sum, deal) => sum + (deal.value || 0), 0);
@@ -1065,21 +1127,55 @@ export default function SalesPipeline() {
                     </div>
                   </div>
                   
-                  {/* Month Filter */}
-                  <Select value={wonMonthFilter} onValueChange={setWonMonthFilter}>
-                    <SelectTrigger className="w-full sm:w-[200px] bg-background">
-                      <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <SelectValue placeholder="Todos os meses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os meses</SelectItem>
-                      {availableWonMonths.map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {/* Month Filter */}
+                    <Select value={wonMonthFilter} onValueChange={setWonMonthFilter}>
+                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
+                        <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os meses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os meses</SelectItem>
+                        {availableWonMonths.map(([key, label]) => (
+                          <SelectItem key={key} value={key}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Seller Filter */}
+                    <Select value={wonSellerFilter} onValueChange={setWonSellerFilter}>
+                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
+                        <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os vendedores" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os vendedores</SelectItem>
+                        {availableWonSellers.map(([id, name]) => (
+                          <SelectItem key={id} value={id}>
+                            {name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Product Filter */}
+                    <Select value={wonProductFilter} onValueChange={setWonProductFilter}>
+                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
+                        <Package className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os produtos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os produtos</SelectItem>
+                        {availableWonProducts.map(([id, name]) => (
+                          <SelectItem key={id} value={id}>
+                            {name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <DealListView 
