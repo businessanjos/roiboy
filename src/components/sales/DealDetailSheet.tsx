@@ -1591,49 +1591,19 @@ export function DealDetailSheet({
         )}
 
         {/* Lost Reason Dialog */}
-        <Dialog open={lostDialogOpen} onOpenChange={setLostDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Marcar como Perdida</DialogTitle>
-              <DialogDescription>
-                Por favor, informe o motivo da perda para continuar.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="py-4">
-              <label className="text-sm font-medium mb-2 block">
-                Motivo da Perda <span className="text-destructive">*</span>
-              </label>
-              <Textarea
-                value={lostReason}
-                onChange={(e) => setLostReason(e.target.value)}
-                placeholder="Ex: Preço acima do orçamento, concorrente ofereceu melhor condição..."
-                className="min-h-[100px]"
-              />
-            </div>
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setLostDialogOpen(false);
-                  setLostReason("");
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="destructive"
-                disabled={!lostReason.trim()}
-                onClick={async () => {
-                  await onMarkAsLost(deal.id, lostReason.trim());
-                  setLostDialogOpen(false);
-                  setLostReason("");
-                }}
-              >
-                Concluído
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <MarkAsLostDialog
+          open={lostDialogOpen}
+          onOpenChange={setLostDialogOpen}
+          onConfirm={async (data) => {
+            if (!deal) return;
+            await onMarkAsLost(deal.id, data.lostReason, {
+              lossReasonId: data.lossReasonId,
+              lossSubReasonId: data.lossSubReasonId,
+              lossNotes: data.lossNotes,
+            });
+            setLostDialogOpen(false);
+          }}
+        />
         
         {/* Required Fields Modal */}
         {deal && (
