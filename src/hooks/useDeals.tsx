@@ -22,6 +22,7 @@ export interface Deal {
   title: string;
   client_id: string | null;
   lead_id: string | null;
+  pipeline_id: string | null;
   contact_name: string | null;
   contact_phone: string | null;
   contact_email: string | null;
@@ -92,6 +93,7 @@ interface CreateDealData {
   title: string;
   client_id?: string;
   lead_id?: string;
+  pipeline_id?: string;
   contact_name?: string;
   contact_phone?: string;
   contact_email?: string;
@@ -235,7 +237,7 @@ export function useDeals(pipelineId?: string | null) {
     try {
       // Convert empty strings to null for UUID fields
       const cleanData: any = { ...data };
-      const uuidFields = ['client_id', 'lead_id', 'stage_id', 'responsible_user_id'];
+      const uuidFields = ['client_id', 'lead_id', 'pipeline_id', 'stage_id', 'responsible_user_id'];
       uuidFields.forEach(field => {
         if (cleanData[field] === '') {
           cleanData[field] = null;
@@ -254,15 +256,18 @@ export function useDeals(pipelineId?: string | null) {
       const productId = cleanData.product_id;
       delete cleanData.product_id;
 
+      const explicitPipelineId = cleanData.pipeline_id;
+      delete cleanData.pipeline_id;
+
       // George's user ID - his manually created deals go to SDR pipeline
       const GEORGE_USER_ID = 'cefc44c7-d2e2-4937-94ac-069c1c94731b';
       const isGeorgeCreating = currentUser.id === GEORGE_USER_ID;
 
       // Determine pipeline/stage and guarantee both are always persisted together
-      let targetPipelineId = pipelineId;
+      let targetPipelineId = explicitPipelineId || pipelineId;
       let targetStageId = cleanData.stage_id;
 
-      if (isGeorgeCreating) {
+      if (!targetPipelineId && isGeorgeCreating) {
         const { data: sdrPipeline } = await supabase
           .from('pipelines')
           .select('id')
@@ -418,7 +423,7 @@ export function useDeals(pipelineId?: string | null) {
       delete updateData.product_id;
       
       // Convert empty strings to null for UUID fields
-      const uuidFields = ['client_id', 'lead_id', 'stage_id', 'responsible_user_id'];
+      const uuidFields = ['client_id', 'lead_id', 'pipeline_id', 'stage_id', 'responsible_user_id'];
       uuidFields.forEach(field => {
         if (updateData[field] === '') {
           updateData[field] = null;
