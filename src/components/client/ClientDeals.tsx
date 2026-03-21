@@ -287,6 +287,7 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
       stage_id: deal.stage?.id || null,
       client_id: clientId,
       lead_id: deal.lead_id ?? null,
+      pipeline_id: deal.pipeline_id ?? null,
       responsible_user_id: deal.responsible_user?.id || null,
       sdr_user_id: null,
       contact_name: null,
