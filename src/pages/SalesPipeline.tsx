@@ -1127,21 +1127,55 @@ export default function SalesPipeline() {
                     </div>
                   </div>
                   
-                  {/* Month Filter */}
-                  <Select value={wonMonthFilter} onValueChange={setWonMonthFilter}>
-                    <SelectTrigger className="w-full sm:w-[200px] bg-background">
-                      <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <SelectValue placeholder="Todos os meses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os meses</SelectItem>
-                      {availableWonMonths.map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {/* Month Filter */}
+                    <Select value={wonMonthFilter} onValueChange={setWonMonthFilter}>
+                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
+                        <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os meses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os meses</SelectItem>
+                        {availableWonMonths.map(([key, label]) => (
+                          <SelectItem key={key} value={key}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Seller Filter */}
+                    <Select value={wonSellerFilter} onValueChange={setWonSellerFilter}>
+                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
+                        <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os vendedores" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os vendedores</SelectItem>
+                        {availableWonSellers.map(([id, name]) => (
+                          <SelectItem key={id} value={id}>
+                            {name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Product Filter */}
+                    <Select value={wonProductFilter} onValueChange={setWonProductFilter}>
+                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
+                        <Package className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os produtos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os produtos</SelectItem>
+                        {availableWonProducts.map(([id, name]) => (
+                          <SelectItem key={id} value={id}>
+                            {name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <DealListView 
