@@ -253,7 +253,32 @@ export default function SalesPipeline() {
       .sort((a, b) => b[0].localeCompare(a[0]));
   }, [wonDeals]);
 
-  // Filter won deals by selected month
+  // Available sellers for won deals filter
+  const availableWonSellers = useMemo(() => {
+    const sellersMap = new Map<string, string>();
+    wonDeals.forEach(deal => {
+      if (deal.responsible_user_id && deal.responsible_user?.name) {
+        sellersMap.set(deal.responsible_user_id, deal.responsible_user.name);
+      }
+    });
+    return Array.from(sellersMap.entries())
+      .sort((a, b) => a[1].localeCompare(b[1]));
+  }, [wonDeals]);
+
+  // Available products for won deals filter
+  const availableWonProducts = useMemo(() => {
+    const productsMap = new Map<string, string>();
+    wonDeals.forEach(deal => {
+      const product = dealProductMap[deal.id];
+      if (product) {
+        productsMap.set(product.productId, product.productName);
+      }
+    });
+    return Array.from(productsMap.entries())
+      .sort((a, b) => a[1].localeCompare(b[1]));
+  }, [wonDeals, dealProductMap]);
+
+  // Filter won deals by selected month, seller, and product
   const filteredWonDealsByMonth = useMemo(() => {
     let result = filteredWonDeals;
     
@@ -265,6 +290,17 @@ export default function SalesPipeline() {
         return key === wonMonthFilter;
       });
     }
+
+    if (wonSellerFilter !== 'all') {
+      result = result.filter(deal => deal.responsible_user_id === wonSellerFilter);
+    }
+
+    if (wonProductFilter !== 'all') {
+      result = result.filter(deal => {
+        const product = dealProductMap[deal.id];
+        return product?.productId === wonProductFilter;
+      });
+    }
     
     // Sort by won_at descending (most recent first)
     return [...result].sort((a, b) => {
@@ -272,7 +308,7 @@ export default function SalesPipeline() {
       const dateB = b.won_at ? new Date(b.won_at).getTime() : 0;
       return dateB - dateA;
     });
-  }, [filteredWonDeals, wonMonthFilter]);
+  }, [filteredWonDeals, wonMonthFilter, wonSellerFilter, wonProductFilter, dealProductMap]);
 
   const filteredWonTotal = useMemo(() => {
     return filteredWonDealsByMonth.reduce((sum, deal) => sum + (deal.value || 0), 0);
