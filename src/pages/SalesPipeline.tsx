@@ -1135,9 +1135,9 @@ export default function SalesPipeline() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos os motivos</SelectItem>
-                        {availableLostReasons.map((reason) => (
-                          <SelectItem key={reason} value={reason}>
-                            {reason}
+                        {lossReasons.map((reason) => (
+                          <SelectItem key={reason.id} value={reason.id}>
+                            {reason.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
