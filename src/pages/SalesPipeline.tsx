@@ -299,8 +299,8 @@ export default function SalesPipeline() {
     stageName?: string;
   }>({ open: false });
 
-  const handleDealMove = async (dealId: string, newStageId: string): Promise<boolean> => {
-    const result = await moveDeal(dealId, newStageId);
+  const handleDealMove = async (dealId: string, newStageId: string, newPipelineId?: string): Promise<boolean> => {
+    const result = await moveDeal(dealId, newStageId, newPipelineId);
     
     if (result) {
       // Check if target stage name contains "reunião" or "reuniao"
