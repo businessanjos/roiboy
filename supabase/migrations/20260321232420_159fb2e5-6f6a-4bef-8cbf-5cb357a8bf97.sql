@@ -1,0 +1,1 @@
+UPDATE user_sector_access SET is_active = false WHERE id IN ('b5555f99-61fa-45ae-9c2a-f20fe19b702b', 'c759b1b1-73f1-4d34-86ee-4d4deba29111');
