@@ -603,7 +603,7 @@ export function DealDialog({
                         <Select 
                           onValueChange={field.onChange} 
                           value={field.value}
-                          disabled={isClosed}
+                          disabled={isClosed && !canAlwaysChangeResponsible}
                         >
                           <FormControl>
                             <SelectTrigger>
