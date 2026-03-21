@@ -148,7 +148,7 @@ interface DealDetailSheetProps {
   allDeals?: Deal[];
   onEdit: () => void;
   onMarkAsWon: (dealId: string) => Promise<void>;
-  onMarkAsLost: (dealId: string, reason?: string) => Promise<void>;
+  onMarkAsLost: (dealId: string, reason?: string, lossData?: { lossReasonId?: string; lossSubReasonId?: string; lossNotes?: string }) => Promise<void>;
   onReopen: (dealId: string) => Promise<void>;
   onStageChange: (dealId: string, stageId: string, pipelineId?: string) => Promise<boolean>;
   onDealUpdated?: () => void;
