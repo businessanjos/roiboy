@@ -150,6 +150,7 @@ export default function SalesPipeline() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
   const [lostMonthFilter, setLostMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostMonthFilter", "all");
+  const [lostReasonFilter, setLostReasonFilter] = usePersistedFilter<string>("salesPipeline", "lostReasonFilter", "all");
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
   
