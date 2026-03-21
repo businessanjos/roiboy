@@ -6,6 +6,7 @@ import { Deal, DealStage } from "@/hooks/useDeals";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Checkbox } from "@/components/ui/checkbox";
+import { MarkAsLostDialog } from "@/components/sales/MarkAsLostDialog";
 import {
   Dialog,
   DialogContent,
