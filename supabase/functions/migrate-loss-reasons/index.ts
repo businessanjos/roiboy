@@ -43,14 +43,15 @@ serve(async (req) => {
 
     if (subError) throw subError;
 
-    // 3. Get deals with text lost_reason but no structured loss_reason_id
+    // 3. Get deals with text lost_reason but no structured loss_reason_id (limit to 40 per run)
     const { data: deals, error: dealsError } = await supabase
       .from("deals")
       .select("id, lost_reason")
       .eq("account_id", account_id)
       .eq("status", "lost")
       .not("lost_reason", "is", null)
-      .is("loss_reason_id", null);
+      .is("loss_reason_id", null)
+      .limit(40);
 
     if (dealsError) throw dealsError;
 
