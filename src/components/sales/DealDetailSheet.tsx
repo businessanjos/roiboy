@@ -230,7 +230,6 @@ export function DealDetailSheet({
   const [fieldsConfigOpen, setFieldsConfigOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
-  const [lostReason, setLostReason] = useState("");
   const [wonAtPopoverOpen, setWonAtPopoverOpen] = useState(false);
   const [updatingWonAt, setUpdatingWonAt] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
