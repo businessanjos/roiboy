@@ -1109,21 +1109,39 @@ export default function SalesPipeline() {
                     </div>
                   </div>
                   
-                  {/* Month Filter */}
-                  <Select value={lostMonthFilter} onValueChange={setLostMonthFilter}>
-                    <SelectTrigger className="w-full sm:w-[200px] bg-background">
-                      <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <SelectValue placeholder="Todos os meses" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os meses</SelectItem>
-                      {availableLostMonths.map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    {/* Month Filter */}
+                    <Select value={lostMonthFilter} onValueChange={setLostMonthFilter}>
+                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
+                        <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os meses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os meses</SelectItem>
+                        {availableLostMonths.map(([key, label]) => (
+                          <SelectItem key={key} value={key}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Reason Filter */}
+                    <Select value={lostReasonFilter} onValueChange={setLostReasonFilter}>
+                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
+                        <XCircle className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os motivos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os motivos</SelectItem>
+                        {availableLostReasons.map((reason) => (
+                          <SelectItem key={reason} value={reason}>
+                            {reason}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <DealListView 
