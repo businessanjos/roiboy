@@ -776,6 +776,14 @@ export function DealDetailSheet({
   const contactName = deal.client?.full_name || deal.lead?.full_name || deal.contact_name || 'Sem contato';
   const contactPhone = deal.client?.phone_e164 || deal.lead?.phone || null;
   const isClosed = deal.status !== 'open';
+  
+  // Users who can always change the responsible, regardless of deal status
+  const RESPONSIBLE_OVERRIDE_USER_IDS = [
+    "d20201f6-a9bd-4934-ae50-07ce7a47574b", // Maikol Parnow
+    "de43a643-0109-4afb-ac35-be768dbf4090", // Everton Pieri
+    "1232ec15-5f66-4b5f-9e74-f40d436f9d0f", // Jonathan Marcato
+  ];
+  const canAlwaysChangeResponsible = RESPONSIBLE_OVERRIDE_USER_IDS.includes(currentUser?.id || "");
 
   const handleCopyPhone = async (phone: string) => {
     try {
@@ -1091,7 +1099,7 @@ export function DealDetailSheet({
                         <span className="text-sm text-muted-foreground italic">Sem responsável</span>
                       )}
                     </div>
-                    {!isClosed && (
+                    {(!isClosed || canAlwaysChangeResponsible) && (
                       <div className="flex items-center gap-1 flex-shrink-0">
                         <Button
                           variant="ghost"
