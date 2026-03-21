@@ -157,94 +157,91 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
       {...attributes}
       {...listeners}
       className={cn(
-        "relative cursor-pointer hover:shadow-lg transition-all duration-200 bg-card border-border/50 overflow-hidden",
-        isRenewal && "ring-2 ring-amber-500/50 bg-amber-500/5",
+        "relative cursor-pointer hover:shadow-md transition-all duration-200 bg-card border-border/40 overflow-hidden group",
+        isRenewal && "ring-1 ring-amber-400/40 bg-amber-500/5",
         (isDragging || isSortableDragging) && "opacity-30 shadow-none scale-95 border-dashed border-primary/40"
       )}
       onClick={onClick}
     >
-      {/* Activity Status Indicator - Positioned on right center */}
-      <div className="absolute right-1.5 sm:right-2 top-2 sm:top-1/2 sm:-translate-y-1/2 flex items-center gap-1">
-        <span className={cn(
-          "h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full",
+      {/* Left color accent bar */}
+      <div 
+        className={cn(
+          "absolute left-0 top-0 bottom-0 w-1 rounded-l",
           statusIndicator.bgColor
-        )} />
-        <span className={cn(
-          "text-[9px] sm:text-xs font-medium hidden sm:inline",
-          statusIndicator.textColor
-        )}>
-          {statusIndicator.label}
-        </span>
-      </div>
-    <CardContent className="p-3 space-y-2">
-        {/* Renewal Badge */}
-        {isRenewal && (
-          <div className="flex items-center gap-1 text-amber-600 mb-1">
-            <RefreshCw className="h-3 w-3" />
-            <span className="text-[10px] font-semibold uppercase">Renovação</span>
-          </div>
-        )}
+        )} 
+      />
 
-        {/* Header with Title and Client */}
+      <CardContent className="pl-4 pr-3 py-2.5 space-y-1.5">
+        {/* Row 1: Avatar + Name/Title + Value */}
         <div className="flex items-start gap-2">
-          <div className="relative">
-            <Avatar className="h-8 w-8 border border-primary/20">
+          <div className="relative flex-shrink-0">
+            <Avatar className="h-7 w-7 border border-border/50">
               <AvatarImage src={avatarUrl || undefined} />
-              <AvatarFallback className="text-[10px] font-semibold bg-primary/10 text-primary">
+              <AvatarFallback className="text-[9px] font-semibold bg-primary/10 text-primary">
                 {getInitials(contactName)}
               </AvatarFallback>
             </Avatar>
-            {/* Owner avatar overlay */}
             {deal.responsible_user && (
-              <Avatar className="h-4 w-4 absolute -bottom-0.5 -right-0.5 border border-background ring-1 ring-background">
+              <Avatar className="h-3.5 w-3.5 absolute -bottom-0.5 -right-0.5 border border-background ring-1 ring-background">
                 <AvatarImage src={deal.responsible_user.avatar_url || undefined} />
-                <AvatarFallback className="text-[6px] bg-blue-500 text-white font-bold">
+                <AvatarFallback className="text-[5px] bg-blue-500 text-white font-bold">
                   {deal.responsible_user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-xs truncate">{deal.title}</h4>
+            <h4 className="font-semibold text-xs leading-tight truncate">{deal.title}</h4>
             <p className="text-[10px] text-muted-foreground truncate">{contactName}</p>
           </div>
+          <span className="text-xs font-bold text-primary whitespace-nowrap flex-shrink-0">
+            {formatCurrency(deal.value)}
+          </span>
         </div>
 
-        {/* Contact Details - Compact */}
-        <div className="space-y-0.5 text-[10px] text-muted-foreground">
-          {contactEmail && (
-            <div className="flex items-center gap-1.5 truncate">
-              <Mail className="h-2.5 w-2.5 flex-shrink-0" />
-              <span className="truncate">{contactEmail}</span>
-            </div>
-          )}
-          {contactPhone && (
-            <div className="flex items-center gap-1.5">
-              <Phone className="h-2.5 w-2.5 flex-shrink-0" />
-              <span>{contactPhone}</span>
-            </div>
-          )}
-          <div className="flex items-center gap-1.5">
-            <Calendar className="h-2.5 w-2.5 flex-shrink-0" />
-            <span>{createdDate}</span>
+        {/* Row 2: Renewal badge */}
+        {isRenewal && (
+          <div className="flex items-center gap-1 text-amber-600">
+            <RefreshCw className="h-2.5 w-2.5" />
+            <span className="text-[9px] font-semibold uppercase tracking-wide">Renovação</span>
           </div>
-        </div>
+        )}
 
-        {/* Time Badge, Quick Actions and Value - Same Row */}
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex items-center gap-1">
+        {/* Row 3: Meta info line - time + contact hints */}
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+          <Badge 
+            variant="secondary" 
+            className={cn("text-[9px] px-1 py-0 h-4 font-medium", timeBadge.bg, timeBadge.text)}
+          >
+            {timeBadge.label}
+          </Badge>
+          {contactPhone && (
+            <Phone className="h-2.5 w-2.5 flex-shrink-0" />
+          )}
+          {contactEmail && (
+            <Mail className="h-2.5 w-2.5 flex-shrink-0" />
+          )}
+          {/* Contract expiry inline */}
+          {contractExpiry && (
             <Badge 
               variant="secondary" 
-              className={cn("text-[10px] px-1.5 py-0", timeBadge.bg, timeBadge.text)}
+              className={cn("text-[9px] px-1 py-0 h-4 flex items-center gap-0.5 font-medium", contractExpiry.bg, contractExpiry.text)}
             >
-              {timeBadge.label}
+              <AlertTriangle className="h-2 w-2" />
+              {contractExpiry.label}
             </Badge>
-            {/* WhatsApp Button */}
+          )}
+        </div>
+
+        {/* Row 4: Actions + Tags */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-0.5">
+            {/* WhatsApp */}
             {contactPhone && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-5 w-5 hover:bg-emerald-500/20"
+                className="h-5 w-5 hover:bg-emerald-500/10"
                 onClick={(e) => {
                   e.stopPropagation();
                   openZappConversation({
@@ -261,7 +258,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
                 <MessageCircle className="h-3 w-3 text-emerald-600" />
               </Button>
             )}
-            {/* Activities Button */}
+            {/* Activities */}
             <Button
               variant="ghost"
               size="icon"
@@ -281,7 +278,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               )} />
               {activityStatus.pendingCount > 0 && (
                 <span className={cn(
-                  "absolute -top-1 -right-1 text-[8px] rounded-full h-3.5 w-3.5 flex items-center justify-center font-bold",
+                  "absolute -top-1 -right-1 text-[7px] rounded-full h-3 w-3 flex items-center justify-center font-bold",
                   activityStatus.hasOverdue ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
                 )}>
                   {activityStatus.pendingCount}
@@ -289,62 +286,34 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               )}
             </Button>
           </div>
-          <span className="text-xs font-bold text-primary">
-            {formatCurrency(deal.value)}
-          </span>
-        </div>
 
-        {/* Contract Expiry Badge for Renewal Deals */}
-        {contractExpiry && (
-          <div className="flex items-center gap-1">
-            <Badge 
-              variant="secondary" 
-              className={cn("text-[10px] px-1.5 py-0 flex items-center gap-1", contractExpiry.bg, contractExpiry.text)}
-            >
-              <AlertTriangle className="h-2.5 w-2.5" />
-              {contractExpiry.label}
-            </Badge>
-          </div>
-        )}
-
-        {/* Tags - Faturamento + existing tags */}
-        {(faturamentoLabel || itemVendaLabel || (deal.tags && deal.tags.length > 0)) && (
-          <div className="flex flex-wrap gap-1">
+          {/* Tags compact */}
+          <div className="flex items-center gap-1 overflow-hidden">
             {faturamentoLabel && (
-              <Badge 
-                variant="outline" 
-                className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
-              >
+              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-emerald-500/10 text-emerald-700 border-emerald-500/20 truncate max-w-[80px]">
                 $ {faturamentoLabel}
               </Badge>
             )}
             {itemVendaLabel && (
-              <Badge 
-                variant="outline" 
-                className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-700 border-blue-500/30"
-              >
+              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-blue-500/10 text-blue-700 border-blue-500/20 truncate max-w-[80px]">
                 {itemVendaLabel}
               </Badge>
             )}
             {deal.tags
               ?.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase()))
-              .slice(0, 2)
+              .slice(0, 1)
               .map((tag, index) => (
-                <Badge 
-                  key={index} 
-                  variant="outline" 
-                  className="text-[10px] px-1.5 py-0 bg-background"
-                >
+                <Badge key={index} variant="outline" className="text-[9px] px-1 py-0 h-4 bg-muted/50 truncate max-w-[60px]">
                   {tag}
                 </Badge>
               ))}
-            {deal.tags && deal.tags.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase())).length > 2 && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-background">
-                +{deal.tags.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase())).length - 2}
-              </Badge>
+            {deal.tags && deal.tags.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase())).length > 1 && (
+              <span className="text-[9px] text-muted-foreground">
+                +{deal.tags.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase())).length - 1}
+              </span>
             )}
           </div>
-        )}
+        </div>
       </CardContent>
     </Card>
     <DealActivitiesDialog
