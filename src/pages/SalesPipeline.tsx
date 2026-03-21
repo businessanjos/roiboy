@@ -266,16 +266,35 @@ export default function SalesPipeline() {
       .sort((a, b) => b[0].localeCompare(a[0]));
   }, [lostDeals]);
 
-  // Filter lost deals by selected month
-  const filteredLostDealsByMonth = useMemo(() => {
-    if (lostMonthFilter === 'all') return filteredLostDeals;
-    return filteredLostDeals.filter(deal => {
-      if (!deal.lost_at) return false;
-      const date = new Date(deal.lost_at);
-      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      return key === lostMonthFilter;
+  // Available lost reasons for filter
+  const availableLostReasons = useMemo(() => {
+    const reasonsSet = new Set<string>();
+    lostDeals.forEach(deal => {
+      const reason = deal.lost_reason || "Não informado";
+      reasonsSet.add(reason);
     });
-  }, [filteredLostDeals, lostMonthFilter]);
+    return Array.from(reasonsSet).sort();
+  }, [lostDeals]);
+
+  // Filter lost deals by selected month and reason
+  const filteredLostDealsByMonth = useMemo(() => {
+    let result = filteredLostDeals;
+    if (lostMonthFilter !== 'all') {
+      result = result.filter(deal => {
+        if (!deal.lost_at) return false;
+        const date = new Date(deal.lost_at);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        return key === lostMonthFilter;
+      });
+    }
+    if (lostReasonFilter !== 'all') {
+      result = result.filter(deal => {
+        const reason = deal.lost_reason || "Não informado";
+        return reason === lostReasonFilter;
+      });
+    }
+    return result;
+  }, [filteredLostDeals, lostMonthFilter, lostReasonFilter]);
 
   const filteredLostTotal = useMemo(() => {
     return filteredLostDealsByMonth.reduce((sum, deal) => sum + (deal.value || 0), 0);
