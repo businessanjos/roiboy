@@ -963,7 +963,7 @@ export function DealDialog({
                   >
                     Cancelar
                   </Button>
-                  {!isClosed && (
+                  {(!isClosed || canAlwaysChangeResponsible) && (
                     <Button type="submit" disabled={saving}>
                       {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                       {isEditing ? "Salvar" : "Criar"}
