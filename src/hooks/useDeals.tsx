@@ -39,6 +39,9 @@ export interface Deal {
   won_at: string | null;
   lost_at: string | null;
   lost_reason: string | null;
+  loss_reason_id: string | null;
+  loss_sub_reason_id: string | null;
+  loss_notes: string | null;
   tags: string[];
   created_at: string;
   updated_at: string;

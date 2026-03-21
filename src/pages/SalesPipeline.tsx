@@ -283,9 +283,7 @@ export default function SalesPipeline() {
     }
     if (lostReasonFilter !== 'all') {
       result = result.filter(deal => {
-        // Match by structured loss_reason_id or legacy lost_reason text
-        if ((deal as any).loss_reason_id === lostReasonFilter) return true;
-        // Fallback: match by reason name in legacy field
+        if (deal.loss_reason_id === lostReasonFilter) return true;
         const matchedReason = lossReasons.find(r => r.id === lostReasonFilter);
         if (matchedReason && deal.lost_reason?.includes(matchedReason.name)) return true;
         return false;
