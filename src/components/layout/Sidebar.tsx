@@ -456,95 +456,33 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       {PinDialog}
       {InstanceSelectorDialog}
 
-      {/* User Menu */}
-      <div className="p-3 border-t border-border">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              className={cn(
-                "w-full justify-start gap-3 px-2 py-2 h-auto hover:bg-muted",
-                collapsed && "justify-center px-0"
-              )}
-            >
-              <Avatar className="h-8 w-8">
-                <AvatarImage src={currentUser?.avatar_url || undefined} alt={currentUser?.name} />
-                <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                  {currentUser ? getInitials(currentUser.name) : "?"}
-                </AvatarFallback>
-              </Avatar>
-              {!collapsed && currentUser && (
-                <div className="flex flex-col items-start text-left overflow-hidden">
-                  <span className="text-sm font-medium text-foreground truncate max-w-[140px]">
-                    {currentUser.name}
-                  </span>
-                  <span className="text-xs text-muted-foreground truncate max-w-[140px]">
-                    {currentUser.email}
-                  </span>
-                </div>
-              )}
+      {/* Edit Name Dialog */}
+      <Dialog open={isEditNameOpen} onOpenChange={setIsEditNameOpen}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Editar Nome</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="edit-user-name">Nome</Label>
+            <Input
+              id="edit-user-name"
+              value={editName}
+              onChange={(e) => setEditName(e.target.value)}
+              placeholder="Seu nome completo"
+              className="mt-2"
+              onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditNameOpen(false)}>
+              Cancelar
             </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align={collapsed ? "center" : "start"} side="top" className="w-56">
-            <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={openEditName}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar Nome
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => { navigate("/settings?tab=profile"); onNavigate?.(); }}>
-              <User className="mr-2 h-4 w-4" />
-              Meu Perfil
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={toggleTheme}>
-              {theme === "dark" ? (
-                <>
-                  <Sun className="mr-2 h-4 w-4" />
-                  Modo Claro
-                </>
-              ) : (
-                <>
-                  <Moon className="mr-2 h-4 w-4" />
-                  Modo Escuro
-                </>
-              )}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
-              <LogOut className="mr-2 h-4 w-4" />
-              Sair
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Edit Name Dialog */}
-        <Dialog open={isEditNameOpen} onOpenChange={setIsEditNameOpen}>
-          <DialogContent className="sm:max-w-[400px]">
-            <DialogHeader>
-              <DialogTitle>Editar Nome</DialogTitle>
-            </DialogHeader>
-            <div className="py-4">
-              <Label htmlFor="edit-user-name">Nome</Label>
-              <Input
-                id="edit-user-name"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                placeholder="Seu nome completo"
-                className="mt-2"
-                onKeyDown={(e) => e.key === "Enter" && handleSaveName()}
-              />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditNameOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSaveName} disabled={saving}>
-                {saving ? "Salvando..." : "Salvar"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
+            <Button onClick={handleSaveName} disabled={saving}>
+              {saving ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
