@@ -312,7 +312,7 @@ export default function WhatsAppDiagnostics() {
       operacoes: "bg-blue-500",
       vendas: "bg-green-500",
       financeiro: "bg-amber-500",
-      diretoria: "bg-purple-500",
+      
     };
     return colors[sectorId] || "bg-gray-500";
   };
