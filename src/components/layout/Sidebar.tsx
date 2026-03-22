@@ -600,8 +600,8 @@ export function Sidebar() {
   const isMobile = useIsMobile();
   const { currentSector } = useSector();
 
-  // Hide sidebar entirely when no sector is selected (e.g. /setores)
-  if (isMobile || !currentSector) {
+  // Hide sidebar entirely when no sector is selected (e.g. /setores) or on notifications page
+  if (isMobile || !currentSector || location.pathname === "/notifications") {
     return null;
   }
 
