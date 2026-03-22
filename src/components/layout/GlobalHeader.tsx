@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useSector } from "@/contexts/SectorContext";
 import { Bell, Moon, Sun, LogOut, User, Pencil } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
