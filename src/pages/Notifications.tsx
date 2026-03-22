@@ -92,7 +92,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
       case "sales": return <ShoppingCart className="h-4 w-4" />;
       case "forms": return <FileText className="h-4 w-4" />;
       case "mentions": return <AtSign className="h-4 w-4" />;
-      case "contracts": return <ScrollText className="h-4 w-4" />;
+      
       default: return <Bell className="h-4 w-4" />;
     }
   };
