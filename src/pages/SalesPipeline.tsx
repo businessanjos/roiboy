@@ -262,9 +262,15 @@ export default function SalesPipeline() {
         });
       }
 
-      const mergedMap = { ...contractMap };
+      const mergedMap: Record<string, { productId: string; productName: string; isUpsell?: boolean }> = { ...contractMap };
       wonDeals.forEach((deal) => {
-        if (mergedMap[deal.id]) return;
+        if (mergedMap[deal.id]) {
+          // Also flag as upsell if deal title contains "upsell"
+          if (!mergedMap[deal.id].isUpsell && deal.title?.toLowerCase().includes('upsell')) {
+            mergedMap[deal.id].isUpsell = true;
+          }
+          return;
+        }
 
         const rawValue = fallbackRawMap[deal.id];
         if (!rawValue) return;
@@ -272,6 +278,7 @@ export default function SalesPipeline() {
         mergedMap[deal.id] = {
           productId: rawValue,
           productName: optionMap[rawValue] || productNameById[rawValue] || rawValue,
+          isUpsell: deal.title?.toLowerCase().includes('upsell'),
         };
       });
 
