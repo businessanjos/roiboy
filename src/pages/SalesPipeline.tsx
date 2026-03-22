@@ -1444,13 +1444,30 @@ function DealListView({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 sm:gap-4 ml-[42px] sm:ml-0 flex-wrap">
-                    {deal.status === 'won' && dealProductMap?.[deal.id] ? (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] sm:text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
-                      >
-                        {dealProductMap[deal.id].productName}
-                      </Badge>
+                    {deal.status === 'won' && dealProductMap?.[deal.id] ? (() => {
+                      const productName = dealProductMap[deal.id].productName;
+                      const productColorMap: Record<string, string> = {
+                        'Eternum Club': '#0f172a',
+                        'Eternum MVP': '#d4a937',
+                        'Rykas Mentoring': '#6A5ACD',
+                        'Eternum Private': '#1C1C1C',
+                        'Conselho': '#2F4F4F',
+                      };
+                      const color = productColorMap[productName] || '#059669';
+                      return (
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] sm:text-xs font-semibold"
+                          style={{
+                            borderColor: color,
+                            color: '#fff',
+                            backgroundColor: color,
+                          }}
+                        >
+                          {productName}
+                        </Badge>
+                      );
+                    })()
                     ) : stage ? (
                       <Badge
                         variant="outline"
