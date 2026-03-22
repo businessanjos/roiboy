@@ -62,7 +62,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   };
   
   const SectorIcon = getSectorIcon();
-  // Show sector button for vendas/financeiro OR if user is mentor/diretoria
+  // Show sector button for vendas/financeiro OR if user is mentor
   const showSectorButton = sectorId && (["vendas", "financeiro"].includes(sectorId) || showCRMForMentor);
   
   return (
