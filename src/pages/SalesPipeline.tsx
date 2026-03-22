@@ -379,13 +379,18 @@ export default function SalesPipeline() {
       .sort((a, b) => a[1].localeCompare(b[1]));
   }, [wonDeals]);
 
-  // Available products for won deals filter
+  // Available products for won deals filter (deduplicated by name)
   const availableWonProducts = useMemo(() => {
     const productsMap = new Map<string, string>();
+    const seenNames = new Set<string>();
     wonDeals.forEach(deal => {
       const product = dealProductMap[deal.id];
       if (product) {
-        productsMap.set(product.productId, product.productName);
+        const normalizedName = product.productName.trim().toLowerCase();
+        if (!seenNames.has(normalizedName)) {
+          seenNames.add(normalizedName);
+          productsMap.set(product.productId, product.productName);
+        }
       }
     });
     return Array.from(productsMap.entries())
