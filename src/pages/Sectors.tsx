@@ -6,7 +6,7 @@ import { sectors, SectorId } from "@/config/sectors";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { RoyLogo } from "@/components/ui/roy-logo";
-import { ArrowRight, BarChart3, Wallet, Target, Palette } from "lucide-react";
+import { ArrowRight, BarChart3, Wallet, Target, Palette, MessageCircle, Zap } from "lucide-react";
 import eternumSimbolo from "@/assets/simbolo-eternum.png";
 
 // Sectors accessible by sales rep roles
