@@ -551,8 +551,8 @@ export function MobileHeader() {
   const [open, setOpen] = useState(false);
   const { currentSector } = useSector();
 
-  // Hide mobile header when no sector is selected
-  if (!currentSector) return null;
+  // Hide mobile header when no sector is selected or on notifications page
+  if (!currentSector || location.pathname === "/notifications") return null;
 
   return (
     <header className="lg:hidden flex items-center justify-between h-14 px-4 border-b border-border bg-card">
@@ -600,8 +600,8 @@ export function Sidebar() {
   const isMobile = useIsMobile();
   const { currentSector } = useSector();
 
-  // Hide sidebar entirely when no sector is selected (e.g. /setores)
-  if (isMobile || !currentSector) {
+  // Hide sidebar entirely when no sector is selected (e.g. /setores) or on notifications page
+  if (isMobile || !currentSector || location.pathname === "/notifications") {
     return null;
   }
 
