@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { RoyLogo } from "@/components/ui/roy-logo";
 import { ArrowRight, BarChart3, Wallet, Target, Palette } from "lucide-react";
+import eternumLogo from "@/assets/logo-eternum.svg";
 
 // Sectors accessible by sales rep roles
 const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "roychat", "configuracoes"];
