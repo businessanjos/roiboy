@@ -1656,7 +1656,11 @@ function DealListView({
                       <div className="flex items-center gap-1 text-xs sm:text-sm text-emerald-600">
                         <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         <span>
-                          {new Date(deal.won_at).toLocaleDateString('pt-BR')}
+                          {(() => {
+                            const d = new Date(deal.won_at);
+                            d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+                            return d.toLocaleDateString('pt-BR');
+                          })()}
                         </span>
                       </div>
                     )}
