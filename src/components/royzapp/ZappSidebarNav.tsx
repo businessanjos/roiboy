@@ -30,14 +30,13 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   sectorId,
   userRole,
 }: ZappSidebarNavProps) {
-  // Mentors always see CRM functionality (role mentor OR sector diretoria)
+  // Mentors always see CRM functionality
   const isMentor = userRole === "mentor";
-  const isDiretoria = sectorId === "diretoria";
-  const showCRMForMentor = isMentor || isDiretoria;
+  const showCRMForMentor = isMentor;
   
   // Determine sector-specific icon and label
   const getSectorIcon = () => {
-    // Mentors/Diretoria always see CRM icon when in non-sales/finance sectors
+    // Mentors always see CRM icon when in non-sales/finance sectors
     if (showCRMForMentor && !["vendas", "financeiro"].includes(sectorId || "")) {
       return Briefcase;
     }
@@ -50,7 +49,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   };
   
   const getSectorLabel = () => {
-    // Mentors/Diretoria always see "CRM" label when in non-sales/finance sectors
+    // Mentors always see "CRM" label when in non-sales/finance sectors
     if (showCRMForMentor && !["vendas", "financeiro"].includes(sectorId || "")) {
       return "CRM";
     }
@@ -63,7 +62,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   };
   
   const SectorIcon = getSectorIcon();
-  // Show sector button for vendas/financeiro OR if user is mentor/diretoria
+  // Show sector button for vendas/financeiro OR if user is mentor
   const showSectorButton = sectorId && (["vendas", "financeiro"].includes(sectorId) || showCRMForMentor);
   
   return (

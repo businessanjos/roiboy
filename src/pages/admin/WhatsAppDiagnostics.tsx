@@ -17,7 +17,7 @@ import { sectors } from "@/config/sectors";
 import { toast } from "sonner";
 
 // WhatsApp sector IDs
-const WHATSAPP_SECTOR_IDS = ["operacoes", "vendas", "diretoria"] as const;
+const WHATSAPP_SECTOR_IDS = ["operacoes", "vendas"] as const;
 
 interface Integration {
   id: string;
@@ -312,7 +312,7 @@ export default function WhatsAppDiagnostics() {
       operacoes: "bg-blue-500",
       vendas: "bg-green-500",
       financeiro: "bg-amber-500",
-      diretoria: "bg-purple-500",
+      
     };
     return colors[sectorId] || "bg-gray-500";
   };

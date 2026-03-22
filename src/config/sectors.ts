@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
 
-export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "roychat" | "configuracoes" | "diretoria";
+export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "roychat" | "configuracoes";
 
 export interface NavItem {
   to: string;
@@ -66,6 +66,7 @@ export const sectors: Sector[] = [
       { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
       { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
       { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
+      { to: "/mentor-agenda", icon: Crown, label: "Agenda Mentor", permission: PERMISSIONS.EVENTS_VIEW },
       { to: "/forms", icon: FileText, label: "Formulários", permission: PERMISSIONS.FORMS_VIEW },
       { to: "/reminders", icon: BellRing, label: "Lembretes", permission: PERMISSIONS.SETTINGS_VIEW },
       { to: "/whatsapp-groups", icon: UsersRound, label: "Grupos WhatsApp", permission: PERMISSIONS.SETTINGS_VIEW },
@@ -163,20 +164,6 @@ export const sectors: Sector[] = [
     defaultRoute: "/settings",
     navItems: [
       { to: "/settings", icon: Settings, label: "Configurações" },
-      { to: "/notifications", icon: Bell, label: "Notificações" },
-    ],
-  },
-  {
-    id: "diretoria",
-    name: "Mentor",
-    description: "Gestão e mentoria executiva",
-    icon: Crown,
-    color: "text-rose-600",
-    bgColor: "bg-rose-500/10",
-    defaultRoute: "/mentor-agenda",
-    navItems: [
-      { to: "/mentor-agenda", icon: CalendarDays, label: "Agenda" },
-      { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },

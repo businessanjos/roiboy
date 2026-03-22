@@ -77,10 +77,6 @@ export function useSectorAccess() {
   });
 
   const hasSectorAccess = (sectorId: SectorId): boolean => {
-    // Diretoria sector is ONLY accessible by super_admin
-    if (sectorId === "diretoria") {
-      return isSuperAdmin;
-    }
     
     // Admins have access to all other sectors
     if (userRole === "admin") return true;
