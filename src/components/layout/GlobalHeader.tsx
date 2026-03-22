@@ -91,7 +91,7 @@ export function GlobalHeader() {
     <>
       <header className="flex items-center justify-between h-14 px-4 md:px-6 border-b border-border bg-card shrink-0">
         {/* Logo */}
-        <button onClick={() => navigate("/setores")} className="flex items-center gap-2">
+        <button onClick={() => { clearSector(); navigate("/setores"); }} className="flex items-center gap-2">
           <RoyLogo size="md" />
           <span className="font-semibold text-lg tracking-tight text-foreground hidden sm:inline">
             ROY APP
