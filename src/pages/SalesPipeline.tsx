@@ -1444,7 +1444,14 @@ function DealListView({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 sm:gap-4 ml-[42px] sm:ml-0 flex-wrap">
-                    {stage && (
+                    {deal.status === 'won' && dealProductMap?.[deal.id] ? (
+                      <Badge
+                        variant="outline"
+                        className="text-[10px] sm:text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
+                      >
+                        {dealProductMap[deal.id].productName}
+                      </Badge>
+                    ) : stage ? (
                       <Badge
                         variant="outline"
                         className="text-[10px] sm:text-xs"
@@ -1455,7 +1462,7 @@ function DealListView({
                       >
                         {stage.name}
                       </Badge>
-                    )}
+                    ) : null}
                     {showStatus && (
                       <Badge
                         variant={deal.status === 'won' ? 'default' : 'destructive'}
