@@ -1193,6 +1193,7 @@ export default function SalesPipeline() {
                   stages={stages}
                   onDealClick={handleDealClick} 
                   showStatus
+                  dealProductMap={dealProductMap}
                 />
               </TabsContent>
 
