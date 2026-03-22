@@ -263,11 +263,12 @@ export default function Tasks() {
 
   // Realtime subscription
   useEffect(() => {
+    if (!currentUser?.account_id) return;
     const channel = supabase
       .channel("tasks-changes")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "internal_tasks" },
+        { event: "*", schema: "public", table: "internal_tasks", filter: `account_id=eq.${currentUser.account_id}` },
         () => queryClient.invalidateQueries({ queryKey: ["internal-tasks"] })
       )
       .subscribe();
@@ -275,7 +276,7 @@ export default function Tasks() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [queryClient]);
+  }, [queryClient, currentUser?.account_id]);
 
   const invalidateTasks = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
