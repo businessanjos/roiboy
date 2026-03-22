@@ -35,10 +35,9 @@ type TabId = (typeof TABS)[number]["id"];
 const SOURCE_TYPE_MAP: Record<string, TabId> = {
   deal: "sales",
   contract_renewal: "sales",
+  client_contracts: "sales",
   form_response: "forms",
   client_followup: "mentions",
-  contract_expiry: "contracts",
-  client_contracts: "contracts",
 };
 
 function getTabForNotification(sourceType: string | null): TabId {
