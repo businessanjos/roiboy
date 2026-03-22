@@ -16,6 +16,8 @@ import {
   Grid3X3,
   Loader2,
   MessageSquare,
+  PanelLeftOpen,
+  PanelLeftClose,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
