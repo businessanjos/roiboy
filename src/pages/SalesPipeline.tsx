@@ -415,9 +415,14 @@ export default function SalesPipeline() {
     }
 
     if (wonProductFilter !== 'all') {
+      // Find the selected product name for cross-source matching
+      const selectedEntry = availableWonProducts.find(([id]) => id === wonProductFilter);
+      const selectedName = selectedEntry?.[1]?.trim().toLowerCase();
       result = result.filter(deal => {
         const product = dealProductMap[deal.id];
-        return product?.productId === wonProductFilter;
+        if (!product) return false;
+        return product.productId === wonProductFilter || 
+               product.productName.trim().toLowerCase() === selectedName;
       });
     }
     
