@@ -20,7 +20,6 @@ import {
   Moon,
   Sun,
   ClipboardList,
-  Presentation,
   Shield,
   BellRing,
   UsersRound,
