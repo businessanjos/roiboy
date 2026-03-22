@@ -15,7 +15,7 @@ const PIN_ENABLED_SECTORS: SectorId[] = [];
 export function SectorPinSettings() {
   const [newPin, setNewPin] = useState("");
   const [saving, setSaving] = useState(false);
-  const [selectedSector, setSelectedSector] = useState<SectorId>("diretoria");
+  const [selectedSector, setSelectedSector] = useState<SectorId>("operacoes");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
 
