@@ -49,7 +49,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   };
   
   const getSectorLabel = () => {
-    // Mentors/Diretoria always see "CRM" label when in non-sales/finance sectors
+    // Mentors always see "CRM" label when in non-sales/finance sectors
     if (showCRMForMentor && !["vendas", "financeiro"].includes(sectorId || "")) {
       return "CRM";
     }
