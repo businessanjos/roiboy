@@ -1135,7 +1135,7 @@ export function DealDetailSheet({
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          {teamMembers.map(member => (
+                          {salesMembers.map(member => (
                             <SelectItem key={member.id} value={member.id}>
                               <div className="flex items-center gap-2">
                                 <Avatar className="h-5 w-5">
