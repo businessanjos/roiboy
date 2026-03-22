@@ -1609,12 +1609,27 @@ function DealListView({
                         );
                       }
                       return (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] sm:text-xs text-muted-foreground border-muted-foreground/30 bg-muted/50"
-                        >
-                          Sem produto
-                        </Badge>
+                        <>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] sm:text-xs text-muted-foreground border-muted-foreground/30 bg-muted/50"
+                          >
+                            Sem produto
+                          </Badge>
+                          {deal.title?.toLowerCase().includes('upsell') && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] sm:text-xs font-semibold"
+                              style={{
+                                borderColor: '#FF8C00',
+                                color: '#fff',
+                                backgroundColor: '#FF8C00',
+                              }}
+                            >
+                              Upsell
+                            </Badge>
+                          )}
+                        </>
                       );
                     })() : stage ? (
                       <Badge
