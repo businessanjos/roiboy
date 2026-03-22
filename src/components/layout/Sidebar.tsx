@@ -74,7 +74,7 @@ import { ClientDetailSidebarNav } from "./ClientDetailSidebarNav";
 
 interface NavItem {
   to: string;
-  icon: typeof LayoutDashboard;
+  icon: typeof Shield;
   label: string;
   permission?: Permission | Permission[];
 }
