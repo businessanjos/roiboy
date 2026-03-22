@@ -1,36 +1,21 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  Users,
-  Settings,
-  Link2,
   LogOut,
   ChevronLeft,
   ChevronRight,
-  UserCircle,
-  Package,
   Menu,
   X,
-  FileText,
-  CalendarDays,
   User,
   Pencil,
   Bell,
   Moon,
   Sun,
-  ClipboardList,
-  Presentation,
   Shield,
-  BellRing,
-  UsersRound,
-  Bot,
-  MessageSquare,
-  MessageCircle,
   Activity,
   Grid3X3,
-  UserPlus,
   Loader2,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -89,29 +74,10 @@ import { ClientDetailSidebarNav } from "./ClientDetailSidebarNav";
 
 interface NavItem {
   to: string;
-  icon: typeof LayoutDashboard;
+  icon: typeof Shield;
   label: string;
   permission?: Permission | Permission[];
 }
-
-const navItems: NavItem[] = [
-  { to: "/sobre", icon: Presentation, label: "Apresentação" },
-  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", permission: PERMISSIONS.REPORTS_VIEW },
-  { to: "/leads", icon: UserPlus, label: "Leads", permission: PERMISSIONS.CLIENTS_VIEW },
-  { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
-  { to: "/team", icon: UserCircle, label: "Equipe", permission: PERMISSIONS.TEAM_VIEW },
-  { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
-  { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
-  { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
-  { to: "/forms", icon: FileText, label: "Formulários", permission: PERMISSIONS.FORMS_VIEW },
-  { to: "/reminders", icon: BellRing, label: "Lembretes", permission: PERMISSIONS.SETTINGS_VIEW },
-  { to: "/whatsapp-groups", icon: UsersRound, label: "Grupos WhatsApp", permission: PERMISSIONS.SETTINGS_VIEW },
-  { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP", permission: PERMISSIONS.SETTINGS_VIEW },
-  { to: "/team-chat", icon: MessageCircle, label: "ROY Chat", permission: PERMISSIONS.TEAM_VIEW },
-  { to: "/ai-agent", icon: Bot, label: "Agente ROY", permission: PERMISSIONS.SETTINGS_VIEW },
-  
-  { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
-];
 
 // Simplified navigation for super admins - only admin-related items
 const superAdminNavItems: NavItem[] = [
@@ -189,39 +155,28 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     // During loading OR for admins, show all items to avoid empty sidebar
     const showAllItems = permissionsLoading || isAdmin || isSuperAdmin || currentUser?.role === "admin" || hasFullSectorAccess();
     
-    // Super admins have access to everything - show sector items + admin items
+    // No sector selected - return empty (sidebar won't render)
+    if (!currentSector) return [];
+
+    // Super admins have access to everything
     if (isSuperAdmin) {
-      if (currentSector) {
-        const sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
-        return [...sectorItems, ...superAdminNavItems];
-      }
-      return [...navItems, ...superAdminNavItems];
+      const sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
+      return [...sectorItems, ...superAdminNavItems];
     }
     
-    // If we have a current sector, use its nav items
-    if (currentSector) {
-      let sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
-      
-      // Hide "Gestão" (/sales-team) from sales reps (SDR, Closer, Vendas, Vendedor)
-      const isSalesRepRole = !!teamRoleName && SALES_REP_ROLES.includes(teamRoleName) && 
-        !(currentUser?.role === "admin" || currentUser?.is_also_admin);
-      if (isSalesRepRole) {
-        sectorItems = sectorItems.filter(item => item.to !== "/sales-team");
-      }
-      
-      // Admins, role-based access, or during loading - show all sector items
-      if (showAllItems) return sectorItems;
-      
-      return sectorItems.filter((item) => {
-        if (!item.permission) return true;
-        return hasPermission(item.permission);
-      });
+    let sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
+    
+    // Hide "Gestão" (/sales-team) from sales reps (SDR, Closer, Vendas, Vendedor)
+    const isSalesRepRole = !!teamRoleName && SALES_REP_ROLES.includes(teamRoleName) && 
+      !(currentUser?.role === "admin" || currentUser?.is_also_admin);
+    if (isSalesRepRole) {
+      sectorItems = sectorItems.filter(item => item.to !== "/sales-team");
     }
     
-    // No sector selected - show all main nav items
-    if (showAllItems) return navItems;
+    // Admins, role-based access, or during loading - show all sector items
+    if (showAllItems) return sectorItems;
     
-    return navItems.filter((item) => {
+    return sectorItems.filter((item) => {
       if (!item.permission) return true;
       return hasPermission(item.permission);
     });
@@ -594,6 +549,10 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
 
 export function MobileHeader() {
   const [open, setOpen] = useState(false);
+  const { currentSector } = useSector();
+
+  // Hide mobile header when no sector is selected
+  if (!currentSector) return null;
 
   return (
     <header className="lg:hidden flex items-center justify-between h-14 px-4 border-b border-border bg-card">
@@ -639,8 +598,10 @@ export function MobileHeader() {
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const isMobile = useIsMobile();
+  const { currentSector } = useSector();
 
-  if (isMobile) {
+  // Hide sidebar entirely when no sector is selected (e.g. /setores)
+  if (isMobile || !currentSector) {
     return null;
   }
 
