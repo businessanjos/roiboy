@@ -207,7 +207,7 @@ export default function SalesPipeline() {
           .maybeSingle(),
       ]);
 
-      const contractMap: Record<string, { productId: string; productName: string }> = {};
+      const contractMap: Record<string, { productId: string; productName: string; isUpsell?: boolean }> = {};
       contractResults.forEach(({ data, error }) => {
         if (error) throw error;
         (data || []).forEach((contract: any) => {
@@ -215,6 +215,7 @@ export default function SalesPipeline() {
             contractMap[contract.deal_id] = {
               productId: contract.product.id,
               productName: contract.product.name,
+              isUpsell: contract.contract_type === 'upsell',
             };
           }
         });
