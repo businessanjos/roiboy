@@ -1446,27 +1446,37 @@ function DealListView({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 sm:gap-4 ml-[42px] sm:ml-0 flex-wrap">
-                    {deal.status === 'won' && dealProductMap?.[deal.id] ? (() => {
-                      const productName = dealProductMap[deal.id].productName;
-                      const productColorMap: Record<string, string> = {
-                        'Eternum Club': '#0f172a',
-                        'Eternum MVP': '#d4a937',
-                        'Rykas Mentoring': '#6A5ACD',
-                        'Eternum Private': '#1C1C1C',
-                        'Conselho': '#2F4F4F',
-                      };
-                      const color = productColorMap[productName] || '#059669';
+                    {deal.status === 'won' ? (() => {
+                      const product = dealProductMap?.[deal.id];
+                      if (product) {
+                        const productColorMap: Record<string, string> = {
+                          'Eternum Club': '#0f172a',
+                          'Eternum MVP': '#d4a937',
+                          'Rykas Mentoring': '#6A5ACD',
+                          'Eternum Private': '#1C1C1C',
+                          'Conselho': '#2F4F4F',
+                        };
+                        const color = productColorMap[product.productName] || '#059669';
+                        return (
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] sm:text-xs font-semibold"
+                            style={{
+                              borderColor: color,
+                              color: '#fff',
+                              backgroundColor: color,
+                            }}
+                          >
+                            {product.productName}
+                          </Badge>
+                        );
+                      }
                       return (
                         <Badge
                           variant="outline"
-                          className="text-[10px] sm:text-xs font-semibold"
-                          style={{
-                            borderColor: color,
-                            color: '#fff',
-                            backgroundColor: color,
-                          }}
+                          className="text-[10px] sm:text-xs text-muted-foreground border-muted-foreground/30 bg-muted/50"
                         >
-                          {productName}
+                          Sem produto
                         </Badge>
                       );
                     })() : stage ? (
