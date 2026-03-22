@@ -185,7 +185,7 @@ export default function SalesPipeline() {
           dealIdChunks.map((ids) =>
             supabase
               .from('client_contracts')
-              .select('deal_id, product_id, product:products!client_contracts_product_id_fkey(id, name)')
+              .select('deal_id, product_id, contract_type, product:products!client_contracts_product_id_fkey(id, name)')
               .in('deal_id', ids)
               .not('product_id', 'is', null)
           )
