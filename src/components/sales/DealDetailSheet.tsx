@@ -331,6 +331,7 @@ export function DealDetailSheet({
       fetchCurrentUser();
       fetchDealCustomFields();
       fetchTeamMembers();
+      fetchSalesMembers();
     }
   }, [deal?.id, open]);
 
