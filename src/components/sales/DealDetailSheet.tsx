@@ -1084,42 +1084,82 @@ export function DealDetailSheet({
                   <div className="flex items-center gap-2 overflow-hidden">
                     <User className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <span className="text-xs text-muted-foreground min-w-[40px]">Resp.</span>
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {deal.responsible_user ? (
-                        <>
-                          <Avatar className="h-5 w-5 flex-shrink-0">
-                            <AvatarImage src={deal.responsible_user.avatar_url || undefined} />
-                            <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
-                              {getInitials(deal.responsible_user.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm truncate">{deal.responsible_user.name}</span>
-                        </>
-                      ) : (
-                        <span className="text-sm text-muted-foreground italic">Sem responsável</span>
-                      )}
-                    </div>
-                    {(!isClosed || canAlwaysChangeResponsible) && (
-                      <div className="flex items-center gap-1 flex-shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => setMergeDialogOpen(true)}
-                        >
-                          <GitMerge className="h-3.5 w-3.5 mr-1" />
-                          Mesclar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 text-xs"
-                          onClick={() => setTransferDialogOpen(true)}
-                        >
-                          <ArrowRightLeft className="h-3.5 w-3.5 mr-1" />
-                          Transferir
-                        </Button>
-                      </div>
+                    {isClosed && canAlwaysChangeResponsible ? (
+                      <Select
+                        value={deal.responsible_user_id || ""}
+                        onValueChange={async (value) => {
+                          try {
+                            const { error } = await supabase
+                              .from("deals")
+                              .update({ responsible_user_id: value })
+                              .eq("id", deal.id);
+                            if (error) throw error;
+                            toast.success("Responsável atualizado!");
+                            onDealUpdated?.();
+                          } catch (err: any) {
+                            toast.error("Erro ao atualizar responsável: " + err.message);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="h-7 text-sm flex-1 min-w-0">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {teamMembers.map(member => (
+                            <SelectItem key={member.id} value={member.id}>
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={member.avatar_url || undefined} />
+                                  <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
+                                    {getInitials(member.name)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                {member.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          {deal.responsible_user ? (
+                            <>
+                              <Avatar className="h-5 w-5 flex-shrink-0">
+                                <AvatarImage src={deal.responsible_user.avatar_url || undefined} />
+                                <AvatarFallback className="text-[9px] bg-primary/10 text-primary">
+                                  {getInitials(deal.responsible_user.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm truncate">{deal.responsible_user.name}</span>
+                            </>
+                          ) : (
+                            <span className="text-sm text-muted-foreground italic">Sem responsável</span>
+                          )}
+                        </div>
+                        {!isClosed && (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => setMergeDialogOpen(true)}
+                            >
+                              <GitMerge className="h-3.5 w-3.5 mr-1" />
+                              Mesclar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs"
+                              onClick={() => setTransferDialogOpen(true)}
+                            >
+                              <ArrowRightLeft className="h-3.5 w-3.5 mr-1" />
+                              Transferir
+                            </Button>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 
