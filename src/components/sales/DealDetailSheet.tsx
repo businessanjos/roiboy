@@ -219,6 +219,7 @@ export function DealDetailSheet({
   const [eventType, setEventType] = useState("note");
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
   const [teamMembers, setTeamMembers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
+  const [salesMembers, setSalesMembers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
   const [updatingSDR, setUpdatingSDR] = useState(false);
   const [changingStage, setChangingStage] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
@@ -330,6 +331,7 @@ export function DealDetailSheet({
       fetchCurrentUser();
       fetchDealCustomFields();
       fetchTeamMembers();
+      fetchSalesMembers();
     }
   }, [deal?.id, open]);
 
@@ -708,6 +710,34 @@ export function DealDetailSheet({
     } catch (error: any) {
       console.error("Error deleting activity:", error);
       toast.error("Erro ao excluir anotação");
+    }
+  };
+
+  const fetchSalesMembers = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+      const { data: userData } = await supabase
+        .from("users")
+        .select("account_id")
+        .eq("auth_user_id", authUser.id)
+        .maybeSingle();
+      if (!userData?.account_id) return;
+
+      const { data } = await supabase
+        .from("user_sector_access")
+        .select("user:users!user_sector_access_user_id_fkey(id, name, avatar_url)")
+        .eq("sector_id", "vendas")
+        .eq("account_id", userData.account_id)
+        .eq("is_active", true);
+
+      const members = (data as any[] || [])
+        .filter((a: any) => a.user?.name)
+        .map((a: any) => ({ id: a.user.id, name: a.user.name, avatar_url: a.user.avatar_url }));
+      members.sort((a: any, b: any) => a.name.localeCompare(b.name));
+      setSalesMembers(members);
+    } catch (err) {
+      console.error("Error fetching sales members:", err);
     }
   };
 
@@ -1105,7 +1135,7 @@ export function DealDetailSheet({
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
-                          {teamMembers.map(member => (
+                          {salesMembers.map(member => (
                             <SelectItem key={member.id} value={member.id}>
                               <div className="flex items-center gap-2">
                                 <Avatar className="h-5 w-5">
