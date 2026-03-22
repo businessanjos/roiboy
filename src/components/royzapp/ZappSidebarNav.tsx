@@ -36,7 +36,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   
   // Determine sector-specific icon and label
   const getSectorIcon = () => {
-    // Mentors/Diretoria always see CRM icon when in non-sales/finance sectors
+    // Mentors always see CRM icon when in non-sales/finance sectors
     if (showCRMForMentor && !["vendas", "financeiro"].includes(sectorId || "")) {
       return Briefcase;
     }
