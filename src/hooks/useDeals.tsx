@@ -189,28 +189,48 @@ export function useDeals(pipelineId?: string | null) {
     
     setLoading(true);
     try {
-      let query = supabase
-        .from('deals')
-        .select(`
+      const selectQuery = `
           *,
           client:clients(id, full_name, phone_e164, avatar_url),
           lead:leads(id, full_name, phone, email, avatar_url),
           responsible_user:users!deals_responsible_user_id_fkey(id, name, avatar_url),
           sdr_user:users!deals_sdr_user_id_fkey(id, name, avatar_url),
           stage:deal_stages(*)
-        `)
-        .eq('account_id', currentUser.account_id)
-        .order('created_at', { ascending: false });
+        `;
 
-      if (pipelineId) {
-        query = query.eq('pipeline_id', pipelineId);
+      // Paginate to fetch ALL deals (Supabase default limit is 1000)
+      const PAGE_SIZE = 1000;
+      let allData: any[] = [];
+      let from = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        let query = supabase
+          .from('deals')
+          .select(selectQuery)
+          .eq('account_id', currentUser.account_id)
+          .order('created_at', { ascending: false })
+          .range(from, from + PAGE_SIZE - 1);
+
+        if (pipelineId) {
+          query = query.eq('pipeline_id', pipelineId);
+        }
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+
+        const batch = data || [];
+        allData = allData.concat(batch);
+
+        if (batch.length < PAGE_SIZE) {
+          hasMore = false;
+        } else {
+          from += PAGE_SIZE;
+        }
       }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      const formattedDeals: Deal[] = (data || []).map(deal => ({
+      const formattedDeals: Deal[] = allData.map(deal => ({
         ...deal,
         status: deal.status as 'open' | 'won' | 'lost',
         tags: Array.isArray(deal.tags) ? deal.tags as string[] : [],
