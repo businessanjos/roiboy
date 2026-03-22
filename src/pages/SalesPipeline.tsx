@@ -1493,7 +1493,7 @@ function DealListView({
   stages: DealStage[];
   onDealClick: (deal: Deal) => void;
   showStatus?: boolean;
-  dealProductMap?: Record<string, { productId: string; productName: string }>;
+  dealProductMap?: Record<string, { productId: string; productName: string; isUpsell?: boolean }>;
 }) {
   const [expandedReasons, setExpandedReasons] = useState<Set<string>>(new Set());
   
