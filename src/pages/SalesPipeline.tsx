@@ -13,6 +13,7 @@ import { notifyContractCreated } from "@/hooks/useContractNotifications";
 import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
 import { useLossReasons } from "@/hooks/useLossReasons";
 import {
+  DEAL_FIELD_IDS,
   fetchDealCustomFieldValues,
   updateClientWithDealData,
   getContractDataFromDealFields,
@@ -161,22 +162,125 @@ export default function SalesPipeline() {
   const [dealProductMap, setDealProductMap] = useState<Record<string, { productId: string; productName: string }>>({});
   
   useEffect(() => {
-    if (!currentUser?.account_id || wonDeals.length === 0) return;
-    const dealIds = wonDeals.map(d => d.id);
-    supabase
-      .from('client_contracts')
-      .select('deal_id, product_id, product:products!client_contracts_product_id_fkey(id, name)')
-      .in('deal_id', dealIds)
-      .not('product_id', 'is', null)
-      .then(({ data }) => {
-        const map: Record<string, { productId: string; productName: string }> = {};
-        (data || []).forEach((c: any) => {
-          if (c.deal_id && c.product) {
-            map[c.deal_id] = { productId: c.product.id, productName: c.product.name };
+    if (!currentUser?.account_id || wonDeals.length === 0) {
+      setDealProductMap({});
+      return;
+    }
+
+    const dealIds = wonDeals.map((deal) => deal.id);
+
+    const chunk = <T,>(items: T[], size: number) => {
+      const chunks: T[][] = [];
+      for (let index = 0; index < items.length; index += size) {
+        chunks.push(items.slice(index, index + size));
+      }
+      return chunks;
+    };
+
+    const fetchWonDealProductMap = async () => {
+      const dealIdChunks = chunk(dealIds, 200);
+
+      const [contractResults, itemVendaResults, fieldResult] = await Promise.all([
+        Promise.all(
+          dealIdChunks.map((ids) =>
+            supabase
+              .from('client_contracts')
+              .select('deal_id, product_id, product:products!client_contracts_product_id_fkey(id, name)')
+              .in('deal_id', ids)
+              .not('product_id', 'is', null)
+          )
+        ),
+        Promise.all(
+          dealIdChunks.map((ids) =>
+            supabase
+              .from('deal_field_values')
+              .select('deal_id, value_text')
+              .eq('field_id', DEAL_FIELD_IDS.ITEM_VENDA)
+              .in('deal_id', ids)
+              .not('value_text', 'is', null)
+          )
+        ),
+        supabase
+          .from('custom_fields')
+          .select('options')
+          .eq('id', DEAL_FIELD_IDS.ITEM_VENDA)
+          .maybeSingle(),
+      ]);
+
+      const contractMap: Record<string, { productId: string; productName: string }> = {};
+      contractResults.forEach(({ data, error }) => {
+        if (error) throw error;
+        (data || []).forEach((contract: any) => {
+          if (contract.deal_id && contract.product) {
+            contractMap[contract.deal_id] = {
+              productId: contract.product.id,
+              productName: contract.product.name,
+            };
           }
         });
-        setDealProductMap(map);
       });
+
+      const optionMap: Record<string, string> = {};
+      if (fieldResult.error) throw fieldResult.error;
+      if (Array.isArray(fieldResult.data?.options)) {
+        (fieldResult.data.options as Array<{ value: string; label: string }>).forEach((option) => {
+          optionMap[option.value] = option.label;
+        });
+      }
+
+      const fallbackRawMap: Record<string, string> = {};
+      itemVendaResults.forEach(({ data, error }) => {
+        if (error) throw error;
+        (data || []).forEach((fieldValue) => {
+          if (fieldValue.deal_id && fieldValue.value_text) {
+            fallbackRawMap[fieldValue.deal_id] = fieldValue.value_text;
+          }
+        });
+      });
+
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const unresolvedProductIds = [...new Set(Object.values(fallbackRawMap).filter((value) => uuidRegex.test(value)))];
+      const productNameById: Record<string, string> = {};
+
+      if (unresolvedProductIds.length > 0) {
+        const productIdChunks = chunk(unresolvedProductIds, 200);
+        const productResults = await Promise.all(
+          productIdChunks.map((ids) =>
+            supabase
+              .from('products')
+              .select('id, name')
+              .in('id', ids)
+          )
+        );
+
+        productResults.forEach(({ data, error }) => {
+          if (error) throw error;
+          (data || []).forEach((product) => {
+            productNameById[product.id] = product.name;
+          });
+        });
+      }
+
+      const mergedMap = { ...contractMap };
+      wonDeals.forEach((deal) => {
+        if (mergedMap[deal.id]) return;
+
+        const rawValue = fallbackRawMap[deal.id];
+        if (!rawValue) return;
+
+        mergedMap[deal.id] = {
+          productId: rawValue,
+          productName: optionMap[rawValue] || productNameById[rawValue] || rawValue,
+        };
+      });
+
+      setDealProductMap(mergedMap);
+    };
+
+    fetchWonDealProductMap().catch((error) => {
+      console.error('[SalesPipeline] Error fetching won deal product map:', error);
+      setDealProductMap({});
+    });
   }, [currentUser?.account_id, wonDeals]);
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
