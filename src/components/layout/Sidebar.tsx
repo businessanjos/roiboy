@@ -94,25 +94,6 @@ interface NavItem {
   permission?: Permission | Permission[];
 }
 
-const navItems: NavItem[] = [
-  { to: "/sobre", icon: Presentation, label: "Apresentação" },
-  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", permission: PERMISSIONS.REPORTS_VIEW },
-  { to: "/leads", icon: UserPlus, label: "Leads", permission: PERMISSIONS.CLIENTS_VIEW },
-  { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
-  { to: "/team", icon: UserCircle, label: "Equipe", permission: PERMISSIONS.TEAM_VIEW },
-  { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
-  { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
-  { to: "/events", icon: CalendarDays, label: "Eventos", permission: PERMISSIONS.EVENTS_VIEW },
-  { to: "/forms", icon: FileText, label: "Formulários", permission: PERMISSIONS.FORMS_VIEW },
-  { to: "/reminders", icon: BellRing, label: "Lembretes", permission: PERMISSIONS.SETTINGS_VIEW },
-  { to: "/whatsapp-groups", icon: UsersRound, label: "Grupos WhatsApp", permission: PERMISSIONS.SETTINGS_VIEW },
-  { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP", permission: PERMISSIONS.SETTINGS_VIEW },
-  { to: "/team-chat", icon: MessageCircle, label: "ROY Chat", permission: PERMISSIONS.TEAM_VIEW },
-  { to: "/ai-agent", icon: Bot, label: "Agente ROY", permission: PERMISSIONS.SETTINGS_VIEW },
-  
-  { to: "/settings", icon: Settings, label: "Configurações", permission: PERMISSIONS.SETTINGS_VIEW },
-];
-
 // Simplified navigation for super admins - only admin-related items
 const superAdminNavItems: NavItem[] = [
   { to: "/admin", icon: Shield, label: "Administração" },
