@@ -159,7 +159,7 @@ export default function SalesPipeline() {
   const [lostReasonFilter, setLostReasonFilter] = usePersistedFilter<string>("salesPipeline", "lostReasonFilter", "all");
   
   // Fetch deal→product mapping from contracts for won deals
-  const [dealProductMap, setDealProductMap] = useState<Record<string, { productId: string; productName: string }>>({});
+  const [dealProductMap, setDealProductMap] = useState<Record<string, { productId: string; productName: string; isUpsell?: boolean }>>({});
   
   useEffect(() => {
     if (!currentUser?.account_id || wonDeals.length === 0) {
