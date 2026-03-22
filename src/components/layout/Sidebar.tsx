@@ -553,6 +553,8 @@ export function MobileHeader() {
 
   // Hide mobile header when no sector is selected
   if (!currentSector) return null;
+
+  return (
     <header className="lg:hidden flex items-center justify-between h-14 px-4 border-b border-border bg-card">
       <NavLink to="/dashboard" className="flex items-center gap-2">
         <RoyLogo size="md" />
