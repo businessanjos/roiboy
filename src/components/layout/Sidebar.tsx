@@ -612,16 +612,10 @@ export function Sidebar() {
         collapsed ? "w-16" : "w-64"
       )}
     >
-      {/* Logo */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-border">
-        <NavLink to="/dashboard" className="flex items-center gap-2">
-          <RoyLogo size="md" />
-          {!collapsed && (
-            <span className="font-semibold text-lg tracking-tight text-foreground">
-              ROY APP
-            </span>
-          )}
-        </NavLink>
+      <SidebarContent collapsed={collapsed} />
+
+      {/* Toggle Button at bottom */}
+      <div className="border-t border-border p-2 flex justify-center">
         <Button
           variant="ghost"
           size="icon"
@@ -629,14 +623,12 @@ export function Sidebar() {
           onClick={() => setCollapsed(!collapsed)}
         >
           {collapsed ? (
-            <ChevronRight className="h-4 w-4" />
+            <PanelLeftOpen className="h-4 w-4" />
           ) : (
-            <ChevronLeft className="h-4 w-4" />
+            <PanelLeftClose className="h-4 w-4" />
           )}
         </Button>
       </div>
-
-      <SidebarContent collapsed={collapsed} />
     </aside>
   );
 }
