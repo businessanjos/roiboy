@@ -127,45 +127,34 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               )}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1">
-              {contactInfo.isGroup && <Users2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-zapp-accent flex-shrink-0" />}
-              <h3 className="text-zapp-text font-medium truncate text-sm sm:text-base">
-                {contactInfo.name}
-              </h3>
-              {clientId && <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-zapp-text-muted flex-shrink-0" />}
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2">
-              <p className="text-zapp-text-muted text-[10px] sm:text-xs truncate">
-                {contactInfo.phone}
-                {assignment.agent?.user && (
-                  <span className="hidden sm:inline"> • Atendido por {assignment.agent.user.name}</span>
+          <div className="flex-1 min-w-0 flex items-center gap-1 sm:gap-2">
+            {contactInfo.isGroup && <Users2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-zapp-accent flex-shrink-0" />}
+            <h3 className="text-zapp-text font-medium truncate text-sm sm:text-base">
+              {contactInfo.name}
+            </h3>
+            {clientId && <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-zapp-text-muted flex-shrink-0" />}
+            {clientProducts && clientProducts.length > 0 && (
+              <div className="hidden xs:flex items-center gap-1 flex-shrink-0">
+                {clientProducts.slice(0, 1).map((p) => (
+                  <Badge 
+                    key={p.id} 
+                    variant="secondary" 
+                    className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 h-3.5 sm:h-4 border-0"
+                    style={{ 
+                      backgroundColor: `${p.color || '#10b981'}20`,
+                      color: p.color || '#10b981'
+                    }}
+                  >
+                    {p.name}
+                  </Badge>
+                ))}
+                {clientProducts.length > 1 && (
+                  <span className="text-[9px] sm:text-[10px] text-zapp-text-muted">
+                    +{clientProducts.length - 1}
+                  </span>
                 )}
-              </p>
-              {/* Product badges - hidden on very small screens */}
-              {clientProducts && clientProducts.length > 0 && (
-                <div className="hidden xs:flex items-center gap-1 flex-shrink-0">
-                  {clientProducts.slice(0, 1).map((p) => (
-                    <Badge 
-                      key={p.id} 
-                      variant="secondary" 
-                      className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 h-3.5 sm:h-4 border-0"
-                      style={{ 
-                        backgroundColor: `${p.color || '#10b981'}20`,
-                        color: p.color || '#10b981'
-                      }}
-                    >
-                      {p.name}
-                    </Badge>
-                  ))}
-                  {clientProducts.length > 1 && (
-                    <span className="text-[9px] sm:text-[10px] text-zapp-text-muted">
-                      +{clientProducts.length - 1}
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1 sm:gap-2">
