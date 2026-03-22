@@ -249,10 +249,7 @@ export default function TeamChat() {
                               {member.name?.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <p className="font-medium text-sm">{member.name}</p>
-                            <p className="text-xs text-muted-foreground">{member.email}</p>
-                          </div>
+                          <span className="font-medium text-sm">{member.name}</span>
                         </label>
                       ))}
                     </div>
