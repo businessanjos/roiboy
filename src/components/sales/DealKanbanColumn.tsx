@@ -99,6 +99,11 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
         >
           {deals.length}
         </Badge>
+        {totalValue > 0 && (
+          <span className="text-[9px] font-medium text-muted-foreground truncate max-w-[70px]" title={formatCurrency(totalValue)}>
+            {formatCurrency(totalValue)}
+          </span>
+        )}
         {conversionRate !== undefined ? (
           <span className="text-[9px] text-muted-foreground/70 tabular-nums w-6 text-right flex-shrink-0">
             {conversionRate}%
