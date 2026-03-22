@@ -100,8 +100,6 @@ export function AppLayout() {
           {/* Keyboard Shortcuts Help */}
           <KeyboardShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
 
-          {/* Chat com agentes de IA - temporariamente oculto */}
-          {/* {isAdmin && <GlobalAgentChat />} */}
 
           {/* 3C Plus Embedded Panel */}
           {isInVendas && <ThreeCPlusPanel />}
