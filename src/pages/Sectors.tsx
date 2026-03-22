@@ -6,7 +6,6 @@ import { sectors, SectorId } from "@/config/sectors";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { RoyLogo } from "@/components/ui/roy-logo";
-import logoEternum from "@/assets/logo-eternum.svg";
 import { ArrowRight, BarChart3, Wallet, Target, Palette } from "lucide-react";
 
 // Sectors accessible by sales rep roles
@@ -143,7 +142,7 @@ export default function Sectors() {
       <div className="container mx-auto px-6 py-12 max-w-5xl">
         {/* Header */}
         <div className="flex flex-col items-center mb-14">
-          <img src={logoEternum} alt="Eternum" className="h-48 mb-5 opacity-90" />
+          <RoyLogo size="xl" className="mb-5 opacity-80" />
           <h1 className="text-2xl md:text-3xl font-light text-foreground tracking-tight">
             {accountName || (userLoading ? "..." : "Sua Empresa")}
           </h1>
