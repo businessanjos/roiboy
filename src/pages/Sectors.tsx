@@ -133,10 +133,8 @@ export default function Sectors() {
     return sectors;
   }, [isSalesRep, isManager]);
 
-  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro"];
+  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "royzapp", "roychat"];
   const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);
-  const otherSectors = availableSectors.filter(s => !coreAreas.includes(s.id) && s.id !== "royzapp" && s.id !== "roychat" && s.id !== "configuracoes");
-  const toolSectors = availableSectors.filter(s => s.id === "royzapp" || s.id === "roychat");
 
   return (
     <div className="min-h-screen bg-background">
@@ -156,8 +154,8 @@ export default function Sectors() {
           </p>
         </div>
 
-        {/* Core 4 Areas — with accent border, pattern, and distinct icons */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        {/* All 6 Areas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {coreSectors.map((sector) => {
             const identity = SECTOR_IDENTITY[sector.id];
             const IconComponent = identity?.overrideIcon || sector.icon;
@@ -168,12 +166,12 @@ export default function Sectors() {
                 onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
                 className={cn(
                   "group relative p-5 rounded-xl border border-l-[3px] bg-card overflow-hidden transition-all duration-300",
-                  identity?.accent,
+                  identity?.accent || "border-l-primary",
                   sector.comingSoon
                     ? "cursor-not-allowed opacity-40"
                     : cn(
                         "cursor-pointer hover:shadow-xl hover:shadow-black/5 hover:-translate-y-0.5",
-                        identity?.hoverBorder
+                        identity?.hoverBorder || "hover:border-primary/30"
                       )
                 )}
               >
@@ -184,11 +182,11 @@ export default function Sectors() {
                   {/* Icon */}
                   <div className={cn(
                     "w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center flex-shrink-0 transition-colors duration-300",
-                    identity?.hoverIconBg
+                    identity?.hoverIconBg || "group-hover:bg-primary/10"
                   )}>
                     <IconComponent className={cn(
                       "h-6 w-6 text-foreground/70 transition-colors duration-300",
-                      identity?.hoverIconColor
+                      identity?.hoverIconColor || "group-hover:text-primary"
                     )} strokeWidth={1.5} />
                   </div>
 
@@ -216,49 +214,6 @@ export default function Sectors() {
             );
           })}
         </div>
-
-        {/* Divider */}
-        {(otherSectors.length > 0 || toolSectors.length > 0) && (
-          <div className="flex items-center gap-3 my-8">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
-              Mais áreas
-            </span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-        )}
-
-        {/* Other Sectors + Tools - Unified grid */}
-        {[...otherSectors, ...toolSectors].length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-            {[...otherSectors, ...toolSectors].map((sector) => (
-              <div
-                key={sector.id}
-                onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
-                className={cn(
-                  "group relative p-4 rounded-lg border bg-card/50 transition-all duration-300",
-                  sector.comingSoon
-                    ? "cursor-not-allowed opacity-40"
-                    : "cursor-pointer hover:bg-card hover:border-primary/20 hover:shadow-md hover:shadow-primary/5"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors duration-300">
-                    <sector.icon className="h-[18px] w-[18px] text-foreground/60 group-hover:text-primary transition-colors duration-300" strokeWidth={1.5} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-sm font-medium text-foreground">
-                      {sector.name}
-                    </h3>
-                    <p className="text-[11px] text-muted-foreground line-clamp-1">
-                      {sector.description}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
