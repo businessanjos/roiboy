@@ -67,7 +67,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
   }, [notifications, activeTab]);
 
   const tabCounts = useMemo(() => {
-    const counts: Record<TabId, number> = { all: 0, sales: 0, forms: 0, mentions: 0, contracts: 0, other: 0 };
+    const counts: Record<TabId, number> = { all: 0, sales: 0, forms: 0, mentions: 0, other: 0 };
     notifications.forEach((n) => {
       if (!n.is_read) {
         counts.all++;
