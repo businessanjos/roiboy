@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useSector } from "@/contexts/SectorContext";
 import { Bell, Moon, Sun, LogOut, User, Pencil } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export function GlobalHeader() {
   const { pendingCount, overdueCount } = usePendingTasksCount();
   const { setTheme, theme } = useTheme();
   const navigate = useNavigate();
+  const { clearSector } = useSector();
 
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
   const [editName, setEditName] = useState("");
@@ -90,7 +92,7 @@ export function GlobalHeader() {
     <>
       <header className="flex items-center justify-between h-14 px-4 md:px-6 border-b border-border bg-card shrink-0">
         {/* Logo */}
-        <button onClick={() => navigate("/setores")} className="flex items-center gap-2">
+        <button onClick={() => { clearSector(); navigate("/setores"); }} className="flex items-center gap-2">
           <RoyLogo size="md" />
           <span className="font-semibold text-lg tracking-tight text-foreground hidden sm:inline">
             ROY APP
