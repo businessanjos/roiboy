@@ -1580,17 +1580,32 @@ function DealListView({
                         };
                         const color = productColorMap[product.productName] || '#059669';
                         return (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] sm:text-xs font-semibold"
-                            style={{
-                              borderColor: color,
-                              color: '#fff',
-                              backgroundColor: color,
-                            }}
-                          >
-                            {product.productName}
-                          </Badge>
+                          <>
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] sm:text-xs font-semibold"
+                              style={{
+                                borderColor: color,
+                                color: '#fff',
+                                backgroundColor: color,
+                              }}
+                            >
+                              {product.productName}
+                            </Badge>
+                            {(product.isUpsell || deal.title?.toLowerCase().includes('upsell')) && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] sm:text-xs font-semibold"
+                                style={{
+                                  borderColor: '#FF8C00',
+                                  color: '#fff',
+                                  backgroundColor: '#FF8C00',
+                                }}
+                              >
+                                Upsell
+                              </Badge>
+                            )}
+                          </>
                         );
                       }
                       return (
