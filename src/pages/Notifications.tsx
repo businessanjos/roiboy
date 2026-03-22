@@ -27,7 +27,6 @@ const TABS = [
   { id: "sales", label: "Vendas", icon: ShoppingCart },
   { id: "forms", label: "Formulários", icon: FileText },
   { id: "mentions", label: "Menções", icon: AtSign },
-  { id: "contracts", label: "Contratos", icon: ScrollText },
   { id: "other", label: "Outros", icon: MessageSquare },
 ] as const;
 
@@ -36,10 +35,9 @@ type TabId = (typeof TABS)[number]["id"];
 const SOURCE_TYPE_MAP: Record<string, TabId> = {
   deal: "sales",
   contract_renewal: "sales",
+  client_contracts: "sales",
   form_response: "forms",
   client_followup: "mentions",
-  contract_expiry: "contracts",
-  client_contracts: "contracts",
 };
 
 function getTabForNotification(sourceType: string | null): TabId {
@@ -69,7 +67,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
   }, [notifications, activeTab]);
 
   const tabCounts = useMemo(() => {
-    const counts: Record<TabId, number> = { all: 0, sales: 0, forms: 0, mentions: 0, contracts: 0, other: 0 };
+    const counts: Record<TabId, number> = { all: 0, sales: 0, forms: 0, mentions: 0, other: 0 };
     notifications.forEach((n) => {
       if (!n.is_read) {
         counts.all++;
@@ -94,7 +92,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
       case "sales": return <ShoppingCart className="h-4 w-4" />;
       case "forms": return <FileText className="h-4 w-4" />;
       case "mentions": return <AtSign className="h-4 w-4" />;
-      case "contracts": return <ScrollText className="h-4 w-4" />;
+      
       default: return <Bell className="h-4 w-4" />;
     }
   };
