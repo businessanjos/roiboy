@@ -178,8 +178,6 @@ verify_jwt = false
 [functions.update-meeting]
 verify_jwt = false
 
-[functions.backfill-lead-fields]
-verify_jwt = false
 
 [functions.attach-deal-file]
 verify_jwt = false
