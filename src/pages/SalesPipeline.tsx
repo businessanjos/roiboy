@@ -159,7 +159,7 @@ export default function SalesPipeline() {
   const [lostReasonFilter, setLostReasonFilter] = usePersistedFilter<string>("salesPipeline", "lostReasonFilter", "all");
   
   // Fetch deal→product mapping from contracts for won deals
-  const [dealProductMap, setDealProductMap] = useState<Record<string, { productId: string; productName: string }>>({});
+  const [dealProductMap, setDealProductMap] = useState<Record<string, { productId: string; productName: string; isUpsell?: boolean }>>({});
   
   useEffect(() => {
     if (!currentUser?.account_id || wonDeals.length === 0) {
@@ -185,7 +185,7 @@ export default function SalesPipeline() {
           dealIdChunks.map((ids) =>
             supabase
               .from('client_contracts')
-              .select('deal_id, product_id, product:products!client_contracts_product_id_fkey(id, name)')
+              .select('deal_id, product_id, contract_type, product:products!client_contracts_product_id_fkey(id, name)')
               .in('deal_id', ids)
               .not('product_id', 'is', null)
           )
@@ -207,7 +207,7 @@ export default function SalesPipeline() {
           .maybeSingle(),
       ]);
 
-      const contractMap: Record<string, { productId: string; productName: string }> = {};
+      const contractMap: Record<string, { productId: string; productName: string; isUpsell?: boolean }> = {};
       contractResults.forEach(({ data, error }) => {
         if (error) throw error;
         (data || []).forEach((contract: any) => {
@@ -215,6 +215,7 @@ export default function SalesPipeline() {
             contractMap[contract.deal_id] = {
               productId: contract.product.id,
               productName: contract.product.name,
+              isUpsell: contract.contract_type === 'upsell',
             };
           }
         });
@@ -261,9 +262,15 @@ export default function SalesPipeline() {
         });
       }
 
-      const mergedMap = { ...contractMap };
+      const mergedMap: Record<string, { productId: string; productName: string; isUpsell?: boolean }> = { ...contractMap };
       wonDeals.forEach((deal) => {
-        if (mergedMap[deal.id]) return;
+        if (mergedMap[deal.id]) {
+          // Also flag as upsell if deal title contains "upsell"
+          if (!mergedMap[deal.id].isUpsell && deal.title?.toLowerCase().includes('upsell')) {
+            mergedMap[deal.id].isUpsell = true;
+          }
+          return;
+        }
 
         const rawValue = fallbackRawMap[deal.id];
         if (!rawValue) return;
@@ -271,6 +278,7 @@ export default function SalesPipeline() {
         mergedMap[deal.id] = {
           productId: rawValue,
           productName: optionMap[rawValue] || productNameById[rawValue] || rawValue,
+          isUpsell: deal.title?.toLowerCase().includes('upsell'),
         };
       });
 
@@ -1485,7 +1493,7 @@ function DealListView({
   stages: DealStage[];
   onDealClick: (deal: Deal) => void;
   showStatus?: boolean;
-  dealProductMap?: Record<string, { productId: string; productName: string }>;
+  dealProductMap?: Record<string, { productId: string; productName: string; isUpsell?: boolean }>;
 }) {
   const [expandedReasons, setExpandedReasons] = useState<Set<string>>(new Set());
   
@@ -1572,26 +1580,56 @@ function DealListView({
                         };
                         const color = productColorMap[product.productName] || '#059669';
                         return (
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] sm:text-xs font-semibold"
-                            style={{
-                              borderColor: color,
-                              color: '#fff',
-                              backgroundColor: color,
-                            }}
-                          >
-                            {product.productName}
-                          </Badge>
+                          <>
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] sm:text-xs font-semibold"
+                              style={{
+                                borderColor: color,
+                                color: '#fff',
+                                backgroundColor: color,
+                              }}
+                            >
+                              {product.productName}
+                            </Badge>
+                            {(product.isUpsell || deal.title?.toLowerCase().includes('upsell')) && (
+                              <Badge
+                                variant="outline"
+                                className="text-[10px] sm:text-xs font-semibold"
+                                style={{
+                                  borderColor: '#FF8C00',
+                                  color: '#fff',
+                                  backgroundColor: '#FF8C00',
+                                }}
+                              >
+                                Upsell
+                              </Badge>
+                            )}
+                          </>
                         );
                       }
                       return (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] sm:text-xs text-muted-foreground border-muted-foreground/30 bg-muted/50"
-                        >
-                          Sem produto
-                        </Badge>
+                        <>
+                          <Badge
+                            variant="outline"
+                            className="text-[10px] sm:text-xs text-muted-foreground border-muted-foreground/30 bg-muted/50"
+                          >
+                            Sem produto
+                          </Badge>
+                          {deal.title?.toLowerCase().includes('upsell') && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] sm:text-xs font-semibold"
+                              style={{
+                                borderColor: '#FF8C00',
+                                color: '#fff',
+                                backgroundColor: '#FF8C00',
+                              }}
+                            >
+                              Upsell
+                            </Badge>
+                          )}
+                        </>
                       );
                     })() : stage ? (
                       <Badge
