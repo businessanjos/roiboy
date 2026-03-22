@@ -608,8 +608,10 @@ export function MobileHeader() {
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const isMobile = useIsMobile();
+  const { currentSector } = useSector();
 
-  if (isMobile) {
+  // Hide sidebar entirely when no sector is selected (e.g. /setores)
+  if (isMobile || !currentSector) {
     return null;
   }
 
