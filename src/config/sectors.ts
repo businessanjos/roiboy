@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
 
-export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "roychat" | "configuracoes" | "diretoria";
+export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "roychat" | "configuracoes";
 
 export interface NavItem {
   to: string;
