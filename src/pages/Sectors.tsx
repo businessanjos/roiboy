@@ -224,7 +224,7 @@ export default function Sectors() {
                   </div>
 
                   {/* Arrow */}
-                  <ArrowRight className="h-4 w-4 text-muted-foreground/20 group-hover:text-foreground/40 group-hover:translate-x-0.5 transition-all duration-300 flex-shrink-0" />
+                  
                 </div>
               </div>
             );
