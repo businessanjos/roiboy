@@ -143,7 +143,7 @@ export default function Sectors() {
       <div className="container mx-auto px-6 py-12 max-w-5xl">
         {/* Header */}
         <div className="flex flex-col items-center mb-14">
-          <img src={logoEternum} alt="Eternum" className="h-12 mb-5 opacity-90" />
+          <img src={logoEternum} alt="Eternum" className="h-24 mb-5 opacity-90" />
           <h1 className="text-2xl md:text-3xl font-light text-foreground tracking-tight">
             {accountName || (userLoading ? "..." : "Sua Empresa")}
           </h1>
