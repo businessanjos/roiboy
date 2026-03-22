@@ -27,7 +27,6 @@ const TABS = [
   { id: "sales", label: "Vendas", icon: ShoppingCart },
   { id: "forms", label: "Formulários", icon: FileText },
   { id: "mentions", label: "Menções", icon: AtSign },
-  { id: "contracts", label: "Contratos", icon: ScrollText },
   { id: "other", label: "Outros", icon: MessageSquare },
 ] as const;
 
