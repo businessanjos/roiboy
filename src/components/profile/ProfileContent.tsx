@@ -271,8 +271,11 @@ export function ProfileContent() {
               <CardDescription className="flex items-center gap-1">
                 <Mail className="h-3 w-3" /> {profile.email}
               </CardDescription>
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <Badge variant="outline">{getRoleLabel(profile.role)}</Badge>
+                {currentUser?.team_role_names?.filter(name => name !== "Mentor").map((roleName) => (
+                  <Badge key={roleName} variant="secondary">{roleName}</Badge>
+                ))}
               </div>
             </div>
           </div>
