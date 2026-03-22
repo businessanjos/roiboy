@@ -23,10 +23,10 @@ const SECTOR_IDENTITY: Record<string, {
   overrideIcon: React.ElementType;
 }> = {
   operacoes: {
-    accent: "border-l-amber-500",
-    hoverBorder: "hover:border-amber-500/30",
-    hoverIconBg: "group-hover:bg-amber-500/10",
-    hoverIconColor: "group-hover:text-amber-600",
+    accent: "border-l-yellow-800",
+    hoverBorder: "hover:border-yellow-800/30",
+    hoverIconBg: "group-hover:bg-yellow-800/10",
+    hoverIconColor: "group-hover:text-yellow-800",
     patternClass: "sector-pattern-ops",
     overrideIcon: BarChart3,
   },
