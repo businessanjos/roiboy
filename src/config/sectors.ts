@@ -167,20 +167,6 @@ export const sectors: Sector[] = [
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
-  {
-    id: "diretoria",
-    name: "Mentor",
-    description: "Gestão e mentoria executiva",
-    icon: Crown,
-    color: "text-rose-600",
-    bgColor: "bg-rose-500/10",
-    defaultRoute: "/mentor-agenda",
-    navItems: [
-      { to: "/mentor-agenda", icon: CalendarDays, label: "Agenda" },
-      { to: "/roy-zapp", icon: MessageSquare, label: "ROY zAPP" },
-      { to: "/notifications", icon: Bell, label: "Notificações" },
-    ],
-  },
 ];
 
 export function getSectorById(id: SectorId): Sector | undefined {
