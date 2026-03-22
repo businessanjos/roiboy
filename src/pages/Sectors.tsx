@@ -5,6 +5,8 @@ import { useSector } from "@/contexts/SectorContext";
 import { sectors, SectorId } from "@/config/sectors";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { RoyLogo } from "@/components/ui/roy-logo";
+import { ArrowRight } from "lucide-react";
 
 // Sectors accessible by sales rep roles (SDR, Closer, Vendas, Vendedor)
 const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "roychat", "configuracoes"];
@@ -71,146 +73,101 @@ export default function Sectors() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-6 py-16 max-w-5xl">
+      <div className="container mx-auto px-6 py-12 max-w-5xl">
         {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-3xl md:text-4xl font-light text-foreground mb-2 tracking-tight">
-            Bem-vindo à{" "}
-            <span className="text-primary font-medium">
-              {accountName || (userLoading ? "..." : "Sua Empresa")}
-            </span>
+        <div className="flex flex-col items-center mb-14">
+          <RoyLogo size="xl" className="mb-5 opacity-80" />
+          <h1 className="text-2xl md:text-3xl font-light text-foreground tracking-tight">
+            {accountName || (userLoading ? "..." : "Sua Empresa")}
           </h1>
-          <p className="text-muted-foreground">
-            Gerencie sua empresa através das áreas fundamentais do negócio
+          <p className="text-sm text-muted-foreground mt-1">
+            Selecione uma área para continuar
           </p>
         </div>
 
-        {/* Core 4 Areas - Larger Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-8">
-          {coreSectors.map((sector) => (
+        {/* Core 4 Areas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {coreSectors.map((sector, i) => (
             <div
               key={sector.id}
               onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
               className={cn(
-                "group relative p-6 rounded-xl border-2 bg-card transition-all duration-200",
+                "group relative p-5 rounded-xl border bg-card transition-all duration-300",
                 sector.comingSoon
-                  ? "cursor-not-allowed opacity-50"
-                  : "cursor-pointer hover:shadow-lg hover:scale-[1.02]",
-                // Dynamic border color based on sector
-                sector.id === "operacoes" && "border-amber-500/30 hover:border-amber-500/60",
-                sector.id === "financeiro" && "border-emerald-500/30 hover:border-emerald-500/60",
-                sector.id === "vendas" && "border-blue-500/30 hover:border-blue-500/60",
-                sector.id === "marketing" && "border-purple-500/30 hover:border-purple-500/60"
+                  ? "cursor-not-allowed opacity-40"
+                  : "cursor-pointer hover:shadow-xl hover:shadow-primary/5 hover:border-primary/30 hover:-translate-y-0.5"
               )}
+              style={{ animationDelay: `${i * 60}ms` }}
             >
-              <div className="flex items-start gap-4">
-                {/* Icon - Larger for core areas */}
-                <div className={cn(
-                  "w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0",
-                  sector.bgColor
-                )}>
-                  <sector.icon className={cn("h-7 w-7", sector.color)} />
+              <div className="flex items-center gap-4">
+                {/* Monochrome icon */}
+                <div className="w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors duration-300">
+                  <sector.icon className="h-6 w-6 text-foreground/70 group-hover:text-primary transition-colors duration-300" />
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <h3 className="text-xl font-semibold text-foreground">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-foreground tracking-tight">
                       {sector.name}
                     </h3>
                     {sector.comingSoon && (
-                      <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                      <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full uppercase tracking-wider font-medium">
                         Em breve
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
                     {sector.description}
                   </p>
                 </div>
+
+                {/* Arrow */}
+                <ArrowRight className="h-4 w-4 text-muted-foreground/30 group-hover:text-primary/60 group-hover:translate-x-0.5 transition-all duration-300 flex-shrink-0" />
               </div>
             </div>
           ))}
         </div>
 
-        {/* Other Sectors - Smaller Cards */}
-        {otherSectors.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-            {otherSectors.map((sector) => (
+        {/* Divider */}
+        {(otherSectors.length > 0 || toolSectors.length > 0) && (
+          <div className="flex items-center gap-3 my-8">
+            <div className="flex-1 h-px bg-border" />
+            <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
+              Mais áreas
+            </span>
+            <div className="flex-1 h-px bg-border" />
+          </div>
+        )}
+
+        {/* Other Sectors + Tools - Unified grid */}
+        {[...otherSectors, ...toolSectors].length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {[...otherSectors, ...toolSectors].map((sector, i) => (
               <div
                 key={sector.id}
                 onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
                 className={cn(
-                  "group relative p-5 rounded-lg border bg-card/50 transition-all duration-200",
+                  "group relative p-4 rounded-lg border bg-card/50 transition-all duration-300",
                   sector.comingSoon
-                    ? "cursor-not-allowed opacity-50"
-                    : "cursor-pointer hover:border-muted-foreground/30 hover:bg-card"
+                    ? "cursor-not-allowed opacity-40"
+                    : "cursor-pointer hover:bg-card hover:border-primary/20 hover:shadow-md hover:shadow-primary/5"
                 )}
               >
-                <div className="flex items-start gap-3">
+                <div className="flex items-center gap-3">
                   {/* Icon */}
-                  <div className={cn(
-                    "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                    sector.bgColor
-                  )}>
-                    <sector.icon className={cn("h-5 w-5", sector.color)} />
+                  <div className="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/10 transition-colors duration-300">
+                    <sector.icon className="h-4.5 w-4.5 text-foreground/60 group-hover:text-primary transition-colors duration-300" />
                   </div>
 
                   {/* Content */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <h3 className="text-base font-medium text-foreground">
-                        {sector.name}
-                      </h3>
-                      {sector.comingSoon && (
-                        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                          Em breve
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
+                    <h3 className="text-sm font-medium text-foreground">
+                      {sector.name}
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground line-clamp-1">
                       {sector.description}
                     </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Tools - ROY zAPP & ROY Chat */}
-        {toolSectors.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {toolSectors.map((tool) => (
-              <div
-                key={tool.id}
-                onClick={() => handleSectorClick(tool.id, tool.defaultRoute)}
-                className="group relative p-5 rounded-lg border border-primary/20 bg-primary/5 cursor-pointer transition-all duration-200 hover:border-primary/40 hover:bg-primary/10"
-              >
-                <div className="flex items-center gap-4">
-                  {/* Icon */}
-                  <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0", tool.bgColor)}>
-                    <tool.icon className={cn("h-6 w-6", tool.color)} />
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-medium text-primary uppercase tracking-wider">
-                      Ferramenta
-                    </span>
-                    <h3 className="text-lg font-medium text-foreground">
-                      {tool.name}
-                    </h3>
-                    <p className="text-sm text-muted-foreground line-clamp-1">
-                      {tool.description}
-                    </p>
-                  </div>
-
-                  {/* Arrow */}
-                  <div className="text-primary/60 group-hover:text-primary transition-colors">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-                    </svg>
                   </div>
                 </div>
               </div>
