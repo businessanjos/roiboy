@@ -1,35 +1,21 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard,
-  Users,
-  Settings,
-  Link2,
   LogOut,
   ChevronLeft,
   ChevronRight,
-  UserCircle,
-  Package,
   Menu,
   X,
-  FileText,
-  CalendarDays,
   User,
   Pencil,
   Bell,
   Moon,
   Sun,
-  ClipboardList,
   Shield,
-  BellRing,
-  UsersRound,
-  Bot,
-  MessageSquare,
-  MessageCircle,
   Activity,
   Grid3X3,
-  UserPlus,
   Loader2,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
