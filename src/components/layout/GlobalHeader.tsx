@@ -161,14 +161,9 @@ export function GlobalHeader() {
                     {currentUser ? getInitials(currentUser.name) : "?"}
                   </AvatarFallback>
                 </Avatar>
-                <div className="hidden md:flex flex-col items-start text-left">
-                  <span className="text-sm font-medium text-foreground truncate max-w-[140px]">
-                    {currentUser?.name}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground truncate max-w-[140px]">
-                    {currentUser?.email}
-                  </span>
-                </div>
+                <span className="hidden md:inline text-sm font-medium text-foreground truncate max-w-[140px]">
+                  {currentUser?.name}
+                </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
