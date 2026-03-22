@@ -21,8 +21,6 @@ verify_jwt = false
 [functions.sync-omie]
 verify_jwt = false
 
-[functions.ryka-webhook]
-verify_jwt = false
 
 [functions.pipedrive-webhook]
 verify_jwt = false
@@ -180,8 +178,6 @@ verify_jwt = false
 [functions.update-meeting]
 verify_jwt = false
 
-[functions.backfill-lead-fields]
-verify_jwt = false
 
 [functions.attach-deal-file]
 verify_jwt = false
