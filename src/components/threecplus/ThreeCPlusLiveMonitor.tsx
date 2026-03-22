@@ -148,12 +148,14 @@ export function ThreeCPlusLiveMonitor() {
 
   // Subscribe to realtime changes
   useEffect(() => {
+    if (!currentUser?.account_id) return;
+    const accountFilter = `account_id=eq.${currentUser.account_id}`;
     const channel = supabase
       .channel("threecplus-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "threecplus_agent_sessions" }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "threecplus_agent_sessions", filter: accountFilter }, () => {
         fetchLiveStatus();
       })
-      .on("postgres_changes", { event: "*", schema: "public", table: "threecplus_call_logs" }, () => {
+      .on("postgres_changes", { event: "*", schema: "public", table: "threecplus_call_logs", filter: accountFilter }, () => {
         fetchLiveStatus();
       })
       .subscribe();
@@ -161,7 +163,7 @@ export function ThreeCPlusLiveMonitor() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchLiveStatus]);
+  }, [fetchLiveStatus, currentUser?.account_id]);
 
   const onlineCount = agents.filter((a) => a.status !== "offline").length;
   const inCallCount = agents.filter((a) => a.status === "on_call").length;
