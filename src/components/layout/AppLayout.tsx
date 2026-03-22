@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Outlet, Navigate, useLocation } from "react-router-dom";
+import { Outlet, Navigate } from "react-router-dom";
 import { Sidebar, MobileHeader } from "./Sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
@@ -7,9 +7,6 @@ import { LoadingScreen } from "@/components/ui/loading-screen";
 import { GlobalSearch, useGlobalSearch } from "@/components/ui/global-search";
 import { KeyboardShortcutsHelp, useKeyboardShortcuts } from "@/components/ui/keyboard-shortcuts";
 import { TrialBanner } from "@/components/subscription/TrialBanner";
-
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { PlanLimitsProvider } from "@/hooks/usePlanLimits";
 import { NotificationsProvider } from "@/hooks/useNotifications";
@@ -27,7 +24,7 @@ export function AppLayout() {
 
   const isLoading = authLoading || subLoading;
 
-  // Show retry button after 12s of loading
+  // Show retry button after 6s of loading
   useEffect(() => {
     if (!isLoading) {
       setLoadingTimeout(false);
@@ -36,28 +33,6 @@ export function AppLayout() {
     const timer = setTimeout(() => setLoadingTimeout(true), 6000);
     return () => clearTimeout(timer);
   }, [isLoading]);
-
-  // Check if user is super admin or has admin role
-  const { data: isAdmin = false } = useQuery({
-    queryKey: ["user-is-admin", user?.id],
-    queryFn: async () => {
-      if (!user?.id) return false;
-      
-      // Check super admin
-      const { data: isSuperAdmin } = await supabase.rpc("is_super_admin", { _user_id: user.id });
-      if (isSuperAdmin) return true;
-      
-      // Check admin role
-      const { data: userData } = await supabase
-        .from("users")
-        .select("role")
-        .eq("auth_user_id", user.id)
-        .single();
-      
-      return userData?.role === "admin";
-    },
-    enabled: !!user?.id,
-  });
 
   if (isLoading) {
     return (
@@ -99,7 +74,6 @@ export function AppLayout() {
           
           {/* Keyboard Shortcuts Help */}
           <KeyboardShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
-
 
           {/* 3C Plus Embedded Panel */}
           {isInVendas && <ThreeCPlusPanel />}
