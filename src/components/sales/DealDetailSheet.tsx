@@ -713,6 +713,34 @@ export function DealDetailSheet({
     }
   };
 
+  const fetchSalesMembers = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+      const { data: userData } = await supabase
+        .from("users")
+        .select("account_id")
+        .eq("auth_user_id", authUser.id)
+        .maybeSingle();
+      if (!userData?.account_id) return;
+
+      const { data } = await supabase
+        .from("user_sector_access")
+        .select("user:users!user_sector_access_user_id_fkey(id, name, avatar_url)")
+        .eq("sector_id", "vendas")
+        .eq("account_id", userData.account_id)
+        .eq("is_active", true);
+
+      const members = (data as any[] || [])
+        .filter((a: any) => a.user?.name)
+        .map((a: any) => ({ id: a.user.id, name: a.user.name, avatar_url: a.user.avatar_url }));
+      members.sort((a: any, b: any) => a.name.localeCompare(b.name));
+      setSalesMembers(members);
+    } catch (err) {
+      console.error("Error fetching sales members:", err);
+    }
+  };
+
 
   const handleStageChange = async (newStageId: string, pipelineId?: string) => {
     if (!deal || newStageId === deal.stage_id) return;
