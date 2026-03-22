@@ -998,7 +998,11 @@ export function useDeals(pipelineId?: string | null) {
   const lostDeals = deals.filter(d => d.status === 'lost');
   
   const totalPipelineValue = openDeals.reduce((sum, d) => sum + (d.value || 0), 0);
-  const weightedPipelineValue = openDeals.reduce((sum, d) => sum + ((d.value || 0) * (d.probability || 0) / 100), 0);
+  const weightedPipelineValue = openDeals.reduce((sum, d) => {
+    const stageProbability = (d as any).stage?.probability ?? 0;
+    const probability = (d.probability && d.probability > 0) ? d.probability : stageProbability;
+    return sum + ((d.value || 0) * probability / 100);
+  }, 0);
   const totalWonValue = wonDeals.reduce((sum, d) => sum + (d.value || 0), 0);
 
   return {
