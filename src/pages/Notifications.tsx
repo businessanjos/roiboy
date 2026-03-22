@@ -1,4 +1,4 @@
-import { forwardRef } from "react";
+import { forwardRef, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
@@ -11,15 +11,45 @@ import {
   Bell,
   BellRing,
   CheckCheck,
-  Loader2,
   AtSign,
   ExternalLink,
+  ShoppingCart,
+  FileText,
+  MessageSquare,
+  ScrollText,
+  Inbox,
 } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { PushNotificationPreferences } from "@/components/notifications/PushNotificationPreferences";
 
+const TABS = [
+  { id: "all", label: "Todas", icon: Inbox },
+  { id: "sales", label: "Vendas", icon: ShoppingCart },
+  { id: "forms", label: "Formulários", icon: FileText },
+  { id: "mentions", label: "Menções", icon: AtSign },
+  { id: "contracts", label: "Contratos", icon: ScrollText },
+  { id: "other", label: "Outros", icon: MessageSquare },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
+
+const SOURCE_TYPE_MAP: Record<string, TabId> = {
+  deal: "sales",
+  contract_renewal: "sales",
+  form_response: "forms",
+  client_followup: "mentions",
+  contract_expiry: "contracts",
+  client_contracts: "contracts",
+};
+
+function getTabForNotification(sourceType: string | null): TabId {
+  if (!sourceType) return "other";
+  return SOURCE_TYPE_MAP[sourceType] || "other";
+}
+
 const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) {
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<TabId>("all");
   const { 
     notifications, 
     unreadCount, 
@@ -31,6 +61,24 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
     requestNotificationPermission,
   } = useNotifications();
 
+  const filteredNotifications = useMemo(() => {
+    if (activeTab === "all") return notifications;
+    return notifications.filter(
+      (n) => getTabForNotification(n.source_type) === activeTab
+    );
+  }, [notifications, activeTab]);
+
+  const tabCounts = useMemo(() => {
+    const counts: Record<TabId, number> = { all: 0, sales: 0, forms: 0, mentions: 0, contracts: 0, other: 0 };
+    notifications.forEach((n) => {
+      if (!n.is_read) {
+        counts.all++;
+        counts[getTabForNotification(n.source_type)]++;
+      }
+    });
+    return counts;
+  }, [notifications]);
+
   const handleNotificationClick = async (notification: any) => {
     if (!notification.is_read) {
       await markAsRead(notification.id);
@@ -40,12 +88,14 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
     }
   };
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case "mention":
-        return <AtSign className="h-4 w-4" />;
-      default:
-        return <Bell className="h-4 w-4" />;
+  const getIcon = (sourceType: string | null) => {
+    const tab = getTabForNotification(sourceType);
+    switch (tab) {
+      case "sales": return <ShoppingCart className="h-4 w-4" />;
+      case "forms": return <FileText className="h-4 w-4" />;
+      case "mentions": return <AtSign className="h-4 w-4" />;
+      case "contracts": return <ScrollText className="h-4 w-4" />;
+      default: return <Bell className="h-4 w-4" />;
     }
   };
 
@@ -95,6 +145,38 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
         <PushNotificationPreferences />
       )}
 
+      {/* Category tabs */}
+      <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
+        {TABS.map((tab) => {
+          const Icon = tab.icon;
+          const count = tabCounts[tab.id];
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {tab.label}
+              {count > 0 && (
+                <span className={`text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none ${
+                  isActive
+                    ? "bg-primary-foreground/20 text-primary-foreground"
+                    : "bg-primary/10 text-primary"
+                }`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
       {unreadCount > 0 && (
         <div className="flex justify-end">
           <Button variant="outline" size="sm" onClick={markAllAsRead}>
@@ -104,21 +186,23 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
         </div>
       )}
 
-      {notifications.length === 0 ? (
+      {filteredNotifications.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Bell className="h-12 w-12 text-muted-foreground/30 mb-4" />
             <p className="text-lg font-medium text-muted-foreground">
-              Nenhuma notificação
+              {activeTab === "all" ? "Nenhuma notificação" : "Nenhuma notificação nesta categoria"}
             </p>
             <p className="text-sm text-muted-foreground/70">
-              Você será notificado quando alguém mencionar você
+              {activeTab === "all"
+                ? "Você será notificado quando alguém mencionar você"
+                : "As notificações aparecerão aqui quando houver novidades"}
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-2">
-          {notifications.map((notification) => (
+          {filteredNotifications.map((notification) => (
             <button
               key={notification.id}
               onClick={() => handleNotificationClick(notification)}
@@ -140,7 +224,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
                   </Avatar>
                 ) : (
                   <div className="h-10 w-10 flex-shrink-0 rounded-full bg-muted flex items-center justify-center">
-                    {getIcon(notification.type)}
+                    {getIcon(notification.source_type)}
                   </div>
                 )}
 
