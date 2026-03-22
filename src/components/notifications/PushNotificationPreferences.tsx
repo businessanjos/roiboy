@@ -56,7 +56,7 @@ const SECTOR_OPTIONS = [
   { id: "vendas", label: "Vendas" },
   { id: "financeiro", label: "Finanças" },
   { id: "marketing", label: "Marketing" },
-  { id: "diretoria", label: "Mentor" },
+  
 ];
 
 type ToggleKey = "notify_zapp_messages" | "notify_task_assigned" | "notify_mentions" | "notify_system_alerts";

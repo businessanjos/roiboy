@@ -30,10 +30,9 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   sectorId,
   userRole,
 }: ZappSidebarNavProps) {
-  // Mentors always see CRM functionality (role mentor OR sector diretoria)
+  // Mentors always see CRM functionality
   const isMentor = userRole === "mentor";
-  const isDiretoria = sectorId === "diretoria";
-  const showCRMForMentor = isMentor || isDiretoria;
+  const showCRMForMentor = isMentor;
   
   // Determine sector-specific icon and label
   const getSectorIcon = () => {

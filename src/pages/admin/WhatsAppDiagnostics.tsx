@@ -17,7 +17,7 @@ import { sectors } from "@/config/sectors";
 import { toast } from "sonner";
 
 // WhatsApp sector IDs
-const WHATSAPP_SECTOR_IDS = ["operacoes", "vendas", "diretoria"] as const;
+const WHATSAPP_SECTOR_IDS = ["operacoes", "vendas"] as const;
 
 interface Integration {
   id: string;
