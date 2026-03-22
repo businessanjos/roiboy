@@ -213,6 +213,16 @@ export default function SalesPipeline() {
     }
   }, [searchParams, deals, loading, setSearchParams]);
 
+  useEffect(() => {
+    if (!selectedDeal) return;
+
+    const refreshedSelectedDeal = deals.find((deal) => deal.id === selectedDeal.id);
+
+    if (refreshedSelectedDeal) {
+      setSelectedDeal(refreshedSelectedDeal);
+    }
+  }, [deals, selectedDeal]);
+
   // Extract unique tags from all deals
   const availableTags = useMemo(() => {
     const tagSet = new Set<string>();
