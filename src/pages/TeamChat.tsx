@@ -437,12 +437,12 @@ export default function TeamChat() {
                     </>
                   )}
                 </Avatar>
-                <div>
+                <div className="flex items-center">
                   <h2 className="font-semibold">{getChatName(selectedChat)}</h2>
                   {selectedChat.is_group && (
-                    <p className="text-xs text-muted-foreground">
-                      {selectedChat.participants?.length} participantes
-                    </p>
+                    <span className="text-xs text-muted-foreground ml-2">
+                      · {selectedChat.participants?.length} participantes
+                    </span>
                   )}
                 </div>
               </div>
