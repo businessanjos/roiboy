@@ -1467,8 +1467,7 @@ function DealListView({
                           {productName}
                         </Badge>
                       );
-                    })()
-                    ) : stage ? (
+                    })() : stage ? (
                       <Badge
                         variant="outline"
                         className="text-[10px] sm:text-xs"
