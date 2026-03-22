@@ -999,8 +999,7 @@ export function useDeals(pipelineId?: string | null) {
   
   const totalPipelineValue = openDeals.reduce((sum, d) => sum + (d.value || 0), 0);
   const weightedPipelineValue = openDeals.reduce((sum, d) => {
-    // Use stage probability if deal probability is 0 or not set
-    const stageProbability = (d as any).deal_stages?.probability ?? 0;
+    const stageProbability = (d as any).stage?.probability ?? 0;
     const probability = (d.probability && d.probability > 0) ? d.probability : stageProbability;
     return sum + ((d.value || 0) * probability / 100);
   }, 0);
