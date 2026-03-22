@@ -7,7 +7,7 @@ import { LoadingScreen } from "@/components/ui/loading-screen";
 import { GlobalSearch, useGlobalSearch } from "@/components/ui/global-search";
 import { KeyboardShortcutsHelp, useKeyboardShortcuts } from "@/components/ui/keyboard-shortcuts";
 import { TrialBanner } from "@/components/subscription/TrialBanner";
-import { GlobalAgentChat } from "@/components/admin/GlobalAgentChat";
+
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
