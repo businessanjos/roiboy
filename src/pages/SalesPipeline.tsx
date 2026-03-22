@@ -1365,11 +1365,13 @@ function DealListView({
   stages,
   onDealClick,
   showStatus = false,
+  dealProductMap,
 }: { 
   deals: Deal[];
   stages: DealStage[];
   onDealClick: (deal: Deal) => void;
   showStatus?: boolean;
+  dealProductMap?: Record<string, { productId: string; productName: string }>;
 }) {
   const [expandedReasons, setExpandedReasons] = useState<Set<string>>(new Set());
   
