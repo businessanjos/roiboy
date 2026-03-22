@@ -43,6 +43,7 @@ export function GlobalHeader() {
   const { pendingCount, overdueCount } = usePendingTasksCount();
   const { setTheme, theme } = useTheme();
   const navigate = useNavigate();
+  const { clearSector } = useSector();
 
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
   const [editName, setEditName] = useState("");
