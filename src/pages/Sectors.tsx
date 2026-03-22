@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { RoyLogo } from "@/components/ui/roy-logo";
 import { ArrowRight, BarChart3, Wallet, Target, Palette } from "lucide-react";
+import eternumLogo from "@/assets/logo-eternum.svg";
 
 // Sectors accessible by sales rep roles
 const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "roychat", "configuracoes"];
@@ -142,7 +143,11 @@ export default function Sectors() {
       <div className="container mx-auto px-6 py-12 max-w-5xl">
         {/* Header */}
         <div className="flex flex-col items-center mb-14">
-          <RoyLogo size="xl" className="mb-5 opacity-80" />
+          <img 
+            src={eternumLogo} 
+            alt="Eternum" 
+            className="h-14 w-auto mb-4 opacity-90 dark:invert dark:opacity-80" 
+          />
           <h1 className="text-2xl md:text-3xl font-light text-foreground tracking-tight">
             {accountName || (userLoading ? "..." : "Sua Empresa")}
           </h1>
