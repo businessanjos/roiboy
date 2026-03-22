@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 
 // Setores que podem ter PIN
-const PIN_ENABLED_SECTORS: SectorId[] = ["diretoria"];
+const PIN_ENABLED_SECTORS: SectorId[] = [];
 
 export function SectorPinSettings() {
   const [newPin, setNewPin] = useState("");
