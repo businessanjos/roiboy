@@ -65,6 +65,8 @@ interface Contract {
   contract_type: string;
   created_at: string;
   updated_at: string;
+  cancellation_reason?: string | null;
+  cancellation_justification?: string | null;
   negotiation_type?: string | null;
   negotiation_description?: string | null;
   payment_method?: string | null;
@@ -94,7 +96,7 @@ const CONTRACT_STATUS_CONFIG: Record<string, { label: string; icon: typeof Check
   active: { label: "Ativo", icon: CheckCircle, className: "border-green-500 text-green-600 bg-green-50" },
   pending: { label: "Pendente", icon: FileText, className: "border-blue-500 text-blue-600 bg-blue-50" },
   suspended: { label: "Suspenso", icon: Ban, className: "border-orange-500 text-orange-600 bg-orange-50" },
-  paused: { label: "Pausado", icon: PauseCircle, className: "border-amber-500 text-amber-600 bg-amber-50" },
+  paused: { label: "Pausado/Congelado", icon: PauseCircle, className: "border-amber-500 text-amber-600 bg-amber-50" },
   cancelled: { label: "Cancelado", icon: XCircle, className: "border-red-500 text-red-600 bg-red-50" },
   ended: { label: "Encerrado", icon: Ban, className: "border-slate-500 text-slate-600 bg-slate-50" },
   dismissed: { label: "Demitida", icon: XCircle, className: "border-rose-500 text-rose-600 bg-rose-50" },
@@ -130,6 +132,17 @@ const PAYMENT_METHODS = [
   { value: "cartao", label: "Cartão" },
   { value: "cheque", label: "Cheque" },
 ];
+
+const CANCELLATION_REASONS = [
+  { value: "financeiro", label: "Financeiro – Dificuldade em manter o investimento no momento." },
+  { value: "operacional_financeiro", label: "Operacional/Financeiro – Alega não estar tendo retorno no negócio e, por isso, não consegue seguir com o investimento." },
+  { value: "problemas_pessoais", label: "Problemas pessoais – Questões pessoais que impactam na continuidade no programa." },
+  { value: "falta_tempo", label: "Falta de tempo / priorização" },
+  { value: "nao_adaptou", label: "Não se adaptou ao formato" },
+  { value: "mudanca_momento", label: "Mudança de momento do negócio" },
+];
+
+const TERMINAL_STATUSES = ["cancelled", "dismissed", "dropout_7d", "ended", "suspended", "paused"];
 
 const parsePaymentOption = (option: string | null) => {
   if (!option) return { type: "", installments: "", method: "" };
@@ -179,6 +192,8 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
     payment_method: "",
     notes: "",
     status: "active",
+    cancellation_reason: "",
+    cancellation_justification: "",
   });
 
   useEffect(() => {
@@ -200,6 +215,8 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
         payment_method: paymentParts.method,
         notes: contract.notes || "",
         status: contract.status,
+        cancellation_reason: contract.cancellation_reason || "",
+        cancellation_justification: contract.cancellation_justification || "",
       });
       setIsEditing(false);
     }
@@ -231,7 +248,8 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
     setSaving(true);
     try {
       const statusChanged = contract.status !== formData.status;
-      const updateData = {
+      const isTerminalStatus = TERMINAL_STATUSES.includes(formData.status);
+      const updateData: Record<string, any> = {
         start_date: formData.start_date,
         end_date: formData.end_date || null,
         cancelled_at: formData.cancelled_at
@@ -245,6 +263,8 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
         status: formData.status,
         status_changed_at: statusChanged ? new Date().toISOString() : contract.status_changed_at,
         updated_at: new Date().toISOString(),
+        cancellation_reason: isTerminalStatus ? (formData.cancellation_reason || null) : null,
+        cancellation_justification: isTerminalStatus ? (formData.cancellation_justification || null) : null,
       };
 
       const { error } = await supabase
@@ -281,6 +301,8 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
         payment_method: paymentParts.method,
         notes: contract.notes || "",
         status: contract.status,
+        cancellation_reason: contract.cancellation_reason || "",
+        cancellation_justification: contract.cancellation_justification || "",
       });
     }
     setIsEditing(false);
@@ -484,27 +506,77 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
             </div>
           </div>
 
-          {/* Cancelled At - only show for cancelled/dismissed/dropout_7d/ended statuses */}
-          {["cancelled", "dismissed", "dropout_7d", "ended"].includes(isEditing ? formData.status : contract.status) && (
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1 text-destructive">
-                <XCircle className="h-3 w-3" />
-                Data do Cancelamento
-              </Label>
-              {isEditing ? (
-                <Input
-                  type="date"
-                  value={formData.cancelled_at?.split('T')[0] || ""}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, cancelled_at: e.target.value }))}
-                  className="border-destructive/50"
-                />
-              ) : (
-                <p className="text-sm font-medium text-destructive">
-                  {contract.cancelled_at
-                    ? format(new Date(contract.cancelled_at), "dd/MM/yyyy", { locale: ptBR })
-                    : "—"}
-                </p>
-              )}
+          {/* Cancelled At - only show for terminal statuses */}
+          {TERMINAL_STATUSES.includes(isEditing ? formData.status : contract.status) && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1 text-destructive">
+                  <XCircle className="h-3 w-3" />
+                  Data do Cancelamento
+                </Label>
+                {isEditing ? (
+                  <Input
+                    type="date"
+                    value={formData.cancelled_at?.split('T')[0] || ""}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, cancelled_at: e.target.value }))}
+                    className="border-destructive/50"
+                  />
+                ) : (
+                  <p className="text-sm font-medium text-destructive">
+                    {contract.cancelled_at
+                      ? format(new Date(contract.cancelled_at), "dd/MM/yyyy", { locale: ptBR })
+                      : "—"}
+                  </p>
+                )}
+              </div>
+
+              {/* Cancellation Reason */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1 text-destructive">
+                  Motivo
+                </Label>
+                {isEditing ? (
+                  <Select
+                    value={formData.cancellation_reason}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, cancellation_reason: value }))}
+                  >
+                    <SelectTrigger className="border-destructive/50">
+                      <SelectValue placeholder="Selecione o motivo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CANCELLATION_REASONS.map((reason) => (
+                        <SelectItem key={reason.value} value={reason.value}>
+                          {reason.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm font-medium text-destructive">
+                    {CANCELLATION_REASONS.find(r => r.value === contract.cancellation_reason)?.label || contract.cancellation_reason || "—"}
+                  </p>
+                )}
+              </div>
+
+              {/* Cancellation Justification */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1 text-destructive">
+                  Justificativa
+                </Label>
+                {isEditing ? (
+                  <Textarea
+                    value={formData.cancellation_justification}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, cancellation_justification: e.target.value }))}
+                    placeholder="Descreva a justificativa do cancelamento..."
+                    rows={3}
+                    className="border-destructive/50"
+                  />
+                ) : (
+                  <p className="text-sm text-destructive">
+                    {contract.cancellation_justification || "—"}
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
