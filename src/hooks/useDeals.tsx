@@ -992,18 +992,18 @@ export function useDeals(pipelineId?: string | null) {
     }
   };
 
-  // Computed values
-  const openDeals = deals.filter(d => d.status === 'open');
-  const wonDeals = deals.filter(d => d.status === 'won');
-  const lostDeals = deals.filter(d => d.status === 'lost');
+  // Computed values - memoized to prevent new references each render
+  const openDeals = useMemo(() => deals.filter(d => d.status === 'open'), [deals]);
+  const wonDeals = useMemo(() => deals.filter(d => d.status === 'won'), [deals]);
+  const lostDeals = useMemo(() => deals.filter(d => d.status === 'lost'), [deals]);
   
-  const totalPipelineValue = openDeals.reduce((sum, d) => sum + (d.value || 0), 0);
-  const weightedPipelineValue = openDeals.reduce((sum, d) => {
+  const totalPipelineValue = useMemo(() => openDeals.reduce((sum, d) => sum + (d.value || 0), 0), [openDeals]);
+  const weightedPipelineValue = useMemo(() => openDeals.reduce((sum, d) => {
     const stageProbability = (d as any).stage?.probability ?? 0;
     const probability = (d.probability && d.probability > 0) ? d.probability : stageProbability;
     return sum + ((d.value || 0) * probability / 100);
-  }, 0);
-  const totalWonValue = wonDeals.reduce((sum, d) => sum + (d.value || 0), 0);
+  }, 0), [openDeals]);
+  const totalWonValue = useMemo(() => wonDeals.reduce((sum, d) => sum + (d.value || 0), 0), [wonDeals]);
 
   return {
     stages,
