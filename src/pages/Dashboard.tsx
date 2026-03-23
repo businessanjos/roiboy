@@ -955,16 +955,31 @@ export default function Dashboard() {
             </Card>
             )}
 
-            {/* Congelamentos (suspended + paused) */}
+            {/* Suspensos */}
             {gestaoViewMode === "operacoes" && (
             <Card className="shadow-card border-l-4 border-l-amber-500">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground">Congelamentos</p>
-                    <p className="text-2xl font-bold text-amber-600">{(contractStats?.suspended ?? 0) + (contractStats?.paused ?? 0)}</p>
+                    <p className="text-xs font-medium text-muted-foreground">Suspensos</p>
+                    <p className="text-2xl font-bold text-amber-600">{contractStats?.suspended ?? 0}</p>
                   </div>
                   <Minus className="h-5 w-5 text-amber-500" />
+                </div>
+              </CardContent>
+            </Card>
+            )}
+
+            {/* Pausados */}
+            {gestaoViewMode === "operacoes" && (
+            <Card className="shadow-card border-l-4 border-l-sky-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Pausados</p>
+                    <p className="text-2xl font-bold text-sky-600">{contractStats?.paused ?? 0}</p>
+                  </div>
+                  <Minus className="h-5 w-5 text-sky-500" />
                 </div>
               </CardContent>
             </Card>
