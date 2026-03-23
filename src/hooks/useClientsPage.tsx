@@ -123,38 +123,26 @@ export function useClientsPage() {
       if (data && data.length > 0) {
         const clientIds = data.map(c => c.id);
         
-        // Fetch V-NPS
-        const { data: vnpsData } = await supabase
-          .from("vnps_snapshots")
-          .select("*")
-          .in("client_id", clientIds)
-          .order("computed_at", { ascending: false });
+        // Fetch V-NPS and Scores using optimized RPCs (1 row per client)
+        const [vnpsRes, scoresRes] = await Promise.all([
+          supabase.rpc("get_latest_vnps_for_clients", { p_client_ids: clientIds }),
+          supabase.rpc("get_latest_scores_for_clients", { p_client_ids: clientIds }),
+        ]);
         
         const vnpsGrouped: Record<string, VNPSData> = {};
-        (vnpsData || []).forEach((v: any) => {
-          if (!vnpsGrouped[v.client_id]) {
-            vnpsGrouped[v.client_id] = v;
-          }
+        (vnpsRes.data || []).forEach((v: any) => {
+          vnpsGrouped[v.client_id] = v;
         });
         setVnpsMap(vnpsGrouped);
 
-        // Fetch score snapshots
-        const { data: scoresData } = await supabase
-          .from("score_snapshots")
-          .select("*")
-          .in("client_id", clientIds)
-          .order("computed_at", { ascending: false });
-
         const scoresGrouped: Record<string, ScoreData> = {};
-        (scoresData || []).forEach((s: any) => {
-          if (!scoresGrouped[s.client_id]) {
-            scoresGrouped[s.client_id] = {
-              escore: s.escore,
-              roizometer: s.roizometer,
-              quadrant: s.quadrant,
-              trend: s.trend,
-            };
-          }
+        (scoresRes.data || []).forEach((s: any) => {
+          scoresGrouped[s.client_id] = {
+            escore: s.escore,
+            roizometer: s.roizometer,
+            quadrant: s.quadrant,
+            trend: s.trend,
+          };
         });
         setScoreMap(scoresGrouped);
 
