@@ -579,7 +579,6 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
               </div>
             </div>
           )}
-          )}
 
           {/* Value */}
           <div className="space-y-2">
