@@ -302,6 +302,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
                 faturamentoMap={faturamentoMap}
                 itemVendaMap={itemVendaMap}
                 isDragActive={isDragActive}
+                activityStatusGetter={getActivityStatus}
               />
             ))}
           </div>
