@@ -236,6 +236,7 @@ export function useDeals(pipelineId?: string | null) {
         ...deal,
         status: deal.status as 'open' | 'won' | 'lost',
         tags: Array.isArray(deal.tags) ? deal.tags as string[] : [],
+        stage: deal.stage_id ? stages.find(s => s.id === deal.stage_id) || null : null,
       }));
 
       setDeals(formattedDeals);
