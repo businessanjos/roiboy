@@ -109,7 +109,7 @@ serve(async (req) => {
     let result: unknown = { success: true };
 
     if (action === "status") {
-      const all = await uazapiAdmin("/instance/all", "GET") as Array<{name?:string;status?:string;owner?:string}>;
+      const all = await uazapiAdmin("/instance/fetchInstances", "GET") as Array<{name?:string;status?:string;owner?:string}>;
       const inst = all.find(i => i.name === instanceName);
       result = { state: inst?.status || "unknown", connected: inst?.status === "connected", owner: inst?.owner };
       if (intData?.id) await supabase.from("integrations").update({ status: inst?.status === "connected" ? "connected" : "disconnected" }).eq("id", intData.id);
