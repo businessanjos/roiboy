@@ -431,17 +431,8 @@ async function ensureAgentReadyForDial(
   apiToken: string,
   preferredCampaignId?: unknown,
 ) {
-  const webphoneResult = await waitForWebphoneRegistration(apiBase, apiToken, 12000);
-  let runtime = webphoneResult.runtime;
+  let runtime = await fetchAgentRuntimeState(apiBase, apiToken);
   let performedCampaignLogin = false;
-
-  if (!webphoneResult.success) {
-    return {
-      success: false,
-      runtime,
-      error: getWebphoneNotReadyMessage(),
-    };
-  }
 
   if (runtime.manual_mode && !runtime.has_active_call) {
     try {
