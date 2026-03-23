@@ -278,6 +278,19 @@ export function SectorInstanceCard({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* QR Code connect dialog */}
+      <ConnectQRCodeDialog
+        open={showQRDialog}
+        onOpenChange={setShowQRDialog}
+        instanceName={instance.instance_name}
+        integrationId={instance.id}
+        sectorId={instance.sector_id || undefined}
+        onConnected={() => {
+          setShowQRDialog(false);
+          onRefresh?.();
+        }}
+      />
     </>
   );
 }
