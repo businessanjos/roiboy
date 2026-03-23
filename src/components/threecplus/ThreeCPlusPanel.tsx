@@ -38,6 +38,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { useThreeCPlus, AgentStatus } from "@/hooks/useThreeCPlus";
 import { cn } from "@/lib/utils";
 
@@ -104,6 +109,7 @@ export function ThreeCPlusPanel() {
   const [extensionLoaded, setExtensionLoaded] = useState(false);
   const [extensionInput, setExtensionInput] = useState("");
   const [extensionPasswordInput, setExtensionPasswordInput] = useState("");
+  const [showCampaignSection, setShowCampaignSection] = useState(false);
 
   // Initialize connection
   const handleInit = useCallback(async () => {
@@ -290,92 +296,133 @@ export function ThreeCPlusPanel() {
 
       <ScrollArea className="flex-1 overflow-auto">
         <div className="p-4 space-y-4">
-          {/* Campaign Login */}
-          {agentStatus === "offline" && (
-            <div className="space-y-3">
+
+          {/* ===== PRIMARY: Manual Dial (no campaign required) ===== */}
+          {canDialManually && !hasCallActivity && (
+            <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Campanha (opcional)
+                Discar
               </label>
-              {campaigns.length === 0 ? (
-                <div className="text-sm text-muted-foreground text-center py-4">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="(11) 99999-9999"
+                  value={manualPhone}
+                  onChange={(e) => setManualPhone(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleManualCall()}
+                  className="text-sm"
+                  autoFocus
+                />
+                <Button
+                  size="icon"
+                  onClick={handleManualCall}
+                  disabled={!manualPhone.trim() || loading}
+                  className="shrink-0"
+                >
                   {loading ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Carregando...
-                    </div>
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <div className="space-y-1">
-                      <p>Nenhuma campanha disponível</p>
-                      <p className="text-xs">Ao reabrir o painel, a lista será consultada novamente.</p>
-                    </div>
+                    <Phone className="h-4 w-4" />
                   )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Select onValueChange={handleLogin} disabled={!canLogin}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione uma campanha" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {campaigns.map((c) => (
-                        <SelectItem key={String(c.id)} value={String(c.id)}>
-                          {c.name || `Campanha ${c.id}`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {!extensionLoaded && (
-                    <p className="text-xs text-muted-foreground">
-                      Carregando o ramal WebRTC antes de liberar o login.
-                    </p>
-                  )}
-                  {extensionLoaded && (
-                    <p className="text-xs text-muted-foreground">
-                      {isConnected
-                        ? "Se quiser usar o discador de campanha, selecione uma campanha. Para ligação manual, disque direto abaixo."
-                        : "O ramal foi carregado. Para ligação manual, disque direto abaixo; campanha é opcional."}
-                    </p>
+                </Button>
+              </div>
+              {!savedExtension && !extensionLoaded && (
+                <p className="text-xs text-yellow-600">
+                  ⚠️ Configure seu ramal abaixo para fazer ligações.
+                </p>
+              )}
+              {savedExtension && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Headphones className="h-3 w-3" />
+                  <span>Ramal: <strong>{savedExtension}</strong></span>
+                  {savedExtensionPassword && (
+                    <span className="text-green-600">• Senha OK</span>
                   )}
                 </div>
               )}
             </div>
           )}
 
-          {/* Active Session Info */}
-          {agentStatus !== "offline" && selectedCampaign && (
-            <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
-              <div>
-                <p className="text-xs text-muted-foreground">Campanha</p>
-                <p className="text-sm font-medium truncate max-w-[200px]">
-                  {selectedCampaign.name}
-                </p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                onClick={logout}
-                disabled={loading}
-              >
-                <LogOut className="h-3.5 w-3.5 mr-1" />
-                Sair
-              </Button>
-            </div>
-          )}
-
-          {selectedCampaign && agentStatus === "connecting" && !hasCallActivity && (
-            <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Aguardando agente ficar ocioso
+          {/* ===== Ramal Config (when not configured) ===== */}
+          {extensionLoaded && !savedExtension && !hasCallActivity && (
+            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <Settings className="h-4 w-4 text-yellow-600" />
+                <p className="text-sm font-medium">Configure seu ramal</p>
               </div>
               <p className="text-xs text-muted-foreground">
-                A 3C Plus ainda está finalizando o login do agente. Você já pode clicar em discar que o sistema tenta novamente automaticamente.
+                Informe o número do seu ramal e a senha na 3C Plus para fazer ligações diretas sem campanha.
               </p>
+              <div className="space-y-2">
+                <Input
+                  placeholder="Ramal (ex: 1001)"
+                  value={extensionInput}
+                  onChange={(e) => setExtensionInput(e.target.value)}
+                  className="text-sm"
+                />
+                <Input
+                  type="password"
+                  placeholder="Senha do ramal"
+                  value={extensionPasswordInput}
+                  onChange={(e) => setExtensionPasswordInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && extensionInput.trim() && extensionPasswordInput.trim() && saveExtension(extensionInput.trim(), extensionPasswordInput.trim())}
+                  className="text-sm"
+                />
+                <Button
+                  size="sm"
+                  className="w-full"
+                  onClick={() => saveExtension(extensionInput.trim(), extensionPasswordInput.trim())}
+                  disabled={!extensionInput.trim() || !extensionPasswordInput.trim() || loading}
+                >
+                  Salvar
+                </Button>
+              </div>
             </div>
           )}
 
-          {/* Call Activity Display */}
+          {/* ===== Saved Extension display with edit ===== */}
+          {savedExtension && !hasCallActivity && (
+            <div className="space-y-2 bg-muted/50 rounded-lg px-3 py-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Headphones className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Ramal: <strong>{savedExtension}</strong></span>
+                  {savedExtensionPassword && (
+                    <span className="text-xs text-green-600">• Senha configurada</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Novo ramal"
+                  value={extensionInput !== savedExtension ? extensionInput : ""}
+                  onChange={(e) => setExtensionInput(e.target.value)}
+                  className="text-xs h-6 flex-1"
+                />
+                <Input
+                  type="password"
+                  placeholder="Nova senha"
+                  value={extensionPasswordInput}
+                  onChange={(e) => setExtensionPasswordInput(e.target.value)}
+                  className="text-xs h-6 flex-1"
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => {
+                    const newExt = extensionInput.trim() && extensionInput !== savedExtension ? extensionInput.trim() : savedExtension;
+                    const newPwd = extensionPasswordInput.trim() || savedExtensionPassword || "";
+                    saveExtension(newExt, newPwd);
+                  }}
+                  disabled={(!extensionInput.trim() || extensionInput === savedExtension) && !extensionPasswordInput.trim()}
+                >
+                  <Settings className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* ===== Call Activity Display ===== */}
           {hasCallActivity && (
             <div
               className={cn(
@@ -478,7 +525,7 @@ export function ThreeCPlusPanel() {
             </div>
           )}
 
-          {/* Emergency hangup - when agent is in a non-idle/non-offline state but not detected as "in call" */}
+          {/* Emergency hangup */}
           {agentStatus !== "offline" && agentStatus !== "idle" && agentStatus !== "on_break" && agentStatus !== "acw" && agentStatus !== "connecting" && agentStatus !== "manual_mode" && !isInCall && !hasCallTarget && (
             <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3">
               <Button
@@ -524,121 +571,6 @@ export function ThreeCPlusPanel() {
             </div>
           )}
 
-          {/* Ramal / Extension Config */}
-          {extensionLoaded && !savedExtension && !hasCallActivity && (
-            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <Settings className="h-4 w-4 text-yellow-600" />
-                <p className="text-sm font-medium">Configure seu ramal</p>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Informe o número do seu ramal e a senha na 3C Plus para fazer ligações.
-              </p>
-              <div className="space-y-2">
-                <Input
-                  placeholder="Ramal (ex: 1001)"
-                  value={extensionInput}
-                  onChange={(e) => setExtensionInput(e.target.value)}
-                  className="text-sm"
-                />
-                <Input
-                  type="password"
-                  placeholder="Senha do ramal"
-                  value={extensionPasswordInput}
-                  onChange={(e) => setExtensionPasswordInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && extensionInput.trim() && extensionPasswordInput.trim() && saveExtension(extensionInput.trim(), extensionPasswordInput.trim())}
-                  className="text-sm"
-                />
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => saveExtension(extensionInput.trim(), extensionPasswordInput.trim())}
-                  disabled={!extensionInput.trim() || !extensionPasswordInput.trim() || loading}
-                >
-                  Salvar
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Saved extension display with edit */}
-          {savedExtension && !hasCallActivity && (
-            <div className="space-y-2 bg-muted/50 rounded-lg px-3 py-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Headphones className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">Ramal: <strong>{savedExtension}</strong></span>
-                  {savedExtensionPassword && (
-                    <span className="text-xs text-green-600">• Senha configurada</span>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Novo ramal"
-                  value={extensionInput !== savedExtension ? extensionInput : ""}
-                  onChange={(e) => setExtensionInput(e.target.value)}
-                  className="text-xs h-6 flex-1"
-                />
-                <Input
-                  type="password"
-                  placeholder="Nova senha"
-                  value={extensionPasswordInput}
-                  onChange={(e) => setExtensionPasswordInput(e.target.value)}
-                  className="text-xs h-6 flex-1"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => {
-                    const newExt = extensionInput.trim() && extensionInput !== savedExtension ? extensionInput.trim() : savedExtension;
-                    const newPwd = extensionPasswordInput.trim() || savedExtensionPassword || "";
-                    saveExtension(newExt, newPwd);
-                  }}
-                  disabled={(!extensionInput.trim() || extensionInput === savedExtension) && !extensionPasswordInput.trim()}
-                >
-                  <Settings className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Manual Call - available without campaign, just like native 3C Plus */}
-          {canDialManually && !hasCallActivity && (
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Ligação Manual
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="(11) 99999-9999"
-                  value={manualPhone}
-                  onChange={(e) => setManualPhone(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleManualCall()}
-                  className="text-sm"
-                />
-                <Button
-                  size="icon"
-                  onClick={handleManualCall}
-                  disabled={!manualPhone.trim() || loading}
-                  className="shrink-0"
-                >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Phone className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-              {!savedExtension && (
-                <p className="text-xs text-yellow-600">
-                  ⚠️ Configure seu ramal acima para ligações manuais funcionarem.
-                </p>
-              )}
-            </div>
-          )}
-
           {/* Exit manual mode button */}
           {agentStatus === "manual_mode" && !hasCallActivity && (
             <Button
@@ -651,6 +583,95 @@ export function ThreeCPlusPanel() {
               <Play className="h-3.5 w-3.5 mr-2" />
               Voltar ao discador
             </Button>
+          )}
+
+          {/* ===== SECONDARY: Campaign Section (collapsible) ===== */}
+          {!hasCallActivity && (
+            <Collapsible open={showCampaignSection} onOpenChange={setShowCampaignSection}>
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center justify-between w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1">
+                  <span className="uppercase tracking-wider font-medium">
+                    {selectedCampaign ? `Campanha: ${selectedCampaign.name}` : "Campanha (opcional)"}
+                  </span>
+                  {showCampaignSection ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-3 pt-2">
+                {/* Active campaign */}
+                {agentStatus !== "offline" && selectedCampaign && (
+                  <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Campanha ativa</p>
+                      <p className="text-sm font-medium truncate max-w-[200px]">
+                        {selectedCampaign.name}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:text-destructive"
+                      onClick={logout}
+                      disabled={loading}
+                    >
+                      <LogOut className="h-3.5 w-3.5 mr-1" />
+                      Sair
+                    </Button>
+                  </div>
+                )}
+
+                {/* Campaign selector */}
+                {agentStatus === "offline" && (
+                  <>
+                    {campaigns.length === 0 ? (
+                      <div className="text-sm text-muted-foreground text-center py-2">
+                        {loading ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Carregando...
+                          </div>
+                        ) : (
+                          <p className="text-xs">Nenhuma campanha disponível</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Select onValueChange={handleLogin} disabled={!canLogin}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione uma campanha" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {campaigns.map((c) => (
+                              <SelectItem key={String(c.id)} value={String(c.id)}>
+                                {c.name || `Campanha ${c.id}`}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[11px] text-muted-foreground">
+                          Campanhas são opcionais. Você pode discar direto pelo ramal sem entrar em campanha.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {selectedCampaign && agentStatus === "connecting" && !hasCallActivity && (
+                  <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Aguardando agente ficar ocioso
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      A 3C Plus ainda está finalizando o login do agente. Você já pode clicar em discar que o sistema tenta novamente automaticamente.
+                    </p>
+                  </div>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           {/* Pause Controls */}
