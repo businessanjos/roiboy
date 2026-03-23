@@ -48,6 +48,7 @@ interface AgentRuntimeState {
   logged_campaign?: boolean;
   has_active_call?: boolean;
   manual_mode?: boolean;
+  webphone_registered?: boolean;
 }
 
 export function useThreeCPlus() {
@@ -514,7 +515,10 @@ export function useThreeCPlus() {
           console.log("[useThreeCPlus] Login confirmado pela API; aguardando agente ficar pronto para discagem.");
         }
       } else {
-        toast.error("Falha ao entrar na campanha", { description: data?.error });
+        toast.error(
+          data?.code === "WEBPHONE_NOT_READY" ? "Ramal ainda não registrado" : "Falha ao entrar na campanha",
+          { description: data?.error }
+        );
         setSelectedCampaign(null);
         setAgentStatus("offline");
       }
@@ -580,6 +584,11 @@ export function useThreeCPlus() {
         toast.error("Não foi possível discar", {
           description: dialData?.error || "A 3C Plus recusou a chamada.",
         });
+
+        if (dialData?.code === "WEBPHONE_NOT_READY") {
+          setAgentStatus("offline");
+        }
+
         return false;
       }
 
