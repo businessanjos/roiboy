@@ -26,7 +26,7 @@ const WHATSAPP_SECTORS: SectorConfig[] = [
   { id: "operacoes", name: "Operações", description: "Atendimento CX/CS e suporte geral", icon: Headphones, color: "bg-primary/10 text-primary" },
   { id: "financeiro", name: "Finanças", description: "Cobranças, boletos e pagamentos", icon: DollarSign, color: "bg-emerald-500/10 text-emerald-600" },
   { id: "vendas", name: "Vendas", description: "Pipeline comercial e leads", icon: ShoppingCart, color: "bg-blue-500/10 text-blue-600" },
-  
+  { id: "sdr", name: "SDR", description: "Prospecção e qualificação de leads", icon: UserSearch, color: "bg-violet-500/10 text-violet-600" },
 ];
 
 interface WhatsAppSectorManagerProps {

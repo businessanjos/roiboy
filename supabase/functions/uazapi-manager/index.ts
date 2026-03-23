@@ -113,7 +113,8 @@ serve(async (req) => {
       result = { ...r, token: newToken };
     
     } else if (action === "connect" || action === "qrcode") {
-      result = await uazapiAdmin(`/instance/connect/${instanceName}`, "GET");
+      const instName = payload.instance_name || instanceName;
+      result = await uazapiAdmin(`/instance/connect/${instName}`, "GET");
     
     } else if (action === "disconnect") {
       try { await uazapiInstance("/logout", "POST", token!); } catch {}
