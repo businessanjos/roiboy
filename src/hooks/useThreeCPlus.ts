@@ -296,7 +296,15 @@ export function useThreeCPlus() {
 
       socket.on("agent-login-failed", (data: any) => {
         console.log("[useThreeCPlus] agent-login-failed", data);
-        toast.error("Falha no login", { description: "Não foi possível conectar na campanha." });
+
+        if (agentStatusRef.current !== "connecting") {
+          console.warn("[useThreeCPlus] Ignorando agent-login-failed fora do fluxo ativo de login.");
+          return;
+        }
+
+        toast.error("Falha no login", {
+          description: "O ramal não aceitou a conexão da campanha. Aguarde o WebRTC estabilizar e tente de novo.",
+        });
         setAgentStatus("offline");
         setSelectedCampaign(null);
       });
@@ -486,6 +494,20 @@ export function useThreeCPlus() {
 
   // Login to campaign
   const loginCampaign = useCallback(async (campaign: Campaign) => {
+    if (!isConnected) {
+      toast.error("Ramal ainda conectando", {
+        description: "Aguarde o socket da 3C Plus conectar antes de entrar na campanha.",
+      });
+      return;
+    }
+
+    if (!connectionInfo?.has_agent_token) {
+      toast.error("Token do agente obrigatório", {
+        description: "Configure o token de API do agente para usar o ramal WebRTC e entrar na campanha.",
+      });
+      return;
+    }
+
     setLoading(true);
     setAgentStatus("connecting");
     setCurrentCall(null);
@@ -501,8 +523,8 @@ export function useThreeCPlus() {
           setWorkBreaks(campData.campaign.work_breaks);
         }
 
-        toast.success("Conectado à campanha", {
-          description: "Aguardando o agente ficar ocioso para liberar a discagem.",
+        toast.info("Login enviado para a campanha", {
+          description: "Agora aguarde o evento de agente ocioso para liberar a discagem.",
         });
 
         if (socketRef.current?.connected) {
@@ -530,7 +552,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent, waitForAgentStatus]);
+  }, [connectionInfo?.has_agent_token, invokeAgent, isConnected, waitForAgentStatus]);
 
   // Logout
   const logout = useCallback(async () => {
@@ -567,6 +589,36 @@ export function useThreeCPlus() {
 
     if (currentStatus === "on_call" || currentStatus === "manual_call_connected") {
       toast.error("Já existe uma chamada ativa");
+      return false;
+    }
+
+    if (!isConnected) {
+      toast.error("Ramal ainda conectando", {
+        description: "Aguarde o socket da 3C Plus conectar antes de discar.",
+      });
+      return false;
+    }
+
+    if (!connectionInfo?.has_agent_token) {
+      toast.error("Token do agente obrigatório", {
+        description: "Configure o token de API do agente para usar o discador.",
+      });
+      return false;
+    }
+
+    if (!selectedCampaign) {
+      toast.error("Entre em uma campanha primeiro", {
+        description: "A 3C Plus só libera chamadas quando o agente já está logado na campanha.",
+      });
+      return false;
+    }
+
+    if (currentStatus !== "idle" && currentStatus !== "manual_mode") {
+      toast.error("Agente ainda não está pronto", {
+        description: currentStatus === "connecting"
+          ? "Aguarde a 3C Plus confirmar o status Ocioso para discar."
+          : "O agente precisa estar ocioso para iniciar uma nova chamada.",
+      });
       return false;
     }
 
@@ -612,7 +664,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent, selectedCampaign?.id, setAgentStatus, setCurrentCall]);
+  }, [connectionInfo?.has_agent_token, invokeAgent, isConnected, selectedCampaign, setAgentStatus, setCurrentCall]);
 
   // Hangup
   const hangup = useCallback(async () => {
