@@ -569,7 +569,10 @@ export function useThreeCPlus() {
     setLoading(true);
     try {
       const normalizedPhone = phone.replace(/\D/g, "");
-      const dialData = await invokeAgent("place_call", { phone: normalizedPhone });
+      const dialData = await invokeAgent("place_call", {
+        phone: normalizedPhone,
+        campaign_id: selectedCampaign?.id,
+      });
 
       console.log("[useThreeCPlus] place_call result", dialData);
 
@@ -600,7 +603,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent, setAgentStatus, setCurrentCall]);
+  }, [invokeAgent, selectedCampaign?.id, setAgentStatus, setCurrentCall]);
 
   // Hangup
   const hangup = useCallback(async () => {

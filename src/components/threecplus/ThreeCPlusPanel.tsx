@@ -657,7 +657,7 @@ export function ThreeCPlusPanel() {
                           </SelectContent>
                         </Select>
                         <p className="text-[11px] text-muted-foreground">
-                          Campanhas são opcionais. Você pode discar direto pelo ramal sem entrar em campanha.
+                          Se não houver campanha ativa, o sistema tenta entrar automaticamente em uma campanha disponível do agente.
                         </p>
                       </div>
                     )}
