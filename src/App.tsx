@@ -34,9 +34,8 @@ function lazyRetry<T extends ComponentType<any>>(
   return lazy(() => retryFactory(retries));
 }
 
-// Eager loaded pages (critical for UX)
+// Eager loaded pages (critical for UX - only auth and 404)
 import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 // Lazy loaded pages
