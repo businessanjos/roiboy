@@ -11,7 +11,7 @@ const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
   const r = await fetch(`${UAZAPI_URL}${endpoint}`, { 
     method, 
-    headers: { "Content-Type": "application/json", "admintoken": UAZAPI_ADMIN_TOKEN }, 
+    headers: { "Content-Type": "application/json", "AdminToken": UAZAPI_ADMIN_TOKEN }, 
     body: body ? JSON.stringify(body) : undefined 
   });
   const json = await r.json();
