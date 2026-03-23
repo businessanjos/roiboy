@@ -556,7 +556,7 @@ export function useThreeCPlus() {
     }
   }, [invokeAgent, currentCall?.id, reconcileTelephonyState]);
 
-  // Manual call - use direct call flow with backend fallback instead of requiring agent idle/manual mode first
+  // Manual call - use the same direct backend flow used by the sales call button
   const manualCall = useCallback(async (phone: string) => {
     const currentStatus = agentStatusRef.current;
 
@@ -567,8 +567,26 @@ export function useThreeCPlus() {
 
     setLoading(true);
     try {
-      const dialData = await invokeAgent("place_call", { phone });
-      console.log("[useThreeCPlus] place_call result", dialData);
+      const normalizedPhone = phone.replace(/\D/g, "");
+      const { data: dialData, error } = await supabase.functions.invoke("threecplus-call", {
+        body: { phone: normalizedPhone },
+      });
+
+      console.log("[useThreeCPlus] threecplus-call result", dialData, error);
+
+      if (error) {
+        toast.error("Não foi possível discar", {
+          description: "Não foi possível conectar ao serviço de chamadas.",
+        });
+        return false;
+      }
+
+      if (dialData?.code === "NO_INTEGRATION") {
+        toast.error("3C Plus não configurado", {
+          description: "Vá em Configurações > Integrações para conectar sua conta 3C Plus.",
+        });
+        return false;
+      }
 
       if (!dialData?.success) {
         toast.error("Não foi possível discar", {
@@ -577,20 +595,13 @@ export function useThreeCPlus() {
         return false;
       }
 
-      if (dialData?.mode === "manual_mode") {
-        setAgentStatus("manual_mode");
-      }
-
       setCurrentCall({
-        id: dialData?.call?.id,
-        phone: dialData?.call?.phone || phone,
-        contact_name: dialData?.call?.contact_name,
+        phone: normalizedPhone,
       });
+      setAgentStatus("connecting");
+
       toast.success("Chamada iniciada", {
-        description:
-          dialData?.mode === "click2call"
-            ? "Ligação enviada pelo fluxo direto da 3C Plus."
-            : "Ligação enviada pelo modo manual da 3C Plus.",
+        description: "Ligação enviada pelo fluxo direto da 3C Plus.",
       });
       return true;
     } catch (err) {
@@ -600,7 +611,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [invokeAgent]);
+  }, []);
 
   // Hangup
   const hangup = useCallback(async () => {
