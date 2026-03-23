@@ -39,6 +39,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 // Lazy loaded pages
+const Dashboard = lazyRetry(() => import("./pages/Dashboard"));
 const Clients = lazyRetry(() => import("./pages/Clients"));
 const ClientDetail = lazyRetry(() => import("./pages/ClientDetail"));
 const Integrations = lazyRetry(() => import("./pages/Integrations"));
