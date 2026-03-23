@@ -204,33 +204,49 @@ export function SectorInstanceCard({
           </div>
 
           {/* Actions */}
-          {isAdmin && (
-            <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1">
+            {/* QR Code connect button for disconnected instances */}
+            {!isConnected && (
               <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => onEdit(instance)}
-                title="Editar nome e PIN"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1"
+                onClick={() => setShowQRDialog(true)}
+                title="Conectar via QR Code"
               >
-                <Pencil className="h-4 w-4" />
+                <QrCode className="h-3.5 w-3.5" />
+                Conectar
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => setShowRemoveDialog(true)}
-                disabled={isRemoving}
-                title="Remover instância"
-              >
-                {isRemoving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-          )}
+            )}
+            
+            {isAdmin && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => onEdit(instance)}
+                  title="Editar nome e PIN"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                  onClick={() => setShowRemoveDialog(true)}
+                  disabled={isRemoving}
+                  title="Remover instância"
+                >
+                  {isRemoving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
