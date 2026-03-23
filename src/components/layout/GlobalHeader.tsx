@@ -70,6 +70,18 @@ export function GlobalHeader() {
           </Tooltip>
         </TooltipProvider>
 
+        {/* Settings */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={() => navigate("/settings")} className="h-9 w-9">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Configurações</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
         {/* Notifications */}
         <TooltipProvider>
           <Tooltip>
