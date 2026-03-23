@@ -66,6 +66,7 @@ export function SectorInstanceCard({
   const [isRemoving, setIsRemoving] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [isReconfiguringWebhook, setIsReconfiguringWebhook] = useState(false);
+  const [showQRDialog, setShowQRDialog] = useState(false);
 
   const isConnected = instance.status === "connected";
   const displayName = instance.display_name || instance.profile_name || instance.instance_name;
