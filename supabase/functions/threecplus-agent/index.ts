@@ -286,8 +286,8 @@ async function ensureAgentReadyForDial(
   preferredCampaignId?: unknown,
 ) {
   let runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+  let performedCampaignLogin = false;
 
-  // If in manual mode without active call, exit first
   if (runtime.manual_mode && !runtime.has_active_call) {
     try {
       const exitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
@@ -306,7 +306,6 @@ async function ensureAgentReadyForDial(
     return { success: true, runtime, method: "already_ready" };
   }
 
-  // Login to campaign if not logged
   if (!runtime.logged_campaign) {
     const campaignsResult = await fetchAvailableAgentCampaigns(apiBase, apiToken);
     if (!campaignsResult.success) {
@@ -334,17 +333,27 @@ async function ensureAgentReadyForDial(
         error: extractApiMessage(loginText, "A 3C Plus não conseguiu logar o agente em uma campanha."),
       };
     }
+
+    performedCampaignLogin = true;
+    runtime = { ...runtime, logged_campaign: true };
   }
 
-  // After campaign login, wait a bit for agent to become ready
   const readyResult = await waitForAgentReady(apiBase, apiToken, 8000);
   if (readyResult.success) {
     return { success: true, runtime: readyResult.runtime, method: "campaign_login" };
   }
 
-  // Even if not "idle" yet, consider it ready enough to attempt manual dial
-  // The iframe WebRTC handles the actual phone connection - we just need campaign login
   const latestRuntime = readyResult.runtime ?? await fetchAgentRuntimeState(apiBase, apiToken);
+
+  if (performedCampaignLogin && !latestRuntime.has_active_call) {
+    console.log("[threecplus-agent] ensureAgentReadyForDial: trusting successful campaign login despite runtime mismatch", latestRuntime);
+    return {
+      success: true,
+      runtime: { ...latestRuntime, logged_campaign: true },
+      method: "campaign_login_trusted",
+    };
+  }
+
   if (latestRuntime.logged_campaign && !latestRuntime.has_active_call) {
     console.log("[threecplus-agent] ensureAgentReadyForDial: agent logged in campaign, proceeding despite status:", latestRuntime.agent_status);
     return { success: true, runtime: latestRuntime, method: "campaign_login_force" };
@@ -353,7 +362,7 @@ async function ensureAgentReadyForDial(
   return {
     success: false,
     runtime: latestRuntime,
-    error: "O agente está logado na campanha, mas ainda não ficou ocioso. Aguarde o ramal WebRTC carregar completamente no painel e tente novamente.",
+    error: "O agente está logado na campanha, mas a 3C Plus ainda não liberou a discagem manual.",
   };
 }
 
