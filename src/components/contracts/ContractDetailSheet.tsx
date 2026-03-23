@@ -133,6 +133,17 @@ const PAYMENT_METHODS = [
   { value: "cheque", label: "Cheque" },
 ];
 
+const CANCELLATION_REASONS = [
+  { value: "financeiro", label: "Financeiro – Dificuldade em manter o investimento no momento." },
+  { value: "operacional_financeiro", label: "Operacional/Financeiro – Alega não estar tendo retorno no negócio e, por isso, não consegue seguir com o investimento." },
+  { value: "problemas_pessoais", label: "Problemas pessoais – Questões pessoais que impactam na continuidade no programa." },
+  { value: "falta_tempo", label: "Falta de tempo / priorização" },
+  { value: "nao_adaptou", label: "Não se adaptou ao formato" },
+  { value: "mudanca_momento", label: "Mudança de momento do negócio" },
+];
+
+const TERMINAL_STATUSES = ["cancelled", "dismissed", "dropout_7d", "ended", "suspended", "paused"];
+
 const parsePaymentOption = (option: string | null) => {
   if (!option) return { type: "", installments: "", method: "" };
   
