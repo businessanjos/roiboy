@@ -144,6 +144,18 @@ Deno.serve(async (req) => {
     const userExtension = metadata?.extension as string | null;
     const userPassword = metadata?.extension_password as string | null;
 
+    // Ensure agent is connected first (idempotent)
+    try {
+      const connectRes = await fetch(
+        `${baseDomain}/api/v1/agent/connect?api_token=${apiToken}`,
+        { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" } }
+      );
+      const connectText = await connectRes.text();
+      console.log("[threecplus-call] agent/connect:", connectRes.status, connectText);
+    } catch (connectErr) {
+      console.warn("[threecplus-call] agent/connect failed (non-blocking):", connectErr);
+    }
+
     // Try click2call first (preferred, works without campaign login)
     const click2callPayload: Record<string, string> = { phone: cleanPhone };
     if (userExtension) click2callPayload.extension = userExtension;
@@ -166,6 +178,55 @@ Deno.serve(async (req) => {
       await logCall(supabaseAdmin, userData, cleanPhone, contactName, "manual", leadId, clientId, dealId);
       return new Response(JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // If click2call failed because agent not idle, try webphone login + retry
+    if (isAgentNotIdle(click2callRes.status, click2callText) && userExtension) {
+      try {
+        const campaignsRes = await fetch(
+          `${baseDomain}/api/v1/agent/campaigns?api_token=${apiToken}`,
+          { method: "GET", headers: { Accept: "application/json" } }
+        );
+        if (campaignsRes.ok) {
+          const campsData = JSON.parse(await campaignsRes.text());
+          const campsList = campsData?.data || campsData || [];
+          const firstCamp = Array.isArray(campsList) ? campsList[0] : null;
+          if (firstCamp?.id) {
+            console.log("[threecplus-call] Trying webphone login with campaign:", firstCamp.id);
+            const wpRes = await fetch(
+              `${baseDomain}/api/v1/agent/webphone/login?api_token=${apiToken}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Accept: "application/json" },
+                body: JSON.stringify({ campaign: firstCamp.id }),
+              }
+            );
+            console.log("[threecplus-call] webphone/login:", wpRes.status, await wpRes.text());
+
+            if (wpRes.ok || wpRes.status === 204) {
+              await new Promise(r => setTimeout(r, 2000));
+              // Retry click2call
+              const retryRes = await fetch(
+                `${baseDomain}/api/v1/click2call?api_token=${apiToken}`,
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", Accept: "application/json" },
+                  body: JSON.stringify(click2callPayload),
+                }
+              );
+              const retryText = await retryRes.text();
+              console.log("[threecplus-call] click2call retry:", retryRes.status, retryText);
+              if (retryRes.ok || retryRes.status === 204) {
+                await logCall(supabaseAdmin, userData, cleanPhone, contactName, "manual", leadId, clientId, dealId);
+                return new Response(JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
+                  { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+              }
+            }
+          }
+        }
+      } catch (wpErr) {
+        console.warn("[threecplus-call] webphone login attempt failed:", wpErr);
+      }
     }
 
     // Fallback: manual call mode

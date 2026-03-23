@@ -524,6 +524,18 @@ Deno.serve(async (req) => {
 
       const { extension, password } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, apiToken);
 
+      // Step 1: Ensure agent is connected (idempotent - won't error if already connected)
+      try {
+        const connectRes = await fetch(`${apiBase}/agent/connect?api_token=${apiToken}`, {
+          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        });
+        const connectText = await connectRes.text();
+        console.log("[threecplus-agent] place_call agent/connect:", connectRes.status, connectText);
+      } catch (connectErr) {
+        console.warn("[threecplus-agent] place_call agent/connect failed (non-blocking):", connectErr);
+      }
+
+      // Step 2: Try click2call
       const click2callPayload: Record<string, string> = { phone: cleanPhone };
       if (extension) click2callPayload.extension = extension;
       if (password) click2callPayload.password = password;
@@ -543,7 +555,55 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Fallback: manual mode
+      // Step 3: If click2call failed because agent not idle, try webphone login then retry
+      const click2callNotIdle = isAgentNotIdle(click2callRes.status, click2callText);
+      if (click2callNotIdle && extension) {
+        // Try to find any campaign to use for webphone login
+        try {
+          const campaignsRes = await fetch(`${apiBase}/agent/campaigns?api_token=${apiToken}`, {
+            method: "GET", headers: { Accept: "application/json" },
+          });
+          if (campaignsRes.ok) {
+            const campaignsData = safeJsonParse(await campaignsRes.text()) as any;
+            const campaignsList = campaignsData?.data || campaignsData || [];
+            const firstCampaign = Array.isArray(campaignsList) ? campaignsList[0] : null;
+            if (firstCampaign?.id) {
+              console.log("[threecplus-agent] place_call trying webphone login with campaign:", firstCampaign.id);
+              const wpRes = await fetch(`${apiBase}/agent/webphone/login?api_token=${apiToken}`, {
+                method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+                body: JSON.stringify({ campaign: firstCampaign.id }),
+              });
+              const wpText = await wpRes.text();
+              console.log("[threecplus-agent] place_call webphone/login:", wpRes.status, wpText);
+
+              if (wpRes.ok || wpRes.status === 204) {
+                // Wait a moment for the agent to become idle
+                await new Promise(r => setTimeout(r, 2000));
+
+                // Retry click2call
+                const retryRes = await fetch(`${apiBase}/click2call?api_token=${apiToken}`, {
+                  method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+                  body: JSON.stringify(click2callPayload),
+                });
+                const retryText = await retryRes.text();
+                const retryPayload = safeJsonParse(retryText);
+                const retryCall = extractCallDetails(retryPayload);
+                console.log("[threecplus-agent] place_call click2call retry after webphone:", retryRes.status, retryText);
+
+                if (retryRes.ok || retryRes.status === 204) {
+                  await logCallToDb(supabaseAdmin, userData.account_id, userData.id, retryCall || { phone: cleanPhone }, "click2call_after_webphone");
+                  return new Response(JSON.stringify({ success: true, mode: "click2call", call: retryCall }),
+                    { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+                }
+              }
+            }
+          }
+        } catch (wpErr) {
+          console.warn("[threecplus-agent] webphone login attempt failed:", wpErr);
+        }
+      }
+
+      // Step 4: Fallback to manual mode
       const enterRes = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${apiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
@@ -583,7 +643,7 @@ Deno.serve(async (req) => {
           error: click2callNeedsExtension
             ? "A 3C Plus exigiu o ramal do agente para a ligação direta, mas ele não foi identificado automaticamente."
             : agentNotIdle
-              ? "O agente não está ocioso no 3C Plus. Deixe o ramal livre ou coloque o agente em modo manual antes de discar."
+              ? "O agente não está ocioso no 3C Plus. Verifique se o ramal WebRTC está logado no painel 3C Plus ou tente novamente."
               : extractApiMessage(enterText, extractApiMessage(click2callText, "Não foi possível iniciar a chamada.")),
           extension_resolved: Boolean(extension),
         }),
