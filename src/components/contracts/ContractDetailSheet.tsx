@@ -506,28 +506,79 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
             </div>
           </div>
 
-          {/* Cancelled At - only show for cancelled/dismissed/dropout_7d/ended statuses */}
-          {["cancelled", "dismissed", "dropout_7d", "ended"].includes(isEditing ? formData.status : contract.status) && (
-            <div className="space-y-2">
-              <Label className="flex items-center gap-1 text-destructive">
-                <XCircle className="h-3 w-3" />
-                Data do Cancelamento
-              </Label>
-              {isEditing ? (
-                <Input
-                  type="date"
-                  value={formData.cancelled_at?.split('T')[0] || ""}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, cancelled_at: e.target.value }))}
-                  className="border-destructive/50"
-                />
-              ) : (
-                <p className="text-sm font-medium text-destructive">
-                  {contract.cancelled_at
-                    ? format(new Date(contract.cancelled_at), "dd/MM/yyyy", { locale: ptBR })
-                    : "—"}
-                </p>
-              )}
+          {/* Cancelled At - only show for terminal statuses */}
+          {TERMINAL_STATUSES.includes(isEditing ? formData.status : contract.status) && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1 text-destructive">
+                  <XCircle className="h-3 w-3" />
+                  Data do Cancelamento
+                </Label>
+                {isEditing ? (
+                  <Input
+                    type="date"
+                    value={formData.cancelled_at?.split('T')[0] || ""}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, cancelled_at: e.target.value }))}
+                    className="border-destructive/50"
+                  />
+                ) : (
+                  <p className="text-sm font-medium text-destructive">
+                    {contract.cancelled_at
+                      ? format(new Date(contract.cancelled_at), "dd/MM/yyyy", { locale: ptBR })
+                      : "—"}
+                  </p>
+                )}
+              </div>
+
+              {/* Cancellation Reason */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1 text-destructive">
+                  Motivo
+                </Label>
+                {isEditing ? (
+                  <Select
+                    value={formData.cancellation_reason}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, cancellation_reason: value }))}
+                  >
+                    <SelectTrigger className="border-destructive/50">
+                      <SelectValue placeholder="Selecione o motivo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CANCELLATION_REASONS.map((reason) => (
+                        <SelectItem key={reason.value} value={reason.value}>
+                          {reason.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm font-medium text-destructive">
+                    {CANCELLATION_REASONS.find(r => r.value === contract.cancellation_reason)?.label || contract.cancellation_reason || "—"}
+                  </p>
+                )}
+              </div>
+
+              {/* Cancellation Justification */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1 text-destructive">
+                  Justificativa
+                </Label>
+                {isEditing ? (
+                  <Textarea
+                    value={formData.cancellation_justification}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, cancellation_justification: e.target.value }))}
+                    placeholder="Descreva a justificativa do cancelamento..."
+                    rows={3}
+                    className="border-destructive/50"
+                  />
+                ) : (
+                  <p className="text-sm text-destructive">
+                    {contract.cancellation_justification || "—"}
+                  </p>
+                )}
+              </div>
             </div>
+          )}
           )}
 
           {/* Value */}
