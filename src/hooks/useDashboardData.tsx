@@ -144,36 +144,25 @@ export function useClientsWithScores() {
         (activeContractsRes.data || []).map((c: any) => c.client_id)
       );
 
-      // Take latest score per client
+      // Build maps - RPC functions already return 1 row per client (DISTINCT ON)
       const scoresMap: Record<string, any> = {};
       (scoresRes.data || []).forEach((s: any) => {
-        if (!scoresMap[s.client_id]) {
-          scoresMap[s.client_id] = s;
-        }
+        scoresMap[s.client_id] = s;
       });
 
-      // Take latest vnps per client
       const vnpsMap: Record<string, any> = {};
       (vnpsRes.data || []).forEach((v: any) => {
-        if (!vnpsMap[v.client_id]) {
-          vnpsMap[v.client_id] = v;
-        }
+        vnpsMap[v.client_id] = v;
       });
 
-      // Take latest risk per client
       const risksMap: Record<string, string> = {};
       (risksRes.data || []).forEach((r: any) => {
-        if (!risksMap[r.client_id]) {
-          risksMap[r.client_id] = r.reason;
-        }
+        risksMap[r.client_id] = r.reason;
       });
 
-      // Take latest recommendation per client
       const recsMap: Record<string, string> = {};
       (recsRes.data || []).forEach((r: any) => {
-        if (!recsMap[r.client_id]) {
-          recsMap[r.client_id] = r.action_text;
-        }
+        recsMap[r.client_id] = r.action_text;
       });
 
       // Map clients with their data
