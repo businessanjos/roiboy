@@ -20,6 +20,7 @@ interface DealCardProps {
   isDragging?: boolean;
   faturamentoLabel?: string;
   itemVendaLabel?: string;
+  activityStatus?: ActivityStatus;
 }
 
 export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel }: DealCardProps) {
