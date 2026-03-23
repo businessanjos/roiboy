@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { useLossReasons } from "@/hooks/useLossReasons";
 import { Loader2 } from "lucide-react";
 
@@ -35,32 +36,39 @@ export function MarkAsLostDialog({ open, onOpenChange, onConfirm }: MarkAsLostDi
   const [selectedReasonId, setSelectedReasonId] = useState("");
   const [selectedSubReasonId, setSelectedSubReasonId] = useState("");
   const [notes, setNotes] = useState("");
+  const [customReason, setCustomReason] = useState("");
 
   const availableSubReasons = selectedReasonId ? getSubReasons(selectedReasonId) : [];
   const selectedReason = reasons.find((r) => r.id === selectedReasonId);
   const selectedSubReason = availableSubReasons.find((s) => s.id === selectedSubReasonId);
+
+  const isOutro = selectedReason?.name?.toLowerCase().trim() === "outro";
 
   useEffect(() => {
     if (!open) {
       setSelectedReasonId("");
       setSelectedSubReasonId("");
       setNotes("");
+      setCustomReason("");
     }
   }, [open]);
 
-  // Reset sub-reason when reason changes
+  // Reset sub-reason and custom reason when reason changes
   useEffect(() => {
     setSelectedSubReasonId("");
+    setCustomReason("");
   }, [selectedReasonId]);
 
-  const canSubmit = selectedReasonId && notes.trim().length > 0;
+  const canSubmit = selectedReasonId && notes.trim().length > 0 && (!isOutro || customReason.trim().length > 0);
 
   const handleConfirm = () => {
     if (!canSubmit || !selectedReason) return;
 
     // Build legacy lost_reason string for backward compat
     let legacyReason = selectedReason.name;
-    if (selectedSubReason) {
+    if (isOutro && customReason.trim()) {
+      legacyReason = `Outro: ${customReason.trim()}`;
+    } else if (selectedSubReason) {
       legacyReason += ` > ${selectedSubReason.name}`;
     }
 
@@ -107,8 +115,23 @@ export function MarkAsLostDialog({ open, onOpenChange, onConfirm }: MarkAsLostDi
               </Select>
             </div>
 
-            {/* Sub-reason Select (only if reason has sub-reasons) */}
-            {availableSubReasons.length > 0 && (
+            {/* Custom reason input when "Outro" is selected */}
+            {isOutro && (
+              <div>
+                <label className="text-sm font-medium mb-1.5 block">
+                  Qual o motivo? <span className="text-destructive">*</span>
+                </label>
+                <Input
+                  value={customReason}
+                  onChange={(e) => setCustomReason(e.target.value)}
+                  placeholder="Descreva o motivo da perda..."
+                  maxLength={200}
+                />
+              </div>
+            )}
+
+            {/* Sub-reason Select (only if reason has sub-reasons and is not "Outro") */}
+            {!isOutro && availableSubReasons.length > 0 && (
               <div>
                 <label className="text-sm font-medium mb-1.5 block">
                   Detalhamento
