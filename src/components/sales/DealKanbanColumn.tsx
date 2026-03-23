@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Deal, DealStage } from "@/hooks/useDeals";
@@ -5,7 +6,7 @@ import { DealCard } from "./DealCard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ActivityStatus } from "@/hooks/useBatchDealActivityStatus";
-import { Users, Clock, MessageSquare, CheckCircle, XCircle, ArrowDown } from "lucide-react";
+import { Users, Clock, MessageSquare, CheckCircle, XCircle, ArrowDown, ChevronDown } from "lucide-react";
 
 interface DealKanbanColumnProps {
   stage: DealStage;
