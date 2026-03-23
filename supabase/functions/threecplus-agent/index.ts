@@ -165,6 +165,12 @@ function isAgentNotIdle(status: number, text: string): boolean {
   return /n[ãa]o\s+est[áa]\s+ocioso/i.test(message);
 }
 
+function isPermissionDenied(status: number, text: string): boolean {
+  if (status !== 403) return false;
+  const message = extractApiMessage(text, "");
+  return /sem permiss|n[ãa]o tem permiss|proibido/i.test(message);
+}
+
 function normalizeCampaignId(value: unknown): string | null {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   if (typeof value !== "string") return null;
@@ -817,6 +823,7 @@ Deno.serve(async (req) => {
       const cleanPhone = phone.replace(/\D/g, "");
 
       const { extension, password } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, effectiveApiToken);
+      const click2CallFallbackToken = effectiveApiToken !== apiToken ? apiToken : null;
 
       try {
         const connectRes = await fetch(`${apiBase}/agent/connect?api_token=${effectiveApiToken}`, {
@@ -833,6 +840,16 @@ Deno.serve(async (req) => {
         await logCallToDb(supabaseAdmin, userData.account_id, userData.id, click2CallResult.call, "click2call");
         return new Response(JSON.stringify({ success: true, mode: "click2call", call: click2CallResult.call }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (click2CallFallbackToken && isPermissionDenied(click2CallResult.status, click2CallResult.text)) {
+        console.log("[threecplus-agent] place_call retrying click2call with account token after agent token permission denial");
+        const fallbackClick2CallResult = await tryClick2Call(apiBase, click2CallFallbackToken, cleanPhone, extension, password);
+        if (fallbackClick2CallResult.success) {
+          await logCallToDb(supabaseAdmin, userData.account_id, userData.id, fallbackClick2CallResult.call, "click2call_account_token");
+          return new Response(JSON.stringify({ success: true, mode: "click2call", call: fallbackClick2CallResult.call }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
       }
 
       if (extension && isAgentNotIdle(click2CallResult.status, click2CallResult.text)) {
