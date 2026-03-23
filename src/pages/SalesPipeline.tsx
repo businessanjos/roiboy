@@ -161,6 +161,9 @@ export default function SalesPipeline() {
   // Fetch deal→product mapping from contracts for won deals
   const [dealProductMap, setDealProductMap] = useState<Record<string, { productId: string; productName: string; isUpsell?: boolean }>>({});
   
+  // Stabilize dependency to prevent infinite re-fetch
+  const wonDealIds = useMemo(() => wonDeals.map(d => d.id).join(','), [wonDeals]);
+  
   useEffect(() => {
     if (!currentUser?.account_id || wonDeals.length === 0) {
       setDealProductMap({});
