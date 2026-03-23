@@ -200,16 +200,23 @@ export function useUpcomingLifeEvents() {
   return useQuery({
     queryKey: ["dashboard-life-events"],
     queryFn: async () => {
-      const { data: eventsData, error } = await supabase
-        .from("client_life_events")
-        .select("*, clients!inner(full_name)")
-        .not("event_date", "is", null)
-        .order("event_date", { ascending: true });
-
-      if (error) throw error;
-
       const today = new Date();
       today.setHours(0, 0, 0, 0);
+      
+      // For non-recurring: only fetch events in the next 30 days
+      // For recurring: fetch all (they repeat yearly), but limit total rows
+      const todayStr = format(today, "yyyy-MM-dd");
+      const in30Days = format(new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000), "yyyy-MM-dd");
+      
+      const { data: eventsData, error } = await supabase
+        .from("client_life_events")
+        .select("id, client_id, event_type, title, event_date, is_recurring, source, clients!inner(full_name)")
+        .not("event_date", "is", null)
+        .or(`and(is_recurring.eq.false,event_date.gte.${todayStr},event_date.lte.${in30Days}),is_recurring.eq.true`)
+        .order("event_date", { ascending: true })
+        .limit(200);
+
+      if (error) throw error;
 
       const upcoming = (eventsData || [])
         .map((event: any) => {
@@ -238,7 +245,7 @@ export function useUpcomingLifeEvents() {
 
       return upcoming as LifeEvent[];
     },
-    staleTime: 1000 * 60 * 10, // 10 minutes - life events don't change often
+    staleTime: 1000 * 60 * 10,
     gcTime: 1000 * 60 * 20,
   });
 }

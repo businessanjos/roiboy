@@ -123,38 +123,26 @@ export function useClientsPage() {
       if (data && data.length > 0) {
         const clientIds = data.map(c => c.id);
         
-        // Fetch V-NPS
-        const { data: vnpsData } = await supabase
-          .from("vnps_snapshots")
-          .select("*")
-          .in("client_id", clientIds)
-          .order("computed_at", { ascending: false });
+        // Fetch V-NPS and Scores using optimized RPCs (1 row per client)
+        const [vnpsRes, scoresRes] = await Promise.all([
+          supabase.rpc("get_latest_vnps_for_clients", { p_client_ids: clientIds }),
+          supabase.rpc("get_latest_scores_for_clients", { p_client_ids: clientIds }),
+        ]);
         
         const vnpsGrouped: Record<string, VNPSData> = {};
-        (vnpsData || []).forEach((v: any) => {
-          if (!vnpsGrouped[v.client_id]) {
-            vnpsGrouped[v.client_id] = v;
-          }
+        (vnpsRes.data || []).forEach((v: any) => {
+          vnpsGrouped[v.client_id] = v;
         });
         setVnpsMap(vnpsGrouped);
 
-        // Fetch score snapshots
-        const { data: scoresData } = await supabase
-          .from("score_snapshots")
-          .select("*")
-          .in("client_id", clientIds)
-          .order("computed_at", { ascending: false });
-
         const scoresGrouped: Record<string, ScoreData> = {};
-        (scoresData || []).forEach((s: any) => {
-          if (!scoresGrouped[s.client_id]) {
-            scoresGrouped[s.client_id] = {
-              escore: s.escore,
-              roizometer: s.roizometer,
-              quadrant: s.quadrant,
-              trend: s.trend,
-            };
-          }
+        (scoresRes.data || []).forEach((s: any) => {
+          scoresGrouped[s.client_id] = {
+            escore: s.escore,
+            roizometer: s.roizometer,
+            quadrant: s.quadrant,
+            trend: s.trend,
+          };
         });
         setScoreMap(scoresGrouped);
 
@@ -192,45 +180,23 @@ export function useClientsPage() {
         });
         setContractMap(contractsGrouped);
         
-        // Fetch WhatsApp conversations
-        const { data: conversationsData } = await supabase
-          .from("conversations")
-          .select("client_id")
-          .in("client_id", clientIds);
-        
-        const { data: messagesData } = await supabase
-          .from("message_events")
-          .select("client_id, sent_at")
+        // Fetch WhatsApp data from zapp_conversations (lightweight, already has last_message_at)
+        const { data: zappConvData } = await supabase
+          .from("zapp_conversations")
+          .select("client_id, last_message_at, unread_count")
           .in("client_id", clientIds)
-          .order("sent_at", { ascending: false });
+          .not("client_id", "is", null);
         
         const whatsappGrouped: Record<string, WhatsAppData> = {};
-        
-        (conversationsData || []).forEach((c: any) => {
+        (zappConvData || []).forEach((c: any) => {
           if (!whatsappGrouped[c.client_id]) {
-            whatsappGrouped[c.client_id] = { hasConversation: true, messageCount: 0, lastMessageAt: null };
+            whatsappGrouped[c.client_id] = { 
+              hasConversation: true, 
+              messageCount: c.unread_count || 0, 
+              lastMessageAt: c.last_message_at 
+            };
           }
         });
-        
-        const messageCountMap = new Map<string, number>();
-        const lastMessageMap = new Map<string, string>();
-        
-        (messagesData || []).forEach((m: any) => {
-          messageCountMap.set(m.client_id, (messageCountMap.get(m.client_id) || 0) + 1);
-          if (!lastMessageMap.has(m.client_id)) {
-            lastMessageMap.set(m.client_id, m.sent_at);
-          }
-        });
-        
-        messageCountMap.forEach((count, clientId) => {
-          if (!whatsappGrouped[clientId]) {
-            whatsappGrouped[clientId] = { hasConversation: true, messageCount: count, lastMessageAt: lastMessageMap.get(clientId) || null };
-          } else {
-            whatsappGrouped[clientId].messageCount = count;
-            whatsappGrouped[clientId].lastMessageAt = lastMessageMap.get(clientId) || null;
-          }
-        });
-        
         setWhatsappMap(whatsappGrouped);
       }
     }
