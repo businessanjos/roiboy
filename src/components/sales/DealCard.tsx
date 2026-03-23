@@ -12,7 +12,7 @@ import { Mail, Phone, Calendar, RefreshCw, AlertTriangle, ListTodo, MessageCircl
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DealActivitiesDialog } from "./DealActivitiesDialog";
-import { useDealActivityStatus } from "@/hooks/useDealActivityStatus";
+import type { ActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 
 interface DealCardProps {
   deal: Deal;
@@ -20,11 +20,13 @@ interface DealCardProps {
   isDragging?: boolean;
   faturamentoLabel?: string;
   itemVendaLabel?: string;
+  activityStatus?: ActivityStatus;
 }
 
-export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel }: DealCardProps) {
+const DEFAULT_ACTIVITY_STATUS: ActivityStatus = { pendingCount: 0, hasOverdue: false, totalActivities: 0 };
+
+export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel, activityStatus = DEFAULT_ACTIVITY_STATUS }: DealCardProps) {
   const [activitiesDialogOpen, setActivitiesDialogOpen] = useState(false);
-  const activityStatus = useDealActivityStatus(deal.id);
   
   const { openZappConversation, loading: zappLoading } = useZappNavigationContext();
   const {

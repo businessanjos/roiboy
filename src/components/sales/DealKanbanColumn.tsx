@@ -4,6 +4,7 @@ import { Deal, DealStage } from "@/hooks/useDeals";
 import { DealCard } from "./DealCard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import type { ActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 import { Users, Clock, MessageSquare, CheckCircle, XCircle, ArrowDown } from "lucide-react";
 
 interface DealKanbanColumnProps {
@@ -14,6 +15,7 @@ interface DealKanbanColumnProps {
   faturamentoMap?: Record<string, string>;
   itemVendaMap?: Record<string, string>;
   isDragActive?: boolean;
+  activityStatusGetter?: (dealId: string) => ActivityStatus;
 }
 
 const getStageIcon = (stageName: string, color: string) => {
@@ -38,7 +40,7 @@ const getStageIcon = (stageName: string, color: string) => {
   return <Users className={iconClass} style={{ color }} />;
 };
 
-export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap, itemVendaMap, isDragActive = false }: DealKanbanColumnProps) {
+export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap, itemVendaMap, isDragActive = false, activityStatusGetter }: DealKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
   });
@@ -151,6 +153,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
                 onClick={() => onDealClick(deal)}
                 faturamentoLabel={faturamentoMap?.[deal.id]}
                 itemVendaLabel={itemVendaMap?.[deal.id]}
+                activityStatus={activityStatusGetter?.(deal.id)}
               />
             ))
           )}

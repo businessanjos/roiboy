@@ -18,6 +18,7 @@ import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation
 import { RequiredFieldsModal } from "./RequiredFieldsModal";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { supabase } from "@/integrations/supabase/client";
+import { useBatchDealActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 
 interface DealKanbanProps {
   stages: DealStage[];
@@ -42,6 +43,10 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
   const [requiredFieldsModal, setRequiredFieldsModal] = useState<RequiredFieldsModalState | null>(null);
   const [faturamentoMap, setFaturamentoMap] = useState<Record<string, string>>({});
   const [itemVendaMap, setItemVendaMap] = useState<Record<string, string>>({});
+
+  // Batch fetch activity statuses for ALL deals in a single query
+  const dealIds = useMemo(() => deals.map(d => d.id), [deals]);
+  const { getStatus: getActivityStatus } = useBatchDealActivityStatus(dealIds);
 
   const FATURAMENTO_FIELD_ID = 'ed5c7c0e-0740-4945-b982-70a593ffae0c';
   const ITEM_VENDA_FIELD_ID = '033b91fb-3add-4c96-aec9-567fefbd0fb2';
@@ -297,6 +302,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
                 faturamentoMap={faturamentoMap}
                 itemVendaMap={itemVendaMap}
                 isDragActive={isDragActive}
+                activityStatusGetter={getActivityStatus}
               />
             ))}
           </div>

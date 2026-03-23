@@ -161,6 +161,9 @@ export default function SalesPipeline() {
   // Fetch deal→product mapping from contracts for won deals
   const [dealProductMap, setDealProductMap] = useState<Record<string, { productId: string; productName: string; isUpsell?: boolean }>>({});
   
+  // Stabilize dependency to prevent infinite re-fetch
+  const wonDealIds = useMemo(() => wonDeals.map(d => d.id).join(','), [wonDeals]);
+  
   useEffect(() => {
     if (!currentUser?.account_id || wonDeals.length === 0) {
       setDealProductMap({});
@@ -289,7 +292,7 @@ export default function SalesPipeline() {
       console.error('[SalesPipeline] Error fetching won deal product map:', error);
       setDealProductMap({});
     });
-  }, [currentUser?.account_id, wonDeals]);
+  }, [currentUser?.account_id, wonDealIds]);
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
   
