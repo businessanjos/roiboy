@@ -7,6 +7,7 @@ import { UserSectorAccessManager } from "@/components/settings/UserSectorAccessM
 import { TeamManager } from "@/components/settings/TeamManager";
 import { ActivityTypesManager } from "@/components/sales";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { LossReasonsManager } from "@/components/settings/LossReasonsManager";
 import { SectorPinSettings } from "@/components/settings/SectorPinSettings";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
