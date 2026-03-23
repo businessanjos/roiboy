@@ -1,9 +1,14 @@
-import { useState } from "react";
-import { Phone, Loader2 } from "lucide-react";
+import { type MouseEvent } from "react";
+import { Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+declare global {
+  interface WindowEventMap {
+    "threecplus:dial-request": CustomEvent<{ phone: string; contactName?: string }>;
+  }
+}
 
 interface ThreeCPlusCallButtonProps {
   contactPhone: string;
@@ -11,45 +16,17 @@ interface ThreeCPlusCallButtonProps {
 }
 
 export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCallButtonProps) {
-  const [loading, setLoading] = useState(false);
-
-  const makeCall = async (e: React.MouseEvent) => {
+  const makeCall = (e: MouseEvent) => {
     e.stopPropagation();
-    setLoading(true);
+    window.dispatchEvent(
+      new CustomEvent("threecplus:dial-request", {
+        detail: { phone: contactPhone, contactName },
+      })
+    );
 
-    try {
-      const { data, error } = await supabase.functions.invoke("threecplus-agent", {
-        body: { action: "place_call", phone: contactPhone, contact_name: contactName },
-      });
-
-      if (error) {
-        toast.error("Erro ao iniciar chamada", {
-          description: "Não foi possível conectar ao serviço de chamadas.",
-        });
-        return;
-      }
-
-      if (data?.code === "NO_INTEGRATION") {
-        toast.error("3C Plus não configurado", {
-          description: "Vá em Configurações > Integrações para conectar sua conta 3C Plus.",
-        });
-        return;
-      }
-
-      if (data?.success) {
-        toast.success("Chamada iniciada no 3C Plus", {
-          description: contactName ? `Ligando para ${contactName}...` : "Ligando...",
-        });
-        return;
-      }
-
-      toast.error("Erro", { description: data?.error || "Erro desconhecido" });
-    } catch (err) {
-      console.error("[ThreeCPlusCallButton] Error:", err);
-      toast.error("Erro ao iniciar chamada");
-    } finally {
-      setLoading(false);
-    }
+    toast.info("Abrindo discador 3C Plus", {
+      description: "O número foi enviado para o painel. Aguarde o agente ficar ocioso para discar.",
+    });
   };
 
   return (
@@ -61,13 +38,8 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
             size="icon"
             className="h-6 w-6 text-primary hover:text-primary hover:bg-primary/10"
             onClick={makeCall}
-            disabled={loading}
           >
-            {loading ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
               <Phone className="h-3.5 w-3.5" />
-            )}
           </Button>
         </TooltipTrigger>
         <TooltipContent>

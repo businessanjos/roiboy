@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/collapsible";
 import { useThreeCPlus, AgentStatus } from "@/hooks/useThreeCPlus";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -151,17 +152,68 @@ export function ThreeCPlusPanel() {
     }
   }, [connectionInfo, isConnected, connectSocket]);
 
+  useEffect(() => {
+    const handleDialRequest = async (event: Event) => {
+      const customEvent = event as CustomEvent<{ phone?: string }>;
+      const phone = customEvent.detail?.phone?.trim();
+      if (!phone) return;
+
+      setIsOpen(true);
+      setIsMinimized(false);
+      setShowExtension(true);
+      setShowCampaignSection(true);
+      setManualPhone(phone);
+
+      await handleInit();
+
+      if (!connectionInfo?.has_agent_token) {
+        toast.error("Configure o token do agente", {
+          description: "Sem o token do agente, a 3C Plus não libera o WebRTC nem o login da campanha.",
+        });
+        return;
+      }
+
+      if (!extensionLoaded || !isConnected) {
+        toast.info("Discador aberto", {
+          description: "Aguarde o ramal carregar e o socket conectar antes de entrar na campanha.",
+        });
+        return;
+      }
+
+      if (!selectedCampaign) {
+        toast.info("Selecione uma campanha", {
+          description: "Depois que o agente ficar ocioso, a discagem será liberada.",
+        });
+        return;
+      }
+
+      if (agentStatus === "idle" || agentStatus === "manual_mode") {
+        await manualCall(phone);
+        return;
+      }
+
+      toast.info("Discador preparado", {
+        description: "Aguarde o status Ocioso para concluir a ligação.",
+      });
+    };
+
+    window.addEventListener("threecplus:dial-request", handleDialRequest as EventListener);
+    return () => {
+      window.removeEventListener("threecplus:dial-request", handleDialRequest as EventListener);
+    };
+  }, [agentStatus, connectionInfo?.has_agent_token, extensionLoaded, handleInit, isConnected, manualCall, selectedCampaign]);
+
   // Login to selected campaign
   const handleLogin = useCallback(
     async (campaignId: string) => {
-      if (!extensionLoaded) return;
+      if (!extensionLoaded || !isConnected || !connectionInfo?.has_agent_token) return;
 
       const campaign = campaigns.find((c) => String(c.id) === campaignId);
       if (campaign) {
         await loginCampaign(campaign);
       }
     },
-    [campaigns, extensionLoaded, loginCampaign]
+    [campaigns, connectionInfo?.has_agent_token, extensionLoaded, isConnected, loginCampaign]
   );
 
   // Make manual call
@@ -187,8 +239,14 @@ export function ThreeCPlusPanel() {
           : agentStatus === "connecting"
             ? "Preparando o agente para discagem"
             : "Aguardando atualização do status da ligação";
-  const canLogin = !loading && extensionLoaded;
-  const canDialManually = extensionLoaded && (agentStatus === "offline" || agentStatus === "idle" || agentStatus === "manual_mode" || agentStatus === "connecting");
+  const canLogin = !loading && extensionLoaded && isConnected && Boolean(connectionInfo?.has_agent_token);
+  const canDialManually =
+    !loading &&
+    extensionLoaded &&
+    isConnected &&
+    Boolean(connectionInfo?.has_agent_token) &&
+    Boolean(selectedCampaign) &&
+    (agentStatus === "idle" || agentStatus === "manual_mode");
   const defaultStatusInfo =
     agentStatus !== "offline"
       ? statusInfo
@@ -673,7 +731,7 @@ export function ThreeCPlusPanel() {
                       Aguardando agente ficar ocioso
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      A 3C Plus ainda está finalizando o login do agente. Você já pode clicar em discar que o sistema tenta novamente automaticamente.
+                      A 3C Plus ainda está finalizando o login do agente. Aguarde o status Ocioso para liberar a discagem.
                     </p>
                   </div>
                 )}
