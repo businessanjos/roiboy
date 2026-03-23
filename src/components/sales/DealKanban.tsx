@@ -18,6 +18,7 @@ import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation
 import { RequiredFieldsModal } from "./RequiredFieldsModal";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { supabase } from "@/integrations/supabase/client";
+import { useBatchDealActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 
 interface DealKanbanProps {
   stages: DealStage[];
