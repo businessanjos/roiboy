@@ -114,7 +114,7 @@ export function useClientsWithScores() {
 
       const clientIds = clientsData.map(c => c.id);
 
-      // Batch fetch all related data in parallel
+      // Batch fetch all related data in parallel - using RPC for heavy tables
       const [
         clientProductsRes,
         activeContractsRes,
@@ -125,23 +125,10 @@ export function useClientsWithScores() {
       ] = await Promise.all([
         supabase.from("client_products").select("client_id, product_id").in("client_id", clientIds),
         supabase.from("client_contracts").select("client_id").eq("status", "active").in("client_id", clientIds),
-        supabase.from("score_snapshots")
-          .select("client_id, roizometer, escore, quadrant, trend, computed_at")
-          .in("client_id", clientIds)
-          .order("computed_at", { ascending: false }),
-        supabase.from("vnps_snapshots")
-          .select("client_id, vnps_score, vnps_class, computed_at")
-          .in("client_id", clientIds)
-          .order("computed_at", { ascending: false }),
-        supabase.from("risk_events")
-          .select("client_id, reason, happened_at")
-          .in("client_id", clientIds)
-          .order("happened_at", { ascending: false }),
-        supabase.from("recommendations")
-          .select("client_id, action_text, created_at")
-          .in("client_id", clientIds)
-          .eq("status", "open")
-          .order("created_at", { ascending: false })
+        supabase.rpc("get_latest_scores_for_clients", { p_client_ids: clientIds }),
+        supabase.rpc("get_latest_vnps_for_clients", { p_client_ids: clientIds }),
+        supabase.rpc("get_latest_risks_for_clients", { p_client_ids: clientIds }),
+        supabase.rpc("get_latest_recommendations_for_clients", { p_client_ids: clientIds }),
       ]);
 
       // Build maps for fast lookup
@@ -157,36 +144,25 @@ export function useClientsWithScores() {
         (activeContractsRes.data || []).map((c: any) => c.client_id)
       );
 
-      // Take latest score per client
+      // Build maps - RPC functions already return 1 row per client (DISTINCT ON)
       const scoresMap: Record<string, any> = {};
       (scoresRes.data || []).forEach((s: any) => {
-        if (!scoresMap[s.client_id]) {
-          scoresMap[s.client_id] = s;
-        }
+        scoresMap[s.client_id] = s;
       });
 
-      // Take latest vnps per client
       const vnpsMap: Record<string, any> = {};
       (vnpsRes.data || []).forEach((v: any) => {
-        if (!vnpsMap[v.client_id]) {
-          vnpsMap[v.client_id] = v;
-        }
+        vnpsMap[v.client_id] = v;
       });
 
-      // Take latest risk per client
       const risksMap: Record<string, string> = {};
       (risksRes.data || []).forEach((r: any) => {
-        if (!risksMap[r.client_id]) {
-          risksMap[r.client_id] = r.reason;
-        }
+        risksMap[r.client_id] = r.reason;
       });
 
-      // Take latest recommendation per client
       const recsMap: Record<string, string> = {};
       (recsRes.data || []).forEach((r: any) => {
-        if (!recsMap[r.client_id]) {
-          recsMap[r.client_id] = r.action_text;
-        }
+        recsMap[r.client_id] = r.action_text;
       });
 
       // Map clients with their data

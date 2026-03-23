@@ -12804,6 +12804,38 @@ export type Database = {
           title: string
         }[]
       }
+      get_latest_recommendations_for_clients: {
+        Args: { p_client_ids: string[] }
+        Returns: {
+          action_text: string
+          client_id: string
+        }[]
+      }
+      get_latest_risks_for_clients: {
+        Args: { p_client_ids: string[] }
+        Returns: {
+          client_id: string
+          reason: string
+        }[]
+      }
+      get_latest_scores_for_clients: {
+        Args: { p_client_ids: string[] }
+        Returns: {
+          client_id: string
+          escore: number
+          quadrant: string
+          roizometer: number
+          trend: string
+        }[]
+      }
+      get_latest_vnps_for_clients: {
+        Args: { p_client_ids: string[] }
+        Returns: {
+          client_id: string
+          vnps_class: string
+          vnps_score: number
+        }[]
+      }
       get_my_account_id: { Args: never; Returns: string }
       get_participant_by_rsvp_token: {
         Args: { p_token: string }
