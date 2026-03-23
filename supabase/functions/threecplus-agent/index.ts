@@ -222,12 +222,13 @@ async function resolveClick2CallExtension(
   // Check user_integrations metadata for saved extension
   const { data: userInt } = await supabaseAdmin
     .from("user_integrations")
-    .select("metadata")
+    .select("access_token, metadata")
     .eq("user_id", userId)
     .eq("provider", "3cplus")
     .maybeSingle();
 
   const metadata = asRecord(userInt?.metadata);
+  const storedAccessToken = typeof userInt?.access_token === "string" ? userInt.access_token : null;
   const storedExtension = extractExtension(metadata);
   const storedPassword = metadata?.extension_password as string | null;
   if (storedExtension) return { extension: storedExtension, password: storedPassword, source: "metadata" };
@@ -239,7 +240,7 @@ async function resolveClick2CallExtension(
     const nextMetadata = { ...(metadata ?? {}), extension: profileExtension };
     await supabaseAdmin
       .from("user_integrations")
-      .upsert({ user_id: userId, provider: "3cplus", access_token: "account_level", metadata: nextMetadata }, { onConflict: "user_id,provider" });
+      .upsert({ user_id: userId, provider: "3cplus", access_token: storedAccessToken ?? "account_level", metadata: nextMetadata }, { onConflict: "user_id,provider" });
     return { extension: profileExtension, password: null, source: "profile" };
   }
   return { extension: null, password: null, source: null };
@@ -432,7 +433,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: false, error: "campaign_id é obrigatório" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const res = await fetch(`${apiBase}/agent/login?api_token=${apiToken}`, {
+      const res = await fetch(`${apiBase}/agent/login?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ campaign: campaign_id }),
       });
@@ -448,13 +449,13 @@ Deno.serve(async (req) => {
 
     // Logout
     if (action === "logout") {
-      const manualExitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
+      const manualExitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       const manualExitText = await manualExitRes.text();
       console.log("[threecplus-agent] logout manual_call_exit:", manualExitRes.status, manualExitText);
 
-      const res = await fetch(`${apiBase}/agent/logout?api_token=${apiToken}`, {
+      const res = await fetch(`${apiBase}/agent/logout?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       const text = await res.text();
@@ -464,7 +465,7 @@ Deno.serve(async (req) => {
       let success = res.ok || res.status === 204;
 
       if (!success) {
-        runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+        runtime = await fetchAgentRuntimeState(apiBase, effectiveApiToken);
         if (!runtime.logged_campaign) {
           success = true;
         }
@@ -489,7 +490,7 @@ Deno.serve(async (req) => {
 
     // Enter manual call mode
     if (action === "manual_call_enter") {
-      const res = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${apiToken}`, {
+      const res = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       const text = await res.text();
@@ -512,7 +513,7 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const cleanPhone = phone.replace(/\D/g, "");
-      const res = await fetch(`${apiBase}/agent/manual_call/dial?api_token=${apiToken}`, {
+      const res = await fetch(`${apiBase}/agent/manual_call/dial?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ phone: cleanPhone }),
       });
@@ -541,11 +542,11 @@ Deno.serve(async (req) => {
       }
       const cleanPhone = phone.replace(/\D/g, "");
 
-      const { extension, password } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, apiToken);
+      const { extension, password } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, effectiveApiToken);
 
       // Step 1: Ensure agent is connected (idempotent - won't error if already connected)
       try {
-        const connectRes = await fetch(`${apiBase}/agent/connect?api_token=${apiToken}`, {
+        const connectRes = await fetch(`${apiBase}/agent/connect?api_token=${effectiveApiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         });
         const connectText = await connectRes.text();
@@ -559,7 +560,7 @@ Deno.serve(async (req) => {
       if (extension) click2callPayload.extension = extension;
       if (password) click2callPayload.password = password;
 
-      const click2callRes = await fetch(`${apiBase}/click2call?api_token=${apiToken}`, {
+      const click2callRes = await fetch(`${apiBase}/click2call?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify(click2callPayload),
       });
@@ -579,7 +580,7 @@ Deno.serve(async (req) => {
       if (click2callNotIdle && extension) {
         // Try to find any campaign to use for webphone login
         try {
-          const campaignsRes = await fetch(`${apiBase}/agent/campaigns?api_token=${apiToken}`, {
+          const campaignsRes = await fetch(`${apiBase}/agent/campaigns?api_token=${effectiveApiToken}`, {
             method: "GET", headers: { Accept: "application/json" },
           });
           if (campaignsRes.ok) {
@@ -588,7 +589,7 @@ Deno.serve(async (req) => {
             const firstCampaign = Array.isArray(campaignsList) ? campaignsList[0] : null;
             if (firstCampaign?.id) {
               console.log("[threecplus-agent] place_call trying webphone login with campaign:", firstCampaign.id);
-              const wpRes = await fetch(`${apiBase}/agent/webphone/login?api_token=${apiToken}`, {
+              const wpRes = await fetch(`${apiBase}/agent/webphone/login?api_token=${effectiveApiToken}`, {
                 method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
                 body: JSON.stringify({ campaign: firstCampaign.id }),
               });
@@ -600,7 +601,7 @@ Deno.serve(async (req) => {
                 await new Promise(r => setTimeout(r, 2000));
 
                 // Retry click2call
-                const retryRes = await fetch(`${apiBase}/click2call?api_token=${apiToken}`, {
+                const retryRes = await fetch(`${apiBase}/click2call?api_token=${effectiveApiToken}`, {
                   method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
                   body: JSON.stringify(click2callPayload),
                 });
@@ -623,7 +624,7 @@ Deno.serve(async (req) => {
       }
 
       // Step 4: Fallback to manual mode
-      const enterRes = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${apiToken}`, {
+      const enterRes = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       const enterText = await enterRes.text();
@@ -637,7 +638,7 @@ Deno.serve(async (req) => {
           console.log("[threecplus-agent] place_call proceeding to dial because agent is already in manual dialing state");
         }
 
-        const dialRes = await fetch(`${apiBase}/agent/manual_call/dial?api_token=${apiToken}`, {
+        const dialRes = await fetch(`${apiBase}/agent/manual_call/dial?api_token=${effectiveApiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({ phone: cleanPhone }),
         });
@@ -672,7 +673,7 @@ Deno.serve(async (req) => {
 
     // Exit manual call mode
     if (action === "manual_call_exit") {
-      const res = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
+      const res = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       const text = await res.text();
@@ -682,7 +683,7 @@ Deno.serve(async (req) => {
       let success = res.ok || res.status === 204;
 
       if (!success) {
-        runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+        runtime = await fetchAgentRuntimeState(apiBase, effectiveApiToken);
         if (!runtime.has_active_call && !runtime.manual_mode) {
           success = true;
         }
@@ -703,7 +704,7 @@ Deno.serve(async (req) => {
     if (action === "hangup") {
       const { call_id } = body;
 
-      let runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+      let runtime = await fetchAgentRuntimeState(apiBase, effectiveApiToken);
       let resolvedCallId = call_id ?? runtime.call_id ?? undefined;
 
       if (!resolvedCallId && !runtime.has_active_call) {
@@ -715,13 +716,13 @@ Deno.serve(async (req) => {
 
       if (!resolvedCallId) {
         console.log("[threecplus-agent] hangup: trying manual_call/exit fallback");
-        const exitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
+        const exitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${effectiveApiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         });
         const exitText = await exitRes.text();
         console.log("[threecplus-agent] manual_call/exit fallback:", exitRes.status, exitText);
 
-        runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+        runtime = await fetchAgentRuntimeState(apiBase, effectiveApiToken);
         const exitSuccess = exitRes.ok || exitRes.status === 204 || !runtime.has_active_call;
         if (exitSuccess) {
           return new Response(
@@ -731,13 +732,13 @@ Deno.serve(async (req) => {
         }
 
         console.log("[threecplus-agent] hangup: trying logout as last resort");
-        const logoutRes = await fetch(`${apiBase}/agent/logout?api_token=${apiToken}`, {
+        const logoutRes = await fetch(`${apiBase}/agent/logout?api_token=${effectiveApiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         });
         const logoutText = await logoutRes.text();
         console.log("[threecplus-agent] logout fallback:", logoutRes.status, logoutText);
 
-        runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+        runtime = await fetchAgentRuntimeState(apiBase, effectiveApiToken);
         const success = logoutRes.ok || logoutRes.status === 204 || !runtime.has_active_call;
         return new Response(
           JSON.stringify({
@@ -750,7 +751,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const res = await fetch(`${apiBase}/agent/call/${resolvedCallId}/hangup?api_token=${apiToken}`, {
+      const res = await fetch(`${apiBase}/agent/call/${resolvedCallId}/hangup?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       const text = await res.text();
@@ -761,7 +762,7 @@ Deno.serve(async (req) => {
 
       if (!success) {
         console.log("[threecplus-agent] hangup failed, trying manual_call/exit fallback after call_id attempt");
-        const exitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
+        const exitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${effectiveApiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         });
         const exitText = await exitRes.text();
@@ -769,7 +770,7 @@ Deno.serve(async (req) => {
         manualExitSucceeded = exitRes.ok || exitRes.status === 204;
       }
 
-      runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+      runtime = await fetchAgentRuntimeState(apiBase, effectiveApiToken);
       if (!success && (manualExitSucceeded || !runtime.has_active_call)) {
         success = true;
       }
@@ -861,7 +862,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: false, error: "call_id e qualification_id são obrigatórios" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const res = await fetch(`${apiBase}/agent/call/${call_id}/qualify?api_token=${apiToken}`, {
+      const res = await fetch(`${apiBase}/agent/call/${call_id}/qualify?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ qualification: qualification_id }),
       });
@@ -877,7 +878,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: false, error: "work_break_id é obrigatório" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const res = await fetch(`${apiBase}/agent/work_break/${work_break_id}/enter?api_token=${apiToken}`, {
+      const res = await fetch(`${apiBase}/agent/work_break/${work_break_id}/enter?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       console.log("[threecplus-agent] pause_enter:", res.status);
@@ -887,7 +888,7 @@ Deno.serve(async (req) => {
 
     // Exit work break
     if (action === "pause_exit") {
-      const res = await fetch(`${apiBase}/agent/work_break_exit?api_token=${apiToken}`, {
+      const res = await fetch(`${apiBase}/agent/work_break_exit?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       console.log("[threecplus-agent] pause_exit:", res.status);
@@ -897,7 +898,7 @@ Deno.serve(async (req) => {
 
     // Get logged campaign info
     if (action === "get_logged_campaign") {
-      const res = await fetch(`${apiBase}/campaigns/agent/loggedCampaign?api_token=${apiToken}`, {
+      const res = await fetch(`${apiBase}/campaigns/agent/loggedCampaign?api_token=${effectiveApiToken}`, {
         method: "GET", headers: { Accept: "application/json" },
       });
       const text = await res.text();
@@ -918,7 +919,7 @@ Deno.serve(async (req) => {
     // Get call history
     if (action === "get_calls") {
       const { start_date, end_date, page } = body;
-      const params = new URLSearchParams({ api_token: apiToken });
+      const params = new URLSearchParams({ api_token: effectiveApiToken });
       if (start_date) params.set("start_date", start_date);
       if (end_date) params.set("end_date", end_date);
       if (page) params.set("page", String(page));

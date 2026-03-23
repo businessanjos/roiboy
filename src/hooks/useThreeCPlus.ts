@@ -569,32 +569,9 @@ export function useThreeCPlus() {
     setLoading(true);
     try {
       const normalizedPhone = phone.replace(/\D/g, "");
-      const { data: dialData, error } = await supabase.functions.invoke("threecplus-call", {
-        body: { phone: normalizedPhone },
-      });
+      const dialData = await invokeAgent("place_call", { phone: normalizedPhone });
 
-      console.log("[useThreeCPlus] threecplus-call result", dialData, error);
-
-      if (error) {
-        toast.error("Não foi possível discar", {
-          description: "Não foi possível conectar ao serviço de chamadas.",
-        });
-        return false;
-      }
-
-      if (dialData?.code === "NO_INTEGRATION") {
-        toast.error("3C Plus não configurado", {
-          description: "Vá em Configurações > Integrações para conectar sua conta 3C Plus.",
-        });
-        return false;
-      }
-
-      if (dialData?.code === "NO_AGENT_TOKEN") {
-        toast.error("Token do agente não configurado", {
-          description: dialData?.error || "Preencha o Token de API do Agente em Integrações > 3C Plus > Meu Ramal.",
-        });
-        return false;
-      }
+      console.log("[useThreeCPlus] place_call result", dialData);
 
       if (!dialData?.success) {
         toast.error("Não foi possível discar", {
@@ -604,12 +581,16 @@ export function useThreeCPlus() {
       }
 
       setCurrentCall({
-        phone: normalizedPhone,
+        id: dialData?.call?.id,
+        phone: dialData?.call?.phone || normalizedPhone,
+        contact_name: dialData?.call?.contact_name,
       });
       setAgentStatus("connecting");
 
       toast.success("Chamada iniciada", {
-        description: "Ligação enviada pelo fluxo direto da 3C Plus.",
+        description: dialData?.mode === "manual_mode"
+          ? "Ligação enviada pelo modo manual do agente."
+          : "Ligação enviada pelo fluxo direto da 3C Plus.",
       });
       return true;
     } catch (err) {
@@ -619,7 +600,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, [setAgentStatus, setCurrentCall]);
+  }, [invokeAgent, setAgentStatus, setCurrentCall]);
 
   // Hangup
   const hangup = useCallback(async () => {
