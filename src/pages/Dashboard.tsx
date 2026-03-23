@@ -292,7 +292,7 @@ export default function Dashboard() {
   // Calculate monthly chart data including new clients
   const monthlyChartData = useMemo(() => {
     const { periodStart, periodEnd } = gestaoPeriodRange;
-    const months: { [key: string]: { month: string; novos: number; cancelamentos: number; encerramentos: number; congelamentos: number } } = {};
+    const months: { [key: string]: { month: string; novos: number; cancelamentos: number; encerramentos: number; suspensos: number; pausados: number } } = {};
     
     // Calculate the number of months to show
     const monthsDiff = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24 * 30)));
@@ -303,7 +303,7 @@ export default function Dashboard() {
       const key = format(date, "yyyy-MM");
       const label = format(date, "MMM/yy", { locale: ptBR });
       if (!months[key]) {
-        months[key] = { month: label, novos: 0, cancelamentos: 0, encerramentos: 0, congelamentos: 0 };
+        months[key] = { month: label, novos: 0, cancelamentos: 0, encerramentos: 0, suspensos: 0, pausados: 0 };
       }
     }
     
@@ -328,8 +328,10 @@ export default function Dashboard() {
             months[key].cancelamentos++;
           } else if (contract.status === "ended") {
             months[key].encerramentos++;
-          } else if (["paused", "suspended"].includes(contract.status)) {
-            months[key].congelamentos++;
+          } else if (contract.status === "suspended") {
+            months[key].suspensos++;
+          } else if (contract.status === "paused") {
+            months[key].pausados++;
           }
         }
       }
@@ -402,9 +404,13 @@ export default function Dashboard() {
       label: "Encerramentos",
       color: "hsl(25 95% 53%)",
     },
-    congelamentos: {
-      label: "Congelamentos",
+    suspensos: {
+      label: "Suspensos",
       color: "hsl(38 92% 50%)",
+    },
+    pausados: {
+      label: "Pausados",
+      color: "hsl(200 80% 50%)",
     },
   };
 
@@ -949,16 +955,31 @@ export default function Dashboard() {
             </Card>
             )}
 
-            {/* Congelamentos (suspended + paused) */}
+            {/* Suspensos */}
             {gestaoViewMode === "operacoes" && (
             <Card className="shadow-card border-l-4 border-l-amber-500">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground">Congelamentos</p>
-                    <p className="text-2xl font-bold text-amber-600">{(contractStats?.suspended ?? 0) + (contractStats?.paused ?? 0)}</p>
+                    <p className="text-xs font-medium text-muted-foreground">Suspensos</p>
+                    <p className="text-2xl font-bold text-amber-600">{contractStats?.suspended ?? 0}</p>
                   </div>
                   <Minus className="h-5 w-5 text-amber-500" />
+                </div>
+              </CardContent>
+            </Card>
+            )}
+
+            {/* Pausados */}
+            {gestaoViewMode === "operacoes" && (
+            <Card className="shadow-card border-l-4 border-l-sky-500">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Pausados</p>
+                    <p className="text-2xl font-bold text-sky-600">{contractStats?.paused ?? 0}</p>
+                  </div>
+                  <Minus className="h-5 w-5 text-sky-500" />
                 </div>
               </CardContent>
             </Card>
@@ -989,7 +1010,7 @@ export default function Dashboard() {
                     </div>
                     Evolução Mensal
                   </CardTitle>
-                  <CardDescription className="mt-1">{gestaoViewMode === "operacoes" ? "Novos, cancelamentos, encerramentos e congelamentos nos últimos 6 meses" : "Novos contratos nos últimos 6 meses"}</CardDescription>
+                  <CardDescription className="mt-1">{gestaoViewMode === "operacoes" ? "Novos, cancelamentos, encerramentos, suspensos e pausados nos últimos 6 meses" : "Novos contratos nos últimos 6 meses"}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -1013,9 +1034,13 @@ export default function Dashboard() {
                       <stop offset="0%" stopColor="hsl(25 95% 53%)" stopOpacity={1} />
                       <stop offset="100%" stopColor="hsl(25 95% 43%)" stopOpacity={0.8} />
                     </linearGradient>
-                    <linearGradient id="congelamentosGradient" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="suspensosGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="hsl(38 92% 50%)" stopOpacity={1} />
                       <stop offset="100%" stopColor="hsl(38 92% 40%)" stopOpacity={0.8} />
+                    </linearGradient>
+                    <linearGradient id="pausadosGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(200 80% 50%)" stopOpacity={1} />
+                      <stop offset="100%" stopColor="hsl(200 80% 40%)" stopOpacity={0.8} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid 
@@ -1069,10 +1094,18 @@ export default function Dashboard() {
                         animationEasing="ease-out"
                       />
                       <Bar 
-                        dataKey="congelamentos" 
-                        fill="url(#congelamentosGradient)" 
+                        dataKey="suspensos" 
+                        fill="url(#suspensosGradient)" 
                         radius={[6, 6, 0, 0]} 
-                        name="Congelamentos"
+                        name="Suspensos"
+                        animationDuration={800}
+                        animationEasing="ease-out"
+                      />
+                      <Bar 
+                        dataKey="pausados" 
+                        fill="url(#pausadosGradient)" 
+                        radius={[6, 6, 0, 0]} 
+                        name="Pausados"
                         animationDuration={800}
                         animationEasing="ease-out"
                       />
@@ -1258,10 +1291,24 @@ export default function Dashboard() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground">Congelamentos</p>
-                      <p className="text-4xl font-bold text-amber-600">{(contractStats?.suspended ?? 0) + (contractStats?.paused ?? 0)}</p>
+                      <p className="text-sm font-medium text-muted-foreground">Suspensos</p>
+                      <p className="text-4xl font-bold text-amber-600">{contractStats?.suspended ?? 0}</p>
                     </div>
                     <Minus className="h-8 w-8 text-amber-500" />
+                  </div>
+                </CardContent>
+              </Card>
+              )}
+
+              {gestaoViewMode === "operacoes" && (
+              <Card className="border-l-4 border-l-sky-500">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Pausados</p>
+                      <p className="text-4xl font-bold text-sky-600">{contractStats?.paused ?? 0}</p>
+                    </div>
+                    <Minus className="h-8 w-8 text-sky-500" />
                   </div>
                 </CardContent>
               </Card>
@@ -1304,9 +1351,13 @@ export default function Dashboard() {
                         <stop offset="0%" stopColor="hsl(25 95% 53%)" stopOpacity={1} />
                         <stop offset="100%" stopColor="hsl(25 95% 43%)" stopOpacity={0.8} />
                       </linearGradient>
-                      <linearGradient id="focusCongelamentosGradient" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="focusSuspensosGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="hsl(38 92% 50%)" stopOpacity={1} />
                         <stop offset="100%" stopColor="hsl(38 92% 40%)" stopOpacity={0.8} />
+                      </linearGradient>
+                      <linearGradient id="focusPausadosGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(200 80% 50%)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(200 80% 40%)" stopOpacity={0.8} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
@@ -1318,7 +1369,8 @@ export default function Dashboard() {
                       <>
                         <Bar dataKey="cancelamentos" fill="url(#focusCancelamentosGradient)" radius={[6, 6, 0, 0]} name="Cancelamentos" />
                         <Bar dataKey="encerramentos" fill="url(#focusEncerramentosGradient)" radius={[6, 6, 0, 0]} name="Encerramentos" />
-                        <Bar dataKey="congelamentos" fill="url(#focusCongelamentosGradient)" radius={[6, 6, 0, 0]} name="Congelamentos" />
+                        <Bar dataKey="suspensos" fill="url(#focusSuspensosGradient)" radius={[6, 6, 0, 0]} name="Suspensos" />
+                        <Bar dataKey="pausados" fill="url(#focusPausadosGradient)" radius={[6, 6, 0, 0]} name="Pausados" />
                       </>
                     )}
                     <Legend wrapperStyle={{ paddingTop: 20 }} iconType="circle" iconSize={10} formatter={(value) => <span className="text-base text-muted-foreground ml-1">{value}</span>} />
