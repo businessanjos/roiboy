@@ -7,6 +7,7 @@ import { UserSectorAccessManager } from "@/components/settings/UserSectorAccessM
 import { TeamManager } from "@/components/settings/TeamManager";
 import { ActivityTypesManager } from "@/components/sales";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { LossReasonsManager } from "@/components/settings/LossReasonsManager";
 import { SectorPinSettings } from "@/components/settings/SectorPinSettings";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -58,7 +59,12 @@ export default function Settings() {
           </div>
         ) : null;
       case "sales":
-        return hasVendasAccess ? <ActivityTypesManager /> : null;
+        return hasVendasAccess ? (
+          <div className="space-y-6">
+            <ActivityTypesManager />
+            <LossReasonsManager />
+          </div>
+        ) : null;
       case "integrations":
         return <IntegrationsContent />;
       case "security":
