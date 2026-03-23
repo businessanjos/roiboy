@@ -328,8 +328,10 @@ export default function Dashboard() {
             months[key].cancelamentos++;
           } else if (contract.status === "ended") {
             months[key].encerramentos++;
-          } else if (["paused", "suspended"].includes(contract.status)) {
-            months[key].congelamentos++;
+          } else if (contract.status === "suspended") {
+            months[key].suspensos++;
+          } else if (contract.status === "paused") {
+            months[key].pausados++;
           }
         }
       }
