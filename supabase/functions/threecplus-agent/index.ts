@@ -431,17 +431,8 @@ async function ensureAgentReadyForDial(
   apiToken: string,
   preferredCampaignId?: unknown,
 ) {
-  const webphoneResult = await waitForWebphoneRegistration(apiBase, apiToken, 12000);
-  let runtime = webphoneResult.runtime;
+  let runtime = await fetchAgentRuntimeState(apiBase, apiToken);
   let performedCampaignLogin = false;
-
-  if (!webphoneResult.success) {
-    return {
-      success: false,
-      runtime,
-      error: getWebphoneNotReadyMessage(),
-    };
-  }
 
   if (runtime.manual_mode && !runtime.has_active_call) {
     try {
@@ -790,17 +781,6 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      const webphoneResult = await waitForWebphoneRegistration(apiBase, effectiveApiToken, 12000);
-      if (!webphoneResult.success) {
-        return new Response(JSON.stringify({
-          success: false,
-          code: "WEBPHONE_NOT_READY",
-          error: getWebphoneNotReadyMessage(),
-          runtime: webphoneResult.runtime,
-        }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-
       const res = await fetch(`${apiBase}/agent/login?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ campaign: campaign_id }),
@@ -919,20 +899,6 @@ Deno.serve(async (req) => {
 
       const { extension, password } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, effectiveApiToken);
       const click2CallFallbackToken = effectiveApiToken !== apiToken ? apiToken : null;
-      const webphoneResult = await waitForWebphoneRegistration(apiBase, effectiveApiToken, 12000);
-
-      if (!webphoneResult.success) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: getWebphoneNotReadyMessage(),
-            code: "WEBPHONE_NOT_READY",
-            extension_resolved: Boolean(extension),
-            runtime: webphoneResult.runtime,
-          }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
 
       try {
         const connectRes = await fetch(`${apiBase}/agent/connect?api_token=${effectiveApiToken}`, {
