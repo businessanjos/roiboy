@@ -50,7 +50,7 @@ const Events = lazyRetry(() => import("./pages/Events"));
 const EventDetail = lazyRetry(() => import("./pages/EventDetail"));
 // Team moved to Settings
 const Tasks = lazyRetry(() => import("./pages/Tasks"));
-const Profile = lazyRetry(() => import("./pages/Profile"));
+
 const Notifications = lazyRetry(() => import("./pages/Notifications"));
 const Forms = lazyRetry(() => import("./pages/Forms"));
 const PublicForm = lazyRetry(() => import("./pages/PublicForm"));
