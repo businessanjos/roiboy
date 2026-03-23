@@ -233,6 +233,79 @@ async function connectAgentSession(apiBase: string, apiToken: string) {
   }
 }
 
+async function postToAgentEndpoint(
+  apiBase: string,
+  apiToken: string,
+  path: string,
+  body?: Record<string, unknown>,
+) {
+  return fetch(`${apiBase}${path}?api_token=${apiToken}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+}
+
+async function fetchLoggedCampaignState(apiBase: string, apiToken: string) {
+  try {
+    const response = await fetch(`${apiBase}/campaigns/agent/loggedCampaign?api_token=${apiToken}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    const text = await response.text();
+
+    return {
+      success: response.ok,
+      campaign: response.ok ? safeJsonParse(text) : null,
+    };
+  } catch (error) {
+    console.warn("[threecplus-agent] fetchLoggedCampaignState failed:", error);
+    return { success: false, campaign: null };
+  }
+}
+
+async function cleanupAgentState(apiBase: string, apiToken: string) {
+  const actions = [
+    { label: "manual_call/exit", path: "/agent/manual_call/exit" },
+    { label: "logout", path: "/agent/logout" },
+  ];
+
+  for (const action of actions) {
+    try {
+      const response = await postToAgentEndpoint(apiBase, apiToken, action.path);
+      const text = await response.text();
+      console.log(`[threecplus-agent] cleanup ${action.label}:`, response.status, text);
+    } catch (error) {
+      console.warn(`[threecplus-agent] cleanup ${action.label} failed:`, error);
+    }
+  }
+
+  return fetchAgentRuntimeState(apiBase, apiToken);
+}
+
+async function tryClick2Call(
+  apiBase: string,
+  apiToken: string,
+  phone: string,
+  extension?: string | null,
+  password?: string | null,
+) {
+  const payload: Record<string, string> = { phone };
+  if (extension) payload.extension = extension;
+  if (password) payload.password = password;
+
+  const response = await postToAgentEndpoint(apiBase, apiToken, "/click2call", payload);
+  const text = await response.text();
+  console.log("[threecplus-agent] click2call:", response.status, text);
+
+  return {
+    success: response.ok || response.status === 204,
+    status: response.status,
+    text,
+    call: extractCallDetails(safeJsonParse(text)) || { phone },
+  };
+}
+
 async function loginWebphoneSession(apiBase: string, apiToken: string, preferredCampaignId?: unknown) {
   const campaignsResult = await fetchAvailableAgentCampaigns(apiBase, apiToken);
   if (!campaignsResult.success) {
@@ -345,24 +418,24 @@ async function ensureAgentReadyForDial(
 
   const latestRuntime = readyResult.runtime ?? await fetchAgentRuntimeState(apiBase, apiToken);
 
-  if (performedCampaignLogin && !latestRuntime.has_active_call) {
-    console.log("[threecplus-agent] ensureAgentReadyForDial: trusting successful campaign login despite runtime mismatch", latestRuntime);
+  const loggedCampaignState = await fetchLoggedCampaignState(apiBase, apiToken);
+  const hasConfirmedCampaign = loggedCampaignState.success || latestRuntime.logged_campaign;
+
+  if (hasConfirmedCampaign && !latestRuntime.has_active_call) {
+    console.log("[threecplus-agent] ensureAgentReadyForDial: agent logged in campaign, proceeding despite status:", latestRuntime.agent_status);
     return {
       success: true,
       runtime: { ...latestRuntime, logged_campaign: true },
-      method: "campaign_login_trusted",
+      method: performedCampaignLogin ? "campaign_login_confirmed" : "campaign_login_force",
     };
-  }
-
-  if (latestRuntime.logged_campaign && !latestRuntime.has_active_call) {
-    console.log("[threecplus-agent] ensureAgentReadyForDial: agent logged in campaign, proceeding despite status:", latestRuntime.agent_status);
-    return { success: true, runtime: latestRuntime, method: "campaign_login_force" };
   }
 
   return {
     success: false,
-    runtime: latestRuntime,
-    error: "O agente está logado na campanha, mas a 3C Plus ainda não liberou a discagem manual.",
+    runtime: { ...latestRuntime, logged_campaign: hasConfirmedCampaign },
+    error: performedCampaignLogin
+      ? "A 3C Plus aceitou o login da campanha, mas não abriu a sessão real do agente para discagem."
+      : "O agente não está logado em uma campanha ativa no 3C Plus.",
   };
 }
 
@@ -744,6 +817,50 @@ Deno.serve(async (req) => {
       const cleanPhone = phone.replace(/\D/g, "");
 
       const { extension, password } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, effectiveApiToken);
+
+      try {
+        const connectRes = await fetch(`${apiBase}/agent/connect?api_token=${effectiveApiToken}`, {
+          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        });
+        const connectText = await connectRes.text();
+        console.log("[threecplus-agent] place_call agent/connect:", connectRes.status, connectText);
+      } catch (connectErr) {
+        console.warn("[threecplus-agent] place_call agent/connect failed (non-blocking):", connectErr);
+      }
+
+      const click2CallResult = await tryClick2Call(apiBase, effectiveApiToken, cleanPhone, extension, password);
+      if (click2CallResult.success) {
+        await logCallToDb(supabaseAdmin, userData.account_id, userData.id, click2CallResult.call, "click2call");
+        return new Response(JSON.stringify({ success: true, mode: "click2call", call: click2CallResult.call }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      if (extension && isAgentNotIdle(click2CallResult.status, click2CallResult.text)) {
+        const webphoneResult = await loginWebphoneSession(apiBase, effectiveApiToken, campaign_id);
+        if (webphoneResult.success) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+
+          const retryClick2CallResult = await tryClick2Call(apiBase, effectiveApiToken, cleanPhone, extension, password);
+          if (retryClick2CallResult.success) {
+            await logCallToDb(supabaseAdmin, userData.account_id, userData.id, retryClick2CallResult.call, "click2call_webphone_retry");
+            return new Response(JSON.stringify({ success: true, mode: "click2call", call: retryClick2CallResult.call }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+        } else {
+          console.warn("[threecplus-agent] place_call webphone login skipped/failed:", webphoneResult.error);
+        }
+      }
+
+      await cleanupAgentState(apiBase, effectiveApiToken);
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
+      const postCleanupClick2CallResult = await tryClick2Call(apiBase, effectiveApiToken, cleanPhone, extension, password);
+      if (postCleanupClick2CallResult.success) {
+        await logCallToDb(supabaseAdmin, userData.account_id, userData.id, postCleanupClick2CallResult.call, "click2call_after_cleanup");
+        return new Response(JSON.stringify({ success: true, mode: "click2call", call: postCleanupClick2CallResult.call }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       const readyResult = await ensureAgentReadyForDial(apiBase, effectiveApiToken, campaign_id);
       if (!readyResult.success) {
         return new Response(
@@ -756,16 +873,6 @@ Deno.serve(async (req) => {
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
-      }
-
-      try {
-        const connectRes = await fetch(`${apiBase}/agent/connect?api_token=${effectiveApiToken}`, {
-          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
-        });
-        const connectText = await connectRes.text();
-        console.log("[threecplus-agent] place_call agent/connect:", connectRes.status, connectText);
-      } catch (connectErr) {
-        console.warn("[threecplus-agent] place_call agent/connect failed (non-blocking):", connectErr);
       }
 
       const enterRes = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${effectiveApiToken}`, {
