@@ -303,7 +303,7 @@ export default function Dashboard() {
       const key = format(date, "yyyy-MM");
       const label = format(date, "MMM/yy", { locale: ptBR });
       if (!months[key]) {
-        months[key] = { month: label, novos: 0, cancelamentos: 0, encerramentos: 0, congelamentos: 0 };
+        months[key] = { month: label, novos: 0, cancelamentos: 0, encerramentos: 0, suspensos: 0, pausados: 0 };
       }
     }
     
