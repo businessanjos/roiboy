@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, MessageSquare, RefreshCw, ShieldAlert, Smartphone, Headphones, DollarSign, ShoppingCart, Crown } from "lucide-react";
+import { Loader2, MessageSquare, RefreshCw, ShieldAlert, Smartphone, Headphones, DollarSign, ShoppingCart, Crown, UserSearch } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { usePermissions } from "@/hooks/usePermissions";
