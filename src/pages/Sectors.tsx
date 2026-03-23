@@ -101,6 +101,20 @@ function SectorPattern({ sectorId }: { sectorId: string }) {
         <circle cx="40" cy="48" r="18" stroke="currentColor" strokeWidth="2" fill="none" />
       </svg>
     ),
+    royzapp: (
+      <svg className="absolute right-3 bottom-3 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity duration-500" width="80" height="80" viewBox="0 0 80 80">
+        <polygon points="40,8 50,30 74,30 55,46 62,70 40,56 18,70 25,46 6,30 30,30" stroke="currentColor" strokeWidth="2" fill="none" />
+      </svg>
+    ),
+    roychat: (
+      <svg className="absolute right-3 bottom-3 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity duration-500" width="80" height="80" viewBox="0 0 80 80">
+        <rect x="10" y="15" width="55" height="38" rx="8" stroke="currentColor" strokeWidth="2" fill="none" />
+        <polyline points="20,53 28,65 36,53" stroke="currentColor" strokeWidth="2" fill="none" />
+        <circle cx="28" cy="34" r="3" fill="currentColor" />
+        <circle cx="40" cy="34" r="3" fill="currentColor" />
+        <circle cx="52" cy="34" r="3" fill="currentColor" />
+      </svg>
+    ),
   };
   return <>{patterns[sectorId] || null}</>;
 }
