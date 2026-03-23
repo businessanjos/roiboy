@@ -9,13 +9,21 @@ const UAZAPI_URL = (Deno.env.get("UAZAPI_URL") || "").replace(/\/$/, '');
 const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
 async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
+  console.log(`[uazapi-admin] Calling: ${method} ${UAZAPI_URL}${endpoint}`);
   const r = await fetch(`${UAZAPI_URL}${endpoint}`, { 
     method, 
-    headers: { "Content-Type": "application/json", "AdminToken": UAZAPI_ADMIN_TOKEN }, 
+    headers: { 
+      "Content-Type": "application/json", 
+      "AdminToken": UAZAPI_ADMIN_TOKEN,
+      "admintoken": UAZAPI_ADMIN_TOKEN,
+    }, 
     body: body ? JSON.stringify(body) : undefined 
   });
-  const json = await r.json();
-  if (!r.ok && json.error) throw new Error(json.error);
+  const responseText = await r.text();
+  console.log(`[uazapi-admin] Response: ${r.status} - ${responseText.substring(0, 300)}`);
+  let json: any;
+  try { json = JSON.parse(responseText); } catch { throw new Error(`Invalid response: ${responseText.substring(0, 100)}`); }
+  if (json.error && json.error !== false) throw new Error(typeof json.error === 'string' ? json.error : JSON.stringify(json));
   return json;
 }
 
