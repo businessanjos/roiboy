@@ -248,7 +248,8 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
     setSaving(true);
     try {
       const statusChanged = contract.status !== formData.status;
-      const updateData = {
+      const isTerminalStatus = TERMINAL_STATUSES.includes(formData.status);
+      const updateData: Record<string, any> = {
         start_date: formData.start_date,
         end_date: formData.end_date || null,
         cancelled_at: formData.cancelled_at
@@ -262,6 +263,8 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
         status: formData.status,
         status_changed_at: statusChanged ? new Date().toISOString() : contract.status_changed_at,
         updated_at: new Date().toISOString(),
+        cancellation_reason: isTerminalStatus ? (formData.cancellation_reason || null) : null,
+        cancellation_justification: isTerminalStatus ? (formData.cancellation_justification || null) : null,
       };
 
       const { error } = await supabase
