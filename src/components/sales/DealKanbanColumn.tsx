@@ -15,6 +15,7 @@ interface DealKanbanColumnProps {
   faturamentoMap?: Record<string, string>;
   itemVendaMap?: Record<string, string>;
   isDragActive?: boolean;
+  activityStatusGetter?: (dealId: string) => ActivityStatus;
 }
 
 const getStageIcon = (stageName: string, color: string) => {
