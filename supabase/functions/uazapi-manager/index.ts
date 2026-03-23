@@ -189,9 +189,9 @@ serve(async (req) => {
       const linkedNames = new Set((existingInts || []).map((i: any) => i.config?.instance_name).filter(Boolean));
       const linkedMap = new Map((existingInts || []).map((i: any) => [i.config?.instance_name, i]));
       
-      // Filter: instances that belong to this account (roy-prefix) OR are explicitly linked
+      // Filter: instances that belong to this account (roy-prefix), SDR instances, or explicitly linked
       const accountPrefix = `roy-${accountId.slice(0,8)}`;
-      const filtered = all.filter(i => i.name?.startsWith(accountPrefix) || linkedNames.has(i.name));
+      const filtered = all.filter(i => i.name?.startsWith(accountPrefix) || i.name?.startsWith("sdr-") || linkedNames.has(i.name));
       
       result = { instances: filtered.map(i => {
         const linked = linkedMap.get(i.name);
