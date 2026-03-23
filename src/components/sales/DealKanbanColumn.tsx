@@ -46,6 +46,13 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
     id: stage.id,
   });
 
+  const INITIAL_VISIBLE = 30;
+  const LOAD_MORE_INCREMENT = 30;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  
+  const visibleDeals = useMemo(() => deals.slice(0, visibleCount), [deals, visibleCount]);
+  const hasMore = deals.length > visibleCount;
+
   const totalValue = deals.reduce((sum, deal) => sum + (deal.value || 0), 0);
 
   const formatCurrency = (value: number) => {
