@@ -1034,9 +1034,13 @@ export default function Dashboard() {
                       <stop offset="0%" stopColor="hsl(25 95% 53%)" stopOpacity={1} />
                       <stop offset="100%" stopColor="hsl(25 95% 43%)" stopOpacity={0.8} />
                     </linearGradient>
-                    <linearGradient id="congelamentosGradient" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="suspensosGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="hsl(38 92% 50%)" stopOpacity={1} />
                       <stop offset="100%" stopColor="hsl(38 92% 40%)" stopOpacity={0.8} />
+                    </linearGradient>
+                    <linearGradient id="pausadosGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(200 80% 50%)" stopOpacity={1} />
+                      <stop offset="100%" stopColor="hsl(200 80% 40%)" stopOpacity={0.8} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid 
@@ -1090,10 +1094,18 @@ export default function Dashboard() {
                         animationEasing="ease-out"
                       />
                       <Bar 
-                        dataKey="congelamentos" 
-                        fill="url(#congelamentosGradient)" 
+                        dataKey="suspensos" 
+                        fill="url(#suspensosGradient)" 
                         radius={[6, 6, 0, 0]} 
-                        name="Congelamentos"
+                        name="Suspensos"
+                        animationDuration={800}
+                        animationEasing="ease-out"
+                      />
+                      <Bar 
+                        dataKey="pausados" 
+                        fill="url(#pausadosGradient)" 
+                        radius={[6, 6, 0, 0]} 
+                        name="Pausados"
                         animationDuration={800}
                         animationEasing="ease-out"
                       />
