@@ -193,7 +193,9 @@ export function ThreeCPlusPanel() {
     agentStatus !== "offline"
       ? statusInfo
       : extensionLoaded
-        ? { label: isConnected ? "Ramal carregado" : "Ramal carregado", color: "bg-green-500", icon: Wifi }
+        ? isConnected
+          ? { label: "Ramal carregado", color: "bg-green-500", icon: Wifi }
+          : { label: "WebRTC carregando", color: "bg-yellow-500", icon: Loader2 }
         : connectionInfo || loading
           ? { label: "Conectando...", color: "bg-blue-400", icon: Loader2 }
           : statusInfo;
@@ -748,7 +750,7 @@ export function ThreeCPlusPanel() {
                 />
               </div>
               <p className="text-[10px] text-muted-foreground text-center">
-                Não feche ou recarregue durante uma chamada
+                “Ramal carregado” só confirma que o WebRTC abriu; a discagem só libera quando a 3C Plus marcar o agente como ocioso.
               </p>
             </div>
           )}

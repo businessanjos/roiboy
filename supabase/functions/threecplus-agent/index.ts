@@ -218,6 +218,52 @@ function pickAgentCampaign(campaigns: Array<Record<string, unknown>>, preferredC
   return campaigns[0] ?? null;
 }
 
+async function connectAgentSession(apiBase: string, apiToken: string) {
+  try {
+    const connectRes = await fetch(`${apiBase}/agent/connect?api_token=${apiToken}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+    });
+    const connectText = await connectRes.text();
+    console.log("[threecplus-agent] connectAgentSession agent/connect:", connectRes.status, connectText);
+    return connectRes.ok || connectRes.status === 204;
+  } catch (error) {
+    console.warn("[threecplus-agent] connectAgentSession failed:", error);
+    return false;
+  }
+}
+
+async function loginWebphoneSession(apiBase: string, apiToken: string, preferredCampaignId?: unknown) {
+  const campaignsResult = await fetchAvailableAgentCampaigns(apiBase, apiToken);
+  if (!campaignsResult.success) {
+    return { success: false, error: campaignsResult.error };
+  }
+
+  const campaign = pickAgentCampaign(campaignsResult.campaigns, preferredCampaignId);
+  const campaignId = normalizeCampaignId(campaign?.id);
+  if (!campaignId) {
+    return { success: false, error: "Nenhuma campanha disponível para este agente no 3C Plus." };
+  }
+
+  const webphoneRes = await fetch(`${apiBase}/agent/webphone/login?api_token=${apiToken}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ campaign: campaignId }),
+  });
+  const webphoneText = await webphoneRes.text();
+  console.log("[threecplus-agent] loginWebphoneSession agent/webphone/login:", webphoneRes.status, webphoneText);
+
+  if (webphoneRes.ok || webphoneRes.status === 204) {
+    await connectAgentSession(apiBase, apiToken);
+    return { success: true, error: null };
+  }
+
+  return {
+    success: false,
+    error: extractApiMessage(webphoneText, "A 3C Plus não confirmou o login do WebRTC para este agente."),
+  };
+}
+
 async function waitForAgentReady(apiBase: string, apiToken: string, timeoutMs = 12000) {
   const startedAt = Date.now();
   let runtime = await fetchAgentRuntimeState(apiBase, apiToken);
@@ -288,15 +334,25 @@ async function ensureAgentReadyForDial(
     }
   }
 
-  const readyResult = await waitForAgentReady(apiBase, apiToken);
+  let readyResult = await waitForAgentReady(apiBase, apiToken, 5000);
   if (readyResult.success) {
     return { success: true, runtime: readyResult.runtime, method: "campaign_login" };
+  }
+
+  const webphoneLoginResult = await loginWebphoneSession(apiBase, apiToken, preferredCampaignId);
+  if (webphoneLoginResult.success) {
+    readyResult = await waitForAgentReady(apiBase, apiToken, 8000);
+    if (readyResult.success) {
+      return { success: true, runtime: readyResult.runtime, method: "webphone_login" };
+    }
   }
 
   return {
     success: false,
     runtime: readyResult.runtime,
-    error: "O ramal WebRTC ainda não confirmou o login do agente. Deixe o painel 3C Plus aberto e tente novamente em alguns segundos.",
+    error: webphoneLoginResult.success
+      ? "O WebRTC abriu, mas a 3C Plus ainda não confirmou o agente como ocioso para discagem."
+      : webphoneLoginResult.error || "O ramal WebRTC ainda não confirmou o login do agente. Deixe o painel 3C Plus aberto e tente novamente em alguns segundos.",
   };
 }
 
