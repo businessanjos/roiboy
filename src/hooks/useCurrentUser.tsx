@@ -33,7 +33,6 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
 
   const fetchUser = useCallback(async () => {
     try {
-      // First get the current auth user
       const { data: { user: authUser } } = await supabase.auth.getUser();
       
       if (!authUser) {
@@ -42,64 +41,43 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
         return;
       }
       
-      // Then fetch the user profile using auth_user_id, including team role
+      // Fetch user profile
       const { data, error } = await supabase
         .from("users")
         .select("id, name, email, role, avatar_url, account_id, auth_user_id, is_also_admin, zapp_signature, zapp_signature_enabled, team_role_id, team_role:team_roles(name)")
         .eq("auth_user_id", authUser.id)
         .maybeSingle();
       
-      if (error) {
+      if (error || !data) {
         console.error("Error fetching user profile:", error);
         setCurrentUser(null);
         setLoading(false);
         return;
       }
       
-      if (data) {
-        // Extract team role name from the joined data (legacy single role)
-        let teamRoleName = (data as any).team_role?.name;
-        const teamRoleId = (data as any).team_role_id;
-        
-        // Fetch all roles from junction table
-        const { data: userRolesData } = await supabase
-          .from("user_team_roles")
-          .select("team_role_id, team_role:team_roles(name)")
-          .eq("user_id", data.id);
-        
-        const teamRoleNames = (userRolesData || []).map((ur: any) => ur.team_role?.name).filter(Boolean);
-        const teamRoleIds = (userRolesData || []).map((ur: any) => ur.team_role_id);
-        
-        // Use first role name as primary if available
-        if (teamRoleNames.length > 0 && !teamRoleName) {
-          teamRoleName = teamRoleNames[0];
-        }
-        
-        // Fallback: if no junction data but team_role_id exists, fetch name separately
-        if (!teamRoleName && teamRoleId) {
-          try {
-            const { data: roleData } = await supabase
-              .from("team_roles")
-              .select("name")
-              .eq("id", teamRoleId)
-              .maybeSingle();
-            teamRoleName = roleData?.name || undefined;
-            if (teamRoleName) teamRoleNames.push(teamRoleName);
-          } catch {
-            // Non-critical
-          }
-        }
-        
-        setCurrentUser({
-          ...data,
-          team_role_name: teamRoleName,
-          team_role_names: teamRoleNames,
-          team_role_id: teamRoleId,
-          team_role_ids: teamRoleIds,
-        } as CurrentUser);
-      } else {
-        setCurrentUser(null);
+      // Fetch all roles from junction table (parallel-safe, no dependency on profile query besides user id)
+      const { data: userRolesData } = await supabase
+        .from("user_team_roles")
+        .select("team_role_id, team_role:team_roles(name)")
+        .eq("user_id", data.id);
+      
+      const teamRoleNames = (userRolesData || []).map((ur: any) => ur.team_role?.name).filter(Boolean);
+      const teamRoleIds = (userRolesData || []).map((ur: any) => ur.team_role_id);
+      
+      let teamRoleName = (data as any).team_role?.name;
+      const teamRoleId = (data as any).team_role_id;
+      
+      if (teamRoleNames.length > 0 && !teamRoleName) {
+        teamRoleName = teamRoleNames[0];
       }
+      
+      setCurrentUser({
+        ...data,
+        team_role_name: teamRoleName,
+        team_role_names: teamRoleNames,
+        team_role_id: teamRoleId,
+        team_role_ids: teamRoleIds,
+      } as CurrentUser);
     } catch (error) {
       console.error("Error fetching current user:", error);
       setCurrentUser(null);
