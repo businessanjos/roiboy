@@ -292,7 +292,7 @@ export default function SalesPipeline() {
       console.error('[SalesPipeline] Error fetching won deal product map:', error);
       setDealProductMap({});
     });
-  }, [currentUser?.account_id, wonDeals]);
+  }, [currentUser?.account_id, wonDealIds]);
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
   
