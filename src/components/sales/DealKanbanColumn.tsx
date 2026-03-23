@@ -153,6 +153,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
                 onClick={() => onDealClick(deal)}
                 faturamentoLabel={faturamentoMap?.[deal.id]}
                 itemVendaLabel={itemVendaMap?.[deal.id]}
+                activityStatus={activityStatusGetter?.(deal.id)}
               />
             ))
           )}
