@@ -45,6 +45,71 @@ function isAgentNotIdle(status: number, text: string): boolean {
   return /n[ãa]o\s+est[áa]\s+ocioso/i.test(message);
 }
 
+async function postToAgentEndpoint(
+  baseDomain: string,
+  agentApiToken: string,
+  path: string,
+  body?: Record<string, unknown>,
+) {
+  return fetch(`${baseDomain}/api/v1${path}?api_token=${agentApiToken}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+}
+
+async function getAgentRuntime(baseDomain: string, agentApiToken: string) {
+  const runtime = {
+    hasActiveCall: false,
+    manualMode: false,
+    loggedCampaign: false,
+  };
+
+  try {
+    const agentRes = await fetch(`${baseDomain}/api/v1/agent?api_token=${agentApiToken}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    const agentText = await agentRes.text();
+    const agentMessage = extractApiMessage(agentText, "").toLowerCase();
+    runtime.hasActiveCall = /call|chamada|talking|in_call/.test(agentText.toLowerCase());
+    runtime.manualMode = /manual/.test(agentMessage) || /manual/.test(agentText.toLowerCase());
+  } catch (err) {
+    console.warn("[threecplus-call] getAgentRuntime agent error:", err);
+  }
+
+  try {
+    const campaignRes = await fetch(`${baseDomain}/api/v1/campaigns/agent/loggedCampaign?api_token=${agentApiToken}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    runtime.loggedCampaign = campaignRes.ok;
+  } catch (err) {
+    console.warn("[threecplus-call] getAgentRuntime campaign error:", err);
+  }
+
+  return runtime;
+}
+
+async function cleanupAgentState(baseDomain: string, agentApiToken: string) {
+  const actions = [
+    { label: "manual_call/exit", path: "/agent/manual_call/exit" },
+    { label: "logout", path: "/agent/logout" },
+  ];
+
+  for (const action of actions) {
+    try {
+      const response = await postToAgentEndpoint(baseDomain, agentApiToken, action.path);
+      const text = await response.text();
+      console.log(`[threecplus-call] cleanup ${action.label}:`, response.status, text);
+    } catch (err) {
+      console.warn(`[threecplus-call] cleanup ${action.label} failed:`, err);
+    }
+  }
+
+  return getAgentRuntime(baseDomain, agentApiToken);
+}
+
 async function logCall(
   supabaseAdmin: ReturnType<typeof createClient>,
   userData: { id: string; account_id: string },
@@ -165,10 +230,7 @@ Deno.serve(async (req) => {
 
     // Ensure agent is connected first (idempotent)
     try {
-      const connectRes = await fetch(
-        `${baseDomain}/api/v1/agent/connect?api_token=${agentApiToken}`,
-        { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" } }
-      );
+      const connectRes = await postToAgentEndpoint(baseDomain, agentApiToken, "/agent/connect");
       const connectText = await connectRes.text();
       console.log("[threecplus-call] agent/connect:", connectRes.status, connectText);
     } catch (connectErr) {
@@ -181,14 +243,7 @@ Deno.serve(async (req) => {
     if (userPassword) click2callPayload.password = userPassword;
 
     console.log("[threecplus-call] Trying click2call with extension:", userExtension || "none");
-    const click2callRes = await fetch(
-      `${baseDomain}/api/v1/click2call?api_token=${agentApiToken}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(click2callPayload),
-      }
-    );
+    const click2callRes = await postToAgentEndpoint(baseDomain, agentApiToken, "/click2call", click2callPayload);
     const click2callText = await click2callRes.text();
     console.log("[threecplus-call] click2call response:", click2callRes.status, click2callText);
 
@@ -212,27 +267,13 @@ Deno.serve(async (req) => {
           const firstCamp = Array.isArray(campsList) ? campsList[0] : null;
           if (firstCamp?.id) {
             console.log("[threecplus-call] Trying webphone login with campaign:", firstCamp.id);
-            const wpRes = await fetch(
-              `${baseDomain}/api/v1/agent/webphone/login?api_token=${agentApiToken}`,
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json", Accept: "application/json" },
-                body: JSON.stringify({ campaign: firstCamp.id }),
-              }
-            );
+            const wpRes = await postToAgentEndpoint(baseDomain, agentApiToken, "/agent/webphone/login", { campaign: firstCamp.id });
             console.log("[threecplus-call] webphone/login:", wpRes.status, await wpRes.text());
 
             if (wpRes.ok || wpRes.status === 204) {
               await new Promise(r => setTimeout(r, 2000));
               // Retry click2call
-              const retryRes = await fetch(
-                `${baseDomain}/api/v1/click2call?api_token=${agentApiToken}`,
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json", Accept: "application/json" },
-                  body: JSON.stringify(click2callPayload),
-                }
-              );
+              const retryRes = await postToAgentEndpoint(baseDomain, agentApiToken, "/click2call", click2callPayload);
               const retryText = await retryRes.text();
               console.log("[threecplus-call] click2call retry:", retryRes.status, retryText);
               if (retryRes.ok || retryRes.status === 204) {
@@ -248,6 +289,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Cleanup stale state and retry before falling back
+    let runtime = await cleanupAgentState(baseDomain, agentApiToken);
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    const postCleanupClick2CallRes = await postToAgentEndpoint(baseDomain, agentApiToken, "/click2call", click2callPayload);
+    const postCleanupClick2CallText = await postCleanupClick2CallRes.text();
+    console.log("[threecplus-call] click2call after cleanup:", postCleanupClick2CallRes.status, postCleanupClick2CallText);
+
+    if (postCleanupClick2CallRes.ok || postCleanupClick2CallRes.status === 204) {
+      await logCall(supabaseAdmin, userData, cleanPhone, contactName, "manual", leadId, clientId, dealId);
+      return new Response(JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     // Fallback: manual call mode
     console.log("[threecplus-call] click2call failed, trying manual call");
     let enterSuccess = false;
@@ -259,10 +314,7 @@ Deno.serve(async (req) => {
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       console.log(`[threecplus-call] manual_call/enter attempt ${attempt}/${maxRetries}`);
-      const enterRes = await fetch(
-        `${baseDomain}/api/v1/agent/manual_call/enter?api_token=${agentApiToken}`,
-        { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" } }
-      );
+      const enterRes = await postToAgentEndpoint(baseDomain, agentApiToken, "/agent/manual_call/enter");
       const enterText = await enterRes.text();
       const enterMessage = extractApiMessage(enterText, "");
       lastEnterMessage = enterMessage || lastEnterMessage;
@@ -282,6 +334,7 @@ Deno.serve(async (req) => {
       if (isAgentNotIdle(enterRes.status, enterText)) {
         agentNotIdle = true;
         console.log("[threecplus-call] Agent is not idle, aborting manual dial fallback");
+        runtime = await cleanupAgentState(baseDomain, agentApiToken);
         break;
       }
 
@@ -290,13 +343,7 @@ Deno.serve(async (req) => {
 
     if (enterSuccess || manualModeAlreadyActive) {
       console.log("[threecplus-call] Dialing phone:", cleanPhone);
-      const dialRes = await fetch(
-        `${baseDomain}/api/v1/agent/manual_call/dial?api_token=${agentApiToken}`,
-        {
-          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
-          body: JSON.stringify({ phone: cleanPhone }),
-        }
-      );
+      const dialRes = await postToAgentEndpoint(baseDomain, agentApiToken, "/agent/manual_call/dial", { phone: cleanPhone });
       const dialText = await dialRes.text();
       console.log("[threecplus-call] manual_call/dial response:", dialRes.status, dialText);
       if (dialRes.ok || dialRes.status === 204) {
@@ -311,10 +358,11 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: false,
         error: agentNotIdle
-          ? "O agente não está ocioso no 3C Plus. Deixe o ramal livre ou coloque o agente em modo manual antes de discar."
+          ? "O agente ainda está preso em outro estado no 3C Plus. Feche chamadas/pausas pendentes no painel WebRTC e tente novamente."
           : lastEnterMessage || "Não foi possível iniciar a chamada. Verifique se o ramal e senha estão configurados no painel 3C Plus.",
         code: agentNotIdle ? "AGENT_NOT_IDLE" : "API_CALL_FAILED",
         fallback_url: baseDomain,
+        runtime,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

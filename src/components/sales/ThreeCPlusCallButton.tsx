@@ -18,8 +18,8 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke("threecplus-call", {
-        body: { phone: contactPhone, contact_name: contactName },
+      const { data, error } = await supabase.functions.invoke("threecplus-agent", {
+        body: { action: "place_call", phone: contactPhone, contact_name: contactName },
       });
 
       if (error) {
@@ -59,7 +59,7 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 text-blue-500 hover:text-blue-600 hover:bg-blue-500/10"
+            className="h-6 w-6 text-primary hover:text-primary hover:bg-primary/10"
             onClick={makeCall}
             disabled={loading}
           >
