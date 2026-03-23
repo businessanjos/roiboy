@@ -28,9 +28,11 @@ import {
   Loader2,
   AlertTriangle,
   RefreshCw,
+  QrCode,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ConnectQRCodeDialog } from "./ConnectQRCodeDialog";
 
 export interface SectorInstance {
   id: string;
