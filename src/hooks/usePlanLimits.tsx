@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
 
@@ -87,10 +87,19 @@ export function PlanLimitsProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<PlanLimitsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const lastFetchRef = useRef<number>(0);
+  const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes cache
 
-  const fetchLimits = useCallback(async () => {
+  const fetchLimits = useCallback(async (force = false) => {
     if (!currentUser) {
       setData(null);
+      setLoading(false);
+      return;
+    }
+
+    // Skip if cached data is fresh (unless forced)
+    const now = Date.now();
+    if (!force && data && now - lastFetchRef.current < CACHE_DURATION_MS) {
       setLoading(false);
       return;
     }
@@ -135,7 +144,7 @@ export function PlanLimitsProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      // Count current usage
+      // Count current usage in parallel
       const [clientsRes, usersRes, eventsRes, productsRes, formsRes, aiRes] = await Promise.all([
         supabase.from("clients").select("id", { count: "exact", head: true }).eq("account_id", currentUser.account_id),
         supabase.from("users").select("id", { count: "exact", head: true }).eq("account_id", currentUser.account_id),
@@ -170,6 +179,7 @@ export function PlanLimitsProvider({ children }: { children: ReactNode }) {
         whatsapp_connections: whatsappCount,
       };
 
+      lastFetchRef.current = now;
       setData({
         account_id: currentUser.account_id,
         plan_id: accountData.plan_id,
@@ -184,7 +194,7 @@ export function PlanLimitsProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [currentUser]);
+  }, [currentUser, data]);
 
   useEffect(() => {
     if (!userLoading) {

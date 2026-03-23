@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Deal, DealStage } from "@/hooks/useDeals";
@@ -5,7 +6,7 @@ import { DealCard } from "./DealCard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ActivityStatus } from "@/hooks/useBatchDealActivityStatus";
-import { Users, Clock, MessageSquare, CheckCircle, XCircle, ArrowDown } from "lucide-react";
+import { Users, Clock, MessageSquare, CheckCircle, XCircle, ArrowDown, ChevronDown } from "lucide-react";
 
 interface DealKanbanColumnProps {
   stage: DealStage;
@@ -44,6 +45,13 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
   });
+
+  const INITIAL_VISIBLE = 30;
+  const LOAD_MORE_INCREMENT = 30;
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE);
+  
+  const visibleDeals = useMemo(() => deals.slice(0, visibleCount), [deals, visibleCount]);
+  const hasMore = deals.length > visibleCount;
 
   const totalValue = deals.reduce((sum, deal) => sum + (deal.value || 0), 0);
 
@@ -130,7 +138,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
         } : undefined}
       >
         <SortableContext
-          items={deals.map(d => d.id)}
+          items={visibleDeals.map(d => d.id)}
           strategy={verticalListSortingStrategy}
         >
           {deals.length === 0 ? (
@@ -146,16 +154,27 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
               {isOver ? "Solte aqui!" : "Arraste negociações aqui"}
             </div>
           ) : (
-            deals.map(deal => (
-              <DealCard
-                key={deal.id}
-                deal={deal}
-                onClick={() => onDealClick(deal)}
-                faturamentoLabel={faturamentoMap?.[deal.id]}
-                itemVendaLabel={itemVendaMap?.[deal.id]}
-                activityStatus={activityStatusGetter?.(deal.id)}
-              />
-            ))
+            <>
+              {visibleDeals.map(deal => (
+                <DealCard
+                  key={deal.id}
+                  deal={deal}
+                  onClick={() => onDealClick(deal)}
+                  faturamentoLabel={faturamentoMap?.[deal.id]}
+                  itemVendaLabel={itemVendaMap?.[deal.id]}
+                  activityStatus={activityStatusGetter?.(deal.id)}
+                />
+              ))}
+              {hasMore && (
+                <button
+                  onClick={() => setVisibleCount(prev => prev + LOAD_MORE_INCREMENT)}
+                  className="w-full py-2 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md border border-dashed border-border/40 transition-colors flex items-center justify-center gap-1"
+                >
+                  <ChevronDown className="h-3 w-3" />
+                  Ver mais {Math.min(LOAD_MORE_INCREMENT, deals.length - visibleCount)} de {deals.length - visibleCount}
+                </button>
+              )}
+            </>
           )}
         </SortableContext>
       </div>
