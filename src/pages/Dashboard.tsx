@@ -1010,7 +1010,7 @@ export default function Dashboard() {
                     </div>
                     Evolução Mensal
                   </CardTitle>
-                  <CardDescription className="mt-1">{gestaoViewMode === "operacoes" ? "Novos, cancelamentos, encerramentos e congelamentos nos últimos 6 meses" : "Novos contratos nos últimos 6 meses"}</CardDescription>
+                  <CardDescription className="mt-1">{gestaoViewMode === "operacoes" ? "Novos, cancelamentos, encerramentos, suspensos e pausados nos últimos 6 meses" : "Novos contratos nos últimos 6 meses"}</CardDescription>
                 </div>
               </div>
             </CardHeader>
