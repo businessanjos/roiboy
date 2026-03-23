@@ -4,6 +4,7 @@ import { Deal, DealStage } from "@/hooks/useDeals";
 import { DealCard } from "./DealCard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import type { ActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 import { Users, Clock, MessageSquare, CheckCircle, XCircle, ArrowDown } from "lucide-react";
 
 interface DealKanbanColumnProps {
