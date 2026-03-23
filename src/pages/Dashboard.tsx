@@ -414,52 +414,25 @@ export default function Dashboard() {
     },
   };
 
-  // Real-time subscription for client changes (filtered by account_id)
+  // Debounced real-time subscription for client changes (filtered by account_id)
   useEffect(() => {
     if (!currentUser?.account_id) return;
+    
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedRefetch = () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => refetchAll(), 2000);
+    };
     
     const accountFilter = `account_id=eq.${currentUser.account_id}`;
     const channel = supabase
       .channel("dashboard-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "clients",
-          filter: accountFilter,
-        },
-        () => {
-          refetchAll();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "client_products",
-          filter: accountFilter,
-        },
-        () => {
-          refetchAll();
-        }
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "client_contracts",
-          filter: accountFilter,
-        },
-        () => {
-          refetchAll();
-        }
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "clients", filter: accountFilter }, debouncedRefetch)
+      .on("postgres_changes", { event: "*", schema: "public", table: "client_contracts", filter: accountFilter }, debouncedRefetch)
       .subscribe();
 
     return () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
       supabase.removeChannel(channel);
     };
   }, [refetchAll, currentUser?.account_id]);

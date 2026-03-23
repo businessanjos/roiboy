@@ -34,12 +34,12 @@ function lazyRetry<T extends ComponentType<any>>(
   return lazy(() => retryFactory(retries));
 }
 
-// Eager loaded pages (critical for UX)
+// Eager loaded pages (critical for UX - only auth and 404)
 import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
 import NotFound from "./pages/NotFound";
 
 // Lazy loaded pages
+const Dashboard = lazyRetry(() => import("./pages/Dashboard"));
 const Clients = lazyRetry(() => import("./pages/Clients"));
 const ClientDetail = lazyRetry(() => import("./pages/ClientDetail"));
 const Integrations = lazyRetry(() => import("./pages/Integrations"));
@@ -50,7 +50,7 @@ const Events = lazyRetry(() => import("./pages/Events"));
 const EventDetail = lazyRetry(() => import("./pages/EventDetail"));
 // Team moved to Settings
 const Tasks = lazyRetry(() => import("./pages/Tasks"));
-const Profile = lazyRetry(() => import("./pages/Profile"));
+
 const Notifications = lazyRetry(() => import("./pages/Notifications"));
 const Forms = lazyRetry(() => import("./pages/Forms"));
 const PublicForm = lazyRetry(() => import("./pages/PublicForm"));
