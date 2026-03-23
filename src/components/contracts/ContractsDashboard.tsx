@@ -562,7 +562,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                 </div>
               </div>
 
-              {/* Paused + Suspended */}
+              {/* Suspensos */}
               <div className="relative pl-6 border-l-2 border-dashed border-muted-foreground/20 ml-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-amber-500/10 shrink-0">
@@ -570,20 +570,46 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-sm font-medium">Pausados + Suspensos</span>
-                      <span className="text-lg font-bold text-amber-600">{funnelData.paused + funnelData.suspended}</span>
+                      <span className="text-sm font-medium">Suspensos</span>
+                      <span className="text-lg font-bold text-amber-600">{funnelData.suspended}</span>
                     </div>
                     <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
                       <motion.div 
                         className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-400"
                         initial={{ width: 0 }}
-                        animate={{ width: `${funnelData.total > 0 ? ((funnelData.paused + funnelData.suspended) / funnelData.total) * 100 : 0}%` }}
+                        animate={{ width: `${funnelData.total > 0 ? (funnelData.suspended / funnelData.total) * 100 : 0}%` }}
                         transition={{ duration: 0.8, ease: "easeOut", delay: 0.3 }}
                       />
                     </div>
                   </div>
                   <span className="text-xs text-amber-600 font-medium w-12 text-right">
-                    {funnelData.total > 0 ? (((funnelData.paused + funnelData.suspended) / funnelData.total) * 100).toFixed(1) : 0}%
+                    {funnelData.total > 0 ? ((funnelData.suspended / funnelData.total) * 100).toFixed(1) : 0}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Pausados */}
+              <div className="relative pl-6 border-l-2 border-dashed border-muted-foreground/20 ml-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-sky-500/10 shrink-0">
+                    <PauseCircle className="h-4 w-4 text-sky-500" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-medium">Pausados</span>
+                      <span className="text-lg font-bold text-sky-600">{funnelData.paused}</span>
+                    </div>
+                    <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full rounded-full bg-gradient-to-r from-sky-500 to-blue-400"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${funnelData.total > 0 ? (funnelData.paused / funnelData.total) * 100 : 0}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut", delay: 0.35 }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-xs text-sky-600 font-medium w-12 text-right">
+                    {funnelData.total > 0 ? ((funnelData.paused / funnelData.total) * 100).toFixed(1) : 0}%
                   </span>
                 </div>
               </div>
