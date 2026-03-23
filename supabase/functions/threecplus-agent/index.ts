@@ -781,17 +781,6 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      const webphoneResult = await waitForWebphoneRegistration(apiBase, effectiveApiToken, 12000);
-      if (!webphoneResult.success) {
-        return new Response(JSON.stringify({
-          success: false,
-          code: "WEBPHONE_NOT_READY",
-          error: getWebphoneNotReadyMessage(),
-          runtime: webphoneResult.runtime,
-        }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      }
-
       const res = await fetch(`${apiBase}/agent/login?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ campaign: campaign_id }),
