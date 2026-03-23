@@ -65,6 +65,8 @@ interface Contract {
   contract_type: string;
   created_at: string;
   updated_at: string;
+  cancellation_reason?: string | null;
+  cancellation_justification?: string | null;
   negotiation_type?: string | null;
   negotiation_description?: string | null;
   payment_method?: string | null;
