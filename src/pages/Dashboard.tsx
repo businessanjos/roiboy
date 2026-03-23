@@ -292,7 +292,7 @@ export default function Dashboard() {
   // Calculate monthly chart data including new clients
   const monthlyChartData = useMemo(() => {
     const { periodStart, periodEnd } = gestaoPeriodRange;
-    const months: { [key: string]: { month: string; novos: number; cancelamentos: number; encerramentos: number; congelamentos: number } } = {};
+    const months: { [key: string]: { month: string; novos: number; cancelamentos: number; encerramentos: number; suspensos: number; pausados: number } } = {};
     
     // Calculate the number of months to show
     const monthsDiff = Math.max(1, Math.ceil((periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24 * 30)));
