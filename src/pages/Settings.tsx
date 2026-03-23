@@ -58,7 +58,12 @@ export default function Settings() {
           </div>
         ) : null;
       case "sales":
-        return hasVendasAccess ? <ActivityTypesManager /> : null;
+        return hasVendasAccess ? (
+          <div className="space-y-6">
+            <ActivityTypesManager />
+            <LossReasonsManager />
+          </div>
+        ) : null;
       case "integrations":
         return <IntegrationsContent />;
       case "security":
