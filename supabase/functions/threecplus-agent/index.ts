@@ -51,6 +51,22 @@ function safeJsonParse(text: string): unknown | null {
   }
 }
 
+function parseBooleanish(value: unknown): boolean | null {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  if (typeof value !== "string") return null;
+
+  const normalized = value.trim().toLowerCase();
+  if (["true", "1", "yes", "sim", "registered", "connected", "online"].includes(normalized)) {
+    return true;
+  }
+  if (["false", "0", "no", "nao", "não", "unregistered", "disconnected", "offline"].includes(normalized)) {
+    return false;
+  }
+
+  return null;
+}
+
 function normalizePhone(value: unknown): string | null {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   if (typeof value !== "string") return null;
@@ -88,6 +104,38 @@ function extractCallDetails(value: unknown): { id?: string | number; phone?: str
   };
 }
 
+function extractWebphoneRegistered(value: unknown, depth = 0): boolean | null {
+  if (!value || depth > 4) return null;
+  const record = asRecord(value);
+  if (!record) return null;
+
+  const directKeys = [
+    "webphone",
+    "webphone_registered",
+    "web_phone",
+    "webrtc_registered",
+    "extension_registered",
+    "registered",
+  ];
+
+  for (const key of directKeys) {
+    const parsed = parseBooleanish(record[key]);
+    if (parsed !== null) return parsed;
+  }
+
+  const nestedKeys = ["data", "agent", "extension", "webrtc", "webphone"];
+  for (const key of nestedKeys) {
+    const nested = extractWebphoneRegistered(record[key], depth + 1);
+    if (nested !== null) return nested;
+  }
+
+  return null;
+}
+
+function getWebphoneNotReadyMessage() {
+  return "O ramal WebRTC abriu, mas ainda não foi registrado na 3C Plus. Aguarde alguns segundos e tente novamente.";
+}
+
 function extractAgentStatus(value: unknown, depth = 0): string | null {
   if (!value || depth > 4) return null;
   const record = asRecord(value);
@@ -117,6 +165,7 @@ async function fetchAgentRuntimeState(apiBase: string, apiToken: string) {
     manual_mode: false,
     call_id: null as string | number | null,
     agent_status: null as string | null,
+    webphone_registered: false,
   };
 
   try {
@@ -130,11 +179,13 @@ async function fetchAgentRuntimeState(apiBase: string, apiToken: string) {
       const agentPayload = safeJsonParse(agentText);
       const callDetails = extractCallDetails(agentPayload);
       const agentStatus = extractAgentStatus(agentPayload);
+      const webphoneRegistered = extractWebphoneRegistered(agentPayload);
 
       runtime.has_active_call = Boolean(callDetails?.id || callDetails?.phone);
       runtime.call_id = callDetails?.id ?? null;
       runtime.agent_status = agentStatus;
       runtime.manual_mode = Boolean(agentStatus && /manual/i.test(agentStatus));
+      runtime.webphone_registered = webphoneRegistered ?? false;
     }
   } catch (error) {
     console.error("[threecplus-agent] fetchAgentRuntimeState agent error:", error);
@@ -151,6 +202,22 @@ async function fetchAgentRuntimeState(apiBase: string, apiToken: string) {
   }
 
   return runtime;
+}
+
+async function waitForWebphoneRegistration(apiBase: string, apiToken: string, timeoutMs = 12000) {
+  const startedAt = Date.now();
+  let runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (runtime.webphone_registered) {
+      return { success: true, runtime };
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+  }
+
+  return { success: Boolean(runtime.webphone_registered), runtime };
 }
 
 function isManualModeAlreadyActive(status: number, text: string): boolean {
@@ -364,8 +431,17 @@ async function ensureAgentReadyForDial(
   apiToken: string,
   preferredCampaignId?: unknown,
 ) {
-  let runtime = await fetchAgentRuntimeState(apiBase, apiToken);
+  const webphoneResult = await waitForWebphoneRegistration(apiBase, apiToken, 12000);
+  let runtime = webphoneResult.runtime;
   let performedCampaignLogin = false;
+
+  if (!webphoneResult.success) {
+    return {
+      success: false,
+      runtime,
+      error: getWebphoneNotReadyMessage(),
+    };
+  }
 
   if (runtime.manual_mode && !runtime.has_active_call) {
     try {
@@ -713,6 +789,18 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: false, error: "campaign_id é obrigatório" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+
+      const webphoneResult = await waitForWebphoneRegistration(apiBase, effectiveApiToken, 12000);
+      if (!webphoneResult.success) {
+        return new Response(JSON.stringify({
+          success: false,
+          code: "WEBPHONE_NOT_READY",
+          error: getWebphoneNotReadyMessage(),
+          runtime: webphoneResult.runtime,
+        }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       const res = await fetch(`${apiBase}/agent/login?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ campaign: campaign_id }),
@@ -720,10 +808,17 @@ Deno.serve(async (req) => {
       const text = await res.text();
       console.log("[threecplus-agent] login:", res.status, text);
       if (res.ok || res.status === 204) {
-        return new Response(JSON.stringify({ success: true, message: "Login na campanha realizado" }),
+        const runtime = await fetchAgentRuntimeState(apiBase, effectiveApiToken);
+        return new Response(JSON.stringify({ success: true, message: "Login na campanha enviado", runtime }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       return new Response(JSON.stringify({ success: false, error: "Falha ao entrar na campanha", status: res.status }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    if (action === "get_runtime") {
+      const runtime = await fetchAgentRuntimeState(apiBase, effectiveApiToken);
+      return new Response(JSON.stringify({ success: true, runtime }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -824,6 +919,20 @@ Deno.serve(async (req) => {
 
       const { extension, password } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, effectiveApiToken);
       const click2CallFallbackToken = effectiveApiToken !== apiToken ? apiToken : null;
+      const webphoneResult = await waitForWebphoneRegistration(apiBase, effectiveApiToken, 12000);
+
+      if (!webphoneResult.success) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: getWebphoneNotReadyMessage(),
+            code: "WEBPHONE_NOT_READY",
+            extension_resolved: Boolean(extension),
+            runtime: webphoneResult.runtime,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
 
       try {
         const connectRes = await fetch(`${apiBase}/agent/connect?api_token=${effectiveApiToken}`, {
