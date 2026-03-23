@@ -11,6 +11,13 @@ type IntegrationData = {
   baseDomain: string;
 };
 
+function getValidUserApiToken(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "account_level") return null;
+  return trimmed;
+}
+
 function getBaseDomain(domain: string | null): string {
   if (!domain) return "https://app.3c.fluxoti.com";
   let base = domain.trim();
@@ -310,8 +317,9 @@ Deno.serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    if (authError || !user) {
+    const { data: claimsData, error: claimsError } = await supabaseAdmin.auth.getClaims(token);
+    const authUserId = claimsData?.claims?.sub;
+    if (claimsError || !authUserId) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -320,7 +328,7 @@ Deno.serve(async (req) => {
     const { data: userData } = await supabaseAdmin
       .from("users")
       .select("id, account_id")
-      .eq("auth_user_id", user.id)
+      .eq("auth_user_id", authUserId)
       .single();
 
     if (!userData) {
@@ -344,18 +352,19 @@ Deno.serve(async (req) => {
       }
       const { data: existing } = await supabaseAdmin
         .from("user_integrations")
-        .select("metadata")
+        .select("access_token, metadata")
         .eq("user_id", userData.id)
         .eq("provider", "3cplus")
         .maybeSingle();
 
       const prevMeta = asRecord(existing?.metadata) ?? {};
       const nextMetadata = { ...prevMeta, extension: String(ext).trim(), ...(extPwd ? { extension_password: String(extPwd).trim() } : {}) };
+      const preservedAccessToken = getValidUserApiToken(existing?.access_token) ?? "account_level";
 
       await supabaseAdmin
         .from("user_integrations")
         .upsert(
-          { user_id: userData.id, provider: "3cplus", access_token: "account_level", metadata: nextMetadata },
+          { user_id: userData.id, provider: "3cplus", access_token: preservedAccessToken, metadata: nextMetadata },
           { onConflict: "user_id,provider" }
         );
 
@@ -392,6 +401,14 @@ Deno.serve(async (req) => {
 
     const { apiToken, baseDomain } = integration;
     const apiBase = `${baseDomain}/api/v1`;
+    const { data: userIntegration } = await supabaseAdmin
+      .from("user_integrations")
+      .select("access_token")
+      .eq("user_id", userData.id)
+      .eq("provider", "3cplus")
+      .maybeSingle();
+    const agentApiToken = getValidUserApiToken(userIntegration?.access_token);
+    const effectiveApiToken = agentApiToken ?? apiToken;
 
     // Return connection info
     if (action === "get_connection_info") {
@@ -399,8 +416,10 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: true,
           domain: baseDomain,
-          api_token: apiToken,
+          api_token: effectiveApiToken,
           extension_url: `${baseDomain}/extension?api_token=${apiToken}`,
+          socket_url: "https://socket.3c.plus",
+          has_agent_token: Boolean(agentApiToken),
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

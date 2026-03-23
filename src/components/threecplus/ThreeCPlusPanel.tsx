@@ -146,7 +146,7 @@ export function ThreeCPlusPanel() {
   // Connect Socket.io to the client's own domain (not a generic socket server)
   useEffect(() => {
     if (connectionInfo && !isConnected) {
-      connectSocket(connectionInfo.domain, connectionInfo.api_token);
+      connectSocket(connectionInfo.socket_url || connectionInfo.domain, connectionInfo.api_token);
       setShowExtension(true);
     }
   }, [connectionInfo, isConnected, connectSocket]);
@@ -338,6 +338,11 @@ export function ThreeCPlusPanel() {
                     <span className="text-green-600">• Senha OK</span>
                   )}
                 </div>
+              )}
+              {connectionInfo && !connectionInfo.has_agent_token && (
+                <p className="text-xs text-destructive">
+                  Configure o Token de API do agente em Integrações &gt; 3C Plus &gt; Meu Ramal para usar o discador.
+                </p>
               )}
             </div>
           )}
