@@ -181,8 +181,21 @@ serve(async (req) => {
       result = { groups: (Array.isArray(r) ? r : r.groups || []).map((g:any) => ({ group_jid: g.JID||g.jid||g.id, name: g.Name||g.name||g.Subject })) };
     
     } else if (action === "list_instances") {
-      const all = await uazapiAdmin("/instance/all", "GET") as Array<{name?:string;status?:string;owner?:string}>;
-      result = { instances: all.filter(i => i.name?.startsWith(`roy-${accountId.slice(0,8)}`)) };
+      const all = await uazapiAdmin("/instance/all", "GET") as Array<{name?:string;status?:string;owner?:string;profileName?:string;profilePicUrl?:string;token?:string}>;
+      
+      // Get all integrations for this account to know which are linked
+      const { data: existingInts } = await supabase.from("integrations").select("config, sector_id, id, status").eq("account_id", accountId).eq("type", "whatsapp");
+      const linkedNames = new Set((existingInts || []).map((i: any) => i.config?.instance_name).filter(Boolean));
+      const linkedMap = new Map((existingInts || []).map((i: any) => [i.config?.instance_name, i]));
+      
+      // Filter: instances that belong to this account (roy-prefix) OR are explicitly linked
+      const accountPrefix = `roy-${accountId.slice(0,8)}`;
+      const filtered = all.filter(i => i.name?.startsWith(accountPrefix) || linkedNames.has(i.name));
+      
+      result = { instances: filtered.map(i => {
+        const linked = linkedMap.get(i.name);
+        return { ...i, hasToken: !!i.token, linked_sector_id: linked?.sector_id || null, linked_integration_id: linked?.id || null, linked_status: linked?.status || null };
+      }) };
     
     } else if (action === "list_sector_instances") {
       const { data: ints } = await supabase.from("integrations").select("id, sector_id, config, status, display_name, pin_hash").eq("account_id", accountId).eq("type", "whatsapp").not("sector_id", "is", null);
