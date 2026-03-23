@@ -1351,9 +1351,13 @@ export default function Dashboard() {
                         <stop offset="0%" stopColor="hsl(25 95% 53%)" stopOpacity={1} />
                         <stop offset="100%" stopColor="hsl(25 95% 43%)" stopOpacity={0.8} />
                       </linearGradient>
-                      <linearGradient id="focusCongelamentosGradient" x1="0" y1="0" x2="0" y2="1">
+                      <linearGradient id="focusSuspensosGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="hsl(38 92% 50%)" stopOpacity={1} />
                         <stop offset="100%" stopColor="hsl(38 92% 40%)" stopOpacity={0.8} />
+                      </linearGradient>
+                      <linearGradient id="focusPausadosGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(200 80% 50%)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(200 80% 40%)" stopOpacity={0.8} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
@@ -1365,7 +1369,8 @@ export default function Dashboard() {
                       <>
                         <Bar dataKey="cancelamentos" fill="url(#focusCancelamentosGradient)" radius={[6, 6, 0, 0]} name="Cancelamentos" />
                         <Bar dataKey="encerramentos" fill="url(#focusEncerramentosGradient)" radius={[6, 6, 0, 0]} name="Encerramentos" />
-                        <Bar dataKey="congelamentos" fill="url(#focusCongelamentosGradient)" radius={[6, 6, 0, 0]} name="Congelamentos" />
+                        <Bar dataKey="suspensos" fill="url(#focusSuspensosGradient)" radius={[6, 6, 0, 0]} name="Suspensos" />
+                        <Bar dataKey="pausados" fill="url(#focusPausadosGradient)" radius={[6, 6, 0, 0]} name="Pausados" />
                       </>
                     )}
                     <Legend wrapperStyle={{ paddingTop: 20 }} iconType="circle" iconSize={10} formatter={(value) => <span className="text-base text-muted-foreground ml-1">{value}</span>} />
