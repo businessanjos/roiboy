@@ -41,6 +41,7 @@ interface ConnectionInfo {
   api_token: string;
   extension_url: string;
   socket_url?: string;
+  has_agent_token?: boolean;
 }
 
 interface AgentRuntimeState {
@@ -588,6 +589,13 @@ export function useThreeCPlus() {
         return false;
       }
 
+      if (dialData?.code === "NO_AGENT_TOKEN") {
+        toast.error("Token do agente não configurado", {
+          description: dialData?.error || "Preencha o Token de API do Agente em Integrações > 3C Plus > Meu Ramal.",
+        });
+        return false;
+      }
+
       if (!dialData?.success) {
         toast.error("Não foi possível discar", {
           description: dialData?.error || "A 3C Plus recusou a chamada.",
@@ -611,7 +619,7 @@ export function useThreeCPlus() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setAgentStatus, setCurrentCall]);
 
   // Hangup
   const hangup = useCallback(async () => {
@@ -721,11 +729,14 @@ export function useThreeCPlus() {
       if (data?.success && data.extension) {
         setSavedExtension(data.extension);
         if (data.has_password) setSavedExtensionPassword("configured");
+      } else if (data?.success) {
+        setSavedExtension(null);
+        setSavedExtensionPassword(null);
       }
     } catch (err) {
       console.error("[useThreeCPlus] loadExtension error:", err);
     }
-  }, [invokeAgent]);
+  }, [invokeAgent, setSavedExtension, setSavedExtensionPassword]);
 
   // Cleanup
   useEffect(() => {
