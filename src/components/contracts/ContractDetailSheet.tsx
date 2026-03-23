@@ -192,6 +192,8 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
     payment_method: "",
     notes: "",
     status: "active",
+    cancellation_reason: "",
+    cancellation_justification: "",
   });
 
   useEffect(() => {
