@@ -404,9 +404,13 @@ export default function Dashboard() {
       label: "Encerramentos",
       color: "hsl(25 95% 53%)",
     },
-    congelamentos: {
-      label: "Congelamentos",
+    suspensos: {
+      label: "Suspensos",
       color: "hsl(38 92% 50%)",
+    },
+    pausados: {
+      label: "Pausados",
+      color: "hsl(200 80% 50%)",
     },
   };
 
