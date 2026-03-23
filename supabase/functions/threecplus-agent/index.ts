@@ -899,20 +899,6 @@ Deno.serve(async (req) => {
 
       const { extension, password } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, effectiveApiToken);
       const click2CallFallbackToken = effectiveApiToken !== apiToken ? apiToken : null;
-      const webphoneResult = await waitForWebphoneRegistration(apiBase, effectiveApiToken, 12000);
-
-      if (!webphoneResult.success) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: getWebphoneNotReadyMessage(),
-            code: "WEBPHONE_NOT_READY",
-            extension_resolved: Boolean(extension),
-            runtime: webphoneResult.runtime,
-          }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
 
       try {
         const connectRes = await fetch(`${apiBase}/agent/connect?api_token=${effectiveApiToken}`, {
