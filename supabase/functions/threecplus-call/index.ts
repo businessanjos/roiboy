@@ -26,6 +26,13 @@ function extractApiMessage(text: string, fallback = ""): string {
   }
 }
 
+function getValidUserApiToken(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed === "account_level") return null;
+  return trimmed;
+}
+
 function isManualModeAlreadyActive(status: number, text: string): boolean {
   if (status !== 422) return false;
   const message = extractApiMessage(text, "");
@@ -89,8 +96,9 @@ Deno.serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    if (authError || !user) {
+    const { data: claimsData, error: claimsError } = await supabaseAdmin.auth.getClaims(token);
+    const authUserId = claimsData?.claims?.sub;
+    if (claimsError || !authUserId) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -99,7 +107,7 @@ Deno.serve(async (req) => {
     const { data: userData } = await supabaseAdmin
       .from("users")
       .select("id, account_id")
-      .eq("auth_user_id", user.id)
+      .eq("auth_user_id", authUserId)
       .single();
 
     if (!userData) {
@@ -128,26 +136,37 @@ Deno.serve(async (req) => {
     }
 
     const config = integration.config as Record<string, unknown>;
-    const apiToken = config.api_token as string;
     const baseDomain = getBaseDomain(config.domain as string | null);
     const cleanPhone = phone.replace(/\D/g, "");
 
     // Get user's extension and password from user_integrations
     const { data: userInt } = await supabaseAdmin
       .from("user_integrations")
-      .select("metadata")
+      .select("access_token, metadata")
       .eq("user_id", userData.id)
       .eq("provider", "3cplus")
       .maybeSingle();
 
     const metadata = userInt?.metadata as Record<string, unknown> | null;
+    const agentApiToken = getValidUserApiToken(userInt?.access_token);
     const userExtension = metadata?.extension as string | null;
     const userPassword = metadata?.extension_password as string | null;
+
+    if (!agentApiToken) {
+      return new Response(JSON.stringify({
+        success: false,
+        code: "NO_AGENT_TOKEN",
+        error: "Configure o Token de API do agente em Integrações > 3C Plus > Meu Ramal.",
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Ensure agent is connected first (idempotent)
     try {
       const connectRes = await fetch(
-        `${baseDomain}/api/v1/agent/connect?api_token=${apiToken}`,
+        `${baseDomain}/api/v1/agent/connect?api_token=${agentApiToken}`,
         { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" } }
       );
       const connectText = await connectRes.text();
@@ -163,7 +182,7 @@ Deno.serve(async (req) => {
 
     console.log("[threecplus-call] Trying click2call with extension:", userExtension || "none");
     const click2callRes = await fetch(
-      `${baseDomain}/api/v1/click2call?api_token=${apiToken}`,
+      `${baseDomain}/api/v1/click2call?api_token=${agentApiToken}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -184,7 +203,7 @@ Deno.serve(async (req) => {
     if (isAgentNotIdle(click2callRes.status, click2callText) && userExtension) {
       try {
         const campaignsRes = await fetch(
-          `${baseDomain}/api/v1/agent/campaigns?api_token=${apiToken}`,
+          `${baseDomain}/api/v1/agent/campaigns?api_token=${agentApiToken}`,
           { method: "GET", headers: { Accept: "application/json" } }
         );
         if (campaignsRes.ok) {
@@ -194,7 +213,7 @@ Deno.serve(async (req) => {
           if (firstCamp?.id) {
             console.log("[threecplus-call] Trying webphone login with campaign:", firstCamp.id);
             const wpRes = await fetch(
-              `${baseDomain}/api/v1/agent/webphone/login?api_token=${apiToken}`,
+              `${baseDomain}/api/v1/agent/webphone/login?api_token=${agentApiToken}`,
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -207,7 +226,7 @@ Deno.serve(async (req) => {
               await new Promise(r => setTimeout(r, 2000));
               // Retry click2call
               const retryRes = await fetch(
-                `${baseDomain}/api/v1/click2call?api_token=${apiToken}`,
+                `${baseDomain}/api/v1/click2call?api_token=${agentApiToken}`,
                 {
                   method: "POST",
                   headers: { "Content-Type": "application/json", Accept: "application/json" },
@@ -241,7 +260,7 @@ Deno.serve(async (req) => {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       console.log(`[threecplus-call] manual_call/enter attempt ${attempt}/${maxRetries}`);
       const enterRes = await fetch(
-        `${baseDomain}/api/v1/agent/manual_call/enter?api_token=${apiToken}`,
+        `${baseDomain}/api/v1/agent/manual_call/enter?api_token=${agentApiToken}`,
         { method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" } }
       );
       const enterText = await enterRes.text();
@@ -272,7 +291,7 @@ Deno.serve(async (req) => {
     if (enterSuccess || manualModeAlreadyActive) {
       console.log("[threecplus-call] Dialing phone:", cleanPhone);
       const dialRes = await fetch(
-        `${baseDomain}/api/v1/agent/manual_call/dial?api_token=${apiToken}`,
+        `${baseDomain}/api/v1/agent/manual_call/dial?api_token=${agentApiToken}`,
         {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
           body: JSON.stringify({ phone: cleanPhone }),
