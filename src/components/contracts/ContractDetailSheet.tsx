@@ -298,6 +298,8 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
         payment_method: paymentParts.method,
         notes: contract.notes || "",
         status: contract.status,
+        cancellation_reason: contract.cancellation_reason || "",
+        cancellation_justification: contract.cancellation_justification || "",
       });
     }
     setIsEditing(false);
