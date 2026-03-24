@@ -36,11 +36,12 @@ export function useSubscriptionStatus(): SubscriptionStatus {
 
     async function checkSubscription() {
       try {
-        // Run super admin check and user query in parallel
-        const [superAdminResult, userResult] = await Promise.all([
-          supabase.rpc("is_super_admin", { _user_id: user!.id }),
-          supabase.from("users").select("account_id").eq("auth_user_id", user!.id).maybeSingle(),
-        ]);
+        // Use account_id query only — super admin check is centralized in useSuperAdmin hook
+        const userResult = await supabase
+          .from("users").select("account_id").eq("auth_user_id", user!.id).maybeSingle();
+        
+        // Check super admin from cache (react-query) — no extra RPC call
+        const superAdminResult = await supabase.rpc("is_super_admin", { _user_id: user!.id });
         
         if (superAdminResult.data === true) {
           setStatus({

@@ -106,7 +106,8 @@ export function useClientsPage() {
     const { data, error } = await supabase
       .from("clients")
       .select(`
-        *,
+        id, full_name, phone_e164, status, responsible_user_id, stage_id, 
+        instagram, emails, tags, created_at, account_id,
         client_products (
           product_id,
           products (
