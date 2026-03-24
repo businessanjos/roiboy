@@ -99,20 +99,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const { setTheme, theme } = useTheme();
   const { currentSector, clearSector, setCurrentSector } = useSector();
   const navigate = useNavigate();
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  
-  // Hook for ROY zAPP instance selection
-  const { openZappForSector, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useSidebarZappNavigation();
-
-  // Check if current user is super admin
-  useEffect(() => {
-    const checkSuperAdmin = async () => {
-      if (!user) return;
-      const { data } = await supabase.rpc('is_super_admin', { _user_id: user.id });
-      setIsSuperAdmin(data === true);
-    };
-    checkSuperAdmin();
-  }, [user]);
+  // Use centralized super admin hook (eliminates duplicate RPC call)
+  const { isSuperAdmin } = useSuperAdmin();
 
   // Filter nav items based on permissions, super admin status, and current sector
   const filteredNavItems = useMemo(() => {
