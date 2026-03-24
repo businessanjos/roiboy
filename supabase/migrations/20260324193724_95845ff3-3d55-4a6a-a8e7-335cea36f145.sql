@@ -1,0 +1,2 @@
+ALTER TABLE public.client_contracts DROP CONSTRAINT client_contracts_status_check;
+ALTER TABLE public.client_contracts ADD CONSTRAINT client_contracts_status_check CHECK (status = ANY (ARRAY['active'::text, 'pending'::text, 'suspended'::text, 'paused'::text, 'cancelled'::text, 'ended'::text, 'scheduled'::text, 'dismissed'::text, 'dropout_7d'::text, 'suspended_bonus'::text, 'dismissal_termination'::text]));
