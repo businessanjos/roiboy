@@ -31,6 +31,7 @@ export function LossReasonsManager() {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
   const accountId = currentUser?.account_id;
+  const canDelete = currentUser?.is_also_admin || currentUser?.id === "1232ec15-5f66-4b5f-9e74-f40d436f9d0f";
 
   const [expandedReasons, setExpandedReasons] = useState<Set<string>>(new Set());
   const [newReasonName, setNewReasonName] = useState("");
