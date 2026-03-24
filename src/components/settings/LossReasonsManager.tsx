@@ -126,6 +126,25 @@ export function LossReasonsManager() {
     onError: () => toast.error("Erro ao atualizar"),
   });
 
+  const deleteReason = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from("deal_loss_sub_reasons").delete().eq("loss_reason_id", id);
+      const { error } = await supabase.from("deal_loss_reasons").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidateAll(); toast.success("Motivo excluído"); },
+    onError: () => toast.error("Erro ao excluir motivo"),
+  });
+
+  const deleteSubReason = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("deal_loss_sub_reasons").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidateAll(); toast.success("Subcategoria excluída"); },
+    onError: () => toast.error("Erro ao excluir subcategoria"),
+  });
+
   const toggleExpand = (id: string) => {
     setExpandedReasons(prev => {
       const next = new Set(prev);
