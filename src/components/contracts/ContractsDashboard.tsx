@@ -163,11 +163,13 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
       name: status === "active" ? "Ativos" :
             status === "pending" ? "Pendentes" :
             status === "suspended" ? "Suspensos" :
+            status === "suspended_bonus" ? "Suspenso Bônus" :
             status === "paused" ? "Pausados" :
-            status === "cancelled" ? "Cancelados" :
+            status === "cancelled" ? "Distrato de Cancelamento" :
             status === "ended" ? "Encerrados" :
             status === "scheduled" ? "A Iniciar" :
             status === "dismissed" ? "Demitidas" :
+            status === "dismissal_termination" ? "Distrato por Demissão" :
             status === "dropout_7d" ? "Desistência 7D" : status,
       value: count,
       color: STATUS_COLORS[status] || "#94a3b8",
