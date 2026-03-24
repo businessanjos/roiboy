@@ -67,11 +67,13 @@ const STATUS_COLORS: Record<string, string> = {
   active: "#22c55e",
   pending: "#3b82f6",
   suspended: "#f97316",
+  suspended_bonus: "#eab308",
   paused: "#f59e0b",
   cancelled: "#ef4444",
   ended: "#64748b",
   scheduled: "#6366f1",
   dismissed: "#e11d48",
+  dismissal_termination: "#be123c",
   dropout_7d: "#ec4899",
 };
 
