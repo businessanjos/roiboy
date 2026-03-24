@@ -1413,19 +1413,24 @@ export default function Contracts() {
     }
   };
 
-  // Separate contracts by reconciliation status
-  const reconciledContracts = useMemo(() => {
-    return contracts.filter(c => c.receivables_generated === true);
+  // Filter out child contracts (renewals linked via parent_contract_id) to avoid duplication
+  const rootContracts = useMemo(() => {
+    return contracts.filter(c => !c.parent_contract_id);
   }, [contracts]);
 
+  // Separate contracts by reconciliation status
+  const reconciledContracts = useMemo(() => {
+    return rootContracts.filter(c => c.receivables_generated === true);
+  }, [rootContracts]);
+
   const queueContracts = useMemo(() => {
-    return contracts.filter(c => !c.receivables_generated);
-  }, [contracts]);
+    return rootContracts.filter(c => !c.receivables_generated);
+  }, [rootContracts]);
 
   // Contracts for triage queue (clients without responsible)
   const triageContracts = useMemo(() => {
-    return contracts.filter(c => !c.client?.responsible_user_id);
-  }, [contracts]);
+    return rootContracts.filter(c => !c.client?.responsible_user_id);
+  }, [rootContracts]);
 
   // Batch validation for queue contracts
   const { validations: conciliationValidations, isLoading: validationsLoading } = useBatchConciliationValidation(
