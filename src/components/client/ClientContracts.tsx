@@ -524,16 +524,17 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
 
     setStatusSaving(true);
     try {
-      const { error } = await supabase
-        .from("client_contracts")
-        .update({
-          status: statusAction,
-          status_reason: statusAction === 'active' ? null : statusReason.trim() || null,
-          status_changed_at: new Date().toISOString(),
-        })
-        .eq("id", statusContract.id);
-
-      if (error) throw error;
+      await withRetry(async () => {
+        const { error } = await supabase
+          .from("client_contracts")
+          .update({
+            status: statusAction,
+            status_reason: statusAction === 'active' ? null : statusReason.trim() || null,
+            status_changed_at: new Date().toISOString(),
+          })
+          .eq("id", statusContract.id);
+        if (error) throw error;
+      });
       
       const actionLabels = {
         cancelled: "Contrato cancelado (churn)",
