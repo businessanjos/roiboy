@@ -220,14 +220,16 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
     const paused = contracts.filter(c => c.status === "paused").length;
     const suspended = contracts.filter(c => c.status === "suspended").length;
     const ended = contracts.filter(c => c.status === "ended").length;
+    const suspendedBonus = contracts.filter(c => c.status === "suspended_bonus").length;
     const cancelled = contracts.filter(c => c.status === "cancelled").length;
     const dismissed = contracts.filter(c => c.status === "dismissed").length;
+    const dismissalTermination = contracts.filter(c => c.status === "dismissal_termination").length;
     const dropout7d = contracts.filter(c => c.status === "dropout_7d").length;
     
     // Calculate rates
     const activeRate = total > 0 ? (active / total) * 100 : 0;
     const completedRate = total > 0 ? (ended / total) * 100 : 0;
-    const churnTotal = cancelled + dismissed + dropout7d;
+    const churnTotal = cancelled + dismissed + dismissalTermination + dropout7d;
     const churnRate = total > 0 ? (churnTotal / total) * 100 : 0;
     const inProgressRate = total > 0 ? ((active + pending + scheduled + paused + suspended) / total) * 100 : 0;
     

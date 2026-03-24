@@ -144,7 +144,7 @@ const CANCELLATION_REASONS = [
   { value: "mudanca_momento", label: "Mudança de momento do negócio" },
 ];
 
-const TERMINAL_STATUSES = ["cancelled", "dismissed", "dropout_7d", "ended", "suspended", "paused"];
+const TERMINAL_STATUSES = ["cancelled", "dismissed", "dismissal_termination", "dropout_7d", "ended", "suspended", "suspended_bonus", "paused"];
 
 const parsePaymentOption = (option: string | null) => {
   if (!option) return { type: "", installments: "", method: "" };

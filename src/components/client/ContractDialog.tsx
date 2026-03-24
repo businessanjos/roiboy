@@ -57,8 +57,13 @@ const CONTRACT_STATUSES = [
   { value: "active", label: "Ativo" },
   { value: "pending", label: "Pendente (em assinatura)" },
   { value: "paused", label: "Pausado" },
-  { value: "cancelled", label: "Cancelado" },
+  { value: "suspended", label: "Suspenso" },
+  { value: "suspended_bonus", label: "Suspenso Bônus" },
+  { value: "cancelled", label: "Distrato de Cancelamento" },
+  { value: "dismissal_termination", label: "Distrato por Demissão" },
   { value: "ended", label: "Encerrado" },
+  { value: "dismissed", label: "Demitida" },
+  { value: "dropout_7d", label: "Desistência 7D" },
 ];
 
 interface Contract {

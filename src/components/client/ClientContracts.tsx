@@ -99,9 +99,14 @@ type ContractStatusAction = 'cancelled' | 'ended' | 'paused' | 'active';
 
 const CONTRACT_STATUS_CONFIG = {
   active: { label: "Ativo", icon: CheckCircle, className: "border-green-500 text-green-600" },
-  cancelled: { label: "Cancelado (Churn)", icon: XCircle, className: "border-red-500 text-red-600" },
+  suspended: { label: "Suspenso", icon: Ban, className: "border-orange-500 text-orange-600" },
+  suspended_bonus: { label: "Suspenso Bônus", icon: Ban, className: "border-yellow-500 text-yellow-600" },
+  cancelled: { label: "Distrato de Cancelamento", icon: XCircle, className: "border-red-500 text-red-600" },
+  dismissal_termination: { label: "Distrato por Demissão", icon: XCircle, className: "border-rose-600 text-rose-700" },
   ended: { label: "Encerrado", icon: Ban, className: "border-slate-500 text-slate-600" },
   paused: { label: "Pausado", icon: PauseCircle, className: "border-amber-500 text-amber-600" },
+  dismissed: { label: "Demitida", icon: XCircle, className: "border-rose-500 text-rose-600" },
+  dropout_7d: { label: "Desistência 7D", icon: XCircle, className: "border-pink-500 text-pink-600" },
 };
 
 interface ClientContractsProps {
