@@ -97,9 +97,11 @@ const CONTRACT_STATUS_CONFIG: Record<string, { label: string; icon: typeof Check
   pending: { label: "Pendente", icon: FileText, className: "border-blue-500 text-blue-600 bg-blue-50" },
   suspended: { label: "Suspenso", icon: Ban, className: "border-orange-500 text-orange-600 bg-orange-50" },
   paused: { label: "Pausado/Congelado", icon: PauseCircle, className: "border-amber-500 text-amber-600 bg-amber-50" },
-  cancelled: { label: "Cancelado", icon: XCircle, className: "border-red-500 text-red-600 bg-red-50" },
+  suspended_bonus: { label: "Suspenso Bônus", icon: Ban, className: "border-yellow-500 text-yellow-600 bg-yellow-50" },
+  cancelled: { label: "Distrato de Cancelamento", icon: XCircle, className: "border-red-500 text-red-600 bg-red-50" },
   ended: { label: "Encerrado", icon: Ban, className: "border-slate-500 text-slate-600 bg-slate-50" },
   dismissed: { label: "Demitida", icon: XCircle, className: "border-rose-500 text-rose-600 bg-rose-50" },
+  dismissal_termination: { label: "Distrato por Demissão", icon: XCircle, className: "border-rose-600 text-rose-700 bg-rose-50" },
   dropout_7d: { label: "Desistência 7D", icon: XCircle, className: "border-pink-500 text-pink-600 bg-pink-50" },
 };
 
