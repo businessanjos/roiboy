@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { withRetry } from "@/lib/retryFetch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -251,12 +252,17 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
     try {
       const statusChanged = contract.status !== formData.status;
       const isTerminalStatus = TERMINAL_STATUSES.includes(formData.status);
+      // Safely parse cancelled_at - handle both date-only and ISO strings
+      let cancelledAtValue: string | null = null;
+      if (formData.cancelled_at) {
+        const raw = formData.cancelled_at.split("T")[0]; // extract date part only
+        cancelledAtValue = new Date(raw + "T00:00:00").toISOString();
+      }
+
       const updateData: Record<string, any> = {
         start_date: formData.start_date,
         end_date: formData.end_date || null,
-        cancelled_at: formData.cancelled_at
-          ? new Date(formData.cancelled_at + "T00:00:00").toISOString()
-          : null,
+        cancelled_at: cancelledAtValue,
         value: parseFloat(formData.value) || 0,
         contract_type: formData.contract_type,
         product_id: formData.product_id || null,
@@ -269,12 +275,14 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
         cancellation_justification: isTerminalStatus ? (formData.cancellation_justification || null) : null,
       };
 
-      const { error } = await supabase
-        .from("client_contracts")
-        .update(updateData)
-        .eq("id", contract.id);
+      await withRetry(async () => {
+        const { error: updateError } = await supabase
+          .from("client_contracts")
+          .update(updateData)
+          .eq("id", contract.id);
+        if (updateError) throw updateError;
+      });
 
-      if (error) throw error;
 
       toast.success("Contrato atualizado com sucesso");
       setIsEditing(false);
