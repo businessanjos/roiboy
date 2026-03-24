@@ -1077,44 +1077,6 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                               <Edit className="h-4 w-4 mr-2" />
                               Editar
                             </DropdownMenuItem>
-                            {contract.status === 'active' && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  onClick={() => openStatusDialog(contract, 'paused')}
-                                  className="text-amber-600"
-                                >
-                                  <PauseCircle className="h-4 w-4 mr-2" />
-                                  Pausar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => openStatusDialog(contract, 'ended')}
-                                  className="text-slate-600"
-                                >
-                                  <Ban className="h-4 w-4 mr-2" />
-                                  Encerrar (Demissão)
-                                </DropdownMenuItem>
-                                <DropdownMenuItem 
-                                  onClick={() => openStatusDialog(contract, 'cancelled')}
-                                  className="text-destructive"
-                                >
-                                  <XCircle className="h-4 w-4 mr-2" />
-                                  Cancelar (Churn)
-                                </DropdownMenuItem>
-                              </>
-                            )}
-                            {contract.status !== 'active' && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  onClick={() => openStatusDialog(contract, 'active')}
-                                  className="text-green-600"
-                                >
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  Reativar
-                                </DropdownMenuItem>
-                              </>
-                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem 
                               onClick={() => {
