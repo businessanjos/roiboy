@@ -275,13 +275,13 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
         cancellation_justification: isTerminalStatus ? (formData.cancellation_justification || null) : null,
       };
 
-      const { error } = await withRetry(() =>
-        supabase
+      await withRetry(async () => {
+        const { error: updateError } = await supabase
           .from("client_contracts")
           .update(updateData)
-          .eq("id", contract.id)
-          .then(res => { if (res.error) throw res.error; return res; })
-      );
+          .eq("id", contract.id);
+        if (updateError) throw updateError;
+      });
 
 
       toast.success("Contrato atualizado com sucesso");
