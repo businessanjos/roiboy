@@ -31,6 +31,7 @@ export function LossReasonsManager() {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
   const accountId = currentUser?.account_id;
+  const canDelete = currentUser?.is_also_admin || currentUser?.id === "1232ec15-5f66-4b5f-9e74-f40d436f9d0f";
 
   const [expandedReasons, setExpandedReasons] = useState<Set<string>>(new Set());
   const [newReasonName, setNewReasonName] = useState("");
@@ -125,6 +126,25 @@ export function LossReasonsManager() {
     onError: () => toast.error("Erro ao atualizar"),
   });
 
+  const deleteReason = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from("deal_loss_sub_reasons").delete().eq("loss_reason_id", id);
+      const { error } = await supabase.from("deal_loss_reasons").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidateAll(); toast.success("Motivo excluído"); },
+    onError: () => toast.error("Erro ao excluir motivo"),
+  });
+
+  const deleteSubReason = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("deal_loss_sub_reasons").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { invalidateAll(); toast.success("Subcategoria excluída"); },
+    onError: () => toast.error("Erro ao excluir subcategoria"),
+  });
+
   const toggleExpand = (id: string) => {
     setExpandedReasons(prev => {
       const next = new Set(prev);
@@ -204,6 +224,16 @@ export function LossReasonsManager() {
                 </span>
 
                 <div className="flex items-center gap-1.5 shrink-0">
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      onClick={(e) => { e.stopPropagation(); deleteReason.mutate(reason.id); }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                   <Switch
                     checked={reason.is_active}
                     onCheckedChange={checked => updateReason.mutate({ id: reason.id, updates: { is_active: checked } })}
@@ -230,6 +260,16 @@ export function LossReasonsManager() {
                       >
                         {sub.name}
                       </span>
+                    )}
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:text-destructive"
+                        onClick={() => deleteSubReason.mutate(sub.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     )}
                     <Switch
                       checked={sub.is_active}
