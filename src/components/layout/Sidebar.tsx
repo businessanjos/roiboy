@@ -102,6 +102,9 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   // Use centralized super admin hook (eliminates duplicate RPC call)
   const { isSuperAdmin } = useSuperAdmin();
 
+  // Hook for ROY zAPP instance selection
+  const { openZappForSector, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useSidebarZappNavigation();
+
   // Filter nav items based on permissions, super admin status, and current sector
   const filteredNavItems = useMemo(() => {
     // Team role name for special access checks
