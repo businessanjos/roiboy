@@ -261,6 +261,16 @@ export function LossReasonsManager() {
                         {sub.name}
                       </span>
                     )}
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:text-destructive"
+                        onClick={() => deleteSubReason.mutate(sub.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    )}
                     <Switch
                       checked={sub.is_active}
                       onCheckedChange={checked => updateSubReason.mutate({ id: sub.id, updates: { is_active: checked } })}
