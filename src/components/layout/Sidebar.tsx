@@ -29,6 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAuth } from "@/hooks/useAuth";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { usePermissions, PERMISSIONS, Permission } from "@/hooks/usePermissions";
