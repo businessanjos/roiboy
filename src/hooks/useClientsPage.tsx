@@ -106,7 +106,9 @@ export function useClientsPage() {
     const { data, error } = await supabase
       .from("clients")
       .select(`
-        *,
+        id, full_name, phone_e164, status, responsible_user_id, stage_id, 
+        instagram, emails, tags, created_at, account_id, company_name,
+        birth_date, cnpj, cpf, notes, additional_phones,
         client_products (
           product_id,
           products (
@@ -340,11 +342,17 @@ export function useClientsPage() {
     }));
   }, []);
 
+  // Load all initial data in parallel
   useEffect(() => {
-    fetchClients();
-    fetchProducts();
-    fetchCustomFields();
-    fetchTeamUsers();
+    const loadAll = async () => {
+      await Promise.all([
+        fetchClients(),
+        fetchProducts(),
+        fetchCustomFields(),
+        fetchTeamUsers(),
+      ]);
+    };
+    loadAll();
   }, [fetchClients, fetchProducts, fetchCustomFields, fetchTeamUsers]);
 
   useEffect(() => {
@@ -356,8 +364,11 @@ export function useClientsPage() {
   useEffect(() => {
     if (clients.length > 0) {
       const clientIds = clients.map(c => c.id);
-      fetchFieldValues(clientIds);
-      fetchPendingFormSends(clientIds);
+      // Parallelize secondary data fetches
+      Promise.all([
+        fetchFieldValues(clientIds),
+        fetchPendingFormSends(clientIds),
+      ]);
     }
   }, [clients, fetchFieldValues, fetchPendingFormSends]);
 

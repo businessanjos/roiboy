@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
+import { useSuperAdmin } from "./useSuperAdmin";
 import { SectorId } from "@/config/sectors";
 
 // Team roles that automatically have access to Operations sector
@@ -63,18 +64,8 @@ export function useSectorAccess() {
     refetchOnWindowFocus: false,
   });
 
-  // Check if user is super_admin
-  const { data: isSuperAdmin = false } = useQuery({
-    queryKey: ["is-super-admin", authUserId],
-    queryFn: async () => {
-      if (!authUserId) return false;
-      const { data } = await supabase.rpc('is_super_admin', { _user_id: authUserId });
-      return data === true;
-    },
-    enabled: !!authUserId,
-    staleTime: 300000, // OPTIMIZED: 5 minutes
-    refetchOnWindowFocus: false,
-  });
+  // Use centralized super admin hook (eliminates duplicate RPC calls)
+  const { isSuperAdmin } = useSuperAdmin();
 
   const hasSectorAccess = (sectorId: SectorId): boolean => {
     

@@ -29,6 +29,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAuth } from "@/hooks/useAuth";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useNotifications } from "@/hooks/useNotifications";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { usePermissions, PERMISSIONS, Permission } from "@/hooks/usePermissions";
@@ -99,20 +100,11 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   const { setTheme, theme } = useTheme();
   const { currentSector, clearSector, setCurrentSector } = useSector();
   const navigate = useNavigate();
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  
+  // Use centralized super admin hook (eliminates duplicate RPC call)
+  const { isSuperAdmin } = useSuperAdmin();
+
   // Hook for ROY zAPP instance selection
   const { openZappForSector, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useSidebarZappNavigation();
-
-  // Check if current user is super admin
-  useEffect(() => {
-    const checkSuperAdmin = async () => {
-      if (!user) return;
-      const { data } = await supabase.rpc('is_super_admin', { _user_id: user.id });
-      setIsSuperAdmin(data === true);
-    };
-    checkSuperAdmin();
-  }, [user]);
 
   // Filter nav items based on permissions, super admin status, and current sector
   const filteredNavItems = useMemo(() => {

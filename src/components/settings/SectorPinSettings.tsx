@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
@@ -16,23 +17,7 @@ export function SectorPinSettings() {
   const [newPin, setNewPin] = useState("");
   const [saving, setSaving] = useState(false);
   const [selectedSector, setSelectedSector] = useState<SectorId>("operacoes");
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [checkingAdmin, setCheckingAdmin] = useState(true);
-
-  // Verificar se é super_admin
-  useEffect(() => {
-    const checkSuperAdmin = async () => {
-      try {
-        const { data } = await supabase.rpc("is_super_admin");
-        setIsSuperAdmin(!!data);
-      } catch (error) {
-        console.error("Error checking super admin:", error);
-      } finally {
-        setCheckingAdmin(false);
-      }
-    };
-    checkSuperAdmin();
-  }, []);
+  const { isSuperAdmin, isLoading: checkingAdmin } = useSuperAdmin();
 
   // Buscar status do PIN para setores
   const { data: sectorPinStatus, refetch: refetchPinStatus } = useQuery({
