@@ -675,10 +675,10 @@ export function useZappData(options: UseZappDataOptions = {}) {
       
       setMessages(msgs);
       
-      // OPTIMIZATION V2: Reduced auto-download from 10 to 3 media items
-      // Remaining media will be downloaded on-demand when user clicks
+      // Auto-download media that hasn't been downloaded yet
+      // Include both "pending" and null status (null = webhook didn't set status)
       const pendingMediaMsgs = msgs.filter(
-        (m) => m.media_download_status === "pending" 
+        (m) => (m.media_download_status === "pending" || !m.media_download_status)
           && m.media_type 
           && m.media_type !== "sticker"
           && !m.media_url
