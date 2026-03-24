@@ -67,11 +67,13 @@ const STATUS_COLORS: Record<string, string> = {
   active: "#22c55e",
   pending: "#3b82f6",
   suspended: "#f97316",
+  suspended_bonus: "#eab308",
   paused: "#f59e0b",
   cancelled: "#ef4444",
   ended: "#64748b",
   scheduled: "#6366f1",
   dismissed: "#e11d48",
+  dismissal_termination: "#be123c",
   dropout_7d: "#ec4899",
 };
 
@@ -161,11 +163,13 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
       name: status === "active" ? "Ativos" :
             status === "pending" ? "Pendentes" :
             status === "suspended" ? "Suspensos" :
+            status === "suspended_bonus" ? "Suspenso Bônus" :
             status === "paused" ? "Pausados" :
-            status === "cancelled" ? "Cancelados" :
+            status === "cancelled" ? "Distrato de Cancelamento" :
             status === "ended" ? "Encerrados" :
             status === "scheduled" ? "A Iniciar" :
             status === "dismissed" ? "Demitidas" :
+            status === "dismissal_termination" ? "Distrato por Demissão" :
             status === "dropout_7d" ? "Desistência 7D" : status,
       value: count,
       color: STATUS_COLORS[status] || "#94a3b8",
@@ -216,14 +220,16 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
     const paused = contracts.filter(c => c.status === "paused").length;
     const suspended = contracts.filter(c => c.status === "suspended").length;
     const ended = contracts.filter(c => c.status === "ended").length;
+    const suspendedBonus = contracts.filter(c => c.status === "suspended_bonus").length;
     const cancelled = contracts.filter(c => c.status === "cancelled").length;
     const dismissed = contracts.filter(c => c.status === "dismissed").length;
+    const dismissalTermination = contracts.filter(c => c.status === "dismissal_termination").length;
     const dropout7d = contracts.filter(c => c.status === "dropout_7d").length;
     
     // Calculate rates
     const activeRate = total > 0 ? (active / total) * 100 : 0;
     const completedRate = total > 0 ? (ended / total) * 100 : 0;
-    const churnTotal = cancelled + dismissed + dropout7d;
+    const churnTotal = cancelled + dismissed + dismissalTermination + dropout7d;
     const churnRate = total > 0 ? (churnTotal / total) * 100 : 0;
     const inProgressRate = total > 0 ? ((active + pending + scheduled + paused + suspended) / total) * 100 : 0;
     

@@ -76,8 +76,13 @@ const CONTRACT_STATUS_CONFIG: Record<
     icon: PauseCircle,
     className: "border-amber-500 text-amber-600 bg-amber-50",
   },
+  suspended_bonus: {
+    label: "Suspenso Bônus",
+    icon: Ban,
+    className: "border-yellow-500 text-yellow-600 bg-yellow-50",
+  },
   cancelled: {
-    label: "Cancelado",
+    label: "Distrato de Cancelamento",
     icon: XCircle,
     className: "border-red-500 text-red-600 bg-red-50",
   },
@@ -85,6 +90,11 @@ const CONTRACT_STATUS_CONFIG: Record<
     label: "Encerrado",
     icon: Ban,
     className: "border-slate-500 text-slate-600 bg-slate-50",
+  },
+  dismissal_termination: {
+    label: "Distrato por Demissão",
+    icon: XCircle,
+    className: "border-rose-600 text-rose-700 bg-rose-50",
   },
 };
 

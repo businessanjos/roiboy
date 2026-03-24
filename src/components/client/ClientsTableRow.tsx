@@ -146,8 +146,10 @@ export const ClientsTableRow = memo(function ClientsTableRow({
                       active: { label: "Ativo", labelTooltip: "Contrato Ativo", icon: CheckCircle2, bgClass: "bg-green-100 dark:bg-green-900/30", textClass: "text-green-700 dark:text-green-400" },
                       pending: { label: "Pendente", labelTooltip: "Contrato Pendente (em assinatura)", icon: Clock, bgClass: "bg-blue-100 dark:bg-blue-900/30", textClass: "text-blue-700 dark:text-blue-400" },
                       paused: { label: "Pausado", labelTooltip: "Contrato Pausado", icon: PauseCircle, bgClass: "bg-amber-100 dark:bg-amber-900/30", textClass: "text-amber-700 dark:text-amber-400" },
-                      cancelled: { label: "Cancelado", labelTooltip: "Contrato Cancelado", icon: XCircle, bgClass: "bg-red-100 dark:bg-red-900/30", textClass: "text-red-700 dark:text-red-400" },
+                      cancelled: { label: "Cancelado", labelTooltip: "Distrato de Cancelamento", icon: XCircle, bgClass: "bg-red-100 dark:bg-red-900/30", textClass: "text-red-700 dark:text-red-400" },
                       ended: { label: "Encerrado", labelTooltip: "Contrato Encerrado", icon: Ban, bgClass: "bg-slate-100 dark:bg-slate-900/30", textClass: "text-slate-700 dark:text-slate-400" },
+                      suspended_bonus: { label: "Susp. Bônus", labelTooltip: "Suspenso Bônus", icon: Ban, bgClass: "bg-yellow-100 dark:bg-yellow-900/30", textClass: "text-yellow-700 dark:text-yellow-400" },
+                      dismissal_termination: { label: "Dist. Demissão", labelTooltip: "Distrato por Demissão", icon: XCircle, bgClass: "bg-rose-100 dark:bg-rose-900/30", textClass: "text-rose-700 dark:text-rose-400" },
                     };
                     const config = statusConfig[status] || statusConfig.active;
                     const StatusIcon = config.icon;
