@@ -341,11 +341,17 @@ export function useClientsPage() {
     }));
   }, []);
 
+  // Load all initial data in parallel
   useEffect(() => {
-    fetchClients();
-    fetchProducts();
-    fetchCustomFields();
-    fetchTeamUsers();
+    const loadAll = async () => {
+      await Promise.all([
+        fetchClients(),
+        fetchProducts(),
+        fetchCustomFields(),
+        fetchTeamUsers(),
+      ]);
+    };
+    loadAll();
   }, [fetchClients, fetchProducts, fetchCustomFields, fetchTeamUsers]);
 
   useEffect(() => {
@@ -357,8 +363,11 @@ export function useClientsPage() {
   useEffect(() => {
     if (clients.length > 0) {
       const clientIds = clients.map(c => c.id);
-      fetchFieldValues(clientIds);
-      fetchPendingFormSends(clientIds);
+      // Parallelize secondary data fetches
+      Promise.all([
+        fetchFieldValues(clientIds),
+        fetchPendingFormSends(clientIds),
+      ]);
     }
   }, [clients, fetchFieldValues, fetchPendingFormSends]);
 
