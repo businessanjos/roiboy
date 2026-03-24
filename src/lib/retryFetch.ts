@@ -22,9 +22,22 @@ export async function withRetry<T>(
       if (!isNetworkError || attempt === maxRetries) {
         throw error;
       }
-      // Wait before retrying
       await new Promise((r) => setTimeout(r, delayMs * (attempt + 1)));
     }
   }
   throw lastError;
+}
+
+/**
+ * Wraps a Supabase mutation (insert/update/delete) with automatic retry on network errors.
+ * Usage: await supabaseMutate(() => supabase.from("table").update(data).eq("id", id));
+ */
+export async function supabaseMutate<T>(
+  fn: () => PromiseLike<{ data: T; error: any }>
+): Promise<{ data: T; error: null }> {
+  return withRetry(async () => {
+    const result = await fn();
+    if (result.error) throw result.error;
+    return { data: result.data, error: null };
+  });
 }
