@@ -979,20 +979,60 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                     </TableCell>
                     <TableCell>{getPaymentLabel(contract.payment_option)}</TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <Badge 
-                          variant={status.variant}
-                          className={status.className}
-                        >
-                          <StatusIcon className="h-3 w-3 mr-1" />
-                          {status.label}
-                        </Badge>
-                        {status.reason && (
-                          <span className="text-xs text-muted-foreground truncate max-w-[150px]" title={status.reason}>
-                            {status.reason}
-                          </span>
-                        )}
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="flex flex-col gap-1 cursor-pointer hover:opacity-80 transition-opacity text-left">
+                            <Badge 
+                              variant={status.variant}
+                              className={status.className}
+                            >
+                              <StatusIcon className="h-3 w-3 mr-1" />
+                              {status.label}
+                            </Badge>
+                            {status.reason && (
+                              <span className="text-xs text-muted-foreground truncate max-w-[150px]" title={status.reason}>
+                                {status.reason}
+                              </span>
+                            )}
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {contract.status === 'active' && (
+                            <>
+                              <DropdownMenuItem 
+                                onClick={() => openStatusDialog(contract, 'paused')}
+                                className="text-amber-600"
+                              >
+                                <PauseCircle className="h-4 w-4 mr-2" />
+                                Pausar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => openStatusDialog(contract, 'ended')}
+                                className="text-slate-600"
+                              >
+                                <Ban className="h-4 w-4 mr-2" />
+                                Encerrar (Demissão)
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => openStatusDialog(contract, 'cancelled')}
+                                className="text-destructive"
+                              >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cancelar (Churn)
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {contract.status !== 'active' && (
+                            <DropdownMenuItem 
+                              onClick={() => openStatusDialog(contract, 'active')}
+                              className="text-green-600"
+                            >
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Reativar
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                     <TableCell>
                       {contract.file_url ? (
