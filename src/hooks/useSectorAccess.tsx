@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
+import { useSuperAdmin } from "./useSuperAdmin";
 import { SectorId } from "@/config/sectors";
 
 // Team roles that automatically have access to Operations sector
