@@ -143,6 +143,7 @@ const CANCELLATION_REASONS = [
   { value: "falta_tempo", label: "Falta de tempo / priorização" },
   { value: "nao_adaptou", label: "Não se adaptou ao formato" },
   { value: "mudanca_momento", label: "Mudança de momento do negócio" },
+  { value: "cliente_nao_retorna_inadimplente", label: "Cliente não retorna – Inadimplente" },
 ];
 
 const TERMINAL_STATUSES = ["cancelled", "dismissed", "dismissal_termination", "dropout_7d", "ended", "suspended", "suspended_bonus", "paused"];
