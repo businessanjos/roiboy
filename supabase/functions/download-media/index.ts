@@ -86,10 +86,10 @@ serve(async (req) => {
     }
 
     // Filter to only those that need processing:
-    // - pending status
+    // - pending or null status (null = webhook didn't set status)
     // - downloading status but stuck (updated_at > 5 min ago)
     const messages = (allMessages || []).filter((msg: any) => {
-      if (msg.media_download_status === "pending") return true;
+      if (!msg.media_download_status || msg.media_download_status === "pending") return true;
       if (msg.media_download_status === "downloading") {
         return msg.updated_at && msg.updated_at < fiveMinutesAgo;
       }
