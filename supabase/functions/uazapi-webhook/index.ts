@@ -1838,6 +1838,17 @@ serve(async (req) => {
             
             const { data } = await groupQuery.maybeSingle();
             existingZappConvo = data;
+            
+            // FALLBACK: If not found with sector filter, search without it (multi-sector groups)
+            if (!existingZappConvo && sectorId) {
+              const { data: fallbackData } = await supabase
+                .from("zapp_conversations")
+                .select("id, unread_count")
+                .eq("account_id", accountId)
+                .eq("group_jid", groupJid)
+                .maybeSingle();
+              existingZappConvo = fallbackData;
+            }
           } else {
             // For direct messages, search by phone_e164 + sector
             let directQuery = supabase
