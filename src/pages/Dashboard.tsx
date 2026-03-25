@@ -659,10 +659,6 @@ export default function Dashboard() {
           </div>
         </TabsContent>
 
-        {/* Suporte Tab */}
-        <TabsContent value="suporte" className="space-y-6">
-          <ClientRequestsFeed />
-        </TabsContent>
 
         {/* Gestão Tab */}
         <TabsContent value="gestao" className="space-y-6">
