@@ -193,7 +193,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
         .eq("account_id", currentUser.account_id)
         .eq("department_id", dept.id) // CRITICAL: Filter by department
         .order("updated_at", { ascending: false })
-        .limit(500);
+        .limit(1000);
       
       // CRITICAL: Filter by integration_id for instance isolation
       // Groups are allowed to be visible cross-instance, but individual contacts must be isolated
