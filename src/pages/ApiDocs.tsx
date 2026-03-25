@@ -101,18 +101,6 @@ x-session-token: eyJhbGciOiJIUzI1NiIs...`,
     "mls_level": "ouro",
     "created_at": "2024-01-15T10:30:00Z"
   },
-  "latest_score": {
-    "escore": 75,
-    "roizometer": 82,
-    "quadrant": "highE_highROI",
-    "trend": "up"
-  },
-  "vnps": {
-    "vnps_score": 8.5,
-    "vnps_class": "promoter",
-    "risk_index": 12
-  },
-  "recent_risks": [...],
   "recent_messages": [...],
   "open_recommendations": [...]
 }`,

@@ -152,16 +152,6 @@ const SYSTEM_FUNCTIONS: SystemFunction[] = [
     method: "POST",
     requiresAuth: true,
   },
-  {
-    id: "recompute-scores",
-    name: "Recálculo de Scores",
-    description: "Atualiza scores dos clientes",
-    endpoint: "/functions/v1/recompute-scores",
-    icon: <Activity className="h-4 w-4" />,
-    category: "ai",
-    method: "POST",
-    requiresAuth: true,
-  },
 ];
 
 const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
