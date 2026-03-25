@@ -1227,7 +1227,6 @@ export default function RoyZapp() {
       
       // Switch to "mine" tab and select the conversation
       setInboxTab("mine");
-      setSelectedAIAgent(null);
       setSelectedConversation({
         ...nextConversation,
         agent_id: currentAgent.id,
