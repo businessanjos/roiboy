@@ -1356,15 +1356,6 @@ export default function Clients() {
               <LayoutGrid className="h-4 w-4" />
             </Button>
             <Button
-              variant={viewMode === "kanban" ? "secondary" : "ghost"}
-              size="sm"
-              className="rounded-none"
-              onClick={() => setViewMode("kanban")}
-              title="Kanban"
-            >
-              <Kanban className="h-4 w-4" />
-            </Button>
-            <Button
               variant={viewMode === "onboarding" ? "secondary" : "ghost"}
               size="sm"
               className="rounded-none gap-2"
