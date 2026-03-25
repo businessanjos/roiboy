@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
-import { format, subMonths, startOfMonth, endOfMonth, eachMonthOfInterval, startOfDay, endOfDay } from "date-fns";
+import { format, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { StatusBar, StatCard } from "@/components/admin";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
@@ -60,7 +60,6 @@ interface Account {
   id: string;
   name: string;
   created_at: string;
-  plan_id: string | null;
   trial_ends_at: string | null;
   subscription_status: string | null;
   email: string | null;
@@ -452,7 +451,6 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
     city: '',
     state: '',
     zip_code: '',
-    plan_id: '',
     subscription_status: 'trial',
     trial_ends_at: ''
   });
@@ -471,7 +469,6 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
     city: '',
     state: '',
     zip_code: '',
-    plan_id: '',
     subscription_status: 'trial',
     trial_ends_at: ''
   });
@@ -491,8 +488,7 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
       city: '',
       state: '',
       zip_code: '',
-      plan_id: '',
-      subscription_status: 'trial',
+        subscription_status: 'trial',
       trial_ends_at: ''
     });
   };
@@ -512,7 +508,6 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
       city: account.city || '',
       state: account.state || '',
       zip_code: account.zip_code || '',
-      plan_id: account.plan_id || '',
       subscription_status: account.subscription_status || 'trial',
       trial_ends_at: account.trial_ends_at ? account.trial_ends_at.split('T')[0] : ''
     };
@@ -539,7 +534,6 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
           city: createFormData.city || null,
           state: createFormData.state || null,
           zip_code: createFormData.zip_code || null,
-          plan_id: createFormData.plan_id || null,
           subscription_status: createFormData.subscription_status,
           trial_ends_at: createFormData.trial_ends_at ? new Date(createFormData.trial_ends_at).toISOString() : null
         })
@@ -587,7 +581,6 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
           city: editFormData.city || null,
           state: editFormData.state || null,
           zip_code: editFormData.zip_code || null,
-          plan_id: editFormData.plan_id || null,
           subscription_status: editFormData.subscription_status,
           trial_ends_at: editFormData.trial_ends_at ? new Date(editFormData.trial_ends_at).toISOString() : null
         })
@@ -866,17 +859,7 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
                   <div className="grid grid-cols-2 gap-3">
                     <div className="grid gap-2">
                       <Label className="text-sm">Plano</Label>
-                      <Select value={createFormData.plan_id || "none"} onValueChange={v => setCreateFormData(f => ({ ...f, plan_id: v === "none" ? "" : v }))}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue placeholder="Selecione um plano" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">Sem plano (Trial)</SelectItem>
-                          {plans.filter(p => p.is_active).map(plan => (
-                            <SelectItem key={plan.id} value={plan.id}>{plan.name} - R$ {plan.price.toLocaleString('pt-BR')}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {/* Plan selector removed */}
                     </div>
                     <div className="grid gap-2">
                       <Label className="text-sm">Status</Label>
@@ -1003,8 +986,7 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
               </TableHeader>
               <TableBody>
                 {filteredAccounts.map(account => {
-                  const plan = plans.find(p => p.id === account.plan_id);
-                  const status = statusLabels[account.subscription_status || 'trial'] || statusLabels.trial;
+                                    const status = statusLabels[account.subscription_status || 'trial'] || statusLabels.trial;
                   const isSelected = selectedAccounts.has(account.id);
                   return (
                     <TableRow key={account.id} className={`group ${isSelected ? 'bg-muted/30' : ''}`}>
@@ -1016,8 +998,8 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
                       </TableCell>
                       <TableCell className="font-medium">{account.name}</TableCell>
                       <TableCell>
-                        {plan ? (
-                          <Badge variant="outline" className="text-xs">{plan.name}</Badge>
+                        {account.plan_id ? (
+                          <Badge variant="outline" className="text-xs">Com plano</Badge>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
@@ -1228,17 +1210,7 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
                     <Label className="text-sm">Plano</Label>
-                    <Select value={editFormData.plan_id || "none"} onValueChange={v => setEditFormData(f => ({ ...f, plan_id: v === "none" ? "" : v }))}>
-                      <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Selecione um plano" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Sem plano</SelectItem>
-                        {plans.filter(p => p.is_active).map(plan => (
-                          <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {/* Plan selector removed */}
                   </div>
                   <div className="grid gap-2">
                     <Label className="text-sm">Status</Label>
