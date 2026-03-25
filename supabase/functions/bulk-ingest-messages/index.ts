@@ -163,23 +163,6 @@ serve(async (req) => {
 
     console.log(`Bulk ingest complete: ${results.inserted} inserted, ${results.skipped} skipped, ${results.skipped_unregistered} unregistered group senders skipped`);
 
-    // If not skipping analysis and we have client messages, trigger recalculation
-    if (!payload.skip_analysis && results.inserted > 0) {
-      // Get unique client IDs that received messages
-      const clientIds = [...new Set(messagesToInsert.map(m => m.client_id))];
-      
-      // Trigger score recalculation for affected clients (fire and forget)
-      for (const clientId of clientIds) {
-        fetch(`${supabaseUrl}/functions/v1/recompute-scores`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${supabaseServiceKey}`,
-          },
-          body: JSON.stringify({ account_id: payload.account_id, client_id: clientId }),
-        }).catch(err => console.error("Score recalc error:", err));
-      }
-    }
 
     return new Response(
       JSON.stringify({
