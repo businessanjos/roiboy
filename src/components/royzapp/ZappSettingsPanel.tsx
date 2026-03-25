@@ -43,8 +43,6 @@ interface ZappSettingsPanelProps {
   userSignature: string;
   // AI Settings
   spellingEnabled?: boolean;
-  suggestionsEnabled?: boolean;
-  autoLearningEnabled?: boolean;
   // System Notifications
   notificationPermission?: NotificationPermissionStatus;
   onToggleWhatsAppConnection: () => void;
