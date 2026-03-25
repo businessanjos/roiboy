@@ -1189,7 +1189,6 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
                 <h4 className="text-sm font-medium text-muted-foreground">Assinatura</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
-                  <div className="grid gap-2">
                     <Label className="text-sm">Status</Label>
                     <Select value={editFormData.subscription_status} onValueChange={v => setEditFormData(f => ({ ...f, subscription_status: v }))}>
                       <SelectTrigger className="h-9">
