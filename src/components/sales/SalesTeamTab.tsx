@@ -317,7 +317,7 @@ export function SalesTeamTab() {
         </Card>
       </div>
 
-      {/* Team Grid */}
+      {/* Team View */}
       {metrics.length === 0 ? (
         <Card>
           <CardContent className="p-6 sm:p-8 text-center text-muted-foreground">
@@ -327,6 +327,34 @@ export function SalesTeamTab() {
               Os vendedores aparecerão aqui quando tiverem ligações, negócios ou tarefas registradas.
             </p>
           </CardContent>
+        </Card>
+      ) : viewMode === "list" ? (
+        <Card>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-medium min-w-[160px]">Vendedor</TableHead>
+                  <TableHead className="font-medium text-center min-w-[100px]">Ligações</TableHead>
+                  <TableHead className="font-medium text-center min-w-[100px]">Pipeline</TableHead>
+                  <TableHead className="font-medium text-center min-w-[120px]">Ganhos</TableHead>
+                  <TableHead className="font-medium text-center min-w-[90px]">Tarefas</TableHead>
+                  <TableHead className="font-medium text-center min-w-[90px]">Agend.</TableHead>
+                  <TableHead className="font-medium text-center min-w-[80px]">Leads</TableHead>
+                  <TableHead className="w-8" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {metrics.map((rep) => (
+                  <SalesRepRow
+                    key={rep.user_id}
+                    rep={rep}
+                    onViewDetails={handleViewDetails}
+                  />
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </Card>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
