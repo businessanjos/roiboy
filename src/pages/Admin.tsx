@@ -52,11 +52,8 @@ import { useImpersonation } from "@/hooks/useImpersonation";
 import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 import { AdminPaymentsManager } from "@/components/admin/AdminPaymentsManager";
 import { CouponsManager } from "@/components/admin/CouponsManager";
-import { SupportTicketsManager } from "@/components/admin/SupportTicketsManager";
-import { SupportWhatsAppConfig } from "@/components/admin/SupportWhatsAppConfig";
-import { SupportKnowledgeBase } from "@/components/admin/SupportKnowledgeBase";
 import { SystemStatusMonitor } from "@/components/admin/SystemStatusMonitor";
-import { Tag, Headset, BookOpen, Activity as ActivityIcon, Cloud, Map, Sparkles, Briefcase, TrendingUp as TrendingUpIcon, Users as UsersIcon, Calendar, DollarSign as DollarSignIcon, Lightbulb, FileText as FileTextIcon, Receipt, RefreshCcw, CreditCard as CreditCardIcon, PieChart, Target, Bell, Building2 as Building2Icon, BarChart3 } from "lucide-react";
+import { Tag, BookOpen, Activity as ActivityIcon, Cloud, Map, Sparkles, Briefcase, TrendingUp as TrendingUpIcon, Users as UsersIcon, Calendar, DollarSign as DollarSignIcon, Lightbulb, FileText as FileTextIcon, Receipt, RefreshCcw, CreditCard as CreditCardIcon, PieChart, Target, Bell, Building2 as Building2Icon, BarChart3 } from "lucide-react";
 import { CloudUsageMonitor } from "@/components/admin/CloudUsageMonitor";
 import { SectorAgentConfig } from "@/components/admin/SectorAgentConfig";
 import SystemMap from "@/pages/admin/SystemMap";
@@ -279,36 +276,6 @@ export default function Admin() {
         return <CouponsManager />;
       case 'cloud':
         return <CloudUsageMonitor />;
-      case 'support':
-        return (
-          <div className="space-y-6">
-            <Tabs defaultValue="tickets" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="tickets" className="gap-2">
-                  <Headset className="h-4 w-4" />
-                  Tickets
-                </TabsTrigger>
-                <TabsTrigger value="knowledge" className="gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  Base de Conhecimento
-                </TabsTrigger>
-                <TabsTrigger value="config" className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  Configuração
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="tickets">
-                <SupportTicketsManager />
-              </TabsContent>
-              <TabsContent value="knowledge">
-                <SupportKnowledgeBase />
-              </TabsContent>
-              <TabsContent value="config">
-                <SupportWhatsAppConfig />
-              </TabsContent>
-            </Tabs>
-          </div>
-        );
       case 'zad-operacoes':
         return (
           <SectorAgentConfig

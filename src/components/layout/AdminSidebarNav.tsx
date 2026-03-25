@@ -2,7 +2,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Activity, Package, Building2, Users, Wallet,
-  FileText, Cpu, Cloud, Tag, Headset, Briefcase, DollarSign,
+  FileText, Cpu, Cloud, Tag, Briefcase, DollarSign,
   TrendingUp, Map, ArrowLeft, Shield,
 } from "lucide-react";
 
@@ -42,12 +42,6 @@ const navGroups: NavGroup[] = [
       { id: "costs", label: "Custos IA", icon: Cpu },
       { id: "cloud", label: "Cloud", icon: Cloud },
       { id: "audit", label: "Auditoria", icon: FileText },
-    ],
-  },
-  {
-    title: "Suporte",
-    items: [
-      { id: "support", label: "Suporte", icon: Headset },
     ],
   },
   {
