@@ -1364,7 +1364,7 @@ export default function Leads() {
                                   Conversar no Zapp
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditLead(lead); }}>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditDialog(lead); }}>
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
