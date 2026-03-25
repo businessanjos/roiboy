@@ -47,19 +47,6 @@ export interface TeamUser {
   email: string;
 }
 
-export interface VNPSData {
-  vnps_score: number;
-  vnps_class: string;
-  trend: string;
-}
-
-export interface ScoreData {
-  escore: number;
-  roizometer: number;
-  quadrant: string;
-  trend: string;
-}
-
 export interface ContractData {
   status: string;
   start_date: string | null;
