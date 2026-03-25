@@ -47,6 +47,8 @@ export interface Message {
   // Campos para edição
   updated_at?: string | null;
   is_edited?: boolean;
+  // Mapa de menções: JID -> nome do contato
+  mention_map?: Record<string, string> | null;
 }
 
 const HEARTBEAT_INTERVAL_MS = 120000; // Increased from 60s to 120s for cloud optimization
