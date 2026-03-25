@@ -46,7 +46,7 @@ import { MeetingsPanel } from "@/components/sales/videocall/MeetingsPanel";
 import { ZappFinancePanel } from "./ZappFinancePanel";
 import { getInitials } from "./types";
 import type { ConversationAssignment, Agent, ZappTag, Department } from "./types";
-import { ZappAIAgentItem, type AIAgent } from "./ZappAIAgentItem";
+
 
 interface ZappConversationPanelProps {
   currentUser: { name: string; avatar_url: string | null; role?: string } | null;
