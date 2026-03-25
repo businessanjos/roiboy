@@ -13,7 +13,6 @@ import {
 interface ClientsTableProps {
   clients: any[];
   contractMap: Record<string, ContractData>;
-  contractMap: Record<string, ContractData>;
   whatsappMap: Record<string, WhatsAppData>;
   customFields: CustomField[];
   fieldValues: Record<string, Record<string, any>>;
@@ -27,9 +26,6 @@ interface ClientsTableProps {
 
 export const ClientsTable = memo(function ClientsTable({
   clients,
-  loading,
-  vnpsMap,
-  scoreMap,
   contractMap,
   whatsappMap,
   customFields,
@@ -41,17 +37,13 @@ export const ClientsTable = memo(function ClientsTable({
   onDeleteClick,
   onFieldValueChange,
 }: ClientsTableProps) {
-  // Memoize the table header to prevent re-renders
   const tableHeader = useMemo(() => (
     <TableHeader>
       <TableRow className="bg-muted/50">
         <TableHead className="font-medium sticky left-0 bg-muted z-20 min-w-[200px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Cliente</TableHead>
         <TableHead className="font-medium text-center min-w-[120px]">Produto</TableHead>
         <TableHead className="font-medium text-center min-w-[140px]">Contrato</TableHead>
-        <TableHead className="font-medium text-center min-w-[80px]">Roizômetro</TableHead>
-        <TableHead className="font-medium text-center min-w-[80px]">E-Score</TableHead>
         <TableHead className="font-medium text-center min-w-[100px]">Conexão</TableHead>
-        <TableHead className="font-medium text-center min-w-[80px]">V-NPS</TableHead>
         <TableHead className="font-medium text-center min-w-[120px]">Responsável</TableHead>
         <TableHead className="font-medium text-right min-w-[80px]">Ação</TableHead>
       </TableRow>
