@@ -106,15 +106,6 @@ const SYSTEM_FUNCTIONS: SystemFunction[] = [
     method: "POST",
   },
   {
-    id: "evolution-webhook",
-    name: "Webhook Evolution",
-    description: "Integração Evolution API",
-    endpoint: "/functions/v1/evolution-webhook",
-    icon: <Webhook className="h-4 w-4" />,
-    category: "integration",
-    method: "POST",
-  },
-  {
     id: "event-checkin",
     name: "Check-in Eventos",
     description: "Registra presença em eventos",
