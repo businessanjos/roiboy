@@ -227,8 +227,6 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   notificationPermission = "default",
   onRequestNotificationPermission,
   onSpellingChange,
-  onSuggestionsChange,
-  onAutoLearningChange,
   getAgentName,
   onPullFromQueue,
   onRefreshMessages,
