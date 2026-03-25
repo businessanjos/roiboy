@@ -1919,7 +1919,7 @@ export default function Contracts() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredContracts.map((contract) => {
+                  {paginatedContracts.map((contract) => {
                     const statusConfig = CONTRACT_STATUS_CONFIG[contract.status] || CONTRACT_STATUS_CONFIG.active;
                     const StatusIcon = statusConfig.icon;
                     
