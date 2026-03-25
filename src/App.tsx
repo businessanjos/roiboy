@@ -67,7 +67,6 @@ const ChoosePlan = lazyRetry(() => import("./pages/ChoosePlan"));
 const TermsOfService = lazyRetry(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazyRetry(() => import("./pages/PrivacyPolicy"));
 const Download = lazyRetry(() => import("./pages/Download"));
-const Home = lazyRetry(() => import("./pages/Home"));
 const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
 const SalesMeetings = lazyRetry(() => import("./pages/SalesMeetings"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
