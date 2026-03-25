@@ -100,7 +100,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       }
 
       // Fetch all metrics in parallel
-      const [callsData, dealsData, tasksData, leadsData] = await Promise.all([
+      const [callsData, dealsData, tasksData, leadsData, schedulingData] = await Promise.all([
         // Calls - from threecplus_call_logs (3C Plus telephony)
         supabase
           .from("threecplus_call_logs")
@@ -130,6 +130,15 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           .from("leads")
           .select("responsible_user_id, status")
           .eq("account_id", currentUser.account_id)
+          .gte("created_at", dateFilter.start)
+          .lte("created_at", dateFilter.end),
+
+        // Scheduling tasks (agendamentos + no-show) via activity_types
+        supabase
+          .from("internal_tasks")
+          .select("assigned_to, activity_types!internal_tasks_activity_type_id_fkey(name)")
+          .eq("account_id", currentUser.account_id)
+          .not("activity_type_id", "is", null)
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
       ]);
