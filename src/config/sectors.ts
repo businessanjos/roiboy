@@ -10,7 +10,7 @@ import {
   Bell,
   UsersRound,
   MessageSquare,
-  Bot,
+  
   Package,
   CreditCard,
   BarChart3,
