@@ -54,8 +54,6 @@ interface ZappSettingsPanelProps {
   onSignatureChange: (value: string) => void;
   // AI Handlers
   onSpellingChange?: (checked: boolean) => void;
-  onSuggestionsChange?: (checked: boolean) => void;
-  onAutoLearningChange?: (checked: boolean) => void;
   // System Notifications Handler
   onRequestNotificationPermission?: () => void;
 }
