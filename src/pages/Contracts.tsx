@@ -91,7 +91,7 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
 import { InstallmentsEditor, InstallmentDetail } from "@/components/contracts/InstallmentsEditor";
-import { ContractsDashboard } from "@/components/contracts/ContractsDashboard";
+
 import { ContractImportPreview, ImportRowWithDuplicate, DuplicateInfo } from "@/components/contracts/ContractImportPreview";
 import { ContractTriageQueue } from "@/components/contracts/ContractTriageQueue";
 import { ConciliateButton } from "@/components/contracts/ConciliateButton";
