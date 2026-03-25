@@ -276,36 +276,6 @@ export default function Admin() {
         return <CouponsManager />;
       case 'cloud':
         return <CloudUsageMonitor />;
-      case 'support':
-        return (
-          <div className="space-y-6">
-            <Tabs defaultValue="tickets" className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="tickets" className="gap-2">
-                  <Headset className="h-4 w-4" />
-                  Tickets
-                </TabsTrigger>
-                <TabsTrigger value="knowledge" className="gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  Base de Conhecimento
-                </TabsTrigger>
-                <TabsTrigger value="config" className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  Configuração
-                </TabsTrigger>
-              </TabsList>
-              <TabsContent value="tickets">
-                <SupportTicketsManager />
-              </TabsContent>
-              <TabsContent value="knowledge">
-                <SupportKnowledgeBase />
-              </TabsContent>
-              <TabsContent value="config">
-                <SupportWhatsAppConfig />
-              </TabsContent>
-            </Tabs>
-          </div>
-        );
       case 'zad-operacoes':
         return (
           <SectorAgentConfig

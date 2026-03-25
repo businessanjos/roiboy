@@ -45,12 +45,6 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    title: "Suporte",
-    items: [
-      { id: "support", label: "Suporte", icon: Headset },
-    ],
-  },
-  {
     title: "Agentes IA (Zad)",
     items: [
       { id: "zad-operacoes", label: "Operações", icon: Briefcase },
