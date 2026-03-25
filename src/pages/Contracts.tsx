@@ -1437,25 +1437,7 @@ export default function Contracts() {
     });
   }, [currentContracts, searchTerm, statusFilter, typeFilter, productFilter, sortOrder]);
 
-  // Filtered contracts for dashboard (always from reconciled)
-  const dashboardContracts = useMemo(() => {
-    const filtered = reconciledContracts.filter((contract) => {
-      const matchesSearch = 
-        contract.client?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contract.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contract.notes?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const isExpired = contract.end_date && isPast(new Date(contract.end_date)) && contract.status === "active";
-      const matchesStatus = statusFilter === "all" || 
-        (statusFilter === "expired" ? isExpired : contract.status === statusFilter);
-      const matchesType = typeFilter === "all" || contract.contract_type === typeFilter;
-      const matchesProduct = productFilter === "all" || contract.product?.id === productFilter;
-      
-      return matchesSearch && matchesStatus && matchesType && matchesProduct;
-    });
 
-    return filtered;
-  }, [reconciledContracts, searchTerm, statusFilter, typeFilter, productFilter]);
 
   // Check if any filter is active
   const hasActiveFilters = searchTerm !== "" || statusFilter !== "all" || typeFilter !== "all" || productFilter !== "all";
