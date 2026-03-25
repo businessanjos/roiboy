@@ -392,43 +392,6 @@ export default function Dashboard() {
     };
   }, [refetchAll, currentUser?.account_id]);
 
-  const filteredClients = useMemo(() => clients.filter((client) => {
-    const matchesSearch =
-      client.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.phone_e164.includes(searchQuery);
-    const matchesStatus = statusFilter === "all" || client.status === statusFilter;
-    const matchesQuadrant = quadrantFilter === "all" || client.quadrant === quadrantFilter;
-    const matchesProduct = productFilter === "all" || (client.product_ids?.includes(productFilter) ?? false);
-    return matchesSearch && matchesStatus && matchesQuadrant && matchesProduct;
-  }), [clients, searchQuery, statusFilter, quadrantFilter, productFilter]);
-
-  const { totalClients, churnRiskCount, promoterCount, detractorCount, avgROI, avgEScore } = useMemo(() => ({
-    totalClients: clients.length,
-    churnRiskCount: clients.filter((c) => c.status === "churn_risk" || c.status === "churned").length,
-    promoterCount: clients.filter((c) => c.vnps_class === "promoter").length,
-    detractorCount: clients.filter((c) => c.vnps_class === "detractor").length,
-    avgROI: clients.length > 0 ? Math.round(clients.reduce((acc, c) => acc + c.roizometer, 0) / clients.length) : 0,
-    avgEScore: clients.length > 0 ? Math.round(clients.reduce((acc, c) => acc + c.escore, 0) / clients.length) : 0,
-  }), [clients]);
-
-  const topRiskClients = useMemo(() => [...clients]
-    .filter((c) => c.status === "churn_risk" || c.status === "churned")
-    .sort((a, b) => a.roizometer - b.roizometer)
-    .slice(0, 5), [clients]);
-
-  const getCategoryLabel = (cat: string) => {
-    const labels: Record<string, string> = {
-      revenue: "Receita",
-      cost: "Custos",
-      time: "Tempo",
-      process: "Processos",
-      clarity: "Clareza",
-      confidence: "Confiança",
-      tranquility: "Tranquilidade",
-      status_direction: "Direção",
-    };
-    return labels[cat] || cat;
-  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 animate-fade-in">
