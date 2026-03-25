@@ -1016,6 +1016,11 @@ export default function Dashboard() {
           )}
 
         </TabsContent>
+
+        {/* Contratos Tab */}
+        <TabsContent value="contratos" className="space-y-6">
+          <ContractsDashboard contracts={dashboardContracts} />
+        </TabsContent>
       </Tabs>
 
       {/* Focus Mode Overlay */}
