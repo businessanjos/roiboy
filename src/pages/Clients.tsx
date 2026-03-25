@@ -253,8 +253,6 @@ export default function Clients() {
   const { logAudit } = useAuditLog();
   const { currentSector } = useSector();
   const [clients, setClients] = useState<any[]>([]);
-  const [vnpsMap, setVnpsMap] = useState<Record<string, any>>({});
-  const [scoreMap, setScoreMap] = useState<Record<string, { escore: number; roizometer: number; quadrant: string; trend: string }>>({});
   const [contractMap, setContractMap] = useState<Record<string, { status: string; start_date: string | null; end_date: string | null }>>({});
   const [whatsappMap, setWhatsappMap] = useState<Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }>>({});
   const [loading, setLoading] = useState(true);
