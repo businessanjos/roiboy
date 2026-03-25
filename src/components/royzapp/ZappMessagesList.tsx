@@ -150,13 +150,20 @@ export function ZappMessagesList({
     return buildFallbackMentionMap(deduplicatedMessages);
   }, [isGroup, deduplicatedMessages]);
 
-  // Enrich messages: for messages with @<number> mentions but no mention_map, inject fallback
+  // Enrich messages: merge fallback mention names into mention_map for better resolution
   const enrichedMessages = useMemo(() => {
     if (!isGroup) return deduplicatedMessages;
     const mentionRegex = /@\d{5,}/;
     return deduplicatedMessages.map(msg => {
-      if (msg.content && mentionRegex.test(msg.content) && !msg.mention_map) {
-        return { ...msg, mention_map: fallbackMentionMap };
+      if (msg.content && mentionRegex.test(msg.content)) {
+        // Merge: existing mention_map + fallback (existing takes priority)
+        const merged = { ...fallbackMentionMap, ...(msg.mention_map || {}) };
+        // Remove empty-string values (webhook stores "" for unresolved)
+        const cleaned: Record<string, string> = {};
+        for (const [k, v] of Object.entries(merged)) {
+          if (v) cleaned[k] = v;
+        }
+        return { ...msg, mention_map: Object.keys(cleaned).length > 0 ? cleaned : null };
       }
       return msg;
     });
