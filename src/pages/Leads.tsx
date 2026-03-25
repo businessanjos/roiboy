@@ -163,7 +163,7 @@ export default function Leads() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSource, setFilterSource] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const LEADS_PER_PAGE = 50;
+  const [pageSize, setPageSize] = useState(20);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -1118,12 +1118,12 @@ export default function Leads() {
   }), [leads, searchQuery, filterSource]);
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / LEADS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedLeads = useMemo(() => {
-    const start = (safePage - 1) * LEADS_PER_PAGE;
-    return filteredLeads.slice(start, start + LEADS_PER_PAGE);
-  }, [filteredLeads, safePage, LEADS_PER_PAGE]);
+    const start = (safePage - 1) * pageSize;
+    return filteredLeads.slice(start, start + pageSize);
+  }, [filteredLeads, safePage, pageSize]);
 
   // Reset page on filter changes
   useEffect(() => {
@@ -1397,11 +1397,22 @@ export default function Leads() {
             )}
 
             {/* Pagination Controls */}
-            {filteredLeads.length > LEADS_PER_PAGE && (
+            {filteredLeads.length > pageSize && (
               <div className="flex items-center justify-between py-3 pr-2">
-                <p className="text-sm text-muted-foreground">
-                  Mostrando {((safePage - 1) * LEADS_PER_PAGE) + 1}–{Math.min(safePage * LEADS_PER_PAGE, filteredLeads.length)} de {filteredLeads.length} leads
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm text-muted-foreground">
+                    Mostrando {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, filteredLeads.length)} de {filteredLeads.length} leads
+                  </p>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                    className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                  >
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                </div>
                 <div className="flex items-center gap-1">
                   <Button
                     variant="outline"

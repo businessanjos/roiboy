@@ -196,7 +196,7 @@ export default function Tasks() {
   const [selectedDealForDetail, setSelectedDealForDetail] = useState<FullDeal | null>(null);
   const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const TASKS_PER_PAGE = 50;
+  const [pageSize, setPageSize] = useState(20);
 
   // Custom task statuses
   const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
@@ -599,12 +599,12 @@ export default function Tasks() {
   }, [filteredTasks, sortBy, sortDirection]);
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(sortedTasks.length / TASKS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(sortedTasks.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedTasks = useMemo(() => {
-    const start = (safePage - 1) * TASKS_PER_PAGE;
-    return sortedTasks.slice(start, start + TASKS_PER_PAGE);
-  }, [sortedTasks, safePage, TASKS_PER_PAGE]);
+    const start = (safePage - 1) * pageSize;
+    return sortedTasks.slice(start, start + pageSize);
+  }, [sortedTasks, safePage, pageSize]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -1392,11 +1392,22 @@ export default function Tasks() {
           ))}
 
           {/* Pagination Controls */}
-          {sortedTasks.length > TASKS_PER_PAGE && (
+          {sortedTasks.length > pageSize && (
             <div className="flex items-center justify-between px-2 py-3">
-              <p className="text-sm text-muted-foreground">
-                Mostrando {((safePage - 1) * TASKS_PER_PAGE) + 1}–{Math.min(safePage * TASKS_PER_PAGE, sortedTasks.length)} de {sortedTasks.length} tarefas
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Mostrando {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, sortedTasks.length)} de {sortedTasks.length} tarefas
+                </p>
+                <select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                >
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
               <div className="flex items-center gap-1">
                 <Button
                   variant="outline"
