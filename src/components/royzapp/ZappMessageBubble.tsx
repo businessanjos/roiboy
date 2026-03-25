@@ -254,10 +254,10 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   // All useMemo hooks MUST be called before any early return
   const renderedContent = useMemo(() => {
     if (message.content && message.content !== "[Áudio]" && message.content !== "[Figurinha]") {
-      return renderTextWithLinks(message.content);
+      return renderTextWithLinks(message.content, message.mention_map);
     }
     return null;
-  }, [message.content]);
+  }, [message.content, message.mention_map]);
 
   // Check if message can be deleted (only outbound messages sent less than 1 hour ago)
   const canDelete = useMemo(() => {
