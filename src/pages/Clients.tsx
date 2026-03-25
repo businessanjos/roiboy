@@ -550,19 +550,11 @@ export default function Clients() {
       }
       
       // Build maps from enriched data
-      const vnpsGrouped: Record<string, any> = {};
-      const scoresGrouped: Record<string, { escore: number; roizometer: number; quadrant: string; trend: string }> = {};
       const contractsGrouped: Record<string, { status: string; start_date: string | null; end_date: string | null }> = {};
       const whatsappGrouped: Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }> = {};
       const pendingFormsGrouped: Record<string, { formId: string; formTitle: string; sentAt: string }[]> = {};
       
       result.clients.forEach((client: any) => {
-        if (client.vnps) {
-          vnpsGrouped[client.id] = client.vnps;
-        }
-        if (client.score) {
-          scoresGrouped[client.id] = client.score;
-        }
         if (client.contract) {
           contractsGrouped[client.id] = {
             status: client.contract.status,
