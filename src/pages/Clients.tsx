@@ -1948,22 +1948,6 @@ export default function Clients() {
                 </Select>
               </div>
 
-              {/* V-NPS Filter */}
-              <div className="space-y-1.5 min-w-[140px]">
-                <Label className="text-xs text-muted-foreground">V-NPS</Label>
-                <Select value={filterVNPS} onValueChange={setFilterVNPS}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="promoter">Promotor</SelectItem>
-                    <SelectItem value="neutral">Neutro</SelectItem>
-                    <SelectItem value="detractor">Detrator</SelectItem>
-                    <SelectItem value="none">Sem V-NPS</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
               {/* Contract Filter */}
               <div className="space-y-1.5 min-w-[160px]">
