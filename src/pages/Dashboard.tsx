@@ -1039,7 +1039,7 @@ export default function Dashboard() {
             </div>
 
             {/* Status Cards */}
-            <div className={`grid grid-cols-2 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-6" : "md:grid-cols-3"} gap-6 mb-8`}>
+            <div className={`grid grid-cols-2 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-7" : "md:grid-cols-3"} gap-6 mb-8`}>
               <Card className="border-l-4 border-l-primary">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
