@@ -449,10 +449,6 @@ export default function Dashboard() {
               <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>Suporte</span>
             </TabsTrigger>
-            <TabsTrigger value="roi" className="gap-1.5 text-xs sm:text-sm">
-              <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>ROI</span>
-            </TabsTrigger>
           </TabsList>
 
           {/* Filters - aligned with tabs */}
