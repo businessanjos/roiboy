@@ -5,8 +5,6 @@ import { Loader2 } from "lucide-react";
 import { ClientsTableRow } from "./ClientsTableRow";
 import { CustomField } from "@/components/custom-fields";
 import {
-  VNPSData,
-  ScoreData,
   ContractData,
   WhatsAppData,
   TeamUser,

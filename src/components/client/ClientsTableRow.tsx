@@ -16,8 +16,6 @@ import {
   getInitials, 
   getContractExpiryStatus,
   getResponsibleUser,
-  VNPSData, 
-  ScoreData, 
   ContractData, 
   WhatsAppData, 
   TeamUser 

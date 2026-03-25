@@ -338,8 +338,6 @@ export function useClientsPage() {
   return {
     // Data
     clients,
-    vnpsMap,
-    scoreMap,
     contractMap,
     whatsappMap,
     products,
