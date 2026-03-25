@@ -257,6 +257,11 @@ export default function Clients() {
   const [whatsappMap, setWhatsappMap] = useState<Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Pagination state
+  const PAGE_SIZE = 50;
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalClients, setTotalClients] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
   
   // Filter states
