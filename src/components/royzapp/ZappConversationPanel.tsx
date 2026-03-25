@@ -152,10 +152,6 @@ interface ZappConversationPanelProps {
   onRefreshMessages?: () => void;
   isRefreshingMessages?: boolean;
   
-  // AI Agents
-  aiAgents?: AIAgent[];
-  selectedAIAgent?: AIAgent | null;
-  onSelectAIAgent?: (agent: AIAgent) => void;
 }
 
 export const ZappConversationPanel = memo(function ZappConversationPanel({
