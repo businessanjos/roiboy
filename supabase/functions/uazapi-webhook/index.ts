@@ -1108,16 +1108,27 @@ serve(async (req) => {
           
           // FALLBACK: If not found with integration_id filter, search without it
           // This handles multi-sector groups (e.g., group created by Diretoria but messages arriving via Operações)
+          // SECURITY: Only reuse if the existing conversation belongs to the SAME sector
           if (!existingZappConvo && integrationId) {
             const { data: fallbackData } = await supabase
               .from("zapp_conversations")
-              .select("id, unread_count, integration_id, contact_name, client_id, lead_id")
+              .select("id, unread_count, integration_id, contact_name, client_id, lead_id, sector_id")
               .eq("account_id", accountId)
               .eq("group_jid", groupJid)
               .maybeSingle();
             if (fallbackData) {
-              console.log(`[ZAPP] Group fallback match: ${groupJid} found with integration_id=${fallbackData.integration_id} (webhook integration=${integrationId})`);
-              existingZappConvo = fallbackData;
+              const fallbackSectorId = (fallbackData as Record<string, unknown>).sector_id as string | null;
+              if (fallbackSectorId === sectorId) {
+                // Same sector, safe to reuse (e.g., instance migration within same sector)
+                console.log(`[ZAPP] Group fallback match (same sector): ${groupJid} found with integration_id=${fallbackData.integration_id} (webhook integration=${integrationId})`);
+                existingZappConvo = fallbackData;
+                // Migrate to current integration
+                await supabase.from("zapp_conversations").update({ integration_id: integrationId }).eq("id", fallbackData.id);
+              } else {
+                // DIFFERENT sector - do NOT reuse! Create a new conversation for this sector.
+                console.warn(`[ZAPP] ⚠️ Group fallback BLOCKED: ${groupJid} exists in sector "${fallbackSectorId}" but webhook is for sector "${sectorId}". Creating new conversation to prevent cross-sector leak.`);
+                // existingZappConvo stays null → new conversation will be created
+              }
             }
           }
           
