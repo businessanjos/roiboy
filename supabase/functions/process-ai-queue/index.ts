@@ -88,19 +88,7 @@ async function handleClientAnalysis(
         sent_at: timestamp,
       });
 
-    // Queue AI analysis as sub-job
-    if (content.length > 10 && !content.startsWith("[") && insertedMsgId) {
-      await supabase
-        .from("ai_analysis_queue")
-        .insert({
-          account_id: accountId,
-          message_id: insertedMsgId,
-          client_id: linkedClientId,
-          job_type: "ai_analysis",
-          status: "pending",
-          priority: 0,
-        });
-    }
+    // AI analysis sub-job removed (analyze-message decommissioned)
   } else {
     // --- LEAD PATH ---
     const normalizedPhone = phone.replace(/^\+/, "");
