@@ -5,8 +5,8 @@ import { Department } from "@/components/royzapp";
 import { SectorId } from "@/config/sectors";
 import { Message, InboundMessageData } from "@/hooks/useZappData";
 
-const REALTIME_DEBOUNCE_MS = 3000;
-const MIN_FETCH_INTERVAL_MS = 3000;
+const REALTIME_DEBOUNCE_MS = 5000; // Increased for high-volume (was 3s)
+const MIN_FETCH_INTERVAL_MS = 5000; // Increased for high-volume (was 3s)
 
 interface UseZappConversationsOptions {
   accountId?: string;
