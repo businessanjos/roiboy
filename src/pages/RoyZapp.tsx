@@ -790,19 +790,6 @@ export default function RoyZapp() {
   const [clientEditSheetOpen, setClientEditSheetOpen] = useState(false);
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
 
-  // ROI dialog state
-  const [roiDialogOpen, setRoiDialogOpen] = useState(false);
-  const [roiType, setRoiType] = useState("tangible");
-  const [roiCategory, setRoiCategory] = useState("revenue");
-  const [roiEvidence, setRoiEvidence] = useState("");
-  const [roiImpact, setRoiImpact] = useState("medium");
-  const [uploadingRoi, setUploadingRoi] = useState(false);
-
-  // Risk dialog state
-  const [riskDialogOpen, setRiskDialogOpen] = useState(false);
-  const [riskLevel, setRiskLevel] = useState("medium");
-  const [riskReason, setRiskReason] = useState("");
-  const [uploadingRisk, setUploadingRisk] = useState(false);
 
   // Contact picker dialog state
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
