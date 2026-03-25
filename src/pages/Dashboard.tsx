@@ -445,10 +445,6 @@ export default function Dashboard() {
               <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>CX</span>
             </TabsTrigger>
-            <TabsTrigger value="suporte" className="gap-1.5 text-xs sm:text-sm">
-              <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>Suporte</span>
-            </TabsTrigger>
           </TabsList>
 
           {/* Filters - aligned with tabs */}
