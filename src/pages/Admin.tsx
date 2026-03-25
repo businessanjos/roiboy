@@ -123,20 +123,6 @@ export default function Admin() {
     checkSuperAdmin();
   }, [user]);
 
-  // Fetch plans
-  const { data: plans = [], isLoading: loadingPlans } = useQuery({
-    queryKey: ['admin-plans'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('subscription_plans')
-        .select('*')
-        .order('price', { ascending: true });
-      
-      if (error) throw error;
-      return data as SubscriptionPlan[];
-    },
-    enabled: isSuperAdmin
-  });
 
   // Fetch accounts with counts
   const { data: accounts = [], isLoading: loadingAccounts } = useQuery({
