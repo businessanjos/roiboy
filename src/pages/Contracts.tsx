@@ -1461,13 +1461,9 @@ export default function Contracts() {
   const hasActiveFilters = searchTerm !== "" || statusFilter !== "all" || typeFilter !== "all" || productFilter !== "all";
 
   const stats = useMemo(() => {
-    // Use dashboard contracts when on dashboard tab, otherwise filtered/current contracts
+    // Use filtered contracts if filter is active, otherwise current tab's contracts
     let baseContracts;
-    if (activeTab === "dashboard") {
-      baseContracts = dashboardContracts;
-    } else {
-      baseContracts = hasActiveFilters ? filteredContracts : currentContracts;
-    }
+    baseContracts = hasActiveFilters ? filteredContracts : currentContracts;
     
     const scheduledContracts = baseContracts.filter(c => c.status === "scheduled");
     const activeContracts = baseContracts.filter(c => c.status === "active");
