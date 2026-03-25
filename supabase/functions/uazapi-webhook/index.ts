@@ -10,8 +10,8 @@ const corsHeaders = {
 // ============================================
 // IN-MEMORY CACHES (persist between invocations on Deno Deploy)
 // ============================================
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const MAX_CACHE_SIZE = 200;
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes (increased for high volume)
+const MAX_CACHE_SIZE = 1000; // Increased for thousands of conversations
 
 interface CacheEntry<T> {
   data: T;
