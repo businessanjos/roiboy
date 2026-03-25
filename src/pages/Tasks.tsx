@@ -244,7 +244,7 @@ export default function Tasks() {
 
       const { data, error } = await query
         .order("created_at", { ascending: false })
-        .limit(5000);
+        .limit(2000);
 
       if (error) throw error;
       return (data || []) as Task[];
