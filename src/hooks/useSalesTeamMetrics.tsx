@@ -320,6 +320,8 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         total_tasks: acc.total_tasks + m.total_tasks,
         completed_tasks: acc.completed_tasks + m.completed_tasks,
         assigned_leads: acc.assigned_leads + m.assigned_leads,
+        scheduled_calls: acc.scheduled_calls + m.scheduled_calls,
+        noshow_calls: acc.noshow_calls + m.noshow_calls,
       }),
       {
         total_calls: 0,
@@ -331,6 +333,8 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         total_tasks: 0,
         completed_tasks: 0,
         assigned_leads: 0,
+        scheduled_calls: 0,
+        noshow_calls: 0,
       }
     );
   }, [metrics]);
