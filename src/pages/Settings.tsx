@@ -75,7 +75,7 @@ export default function Settings() {
           </div>
         );
       case "members-book":
-        return <MembersBookSettings />;
+        return null;
       case "api-key":
         return isAdmin && currentUser ? (
           <ApiKeyTab userId={currentUser.id} accountId={currentUser.account_id} />

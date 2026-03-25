@@ -60,7 +60,7 @@ import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
 
-import { LiveParticipationReport } from "@/components/dashboard/LiveParticipationReport";
+
 import { ClientRequestsFeed } from "@/components/dashboard/ClientRequestsFeed";
 
 interface ContractData {
