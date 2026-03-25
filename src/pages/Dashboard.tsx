@@ -107,8 +107,6 @@ export default function Dashboard() {
     products, 
     clients, 
     upcomingEvents, 
-    roiStats, 
-    riskStats, 
     contractData, 
     isLoading: loading, 
     refetchAll 
