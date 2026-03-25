@@ -14,52 +14,7 @@ const MAX_PROCESSING_TIME_MS = 25000;
 // JOB HANDLERS
 // ============================================
 
-async function handleAiAnalysis(
-  supabase: ReturnType<typeof createClient>,
-  job: { id: string; account_id: string; message_id: string | null; client_id: string | null },
-  supabaseUrl: string,
-  supabaseKey: string,
-) {
-  if (!job.message_id) {
-    return "skipped";
-  }
-
-  const { data: message, error: msgError } = await supabase
-    .from("zapp_messages")
-    .select("content")
-    .eq("id", job.message_id)
-    .single();
-
-  if (msgError || !message) {
-    throw new Error(`Message not found: ${job.message_id}`);
-  }
-
-  const content = message.content || "";
-
-  if (content.length <= 10 || content.startsWith("[")) {
-    return "skipped";
-  }
-
-  const response = await fetch(`${supabaseUrl}/functions/v1/analyze-message`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${supabaseKey}`,
-    },
-    body: JSON.stringify({
-      account_id: job.account_id,
-      client_id: job.client_id,
-      message_content: content,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`analyze-message failed: ${response.status} - ${errorText}`);
-  }
-
-  return "completed";
-}
+// handleAiAnalysis removed — analyze-message edge function was decommissioned
 
 async function handleClientAnalysis(
   supabase: ReturnType<typeof createClient>,
