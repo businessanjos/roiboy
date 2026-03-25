@@ -1439,6 +1439,21 @@ export default function Contracts() {
     });
   }, [currentContracts, searchTerm, statusFilter, typeFilter, productFilter, sortOrder]);
 
+  // Reset page when filters or tab change
+  const filterKey = `${searchTerm}-${statusFilter}-${typeFilter}-${productFilter}-${activeTab}`;
+  const prevFilterKeyRef = useRef(filterKey);
+  if (prevFilterKeyRef.current !== filterKey) {
+    prevFilterKeyRef.current = filterKey;
+    if (contractsPage !== 1) setContractsPage(1);
+  }
+
+  // Paginated contracts for display
+  const totalFilteredContracts = filteredContracts.length;
+  const totalPages = Math.ceil(totalFilteredContracts / contractsPageSize);
+  const paginatedContracts = useMemo(() => {
+    const start = (contractsPage - 1) * contractsPageSize;
+    return filteredContracts.slice(start, start + contractsPageSize);
+  }, [filteredContracts, contractsPage, contractsPageSize]);
 
 
   // Check if any filter is active
