@@ -51,10 +51,7 @@ import {
 import { useImpersonation } from "@/hooks/useImpersonation";
 import { AuditLogViewer } from "@/components/admin/AuditLogViewer";
 import { SystemStatusMonitor } from "@/components/admin/SystemStatusMonitor";
-import { Cloud, Map, Briefcase, TrendingUp as TrendingUpIcon, Users as UsersIcon, Calendar, DollarSign as DollarSignIcon, Lightbulb, FileText as FileTextIcon, Receipt, RefreshCcw, CreditCard as CreditCardIcon, PieChart, Target, Bell, Building2 as Building2Icon, BarChart3 } from "lucide-react";
-import { CloudUsageMonitor } from "@/components/admin/CloudUsageMonitor";
-
-import SystemMap from "@/pages/admin/SystemMap";
+import { Briefcase, TrendingUp as TrendingUpIcon, Users as UsersIcon, Calendar, DollarSign as DollarSignIcon, Lightbulb, FileText as FileTextIcon, Receipt, RefreshCcw, CreditCard as CreditCardIcon, PieChart, Target, Bell, Building2 as Building2Icon, BarChart3 } from "lucide-react";
 
 interface Account {
   id: string;
@@ -223,10 +220,6 @@ export default function Admin() {
         return <AuditLogViewer />;
       case 'costs':
         return <AICostsTab accounts={accounts} />;
-      case 'cloud':
-        return <CloudUsageMonitor />;
-      case 'map':
-        return <SystemMap />;
       default:
         return <DashboardTab accounts={accounts} users={allUsers} />;
     }

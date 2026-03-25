@@ -1,9 +1,8 @@
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Activity, Package, Building2, Users, Wallet,
-  FileText, Cpu, Cloud, Tag, Briefcase, DollarSign,
-  TrendingUp, Map, ArrowLeft, Shield,
+  LayoutDashboard, Activity, Building2, Users,
+  FileText, Cpu, ArrowLeft, Shield,
 } from "lucide-react";
 
 interface NavItem {
@@ -23,7 +22,6 @@ const navGroups: NavGroup[] = [
     items: [
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { id: "status", label: "Status", icon: Activity },
-      { id: "map", label: "Mapa do Sistema", icon: Map },
     ],
   },
   {
@@ -37,7 +35,6 @@ const navGroups: NavGroup[] = [
     title: "Infraestrutura",
     items: [
       { id: "costs", label: "Custos IA", icon: Cpu },
-      { id: "cloud", label: "Cloud", icon: Cloud },
       { id: "audit", label: "Auditoria", icon: FileText },
     ],
   },
