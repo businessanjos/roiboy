@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { VNPSBadge } from "@/components/ui/vnps-badge";
+
 import { CustomField } from "@/components/custom-fields";
 import { FieldValueEditor } from "@/components/custom-fields";
 import { CheckCircle2, AlertCircle, MessageCircle, Wifi, WifiOff, ArrowRight, Trash2, Clock, PauseCircle, XCircle, Ban } from "lucide-react";
@@ -16,8 +16,6 @@ import {
   getInitials, 
   getContractExpiryStatus,
   getResponsibleUser,
-  VNPSData, 
-  ScoreData, 
   ContractData, 
   WhatsAppData, 
   TeamUser 
@@ -25,8 +23,6 @@ import {
 
 interface ClientsTableRowProps {
   client: any;
-  vnpsData?: VNPSData;
-  scoreData?: ScoreData;
   contractData?: ContractData;
   whatsappData?: WhatsAppData;
   customFields: CustomField[];
@@ -41,8 +37,6 @@ interface ClientsTableRowProps {
 
 export const ClientsTableRow = memo(function ClientsTableRow({
   client,
-  vnpsData,
-  scoreData,
   contractData,
   whatsappData,
   customFields,
@@ -200,65 +194,6 @@ export const ClientsTableRow = memo(function ClientsTableRow({
         </button>
       </TableCell>
 
-      {/* Roizometer Cell */}
-      <TableCell className="text-center">
-        {scoreData ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={cn(
-                  "inline-flex items-center justify-center min-w-[40px] px-2 py-1 rounded-md text-xs font-bold",
-                  scoreData.roizometer >= 70
-                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                    : scoreData.roizometer >= 40
-                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                      : "bg-destructive/10 text-destructive"
-                )}>
-                  {scoreData.roizometer}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-xs">
-                  <p className="font-medium">Roizômetro: {scoreData.roizometer}%</p>
-                  <p className="text-muted-foreground">Percepção de ROI do cliente</p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          <span className="text-xs text-muted-foreground">—</span>
-        )}
-      </TableCell>
-
-      {/* E-Score Cell */}
-      <TableCell className="text-center">
-        {scoreData ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={cn(
-                  "inline-flex items-center justify-center min-w-[40px] px-2 py-1 rounded-md text-xs font-bold",
-                  scoreData.escore >= 70
-                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                    : scoreData.escore >= 40
-                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                      : "bg-destructive/10 text-destructive"
-                )}>
-                  {scoreData.escore}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-xs">
-                  <p className="font-medium">E-Score: {scoreData.escore}</p>
-                  <p className="text-muted-foreground">Engajamento do cliente</p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          <span className="text-xs text-muted-foreground">—</span>
-        )}
-      </TableCell>
 
       {/* WhatsApp Cell */}
       <TableCell className="text-center">
@@ -292,19 +227,6 @@ export const ClientsTableRow = memo(function ClientsTableRow({
         </TooltipProvider>
       </TableCell>
 
-      {/* V-NPS Cell */}
-      <TableCell className="text-center">
-      {vnpsData ? (
-          <VNPSBadge
-            score={vnpsData.vnps_score}
-            vnpsClass={vnpsData.vnps_class as "detractor" | "neutral" | "promoter"}
-            trend={vnpsData.trend as "up" | "flat" | "down" | undefined}
-            size="sm"
-          />
-        ) : (
-          <span className="text-xs text-muted-foreground">—</span>
-        )}
-      </TableCell>
 
       {/* Responsible Cell */}
       <TableCell className="text-center">

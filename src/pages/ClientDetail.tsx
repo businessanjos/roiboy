@@ -15,9 +15,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ScoreGauge } from "@/components/ui/score-gauge";
-import { QuadrantIndicator, TrendIndicator, StatusIndicator } from "@/components/ui/status-indicator";
-import { VNPSBadge } from "@/components/ui/vnps-badge";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
 import { ConversationView } from "@/components/client/ConversationView";
 import { ClientFinancial } from "@/components/client/ClientFinancial";
@@ -1750,7 +1747,7 @@ export default function ClientDetail() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">{client.full_name}</h1>
-              <StatusIndicator status={client.status} size="sm" />
+              
               <Button 
                 variant="ghost" 
                 size="sm" 

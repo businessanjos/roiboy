@@ -1,7 +1,7 @@
 export * from "./ZappDepartmentDialog";
 export * from "./ZappAgentDialog";
 export * from "./ZappTagDialog";
-export * from "./ZappRoiDialog";
+
 export * from "./ZappRiskDialog";
 export * from "./ZappTransferDialog";
 export * from "./ZappConversationTagDialog";

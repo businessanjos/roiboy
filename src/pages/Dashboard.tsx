@@ -12,9 +12,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { StatusIndicator, QuadrantIndicator, TrendIndicator } from "@/components/ui/status-indicator";
-import { ScoreBadge } from "@/components/ui/score-badge";
-import { VNPSBadge } from "@/components/ui/vnps-badge";
 import { Badge } from "@/components/ui/badge";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -62,7 +59,7 @@ import { ZoomControls } from "@/components/ui/zoom-controls";
 import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
-import { ROIEventsFeed } from "@/components/dashboard/ROIEventsFeed";
+
 import { LiveParticipationReport } from "@/components/dashboard/LiveParticipationReport";
 import { ClientRequestsFeed } from "@/components/dashboard/ClientRequestsFeed";
 
@@ -692,8 +689,6 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* ROI Events Feed - Full Width */}
-          <ROIEventsFeed />
         </TabsContent>
 
         {/* CX Tab */}

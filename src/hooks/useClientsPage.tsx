@@ -47,19 +47,6 @@ export interface TeamUser {
   email: string;
 }
 
-export interface VNPSData {
-  vnps_score: number;
-  vnps_class: string;
-  trend: string;
-}
-
-export interface ScoreData {
-  escore: number;
-  roizometer: number;
-  quadrant: string;
-  trend: string;
-}
-
 export interface ContractData {
   status: string;
   start_date: string | null;
@@ -84,8 +71,6 @@ export function useClientsPage() {
   const { logAudit } = useAuditLog();
 
   const [clients, setClients] = useState<any[]>([]);
-  const [vnpsMap, setVnpsMap] = useState<Record<string, VNPSData>>({});
-  const [scoreMap, setScoreMap] = useState<Record<string, ScoreData>>({});
   const [contractMap, setContractMap] = useState<Record<string, ContractData>>({});
   const [whatsappMap, setWhatsappMap] = useState<Record<string, WhatsAppData>>({});
   const [loading, setLoading] = useState(true);
@@ -125,28 +110,6 @@ export function useClientsPage() {
       if (data && data.length > 0) {
         const clientIds = data.map(c => c.id);
         
-        // Fetch V-NPS and Scores using optimized RPCs (1 row per client)
-        const [vnpsRes, scoresRes] = await Promise.all([
-          supabase.rpc("get_latest_vnps_for_clients", { p_client_ids: clientIds }),
-          supabase.rpc("get_latest_scores_for_clients", { p_client_ids: clientIds }),
-        ]);
-        
-        const vnpsGrouped: Record<string, VNPSData> = {};
-        (vnpsRes.data || []).forEach((v: any) => {
-          vnpsGrouped[v.client_id] = v;
-        });
-        setVnpsMap(vnpsGrouped);
-
-        const scoresGrouped: Record<string, ScoreData> = {};
-        (scoresRes.data || []).forEach((s: any) => {
-          scoresGrouped[s.client_id] = {
-            escore: s.escore,
-            roizometer: s.roizometer,
-            quadrant: s.quadrant,
-            trend: s.trend,
-          };
-        });
-        setScoreMap(scoresGrouped);
 
         // Fetch ALL contracts (all statuses to show contracts correctly)
         const { data: contractsData } = await supabase
@@ -375,8 +338,6 @@ export function useClientsPage() {
   return {
     // Data
     clients,
-    vnpsMap,
-    scoreMap,
     contractMap,
     whatsappMap,
     products,

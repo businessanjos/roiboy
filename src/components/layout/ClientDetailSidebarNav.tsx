@@ -44,14 +44,6 @@ const navGroups: NavGroup[] = [
       { id: "vinculos", label: "Vínculos", icon: Link2 },
     ],
   },
-  {
-    title: "Inteligência",
-    items: [
-      { id: "roi", label: "ROI", icon: TrendingUp },
-      { id: "risks", label: "Riscos", icon: AlertTriangle },
-      { id: "recommendations", label: "Recomendações", icon: Lightbulb },
-    ],
-  },
 ];
 
 export function ClientDetailSidebarNav({

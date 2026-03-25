@@ -27,8 +27,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { StatusIndicator } from "@/components/ui/status-indicator";
-import { VNPSBadge } from "@/components/ui/vnps-badge";
 import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import { CustomFieldsManager, CustomField, FieldOption, FieldValueEditor } from "@/components/custom-fields";
@@ -2408,18 +2406,6 @@ export default function Clients() {
                           })()}
                         </TableCell>
                         <TableCell className="text-center">
-                          {vnpsMap[client.id] ? (
-                            <VNPSBadge
-                              score={vnpsMap[client.id].vnps_score}
-                              vnpsClass={vnpsMap[client.id].vnps_class}
-                              trend={vnpsMap[client.id].trend}
-                              size="sm"
-                            />
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
                           <Select
                             value={client.responsible_user_id || "none"}
                             onValueChange={async (value) => {
@@ -2680,15 +2666,6 @@ export default function Clients() {
                         </Tooltip>
                       </TooltipProvider>
                       
-                      {vnpsMap[client.id] && (
-                        <VNPSBadge
-                          score={vnpsMap[client.id].vnps_score}
-                          vnpsClass={vnpsMap[client.id].vnps_class}
-                          trend={vnpsMap[client.id].trend}
-                          size="sm"
-                        />
-                      )}
-                      <StatusIndicator status={client.status} size="sm" />
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
