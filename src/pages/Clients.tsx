@@ -18,7 +18,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Wifi, WifiOff, Lock, Trash2, Kanban, PauseCircle, Ban, GitMerge } from "lucide-react";
+import { Plus, Search, ArrowRight, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Lock, Trash2, Kanban, PauseCircle, Ban, GitMerge } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import * as XLSX from "xlsx";
 import { ClientKanban } from "@/components/client/ClientKanban";
@@ -2063,7 +2063,7 @@ export default function Clients() {
                     <TableHead className="font-medium sticky left-0 bg-muted z-20 w-[240px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Cliente</TableHead>
                     <TableHead className="font-medium text-center w-[160px]">Produto</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px]">Contrato</TableHead>
-                    <TableHead className="font-medium text-center min-w-[100px]">Conexão</TableHead>
+                    
                     <TableHead className="font-medium text-center min-w-[120px]">Responsável</TableHead>
                     <TableHead className="font-medium text-right min-w-[80px]">Ação</TableHead>
                   </TableRow>
@@ -2249,58 +2249,6 @@ export default function Clients() {
                               </TooltipProvider>
                             )}
                           </button>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {(() => {
-                            const whatsappData = whatsappMap[client.id];
-                            const hasMessages = whatsappData && whatsappData.messageCount > 0;
-                            const lastMessage = whatsappData?.lastMessageAt;
-                            
-                            return (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className={cn(
-                                      "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium",
-                                      hasMessages 
-                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                        : "bg-muted text-muted-foreground"
-                                    )}>
-                                      {hasMessages ? (
-                                        <>
-                                          <Wifi className="h-3 w-3" />
-                                          <span>{whatsappData.messageCount}</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <WifiOff className="h-3 w-3" />
-                                          <span>—</span>
-                                        </>
-                                      )}
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {hasMessages ? (
-                                      <div className="text-xs">
-                                        <p className="font-medium text-green-600 dark:text-green-400">Conectado</p>
-                                        <p>{whatsappData.messageCount} mensagem{whatsappData.messageCount !== 1 ? 's' : ''} capturada{whatsappData.messageCount !== 1 ? 's' : ''}</p>
-                                        {lastMessage && (
-                                          <p className="text-muted-foreground mt-1">
-                                            Última: {format(new Date(lastMessage), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                                          </p>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <div className="text-xs">
-                                        <p className="font-medium">Não conectado</p>
-                                        <p className="text-muted-foreground">Nenhuma mensagem capturada ainda</p>
-                                      </div>
-                                    )}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            );
-                          })()}
                         </TableCell>
                         <TableCell className="text-center">
                           <Select
