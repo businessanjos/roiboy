@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardContractStats } from "@/hooks/useDashboardContractStats";
+import { useQuery } from "@tanstack/react-query";
+import { ContractsDashboard } from "@/components/contracts/ContractsDashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
