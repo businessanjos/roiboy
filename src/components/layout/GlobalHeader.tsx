@@ -1,6 +1,6 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useSector } from "@/contexts/SectorContext";
-import { Bell, Moon, Sun, LogOut, Settings } from "lucide-react";
+import { Bell, Moon, Sun, LogOut, Settings, Shield } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -25,6 +25,8 @@ import { useTheme } from "next-themes";
 import { supabase } from "@/integrations/supabase/client";
 import { RoyLogo } from "@/components/ui/roy-logo";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 
 export function GlobalHeader() {
   const { currentUser } = useCurrentUser();
@@ -32,7 +34,12 @@ export function GlobalHeader() {
   const { pendingCount, overdueCount } = usePendingTasksCount();
   const { setTheme, theme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const { clearSector } = useSector();
+  const { isAdmin } = usePermissions();
+  const { isSuperAdmin } = useSuperAdmin();
+
+  const showAdminButton = isAdmin || isSuperAdmin;
 
   const totalBadgeCount = unreadCount + pendingCount;
 
@@ -81,6 +88,25 @@ export function GlobalHeader() {
             <TooltipContent>Configurações</TooltipContent>
           </Tooltip>
         </TooltipProvider>
+
+        {/* Admin */}
+        {showAdminButton && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={location.pathname === "/admin" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => navigate("/admin")}
+                  className="h-9 w-9"
+                >
+                  <Shield className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Administração</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
 
         {/* Notifications */}
         <TooltipProvider>
