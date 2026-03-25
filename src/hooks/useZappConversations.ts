@@ -5,8 +5,8 @@ import { Department } from "@/components/royzapp";
 import { SectorId } from "@/config/sectors";
 import { Message, InboundMessageData } from "@/hooks/useZappData";
 
-const REALTIME_DEBOUNCE_MS = 3000;
-const MIN_FETCH_INTERVAL_MS = 3000;
+const REALTIME_DEBOUNCE_MS = 5000; // Increased for high-volume (was 3s)
+const MIN_FETCH_INTERVAL_MS = 5000; // Increased for high-volume (was 3s)
 
 interface UseZappConversationsOptions {
   accountId?: string;
@@ -289,27 +289,40 @@ export function useZappConversations(options: UseZappConversationsOptions) {
   const filteredAssignmentsRef = useRef(filteredAssignments);
   filteredAssignmentsRef.current = filteredAssignments;
 
-  // Realtime subscription
+  // Realtime subscription - OPTIMIZED for high volume
+  // Only subscribe to zapp_conversation_assignments and zapp_messages (skip zapp_conversations to reduce noise)
   useEffect(() => {
     if (!accountId) return;
 
+    // Track consecutive rapid events to auto-throttle
+    let realtimeEventCount = 0;
+    let realtimeResetTimer: ReturnType<typeof setTimeout> | null = null;
+    const THROTTLE_THRESHOLD = 10; // events per window
+    const THROTTLE_WINDOW_MS = 10000; // 10s window
+    let isThrottled = false;
+
+    const maybeThrottle = (callback: () => void) => {
+      realtimeEventCount++;
+      if (!realtimeResetTimer) {
+        realtimeResetTimer = setTimeout(() => {
+          if (realtimeEventCount > THROTTLE_THRESHOLD) {
+            isThrottled = true;
+            console.warn(`[ZappRT] Throttling: ${realtimeEventCount} events in ${THROTTLE_WINDOW_MS}ms window`);
+            // When throttled, do one final fetch after a delay
+            setTimeout(() => {
+              isThrottled = false;
+              fetchAssignmentsOnly();
+            }, REALTIME_DEBOUNCE_MS * 2);
+          }
+          realtimeEventCount = 0;
+          realtimeResetTimer = null;
+        }, THROTTLE_WINDOW_MS);
+      }
+      if (!isThrottled) callback();
+    };
+
     const channel = supabase
       .channel('zapp-conversations-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'zapp_conversations', filter: `account_id=eq.${accountId}` },
-        (payload) => {
-          const payloadAccountId = (payload.new as any)?.account_id || (payload.old as any)?.account_id;
-          if (payloadAccountId && payloadAccountId !== accountId) return;
-          if (!sectorId) return;
-
-          if (payload.eventType === 'INSERT') {
-            fetchAssignmentsOnly();
-          } else {
-            debouncedFetchAssignments();
-          }
-        }
-      )
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'zapp_conversation_assignments', filter: `account_id=eq.${accountId}` },
@@ -318,7 +331,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
           const payloadDeptId = (payload.new as any)?.department_id;
           const currentDeptId = currentDepartmentIdRef.current;
           if (payloadDeptId && currentDeptId && payloadDeptId !== currentDeptId) return;
-          debouncedFetchAssignments();
+          maybeThrottle(debouncedFetchAssignments);
         }
       )
       .on(
@@ -366,7 +379,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
           if (newMsg?.id) {
             const selectedConvId = currentConversationIdRef.current;
             if (selectedConvId && newMsg.zapp_conversation_id !== selectedConvId) {
-              debouncedFetchAssignments();
+              maybeThrottle(debouncedFetchAssignments);
               return;
             }
 
@@ -403,7 +416,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
             });
           }
 
-          debouncedFetchAssignments();
+          maybeThrottle(debouncedFetchAssignments);
         }
       )
       .on(
@@ -438,6 +451,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
     return () => {
       if (realtimeFetchTimeoutRef.current) clearTimeout(realtimeFetchTimeoutRef.current);
+      if (realtimeResetTimer) clearTimeout(realtimeResetTimer);
       supabase.removeChannel(channel);
     };
   }, [accountId, debouncedFetchAssignments, fetchAssignmentsOnly, sectorId]);
@@ -466,7 +480,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
         }
         return currentMessages;
       });
-    }, 30000);
+    }, 45000); // Increased from 30s to 45s for high volume
 
     return () => clearInterval(pollInterval);
   }, []);

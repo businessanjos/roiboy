@@ -10,8 +10,8 @@ const corsHeaders = {
 // ============================================
 // IN-MEMORY CACHES (persist between invocations on Deno Deploy)
 // ============================================
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
-const MAX_CACHE_SIZE = 200;
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes (increased for high volume)
+const MAX_CACHE_SIZE = 1000; // Increased for thousands of conversations
 
 interface CacheEntry<T> {
   data: T;
@@ -34,7 +34,7 @@ const conversationCache = new Map<string, CacheEntry<{ id: string; unread_count:
 const assignmentCache = new Map<string, CacheEntry<{ id: string; status: string; agent_id: string | null; department_id: string | null; assigned_at: string | null; closed_at: string | null } | null>>();
 
 // Shorter TTL for conversation/assignment caches (2 min) - they change more frequently
-const CONV_CACHE_TTL_MS = 2 * 60 * 1000;
+const CONV_CACHE_TTL_MS = 3 * 60 * 1000; // 3 min for conversation caches
 
 function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string, ttl: number = CACHE_TTL_MS): T | undefined {
   const entry = cache.get(key);
@@ -928,13 +928,10 @@ serve(async (req) => {
         
         // ============================================
         // EXTRACT MENTION MAP (for @mentions in groups)
+        // OPTIMIZED: Skip DB resolution for burst messages, cap at 5 mentions
         // ============================================
         let mentionMap: Record<string, string> | null = null;
         if (isGroupMessage) {
-          // UAZAPI sends mentionedJid in multiple places:
-          // 1. msg.mentionedJidList (UAZAPI GO v2 primary)
-          // 2. msg.contextInfo.mentionedJid (standard WhatsApp)
-          // 3. msg.extendedTextMessage.contextInfo.mentionedJid
           const msgAnyMention = msg as Record<string, unknown>;
           const mentionedJids: string[] = 
             (msgAnyMention.mentionedJidList as string[]) ||
@@ -944,36 +941,29 @@ serve(async (req) => {
             [];
           
           if (mentionedJids.length > 0) {
+            // Cap mentions to prevent excessive DB queries at high volume
+            const cappedJids = mentionedJids.slice(0, 10);
             mentionMap = {};
-            // Also check if UAZAPI sends mention names (groupMentions or similar)
+            
             const groupMentions = (msgAnyMention.groupMentions || msgAnyMention.mentions) as Array<{ id?: string; jid?: string; name?: string; pushName?: string; notify?: string }> | undefined;
             
-            for (const jid of mentionedJids) {
-              // Extract the number part from JID (e.g., "5511999887766@s.whatsapp.net" -> "5511999887766")
+            for (const jid of cappedJids) {
               const jidNumber = jid.split("@")[0];
-              
-              // Try to find name from groupMentions array
               let mentionName = "";
               if (groupMentions) {
-                const found = groupMentions.find(m => 
-                  (m.id || m.jid || "").includes(jidNumber)
-                );
-                if (found) {
-                  mentionName = found.name || found.pushName || found.notify || "";
-                }
+                const found = groupMentions.find(m => (m.id || m.jid || "").includes(jidNumber));
+                if (found) mentionName = found.name || found.pushName || found.notify || "";
               }
-              
-              // Store the mapping (jidNumber -> name, name may be empty for now)
-              if (jidNumber) {
-                mentionMap[jidNumber] = mentionName;
-              }
+              if (jidNumber) mentionMap[jidNumber] = mentionName;
             }
             
-            // If we have no names yet, try to resolve from zapp_conversations
+            // OPTIMIZATION: Only resolve unknown mentions from DB if <= 5 unknowns
+            // For burst/high-volume, skip DB resolution to keep webhook fast
             const unknownJids = Object.entries(mentionMap).filter(([, name]) => !name).map(([jid]) => jid);
-            if (unknownJids.length > 0) {
-              // Build possible phone formats to search
+            if (unknownJids.length > 0 && unknownJids.length <= 5) {
               const phoneFormats = unknownJids.flatMap(jid => [`+${jid}`, jid]);
+              
+              // Single query: check conversations first (faster, smaller table scan)
               const { data: contacts } = await supabase
                 .from("zapp_conversations")
                 .select("phone_e164, contact_name")
@@ -985,16 +975,13 @@ serve(async (req) => {
               if (contacts) {
                 for (const contact of contacts) {
                   const normalizedPhone = contact.phone_e164.replace(/^\+/, "");
-                  if (mentionMap[normalizedPhone] === "") {
-                    mentionMap[normalizedPhone] = contact.contact_name || "";
-                  }
+                  if (mentionMap[normalizedPhone] === "") mentionMap[normalizedPhone] = contact.contact_name || "";
                 }
               }
               
-              // Also try clients table for remaining unknowns - use broader matching
+              // Only hit clients table if still unknowns (skip partial matching entirely for perf)
               const stillUnknown = Object.entries(mentionMap!).filter(([, name]) => !name).map(([jid]) => jid);
               if (stillUnknown.length > 0) {
-                // Try exact match first
                 const phoneFormatsForClients = stillUnknown.flatMap(jid => [`+${jid}`, jid]);
                 const { data: clients } = await supabase
                   .from("clients")
@@ -1005,41 +992,13 @@ serve(async (req) => {
                 if (clients) {
                   for (const client of clients) {
                     const normalizedPhone = client.phone_e164.replace(/^\+/, "");
-                    if (mentionMap![normalizedPhone] === "") {
-                      mentionMap![normalizedPhone] = client.full_name || "";
-                    }
-                  }
-                }
-                
-                // For still-unknown, try partial matching by last 8 digits
-                const finalUnknown = Object.entries(mentionMap!).filter(([, name]) => !name).map(([jid]) => jid);
-                if (finalUnknown.length > 0) {
-                  // Query all clients for this account and do partial phone matching
-                  const { data: allClients } = await supabase
-                    .from("clients")
-                    .select("phone_e164, full_name")
-                    .eq("account_id", accountId)
-                    .not("phone_e164", "is", null)
-                    .not("full_name", "is", null)
-                    .limit(500);
-                  
-                  if (allClients) {
-                    for (const jid of finalUnknown) {
-                      const last8 = jid.slice(-8);
-                      const match = allClients.find(c => {
-                        const cDigits = c.phone_e164.replace(/\D/g, "");
-                        return cDigits.endsWith(last8) || jid.endsWith(cDigits.slice(-8));
-                      });
-                      if (match?.full_name) {
-                        mentionMap![jid] = match.full_name;
-                      }
-                    }
+                    if (mentionMap![normalizedPhone] === "") mentionMap![normalizedPhone] = client.full_name || "";
                   }
                 }
               }
             }
             
-            // Clean up: remove entries with empty name (keep only resolved ones)
+            // Clean up empty entries
             if (mentionMap) {
               const cleaned: Record<string, string> = {};
               for (const [k, v] of Object.entries(mentionMap)) {
@@ -1047,7 +1006,6 @@ serve(async (req) => {
               }
               mentionMap = Object.keys(cleaned).length > 0 ? cleaned : null;
             }
-            console.log(`[WEBHOOK] Mention map built:`, JSON.stringify(mentionMap));
           }
         }
         
