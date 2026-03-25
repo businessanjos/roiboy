@@ -262,14 +262,15 @@ serve(async (req) => {
     // Fallback to client record fields
     const clientCpfCnpj = cpfCnpjFromDeal || client?.cnpj || client?.cpf || '';
     
+    const expectedClientName = client?.full_name || deal.contact_name || deal.title;
+    
     if (clientCpfCnpj) {
-      omieClient = await findOmieClientByCpfCnpj(appKey, appSecret, clientCpfCnpj);
+      omieClient = await findOmieClientByCpfCnpj(appKey, appSecret, clientCpfCnpj, expectedClientName);
     }
     
     // Fallback to name
     if (!omieClient) {
-      const clientName = client?.full_name || deal.contact_name || deal.title;
-      omieClient = await findOmieClientByName(appKey, appSecret, clientName);
+      omieClient = await findOmieClientByName(appKey, appSecret, expectedClientName);
     }
 
     if (!omieClient) {
