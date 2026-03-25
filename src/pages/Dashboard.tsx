@@ -117,7 +117,7 @@ export default function Dashboard() {
   // Contract stats from RPC for accurate Gestão metrics
   const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
 
-  // Contracts data for the Contratos tab
+  // Contracts data for the Contratos tab (exclude renewals to avoid duplicates)
   const { data: dashboardContracts = [] } = useQuery({
     queryKey: ["dashboard-contracts-full"],
     queryFn: async () => {
@@ -127,21 +127,11 @@ export default function Dashboard() {
           id, client_id, start_date, end_date, cancelled_at, value, status, contract_type, created_at,
           product:products(id, name, color)
         `)
-        .not("parent_contract_id", "is", null)  
-        .order("created_at", { ascending: false });
-      
-      // Also fetch without parent filter to get all
-      const { data: allData, error: allError } = await supabase
-        .from("client_contracts")
-        .select(`
-          id, client_id, start_date, end_date, cancelled_at, value, status, contract_type, created_at,
-          product:products(id, name, color)
-        `)
         .is("parent_contract_id", null)
         .order("created_at", { ascending: false });
 
-      if (allError) throw allError;
-      return (allData || []) as any[];
+      if (error) throw error;
+      return (data || []) as any[];
     },
     staleTime: 1000 * 60 * 5,
   });
