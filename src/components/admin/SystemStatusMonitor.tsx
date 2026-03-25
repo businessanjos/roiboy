@@ -173,49 +173,70 @@ export function SystemStatusMonitor() {
 
   const checkFunction = async (func: SystemFunction): Promise<FunctionStatus> => {
     const start = Date.now();
+    const maxAttempts = 2;
     
-    try {
-      // For edge functions, we do a simple health check
-      const url = `${supabaseUrl}${func.endpoint}`;
-      
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      
-      if (func.requiresAuth) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          headers["Authorization"] = `Bearer ${session.access_token}`;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const url = `${supabaseUrl}${func.endpoint}`;
+        
+        const headers: Record<string, string> = {
+          "Content-Type": "application/json",
+        };
+        
+        if (func.requiresAuth) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            headers["Authorization"] = `Bearer ${session.access_token}`;
+          }
         }
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+
+        const response = await fetch(url, {
+          method: "OPTIONS",
+          headers,
+          signal: controller.signal,
+        });
+
+        clearTimeout(timeout);
+        const responseTime = Date.now() - start;
+        
+        // Any HTTP response means the function is deployed and running
+        return {
+          id: func.id,
+          status: "online",
+          responseTime,
+          lastChecked: new Date(),
+        };
+      } catch (error) {
+        // If last attempt failed, check if it's a network/timeout issue vs actual offline
+        if (attempt === maxAttempts) {
+          const responseTime = Date.now() - start;
+          const errorMsg = error instanceof Error ? error.message : "Erro desconhecido";
+          const isTimeout = errorMsg.includes("abort") || errorMsg.includes("Failed to fetch");
+          
+          return {
+            id: func.id,
+            status: isTimeout ? "degraded" : "offline",
+            responseTime,
+            lastChecked: new Date(),
+            error: isTimeout ? "Timeout no health-check (função pode estar ok)" : errorMsg,
+          };
+        }
+        // Wait briefly before retry
+        await new Promise(r => setTimeout(r, 1000));
       }
-
-      // Use OPTIONS (CORS preflight) only — never send POST with empty/invalid body
-      // Any response (including 4xx/5xx) means the function is deployed and running
-      const response = await fetch(url, {
-        method: "OPTIONS",
-        headers,
-      });
-
-      const responseTime = Date.now() - start;
-      
-      // Any HTTP response means the function is online (even errors mean it's deployed)
-      const isOnline = true;
-      
-      return {
-        id: func.id,
-        status: isOnline ? "online" : "offline",
-        responseTime,
-        lastChecked: new Date(),
-      };
-    } catch (error) {
-      return {
-        id: func.id,
-        status: "offline",
-        responseTime: Date.now() - start,
-        lastChecked: new Date(),
-        error: error instanceof Error ? error.message : "Erro desconhecido",
-      };
     }
+
+    // Fallback (shouldn't reach here)
+    return {
+      id: func.id,
+      status: "degraded",
+      responseTime: Date.now() - start,
+      lastChecked: new Date(),
+      error: "Verificação inconclusiva",
+    };
   };
 
   const checkAllFunctions = async () => {
