@@ -117,7 +117,7 @@ export const sectors: Sector[] = [
       { to: "/insights", icon: BarChart3, label: "Insights", permission: PERMISSIONS.REPORTS_VIEW },
       { to: "/leads", icon: UserPlus, label: "Leads", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/tasks", icon: ClipboardList, label: "Tarefas" },
-      { to: "/sales-meetings", icon: Video, label: "Reuniões" },
+      
       { to: "/clients", icon: Users, label: "Clientes", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/products", icon: Package, label: "Produtos", permission: PERMISSIONS.PRODUCTS_VIEW },
       { to: "/sales-scripts", icon: ScrollText, label: "Scripts de Vendas" },
