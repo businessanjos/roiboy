@@ -57,8 +57,6 @@ const PublicForm = lazyRetry(() => import("./pages/PublicForm"));
 const PublicRSVP = lazyRetry(() => import("./pages/PublicRSVP"));
 const PublicEventRegistration = lazyRetry(() => import("./pages/PublicEventRegistration"));
 const PublicEventFeedback = lazyRetry(() => import("./pages/PublicEventFeedback"));
-const Presentation = lazyRetry(() => import("./pages/Presentation"));
-const ExtensionPreview = lazyRetry(() => import("./pages/ExtensionPreview"));
 
 const Admin = lazyRetry(() => import("./pages/Admin"));
 const EventCheckin = lazyRetry(() => import("./pages/EventCheckin"));
