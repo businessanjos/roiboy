@@ -72,7 +72,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ZapSignDialog } from "@/components/zapsign/ZapSignDialog";
+
 
 interface Contract {
   id: string;
