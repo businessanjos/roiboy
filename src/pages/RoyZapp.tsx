@@ -24,7 +24,7 @@ import {
   ZappAgentDialog,
   ZappTagDialog,
   
-  ZappRiskDialog,
+  
   ZappTransferDialog,
   ZappConversationTagDialog,
   ZappContactPickerDialog,
