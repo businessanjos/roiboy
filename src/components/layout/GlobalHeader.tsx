@@ -35,7 +35,12 @@ export function GlobalHeader() {
   const { pendingCount, overdueCount } = usePendingTasksCount();
   const { setTheme, theme } = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const { clearSector } = useSector();
+  const { isAdmin } = usePermissions();
+  const { isSuperAdmin } = useSuperAdmin();
+
+  const showAdminButton = isAdmin || isSuperAdmin;
 
   const totalBadgeCount = unreadCount + pendingCount;
 
