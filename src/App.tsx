@@ -73,7 +73,7 @@ const SalesMeetings = lazyRetry(() => import("./pages/SalesMeetings"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
 const WhatsAppGroups = lazyRetry(() => import("./pages/WhatsAppGroups"));
 const PublicMembersBook = lazyRetry(() => import("./pages/PublicMembersBook"));
-const AIAgent = lazyRetry(() => import("./pages/AIAgent"));
+
 const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
 const SharedInsightsDashboard = lazyRetry(() => import("./pages/SharedInsightsDashboard"));
 const MentorAgenda = lazyRetry(() => import("./pages/MentorAgenda"));
