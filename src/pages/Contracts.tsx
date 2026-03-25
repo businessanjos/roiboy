@@ -211,6 +211,8 @@ export default function Contracts() {
   const [productFilter, setProductFilter] = usePersistedFilter<string>("contracts", "productFilter", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<"az" | "recent">("contracts", "sortOrder", "recent");
   const [activeTab, setActiveTab] = useState<string>("fila");
+  const [contractsPage, setContractsPage] = useState(1);
+  const [contractsPageSize, setContractsPageSize] = useState(20);
   
   // New contract dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
