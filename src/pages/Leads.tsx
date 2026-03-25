@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLeads, Lead } from "@/hooks/useLeads";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
@@ -67,6 +67,7 @@ import {
   XCircle,
   DollarSign,
   ChevronRight,
+  ChevronLeft,
   Upload,
   GitMerge,
 } from "lucide-react";
@@ -161,6 +162,8 @@ export default function Leads() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSource, setFilterSource] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const LEADS_PER_PAGE = 50;
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -1103,7 +1106,7 @@ export default function Leads() {
     setFilterSource("all");
   };
 
-  const filteredLeads = leads.filter((lead) => {
+  const filteredLeads = useMemo(() => leads.filter((lead) => {
     const matchesSearch =
       lead.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.phone?.includes(searchQuery) ||
@@ -1112,7 +1115,20 @@ export default function Leads() {
     const matchesSource = filterSource === "all" || lead.source === filterSource;
     
     return matchesSearch && matchesSource;
-  });
+  }), [leads, searchQuery, filterSource]);
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / LEADS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedLeads = useMemo(() => {
+    const start = (safePage - 1) * LEADS_PER_PAGE;
+    return filteredLeads.slice(start, start + LEADS_PER_PAGE);
+  }, [filteredLeads, safePage, LEADS_PER_PAGE]);
+
+  // Reset page on filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterSource]);
 
   const getInitials = (name: string) => {
     return name
@@ -1248,7 +1264,7 @@ export default function Leads() {
         {/* Scrollable Leads List */}
         <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4">
           <ScrollArea className="h-full">
-            {filteredLeads.length === 0 ? (
+            {paginatedLeads.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center text-muted-foreground">
                   {searchQuery ? "Nenhum lead encontrado" : "Nenhum lead cadastrado ainda"}
@@ -1256,7 +1272,7 @@ export default function Leads() {
               </Card>
             ) : (
               <div className="space-y-2 pr-2">
-                {filteredLeads.map((lead) => (
+                {paginatedLeads.map((lead) => (
                   <Card 
                     key={lead.id} 
                     className="hover:shadow-md transition-shadow cursor-pointer"
@@ -1274,7 +1290,6 @@ export default function Leads() {
                           <div className="flex items-center gap-1.5 overflow-hidden">
                             <span className="font-medium text-sm truncate max-w-[150px]">{lead.full_name}</span>
                             {getStatusBadge(lead.status)}
-                            {/* Custom field badges - limit to 1, hide on small screens */}
                             {customFields.slice(0, 1).map(field => {
                               const value = fieldValues[lead.id]?.[field.id];
                               if (value === undefined || value === null) return null;
@@ -1316,9 +1331,7 @@ export default function Leads() {
                           {format(new Date(lead.created_at), "dd/MM/yy", { locale: ptBR })}
                         </div>
 
-                        {/* Action buttons container */}
                         <div className="flex items-center gap-0.5 flex-shrink-0">
-                          {/* WhatsApp Button */}
                           {lead.phone && (
                             <Button
                               variant="ghost"
@@ -1348,36 +1361,10 @@ export default function Leads() {
                                   handleOpenZappForLead(lead);
                                 }}>
                                   <MessageCircle className="h-4 w-4 mr-2" />
-                                  Conversar no RoyZapp
+                                  Conversar no Zapp
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                handleStatusChange(lead.id, "contacted");
-                              }}>
-                                <MessageSquare className="h-4 w-4 mr-2" />
-                                Marcar Contatado
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                handleStatusChange(lead.id, "qualified");
-                              }}>
-                                <UserCheck className="h-4 w-4 mr-2" />
-                                Marcar Qualificado
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                openDealDialogForLead(lead);
-                              }}>
-                                <TrendingUp className="h-4 w-4 mr-2" />
-                                Criar Negócio
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                openEditDialog(lead);
-                              }}>
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); openEditDialog(lead); }}>
                                 <Pencil className="h-4 w-4 mr-2" />
                                 Editar
                               </DropdownMenuItem>
@@ -1406,6 +1393,58 @@ export default function Leads() {
                     </CardContent>
                   </Card>
                 ))}
+              </div>
+            )}
+
+            {/* Pagination Controls */}
+            {filteredLeads.length > LEADS_PER_PAGE && (
+              <div className="flex items-center justify-between py-3 pr-2">
+                <p className="text-sm text-muted-foreground">
+                  Mostrando {((safePage - 1) * LEADS_PER_PAGE) + 1}–{Math.min(safePage * LEADS_PER_PAGE, filteredLeads.length)} de {filteredLeads.length} leads
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={safePage <= 1}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                    let page: number;
+                    if (totalPages <= 7) {
+                      page = i + 1;
+                    } else if (safePage <= 4) {
+                      page = i + 1;
+                    } else if (safePage >= totalPages - 3) {
+                      page = totalPages - 6 + i;
+                    } else {
+                      page = safePage - 3 + i;
+                    }
+                    return (
+                      <Button
+                        key={page}
+                        variant={safePage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className="h-8 w-8 p-0 text-xs"
+                      >
+                        {page}
+                      </Button>
+                    );
+                  })}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={safePage >= totalPages}
+                    className="h-8 w-8 p-0"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             )}
           </ScrollArea>
