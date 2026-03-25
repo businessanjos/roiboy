@@ -1894,6 +1894,7 @@ export default function Contracts() {
 
       {/* Contracts Table - hide on triagem tab since it has its own component */}
       {activeTab !== "triagem" && (
+        <>
         <Card>
           <CardContent className="p-0">
             {totalFilteredContracts === 0 ? (
