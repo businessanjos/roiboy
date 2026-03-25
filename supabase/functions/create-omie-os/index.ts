@@ -40,7 +40,7 @@ const STATE_MAP: Record<string, string> = {
 };
 
 
-async function findOmieClientByCpfCnpj(appKey: string, appSecret: string, cpfCnpj: string) {
+async function findOmieClientByCpfCnpj(appKey: string, appSecret: string, cpfCnpj: string, expectedName?: string) {
   try {
     const cleanDoc = cpfCnpj.replace(/\D/g, '');
     if (!cleanDoc) return null;
@@ -49,7 +49,22 @@ async function findOmieClientByCpfCnpj(appKey: string, appSecret: string, cpfCnp
       registros_por_pagina: 10,
       clientesFiltro: { cnpj_cpf: cleanDoc },
     });
-    return result.clientes_cadastro?.[0] || null;
+    const found = result.clientes_cadastro?.[0] || null;
+    
+    // Validate: if we have an expected name, check the found client matches
+    if (found && expectedName) {
+      const foundName = (found.razao_social || found.nome_fantasia || '').toLowerCase().trim();
+      const expected = expectedName.toLowerCase().trim();
+      // Check if any word (3+ chars) from expected name appears in found name
+      const expectedWords = expected.split(/\s+/).filter((w: string) => w.length >= 3);
+      const hasAnyMatch = expectedWords.some((word: string) => foundName.includes(word));
+      if (!hasAnyMatch) {
+        console.log(`CPF/CNPJ ${cleanDoc} found client "${found.razao_social}" but expected "${expectedName}" - names don't match, skipping`);
+        return null;
+      }
+    }
+    
+    return found;
   } catch {
     return null;
   }
