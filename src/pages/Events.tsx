@@ -180,7 +180,7 @@ export default function Events() {
 
   // Available sectors for visibility (excluding operacoes, configuracoes, and integrations)
   const availableSectors = sectors.filter(
-    s => !['operacoes', 'configuracoes', 'royzapp', 'roychat'].includes(s.id)
+    s => !['operacoes', 'configuracoes', 'royzapp'].includes(s.id)
   );
   // Fetch account ID with React Query
   const { data: accountId } = useQuery({

@@ -176,7 +176,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     });
   }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role, currentUser?.team_role_name]);
 
-  const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "roychat", "configuracoes"];
+  const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "configuracoes"];
 
   const isSalesRep = useMemo(() => {
     const role = currentUser?.team_role_name;

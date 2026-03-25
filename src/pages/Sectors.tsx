@@ -156,7 +156,7 @@ export default function Sectors() {
     return sectors;
   }, [isSalesRep, isManager]);
 
-  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "royzapp", "roychat"];
+  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "royzapp"];
   const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);
 
   return (

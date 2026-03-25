@@ -27,9 +27,9 @@ const iconMap: Record<string, React.ElementType> = {
   circle: Circle,
 };
 
-// Setores disponíveis para seleção (excluindo marketing, configuracoes, royzapp, roychat)
+// Setores disponíveis para seleção (excluindo marketing, configuracoes, royzapp)
 const availableSectors = sectors.filter(
-  s => !['marketing', 'configuracoes', 'royzapp', 'roychat'].includes(s.id)
+  s => !['marketing', 'configuracoes', 'royzapp'].includes(s.id)
 );
 
 interface MarketingEventSheetProps {
