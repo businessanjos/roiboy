@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { supabase } from "@/integrations/supabase/client";
 import { notifyContractCreated } from "@/hooks/useContractNotifications";
