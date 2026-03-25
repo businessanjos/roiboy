@@ -91,6 +91,8 @@ export interface Message {
   // Campos para edição
   updated_at?: string | null;
   is_edited?: boolean;
+  // Mapa de menções: JID -> nome do contato
+  mention_map?: Record<string, string> | null;
 }
 
 export interface ConversationAssignment {
