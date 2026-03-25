@@ -34,7 +34,7 @@ const conversationCache = new Map<string, CacheEntry<{ id: string; unread_count:
 const assignmentCache = new Map<string, CacheEntry<{ id: string; status: string; agent_id: string | null; department_id: string | null; assigned_at: string | null; closed_at: string | null } | null>>();
 
 // Shorter TTL for conversation/assignment caches (2 min) - they change more frequently
-const CONV_CACHE_TTL_MS = 2 * 60 * 1000;
+const CONV_CACHE_TTL_MS = 3 * 60 * 1000; // 3 min for conversation caches
 
 function getCached<T>(cache: Map<string, CacheEntry<T>>, key: string, ttl: number = CACHE_TTL_MS): T | undefined {
   const entry = cache.get(key);
