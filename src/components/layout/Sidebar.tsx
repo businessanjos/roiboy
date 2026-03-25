@@ -534,7 +534,7 @@ export function Sidebar() {
   const location = useLocation();
 
   // Hide sidebar entirely when no sector is selected, on home/sector selection, or on notifications page
-  if (isMobile || !currentSector || location.pathname === "/notifications" || location.pathname === "/setores" || location.pathname === "/" || location.pathname.startsWith("/team-chat")) {
+  if (isMobile || !currentSector || location.pathname === "/notifications" || location.pathname === "/setores" || location.pathname === "/") {
     return null;
   }
 
