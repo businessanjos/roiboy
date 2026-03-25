@@ -337,8 +337,8 @@ serve(async (req) => {
 
         switch (jobType) {
           case "ai_analysis":
-            result = await handleAiAnalysis(supabase, job, supabaseUrl, supabaseKey);
-            break;
+            // Decommissioned — mark as skipped
+            result = "skipped";
           case "client_analysis":
             result = await handleClientAnalysis(supabase, job as { id: string; account_id: string; client_id: string | null; payload: Record<string, unknown> | null });
             break;

@@ -205,7 +205,7 @@ const App = () => (
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/account-settings" element={<AccountSettings />} />
                             <Route path="/reminders" element={<Reminders />} />
-                            <Route path="/whatsapp-groups" element={<WhatsAppGroups />} />
+                            
                             <Route path="/roy-zapp" element={<RoyZapp />} />
                             <Route path="/mentor-agenda" element={<MentorAgenda />} />
                             
