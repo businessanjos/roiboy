@@ -17,7 +17,7 @@ import {
 } from "@/components/royzapp";
 import { normalizeSearchText, normalizePhone, matchesSearchQuery } from "@/components/royzapp/types";
 import { ZappSectorSelector } from "@/components/royzapp/ZappSectorSelector";
-import type { AIAgent } from "@/components/royzapp/ZappAIAgentItem";
+
 import {
   ZappDepartmentDialog,
   ZappAgentDialog,
