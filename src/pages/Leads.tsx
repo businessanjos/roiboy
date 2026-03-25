@@ -163,7 +163,7 @@ export default function Leads() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterSource, setFilterSource] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const LEADS_PER_PAGE = 50;
+  const [pageSize, setPageSize] = useState(20);
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
