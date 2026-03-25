@@ -7,7 +7,7 @@ export * from "./ZappTransferDialog";
 export * from "./ZappConversationTagDialog";
 export * from "./ZappContactPickerDialog";
 export * from "./ZappQuickRepliesDialog";
-export * from "./ZappAddClientDialog";
+
 export * from "./ZappAddContactDialog";
 export * from "./ZappNewConversationDialog";
 export * from "./ZappCloseTicketDialog";
