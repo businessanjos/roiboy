@@ -20,7 +20,7 @@ import {
   FileSignature,
   UserPlus,
   MessageCircle,
-  Crown,
+  
   UserCheck,
   Instagram,
   LayoutGrid,
