@@ -195,7 +195,7 @@ const App = () => (
                             <Route path="/reminders" element={<Reminders />} />
                             
                             <Route path="/roy-zapp" element={<RoyZapp />} />
-                            <Route path="/mentor-agenda" element={<MentorAgenda />} />
+                            
                             
                             <Route path="/billing" element={<BillingPortal />} />
                             
