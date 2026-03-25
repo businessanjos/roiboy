@@ -480,7 +480,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
         }
         return currentMessages;
       });
-    }, 30000);
+    }, 45000); // Increased from 30s to 45s for high volume
 
     return () => clearInterval(pollInterval);
   }, []);
