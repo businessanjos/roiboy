@@ -28,6 +28,8 @@ import {
   Clock,
   RefreshCw,
   CalendarIcon,
+  CalendarCheck,
+  UserX,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSalesTeamMetrics, SalesRepMetrics } from "@/hooks/useSalesTeamMetrics";
