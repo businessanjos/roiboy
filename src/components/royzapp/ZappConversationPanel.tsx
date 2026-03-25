@@ -624,10 +624,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       <ScrollArea className="flex-1">
         {activeView === "inbox" && (
           <div className="divide-y divide-zapp-border">
-              </>
-            )}
-            
-            {filteredAssignments.length === 0 && aiAgents.length === 0 ? (
+            {filteredAssignments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
                 <div className="w-20 h-20 rounded-full bg-zapp-panel flex items-center justify-center mb-4">
                   <MessageSquare className="h-10 w-10 text-zapp-text-muted" />
