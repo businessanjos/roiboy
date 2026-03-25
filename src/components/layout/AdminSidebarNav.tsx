@@ -35,7 +35,6 @@ const navGroups: NavGroup[] = [
     title: "Infraestrutura",
     items: [
       { id: "costs", label: "Custos IA", icon: Cpu },
-      { id: "cloud", label: "Cloud", icon: Cloud },
       { id: "audit", label: "Auditoria", icon: FileText },
     ],
   },

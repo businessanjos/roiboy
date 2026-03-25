@@ -220,10 +220,6 @@ export default function Admin() {
         return <AuditLogViewer />;
       case 'costs':
         return <AICostsTab accounts={accounts} />;
-      case 'cloud':
-        return <CloudUsageMonitor />;
-      case 'map':
-        return <SystemMap />;
       default:
         return <DashboardTab accounts={accounts} users={allUsers} />;
     }
