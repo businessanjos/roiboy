@@ -674,6 +674,10 @@ export function useZappData(options: UseZappDataOptions = {}) {
         // Campos de edição
         updated_at: m.updated_at || null,
         is_edited: m.is_edited || false,
+        // Mention map for group @mentions
+        mention_map: m.mention_map || null,
+        // Sender phone for fallback mention resolution
+        sender_phone: m.sender_phone || null,
       }));
       
       setMessages(msgs);

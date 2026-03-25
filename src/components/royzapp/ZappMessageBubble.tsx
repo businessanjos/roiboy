@@ -82,10 +82,22 @@ function resolveMentions(text: string, mentionMap?: Record<string, string> | nul
   
   // Match @<digits> patterns (WhatsApp JID mentions)
   return text.replace(/@(\d{5,})/g, (match, jidNumber) => {
-    if (mentionMap && mentionMap[jidNumber]) {
-      return `@${mentionMap[jidNumber]}`;
+    if (!mentionMap) return match;
+    
+    // Direct lookup
+    if (mentionMap[jidNumber]) return `@${mentionMap[jidNumber]}`;
+    
+    // Try partial matching (last 8 and 9 digits) to handle country code mismatches
+    const last8 = jidNumber.slice(-8);
+    const last9 = jidNumber.slice(-9);
+    for (const [key, name] of Object.entries(mentionMap)) {
+      if (!name) continue;
+      if (key.endsWith(last8) || key.endsWith(last9) || 
+          jidNumber.endsWith(key.slice(-8)) || jidNumber.endsWith(key.slice(-9))) {
+        return `@${name}`;
+      }
     }
-    // If no name found, keep the original but truncate the number
+    
     return match;
   });
 }

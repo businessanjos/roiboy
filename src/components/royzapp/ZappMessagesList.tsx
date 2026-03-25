@@ -15,18 +15,33 @@ interface ZappMessagesListProps {
 }
 
 // Build a fallback mention map from sender_phone data in group messages
-// Maps phone numbers (without +) to sender names
+// Maps phone numbers (without +) to sender names, with multiple digit variants for matching
 function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
   const map: Record<string, string> = {};
   for (const msg of messages) {
     if (msg.sender_name && msg.sender_name !== "Desconhecido") {
-      // Try to extract phone digits from sender_phone (e.g., "+5511999887766" -> "5511999887766")
-      // Note: WhatsApp JIDs in mentions may use different formats, so we store multiple variants
       const phone = msg.sender_phone;
       if (phone) {
         const digits = phone.replace(/\D/g, "");
-        if (digits && !map[digits]) {
-          map[digits] = msg.sender_name;
+        if (digits) {
+          // Store full number and partial variants for flexible matching
+          if (!map[digits]) map[digits] = msg.sender_name;
+          const last8 = digits.slice(-8);
+          const last9 = digits.slice(-9);
+          if (last8 && !map[last8]) map[last8] = msg.sender_name;
+          if (last9 && !map[last9]) map[last9] = msg.sender_name;
+        }
+      }
+    }
+    // Also merge any existing mention_map from the message into the fallback
+    if (msg.mention_map) {
+      for (const [key, name] of Object.entries(msg.mention_map)) {
+        if (name && !map[key]) {
+          map[key] = name;
+          const last8 = key.slice(-8);
+          const last9 = key.slice(-9);
+          if (last8 && !map[last8]) map[last8] = name;
+          if (last9 && !map[last9]) map[last9] = name;
         }
       }
     }
@@ -135,13 +150,20 @@ export function ZappMessagesList({
     return buildFallbackMentionMap(deduplicatedMessages);
   }, [isGroup, deduplicatedMessages]);
 
-  // Enrich messages: for messages with @<number> mentions but no mention_map, inject fallback
+  // Enrich messages: merge fallback mention names into mention_map for better resolution
   const enrichedMessages = useMemo(() => {
     if (!isGroup) return deduplicatedMessages;
     const mentionRegex = /@\d{5,}/;
     return deduplicatedMessages.map(msg => {
-      if (msg.content && mentionRegex.test(msg.content) && !msg.mention_map) {
-        return { ...msg, mention_map: fallbackMentionMap };
+      if (msg.content && mentionRegex.test(msg.content)) {
+        // Merge: existing mention_map + fallback (existing takes priority)
+        const merged = { ...fallbackMentionMap, ...(msg.mention_map || {}) };
+        // Remove empty-string values (webhook stores "" for unresolved)
+        const cleaned: Record<string, string> = {};
+        for (const [k, v] of Object.entries(merged)) {
+          if (v) cleaned[k] = v;
+        }
+        return { ...msg, mention_map: Object.keys(cleaned).length > 0 ? cleaned : null };
       }
       return msg;
     });
