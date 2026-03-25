@@ -2621,26 +2621,6 @@ export default function Clients() {
         </div>
       )}
 
-      {/* Kanban View */}
-      {viewMode === "kanban" && (accountId || currentUser?.account_id) && (
-        <ClientKanban
-          clients={filtered.map(c => ({
-            id: c.id,
-            full_name: c.full_name,
-            phone_e164: c.phone_e164,
-            emails: c.emails,
-            company_name: c.company_name,
-            avatar_url: c.avatar_url,
-            stage_id: c.stage_id,
-            status: c.status,
-            client_products: c.client_products,
-          }))}
-          stages={clientStages}
-          accountId={accountId || currentUser?.account_id || ''}
-          onStageChange={handleClientStageChange}
-          onRefreshStages={fetchClientStages}
-        />
-      )}
 
       {/* Onboarding Orquestrado View */}
       {viewMode === "onboarding" && (accountId || currentUser?.account_id) && (
