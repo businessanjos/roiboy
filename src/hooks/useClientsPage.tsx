@@ -71,8 +71,7 @@ export function useClientsPage() {
   const { logAudit } = useAuditLog();
 
   const [clients, setClients] = useState<any[]>([]);
-  const [vnpsMap, setVnpsMap] = useState<Record<string, VNPSData>>({});
-  const [scoreMap, setScoreMap] = useState<Record<string, ScoreData>>({});
+  const [contractMap, setContractMap] = useState<Record<string, ContractData>>({});
   const [contractMap, setContractMap] = useState<Record<string, ContractData>>({});
   const [whatsappMap, setWhatsappMap] = useState<Record<string, WhatsAppData>>({});
   const [loading, setLoading] = useState(true);
