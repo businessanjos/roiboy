@@ -586,24 +586,7 @@ export default function RoyZapp() {
     }
   };
   
-  const [messageInput, setMessageInput] = useState("");
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [audioPreview, setAudioPreview] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
-  const [imagePreview, setImagePreview] = useState<{ file: File; url: string; caption?: string } | null>(null);
-  const [filePreview, setFilePreview] = useState<{ file: File; url: string } | null>(null);
-  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
-  const [showFormatting, setShowFormatting] = useState(false);
-  const [uploadingMedia, setUploadingMedia] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<{ id: string; content: string | null; sender_name: string | null; is_from_client: boolean; external_message_id?: string | null } | null>(null);
-  const [pendingMentions, setPendingMentions] = useState<{ phone: string; jid: string }[]>([]);
-  const messageInputRef = useRef<HTMLTextAreaElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Messaging state is now managed by useZappMessaging hook (messaging.*)
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
   
   // User signature state (persisted to database)
