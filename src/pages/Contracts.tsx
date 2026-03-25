@@ -1839,12 +1839,7 @@ export default function Contracts() {
           </CardContent>
         </Card>
 
-        {/* Dashboard Tab */}
-        {activeTab === "dashboard" && (
-          <ContractsDashboard contracts={dashboardContracts} />
-        )}
-
-        {activeTab !== "dashboard" && (
+        {(
           <TabsContent value={activeTab} className="space-y-4">
             {/* Queue Status Info */}
             {activeTab === "fila" && (
