@@ -13,10 +13,10 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useMemo } from "react";
 import { ProfileContent } from "@/components/profile/ProfileContent";
-import { SubscriptionManager } from "@/components/settings/SubscriptionManager";
+
 import { MeetingPreferencesCard } from "@/components/settings/MeetingPreferencesCard";
 import { PlanUsageCard } from "@/components/plan";
-import { BillingContent } from "@/components/billing/BillingContent";
+
 import { ApiKeyTab } from "@/components/profile/ApiKeyTab";
 
 const RESTRICTED_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
@@ -45,8 +45,6 @@ export default function Settings() {
         return (
           <div className="space-y-6">
             <PlanUsageCard />
-            <SubscriptionManager />
-            <BillingContent />
           </div>
         );
       case "team":

@@ -61,7 +61,7 @@ const PublicEventFeedback = lazyRetry(() => import("./pages/PublicEventFeedback"
 const Admin = lazyRetry(() => import("./pages/Admin"));
 const EventCheckin = lazyRetry(() => import("./pages/EventCheckin"));
 const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
-const ChoosePlan = lazyRetry(() => import("./pages/ChoosePlan"));
+
 const TermsOfService = lazyRetry(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazyRetry(() => import("./pages/PrivacyPolicy"));
 
@@ -143,7 +143,7 @@ const App = () => (
                           <Route path="/feedback/:eventId" element={<PublicEventFeedback />} />
                           <Route path="/checkin/:code" element={<EventCheckin />} />
                           <Route path="/onboarding" element={<Onboarding />} />
-                          <Route path="/choose-plan" element={<ChoosePlan />} />
+                          
                           <Route path="/termos" element={<TermsOfService />} />
                           <Route path="/privacidade" element={<PrivacyPolicy />} />
                           
