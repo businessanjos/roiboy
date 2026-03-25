@@ -1967,7 +1967,7 @@ export default function Clients() {
                     <SelectItem value="expired">Expirado</SelectItem>
                     <SelectItem value="urgent">Expira em 30 dias</SelectItem>
                     <SelectItem value="warning">Expira em 60 dias</SelectItem>
-                    <SelectItem value="ok">Vigente</SelectItem>
+                    
                     <SelectItem value="pending">Pendente</SelectItem>
                     <SelectItem value="cancelled">Cancelado</SelectItem>
                     <SelectItem value="suspended">Suspenso</SelectItem>
@@ -2033,7 +2033,7 @@ export default function Clients() {
                 )}
                 {filterContract !== "all" && (
                   <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
-                    Contrato: {filterContract === "active" ? "Ativo" : filterContract === "expired" ? "Expirado" : filterContract === "urgent" ? "30 dias" : filterContract === "warning" ? "60 dias" : filterContract === "ok" ? "Vigente" : filterContract === "pending" ? "Pendente" : filterContract === "cancelled" ? "Cancelado" : filterContract === "suspended" ? "Suspenso" : "Sem contrato"}
+                    Contrato: {filterContract === "active" ? "Ativo" : filterContract === "expired" ? "Expirado" : filterContract === "urgent" ? "30 dias" : filterContract === "warning" ? "60 dias" : filterContract === "pending" ? "Pendente" : filterContract === "cancelled" ? "Cancelado" : filterContract === "suspended" ? "Suspenso" : "Sem contrato"}
                     <button onClick={() => setFilterContract("all")} className="hover:text-destructive">
                       <X className="h-3 w-3" />
                     </button>
