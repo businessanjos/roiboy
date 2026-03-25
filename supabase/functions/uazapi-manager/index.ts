@@ -8,6 +8,77 @@ const corsHeaders = {
 const UAZAPI_URL = (Deno.env.get("UAZAPI_URL") || "").replace(/\/$/, '');
 const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
+type UazapiInstanceLike = {
+  name?: string;
+  instance_name?: string;
+  status?: string;
+  state?: string;
+  owner?: string;
+  phone?: string;
+  number?: string;
+  token?: string;
+  profileName?: string;
+  profilePicUrl?: string;
+  instance?: {
+    name?: string;
+    status?: string;
+    owner?: string;
+    token?: string;
+  };
+};
+
+function extractInstancesList(payload: unknown): UazapiInstanceLike[] {
+  if (Array.isArray(payload)) return payload as UazapiInstanceLike[];
+
+  if (!payload || typeof payload !== "object") return [];
+
+  const record = payload as Record<string, unknown>;
+  const candidateKeys = ["instances", "data", "result", "rows", "all"];
+
+  for (const key of candidateKeys) {
+    if (Array.isArray(record[key])) {
+      return record[key] as UazapiInstanceLike[];
+    }
+  }
+
+  const objectValues = Object.values(record);
+  const nestedArray = objectValues.find(Array.isArray);
+  if (Array.isArray(nestedArray)) {
+    return nestedArray as UazapiInstanceLike[];
+  }
+
+  const looksLikeSingleInstance =
+    typeof record.name === "string" ||
+    typeof record.instance_name === "string" ||
+    (record.instance && typeof record.instance === "object");
+
+  if (looksLikeSingleInstance) {
+    return [record as UazapiInstanceLike];
+  }
+
+  const objectEntries = objectValues.filter(
+    (value) => value && typeof value === "object" && !Array.isArray(value),
+  ) as UazapiInstanceLike[];
+
+  return objectEntries;
+}
+
+function getInstanceName(instance: UazapiInstanceLike): string | undefined {
+  return instance.name || instance.instance_name || instance.instance?.name;
+}
+
+function getInstanceStatus(instance: UazapiInstanceLike): string | undefined {
+  return instance.status || instance.state || instance.instance?.status;
+}
+
+function getInstanceOwner(instance: UazapiInstanceLike): string | undefined {
+  return instance.owner || instance.phone || instance.number || instance.instance?.owner;
+}
+
+function getInstanceToken(instance: UazapiInstanceLike): string | undefined {
+  return instance.token || instance.instance?.token;
+}
+
 async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
   console.log(`[uazapi-admin] Calling: ${method} ${UAZAPI_URL}${endpoint}`);
   const r = await fetch(`${UAZAPI_URL}${endpoint}`, { 
@@ -109,10 +180,24 @@ serve(async (req) => {
     let result: unknown = { success: true };
 
     if (action === "status") {
-      const all = await uazapiAdmin("/instance/fetchInstances", "GET") as Array<{name?:string;status?:string;owner?:string}>;
-      const inst = all.find(i => i.name === instanceName);
-      result = { state: inst?.status || "unknown", connected: inst?.status === "connected", owner: inst?.owner };
-      if (intData?.id) await supabase.from("integrations").update({ status: inst?.status === "connected" ? "connected" : "disconnected" }).eq("id", intData.id);
+      const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET");
+      const all = extractInstancesList(allRaw);
+      const inst = all.find((i) => getInstanceName(i) === instanceName);
+      const instanceStatus = getInstanceStatus(inst || {});
+      const connected = instanceStatus === "connected" || instanceStatus === "open";
+
+      result = {
+        state: instanceStatus || "unknown",
+        connected,
+        owner: inst ? getInstanceOwner(inst) : undefined,
+      };
+
+      if (intData?.id) {
+        await supabase
+          .from("integrations")
+          .update({ status: connected ? "connected" : "disconnected" })
+          .eq("id", intData.id);
+      }
     
     } else if (action === "create") {
       const r = await uazapiAdmin("/instance/init", "POST", { name: instanceName });
@@ -190,7 +275,8 @@ serve(async (req) => {
       result = { groups: (Array.isArray(r) ? r : r.groups || []).map((g:any) => ({ group_jid: g.JID||g.jid||g.id, name: g.Name||g.name||g.Subject })) };
     
     } else if (action === "list_instances") {
-      const all = await uazapiAdmin("/instance/all", "GET") as Array<{name?:string;status?:string;owner?:string;profileName?:string;profilePicUrl?:string;token?:string}>;
+      const allRaw = await uazapiAdmin("/instance/all", "GET");
+      const all = extractInstancesList(allRaw);
       
       // Get all integrations for this account to know which are linked
       const { data: existingInts } = await supabase.from("integrations").select("config, sector_id, id, status").eq("account_id", accountId).eq("type", "whatsapp");
@@ -199,11 +285,24 @@ serve(async (req) => {
       
       // Filter: instances that belong to this account (roy-prefix), SDR instances, or explicitly linked
       const accountPrefix = `roy-${accountId.slice(0,8)}`;
-      const filtered = all.filter(i => i.name?.startsWith(accountPrefix) || i.name?.startsWith("sdr-") || linkedNames.has(i.name));
+      const filtered = all.filter((i) => {
+        const name = getInstanceName(i);
+        return !!name && (name.startsWith(accountPrefix) || name.startsWith("sdr-") || linkedNames.has(name));
+      });
       
       result = { instances: filtered.map(i => {
-        const linked = linkedMap.get(i.name);
-        return { ...i, hasToken: !!i.token, linked_sector_id: linked?.sector_id || null, linked_integration_id: linked?.id || null, linked_status: linked?.status || null };
+        const name = getInstanceName(i);
+        const linked = name ? linkedMap.get(name) : null;
+        return {
+          ...i,
+          name,
+          status: getInstanceStatus(i),
+          owner: getInstanceOwner(i),
+          hasToken: !!getInstanceToken(i),
+          linked_sector_id: linked?.sector_id || null,
+          linked_integration_id: linked?.id || null,
+          linked_status: linked?.status || null,
+        };
       }) };
     
     } else if (action === "list_sector_instances") {
@@ -211,10 +310,11 @@ serve(async (req) => {
       result = { instances: (ints||[]).map((i:any) => ({ id: i.id, sector_id: i.sector_id, instance_name: i.config?.instance_name, status: i.status, has_pin: !!i.pin_hash })) };
     
     } else if (action === "add_instance_to_sector") {
-      const all = await uazapiAdmin("/instance/all", "GET") as Array<{name?:string;token?:string;status?:string;owner?:string}>;
-      const inst = all.find(i => i.name === payload.instance_name);
+      const allRaw = await uazapiAdmin("/instance/all", "GET");
+      const all = extractInstancesList(allRaw);
+      const inst = all.find((i) => getInstanceName(i) === payload.instance_name);
       if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      await supabase.from("integrations").insert({ account_id: accountId, type: "whatsapp", sector_id, status: inst.status === "connected" ? "connected" : "disconnected", config: { provider: "uazapi", instance_name: payload.instance_name, instance_token: inst.token, owner: inst.owner } });
+      await supabase.from("integrations").insert({ account_id: accountId, type: "whatsapp", sector_id, status: getInstanceStatus(inst) === "connected" ? "connected" : "disconnected", config: { provider: "uazapi", instance_name: payload.instance_name, instance_token: getInstanceToken(inst), owner: getInstanceOwner(inst) } });
       result = { success: true };
     
     } else if (action === "verify_instance_pin") {
