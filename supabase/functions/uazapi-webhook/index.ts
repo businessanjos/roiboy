@@ -1629,7 +1629,9 @@ serve(async (req) => {
               console.log(`[RACE GUARD] Keeping assignment ${existingAssignment.id} as closed`);
             } else if (existingAssignment.status === "closed") {
               // Reopen closed conversations only for inbound messages
-              newStatus = direction === "inbound" ? "triage" : "closed";
+              // GROUPS FIX: Grupos dispensados (closed) NÃO devem ser reabertos automaticamente
+              // Apenas conversas individuais devem ser reabertas
+              newStatus = (direction === "inbound" && !isGroupMessage) ? "triage" : "closed";
             } else if (direction === "outbound" && existingAssignment.status !== "closed") {
               // Outbound message: we're waiting for client response
               newStatus = "waiting";
