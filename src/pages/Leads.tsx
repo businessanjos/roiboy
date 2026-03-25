@@ -67,6 +67,7 @@ import {
   XCircle,
   DollarSign,
   ChevronRight,
+  ChevronLeft,
   Upload,
   GitMerge,
 } from "lucide-react";
