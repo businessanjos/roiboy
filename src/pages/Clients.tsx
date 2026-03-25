@@ -259,7 +259,7 @@ export default function Clients() {
   const [searchQuery, setSearchQuery] = useState("");
   
   // Pagination state
-  const PAGE_SIZE = 50;
+  const [pageSize, setPageSize] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalClients, setTotalClients] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
