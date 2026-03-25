@@ -58,16 +58,6 @@ const SYSTEM_FUNCTIONS: SystemFunction[] = [
     requiresAuth: true,
   },
   {
-    id: "analyze-message",
-    name: "Análise de Mensagem",
-    description: "Analisa mensagens com IA para ROI/Risco",
-    endpoint: "/functions/v1/analyze-message",
-    icon: <Brain className="h-4 w-4" />,
-    category: "ai",
-    method: "POST",
-    requiresAuth: true,
-  },
-  {
     id: "uazapi-webhook",
     name: "Webhook UAZAPI",
     description: "Recebe mensagens do WhatsApp",
