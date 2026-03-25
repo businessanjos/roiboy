@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { supabase } from "@/integrations/supabase/client";
 import { notifyContractCreated } from "@/hooks/useContractNotifications";
@@ -185,6 +185,164 @@ const PAYMENT_METHODS = [
   { value: "dinheiro", label: "Dinheiro" },
   { value: "transferencia", label: "Transferência" },
 ];
+
+const formatCurrencyStatic = (value: number) => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+};
+
+const getExpiryBadgeStatic = (endDate: string | null) => {
+  if (!endDate) return null;
+  const daysUntilExpiry = differenceInDays(new Date(endDate), new Date());
+  
+  if (daysUntilExpiry < 0) {
+    return (
+      <Badge variant="destructive" className="text-xs">
+        <AlertTriangle className="h-3 w-3 mr-1" />
+        Vencido há {Math.abs(daysUntilExpiry)} dias
+      </Badge>
+    );
+  }
+  if (daysUntilExpiry <= 30) {
+    return (
+      <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 bg-amber-50">
+        <Clock className="h-3 w-3 mr-1" />
+        Vence em {daysUntilExpiry} dias
+      </Badge>
+    );
+  }
+  return null;
+};
+
+interface ContractRowProps {
+  contract: Contract;
+  activeTab: string;
+  validation?: any;
+  onNavigate: (clientId: string) => void;
+  onView: (contract: Contract) => void;
+  onDelete: (contract: Contract) => void;
+  onConciliateSuccess: () => void;
+}
+
+const ContractTableRow = memo(function ContractTableRow({
+  contract,
+  activeTab,
+  validation,
+  onNavigate,
+  onView,
+  onDelete,
+  onConciliateSuccess,
+}: ContractRowProps) {
+  const statusConfig = CONTRACT_STATUS_CONFIG[contract.status] || CONTRACT_STATUS_CONFIG.active;
+  const StatusIcon = statusConfig.icon;
+
+  return (
+    <TableRow className="group">
+      <TableCell>
+        <div 
+          className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+          onClick={() => onNavigate(contract.client_id)}
+        >
+          <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
+            {contract.client?.avatar_url ? (
+              <img 
+                src={contract.client.avatar_url} 
+                alt={contract.client.full_name}
+                className="w-9 h-9 rounded-full object-cover"
+              />
+            ) : (
+              <Users className="h-4 w-4 text-muted-foreground" />
+            )}
+          </div>
+          <div>
+            <p className="font-medium text-sm hover:underline">{contract.client?.full_name || "Cliente"}</p>
+            {contract.product && (
+              <Badge 
+                className="text-xs font-medium whitespace-nowrap shadow-sm mt-1"
+                style={{ 
+                  backgroundColor: contract.product.color || '#6b7280',
+                  borderColor: contract.product.color || '#6b7280',
+                  color: '#fff',
+                  textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                  boxShadow: `0 0 8px ${contract.product.color || '#6b7280'}50`
+                }}
+              >
+                {contract.product.name}
+              </Badge>
+            )}
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <span className="text-sm">
+          {CONTRACT_TYPES[contract.contract_type] || contract.contract_type}
+        </span>
+      </TableCell>
+      <TableCell>
+        <span className="font-medium text-sm">
+          {formatCurrencyStatic(contract.value)}
+        </span>
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm">
+            {format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}
+            {contract.end_date && (
+              <span className="text-muted-foreground"> →</span>
+            )}
+          </span>
+          {contract.end_date && (
+            <span className="text-sm">
+              {format(new Date(contract.end_date), "dd/MM/yyyy", { locale: ptBR })}
+            </span>
+          )}
+          {contract.status === "active" && getExpiryBadgeStatic(contract.end_date)}
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge 
+          variant="outline" 
+          className={cn("text-xs", statusConfig.className)}
+        >
+          <StatusIcon className="h-3 w-3 mr-1" />
+          {statusConfig.label}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-right">
+        <div className="flex items-center justify-end gap-2">
+          {activeTab === "fila" && (
+            <ConciliateButton
+              contractId={contract.id}
+              validation={validation}
+              onSuccess={onConciliateSuccess}
+            />
+          )}
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => onView(contract)}
+          >
+            <Eye className="h-4 w-4 mr-1" />
+            Ver Contrato
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(contract);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+});
 
 interface Client {
   id: string;
@@ -1502,35 +1660,23 @@ export default function Contracts() {
     };
   }, [filteredContracts, currentContracts, hasActiveFilters]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencyStatic;
+  const getExpiryBadge = getExpiryBadgeStatic;
 
-  const getExpiryBadge = (endDate: string | null) => {
-    if (!endDate) return null;
-    const daysUntilExpiry = differenceInDays(new Date(endDate), new Date());
-    
-    if (daysUntilExpiry < 0) {
-      return (
-        <Badge variant="destructive" className="text-xs">
-          <AlertTriangle className="h-3 w-3 mr-1" />
-          Vencido há {Math.abs(daysUntilExpiry)} dias
-        </Badge>
-      );
-    }
-    if (daysUntilExpiry <= 30) {
-      return (
-        <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 bg-amber-50">
-          <Clock className="h-3 w-3 mr-1" />
-          Vence em {daysUntilExpiry} dias
-        </Badge>
-      );
-    }
-    return null;
-  };
+  // Stable callbacks for memoized row component
+  const handleNavigateToClient = useCallback((clientId: string) => {
+    navigate(`/clients/${clientId}`);
+  }, [navigate]);
+
+  const handleViewContract = useCallback((contract: Contract) => {
+    setSelectedContract(contract);
+    setDetailSheetOpen(true);
+  }, []);
+
+  const handleRequestDeleteContract = useCallback((contract: Contract) => {
+    setContractToDelete(contract);
+    setDeleteDialogOpen(true);
+  }, []);
 
   if (loading) {
     return (
@@ -1920,119 +2066,18 @@ export default function Contracts() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedContracts.map((contract) => {
-                    const statusConfig = CONTRACT_STATUS_CONFIG[contract.status] || CONTRACT_STATUS_CONFIG.active;
-                    const StatusIcon = statusConfig.icon;
-                    
-                    return (
-                      <TableRow key={contract.id} className="group">
-                        <TableCell>
-                          <div 
-                            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                            onClick={() => navigate(`/clients/${contract.client_id}`)}
-                          >
-                            <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center">
-                              {contract.client?.avatar_url ? (
-                                <img 
-                                  src={contract.client.avatar_url} 
-                                  alt={contract.client.full_name}
-                                  className="w-9 h-9 rounded-full object-cover"
-                                />
-                              ) : (
-                                <Users className="h-4 w-4 text-muted-foreground" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm hover:underline">{contract.client?.full_name || "Cliente"}</p>
-                              {contract.product && (
-                                <Badge 
-                                  className="text-xs font-medium whitespace-nowrap shadow-sm mt-1"
-                                  style={{ 
-                                    backgroundColor: contract.product.color || '#6b7280',
-                                    borderColor: contract.product.color || '#6b7280',
-                                    color: '#fff',
-                                    textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                                    boxShadow: `0 0 8px ${contract.product.color || '#6b7280'}50`
-                                  }}
-                                >
-                                  {contract.product.name}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-sm">
-                            {CONTRACT_TYPES[contract.contract_type] || contract.contract_type}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <span className="font-medium text-sm">
-                            {formatCurrency(contract.value)}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-sm">
-                              {format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}
-                              {contract.end_date && (
-                                <span className="text-muted-foreground"> →</span>
-                              )}
-                            </span>
-                            {contract.end_date && (
-                              <span className="text-sm">
-                                {format(new Date(contract.end_date), "dd/MM/yyyy", { locale: ptBR })}
-                              </span>
-                            )}
-                            {contract.status === "active" && getExpiryBadge(contract.end_date)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant="outline" 
-                            className={cn("text-xs", statusConfig.className)}
-                          >
-                            <StatusIcon className="h-3 w-3 mr-1" />
-                            {statusConfig.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            {activeTab === "fila" && (
-                              <ConciliateButton
-                                contractId={contract.id}
-                                validation={conciliationValidations.get(contract.id)}
-                                onSuccess={fetchContracts}
-                              />
-                            )}
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => {
-                                setSelectedContract(contract);
-                                setDetailSheetOpen(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              Ver Contrato
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setContractToDelete(contract);
-                                setDeleteDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                  {paginatedContracts.map((contract) => (
+                    <ContractTableRow
+                      key={contract.id}
+                      contract={contract}
+                      activeTab={activeTab}
+                      validation={conciliationValidations.get(contract.id)}
+                      onNavigate={handleNavigateToClient}
+                      onView={handleViewContract}
+                      onDelete={handleRequestDeleteContract}
+                      onConciliateSuccess={fetchContracts}
+                    />
+                  ))}
                 </TableBody>
               </Table>
             )}
