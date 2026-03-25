@@ -241,19 +241,13 @@ export default function Admin() {
 }
 
 // Dashboard Tab Component
-function DashboardTab({ accounts, users, plans }: { accounts: Account[]; users: User[]; plans: SubscriptionPlan[] }) {
+function DashboardTab({ accounts, users }: { accounts: Account[]; users: User[] }) {
   const activeAccounts = accounts.filter(a => a.subscription_status === 'active').length;
   const trialAccounts = accounts.filter(a => a.subscription_status === 'trial').length;
   const suspendedAccounts = accounts.filter(a => a.subscription_status === 'suspended').length;
   const cancelledAccounts = accounts.filter(a => a.subscription_status === 'cancelled').length;
   
   const totalClients = accounts.reduce((sum, a) => sum + (a.client_count || 0), 0);
-  
-  // Separate main plans from add-ons
-  const mainPlans = plans.filter(p => p.plan_type === 'main');
-  const addonPlans = plans.filter(p => p.plan_type === 'addon');
-  const activeMainPlans = mainPlans.filter(p => p.is_active).length;
-  const activeAddons = addonPlans.filter(p => p.is_active).length;
 
   // ========== AI USAGE METRICS (Last 30 days) ==========
   const { data: aiStats } = useQuery({
