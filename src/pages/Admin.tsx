@@ -395,15 +395,6 @@ function DashboardTab({ accounts, users }: { accounts: Account[]; users: User[] 
     </div>
   );
 }
-      
-      // Get accounts created before last month end that had active status
-      const accountsLastMonth = accounts.filter(a => {
-        const createdAt = new Date(a.created_at);
-        return createdAt <= lastMonthEnd;
-      });
-      
-
-      const lastMonthMrr = accountsLastMonth.reduce((sum, account) => {
 
 // Accounts Tab Component
 function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; allUsers: User[]; isLoading: boolean }) {
@@ -858,10 +849,6 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
                   <h4 className="text-sm font-medium text-muted-foreground">Assinatura</h4>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="grid gap-2">
-                      <Label className="text-sm">Plano</Label>
-                      {/* Plan selector removed */}
-                    </div>
-                    <div className="grid gap-2">
                       <Label className="text-sm">Status</Label>
                       <Select value={createFormData.subscription_status} onValueChange={v => setCreateFormData(f => ({ ...f, subscription_status: v }))}>
                         <SelectTrigger className="h-9">
@@ -976,7 +963,7 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
                     />
                   </TableHead>
                   <TableHead className="font-medium">Nome</TableHead>
-                  <TableHead className="font-medium">Plano</TableHead>
+                  
                   <TableHead className="font-medium">Status</TableHead>
                   <TableHead className="font-medium text-center">Usuários</TableHead>
                   <TableHead className="font-medium text-center">Clientes</TableHead>
@@ -997,13 +984,6 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
                         />
                       </TableCell>
                       <TableCell className="font-medium">{account.name}</TableCell>
-                      <TableCell>
-                        {account.plan_id ? (
-                          <Badge variant="outline" className="text-xs">Com plano</Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
                       <TableCell>
                         <Badge variant={status.variant} className="text-xs">{status.label}</Badge>
                       </TableCell>
@@ -1208,10 +1188,6 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
               <div className="space-y-3">
                 <h4 className="text-sm font-medium text-muted-foreground">Assinatura</h4>
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="grid gap-2">
-                    <Label className="text-sm">Plano</Label>
-                    {/* Plan selector removed */}
-                  </div>
                   <div className="grid gap-2">
                     <Label className="text-sm">Status</Label>
                     <Select value={editFormData.subscription_status} onValueChange={v => setEditFormData(f => ({ ...f, subscription_status: v }))}>
