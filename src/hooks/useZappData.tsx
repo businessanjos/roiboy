@@ -685,20 +685,35 @@ export function useZappData(options: UseZappDataOptions = {}) {
       );
 
       if (pendingMediaMsgs.length > 0) {
-        // Limit to 5 per conversation open to balance cost and UX
-        const idsToDownload = pendingMediaMsgs.slice(0, 5).map((m) => m.id);
-        console.log(`[ZappData] Auto-downloading ${idsToDownload.length} of ${pendingMediaMsgs.length} pending media (optimized)`);
+        // Download in batches of 10, with progressive loading for remaining
+        const BATCH_SIZE = 10;
+        const allIds = pendingMediaMsgs.map((m) => m.id);
+        console.log(`[ZappData] Auto-downloading ${allIds.length} pending media in batches of ${BATCH_SIZE}`);
         
-        // Fire-and-forget to avoid blocking UI - realtime will update when completed
+        // Download first batch immediately
+        const firstBatch = allIds.slice(0, BATCH_SIZE);
         supabase.functions.invoke("download-media", {
-          body: { message_ids: idsToDownload }
+          body: { message_ids: firstBatch }
         }).then((res) => {
           if (res.error) {
-            console.error("[ZappData] Download-media function error:", res.error);
+            console.error("[ZappData] Download-media batch 1 error:", res.error);
           }
         }).catch((err) => {
           console.error("[ZappData] Auto-download network error:", err);
         });
+        
+        // Queue remaining batches with staggered delays
+        for (let i = BATCH_SIZE; i < allIds.length; i += BATCH_SIZE) {
+          const batch = allIds.slice(i, i + BATCH_SIZE);
+          const delay = Math.floor(i / BATCH_SIZE) * 2000; // 2s between batches
+          setTimeout(() => {
+            supabase.functions.invoke("download-media", {
+              body: { message_ids: batch }
+            }).catch((err) => {
+              console.error("[ZappData] Auto-download batch error:", err);
+            });
+          }, delay);
+        }
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
