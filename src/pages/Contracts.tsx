@@ -1501,7 +1501,7 @@ export default function Contracts() {
       expiringSoon: expiringSoon.length,
       expired: expired.length,
     };
-  }, [filteredContracts, currentContracts, dashboardContracts, hasActiveFilters, activeTab]);
+  }, [filteredContracts, currentContracts, hasActiveFilters]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
