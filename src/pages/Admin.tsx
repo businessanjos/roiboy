@@ -395,15 +395,6 @@ function DashboardTab({ accounts, users }: { accounts: Account[]; users: User[] 
     </div>
   );
 }
-      
-      // Get accounts created before last month end that had active status
-      const accountsLastMonth = accounts.filter(a => {
-        const createdAt = new Date(a.created_at);
-        return createdAt <= lastMonthEnd;
-      });
-      
-
-      const lastMonthMrr = accountsLastMonth.reduce((sum, account) => {
 
 // Accounts Tab Component
 function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; allUsers: User[]; isLoading: boolean }) {
