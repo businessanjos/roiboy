@@ -83,7 +83,7 @@ const Contracts = lazyRetry(() => import("./pages/Contracts"));
 const SalesPipeline = lazyRetry(() => import("./pages/SalesPipeline"));
 const SalesTeam = lazyRetry(() => import("./pages/SalesTeam"));
 const Leads = lazyRetry(() => import("./pages/Leads"));
-const TeamChat = lazyRetry(() => import("./pages/TeamChat"));
+
 const Marketing = lazyRetry(() => import("./pages/Marketing"));
 const ContentCalendar = lazyRetry(() => import("./pages/ContentCalendar"));
 const SocialMedia = lazyRetry(() => import("./pages/SocialMedia"));
