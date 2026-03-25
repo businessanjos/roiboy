@@ -61,7 +61,7 @@ import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
 
 
-import { ClientRequestsFeed } from "@/components/dashboard/ClientRequestsFeed";
+
 
 interface ContractData {
   id: string;
