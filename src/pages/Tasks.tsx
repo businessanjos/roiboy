@@ -599,12 +599,12 @@ export default function Tasks() {
   }, [filteredTasks, sortBy, sortDirection]);
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(sortedTasks.length / TASKS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(sortedTasks.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedTasks = useMemo(() => {
-    const start = (safePage - 1) * TASKS_PER_PAGE;
-    return sortedTasks.slice(start, start + TASKS_PER_PAGE);
-  }, [sortedTasks, safePage, TASKS_PER_PAGE]);
+    const start = (safePage - 1) * pageSize;
+    return sortedTasks.slice(start, start + pageSize);
+  }, [sortedTasks, safePage, pageSize]);
 
   // Reset page when filters change
   useEffect(() => {
