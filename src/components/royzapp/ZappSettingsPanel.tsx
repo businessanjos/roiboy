@@ -69,7 +69,6 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
   importingConversations,
   userSignature,
   spellingEnabled = true,
-  spellingEnabled = true,
   notificationPermission = "default",
   onToggleWhatsAppConnection,
   onRoundRobinChange,
