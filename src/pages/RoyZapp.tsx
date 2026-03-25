@@ -14,7 +14,6 @@ import {
   ZappTag,
   Department,
   ConversationAssignment,
-  ZappAIAgentChat,
 } from "@/components/royzapp";
 import { normalizeSearchText, normalizePhone, matchesSearchQuery } from "@/components/royzapp/types";
 import { ZappSectorSelector } from "@/components/royzapp/ZappSectorSelector";
