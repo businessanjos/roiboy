@@ -1186,12 +1186,6 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
         </DialogContent>
       </Dialog>
 
-      <ZapSignDialog
-        open={zapSignDialogOpen}
-        onOpenChange={setZapSignDialogOpen}
-        clientId={clientId}
-        contractId={zapSignContractId}
-      />
     </div>
   );
 }
