@@ -1673,7 +1673,7 @@ export default function Contracts() {
     setDetailSheetOpen(true);
   }, []);
 
-  const handleDeleteContract = useCallback((contract: Contract) => {
+  const handleRequestDeleteContract = useCallback((contract: Contract) => {
     setContractToDelete(contract);
     setDeleteDialogOpen(true);
   }, []);
