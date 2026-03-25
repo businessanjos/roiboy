@@ -161,9 +161,6 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   // Products state
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   
-  // ZapSign dialog state
-  const [zapSignDialogOpen, setZapSignDialogOpen] = useState(false);
-  const [zapSignContractId, setZapSignContractId] = useState<string | undefined>(undefined);
 
   // Status action dialog state
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
