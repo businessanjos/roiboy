@@ -4084,7 +4084,7 @@ export default function RoyZapp() {
           importLimit={importLimit}
           importingConversations={importingConversations}
           onSelectConversation={(a) => {
-            setSelectedAIAgent(null); // Clear AI agent when selecting regular conversation
+            
             setSelectedConversation(a);
             const zappConvId = a.zapp_conversation?.id;
             if (zappConvId && (a.zapp_conversation?.unread_count || 0) > 0) {
