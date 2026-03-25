@@ -239,9 +239,6 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onPullFromQueue,
   onRefreshMessages,
   isRefreshingMessages,
-  aiAgents = [],
-  selectedAIAgent,
-  onSelectAIAgent,
 }: ZappConversationPanelProps) {
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
