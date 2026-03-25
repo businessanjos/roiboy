@@ -1147,8 +1147,24 @@ serve(async (req) => {
           
           const { data } = await groupQuery.maybeSingle();
           existingZappConvo = data;
+          
+          // FALLBACK: If not found with integration_id filter, search without it
+          // This handles multi-sector groups (e.g., group created by Diretoria but messages arriving via Operações)
+          if (!existingZappConvo && integrationId) {
+            const { data: fallbackData } = await supabase
+              .from("zapp_conversations")
+              .select("id, unread_count, integration_id, contact_name, client_id, lead_id")
+              .eq("account_id", accountId)
+              .eq("group_jid", groupJid)
+              .maybeSingle();
+            if (fallbackData) {
+              console.log(`[ZAPP] Group fallback match: ${groupJid} found with integration_id=${fallbackData.integration_id} (webhook integration=${integrationId})`);
+              existingZappConvo = fallbackData;
+            }
+          }
+          
           // Cache result (even null = no conversation found)
-          setCache(conversationCache, convCacheKey, data);
+          setCache(conversationCache, convCacheKey, existingZappConvo || data);
         } else {
           // For direct messages, search by phone_e164 + integration_id for multi-instance isolation
           // CRITICAL: This ensures same phone number creates separate conversations per instance
@@ -1822,6 +1838,17 @@ serve(async (req) => {
             
             const { data } = await groupQuery.maybeSingle();
             existingZappConvo = data;
+            
+            // FALLBACK: If not found with sector filter, search without it (multi-sector groups)
+            if (!existingZappConvo && sectorId) {
+              const { data: fallbackData } = await supabase
+                .from("zapp_conversations")
+                .select("id, unread_count")
+                .eq("account_id", accountId)
+                .eq("group_jid", groupJid)
+                .maybeSingle();
+              existingZappConvo = fallbackData;
+            }
           } else {
             // For direct messages, search by phone_e164 + sector
             let directQuery = supabase
