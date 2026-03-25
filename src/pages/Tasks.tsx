@@ -563,16 +563,14 @@ export default function Tasks() {
       let comparison = 0;
       
       if (sortBy === "priority") {
-        // Alta (high=1) -> Média (medium=2) -> Baixa (low=3)
         comparison = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
       } 
       else if (sortBy === "due_date") {
-        // Atrasado (mais negativo) -> Hoje (0) -> Futuro (positivo)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
         const getDuePriority = (task: Task) => {
-          if (!task.due_date) return Infinity; // Sem prazo vai pro final
+          if (!task.due_date) return Infinity;
           const dueDate = parseLocalDate(task.due_date);
           if (!dueDate) return Infinity;
           return differenceInDays(dueDate, today);
@@ -581,28 +579,37 @@ export default function Tasks() {
         comparison = getDuePriority(a) - getDuePriority(b);
       }
       else if (sortBy === "responsible") {
-        // Ordem alfabética pelo nome do responsável
-        const nameA = a.assigned_user?.name?.toLowerCase() || "zzz"; // Sem responsável vai pro final
+        const nameA = a.assigned_user?.name?.toLowerCase() || "zzz";
         const nameB = b.assigned_user?.name?.toLowerCase() || "zzz";
         comparison = nameA.localeCompare(nameB, "pt-BR");
       }
       else if (sortBy === "stage") {
-        // Ordem alfabética pelo nome da etapa
         const stageA = a.deals?.stage?.name?.toLowerCase() || "zzz";
         const stageB = b.deals?.stage?.name?.toLowerCase() || "zzz";
         comparison = stageA.localeCompare(stageB, "pt-BR");
       }
       else {
-        // created_at - mais recente primeiro
         comparison = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
       
-      // Inverter se direção for descendente
       return sortDirection === "desc" ? -comparison : comparison;
     });
     
     return sorted;
   }, [filteredTasks, sortBy, sortDirection]);
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(sortedTasks.length / TASKS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedTasks = useMemo(() => {
+    const start = (safePage - 1) * TASKS_PER_PAGE;
+    return sortedTasks.slice(start, start + TASKS_PER_PAGE);
+  }, [sortedTasks, safePage, TASKS_PER_PAGE]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterUser, filterActivityType, activeTab, filterDateStart, filterDateEnd, filterStage, sortBy, sortDirection]);
 
   // Count tasks per status - uses baseFilteredTasks for dynamic filtering
   const statusCounts = useMemo(() => {
