@@ -704,7 +704,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Status Cards - Single Row */}
-          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-6" : "md:grid-cols-3"}`}>
+          <div className={`grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 ${gestaoViewMode === "operacoes" ? "md:grid-cols-7" : "md:grid-cols-3"}`}>
             {/* Total de Clientes */}
             <Card className="shadow-card border-l-4 border-l-primary">
               <CardContent className="p-4">
