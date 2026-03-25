@@ -816,41 +816,6 @@ export default function RoyZapp() {
   const [newConversationClients, setNewConversationClients] = useState<any[]>([]);
   const [creatingConversation, setCreatingConversation] = useState(false);
 
-  // AI Agents state
-  const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
-  const [selectedAIAgent, setSelectedAIAgent] = useState<AIAgent | null>(null);
-
-  // Playbook dialog state for chat
-  const [playbookDialogOpen, setPlaybookDialogOpen] = useState(false);
-  
-  // Close ticket dialog state
-  const [closeTicketDialogOpen, setCloseTicketDialogOpen] = useState(false);
-  
-  // Link client dialog state
-  const [linkClientDialogOpen, setLinkClientDialogOpen] = useState(false);
-  
-  // Edit group dialog state
-  const [editGroupDialogOpen, setEditGroupDialogOpen] = useState(false);
-  
-  // Permanent delete conversation dialog state
-  const [permanentDeleteDialogOpen, setPermanentDeleteDialogOpen] = useState(false);
-
-  // Fetch AI agents
-  useEffect(() => {
-    const fetchAIAgents = async () => {
-      const { data, error } = await supabase
-        .from("ai_sector_agents")
-        .select("id, sector_id, name, display_name, avatar_url, greeting_message, is_enabled")
-        .eq("is_enabled", true)
-        .order("name");
-
-      if (!error && data) {
-        setAiAgents(data as AIAgent[]);
-      }
-    };
-
-    fetchAIAgents();
-  }, []);
 
   // Ref to track current conversation ID for realtime validation
   const currentConversationIdRef = useRef<string | null>(null);
