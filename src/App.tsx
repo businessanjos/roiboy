@@ -140,7 +140,7 @@ const App = () => (
                         <Suspense fallback={<PageLoader />}>
                           <Routes>
                             <Route path="/" element={<Navigate to="/setores" replace />} />
-                          <Route path="/home" element={<Home />} />
+                          
                           <Route path="/auth" element={<Auth />} />
                           <Route path="/f/:formId" element={<PublicForm />} />
                           <Route path="/rsvp/:token" element={<PublicRSVP />} />
