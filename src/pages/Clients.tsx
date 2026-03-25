@@ -2251,62 +2251,6 @@ export default function Clients() {
                           </button>
                         </TableCell>
                         <TableCell className="text-center">
-                          {scoreMap[client.id] ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className={cn(
-                                    "inline-flex items-center justify-center min-w-[40px] px-2 py-1 rounded-md text-xs font-bold",
-                                    scoreMap[client.id].roizometer >= 70
-                                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                      : scoreMap[client.id].roizometer >= 40
-                                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                        : "bg-destructive/10 text-destructive"
-                                  )}>
-                                    {scoreMap[client.id].roizometer}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="text-xs">
-                                    <p className="font-medium">Roizômetro: {scoreMap[client.id].roizometer}%</p>
-                                    <p className="text-muted-foreground">Percepção de ROI do cliente</p>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {scoreMap[client.id] ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className={cn(
-                                    "inline-flex items-center justify-center min-w-[40px] px-2 py-1 rounded-md text-xs font-bold",
-                                    scoreMap[client.id].escore >= 70
-                                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                      : scoreMap[client.id].escore >= 40
-                                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                        : "bg-destructive/10 text-destructive"
-                                  )}>
-                                    {scoreMap[client.id].escore}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="text-xs">
-                                    <p className="font-medium">E-Score: {scoreMap[client.id].escore}</p>
-                                    <p className="text-muted-foreground">Engajamento do cliente</p>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
                           {(() => {
                             const whatsappData = whatsappMap[client.id];
                             const hasMessages = whatsappData && whatsappData.messageCount > 0;
