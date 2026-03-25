@@ -160,6 +160,8 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           assigned_leads: 0,
           converted_leads: 0,
           entry_value_total: 0,
+          scheduled_calls: 0,
+          noshow_calls: 0,
         };
       }
 
