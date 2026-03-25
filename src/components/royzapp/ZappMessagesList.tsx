@@ -129,6 +129,24 @@ export function ZappMessagesList({
     return result;
   }, [messages]);
 
+  // Build fallback mention map from sender_phone data for groups
+  const fallbackMentionMap = useMemo(() => {
+    if (!isGroup) return {};
+    return buildFallbackMentionMap(deduplicatedMessages);
+  }, [isGroup, deduplicatedMessages]);
+
+  // Enrich messages: for messages with @<number> mentions but no mention_map, inject fallback
+  const enrichedMessages = useMemo(() => {
+    if (!isGroup) return deduplicatedMessages;
+    const mentionRegex = /@\d{5,}/;
+    return deduplicatedMessages.map(msg => {
+      if (msg.content && mentionRegex.test(msg.content) && !msg.mention_map) {
+        return { ...msg, mention_map: fallbackMentionMap };
+      }
+      return msg;
+    });
+  }, [deduplicatedMessages, isGroup, fallbackMentionMap]);
+
   // Scroll to quoted message handler
   const handleScrollToQuoted = useCallback((quotedMessageId: string) => {
     // Find message by external_message_id OR local id
