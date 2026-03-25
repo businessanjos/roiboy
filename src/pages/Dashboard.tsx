@@ -60,7 +60,7 @@ import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
 
-import { LiveParticipationReport } from "@/components/dashboard/LiveParticipationReport";
+
 import { ClientRequestsFeed } from "@/components/dashboard/ClientRequestsFeed";
 
 interface ContractData {
@@ -652,13 +652,6 @@ export default function Dashboard() {
             </Card>
 
           {/* Live Participation Report */}
-          <div className="mt-6">
-            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <Video className="h-5 w-5 text-primary" />
-              Relatório de Participação em Eventos
-            </h3>
-            <LiveParticipationReport />
-          </div>
 
           {/* Group Engagement Report */}
           <div className="mt-6">

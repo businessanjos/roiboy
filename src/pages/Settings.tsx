@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { SessionsManager } from "@/components/settings/SessionsManager";
 import { SecurityAuditViewer } from "@/components/settings/SecurityAuditViewer";
-import { MembersBookSettings } from "@/components/settings/MembersBookSettings";
+
 import { IntegrationsContent } from "@/components/integrations/IntegrationsContent";
 import { UserSectorAccessManager } from "@/components/settings/UserSectorAccessManager";
 import { TeamManager } from "@/components/settings/TeamManager";
@@ -75,7 +75,7 @@ export default function Settings() {
           </div>
         );
       case "members-book":
-        return <MembersBookSettings />;
+        return null;
       case "api-key":
         return isAdmin && currentUser ? (
           <ApiKeyTab userId={currentUser.id} accountId={currentUser.account_id} />

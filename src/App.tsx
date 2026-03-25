@@ -66,14 +66,9 @@ const TermsOfService = lazyRetry(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazyRetry(() => import("./pages/PrivacyPolicy"));
 
 const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
-const SalesMeetings = lazyRetry(() => import("./pages/SalesMeetings"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
 
-const PublicMembersBook = lazyRetry(() => import("./pages/PublicMembersBook"));
-
 const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
-const SharedInsightsDashboard = lazyRetry(() => import("./pages/SharedInsightsDashboard"));
-const MentorAgenda = lazyRetry(() => import("./pages/MentorAgenda"));
 const BillingPortal = lazyRetry(() => import("./pages/BillingPortal"));
 const Sectors = lazyRetry(() => import("./pages/Sectors"));
 const Contracts = lazyRetry(() => import("./pages/Contracts"));
@@ -152,8 +147,6 @@ const App = () => (
                           <Route path="/termos" element={<TermsOfService />} />
                           <Route path="/privacidade" element={<PrivacyPolicy />} />
                           
-                          <Route path="/members" element={<PublicMembersBook />} />
-                          <Route path="/shared/insights/:token" element={<SharedInsightsDashboard />} />
                           <Route element={<AppLayout />}>
                             <Route path="/setores" element={<Sectors />} />
                             <Route path="/dashboard" element={<Dashboard />} />
@@ -202,7 +195,7 @@ const App = () => (
                             <Route path="/reminders" element={<Reminders />} />
                             
                             <Route path="/roy-zapp" element={<RoyZapp />} />
-                            <Route path="/mentor-agenda" element={<MentorAgenda />} />
+                            
                             
                             <Route path="/billing" element={<BillingPortal />} />
                             
@@ -217,7 +210,7 @@ const App = () => (
                             <Route path="/admin" element={<Admin />} />
                             <Route path="/admin/whatsapp-diagnostics" element={<WhatsAppDiagnostics />} />
                             <Route path="/sales-scripts" element={<SalesScripts />} />
-                            <Route path="/sales-meetings" element={<SalesMeetings />} />
+                            
                           </Route>
                           <Route path="*" element={<NotFound />} />
                         </Routes>
