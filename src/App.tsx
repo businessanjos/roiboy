@@ -57,8 +57,6 @@ const PublicForm = lazyRetry(() => import("./pages/PublicForm"));
 const PublicRSVP = lazyRetry(() => import("./pages/PublicRSVP"));
 const PublicEventRegistration = lazyRetry(() => import("./pages/PublicEventRegistration"));
 const PublicEventFeedback = lazyRetry(() => import("./pages/PublicEventFeedback"));
-const Presentation = lazyRetry(() => import("./pages/Presentation"));
-const ExtensionPreview = lazyRetry(() => import("./pages/ExtensionPreview"));
 
 const Admin = lazyRetry(() => import("./pages/Admin"));
 const EventCheckin = lazyRetry(() => import("./pages/EventCheckin"));
@@ -67,7 +65,6 @@ const ChoosePlan = lazyRetry(() => import("./pages/ChoosePlan"));
 const TermsOfService = lazyRetry(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazyRetry(() => import("./pages/PrivacyPolicy"));
 const Download = lazyRetry(() => import("./pages/Download"));
-const Home = lazyRetry(() => import("./pages/Home"));
 const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
 const SalesMeetings = lazyRetry(() => import("./pages/SalesMeetings"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
@@ -143,15 +140,13 @@ const App = () => (
                         <Suspense fallback={<PageLoader />}>
                           <Routes>
                             <Route path="/" element={<Navigate to="/setores" replace />} />
-                          <Route path="/home" element={<Home />} />
+                          
                           <Route path="/auth" element={<Auth />} />
                           <Route path="/f/:formId" element={<PublicForm />} />
                           <Route path="/rsvp/:token" element={<PublicRSVP />} />
                           <Route path="/inscricao/:code" element={<PublicEventRegistration />} />
                           <Route path="/feedback/:eventId" element={<PublicEventFeedback />} />
                           <Route path="/checkin/:code" element={<EventCheckin />} />
-                          <Route path="/sobre" element={<Presentation />} />
-                          <Route path="/extension-preview" element={<ExtensionPreview />} />
                           <Route path="/onboarding" element={<Onboarding />} />
                           <Route path="/choose-plan" element={<ChoosePlan />} />
                           <Route path="/termos" element={<TermsOfService />} />

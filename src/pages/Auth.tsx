@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, AlertCircle, Info, ArrowLeft, CheckCircle, CreditCard, Phone, ShieldAlert, Lock } from "lucide-react";
+import { Loader2, AlertCircle, ArrowLeft, CheckCircle, CreditCard, Phone, ShieldAlert, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -632,14 +632,6 @@ export default function Auth() {
         <p className="text-center text-sm text-muted-foreground mt-6">
           Encante seus clientes e meça o impacto em tempo real.
         </p>
-        
-        <Link 
-          to="/sobre" 
-          className="flex items-center justify-center gap-2 text-sm text-primary hover:underline mt-4"
-        >
-          <Info className="h-4 w-4" />
-          Conheça mais sobre o ROY
-        </Link>
       </div>
 
       {/* Payment Setup Dialog */}
