@@ -989,13 +989,6 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
                       </TableCell>
                       <TableCell className="font-medium">{account.name}</TableCell>
                       <TableCell>
-                        {account.plan_id ? (
-                          <Badge variant="outline" className="text-xs">Com plano</Badge>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
                         <Badge variant={status.variant} className="text-xs">{status.label}</Badge>
                       </TableCell>
                       <TableCell className="text-center text-sm">{account.user_count}</TableCell>
