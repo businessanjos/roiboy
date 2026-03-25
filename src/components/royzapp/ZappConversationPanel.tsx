@@ -787,8 +787,6 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             onImportConversations={onImportConversations}
             onSignatureChange={onSignatureChange}
             onSpellingChange={onSpellingChange}
-            onSuggestionsChange={onSuggestionsChange}
-            onAutoLearningChange={onAutoLearningChange}
             onRequestNotificationPermission={onRequestNotificationPermission}
           />
         )}
