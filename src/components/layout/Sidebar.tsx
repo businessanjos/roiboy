@@ -82,11 +82,6 @@ interface NavItem {
   permission?: Permission | Permission[];
 }
 
-// Simplified navigation for super admins - only admin-related items
-const superAdminNavItems: NavItem[] = [
-  { to: "/admin", icon: Shield, label: "Administração" },
-  { to: "/admin?tab=status", icon: Activity, label: "Status do Sistema" },
-];
 
 const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 
