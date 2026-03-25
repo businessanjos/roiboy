@@ -2065,10 +2065,7 @@ export default function Clients() {
                     <TableHead className="font-medium sticky left-0 bg-muted z-20 w-[240px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Cliente</TableHead>
                     <TableHead className="font-medium text-center w-[160px]">Produto</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px]">Contrato</TableHead>
-                    <TableHead className="font-medium text-center min-w-[80px]">Roizômetro</TableHead>
-                    <TableHead className="font-medium text-center min-w-[80px]">E-Score</TableHead>
                     <TableHead className="font-medium text-center min-w-[100px]">Conexão</TableHead>
-                    <TableHead className="font-medium text-center min-w-[80px]">V-NPS</TableHead>
                     <TableHead className="font-medium text-center min-w-[120px]">Responsável</TableHead>
                     <TableHead className="font-medium text-right min-w-[80px]">Ação</TableHead>
                   </TableRow>
