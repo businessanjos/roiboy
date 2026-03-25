@@ -3140,39 +3140,43 @@ export default function RoyZapp() {
 
       {/* Contact Picker Dialog */}
       <ZappContactPickerDialog
-        open={contactPickerOpen}
-        onOpenChange={setContactPickerOpen}
-        searchQuery={contactSearch}
-        onSearchChange={setContactSearch}
-        filteredClients={filteredContactClients}
-        onSelectContact={sendContact}
-        sending={sendingContact}
+        open={messaging.contactPickerOpen}
+        onOpenChange={messaging.setContactPickerOpen}
+        searchQuery={messaging.contactSearch}
+        onSearchChange={messaging.setContactSearch}
+        filteredClients={allClients.filter(c => {
+          if (!messaging.contactSearch.trim()) return false;
+          const search = messaging.contactSearch.toLowerCase();
+          return c.full_name.toLowerCase().includes(search) || c.phone_e164.includes(search);
+        }).slice(0, 10)}
+        onSelectContact={messaging.sendContact}
+        sending={messaging.sendingContact}
       />
 
       {/* Quick Replies Dialog */}
       <ZappQuickRepliesDialog
-        open={quickRepliesOpen}
-        onOpenChange={setQuickRepliesOpen}
-        quickReplies={quickReplies}
-        onUseReply={useQuickReply}
+        open={messaging.quickRepliesOpen}
+        onOpenChange={messaging.setQuickRepliesOpen}
+        quickReplies={messaging.quickReplies}
+        onUseReply={messaging.useQuickReply}
         onEditReply={(reply) => {
-          setEditingQuickReply(reply);
-          setQuickReplyForm({ title: reply.title, content: reply.content });
-          setQuickReplyDialogOpen(true);
+          messaging.setEditingQuickReply(reply);
+          messaging.setQuickReplyForm({ title: reply.title, content: reply.content });
+          messaging.setQuickReplyDialogOpen(true);
         }}
-        onDeleteReply={deleteQuickReply}
+        onDeleteReply={messaging.deleteQuickReply}
         onCreateNew={() => {
-          setEditingQuickReply(null);
-          setQuickReplyForm({ title: "", content: "" });
-          setQuickReplyDialogOpen(true);
+          messaging.setEditingQuickReply(null);
+          messaging.setQuickReplyForm({ title: "", content: "" });
+          messaging.setQuickReplyDialogOpen(true);
         }}
-        editDialogOpen={quickReplyDialogOpen}
-        onEditDialogChange={setQuickReplyDialogOpen}
-        editingReply={editingQuickReply}
-        form={quickReplyForm}
-        onFormChange={setQuickReplyForm}
-        onSave={saveQuickReply}
-        saving={savingQuickReply}
+        editDialogOpen={messaging.quickReplyDialogOpen}
+        onEditDialogChange={messaging.setQuickReplyDialogOpen}
+        editingReply={messaging.editingQuickReply}
+        form={messaging.quickReplyForm}
+        onFormChange={messaging.setQuickReplyForm}
+        onSave={messaging.saveQuickReply}
+        saving={messaging.savingQuickReply}
       />
 
       {/* Add Client/Lead Dialog */}
