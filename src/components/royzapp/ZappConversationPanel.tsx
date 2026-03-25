@@ -141,8 +141,6 @@ interface ZappConversationPanelProps {
   onImportConversations: () => void;
   onSignatureChange: (value: string) => void;
   onSpellingChange?: (checked: boolean) => void;
-  onSuggestionsChange?: (checked: boolean) => void;
-  onAutoLearningChange?: (checked: boolean) => void;
   getAgentName: (agentId: string) => string;
   onPullFromQueue?: () => void;
   
