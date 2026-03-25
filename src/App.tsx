@@ -210,7 +210,7 @@ const App = () => (
                             <Route path="/admin" element={<Admin />} />
                             <Route path="/admin/whatsapp-diagnostics" element={<WhatsAppDiagnostics />} />
                             <Route path="/sales-scripts" element={<SalesScripts />} />
-                            <Route path="/sales-meetings" element={<SalesMeetings />} />
+                            
                           </Route>
                           <Route path="*" element={<NotFound />} />
                         </Routes>
