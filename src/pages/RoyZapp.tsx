@@ -4420,17 +4420,6 @@ export default function RoyZapp() {
       />
 
 
-      {/* Risk Dialog */}
-      <ZappRiskDialog
-        open={riskDialogOpen}
-        onOpenChange={setRiskDialogOpen}
-        riskLevel={riskLevel}
-        riskReason={riskReason}
-        uploading={uploadingRisk}
-        onLevelChange={setRiskLevel}
-        onReasonChange={setRiskReason}
-        onSave={handleAddRisk}
-      />
 
       {/* Transfer Dialog */}
       <ZappTransferDialog
