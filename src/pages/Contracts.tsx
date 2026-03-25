@@ -1432,13 +1432,17 @@ export default function Contracts() {
     return rootContracts.filter(c => !c.client?.responsible_user_id);
   }, [rootContracts]);
 
-  // Batch validation for queue contracts
-  const { validations: conciliationValidations, isLoading: validationsLoading } = useBatchConciliationValidation(
-    queueContracts.map(c => ({
+  const validationContracts = useMemo(() => (
+    queueContracts.map((c) => ({
       id: c.id,
       client_id: c.client_id,
       product: c.product,
     }))
+  ), [queueContracts]);
+
+  // Batch validation for queue contracts
+  const { validations: conciliationValidations, isLoading: validationsLoading } = useBatchConciliationValidation(
+    validationContracts
   );
 
   // Get current contracts based on active tab
