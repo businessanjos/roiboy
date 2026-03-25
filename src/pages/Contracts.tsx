@@ -1660,35 +1660,23 @@ export default function Contracts() {
     };
   }, [filteredContracts, currentContracts, hasActiveFilters]);
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
+  const formatCurrency = formatCurrencyStatic;
+  const getExpiryBadge = getExpiryBadgeStatic;
 
-  const getExpiryBadge = (endDate: string | null) => {
-    if (!endDate) return null;
-    const daysUntilExpiry = differenceInDays(new Date(endDate), new Date());
-    
-    if (daysUntilExpiry < 0) {
-      return (
-        <Badge variant="destructive" className="text-xs">
-          <AlertTriangle className="h-3 w-3 mr-1" />
-          Vencido há {Math.abs(daysUntilExpiry)} dias
-        </Badge>
-      );
-    }
-    if (daysUntilExpiry <= 30) {
-      return (
-        <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 bg-amber-50">
-          <Clock className="h-3 w-3 mr-1" />
-          Vence em {daysUntilExpiry} dias
-        </Badge>
-      );
-    }
-    return null;
-  };
+  // Stable callbacks for memoized row component
+  const handleNavigateToClient = useCallback((clientId: string) => {
+    navigate(`/clients/${clientId}`);
+  }, [navigate]);
+
+  const handleViewContract = useCallback((contract: Contract) => {
+    setSelectedContract(contract);
+    setDetailSheetOpen(true);
+  }, []);
+
+  const handleDeleteContract = useCallback((contract: Contract) => {
+    setContractToDelete(contract);
+    setDeleteDialogOpen(true);
+  }, []);
 
   if (loading) {
     return (
