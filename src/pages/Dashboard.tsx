@@ -73,52 +73,14 @@ interface ContractData {
   client_id: string;
 }
 
-interface ClientWithScore {
+interface ContractDataDashboard {
   id: string;
-  full_name: string;
-  phone_e164: string;
-  status: "active" | "paused" | "churn_risk" | "churned" | "no_contract";
-  roizometer: number;
-  escore: number;
-  quadrant: "highE_lowROI" | "lowE_highROI" | "lowE_lowROI" | "highE_highROI";
-  trend: "up" | "flat" | "down";
-  last_risk?: string;
-  recommendation?: string;
-  vnps_score?: number;
-  vnps_class?: "promoter" | "neutral" | "detractor";
-  product_ids?: string[];
-  hasActiveContract?: boolean;
-}
-
-interface Product {
-  id: string;
-  name: string;
-}
-
-interface LifeEvent {
-  id: string;
+  status: string;
+  status_changed_at: string | null;
+  cancelled_at: string | null;
+  start_date: string;
+  value: number;
   client_id: string;
-  client_name: string;
-  event_type: string;
-  title: string;
-  event_date: string | null;
-  is_recurring: boolean;
-  source: string;
-}
-
-interface ROIStats {
-  totalROIEvents: number;
-  tangibleCount: number;
-  intangibleCount: number;
-  highImpactCount: number;
-  recentCategories: { category: string; count: number }[];
-}
-
-interface RiskStats {
-  totalRiskEvents: number;
-  highRiskCount: number;
-  mediumRiskCount: number;
-  lowRiskCount: number;
 }
 
 const EVENT_TYPE_ICONS: Record<string, any> = {
