@@ -4167,19 +4167,9 @@ export default function RoyZapp() {
             }
           }}
           spellingEnabled={spellingEnabled}
-          suggestionsEnabled={suggestionsEnabled}
-          autoLearningEnabled={autoLearningEnabled}
           onSpellingChange={(checked) => {
             setSpellingEnabled(checked);
             localStorage.setItem("zapp_spelling_enabled", String(checked));
-          }}
-          onSuggestionsChange={(checked) => {
-            setSuggestionsEnabled(checked);
-            localStorage.setItem("zapp_suggestions_enabled", String(checked));
-          }}
-          onAutoLearningChange={(checked) => {
-            setAutoLearningEnabled(checked);
-            localStorage.setItem("zapp_auto_learning_enabled", String(checked));
           }}
           getAgentName={getAgentName}
           onPullFromQueue={pullFromQueue}
