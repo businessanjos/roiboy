@@ -151,7 +151,7 @@ const App = () => (
                           <Route path="/choose-plan" element={<ChoosePlan />} />
                           <Route path="/termos" element={<TermsOfService />} />
                           <Route path="/privacidade" element={<PrivacyPolicy />} />
-                          <Route path="/download" element={<Download />} />
+                          
                           <Route path="/members" element={<PublicMembersBook />} />
                           <Route path="/shared/insights/:token" element={<SharedInsightsDashboard />} />
                           <Route element={<AppLayout />}>
