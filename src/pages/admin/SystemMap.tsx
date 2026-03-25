@@ -240,17 +240,8 @@ const systemMap: SystemNode[] = [
       { id: "team-invite", name: "Convites", description: "Convidar novos membros", icon: <Mail className="h-4 w-4" />, status: "active" },
     ],
   },
-  {
-    id: "team-chat",
-    name: "Chat Interno",
-    description: "Comunicação entre equipe",
-    icon: <MessageSquare className="h-5 w-5" />,
-    status: "active",
-    children: [
-      { id: "chat-conversations", name: "Conversas", description: "Chat entre membros", icon: <MessageSquare className="h-4 w-4" />, status: "active" },
-      { id: "chat-mentions", name: "Menções", description: "Notificações de menções", icon: <Bell className="h-4 w-4" />, status: "active" },
-    ],
-  },
+
+
   {
     id: "whatsapp-groups",
     name: "Grupos WhatsApp",
