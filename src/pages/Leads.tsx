@@ -1118,12 +1118,12 @@ export default function Leads() {
   }), [leads, searchQuery, filterSource]);
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / LEADS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
   const paginatedLeads = useMemo(() => {
-    const start = (safePage - 1) * LEADS_PER_PAGE;
-    return filteredLeads.slice(start, start + LEADS_PER_PAGE);
-  }, [filteredLeads, safePage, LEADS_PER_PAGE]);
+    const start = (safePage - 1) * pageSize;
+    return filteredLeads.slice(start, start + pageSize);
+  }, [filteredLeads, safePage, pageSize]);
 
   // Reset page on filter changes
   useEffect(() => {
