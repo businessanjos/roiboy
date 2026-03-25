@@ -1543,7 +1543,7 @@ serve(async (req) => {
               }
             }
           } else {
-            // INBOUND: Single query for external_message_id match
+            // INBOUND: Check for exact external_message_id match first
             const { data: existingMsg } = await supabase
               .from("zapp_messages")
               .select("id, is_deleted, is_edited")
@@ -1560,6 +1560,33 @@ serve(async (req) => {
               }
               console.log(`[DEDUPE] Inbound message ${messageId} already exists, skipping`);
               skipInsert = true;
+            }
+
+            // MULTI-INSTANCE GROUP DEDUP: Same group message arrives from different WhatsApp instances
+            // external_message_id format: "phonePrefix:whatsappMsgId" (e.g., "554388382681:3EB025B786057755F5DC99")
+            // The whatsappMsgId suffix is the same across instances, but the phone prefix differs
+            if (!skipInsert && isGroupMessage && messageId.includes(":")) {
+              const whatsappMsgSuffix = messageId.split(":").slice(1).join(":");
+              if (whatsappMsgSuffix) {
+                const { data: suffixMatch } = await supabase
+                  .from("zapp_messages")
+                  .select("id, is_deleted, external_message_id")
+                  .eq("zapp_conversation_id", zappConversationId)
+                  .ilike("external_message_id", `%:${whatsappMsgSuffix}`)
+                  .limit(1)
+                  .maybeSingle();
+
+                if (suffixMatch) {
+                  if (suffixMatch.is_deleted) {
+                    return new Response(
+                      JSON.stringify({ ignored: true, reason: "message_deleted" }),
+                      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+                    );
+                  }
+                  console.log(`[DEDUPE] Multi-instance group duplicate detected: ${messageId} matches existing ${suffixMatch.external_message_id}, skipping`);
+                  skipInsert = true;
+                }
+              }
             }
           }
 
