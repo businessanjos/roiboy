@@ -48,6 +48,7 @@ export function SalesTeamTab() {
   const [customEnd, setCustomEnd] = useState<Date | undefined>(undefined);
   const [selectedRep, setSelectedRep] = useState<SalesRepMetrics | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "grid">("list");
 
   // Memoize date range to prevent infinite re-renders
   const dateRange = useMemo(() => {
