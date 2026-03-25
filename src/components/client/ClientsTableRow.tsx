@@ -200,7 +200,6 @@ export const ClientsTableRow = memo(function ClientsTableRow({
         </button>
       </TableCell>
 
-      </TableCell>
 
       {/* WhatsApp Cell */}
       <TableCell className="text-center">
