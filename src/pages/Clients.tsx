@@ -2047,10 +2047,27 @@ export default function Clients() {
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
             {totalClients > 0 
-              ? `Mostrando ${((currentPage - 1) * PAGE_SIZE) + 1}–${Math.min(currentPage * PAGE_SIZE, totalClients)} de ${totalClients} cliente${totalClients !== 1 ? "s" : ""}`
+              ? `Mostrando ${((currentPage - 1) * pageSize) + 1}–${Math.min(currentPage * pageSize, totalClients)} de ${totalClients} cliente${totalClients !== 1 ? "s" : ""}`
               : `${filtered.length} cliente${filtered.length !== 1 ? "s" : ""} encontrado${filtered.length !== 1 ? "s" : ""}`
             }
           </span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs">Por página:</span>
+            {[20, 50, 100].map(size => (
+              <Button
+                key={size}
+                variant={pageSize === size ? "default" : "outline"}
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                }}
+              >
+                {size}
+              </Button>
+            ))}
+          </div>
         </div>
       </div>
 
