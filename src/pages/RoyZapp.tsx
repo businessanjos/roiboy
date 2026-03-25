@@ -780,18 +780,7 @@ export default function RoyZapp() {
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
 
 
-  // Contact picker dialog state
-  const [contactPickerOpen, setContactPickerOpen] = useState(false);
-  const [contactSearch, setContactSearch] = useState("");
-  const [sendingContact, setSendingContact] = useState(false);
-
-  // Quick replies state
-  const [quickRepliesOpen, setQuickRepliesOpen] = useState(false);
-  const [quickReplies, setQuickReplies] = useState<{ id: string; title: string; content: string }[]>([]);
-  const [quickReplyDialogOpen, setQuickReplyDialogOpen] = useState(false);
-  const [editingQuickReply, setEditingQuickReply] = useState<{ id: string; title: string; content: string } | null>(null);
-  const [quickReplyForm, setQuickReplyForm] = useState({ title: "", content: "" });
-  const [savingQuickReply, setSavingQuickReply] = useState(false);
+  // Contact picker and quick replies state are now in useZappMessaging hook (messaging.*)
 
   // Add client/lead from contact state
   const [addContactDialogOpen, setAddContactDialogOpen] = useState(false);
