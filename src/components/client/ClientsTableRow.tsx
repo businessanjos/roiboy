@@ -23,8 +23,6 @@ import {
 
 interface ClientsTableRowProps {
   client: any;
-  vnpsData?: VNPSData;
-  scoreData?: ScoreData;
   contractData?: ContractData;
   whatsappData?: WhatsAppData;
   customFields: CustomField[];

@@ -12,9 +12,7 @@ import {
 
 interface ClientsTableProps {
   clients: any[];
-  loading: boolean;
-  vnpsMap: Record<string, VNPSData>;
-  scoreMap: Record<string, ScoreData>;
+  contractMap: Record<string, ContractData>;
   contractMap: Record<string, ContractData>;
   whatsappMap: Record<string, WhatsAppData>;
   customFields: CustomField[];
