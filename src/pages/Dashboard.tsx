@@ -59,7 +59,7 @@ import { ZoomControls } from "@/components/ui/zoom-controls";
 import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
-import { ROIEventsFeed } from "@/components/dashboard/ROIEventsFeed";
+
 import { LiveParticipationReport } from "@/components/dashboard/LiveParticipationReport";
 import { ClientRequestsFeed } from "@/components/dashboard/ClientRequestsFeed";
 
