@@ -22,7 +22,6 @@ const navGroups: NavGroup[] = [
     items: [
       { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
       { id: "status", label: "Status", icon: Activity },
-      { id: "map", label: "Mapa do Sistema", icon: Map },
     ],
   },
   {
