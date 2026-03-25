@@ -360,7 +360,7 @@ export default function Clients() {
       if (searchQuery) baseParams["search"] = searchQuery;
       if (filterResponsible !== "all") baseParams["responsible_user_id"] = filterResponsible;
       if (filterProduct !== "all") baseParams["product_id"] = filterProduct;
-      if (filterVNPS !== "all") baseParams["vnps_class"] = filterVNPS;
+      
       if (filterContract !== "all") baseParams["contract_filter"] = filterContract;
       if (filterClientStatus !== "all") baseParams["client_status"] = filterClientStatus;
       baseParams["sort"] = sortOrder;
