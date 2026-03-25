@@ -147,8 +147,6 @@ const App = () => (
                           <Route path="/inscricao/:code" element={<PublicEventRegistration />} />
                           <Route path="/feedback/:eventId" element={<PublicEventFeedback />} />
                           <Route path="/checkin/:code" element={<EventCheckin />} />
-                          <Route path="/sobre" element={<Presentation />} />
-                          <Route path="/extension-preview" element={<ExtensionPreview />} />
                           <Route path="/onboarding" element={<Onboarding />} />
                           <Route path="/choose-plan" element={<ChoosePlan />} />
                           <Route path="/termos" element={<TermsOfService />} />
