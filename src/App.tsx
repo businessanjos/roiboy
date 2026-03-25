@@ -66,14 +66,9 @@ const TermsOfService = lazyRetry(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazyRetry(() => import("./pages/PrivacyPolicy"));
 
 const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
-const SalesMeetings = lazyRetry(() => import("./pages/SalesMeetings"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
 
-const PublicMembersBook = lazyRetry(() => import("./pages/PublicMembersBook"));
-
 const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
-const SharedInsightsDashboard = lazyRetry(() => import("./pages/SharedInsightsDashboard"));
-const MentorAgenda = lazyRetry(() => import("./pages/MentorAgenda"));
 const BillingPortal = lazyRetry(() => import("./pages/BillingPortal"));
 const Sectors = lazyRetry(() => import("./pages/Sectors"));
 const Contracts = lazyRetry(() => import("./pages/Contracts"));
