@@ -643,14 +643,6 @@ export default function RoyZapp() {
     const saved = localStorage.getItem("zapp_spelling_enabled");
     return saved !== null ? saved === "true" : true;
   });
-  const [suggestionsEnabled, setSuggestionsEnabled] = useState(() => {
-    const saved = localStorage.getItem("zapp_suggestions_enabled");
-    return saved !== null ? saved === "true" : true;
-  });
-  const [autoLearningEnabled, setAutoLearningEnabled] = useState(() => {
-    const saved = localStorage.getItem("zapp_auto_learning_enabled");
-    return saved !== null ? saved === "true" : true;
-  });
   
   // Notification system - handle view chat callback
   const handleNotificationViewChat = useCallback((conversationId: string) => {
