@@ -1,9 +1,8 @@
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
-  LayoutDashboard, Activity, Package, Building2, Users, Wallet,
-  FileText, Cpu, Cloud, Tag, Briefcase, DollarSign,
-  TrendingUp, Map, ArrowLeft, Shield,
+  LayoutDashboard, Activity, Building2, Users,
+  FileText, Cpu, ArrowLeft, Shield,
 } from "lucide-react";
 
 interface NavItem {
