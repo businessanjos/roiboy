@@ -2920,138 +2920,94 @@ export default function RoyZapp() {
           contactInfo={selectedContactInfo || { name: "", phone: "", avatar: null, clientId: null, isClient: false, isGroup: false, lastMessage: null, lastMessagePreview: "", unreadCount: 0, lastMessageAt: "", isPinned: false, isMuted: false, isArchived: false, isFavorite: false, isBlocked: false, searchableText: "" }}
           clientProducts={selectedClientProducts}
           currentAgentId={currentAgent?.id || null}
-          messageInput={messageInput}
-          sendingMessage={sendingMessage}
-          uploadingMedia={uploadingMedia}
-          isRecording={isRecording}
-          recordingDuration={recordingDuration}
-          audioPreview={audioPreview}
-          imagePreview={imagePreview}
-          onSetImagePreview={setImagePreview}
-          showFormatting={showFormatting}
-          messageInputRef={messageInputRef}
-          imageInputRef={imageInputRef}
-          fileInputRef={fileInputRef}
-          sectorId={selectedSectorId}
-          spellingEnabled={spellingEnabled}
-          onlineAgents={onlineAgents}
-          totalQueueConversations={totalQueueConversations}
-          activeConversations={activeConversations}
-          onBack={() => setSelectedConversation(null)}
-          onOpenClientEdit={(id) => {
-            setEditingClientId(id);
-            setClientEditSheetOpen(true);
-          }}
-          onAssignToMe={assignToMe}
-          onReleaseToQueue={releaseToQueue}
-          onUpdateStatus={updateConversationStatus}
-          onOpenTransfer={() => setTransferDialogOpen(true)}
-          onOpenRoiDialog={() => {}}
-          onOpenRiskDialog={() => {}}
-          onOpenAddClient={openAddContactDialog}
-          onOpenLinkClient={() => setLinkClientDialogOpen(true)}
-          onClientLinked={() => fetchData()}
-          onDeleteConversation={() => setPermanentDeleteDialogOpen(true)}
-          onDismissConversation={
-            selectedConversation?.zapp_conversation?.is_group 
-              ? dismissGroupConversation 
-              : undefined
-          }
-          onOpenEditGroup={
-            selectedConversation?.zapp_conversation?.is_group 
-              ? () => setEditGroupDialogOpen(true) 
-              : undefined
-          }
-          accountId={currentUser?.account_id}
-          showLeadOption={hasVendasAccess}
-          onMessageChange={setMessageInput}
-          onSendMessage={sendMessage}
-          onKeyPress={handleKeyPress}
-          onToggleFormatting={() => setShowFormatting(!showFormatting)}
-          onInsertFormatting={insertFormatting}
-          onStartRecording={startRecording}
-          onStopRecording={stopRecording}
-          onCancelRecording={cancelRecording}
-          onDiscardAudioPreview={discardAudioPreview}
-          onConfirmAudioSend={confirmAudioSend}
-          onFileSelect={handleFileSelect}
-          onOpenContactPicker={() => setContactPickerOpen(true)}
-          onOpenQuickReplies={() => setQuickRepliesOpen(true)}
-          replyingTo={replyingTo}
-          onReplyMessage={(msg) => {
-            setReplyingTo({
-              id: msg.id,
-              content: msg.content,
-              sender_name: msg.sender_name || null,
-              is_from_client: msg.is_from_client,
-              external_message_id: msg.external_message_id || null,
-            });
-            messageInputRef.current?.focus();
-          }}
-          onCancelReply={() => setReplyingTo(null)}
-          onDeleteMessage={handleDeleteMessage}
-          onEditMessage={handleEditMessage}
-          onRetryMessage={(msg) => {
-            // Remove the failed message and re-add its content to input for retry
-            setMessages(prev => prev.filter(m => m.id !== msg.id));
-            setMessageInput(msg.content || "");
-            messageInputRef.current?.focus();
-            toast.info("Mensagem restaurada para reenvio");
-          }}
-          onRetryMediaDownload={async (messageId) => {
-            // Reset status to pending and trigger download
-            const { error } = await supabase
-              .from("zapp_messages")
-              .update({ media_download_status: "pending" })
-              .eq("id", messageId);
-            
-            if (error) {
-              toast.error("Erro ao solicitar redownload");
-              return;
-            }
-            
-            // Invoke download function
-            supabase.functions.invoke("download-media", {
-              body: { message_ids: [messageId] }
-            }).then(({ data, error: invokeError }) => {
-              if (invokeError) {
-                toast.error("Erro ao baixar mídia");
-              } else if (data?.successful > 0) {
-                // Refresh messages to get the new URL
-                if (selectedConversation?.zapp_conversation_id) {
-                  fetchMessages(selectedConversation.zapp_conversation_id);
-                }
-              }
-            });
-            
-            toast.info("Tentando baixar mídia novamente...");
-          }}
-          onMentionInsert={(mention) => {
-            setPendingMentions(prev => [...prev, { phone: mention.phone, jid: mention.jid }]);
-          }}
-          signatureEnabled={signatureEnabled}
-          hasSignature={!!userSignature.trim()}
-          onToggleSignature={() => {
-            const newValue = !signatureEnabled;
-            setSignatureEnabled(newValue);
-            if (currentUser) {
-              supabase
-                .from("users")
-                .update({ zapp_signature_enabled: newValue })
-                .eq("id", currentUser.id)
-                .then();
-            }
-          }}
-          onOpenPlaybook={() => setPlaybookDialogOpen(true)}
-          filePreview={filePreview}
-          onSetFilePreview={(preview) => {
-            if (preview && preview.file.size > 50 * 1024 * 1024) {
-              toast.error("Arquivo muito grande. Máximo 50MB.");
-              URL.revokeObjectURL(preview.url);
-              return;
-            }
-            setFilePreview(preview);
-          }}
+           messageInput={messaging.messageInput}
+           sendingMessage={messaging.sendingMessage}
+           uploadingMedia={messaging.uploadingMedia}
+           isRecording={messaging.isRecording}
+           recordingDuration={messaging.recordingDuration}
+           audioPreview={messaging.audioPreview}
+           imagePreview={messaging.imagePreview}
+           onSetImagePreview={messaging.setImagePreview}
+           showFormatting={messaging.showFormatting}
+           messageInputRef={messaging.messageInputRef}
+           imageInputRef={messaging.imageInputRef}
+           fileInputRef={messaging.fileInputRef}
+           sectorId={selectedSectorId}
+           spellingEnabled={spellingEnabled}
+           onlineAgents={onlineAgents}
+           totalQueueConversations={totalQueueConversations}
+           activeConversations={activeConversations}
+           onBack={() => setSelectedConversation(null)}
+           onOpenClientEdit={(id) => {
+             setEditingClientId(id);
+             setClientEditSheetOpen(true);
+           }}
+           onAssignToMe={assignToMe}
+           onReleaseToQueue={releaseToQueue}
+           onUpdateStatus={updateConversationStatus}
+           onOpenTransfer={() => setTransferDialogOpen(true)}
+           onOpenRoiDialog={() => {}}
+           onOpenRiskDialog={() => {}}
+           onOpenAddClient={openAddContactDialog}
+           onOpenLinkClient={() => setLinkClientDialogOpen(true)}
+           onClientLinked={() => fetchData()}
+           onDeleteConversation={() => setPermanentDeleteDialogOpen(true)}
+           onDismissConversation={
+             selectedConversation?.zapp_conversation?.is_group 
+               ? dismissGroupConversation 
+               : undefined
+           }
+           onOpenEditGroup={
+             selectedConversation?.zapp_conversation?.is_group 
+               ? () => setEditGroupDialogOpen(true) 
+               : undefined
+           }
+           accountId={currentUser?.account_id}
+           showLeadOption={hasVendasAccess}
+           onMessageChange={messaging.setMessageInput}
+           onSendMessage={messaging.sendMessage}
+           onKeyPress={messaging.handleKeyPress}
+           onToggleFormatting={() => messaging.setShowFormatting(!messaging.showFormatting)}
+           onInsertFormatting={messaging.insertFormatting}
+           onStartRecording={messaging.startRecording}
+           onStopRecording={messaging.stopRecording}
+           onCancelRecording={messaging.cancelRecording}
+           onDiscardAudioPreview={messaging.discardAudioPreview}
+           onConfirmAudioSend={messaging.confirmAudioSend}
+           onFileSelect={messaging.handleFileSelect}
+           onOpenContactPicker={() => messaging.setContactPickerOpen(true)}
+           onOpenQuickReplies={() => messaging.setQuickRepliesOpen(true)}
+           replyingTo={messaging.replyingTo}
+           onReplyMessage={messaging.handleReplyMessage}
+           onCancelReply={() => messaging.setReplyingTo(null)}
+           onDeleteMessage={messaging.handleDeleteMessage}
+           onEditMessage={messaging.handleEditMessage}
+           onRetryMessage={messaging.retryMessage}
+           onRetryMediaDownload={messaging.retryMediaDownload}
+           onMentionInsert={messaging.handleMentionInsert}
+           signatureEnabled={signatureEnabled}
+           hasSignature={!!userSignature.trim()}
+           onToggleSignature={() => {
+             const newValue = !signatureEnabled;
+             setSignatureEnabled(newValue);
+             if (currentUser) {
+               supabase
+                 .from("users")
+                 .update({ zapp_signature_enabled: newValue })
+                 .eq("id", currentUser.id)
+                 .then();
+             }
+           }}
+           onOpenPlaybook={() => setPlaybookDialogOpen(true)}
+           filePreview={messaging.filePreview}
+           onSetFilePreview={(preview) => {
+             if (preview && preview.file.size > 50 * 1024 * 1024) {
+               toast.error("Arquivo muito grande. Máximo 50MB.");
+               URL.revokeObjectURL(preview.url);
+               return;
+             }
+             messaging.setFilePreview(preview);
+           }}
         />
         )}
       </div>
