@@ -2026,14 +2026,6 @@ export default function Clients() {
                     </button>
                   </Badge>
                 )}
-                {filterVNPS !== "all" && (
-                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
-                    V-NPS: {filterVNPS === "promoter" ? "Promotor" : filterVNPS === "neutral" ? "Neutro" : filterVNPS === "detractor" ? "Detrator" : "Sem V-NPS"}
-                    <button onClick={() => setFilterVNPS("all")} className="hover:text-destructive">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                )}
                 {filterContract !== "all" && (
                   <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
                     Contrato: {filterContract === "active" ? "Ativo" : filterContract === "expired" ? "Expirado" : filterContract === "urgent" ? "30 dias" : filterContract === "warning" ? "60 dias" : filterContract === "ok" ? "Vigente" : filterContract === "pending" ? "Pendente" : filterContract === "cancelled" ? "Cancelado" : filterContract === "suspended" ? "Suspenso" : "Sem contrato"}
