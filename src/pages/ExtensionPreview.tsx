@@ -228,12 +228,6 @@ export default function ExtensionPreview() {
               <RotateCcw className="h-4 w-4" />
               <span className="hidden sm:inline">Reiniciar Demo</span>
             </Button>
-            <Link to="/api-docs">
-              <Button variant="outline" size="sm" className="gap-2">
-                <ExternalLink className="h-4 w-4" />
-                <span className="hidden sm:inline">API Docs</span>
-              </Button>
-            </Link>
           </div>
         </div>
       </header>
