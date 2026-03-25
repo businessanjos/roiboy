@@ -299,35 +299,6 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
           />
         </div>
 
-        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-zapp-accent" />
-            <div>
-              <p className="text-zapp-text text-sm">Sugestões de Resposta</p>
-              <p className="text-zapp-text-muted text-xs">Sugere respostas contextuais</p>
-            </div>
-          </div>
-          <Switch 
-            checked={suggestionsEnabled} 
-            onCheckedChange={onSuggestionsChange}
-            className="data-[state=checked]:bg-zapp-accent" 
-          />
-        </div>
-
-        <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
-          <div className="flex items-center gap-2">
-            <Brain className="h-4 w-4 text-purple-500" />
-            <div>
-              <p className="text-zapp-text text-sm">Aprendizado Automático</p>
-              <p className="text-zapp-text-muted text-xs">IA aprende com suas conversas</p>
-            </div>
-          </div>
-          <Switch 
-            checked={autoLearningEnabled} 
-            onCheckedChange={onAutoLearningChange}
-            className="data-[state=checked]:bg-zapp-accent" 
-          />
-        </div>
       </div>
 
       {/* User Signature */}
