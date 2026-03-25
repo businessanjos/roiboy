@@ -4181,9 +4181,6 @@ export default function RoyZapp() {
           onRequestNotificationPermission={requestNotificationPermission}
           onRefreshMessages={refreshMessages}
           isRefreshingMessages={isRefreshingMessages}
-          aiAgents={[]} // Hidden for now - TODO: configure AI agents properly
-          selectedAIAgent={null}
-          onSelectAIAgent={() => {}} // Disabled for now
         />
       </div>
 
