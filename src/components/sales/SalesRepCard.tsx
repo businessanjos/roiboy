@@ -13,6 +13,8 @@ import {
   Clock,
   TrendingUp,
   ChevronRight,
+  CalendarCheck,
+  UserX,
 } from "lucide-react";
 import { SalesRepMetrics } from "@/hooks/useSalesTeamMetrics";
 
