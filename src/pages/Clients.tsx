@@ -263,7 +263,7 @@ export default function Clients() {
   const [filterClientStatus, setFilterClientStatus] = usePersistedFilter<string>("clients", "clientStatus", "all");
   const [filterStatus, setFilterStatus] = usePersistedFilter<string>("clients", "status", "all"); // Keep for backward compatibility
   const [filterProduct, setFilterProduct] = usePersistedFilter<string>("clients", "product", "all");
-  const [filterVNPS, setFilterVNPS] = usePersistedFilter<string>("clients", "vnps", "all");
+  
   const [filterContract, setFilterContract] = usePersistedFilter<string>("clients", "contract", "all");
   const [filterResponsible, setFilterResponsible] = usePersistedFilter<string>("clients", "responsible", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<"recent" | "alphabetical">("clients", "sortOrder", "recent");
