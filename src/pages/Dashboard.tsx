@@ -116,7 +116,7 @@ export default function Dashboard() {
   const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
   
   const [searchQuery, setSearchQuery] = useState("");
-  const [productFilter, setProductFilter] = usePersistedFilter<string>("dashboard", "productFilter", "all");
+  
   const [gestaoProductFilter, setGestaoProductFilter] = useState<string>("all");
   const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("6");
   const [gestaoCustomDateRange, setGestaoCustomDateRange] = useState<DateRange | undefined>(undefined);
