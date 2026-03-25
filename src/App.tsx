@@ -208,7 +208,7 @@ const App = () => (
                             <Route path="/whatsapp-groups" element={<WhatsAppGroups />} />
                             <Route path="/roy-zapp" element={<RoyZapp />} />
                             <Route path="/mentor-agenda" element={<MentorAgenda />} />
-                            <Route path="/ai-agent" element={<AIAgent />} />
+                            
                             <Route path="/billing" element={<BillingPortal />} />
                             
                             <Route path="/marketing" element={<Marketing />} />
