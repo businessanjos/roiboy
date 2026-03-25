@@ -4496,21 +4496,6 @@ export default function RoyZapp() {
         onDeleteCancel={() => setDeletingAgentId(null)}
       />
 
-      {/* ROI Dialog */}
-      <ZappRoiDialog
-        open={roiDialogOpen}
-        onOpenChange={setRoiDialogOpen}
-        roiType={roiType}
-        roiCategory={roiCategory}
-        roiImpact={roiImpact}
-        roiEvidence={roiEvidence}
-        uploading={uploadingRoi}
-        onTypeChange={setRoiType}
-        onCategoryChange={setRoiCategory}
-        onImpactChange={setRoiImpact}
-        onEvidenceChange={setRoiEvidence}
-        onSave={handleAddRoi}
-      />
 
       {/* Risk Dialog */}
       <ZappRiskDialog
