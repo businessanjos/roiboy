@@ -90,6 +90,25 @@ export function GlobalHeader() {
           </Tooltip>
         </TooltipProvider>
 
+        {/* Admin */}
+        {showAdminButton && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={location.pathname === "/admin" ? "secondary" : "ghost"}
+                  size="icon"
+                  onClick={() => navigate("/admin")}
+                  className="h-9 w-9"
+                >
+                  <Shield className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Administração</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+
         {/* Notifications */}
         <TooltipProvider>
           <Tooltip>
