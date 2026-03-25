@@ -276,7 +276,7 @@ serve(async (req) => {
     if (!omieClient) {
       if (clientCpfCnpj) {
         // Auto-create client in Omie
-        const clientName = client?.full_name || deal.contact_name || deal.title;
+        const clientName = expectedClientName;
         const clientEmail = Array.isArray(client?.emails) && client.emails.length > 0 ? client.emails[0] : '';
         const clientPhone = client?.phone_e164 || '';
 
