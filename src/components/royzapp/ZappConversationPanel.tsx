@@ -224,8 +224,6 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onImportConversations,
   onSignatureChange,
   spellingEnabled = true,
-  suggestionsEnabled = true,
-  autoLearningEnabled = true,
   notificationPermission = "default",
   onRequestNotificationPermission,
   onSpellingChange,
