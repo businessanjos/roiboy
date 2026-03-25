@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardContractStats } from "@/hooks/useDashboardContractStats";
+import { useQuery } from "@tanstack/react-query";
+import { ContractsDashboard } from "@/components/contracts/ContractsDashboard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,6 +116,25 @@ export default function Dashboard() {
   
   // Contract stats from RPC for accurate Gestão metrics
   const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
+
+  // Contracts data for the Contratos tab (exclude renewals to avoid duplicates)
+  const { data: dashboardContracts = [] } = useQuery({
+    queryKey: ["dashboard-contracts-full"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("client_contracts")
+        .select(`
+          id, client_id, start_date, end_date, cancelled_at, value, status, contract_type, created_at,
+          product:products(id, name, color)
+        `)
+        .is("parent_contract_id", null)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as any[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
   
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -436,10 +457,14 @@ export default function Dashboard() {
       {/* Tabs */}
       <Tabs defaultValue="gestao" className="space-y-4 sm:space-y-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-          <TabsList className="grid w-full grid-cols-2 max-w-xs sm:max-w-sm h-9 sm:h-10">
+          <TabsList className="grid w-full grid-cols-3 max-w-sm sm:max-w-md h-9 sm:h-10">
             <TabsTrigger value="gestao" className="gap-1.5 text-xs sm:text-sm">
               <Settings2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>Gestão</span>
+            </TabsTrigger>
+            <TabsTrigger value="contratos" className="gap-1.5 text-xs sm:text-sm">
+              <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Contratos</span>
             </TabsTrigger>
             <TabsTrigger value="cx" className="gap-1.5 text-xs sm:text-sm">
               <Heart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -980,6 +1005,11 @@ export default function Dashboard() {
             </div>
           )}
 
+        </TabsContent>
+
+        {/* Contratos Tab */}
+        <TabsContent value="contratos" className="space-y-6">
+          <ContractsDashboard contracts={dashboardContracts} />
         </TabsContent>
       </Tabs>
 

@@ -91,7 +91,7 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
 import { InstallmentsEditor, InstallmentDetail } from "@/components/contracts/InstallmentsEditor";
-import { ContractsDashboard } from "@/components/contracts/ContractsDashboard";
+
 import { ContractImportPreview, ImportRowWithDuplicate, DuplicateInfo } from "@/components/contracts/ContractImportPreview";
 import { ContractTriageQueue } from "@/components/contracts/ContractTriageQueue";
 import { ConciliateButton } from "@/components/contracts/ConciliateButton";
@@ -1437,37 +1437,15 @@ export default function Contracts() {
     });
   }, [currentContracts, searchTerm, statusFilter, typeFilter, productFilter, sortOrder]);
 
-  // Filtered contracts for dashboard (always from reconciled)
-  const dashboardContracts = useMemo(() => {
-    const filtered = reconciledContracts.filter((contract) => {
-      const matchesSearch = 
-        contract.client?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contract.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contract.notes?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const isExpired = contract.end_date && isPast(new Date(contract.end_date)) && contract.status === "active";
-      const matchesStatus = statusFilter === "all" || 
-        (statusFilter === "expired" ? isExpired : contract.status === statusFilter);
-      const matchesType = typeFilter === "all" || contract.contract_type === typeFilter;
-      const matchesProduct = productFilter === "all" || contract.product?.id === productFilter;
-      
-      return matchesSearch && matchesStatus && matchesType && matchesProduct;
-    });
 
-    return filtered;
-  }, [reconciledContracts, searchTerm, statusFilter, typeFilter, productFilter]);
 
   // Check if any filter is active
   const hasActiveFilters = searchTerm !== "" || statusFilter !== "all" || typeFilter !== "all" || productFilter !== "all";
 
   const stats = useMemo(() => {
-    // Use dashboard contracts when on dashboard tab, otherwise filtered/current contracts
+    // Use filtered contracts if filter is active, otherwise current tab's contracts
     let baseContracts;
-    if (activeTab === "dashboard") {
-      baseContracts = dashboardContracts;
-    } else {
-      baseContracts = hasActiveFilters ? filteredContracts : currentContracts;
-    }
+    baseContracts = hasActiveFilters ? filteredContracts : currentContracts;
     
     const scheduledContracts = baseContracts.filter(c => c.status === "scheduled");
     const activeContracts = baseContracts.filter(c => c.status === "active");
@@ -1505,7 +1483,7 @@ export default function Contracts() {
       expiringSoon: expiringSoon.length,
       expired: expired.length,
     };
-  }, [filteredContracts, currentContracts, dashboardContracts, hasActiveFilters, activeTab]);
+  }, [filteredContracts, currentContracts, hasActiveFilters]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -1734,7 +1712,7 @@ export default function Contracts() {
 
       {/* Tabs for Reconciliation Status */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
+        <TabsList className="grid w-full max-w-xl grid-cols-3">
           <TabsTrigger value="fila" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
             <span className="hidden sm:inline">Conciliação</span>
@@ -1763,10 +1741,6 @@ export default function Contracts() {
                 {reconciledContracts.length}
               </Badge>
             )}
-          </TabsTrigger>
-          <TabsTrigger value="dashboard" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Dashboard
           </TabsTrigger>
         </TabsList>
 
@@ -1843,12 +1817,7 @@ export default function Contracts() {
           </CardContent>
         </Card>
 
-        {/* Dashboard Tab */}
-        {activeTab === "dashboard" && (
-          <ContractsDashboard contracts={dashboardContracts} />
-        )}
-
-        {activeTab !== "dashboard" && (
+        
           <TabsContent value={activeTab} className="space-y-4">
             {/* Queue Status Info */}
             {activeTab === "fila" && (
@@ -2053,7 +2022,7 @@ export default function Contracts() {
         </Card>
       )}
           </TabsContent>
-        )}
+
       </Tabs>
 
       {/* New Contract Dialog */}
