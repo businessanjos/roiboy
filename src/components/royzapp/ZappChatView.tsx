@@ -284,21 +284,13 @@ export function ZappChatView({
         onRetryMediaDownload={onRetryMediaDownload}
       />
 
-      {/* AI Assist Bar - above message input */}
+      {/* AI Assist Bar - spelling correction only */}
       <ZappAIAssistBar
         correction={correction}
         isCheckingSpelling={isCheckingSpelling}
         onApplyCorrection={handleApplyCorrection}
         onDismissCorrection={dismissCorrection}
-        suggestions={suggestions}
-        isLoadingSuggestions={isLoadingSuggestions}
-        onSelectSuggestion={handleSelectSuggestion}
-        onRefreshSuggestions={refreshSuggestions}
-        onSendFeedback={sendFeedback}
-        currentSpinPhase={currentSpinPhase}
         spellingEnabled={spellingEnabled}
-        suggestionsEnabled={suggestionsEnabled}
-        onToggleSuggestions={onToggleSuggestions}
       />
 
       {/* Message input */}
