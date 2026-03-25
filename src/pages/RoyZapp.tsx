@@ -630,6 +630,20 @@ export default function RoyZapp() {
     return saved !== null ? saved === "true" : true;
   });
   
+  // Messaging hook - handles send, recording, media, quick replies, etc.
+  const messaging = useZappMessaging({
+    selectedConversation,
+    currentUser,
+    selectedSectorId,
+    selectedIntegrationId,
+    messages,
+    setMessages,
+    fetchMessages,
+    userSignature,
+    signatureEnabled,
+    navigate,
+  });
+  
   // Notification system - handle view chat callback
   const handleNotificationViewChat = useCallback((conversationId: string) => {
     const assignment = assignments.find(
