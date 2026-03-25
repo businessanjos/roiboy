@@ -4279,8 +4279,8 @@ export default function RoyZapp() {
           onReleaseToQueue={releaseToQueue}
           onUpdateStatus={updateConversationStatus}
           onOpenTransfer={() => setTransferDialogOpen(true)}
-          onOpenRoiDialog={() => setRoiDialogOpen(true)}
-          onOpenRiskDialog={() => setRiskDialogOpen(true)}
+          onOpenRoiDialog={() => {}}
+          onOpenRiskDialog={() => {}}
           onOpenAddClient={openAddContactDialog}
           onOpenLinkClient={() => setLinkClientDialogOpen(true)}
           onClientLinked={() => fetchData()}
