@@ -254,18 +254,6 @@ const systemMap: SystemNode[] = [
     ],
   },
   {
-    id: "ai-agent",
-    name: "Agente IA",
-    description: "Configuração do agente virtual",
-    icon: <Bot className="h-5 w-5" />,
-    status: "active",
-    children: [
-      { id: "ai-functions", name: "Funções", description: "Habilitar/desabilitar funções", icon: <Settings className="h-4 w-4" />, status: "active" },
-      { id: "ai-prompts", name: "Prompts", description: "Configurar prompts de IA", icon: <FileText className="h-4 w-4" />, status: "active" },
-      { id: "ai-analysis", name: "Análise de Mensagens", description: "IA analisa conversas", icon: <MessageSquare className="h-4 w-4" />, status: "active" },
-    ],
-  },
-  {
     id: "settings",
     name: "Configurações",
     description: "Configurações gerais do sistema",
