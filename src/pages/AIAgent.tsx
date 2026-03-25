@@ -389,25 +389,6 @@ export default function AIAgent() {
         </CardContent>
       </Card>
 
-      {/* Score Settings Panel */}
-      <Collapsible open={showScoreSettings} onOpenChange={setShowScoreSettings}>
-        <CollapsibleContent className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Scale className="h-5 w-5" />
-                Configurações de Score e Risco
-              </CardTitle>
-              <CardDescription>
-                Configure pesos de score, limiares de risco, V-NPS e taxonomia.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ScoreSettings />
-            </CardContent>
-          </Card>
-        </CollapsibleContent>
-      </Collapsible>
 
       {/* AI Settings Panel */}
       <Collapsible open={showSettings} onOpenChange={setShowSettings}>
