@@ -370,7 +370,7 @@ export default function Clients() {
       if (filterClientStatus !== "all") baseParams["client_status"] = filterClientStatus;
       baseParams["sort"] = sortOrder;
 
-      const PAGE_SIZE = 200;
+      const pageSize = 200;
       let allClients: any[] = [];
       let offset = 0;
       let hasMore = true;
@@ -378,7 +378,7 @@ export default function Clients() {
       while (hasMore) {
         const params = new URLSearchParams({
           ...baseParams,
-          limit: String(PAGE_SIZE),
+          limit: String(pageSize),
           offset: String(offset),
         });
 
@@ -404,10 +404,10 @@ export default function Clients() {
         const batch = result.clients || [];
         allClients = [...allClients, ...batch];
 
-        if (batch.length < PAGE_SIZE) {
+        if (batch.length < pageSize) {
           hasMore = false;
         } else {
-          offset += PAGE_SIZE;
+          offset += pageSize;
         }
       }
 
@@ -504,9 +504,9 @@ export default function Clients() {
     try {
       // Use optimized edge function for faster loading with server-side filters
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-      const offset = (currentPage - 1) * PAGE_SIZE;
+      const offset = (currentPage - 1) * pageSize;
       const params = new URLSearchParams({
-        limit: String(PAGE_SIZE),
+        limit: String(pageSize),
         offset: String(offset),
       });
       
@@ -2586,7 +2586,7 @@ export default function Clients() {
       ) : null}
 
       {/* Pagination Controls */}
-      {(viewMode === "table" || viewMode === "cards") && totalClients > PAGE_SIZE && (
+      {(viewMode === "table" || viewMode === "cards") && totalClients > pageSize && (
         <div className="flex items-center justify-center gap-2 py-4">
           <Button
             variant="outline"
@@ -2598,8 +2598,8 @@ export default function Clients() {
             Anterior
           </Button>
           <div className="flex items-center gap-1">
-            {Array.from({ length: Math.min(Math.ceil(totalClients / PAGE_SIZE), 7) }, (_, i) => {
-              const totalPages = Math.ceil(totalClients / PAGE_SIZE);
+            {Array.from({ length: Math.min(Math.ceil(totalClients / pageSize), 7) }, (_, i) => {
+              const totalPages = Math.ceil(totalClients / pageSize);
               let pageNum: number;
               
               if (totalPages <= 7) {
@@ -2629,8 +2629,8 @@ export default function Clients() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalClients / PAGE_SIZE), p + 1))}
-            disabled={currentPage >= Math.ceil(totalClients / PAGE_SIZE) || loading}
+            onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalClients / pageSize), p + 1))}
+            disabled={currentPage >= Math.ceil(totalClients / pageSize) || loading}
           >
             Próximo
             <ChevronRight className="h-4 w-4 ml-1" />
