@@ -79,8 +79,6 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
   onImportConversations,
   onSignatureChange,
   onSpellingChange,
-  onSuggestionsChange,
-  onAutoLearningChange,
   onRequestNotificationPermission,
 }: ZappSettingsPanelProps) {
   const navigate = useNavigate();
