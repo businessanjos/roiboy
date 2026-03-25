@@ -158,8 +158,21 @@ serve(async (req) => {
       const { data } = await supabase.from("integrations").select("id, config, status").eq("id", integration_id).eq("account_id", accountId).single();
       intData = data;
     } else if (sector_id) {
-      const { data } = await supabase.from("integrations").select("id, config, status").eq("account_id", accountId).eq("type", "whatsapp").eq("sector_id", sector_id).limit(1);
-      intData = data?.[0] || null;
+      // CRITICAL: For sectors with multiple instances, prefer the connected one
+      // ORDER BY status ASC puts 'connected' before 'disconnected' alphabetically
+      const { data } = await supabase.from("integrations").select("id, config, status")
+        .eq("account_id", accountId).eq("type", "whatsapp").eq("sector_id", sector_id)
+        .order("status", { ascending: true })
+        .limit(5);
+      
+      if (data && data.length > 1) {
+        // Multiple instances for this sector - prefer connected
+        const connected = data.find((i: any) => i.status === "connected");
+        intData = connected || data[0];
+        console.warn(`[uazapi-manager] ⚠️ MULTI-INSTANCE sector "${sector_id}": ${data.length} instances found. Using: ${intData?.config?.instance_name} (${intData?.status}). Pass integration_id to be explicit.`);
+      } else {
+        intData = data?.[0] || null;
+      }
     } else {
       const { data } = await supabase.from("integrations").select("id, config, status").eq("account_id", accountId).eq("type", "whatsapp").is("sector_id", null).limit(1);
       intData = data?.[0] || null;
