@@ -147,8 +147,6 @@ const App = () => (
                           <Route path="/termos" element={<TermsOfService />} />
                           <Route path="/privacidade" element={<PrivacyPolicy />} />
                           
-                          <Route path="/members" element={<PublicMembersBook />} />
-                          <Route path="/shared/insights/:token" element={<SharedInsightsDashboard />} />
                           <Route element={<AppLayout />}>
                             <Route path="/setores" element={<Sectors />} />
                             <Route path="/dashboard" element={<Dashboard />} />
