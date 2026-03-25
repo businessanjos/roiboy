@@ -159,32 +159,17 @@ export function ZappChatView({
   hasSignature,
   onToggleSignature,
   onOpenPlaybook,
-  onToggleSuggestions,
 }: ZappChatViewProps) {
-  // Memoize last 10 messages to prevent infinite re-renders
-  const lastTenMessages = useMemo(() => messages.slice(-10), [messages]);
-
-  // AI Message Assistant hook
+  // AI Message Assistant hook (spelling correction only)
   const {
     correction,
     isCheckingSpelling,
     applyCorrection,
     dismissCorrection,
-    suggestions,
-    isLoadingSuggestions,
-    refreshSuggestions,
-    selectSuggestion,
-    sendFeedback,
-    currentSpinPhase,
   } = useMessageAssistant({
     messageInput,
-    lastMessages: lastTenMessages,
-    clientName: contactInfo.name,
     sectorId: sectorId || "operacoes",
-    conversationId: selectedConversation?.zapp_conversation?.id,
     spellingEnabled,
-    suggestionsEnabled,
-    autoLearningEnabled,
   });
 
   // Handle applying correction
@@ -193,13 +178,6 @@ export function ZappChatView({
       onMessageChange(correction);
       applyCorrection();
     }
-  };
-
-  // Handle selecting a suggestion
-  const handleSelectSuggestion = (suggestion: { id: string; text: string; type: string }) => {
-    onMessageChange(suggestion.text);
-    selectSuggestion(suggestion);
-    messageInputRef.current?.focus();
   };
 
   // 3C Plus call handler
