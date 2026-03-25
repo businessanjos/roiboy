@@ -504,9 +504,10 @@ export default function Clients() {
     try {
       // Use optimized edge function for faster loading with server-side filters
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const offset = (currentPage - 1) * PAGE_SIZE;
       const params = new URLSearchParams({
-        limit: "200",
-        offset: "0",
+        limit: String(PAGE_SIZE),
+        offset: String(offset),
       });
       
       // Add server-side filter parameters
