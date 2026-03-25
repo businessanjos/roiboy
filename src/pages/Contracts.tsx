@@ -1592,19 +1592,6 @@ export default function Contracts() {
               />
             </label>
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleSyncZapSign}
-            disabled={syncing}
-          >
-            {syncing ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            ZapSign
-          </Button>
           <Button size="sm" onClick={openNewContractDialog}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Contrato
