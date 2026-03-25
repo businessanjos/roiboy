@@ -1240,7 +1240,6 @@ export default function Clients() {
   const activeFilterCount = [
     filterClientStatus !== "all",
     filterProduct !== "all",
-    filterVNPS !== "all",
     filterContract !== "all",
     filterResponsible !== "all",
   ].filter(Boolean).length;
@@ -1248,7 +1247,6 @@ export default function Clients() {
   const clearAllFilters = () => {
     setFilterClientStatus("all");
     setFilterProduct("all");
-    setFilterVNPS("all");
     setFilterContract("all");
     setFilterResponsible("all");
   };
