@@ -65,6 +65,8 @@ import {
   LayoutGrid,
   Settings,
   MessageCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
@@ -193,6 +195,8 @@ export default function Tasks() {
   const [followUpDealId, setFollowUpDealId] = useState<string | null>(null);
   const [selectedDealForDetail, setSelectedDealForDetail] = useState<FullDeal | null>(null);
   const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const TASKS_PER_PAGE = 50;
 
   // Custom task statuses
   const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
@@ -240,7 +244,7 @@ export default function Tasks() {
 
       const { data, error } = await query
         .order("created_at", { ascending: false })
-        .limit(5000);
+        .limit(2000);
 
       if (error) throw error;
       return (data || []) as Task[];
@@ -559,16 +563,14 @@ export default function Tasks() {
       let comparison = 0;
       
       if (sortBy === "priority") {
-        // Alta (high=1) -> Média (medium=2) -> Baixa (low=3)
         comparison = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
       } 
       else if (sortBy === "due_date") {
-        // Atrasado (mais negativo) -> Hoje (0) -> Futuro (positivo)
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
         const getDuePriority = (task: Task) => {
-          if (!task.due_date) return Infinity; // Sem prazo vai pro final
+          if (!task.due_date) return Infinity;
           const dueDate = parseLocalDate(task.due_date);
           if (!dueDate) return Infinity;
           return differenceInDays(dueDate, today);
@@ -577,28 +579,37 @@ export default function Tasks() {
         comparison = getDuePriority(a) - getDuePriority(b);
       }
       else if (sortBy === "responsible") {
-        // Ordem alfabética pelo nome do responsável
-        const nameA = a.assigned_user?.name?.toLowerCase() || "zzz"; // Sem responsável vai pro final
+        const nameA = a.assigned_user?.name?.toLowerCase() || "zzz";
         const nameB = b.assigned_user?.name?.toLowerCase() || "zzz";
         comparison = nameA.localeCompare(nameB, "pt-BR");
       }
       else if (sortBy === "stage") {
-        // Ordem alfabética pelo nome da etapa
         const stageA = a.deals?.stage?.name?.toLowerCase() || "zzz";
         const stageB = b.deals?.stage?.name?.toLowerCase() || "zzz";
         comparison = stageA.localeCompare(stageB, "pt-BR");
       }
       else {
-        // created_at - mais recente primeiro
         comparison = new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }
       
-      // Inverter se direção for descendente
       return sortDirection === "desc" ? -comparison : comparison;
     });
     
     return sorted;
   }, [filteredTasks, sortBy, sortDirection]);
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(sortedTasks.length / TASKS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedTasks = useMemo(() => {
+    const start = (safePage - 1) * TASKS_PER_PAGE;
+    return sortedTasks.slice(start, start + TASKS_PER_PAGE);
+  }, [sortedTasks, safePage, TASKS_PER_PAGE]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterUser, filterActivityType, activeTab, filterDateStart, filterDateEnd, filterStage, sortBy, sortDirection]);
 
   // Count tasks per status - uses baseFilteredTasks for dynamic filtering
   const statusCounts = useMemo(() => {
@@ -1372,13 +1383,65 @@ export default function Tasks() {
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
-            <TaskTable tasks={sortedTasks} />
+            <TaskTable tasks={paginatedTasks} />
           </TabsContent>
           {customStatuses.map((status) => (
             <TabsContent key={status.id} value={status.id} className="mt-6">
-              <TaskTable tasks={sortedTasks} />
+              <TaskTable tasks={paginatedTasks} />
             </TabsContent>
           ))}
+
+          {/* Pagination Controls */}
+          {sortedTasks.length > TASKS_PER_PAGE && (
+            <div className="flex items-center justify-between px-2 py-3">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {((safePage - 1) * TASKS_PER_PAGE) + 1}–{Math.min(safePage * TASKS_PER_PAGE, sortedTasks.length)} de {sortedTasks.length} tarefas
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  let page: number;
+                  if (totalPages <= 7) {
+                    page = i + 1;
+                  } else if (safePage <= 4) {
+                    page = i + 1;
+                  } else if (safePage >= totalPages - 3) {
+                    page = totalPages - 6 + i;
+                  } else {
+                    page = safePage - 3 + i;
+                  }
+                  return (
+                    <Button
+                      key={page}
+                      variant={safePage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="h-8 w-8 p-0 text-xs"
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </Tabs>
       )}
 
