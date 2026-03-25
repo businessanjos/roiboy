@@ -277,11 +277,13 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       if (schedulingData.data) {
         for (const task of schedulingData.data as any[]) {
           const activityName = (task.activity_types as any)?.name?.toLowerCase() || "";
+          const taskTitle = (task.title || "").toLowerCase();
+          const combined = activityName + " " + taskTitle;
           if (task.assigned_to && metricsMap[task.assigned_to]) {
-            if (activityName.includes("call comercial agendada") || activityName.includes("agendamento") || activityName.includes("agendada")) {
+            if (combined.includes("call comercial agendada") || combined.includes("agendamento") || combined.includes("agendada")) {
               metricsMap[task.assigned_to].scheduled_calls++;
             }
-            if (activityName.includes("no-show") || activityName.includes("no show") || activityName.includes("noshow")) {
+            if (combined.includes("no-show") || combined.includes("no show") || combined.includes("noshow")) {
               metricsMap[task.assigned_to].noshow_calls++;
             }
           }
