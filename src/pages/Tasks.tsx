@@ -1383,13 +1383,65 @@ export default function Tasks() {
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
-            <TaskTable tasks={sortedTasks} />
+            <TaskTable tasks={paginatedTasks} />
           </TabsContent>
           {customStatuses.map((status) => (
             <TabsContent key={status.id} value={status.id} className="mt-6">
-              <TaskTable tasks={sortedTasks} />
+              <TaskTable tasks={paginatedTasks} />
             </TabsContent>
           ))}
+
+          {/* Pagination Controls */}
+          {sortedTasks.length > TASKS_PER_PAGE && (
+            <div className="flex items-center justify-between px-2 py-3">
+              <p className="text-sm text-muted-foreground">
+                Mostrando {((safePage - 1) * TASKS_PER_PAGE) + 1}–{Math.min(safePage * TASKS_PER_PAGE, sortedTasks.length)} de {sortedTasks.length} tarefas
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  let page: number;
+                  if (totalPages <= 7) {
+                    page = i + 1;
+                  } else if (safePage <= 4) {
+                    page = i + 1;
+                  } else if (safePage >= totalPages - 3) {
+                    page = totalPages - 6 + i;
+                  } else {
+                    page = safePage - 3 + i;
+                  }
+                  return (
+                    <Button
+                      key={page}
+                      variant={safePage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="h-8 w-8 p-0 text-xs"
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                  className="h-8 w-8 p-0"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </Tabs>
       )}
 
