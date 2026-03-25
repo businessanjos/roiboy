@@ -1,4 +1,4 @@
-import { RefObject, useMemo, useCallback } from "react";
+import { RefObject, useCallback } from "react";
 import { MessageSquare, Clock } from "lucide-react";
 import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
@@ -42,9 +42,6 @@ interface ZappChatViewProps {
   onSetFilePreview?: (preview: { file: File; url: string } | null) => void;
   // AI Settings
   spellingEnabled?: boolean;
-  suggestionsEnabled?: boolean;
-  autoLearningEnabled?: boolean;
-  onToggleSuggestions?: () => void;
   // Stats for empty state
   onlineAgents: number;
   totalQueueConversations: number;
@@ -118,8 +115,6 @@ export function ZappChatView({
   filePreview,
   onSetFilePreview,
   spellingEnabled = true,
-  suggestionsEnabled = true,
-  autoLearningEnabled = true,
   onlineAgents,
   totalQueueConversations,
   activeConversations,
@@ -164,32 +159,17 @@ export function ZappChatView({
   hasSignature,
   onToggleSignature,
   onOpenPlaybook,
-  onToggleSuggestions,
 }: ZappChatViewProps) {
-  // Memoize last 10 messages to prevent infinite re-renders
-  const lastTenMessages = useMemo(() => messages.slice(-10), [messages]);
-
-  // AI Message Assistant hook
+  // AI Message Assistant hook (spelling correction only)
   const {
     correction,
     isCheckingSpelling,
     applyCorrection,
     dismissCorrection,
-    suggestions,
-    isLoadingSuggestions,
-    refreshSuggestions,
-    selectSuggestion,
-    sendFeedback,
-    currentSpinPhase,
   } = useMessageAssistant({
     messageInput,
-    lastMessages: lastTenMessages,
-    clientName: contactInfo.name,
     sectorId: sectorId || "operacoes",
-    conversationId: selectedConversation?.zapp_conversation?.id,
     spellingEnabled,
-    suggestionsEnabled,
-    autoLearningEnabled,
   });
 
   // Handle applying correction
@@ -198,13 +178,6 @@ export function ZappChatView({
       onMessageChange(correction);
       applyCorrection();
     }
-  };
-
-  // Handle selecting a suggestion
-  const handleSelectSuggestion = (suggestion: { id: string; text: string; type: string }) => {
-    onMessageChange(suggestion.text);
-    selectSuggestion(suggestion);
-    messageInputRef.current?.focus();
   };
 
   // 3C Plus call handler
@@ -311,21 +284,13 @@ export function ZappChatView({
         onRetryMediaDownload={onRetryMediaDownload}
       />
 
-      {/* AI Assist Bar - above message input */}
+      {/* AI Assist Bar - spelling correction only */}
       <ZappAIAssistBar
         correction={correction}
         isCheckingSpelling={isCheckingSpelling}
         onApplyCorrection={handleApplyCorrection}
         onDismissCorrection={dismissCorrection}
-        suggestions={suggestions}
-        isLoadingSuggestions={isLoadingSuggestions}
-        onSelectSuggestion={handleSelectSuggestion}
-        onRefreshSuggestions={refreshSuggestions}
-        onSendFeedback={sendFeedback}
-        currentSpinPhase={currentSpinPhase}
         spellingEnabled={spellingEnabled}
-        suggestionsEnabled={suggestionsEnabled}
-        onToggleSuggestions={onToggleSuggestions}
       />
 
       {/* Message input */}

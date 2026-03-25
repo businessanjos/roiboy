@@ -112,8 +112,6 @@ interface ZappConversationPanelProps {
   
   // AI Settings
   spellingEnabled?: boolean;
-  suggestionsEnabled?: boolean;
-  autoLearningEnabled?: boolean;
   
   // System Notifications
   notificationPermission?: "granted" | "denied" | "default" | "unsupported";
@@ -143,8 +141,6 @@ interface ZappConversationPanelProps {
   onImportConversations: () => void;
   onSignatureChange: (value: string) => void;
   onSpellingChange?: (checked: boolean) => void;
-  onSuggestionsChange?: (checked: boolean) => void;
-  onAutoLearningChange?: (checked: boolean) => void;
   getAgentName: (agentId: string) => string;
   onPullFromQueue?: () => void;
   
@@ -228,13 +224,9 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onImportConversations,
   onSignatureChange,
   spellingEnabled = true,
-  suggestionsEnabled = true,
-  autoLearningEnabled = true,
   notificationPermission = "default",
   onRequestNotificationPermission,
   onSpellingChange,
-  onSuggestionsChange,
-  onAutoLearningChange,
   getAgentName,
   onPullFromQueue,
   onRefreshMessages,
@@ -786,8 +778,6 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             importingConversations={importingConversations}
             userSignature={userSignature}
             spellingEnabled={spellingEnabled}
-            suggestionsEnabled={suggestionsEnabled}
-            autoLearningEnabled={autoLearningEnabled}
             notificationPermission={notificationPermission}
             onToggleWhatsAppConnection={onToggleWhatsAppConnection}
             onRoundRobinChange={onRoundRobinChange}
@@ -797,8 +787,6 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             onImportConversations={onImportConversations}
             onSignatureChange={onSignatureChange}
             onSpellingChange={onSpellingChange}
-            onSuggestionsChange={onSuggestionsChange}
-            onAutoLearningChange={onAutoLearningChange}
             onRequestNotificationPermission={onRequestNotificationPermission}
           />
         )}

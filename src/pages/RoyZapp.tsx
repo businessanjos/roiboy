@@ -643,14 +643,6 @@ export default function RoyZapp() {
     const saved = localStorage.getItem("zapp_spelling_enabled");
     return saved !== null ? saved === "true" : true;
   });
-  const [suggestionsEnabled, setSuggestionsEnabled] = useState(() => {
-    const saved = localStorage.getItem("zapp_suggestions_enabled");
-    return saved !== null ? saved === "true" : true;
-  });
-  const [autoLearningEnabled, setAutoLearningEnabled] = useState(() => {
-    const saved = localStorage.getItem("zapp_auto_learning_enabled");
-    return saved !== null ? saved === "true" : true;
-  });
   
   // Notification system - handle view chat callback
   const handleNotificationViewChat = useCallback((conversationId: string) => {
@@ -4175,19 +4167,9 @@ export default function RoyZapp() {
             }
           }}
           spellingEnabled={spellingEnabled}
-          suggestionsEnabled={suggestionsEnabled}
-          autoLearningEnabled={autoLearningEnabled}
           onSpellingChange={(checked) => {
             setSpellingEnabled(checked);
             localStorage.setItem("zapp_spelling_enabled", String(checked));
-          }}
-          onSuggestionsChange={(checked) => {
-            setSuggestionsEnabled(checked);
-            localStorage.setItem("zapp_suggestions_enabled", String(checked));
-          }}
-          onAutoLearningChange={(checked) => {
-            setAutoLearningEnabled(checked);
-            localStorage.setItem("zapp_auto_learning_enabled", String(checked));
           }}
           getAgentName={getAgentName}
           onPullFromQueue={pullFromQueue}
@@ -4226,13 +4208,6 @@ export default function RoyZapp() {
           fileInputRef={fileInputRef}
           sectorId={selectedSectorId}
           spellingEnabled={spellingEnabled}
-          suggestionsEnabled={suggestionsEnabled}
-          autoLearningEnabled={autoLearningEnabled}
-          onToggleSuggestions={() => {
-            const newValue = !suggestionsEnabled;
-            setSuggestionsEnabled(newValue);
-            localStorage.setItem("zapp_suggestions_enabled", String(newValue));
-          }}
           onlineAgents={onlineAgents}
           totalQueueConversations={totalQueueConversations}
           activeConversations={activeConversations}
