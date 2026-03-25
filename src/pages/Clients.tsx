@@ -549,8 +549,7 @@ export default function Clients() {
       }));
       
       setClients(transformedClients);
-      
-      // Set team users from response
+      setTotalClients(result.total || 0);
       if (result.team_users) {
         setTeamUsers(result.team_users);
       }
