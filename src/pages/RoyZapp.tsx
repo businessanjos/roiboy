@@ -163,19 +163,7 @@ export default function RoyZapp() {
     setMessages,
   } = useZappData({ sectorId: selectedSectorId || undefined, integrationId: selectedIntegrationId });
 
-  // Messaging hook - handles send, recording, media, quick replies, etc.
-  const messaging = useZappMessaging({
-    selectedConversation,
-    currentUser,
-    selectedSectorId,
-    selectedIntegrationId,
-    messages,
-    setMessages,
-    fetchMessages,
-    userSignature,
-    signatureEnabled,
-    navigate,
-  });
+  // Messaging hook is initialized below after state declarations
 
   // Check WhatsApp status when sector changes
   useEffect(() => {
