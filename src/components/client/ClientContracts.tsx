@@ -656,17 +656,6 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
           {contracts.length} contrato{contracts.length !== 1 ? "s" : ""} registrado{contracts.length !== 1 ? "s" : ""}
         </p>
         <div className="flex items-center gap-2">
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={() => {
-              setZapSignContractId(undefined);
-              setZapSignDialogOpen(true);
-            }}
-          >
-            <PenTool className="h-4 w-4 mr-1" />
-            ZapSign
-          </Button>
           <Dialog open={dialogOpen} onOpenChange={(open) => {
             setDialogOpen(open);
             if (!open) resetForm();
