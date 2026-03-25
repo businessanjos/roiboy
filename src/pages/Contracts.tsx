@@ -211,6 +211,8 @@ export default function Contracts() {
   const [productFilter, setProductFilter] = usePersistedFilter<string>("contracts", "productFilter", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<"az" | "recent">("contracts", "sortOrder", "recent");
   const [activeTab, setActiveTab] = useState<string>("fila");
+  const [contractsPage, setContractsPage] = useState(1);
+  const [contractsPageSize, setContractsPageSize] = useState(20);
   
   // New contract dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -1437,6 +1439,21 @@ export default function Contracts() {
     });
   }, [currentContracts, searchTerm, statusFilter, typeFilter, productFilter, sortOrder]);
 
+  // Reset page when filters or tab change
+  const filterKey = `${searchTerm}-${statusFilter}-${typeFilter}-${productFilter}-${activeTab}`;
+  const prevFilterKeyRef = useRef(filterKey);
+  if (prevFilterKeyRef.current !== filterKey) {
+    prevFilterKeyRef.current = filterKey;
+    if (contractsPage !== 1) setContractsPage(1);
+  }
+
+  // Paginated contracts for display
+  const totalFilteredContracts = filteredContracts.length;
+  const totalPages = Math.ceil(totalFilteredContracts / contractsPageSize);
+  const paginatedContracts = useMemo(() => {
+    const start = (contractsPage - 1) * contractsPageSize;
+    return filteredContracts.slice(start, start + contractsPageSize);
+  }, [filteredContracts, contractsPage, contractsPageSize]);
 
 
   // Check if any filter is active
@@ -1877,9 +1894,10 @@ export default function Contracts() {
 
       {/* Contracts Table - hide on triagem tab since it has its own component */}
       {activeTab !== "triagem" && (
+        <>
         <Card>
           <CardContent className="p-0">
-            {filteredContracts.length === 0 ? (
+            {totalFilteredContracts === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mb-4 opacity-50" />
                 <p className="text-lg font-medium">Nenhum contrato encontrado</p>
@@ -1902,7 +1920,7 @@ export default function Contracts() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredContracts.map((contract) => {
+                  {paginatedContracts.map((contract) => {
                     const statusConfig = CONTRACT_STATUS_CONFIG[contract.status] || CONTRACT_STATUS_CONFIG.active;
                     const StatusIcon = statusConfig.icon;
                     
@@ -2020,6 +2038,75 @@ export default function Contracts() {
             )}
           </CardContent>
         </Card>
+
+        {/* Pagination Controls */}
+        {totalFilteredContracts > contractsPageSize && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 py-4">
+            <p className="text-sm text-muted-foreground">
+              Mostrando {((contractsPage - 1) * contractsPageSize) + 1}–{Math.min(contractsPage * contractsPageSize, totalFilteredContracts)} de {totalFilteredContracts} contratos
+            </p>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 mr-4">
+                {[20, 50, 100].map((size) => (
+                  <Button
+                    key={size}
+                    variant={contractsPageSize === size ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 w-10 text-xs"
+                    onClick={() => {
+                      setContractsPageSize(size);
+                      setContractsPage(1);
+                    }}
+                  >
+                    {size}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setContractsPage(p => Math.max(1, p - 1))}
+                disabled={contractsPage <= 1}
+              >
+                Anterior
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 7) {
+                    pageNum = i + 1;
+                  } else if (contractsPage <= 4) {
+                    pageNum = i + 1;
+                  } else if (contractsPage >= totalPages - 3) {
+                    pageNum = totalPages - 6 + i;
+                  } else {
+                    pageNum = contractsPage - 3 + i;
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={pageNum === contractsPage ? "default" : "outline"}
+                      size="sm"
+                      className="w-9 h-9"
+                      onClick={() => setContractsPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setContractsPage(p => Math.min(totalPages, p + 1))}
+                disabled={contractsPage >= totalPages}
+              >
+                Próximo
+              </Button>
+            </div>
+          </div>
+        )}
+        </>
       )}
           </TabsContent>
 
