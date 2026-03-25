@@ -2406,18 +2406,6 @@ export default function Clients() {
                           })()}
                         </TableCell>
                         <TableCell className="text-center">
-                          {vnpsMap[client.id] ? (
-                            <VNPSBadge
-                              score={vnpsMap[client.id].vnps_score}
-                              vnpsClass={vnpsMap[client.id].vnps_class}
-                              trend={vnpsMap[client.id].trend}
-                              size="sm"
-                            />
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
                           <Select
                             value={client.responsible_user_id || "none"}
                             onValueChange={async (value) => {
