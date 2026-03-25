@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 import { useZappData, Message, TeamUser, InboundMessageData } from "@/hooks/useZappData";
+import { useZappMessaging } from "@/hooks/useZappMessaging";
 import { useZappNotifications } from "@/hooks/useZappNotifications";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -161,6 +162,8 @@ export default function RoyZapp() {
     fetchMessages,
     setMessages,
   } = useZappData({ sectorId: selectedSectorId || undefined, integrationId: selectedIntegrationId });
+
+  // Messaging hook is initialized below after state declarations
 
   // Check WhatsApp status when sector changes
   useEffect(() => {
@@ -571,24 +574,7 @@ export default function RoyZapp() {
     }
   };
   
-  const [messageInput, setMessageInput] = useState("");
-  const [sendingMessage, setSendingMessage] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [audioPreview, setAudioPreview] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
-  const [imagePreview, setImagePreview] = useState<{ file: File; url: string; caption?: string } | null>(null);
-  const [filePreview, setFilePreview] = useState<{ file: File; url: string } | null>(null);
-  const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
-  const [showFormatting, setShowFormatting] = useState(false);
-  const [uploadingMedia, setUploadingMedia] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<{ id: string; content: string | null; sender_name: string | null; is_from_client: boolean; external_message_id?: string | null } | null>(null);
-  const [pendingMentions, setPendingMentions] = useState<{ phone: string; jid: string }[]>([]);
-  const messageInputRef = useRef<HTMLTextAreaElement>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Messaging state is now managed by useZappMessaging hook (messaging.*)
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
   
   // User signature state (persisted to database)
@@ -642,6 +628,20 @@ export default function RoyZapp() {
   const [spellingEnabled, setSpellingEnabled] = useState(() => {
     const saved = localStorage.getItem("zapp_spelling_enabled");
     return saved !== null ? saved === "true" : true;
+  });
+  
+  // Messaging hook - handles send, recording, media, quick replies, etc.
+  const messaging = useZappMessaging({
+    selectedConversation,
+    currentUser,
+    selectedSectorId,
+    selectedIntegrationId,
+    messages,
+    setMessages,
+    fetchMessages,
+    userSignature,
+    signatureEnabled,
+    navigate,
   });
   
   // Notification system - handle view chat callback
@@ -782,18 +782,7 @@ export default function RoyZapp() {
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
 
 
-  // Contact picker dialog state
-  const [contactPickerOpen, setContactPickerOpen] = useState(false);
-  const [contactSearch, setContactSearch] = useState("");
-  const [sendingContact, setSendingContact] = useState(false);
-
-  // Quick replies state
-  const [quickRepliesOpen, setQuickRepliesOpen] = useState(false);
-  const [quickReplies, setQuickReplies] = useState<{ id: string; title: string; content: string }[]>([]);
-  const [quickReplyDialogOpen, setQuickReplyDialogOpen] = useState(false);
-  const [editingQuickReply, setEditingQuickReply] = useState<{ id: string; title: string; content: string } | null>(null);
-  const [quickReplyForm, setQuickReplyForm] = useState({ title: "", content: "" });
-  const [savingQuickReply, setSavingQuickReply] = useState(false);
+  // Contact picker and quick replies state are now in useZappMessaging hook (messaging.*)
 
   // Add client/lead from contact state
   const [addContactDialogOpen, setAddContactDialogOpen] = useState(false);
@@ -823,150 +812,7 @@ export default function RoyZapp() {
   // Permanent delete conversation dialog state
   const [permanentDeleteDialogOpen, setPermanentDeleteDialogOpen] = useState(false);
 
-  // Ref to track current conversation ID for realtime validation
-  const currentConversationIdRef = useRef<string | null>(null);
-
-  // Update ref when conversation changes
-  useEffect(() => {
-    currentConversationIdRef.current = 
-      selectedConversation?.zapp_conversation_id || 
-      selectedConversation?.zapp_conversation?.id || 
-      null;
-  }, [selectedConversation?.id, selectedConversation?.zapp_conversation_id, selectedConversation?.zapp_conversation?.id]);
-
-  // Fetch messages when conversation is selected
-  useEffect(() => {
-    const zappConvId = selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id;
-    
-    // CRITICAL FIX: Clear messages IMMEDIATELY when conversation changes
-    // This prevents showing messages from previous conversation during fetch
-    setMessages([]);
-    
-    if (zappConvId) {
-      fetchMessages(zappConvId);
-    }
-  }, [selectedConversation?.id, fetchMessages, setMessages]);
-
-  // Realtime subscription for messages in selected conversation
-  useEffect(() => {
-    const zappConvId = selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id;
-    if (!zappConvId || !currentUser?.account_id) return;
-
-    console.log("[RoyZapp] Setting up realtime for conversation:", zappConvId);
-
-    // Track recently sent messages to avoid duplicate processing
-    const recentlySentRef = { current: new Set<string>() };
-    
-    const messagesChannel = supabase
-      .channel(`zapp-messages-${zappConvId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'zapp_messages',
-          filter: `zapp_conversation_id=eq.${zappConvId}`
-        },
-        (payload) => {
-          console.log("[RoyZapp] Realtime INSERT received:", payload);
-          const newMsg = payload.new as any;
-          
-          // CRITICAL FIX: Validate this message belongs to CURRENTLY selected conversation
-          // This prevents messages from being added if user switched conversations
-          if (currentConversationIdRef.current !== zappConvId) {
-            console.log("[RoyZapp] Ignoring realtime INSERT - conversation changed:", {
-              receivedFor: zappConvId,
-              currentlySelected: currentConversationIdRef.current
-            });
-            return;
-          }
-          
-          // Skip if this is our own recently sent outbound message
-          // This prevents duplicate fetching right after we insert
-          if (newMsg.direction === 'outbound' && newMsg.id) {
-            const insertTime = new Date(newMsg.sent_at || newMsg.created_at).getTime();
-            const now = Date.now();
-            // If message was sent in last 3 seconds by us, skip refetch
-            if (now - insertTime < 3000) {
-              console.log("[RoyZapp] Skipping refetch for own recent message:", newMsg.id);
-              // Just update state directly instead of refetching
-              setMessages(prev => {
-                // CRITICAL FIX: Check if message already exists by id OR external_message_id
-                const existingByExternal = prev.find(m => 
-                  m.external_message_id && m.external_message_id === newMsg.external_message_id
-                );
-                const existsById = prev.some(m => m.id === newMsg.id);
-                
-                // If message exists (especially edited ones), skip to prevent duplicates
-                if (existsById || existingByExternal) {
-                  if (existingByExternal) {
-                    console.log("[RoyZapp] Ignoring INSERT for existing message with same external_id:", newMsg.external_message_id);
-                  }
-                  return prev;
-                }
-                // Remove any temp messages that might be for this audio
-                const filtered = prev.filter(m => !m.id.startsWith('temp-audio-'));
-                return [...filtered, {
-                  id: newMsg.id,
-                  content: newMsg.content,
-                  is_from_client: newMsg.direction === 'inbound',
-                  created_at: newMsg.sent_at || newMsg.created_at,
-                  message_type: newMsg.message_type,
-                  media_url: newMsg.media_url,
-                  media_type: newMsg.media_type,
-                  media_mimetype: newMsg.media_mimetype,
-                  media_filename: newMsg.media_filename,
-                  audio_duration_sec: newMsg.audio_duration_sec,
-                  sender_name: newMsg.sender_name,
-                  external_message_id: newMsg.external_message_id,
-                }];
-              });
-              return;
-            }
-          }
-          
-          // For inbound messages or older outbound, refetch to ensure proper ordering
-          fetchMessages(zappConvId);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'zapp_messages',
-          filter: `zapp_conversation_id=eq.${zappConvId}`
-        },
-        (payload) => {
-          console.log("[RoyZapp] Realtime UPDATE received:", payload);
-          const updatedMsg = payload.new as any;
-          
-          // CRITICAL FIX: Validate this update belongs to CURRENTLY selected conversation
-          if (currentConversationIdRef.current !== zappConvId) {
-            console.log("[RoyZapp] Ignoring realtime UPDATE - conversation changed:", {
-              receivedFor: zappConvId,
-              currentlySelected: currentConversationIdRef.current
-            });
-            return;
-          }
-          
-          // Update message in local state (includes is_deleted changes)
-          setMessages(prev => prev.map(m => 
-            m.id === updatedMsg.id 
-              ? { ...m, ...updatedMsg }
-              : m
-          ));
-        }
-      )
-      .subscribe((status) => {
-        console.log("[RoyZapp] Realtime subscription status:", status);
-      });
-
-    return () => {
-      console.log("[RoyZapp] Cleaning up realtime for conversation:", zappConvId);
-      supabase.removeChannel(messagesChannel);
-    };
-  }, [selectedConversation?.id, currentUser?.account_id, fetchMessages]);
+  // Message fetching and realtime are now handled by useZappMessaging hook
 
   // Department functions
   const openDepartmentDialog = (dept?: Department) => {
@@ -1506,1128 +1352,8 @@ export default function RoyZapp() {
     }
   };
 
-  // Send message via UAZAPI
-  const sendMessage = async () => {
-    // If there's an image preview, send it instead
-    if (imagePreview && selectedConversation) {
-      const file = imagePreview.file;
-      const caption = imagePreview.caption;
-      URL.revokeObjectURL(imagePreview.url);
-      setImagePreview(null);
-      
-      // Send media message with caption
-      await sendMediaMessage(file, "image", caption);
-      return;
-    }
-
-    // If there's a file preview (video/document), send it
-    if (filePreview && selectedConversation) {
-      const file = filePreview.file;
-      const mediaType: "image" | "video" | "document" = file.type.startsWith('video/') ? 'video' : 'document';
-      URL.revokeObjectURL(filePreview.url);
-      setFilePreview(null);
-      await sendMediaMessage(file, mediaType);
-      return;
-    }
-    
-    if (!messageInput.trim() || !selectedConversation) return;
-    
-    const contactInfo = getContactInfo(selectedConversation);
-    const phone = contactInfo.phone;
-    const isGroup = contactInfo.isGroup;
-    const groupJid = selectedConversation.zapp_conversation?.group_jid;
-    
-    if (!phone && !groupJid) {
-      toast.error("Número de telefone não encontrado");
-      return;
-    }
-    
-    // Add signature at the top of the message if enabled (bold name with colon)
-    const baseMessage = messageInput.trim();
-    const formattedSignature = userSignature.trim() ? `*${userSignature.trim()}:*` : "";
-    const messageContent = signatureEnabled && formattedSignature 
-      ? `${formattedSignature}\n${baseMessage}`
-      : baseMessage;
-    const tempMessageId = `temp-${Date.now()}`;
-    const now = new Date().toISOString();
-    const conversationId = selectedConversation.zapp_conversation_id;
-    const accountId = currentUser!.account_id;
-    
-    // Capture reply context before clearing
-    const replyContext = replyingTo ? { ...replyingTo } : null;
-    
-    // Optimistic update - add message to UI immediately and clear input
-    const optimisticMessage: Message = {
-      id: tempMessageId,
-      content: messageContent,
-      is_from_client: false,
-      created_at: now,
-      message_type: "text",
-      media_url: null,
-      media_type: null,
-      media_mimetype: null,
-      media_filename: null,
-      audio_duration_sec: null,
-      sender_name: null,
-      // Dados da citação para exibição imediata
-      quoted_message_id: replyContext?.external_message_id || null,
-      quoted_content: replyContext?.content || null,
-      quoted_sender_name: replyContext?.is_from_client 
-        ? (replyContext.sender_name || "Cliente") 
-        : "Você",
-      // Status de envio local
-      send_status: "sending",
-      send_error: null,
-    };
-    
-    console.log("[RoyZapp] Adding optimistic message:", optimisticMessage.id);
-    setMessages(prev => {
-      console.log("[RoyZapp] Previous messages count:", prev.length);
-      const newMessages = [...prev, optimisticMessage];
-      console.log("[RoyZapp] New messages count:", newMessages.length);
-      return newMessages;
-    });
-    setMessageInput("");
-    setReplyingTo(null);
-    
-    // Capture current mentions before clearing
-    const mentionsToSend = [...pendingMentions];
-    setPendingMentions([]);
-    
-    // Fire and forget - don't block UI while sending
-    (async () => {
-      try {
-        // Call UAZAPI to send message
-        const action = isGroup && groupJid ? "send_to_group" : "send_text";
-        const payload: Record<string, unknown> = {
-          action,
-          message: messageContent,
-          sector_id: selectedSectorId,
-          integration_id: selectedIntegrationId,
-        };
-        
-        if (isGroup && groupJid) {
-          payload.group_id = groupJid;
-          // Add mentions for group messages
-          if (mentionsToSend.length > 0) {
-            payload.mentions = mentionsToSend.map(m => m.jid);
-          }
-        } else {
-          payload.phone = phone;
-        }
-        
-        // Add quoted message for replies (use external_message_id if available, fallback to id)
-        if (replyContext?.external_message_id) {
-          payload.quoted_message_id = replyContext.external_message_id;
-          // is_from_client = true means CLIENT sent the message, so fromMe = false (we didn't send it)
-          // is_from_client = false means WE sent the message, so fromMe = true
-          payload.quoted_from_me = !replyContext.is_from_client;
-          // Pass the participant for proper quote attribution
-          // For client messages, use the conversation's phone (client's phone)
-          // For our messages, the backend will determine our instance owner JID
-          if (replyContext.is_from_client && phone) {
-            payload.quoted_participant = phone;
-          }
-        }
-        
-        const { data: sendResult, error } = await supabase.functions.invoke("uazapi-manager", {
-          body: payload,
-        });
-        
-        if (error) throw error;
-        
-        // Extract external_message_id from UAZAPI response
-        const externalId = sendResult?.data?.id || sendResult?.data?.messageid || sendResult?.id || sendResult?.messageid || null;
-        
-        // Save message to zapp_messages in background
-        if (conversationId) {
-          const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
-            account_id: accountId,
-            zapp_conversation_id: conversationId,
-            direction: "outbound",
-            content: messageContent,
-            message_type: "text",
-            sent_at: now,
-            external_message_id: externalId,
-            // Dados da mensagem citada
-            quoted_message_id: replyContext?.external_message_id || null,
-            quoted_content: replyContext?.content || null,
-            quoted_sender_name: replyContext?.is_from_client 
-              ? (replyContext.sender_name || "Cliente") 
-              : "Você",
-          }).select("id").single();
-          
-          // Replace temp message with real one and mark as sent
-          if (insertedMessage) {
-            setMessages(prev => prev.map(m => 
-              m.id === tempMessageId ? { ...m, id: insertedMessage.id, send_status: "sent" as const, external_message_id: externalId } : m
-            ));
-          }
-          
-          // Update conversation last message - don't await
-          supabase.from("zapp_conversations").update({
-            last_message_at: now,
-            last_message_preview: messageContent.substring(0, 100),
-            unread_count: 0,
-          }).eq("id", conversationId);
-        }
-      } catch (error: any) {
-        console.error("Error sending message:", error);
-        
-        // Try to extract error message from Edge Function JSON response
-        let errorMsg = error.message || "Erro ao enviar mensagem";
-        
-        // If error has context body (from Edge Function), try to parse it
-        if (error.context?.body) {
-          try {
-            const errorBody = JSON.parse(error.context.body);
-            if (errorBody.error) {
-              errorMsg = errorBody.error;
-            }
-          } catch {
-            // Ignore JSON parse errors
-          }
-        }
-        
-        // Check for permanent errors (don't auto-retry these)
-        const isWhatsAppDisconnected = errorMsg.includes("WHATSAPP_DISCONNECTED") || 
-                                        errorMsg.includes("desconectado") ||
-                                        errorMsg.includes("disconnected");
-        
-        const isLidNotFound = errorMsg.includes("no LID found") || 
-                              errorMsg.includes("LID not found") ||
-                              (errorMsg.includes("not found for") && errorMsg.includes("@s.whatsapp.net"));
-        
-        const isInvalidNumber = errorMsg.includes("invalid") || 
-                                errorMsg.includes("Could not parse") ||
-                                errorMsg.includes("not valid") ||
-                                errorMsg.includes("número inválido") ||
-                                errorMsg.includes("formato inválido");
-        
-        const isPermanentError = isWhatsAppDisconnected || isLidNotFound || isInvalidNumber;
-        
-        // Auto-retry once for transient errors (network issues, timeouts, 500s)
-        // The Edge Function already retries 3x, this is an additional frontend fallback
-        const isTransientError = !isPermanentError && (
-          errorMsg.includes("non-2xx") ||
-          errorMsg.includes("timeout") ||
-          errorMsg.includes("network") ||
-          errorMsg.includes("fetch") ||
-          errorMsg.includes("500") ||
-          errorMsg.includes("503") ||
-          errorMsg.includes("502") ||
-          errorMsg.includes("504")
-        );
-        
-        // Check if this is the first attempt (message doesn't have retry marker)
-        const isFirstAttempt = !optimisticMessage.id.includes("-retry");
-        
-        if (isTransientError && isFirstAttempt) {
-          console.log("[RoyZapp] Transient error detected, auto-retrying in 1.5s...");
-          
-          // Update message status to show retry in progress
-          setMessages(prev => prev.map(m => 
-            m.id === tempMessageId 
-              ? { ...m, send_status: "sending" as const, send_error: "Tentando novamente..." }
-              : m
-          ));
-          
-          // Wait and retry
-          await new Promise(r => setTimeout(r, 1500));
-          
-          try {
-            // Recreate payload for retry (same structure as original)
-            const action = isGroup && groupJid ? "send_to_group" : "send_text";
-            const retryPayload: Record<string, unknown> = {
-              action,
-              message: messageContent,
-              sector_id: selectedSectorId,
-              integration_id: selectedIntegrationId,
-            };
-            
-            if (isGroup && groupJid) {
-              retryPayload.group_id = groupJid;
-              if (mentionsToSend.length > 0) {
-                retryPayload.mentions = mentionsToSend.map(m => m.jid);
-              }
-            } else {
-              retryPayload.phone = phone;
-            }
-            
-            if (replyContext?.external_message_id) {
-              retryPayload.quoted_message_id = replyContext.external_message_id;
-              retryPayload.quoted_from_me = !replyContext.is_from_client;
-              if (replyContext.is_from_client && phone) {
-                retryPayload.quoted_participant = phone;
-              }
-            }
-            
-            const { error: retryError } = await supabase.functions.invoke("uazapi-manager", {
-              body: retryPayload,
-            });
-            
-            if (retryError) throw retryError;
-            
-            console.log("[RoyZapp] Auto-retry succeeded!");
-            
-            // Save message to database after successful retry
-            if (conversationId) {
-              const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
-                account_id: accountId,
-                zapp_conversation_id: conversationId,
-                direction: "outbound",
-                content: messageContent,
-                message_type: "text",
-                sent_at: now,
-                quoted_message_id: replyContext?.external_message_id || null,
-                quoted_content: replyContext?.content || null,
-                quoted_sender_name: replyContext?.is_from_client 
-                  ? (replyContext.sender_name || "Cliente") 
-                  : "Você",
-              }).select("id").single();
-              
-              if (insertedMessage) {
-                setMessages(prev => prev.map(m => 
-                  m.id === tempMessageId ? { ...m, id: insertedMessage.id, send_status: "sent" as const, send_error: null } : m
-                ));
-              }
-              
-              supabase.from("zapp_conversations").update({
-                last_message_at: now,
-                last_message_preview: messageContent.substring(0, 100),
-                unread_count: 0,
-              }).eq("id", conversationId);
-            }
-            
-            return; // Success on retry, exit early
-          } catch (retryErr: any) {
-            console.error("[RoyZapp] Auto-retry also failed:", retryErr);
-            // Continue to show error to user
-            errorMsg = retryErr.message || errorMsg;
-          }
-        }
-        
-        // Determine user-friendly error message
-        let userErrorMessage = errorMsg;
-        if (isWhatsAppDisconnected) {
-          userErrorMessage = "WhatsApp desconectado";
-        } else if (isLidNotFound) {
-          userErrorMessage = "Número não encontrado no WhatsApp";
-        } else if (isInvalidNumber) {
-          userErrorMessage = "Número de telefone inválido ou não registrado no WhatsApp";
-        }
-        
-        // Mark message as failed
-        setMessages(prev => prev.map(m => 
-          m.id === tempMessageId 
-            ? { 
-                ...m, 
-                send_status: "failed" as const, 
-                send_error: userErrorMessage
-              } 
-            : m
-        ));
-        
-        // Show appropriate error toast
-        if (isWhatsAppDisconnected) {
-          toast.error("WhatsApp desconectado. Reconecte nas configurações para enviar mensagens.", {
-            duration: 6000,
-            action: {
-              label: "Ir para Configurações",
-              onClick: () => navigate("/settings"),
-            },
-          });
-        } else if (isLidNotFound) {
-          toast.error("Este número não está cadastrado no WhatsApp ou é inválido. Verifique se o número está correto.", {
-            duration: 8000,
-          });
-        } else if (isInvalidNumber) {
-          toast.error("Número de telefone inválido. Verifique o formato e tente novamente.", {
-            duration: 8000,
-          });
-        } else {
-          toast.error(errorMsg);
-        }
-      }
-    })();
-  };
-
-  // Send media message (image/document/video)
-  const sendMediaMessage = async (file: File, mediaType: "image" | "document" | "video", caption?: string) => {
-    if (!selectedConversation || uploadingMedia) return;
-    
-    const contactInfo = getContactInfo(selectedConversation);
-    const phone = contactInfo.phone;
-    const isGroup = contactInfo.isGroup;
-    const groupJid = selectedConversation.zapp_conversation?.group_jid;
-    
-    if (!phone && !groupJid) {
-      toast.error("Número de telefone não encontrado");
-      return;
-    }
-
-    setUploadingMedia(true);
-    const tempMessageId = `temp-media-${Date.now()}`;
-    const now = new Date().toISOString();
-    
-    // Create optimistic message
-    const optimisticMessage: Message = {
-      id: tempMessageId,
-      content: caption || (mediaType === "image" ? "" : mediaType === "video" ? "" : file.name),
-      is_from_client: false,
-      created_at: now,
-      message_type: mediaType,
-      media_url: URL.createObjectURL(file), // Temporary URL for preview
-      media_type: mediaType,
-      media_mimetype: file.type,
-      media_filename: file.name,
-      audio_duration_sec: null,
-      sender_name: null,
-    };
-    
-    setMessages(prev => [...prev, optimisticMessage]);
-    
-    try {
-      // Upload file to public bucket (UAZAPI needs to access the URL)
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const fileName = `${currentUser!.account_id}/${Date.now()}/${safeName}`;
-      const bucket = "zapp-media";
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-      
-      if (uploadError) throw uploadError;
-      
-      // Get public URL
-      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
-      const mediaUrl = urlData.publicUrl;
-      
-      // Call UAZAPI to send media
-      const action = isGroup && groupJid ? "send_media_to_group" : "send_media";
-      const payload: Record<string, string> = {
-        action,
-        media_url: mediaUrl,
-        media_type: mediaType,
-        caption: caption || "",
-        file_name: file.name,
-        sector_id: selectedSectorId || "",
-        integration_id: selectedIntegrationId || "",
-      };
-      
-      if (isGroup && groupJid) {
-        payload.group_id = groupJid;
-      } else {
-        payload.phone = phone;
-      }
-      
-      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
-        body: payload,
-      });
-      
-      if (error) throw error;
-      
-      if (data?.error) {
-        throw new Error(data.error || "Falha ao enviar mídia");
-      }
-      
-      // Extract external_message_id from UAZAPI response
-      const externalId = data?.data?.id || data?.data?.messageid || data?.id || data?.messageid || null;
-      
-      // Save message to zapp_messages
-      if (selectedConversation.zapp_conversation_id) {
-        const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
-          account_id: currentUser!.account_id,
-          zapp_conversation_id: selectedConversation.zapp_conversation_id,
-          direction: "outbound",
-          content: caption || (mediaType === "image" ? "" : mediaType === "video" ? "" : file.name),
-          message_type: mediaType,
-          media_url: mediaUrl,
-          media_type: mediaType,
-          media_mimetype: file.type,
-          media_filename: file.name,
-          sent_at: now,
-          external_message_id: externalId,
-        }).select("id").single();
-        
-        // Replace temp message with real one
-        if (insertedMessage) {
-          setMessages(prev => prev.map(m => 
-            m.id === tempMessageId ? { ...m, id: insertedMessage.id, media_url: mediaUrl, external_message_id: externalId } : m
-          ));
-        }
-        
-        // Update conversation last message
-        await supabase.from("zapp_conversations").update({
-          last_message_at: now,
-          last_message_preview: mediaType === "image" ? "📷 Imagem" : mediaType === "video" ? "🎬 Vídeo" : `📎 ${file.name}`,
-          unread_count: 0,
-        }).eq("id", selectedConversation.zapp_conversation_id);
-      }
-      
-      toast.success(mediaType === "image" ? "Imagem enviada!" : mediaType === "video" ? "Vídeo enviado!" : "Arquivo enviado!");
-    } catch (error: any) {
-      console.error("Error sending media:", error);
-      // Remove optimistic message on error
-      setMessages(prev => prev.filter(m => m.id !== tempMessageId));
-      toast.error(error.message || "Erro ao enviar mídia");
-    } finally {
-      setUploadingMedia(false);
-    }
-  };
-
-  // Handle file input change
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, mediaType: "image" | "document") => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file size (max 50MB)
-      if (file.size > 50 * 1024 * 1024) {
-        toast.error("Arquivo muito grande. Máximo 50MB.");
-        return;
-      }
-      // Auto-detect video files
-      const resolvedType: "image" | "document" | "video" = file.type.startsWith('video/') ? 'video' : mediaType;
-      sendMediaMessage(file, resolvedType);
-    }
-    // Reset input
-    e.target.value = "";
-  };
-
-  // Start audio recording
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        } 
-      });
-      
-      // Try to use ogg format first (better WhatsApp compatibility), fallback to webm
-      let mimeType = 'audio/webm';
-      if (MediaRecorder.isTypeSupported('audio/ogg;codecs=opus')) {
-        mimeType = 'audio/ogg;codecs=opus';
-      } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
-        mimeType = 'audio/ogg';
-      } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-        mimeType = 'audio/webm;codecs=opus';
-      }
-      
-      console.log('Recording with mimeType:', mimeType);
-      
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
-      
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-      
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-      
-      mediaRecorder.onstop = async () => {
-        // Stop all tracks
-        stream.getTracks().forEach(track => track.stop());
-        
-        if (audioChunksRef.current.length > 0) {
-          // Use the actual mimeType from the recorder for the blob
-          const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
-          const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
-          const audioUrl = URL.createObjectURL(audioBlob);
-          // Set preview instead of sending immediately
-          setAudioPreview({ 
-            blob: audioBlob, 
-            url: audioUrl, 
-            duration: recordingDuration 
-          });
-        }
-      };
-      
-      mediaRecorder.start(100); // Collect data every 100ms
-      setIsRecording(true);
-      setRecordingDuration(0);
-      
-      // Start timer
-      recordingIntervalRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
-      }, 1000);
-      
-      toast.success("Gravando áudio...");
-    } catch (error: any) {
-      console.error("Error starting recording:", error);
-      toast.error("Erro ao acessar microfone. Verifique as permissões.");
-    }
-  };
-
-  // Stop audio recording
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-        recordingIntervalRef.current = null;
-      }
-      setRecordingDuration(0);
-    }
-  };
-
-  // Cancel audio recording
-  const cancelRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      // Stop without triggering onstop handler
-      const stream = mediaRecorderRef.current.stream;
-      stream.getTracks().forEach(track => track.stop());
-      mediaRecorderRef.current = null;
-      audioChunksRef.current = [];
-      setIsRecording(false);
-      
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-        recordingIntervalRef.current = null;
-      }
-      setRecordingDuration(0);
-      toast.info("Gravação cancelada");
-    }
-  };
-
-  // Discard audio preview
-  const discardAudioPreview = () => {
-    if (audioPreview) {
-      URL.revokeObjectURL(audioPreview.url);
-      setAudioPreview(null);
-    }
-  };
-
-  // Confirm and send audio preview
-  const confirmAudioSend = async () => {
-    if (audioPreview) {
-      await sendAudioMessage(audioPreview.blob, audioPreview.duration);
-      URL.revokeObjectURL(audioPreview.url);
-      setAudioPreview(null);
-    }
-  };
-
-  // Send audio message
-  const sendAudioMessage = async (audioBlob: Blob, duration?: number) => {
-    if (!selectedConversation || uploadingMedia) return;
-    
-    const contactInfo = getContactInfo(selectedConversation);
-    const phone = contactInfo.phone;
-    const isGroup = contactInfo.isGroup;
-    const groupJid = selectedConversation.zapp_conversation?.group_jid;
-    
-    if (!phone && !groupJid) {
-      toast.error("Número de telefone não encontrado");
-      return;
-    }
-
-    setUploadingMedia(true);
-    const now = new Date().toISOString();
-    let insertedMessageId: string | null = null;
-    
-    try {
-      // 1. UPLOAD: First upload audio to storage
-      const isOgg = audioBlob.type.includes('ogg');
-      const extension = isOgg ? 'ogg' : 'webm';
-      const fileName = `${currentUser!.account_id}/audio_${Date.now()}.${extension}`;
-      const bucket = "zapp-media";
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from(bucket)
-        .upload(fileName, audioBlob, {
-          contentType: audioBlob.type,
-          cacheControl: '3600',
-          upsert: false
-        });
-      
-      if (uploadError) throw uploadError;
-      
-      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
-      const mediaUrl = urlData.publicUrl;
-      
-      // 2. INSERT FIRST: Save to database BEFORE calling UAZAPI
-      // This ensures webhook finds the record to update (prevents duplicates)
-      if (selectedConversation.zapp_conversation_id) {
-        const { data: insertedMessage, error: insertError } = await supabase.from("zapp_messages").insert({
-          account_id: currentUser!.account_id,
-          zapp_conversation_id: selectedConversation.zapp_conversation_id,
-          direction: "outbound",
-          content: "",
-          message_type: "audio",
-          media_url: mediaUrl,
-          media_type: "audio",
-          media_mimetype: audioBlob.type,
-          media_filename: `audio_${Date.now()}.webm`,
-          audio_duration_sec: duration || null,
-          sent_at: now,
-          // external_message_id will be filled by webhook
-        }).select("id").single();
-        
-        if (insertError) throw insertError;
-        insertedMessageId = insertedMessage?.id || null;
-        
-        // 3. UPDATE UI: Add to messages list with real ID
-        if (insertedMessageId) {
-          const optimisticMessage: Message = {
-            id: insertedMessageId,
-            content: "",
-            is_from_client: false,
-            created_at: now,
-            message_type: "audio",
-            media_url: mediaUrl,
-            media_type: "audio",
-            media_mimetype: audioBlob.type,
-            media_filename: `audio_${Date.now()}.webm`,
-            audio_duration_sec: duration || null,
-            sender_name: null,
-            delivery_status: "pending",
-          };
-          
-          setMessages(prev => {
-            // Check if this message already exists
-            const exists = prev.some(m => m.id === insertedMessageId);
-            if (exists) return prev;
-            // Remove any temp audio messages
-            const filtered = prev.filter(m => !m.id.startsWith('temp-audio-'));
-            return [...filtered, optimisticMessage];
-          });
-        }
-        
-        // 4. SEND: Now call UAZAPI (webhook will update existing record)
-        const action = isGroup && groupJid ? "send_media_to_group" : "send_media";
-        const payload: Record<string, string> = {
-          action,
-          media_url: mediaUrl,
-          media_type: "audio",
-          caption: "",
-          file_name: `audio_${Date.now()}.webm`,
-          sector_id: selectedSectorId || "",
-          integration_id: selectedIntegrationId || "",
-        };
-        
-        if (isGroup && groupJid) {
-          payload.group_id = groupJid;
-        } else {
-          payload.phone = phone;
-        }
-        
-        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
-          body: payload,
-        });
-        
-        if (error) {
-          // ROLLBACK: Delete the inserted record if UAZAPI fails
-          if (insertedMessageId) {
-            console.log(`[ROLLBACK] UAZAPI failed, deleting message ${insertedMessageId}`);
-            await supabase.from("zapp_messages").delete().eq("id", insertedMessageId);
-            setMessages(prev => prev.filter(m => m.id !== insertedMessageId));
-          }
-          throw error;
-        }
-        
-        // Check both wrapper and inner success
-        const innerData = data?.data || data;
-        if (!innerData?.success && innerData?.message) {
-          // ROLLBACK: Delete the inserted record if UAZAPI reports failure
-          if (insertedMessageId) {
-            console.log(`[ROLLBACK] UAZAPI reported failure, deleting message ${insertedMessageId}`);
-            await supabase.from("zapp_messages").delete().eq("id", insertedMessageId);
-            setMessages(prev => prev.filter(m => m.id !== insertedMessageId));
-          }
-          throw new Error(innerData.message || "Falha ao enviar áudio");
-        }
-        
-        // Extract external_message_id from UAZAPI response and update DB record
-        const audioExternalId = innerData?.id || innerData?.messageid || data?.data?.id || data?.data?.messageid || null;
-        if (audioExternalId && insertedMessageId) {
-          await supabase.from("zapp_messages").update({ external_message_id: audioExternalId }).eq("id", insertedMessageId);
-        }
-        
-        // 5. UPDATE UI: Mark as sent
-        setMessages(prev => prev.map(m => 
-          m.id === insertedMessageId 
-            ? { ...m, delivery_status: "sent" as const, external_message_id: audioExternalId }
-            : m
-        ));
-        
-        // Update conversation last message
-        await supabase.from("zapp_conversations").update({
-          last_message_at: now,
-          last_message_preview: "🎤 Áudio",
-          unread_count: 0,
-        }).eq("id", selectedConversation.zapp_conversation_id);
-      }
-      
-      toast.success("Áudio enviado!");
-    } catch (error: any) {
-      console.error("Error sending audio:", error);
-      toast.error(error.message || "Erro ao enviar áudio. O áudio foi gravado mas não enviado ao WhatsApp.");
-    } finally {
-      setUploadingMedia(false);
-    }
-  };
-
-  // Format duration for display
-  const formatRecordingDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Handle delete message for everyone (soft delete)
-  const handleDeleteMessage = async (messageId: string) => {
-    if (!selectedConversation) return;
-    
-    // Find the message to get the external_message_id
-    const message = messages.find(m => m.id === messageId);
-    if (!message) return;
-    
-    // Failsafe: Temporary IDs should be blocked at UI level, but double-check
-    if (messageId.startsWith("temp-")) {
-      console.warn("Attempted to delete temporary message - button should be disabled");
-      return;
-    }
-    
-    try {
-      // 1. Try to delete on WhatsApp via UAZAPI (using external_message_id)
-      let whatsappDeleted = false;
-      
-      if (message.external_message_id) {
-        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
-          body: {
-            action: "delete_message",
-            message_id: message.external_message_id,
-            phone: getContactInfo(selectedConversation).phone,
-            sector_id: selectedSectorId || "",
-          },
-        });
-        
-        if (!error && data?.data?.deleted) {
-          whatsappDeleted = true;
-          console.log("WhatsApp delete successful");
-        } else {
-          const errorMsg = data?.data?.error || data?.error || "Unknown error";
-          console.warn("WhatsApp delete failed:", errorMsg);
-          
-          // Check if it's a time limit issue
-          if (errorMsg.includes("7 minutos") || errorMsg.includes("time") || errorMsg.includes("expired")) {
-            toast.warning("Mensagens só podem ser apagadas para todos em até 7 minutos após o envio");
-          }
-        }
-      }
-      
-      // 2. Soft delete in database - check affected rows
-      const { data: updateData, error: updateError } = await supabase
-        .from("zapp_messages")
-        .update({ 
-          is_deleted: true, 
-          deleted_at: new Date().toISOString(),
-          content: "🚫 Mensagem apagada"
-        })
-        .eq("id", messageId)
-        .select();
-      
-      if (updateError) throw updateError;
-      
-      // Verify rows were actually affected
-      if (!updateData || updateData.length === 0) {
-        console.warn("No rows affected by delete - message may not exist in DB");
-        toast.error("Mensagem não encontrada no banco de dados");
-        return;
-      }
-      
-      // 3. DO NOT update local state - let Realtime propagate the change
-      // The postgres_changes UPDATE event will update the state automatically
-      
-      toast.success(
-        whatsappDeleted 
-          ? "Mensagem apagada para todos" 
-          : "Mensagem apagada localmente"
-      );
-      
-    } catch (error: any) {
-      console.error("Error deleting message:", error);
-      toast.error(error.message || "Erro ao apagar mensagem");
-    }
-  };
-
-  // Handle editing a message
-  const handleEditMessage = async (messageId: string, newContent: string) => {
-    if (!selectedConversation || !newContent.trim()) return;
-    
-    const message = messages.find(m => m.id === messageId);
-    if (!message) return;
-    
-    try {
-      // 1. Try to edit on WhatsApp via UAZAPI
-      let whatsappEdited = false;
-      
-      if (message.external_message_id) {
-        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
-          body: {
-            action: "edit_message",
-            message_id: message.external_message_id,
-            new_content: newContent.trim(),
-            phone: getContactInfo(selectedConversation).phone,
-            sector_id: selectedSectorId || "",
-          },
-        });
-        
-        if (!error && data?.data?.edited) {
-          whatsappEdited = true;
-          console.log("WhatsApp edit successful");
-        } else {
-          const errorMsg = data?.data?.error || data?.error || "Unknown error";
-          console.warn("WhatsApp edit failed:", errorMsg);
-        }
-      }
-      
-      // 2. Update in database
-      const { error: updateError } = await supabase
-        .from("zapp_messages")
-        .update({ 
-          content: newContent.trim(),
-          updated_at: new Date().toISOString(),
-          is_edited: true,
-        })
-        .eq("id", messageId);
-      
-      if (updateError) throw updateError;
-      
-      // 3. Update local state immediately for responsiveness
-      setMessages(prev => prev.map(m =>
-        m.id === messageId
-          ? { ...m, content: newContent.trim(), is_edited: true }
-          : m
-      ));
-      
-      toast.success(
-        whatsappEdited 
-          ? "Mensagem editada" 
-          : "Mensagem editada localmente"
-      );
-      
-    } catch (error: any) {
-      console.error("Error editing message:", error);
-      toast.error(error.message || "Erro ao editar mensagem");
-    }
-  };
-
-  // Handle key press in input
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  // Send contact to conversation
-  const sendContact = async (client: { id: string; full_name: string; phone_e164: string }) => {
-    if (!selectedConversation || sendingContact) return;
-    
-    const contactInfo = getContactInfo(selectedConversation);
-    const phone = contactInfo.phone;
-    const isGroup = contactInfo.isGroup;
-    const groupJid = selectedConversation.zapp_conversation?.group_jid;
-    
-    if (!phone && !groupJid) {
-      toast.error("Número de telefone não encontrado");
-      return;
-    }
-
-    setSendingContact(true);
-    
-    // Format contact as vCard text message for now (UAZAPI contact sending)
-    const contactMessage = `📇 *Contato*\n*Nome:* ${client.full_name}\n*Telefone:* ${client.phone_e164}`;
-    
-    const tempMessageId = `temp-contact-${Date.now()}`;
-    const now = new Date().toISOString();
-    
-    const optimisticMessage: Message = {
-      id: tempMessageId,
-      content: contactMessage,
-      is_from_client: false,
-      created_at: now,
-      message_type: "text",
-      media_url: null,
-      media_type: null,
-      media_mimetype: null,
-      media_filename: null,
-      audio_duration_sec: null,
-      sender_name: null,
-    };
-    
-    setMessages(prev => [...prev, optimisticMessage]);
-    setContactPickerOpen(false);
-    
-    try {
-      const action = isGroup && groupJid ? "send_to_group" : "send_text";
-      const payload: Record<string, string> = {
-        action,
-        message: contactMessage,
-        sector_id: selectedSectorId || "",
-        integration_id: selectedIntegrationId || "",
-      };
-      
-      if (isGroup && groupJid) {
-        payload.group_id = groupJid;
-      } else {
-        payload.phone = phone;
-      }
-      
-      const { data: contactSendResult, error } = await supabase.functions.invoke("uazapi-manager", {
-        body: payload,
-      });
-      
-      if (error) throw error;
-      
-      // Extract external_message_id from UAZAPI response
-      const contactExternalId = contactSendResult?.data?.id || contactSendResult?.data?.messageid || contactSendResult?.id || contactSendResult?.messageid || null;
-      
-      // Save message to zapp_messages
-      if (selectedConversation.zapp_conversation_id) {
-        const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
-          account_id: currentUser!.account_id,
-          zapp_conversation_id: selectedConversation.zapp_conversation_id,
-          direction: "outbound",
-          content: contactMessage,
-          message_type: "text",
-          sent_at: now,
-          external_message_id: contactExternalId,
-        }).select("id").single();
-        
-        if (insertedMessage) {
-          setMessages(prev => prev.map(m => 
-            m.id === tempMessageId ? { ...m, id: insertedMessage.id, external_message_id: contactExternalId } : m
-          ));
-        }
-        
-        await supabase.from("zapp_conversations").update({
-          last_message_at: now,
-          last_message_preview: `📇 ${client.full_name}`,
-          unread_count: 0,
-        }).eq("id", selectedConversation.zapp_conversation_id);
-      }
-      
-      toast.success("Contato enviado!");
-    } catch (error: any) {
-      console.error("Error sending contact:", error);
-      setMessages(prev => prev.filter(m => m.id !== tempMessageId));
-      toast.error(error.message || "Erro ao enviar contato");
-    } finally {
-      setSendingContact(false);
-    }
-  };
-
-  // Use quick reply
-  const useQuickReply = (reply: { title: string; content: string }) => {
-    setMessageInput(reply.content);
-    setQuickRepliesOpen(false);
-    messageInputRef.current?.focus();
-  };
-
-  // Load quick replies from localStorage (for simplicity, can move to DB later)
-  useEffect(() => {
-    const saved = localStorage.getItem(`zapp_quick_replies_${currentUser?.account_id}`);
-    if (saved) {
-      try {
-        setQuickReplies(JSON.parse(saved));
-      } catch {
-        setQuickReplies([]);
-      }
-    }
-  }, [currentUser?.account_id]);
-
-  // Save quick reply
-  const saveQuickReply = () => {
-    if (!quickReplyForm.title.trim() || !quickReplyForm.content.trim()) {
-      toast.error("Preencha título e conteúdo");
-      return;
-    }
-    
-    setSavingQuickReply(true);
-    
-    let updated: { id: string; title: string; content: string }[];
-    if (editingQuickReply) {
-      updated = quickReplies.map(r => 
-        r.id === editingQuickReply.id 
-          ? { ...r, title: quickReplyForm.title, content: quickReplyForm.content }
-          : r
-      );
-    } else {
-      updated = [...quickReplies, {
-        id: `qr-${Date.now()}`,
-        title: quickReplyForm.title,
-        content: quickReplyForm.content,
-      }];
-    }
-    
-    setQuickReplies(updated);
-    localStorage.setItem(`zapp_quick_replies_${currentUser?.account_id}`, JSON.stringify(updated));
-    
-    setQuickReplyDialogOpen(false);
-    setEditingQuickReply(null);
-    setQuickReplyForm({ title: "", content: "" });
-    setSavingQuickReply(false);
-    toast.success(editingQuickReply ? "Resposta atualizada!" : "Resposta rápida criada!");
-  };
-
-  // Delete quick reply
-  const deleteQuickReply = (id: string) => {
-    const updated = quickReplies.filter(r => r.id !== id);
-    setQuickReplies(updated);
-    localStorage.setItem(`zapp_quick_replies_${currentUser?.account_id}`, JSON.stringify(updated));
-    toast.success("Resposta removida!");
-  };
-
-  // Filter clients for contact picker
-  const filteredContactClients = useMemo(() => {
-    if (!contactSearch.trim()) return [];
-    const search = contactSearch.toLowerCase();
-    return allClients
-      .filter(c => 
-        c.full_name.toLowerCase().includes(search) || 
-        c.phone_e164.includes(search)
-      )
-      .slice(0, 10);
-  }, [allClients, contactSearch]);
-
-  // Insert formatting
-  const insertFormatting = useCallback((formatType: 'bold' | 'italic' | 'strikethrough' | 'monospace') => {
-    const input = messageInputRef.current;
-    if (!input) return;
-
-    const start = input.selectionStart || 0;
-    const end = input.selectionEnd || 0;
-    const selectedText = messageInput.substring(start, end);
-    
-    let prefix = '';
-    let suffix = '';
-    
-    switch (formatType) {
-      case 'bold': prefix = '*'; suffix = '*'; break;
-      case 'italic': prefix = '_'; suffix = '_'; break;
-      case 'strikethrough': prefix = '~'; suffix = '~'; break;
-      case 'monospace': prefix = '```'; suffix = '```'; break;
-    }
-    
-    const newText = messageInput.substring(0, start) + prefix + selectedText + suffix + messageInput.substring(end);
-    setMessageInput(newText);
-    
-    setTimeout(() => {
-      input.focus();
-      const newCursorPos = selectedText ? start + prefix.length + selectedText.length + suffix.length : start + prefix.length;
-      input.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
-  }, [messageInput]);
-
+  // All messaging functions (send, media, audio, delete, edit, contact, quick replies, formatting)
+  // are now handled by the useZappMessaging hook (messaging.*)
   // Filter users not already agents — only commercial team members
   const COMMERCIAL_NAMES = ["jonathan", "darlan", "george", "vanessa"];
   const availableUsers = teamUsers.filter(
@@ -4194,138 +2920,94 @@ export default function RoyZapp() {
           contactInfo={selectedContactInfo || { name: "", phone: "", avatar: null, clientId: null, isClient: false, isGroup: false, lastMessage: null, lastMessagePreview: "", unreadCount: 0, lastMessageAt: "", isPinned: false, isMuted: false, isArchived: false, isFavorite: false, isBlocked: false, searchableText: "" }}
           clientProducts={selectedClientProducts}
           currentAgentId={currentAgent?.id || null}
-          messageInput={messageInput}
-          sendingMessage={sendingMessage}
-          uploadingMedia={uploadingMedia}
-          isRecording={isRecording}
-          recordingDuration={recordingDuration}
-          audioPreview={audioPreview}
-          imagePreview={imagePreview}
-          onSetImagePreview={setImagePreview}
-          showFormatting={showFormatting}
-          messageInputRef={messageInputRef}
-          imageInputRef={imageInputRef}
-          fileInputRef={fileInputRef}
-          sectorId={selectedSectorId}
-          spellingEnabled={spellingEnabled}
-          onlineAgents={onlineAgents}
-          totalQueueConversations={totalQueueConversations}
-          activeConversations={activeConversations}
-          onBack={() => setSelectedConversation(null)}
-          onOpenClientEdit={(id) => {
-            setEditingClientId(id);
-            setClientEditSheetOpen(true);
-          }}
-          onAssignToMe={assignToMe}
-          onReleaseToQueue={releaseToQueue}
-          onUpdateStatus={updateConversationStatus}
-          onOpenTransfer={() => setTransferDialogOpen(true)}
-          onOpenRoiDialog={() => {}}
-          onOpenRiskDialog={() => {}}
-          onOpenAddClient={openAddContactDialog}
-          onOpenLinkClient={() => setLinkClientDialogOpen(true)}
-          onClientLinked={() => fetchData()}
-          onDeleteConversation={() => setPermanentDeleteDialogOpen(true)}
-          onDismissConversation={
-            selectedConversation?.zapp_conversation?.is_group 
-              ? dismissGroupConversation 
-              : undefined
-          }
-          onOpenEditGroup={
-            selectedConversation?.zapp_conversation?.is_group 
-              ? () => setEditGroupDialogOpen(true) 
-              : undefined
-          }
-          accountId={currentUser?.account_id}
-          showLeadOption={hasVendasAccess}
-          onMessageChange={setMessageInput}
-          onSendMessage={sendMessage}
-          onKeyPress={handleKeyPress}
-          onToggleFormatting={() => setShowFormatting(!showFormatting)}
-          onInsertFormatting={insertFormatting}
-          onStartRecording={startRecording}
-          onStopRecording={stopRecording}
-          onCancelRecording={cancelRecording}
-          onDiscardAudioPreview={discardAudioPreview}
-          onConfirmAudioSend={confirmAudioSend}
-          onFileSelect={handleFileSelect}
-          onOpenContactPicker={() => setContactPickerOpen(true)}
-          onOpenQuickReplies={() => setQuickRepliesOpen(true)}
-          replyingTo={replyingTo}
-          onReplyMessage={(msg) => {
-            setReplyingTo({
-              id: msg.id,
-              content: msg.content,
-              sender_name: msg.sender_name || null,
-              is_from_client: msg.is_from_client,
-              external_message_id: msg.external_message_id || null,
-            });
-            messageInputRef.current?.focus();
-          }}
-          onCancelReply={() => setReplyingTo(null)}
-          onDeleteMessage={handleDeleteMessage}
-          onEditMessage={handleEditMessage}
-          onRetryMessage={(msg) => {
-            // Remove the failed message and re-add its content to input for retry
-            setMessages(prev => prev.filter(m => m.id !== msg.id));
-            setMessageInput(msg.content || "");
-            messageInputRef.current?.focus();
-            toast.info("Mensagem restaurada para reenvio");
-          }}
-          onRetryMediaDownload={async (messageId) => {
-            // Reset status to pending and trigger download
-            const { error } = await supabase
-              .from("zapp_messages")
-              .update({ media_download_status: "pending" })
-              .eq("id", messageId);
-            
-            if (error) {
-              toast.error("Erro ao solicitar redownload");
-              return;
-            }
-            
-            // Invoke download function
-            supabase.functions.invoke("download-media", {
-              body: { message_ids: [messageId] }
-            }).then(({ data, error: invokeError }) => {
-              if (invokeError) {
-                toast.error("Erro ao baixar mídia");
-              } else if (data?.successful > 0) {
-                // Refresh messages to get the new URL
-                if (selectedConversation?.zapp_conversation_id) {
-                  fetchMessages(selectedConversation.zapp_conversation_id);
-                }
-              }
-            });
-            
-            toast.info("Tentando baixar mídia novamente...");
-          }}
-          onMentionInsert={(mention) => {
-            setPendingMentions(prev => [...prev, { phone: mention.phone, jid: mention.jid }]);
-          }}
-          signatureEnabled={signatureEnabled}
-          hasSignature={!!userSignature.trim()}
-          onToggleSignature={() => {
-            const newValue = !signatureEnabled;
-            setSignatureEnabled(newValue);
-            if (currentUser) {
-              supabase
-                .from("users")
-                .update({ zapp_signature_enabled: newValue })
-                .eq("id", currentUser.id)
-                .then();
-            }
-          }}
-          onOpenPlaybook={() => setPlaybookDialogOpen(true)}
-          filePreview={filePreview}
-          onSetFilePreview={(preview) => {
-            if (preview && preview.file.size > 50 * 1024 * 1024) {
-              toast.error("Arquivo muito grande. Máximo 50MB.");
-              URL.revokeObjectURL(preview.url);
-              return;
-            }
-            setFilePreview(preview);
-          }}
+           messageInput={messaging.messageInput}
+           sendingMessage={messaging.sendingMessage}
+           uploadingMedia={messaging.uploadingMedia}
+           isRecording={messaging.isRecording}
+           recordingDuration={messaging.recordingDuration}
+           audioPreview={messaging.audioPreview}
+           imagePreview={messaging.imagePreview}
+           onSetImagePreview={messaging.setImagePreview}
+           showFormatting={messaging.showFormatting}
+           messageInputRef={messaging.messageInputRef}
+           imageInputRef={messaging.imageInputRef}
+           fileInputRef={messaging.fileInputRef}
+           sectorId={selectedSectorId}
+           spellingEnabled={spellingEnabled}
+           onlineAgents={onlineAgents}
+           totalQueueConversations={totalQueueConversations}
+           activeConversations={activeConversations}
+           onBack={() => setSelectedConversation(null)}
+           onOpenClientEdit={(id) => {
+             setEditingClientId(id);
+             setClientEditSheetOpen(true);
+           }}
+           onAssignToMe={assignToMe}
+           onReleaseToQueue={releaseToQueue}
+           onUpdateStatus={updateConversationStatus}
+           onOpenTransfer={() => setTransferDialogOpen(true)}
+           onOpenRoiDialog={() => {}}
+           onOpenRiskDialog={() => {}}
+           onOpenAddClient={openAddContactDialog}
+           onOpenLinkClient={() => setLinkClientDialogOpen(true)}
+           onClientLinked={() => fetchData()}
+           onDeleteConversation={() => setPermanentDeleteDialogOpen(true)}
+           onDismissConversation={
+             selectedConversation?.zapp_conversation?.is_group 
+               ? dismissGroupConversation 
+               : undefined
+           }
+           onOpenEditGroup={
+             selectedConversation?.zapp_conversation?.is_group 
+               ? () => setEditGroupDialogOpen(true) 
+               : undefined
+           }
+           accountId={currentUser?.account_id}
+           showLeadOption={hasVendasAccess}
+           onMessageChange={messaging.setMessageInput}
+           onSendMessage={messaging.sendMessage}
+           onKeyPress={messaging.handleKeyPress}
+           onToggleFormatting={() => messaging.setShowFormatting(!messaging.showFormatting)}
+           onInsertFormatting={messaging.insertFormatting}
+           onStartRecording={messaging.startRecording}
+           onStopRecording={messaging.stopRecording}
+           onCancelRecording={messaging.cancelRecording}
+           onDiscardAudioPreview={messaging.discardAudioPreview}
+           onConfirmAudioSend={messaging.confirmAudioSend}
+           onFileSelect={messaging.handleFileSelect}
+           onOpenContactPicker={() => messaging.setContactPickerOpen(true)}
+           onOpenQuickReplies={() => messaging.setQuickRepliesOpen(true)}
+           replyingTo={messaging.replyingTo}
+           onReplyMessage={messaging.handleReplyMessage}
+           onCancelReply={() => messaging.setReplyingTo(null)}
+           onDeleteMessage={messaging.handleDeleteMessage}
+           onEditMessage={messaging.handleEditMessage}
+           onRetryMessage={messaging.retryMessage}
+           onRetryMediaDownload={messaging.retryMediaDownload}
+           onMentionInsert={messaging.handleMentionInsert}
+           signatureEnabled={signatureEnabled}
+           hasSignature={!!userSignature.trim()}
+           onToggleSignature={() => {
+             const newValue = !signatureEnabled;
+             setSignatureEnabled(newValue);
+             if (currentUser) {
+               supabase
+                 .from("users")
+                 .update({ zapp_signature_enabled: newValue })
+                 .eq("id", currentUser.id)
+                 .then();
+             }
+           }}
+           onOpenPlaybook={() => setPlaybookDialogOpen(true)}
+           filePreview={messaging.filePreview}
+           onSetFilePreview={(preview) => {
+             if (preview && preview.file.size > 50 * 1024 * 1024) {
+               toast.error("Arquivo muito grande. Máximo 50MB.");
+               URL.revokeObjectURL(preview.url);
+               return;
+             }
+             messaging.setFilePreview(preview);
+           }}
         />
         )}
       </div>
@@ -4458,39 +3140,43 @@ export default function RoyZapp() {
 
       {/* Contact Picker Dialog */}
       <ZappContactPickerDialog
-        open={contactPickerOpen}
-        onOpenChange={setContactPickerOpen}
-        searchQuery={contactSearch}
-        onSearchChange={setContactSearch}
-        filteredClients={filteredContactClients}
-        onSelectContact={sendContact}
-        sending={sendingContact}
+        open={messaging.contactPickerOpen}
+        onOpenChange={messaging.setContactPickerOpen}
+        searchQuery={messaging.contactSearch}
+        onSearchChange={messaging.setContactSearch}
+        filteredClients={allClients.filter(c => {
+          if (!messaging.contactSearch.trim()) return false;
+          const search = messaging.contactSearch.toLowerCase();
+          return c.full_name.toLowerCase().includes(search) || c.phone_e164.includes(search);
+        }).slice(0, 10)}
+        onSelectContact={messaging.sendContact}
+        sending={messaging.sendingContact}
       />
 
       {/* Quick Replies Dialog */}
       <ZappQuickRepliesDialog
-        open={quickRepliesOpen}
-        onOpenChange={setQuickRepliesOpen}
-        quickReplies={quickReplies}
-        onUseReply={useQuickReply}
+        open={messaging.quickRepliesOpen}
+        onOpenChange={messaging.setQuickRepliesOpen}
+        quickReplies={messaging.quickReplies}
+        onUseReply={messaging.useQuickReply}
         onEditReply={(reply) => {
-          setEditingQuickReply(reply);
-          setQuickReplyForm({ title: reply.title, content: reply.content });
-          setQuickReplyDialogOpen(true);
+          messaging.setEditingQuickReply(reply);
+          messaging.setQuickReplyForm({ title: reply.title, content: reply.content });
+          messaging.setQuickReplyDialogOpen(true);
         }}
-        onDeleteReply={deleteQuickReply}
+        onDeleteReply={messaging.deleteQuickReply}
         onCreateNew={() => {
-          setEditingQuickReply(null);
-          setQuickReplyForm({ title: "", content: "" });
-          setQuickReplyDialogOpen(true);
+          messaging.setEditingQuickReply(null);
+          messaging.setQuickReplyForm({ title: "", content: "" });
+          messaging.setQuickReplyDialogOpen(true);
         }}
-        editDialogOpen={quickReplyDialogOpen}
-        onEditDialogChange={setQuickReplyDialogOpen}
-        editingReply={editingQuickReply}
-        form={quickReplyForm}
-        onFormChange={setQuickReplyForm}
-        onSave={saveQuickReply}
-        saving={savingQuickReply}
+        editDialogOpen={messaging.quickReplyDialogOpen}
+        onEditDialogChange={messaging.setQuickReplyDialogOpen}
+        editingReply={messaging.editingQuickReply}
+        form={messaging.quickReplyForm}
+        onFormChange={messaging.setQuickReplyForm}
+        onSave={messaging.saveQuickReply}
+        saving={messaging.savingQuickReply}
       />
 
       {/* Add Client/Lead Dialog */}
@@ -4538,54 +3224,45 @@ export default function RoyZapp() {
         onUseItem={async (item, processedText) => {
           // Insert text content into message input
           if (item.content_type === 'text' && processedText) {
-            setMessageInput(processedText);
-            messageInputRef.current?.focus();
+            messaging.setMessageInput(processedText);
+            messaging.messageInputRef.current?.focus();
           } else if (item.content_type === 'image' && item.media_url) {
-            // For image items, download and set as image preview
             try {
               const response = await fetch(item.media_url);
               if (!response.ok) throw new Error('Failed to fetch image');
-              
               const blob = await response.blob();
               const fileName = item.name || 'playbook-image.jpg';
               const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
               const url = URL.createObjectURL(blob);
-              
-              // Include caption from playbook item
-              setImagePreview({ file, url, caption: item.media_caption || undefined });
+              messaging.setImagePreview({ file, url, caption: item.media_caption || undefined });
               toast.success(item.media_caption ? "Imagem com legenda anexada! Clique em enviar." : "Imagem anexada! Clique em enviar.");
-              messageInputRef.current?.focus();
+              messaging.messageInputRef.current?.focus();
             } catch (error) {
               console.error('Error loading playbook image:', error);
               toast.error("Erro ao carregar imagem do playbook");
             }
           } else if (item.content_type === 'audio' && item.media_url) {
-            // For audio items, download and send directly
             try {
               toast.info("Enviando áudio...");
               const response = await fetch(item.media_url);
               if (!response.ok) throw new Error('Failed to fetch audio');
               const blob = await response.blob();
-              await sendAudioMessage(blob);
+              await messaging.sendMediaMessage(new File([blob], 'audio.webm', { type: blob.type || 'audio/webm' }), 'document');
             } catch (error) {
               console.error('Error sending playbook audio:', error);
               toast.error("Erro ao enviar áudio do playbook");
             }
           } else if ((item.content_type === 'video' || item.content_type === 'document') && item.media_url) {
-            // For video and document items, download and send directly
             try {
               const mediaTypeLabel = item.content_type === 'video' ? 'vídeo' : 'documento';
               toast.info(`Enviando ${mediaTypeLabel}...`);
-              
               const response = await fetch(item.media_url);
               if (!response.ok) throw new Error(`Failed to fetch ${item.content_type}`);
-              
               const blob = await response.blob();
               const fileName = item.media_filename || item.name || `playbook-file`;
               const mimeType = blob.type || (item.content_type === 'video' ? 'video/mp4' : 'application/octet-stream');
               const file = new File([blob], fileName, { type: mimeType });
-              
-              await sendMediaMessage(file, item.content_type === 'video' ? 'video' : 'document', item.media_caption || undefined);
+              await messaging.sendMediaMessage(file, item.content_type === 'video' ? 'video' : 'document', item.media_caption || undefined);
             } catch (error) {
               console.error(`Error sending playbook ${item.content_type}:`, error);
               toast.error(`Erro ao enviar ${item.content_type === 'video' ? 'vídeo' : 'documento'} do playbook`);
