@@ -55,7 +55,7 @@ import { CouponsManager } from "@/components/admin/CouponsManager";
 import { SystemStatusMonitor } from "@/components/admin/SystemStatusMonitor";
 import { Tag, BookOpen, Activity as ActivityIcon, Cloud, Map, Sparkles, Briefcase, TrendingUp as TrendingUpIcon, Users as UsersIcon, Calendar, DollarSign as DollarSignIcon, Lightbulb, FileText as FileTextIcon, Receipt, RefreshCcw, CreditCard as CreditCardIcon, PieChart, Target, Bell, Building2 as Building2Icon, BarChart3 } from "lucide-react";
 import { CloudUsageMonitor } from "@/components/admin/CloudUsageMonitor";
-import { SectorAgentConfig } from "@/components/admin/SectorAgentConfig";
+
 import SystemMap from "@/pages/admin/SystemMap";
 
 interface SubscriptionPlan {
