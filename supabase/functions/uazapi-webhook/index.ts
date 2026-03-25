@@ -1539,6 +1539,7 @@ serve(async (req) => {
                   quoted_message_id: quotedMsgId || null,
                   quoted_content: quotedContent || null,
                   quoted_sender_name: quotedSenderName || null,
+                  mention_map: mentionMap,
                 })
                 .select("id")
                 .single();
