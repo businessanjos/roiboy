@@ -16,7 +16,7 @@ import { ProfileContent } from "@/components/profile/ProfileContent";
 
 import { MeetingPreferencesCard } from "@/components/settings/MeetingPreferencesCard";
 import { PlanUsageCard } from "@/components/plan";
-import { BillingContent } from "@/components/billing/BillingContent";
+
 import { ApiKeyTab } from "@/components/profile/ApiKeyTab";
 
 const RESTRICTED_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
