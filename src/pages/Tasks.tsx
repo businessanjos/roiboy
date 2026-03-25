@@ -195,6 +195,8 @@ export default function Tasks() {
   const [followUpDealId, setFollowUpDealId] = useState<string | null>(null);
   const [selectedDealForDetail, setSelectedDealForDetail] = useState<FullDeal | null>(null);
   const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const TASKS_PER_PAGE = 50;
 
   // Custom task statuses
   const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
