@@ -118,7 +118,7 @@ export default function AIAgent() {
   const [hasChanges, setHasChanges] = useState<Record<string, boolean>>({});
   const [hasPromptChanges, setHasPromptChanges] = useState<Record<string, boolean>>({});
   const [showSettings, setShowSettings] = useState(false);
-  const [showScoreSettings, setShowScoreSettings] = useState(false);
+  
   
   // AI Settings state
   const [aiSettings, setAiSettings] = useState<AISettings>(defaultAI);
