@@ -9,7 +9,7 @@ import {
   Filter,
   MoreVertical,
   Check,
-  Bot,
+  
   ArrowDownToLine,
   Pin,
   RefreshCw,
