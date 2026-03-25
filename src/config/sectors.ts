@@ -103,19 +103,8 @@ export const sectors: Sector[] = [
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
-  {
-    id: "roychat",
-    name: "ROY Chat",
-    description: "Chat interno para comunicação da equipe",
-    icon: MessageCircle,
-    color: "text-indigo-600",
-    bgColor: "bg-indigo-500/10",
-    defaultRoute: "/team-chat",
-    navItems: [
-      { to: "/team-chat", icon: MessageCircle, label: "ROY Chat", permission: PERMISSIONS.TEAM_VIEW },
-      { to: "/notifications", icon: Bell, label: "Notificações" },
-    ],
-  },
+
+
   {
     id: "vendas",
     name: "Vendas",
