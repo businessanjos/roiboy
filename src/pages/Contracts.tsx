@@ -1734,7 +1734,7 @@ export default function Contracts() {
 
       {/* Tabs for Reconciliation Status */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
+        <TabsList className="grid w-full max-w-xl grid-cols-3">
           <TabsTrigger value="fila" className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4" />
             <span className="hidden sm:inline">Conciliação</span>
@@ -1763,10 +1763,6 @@ export default function Contracts() {
                 {reconciledContracts.length}
               </Badge>
             )}
-          </TabsTrigger>
-          <TabsTrigger value="dashboard" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Dashboard
           </TabsTrigger>
         </TabsList>
 
