@@ -926,6 +926,97 @@ serve(async (req) => {
           quotedSenderName = "Você";
         }
         
+        // ============================================
+        // EXTRACT MENTION MAP (for @mentions in groups)
+        // ============================================
+        let mentionMap: Record<string, string> | null = null;
+        if (isGroupMessage) {
+          // UAZAPI sends mentionedJid in multiple places:
+          // 1. msg.mentionedJidList (UAZAPI GO v2 primary)
+          // 2. msg.contextInfo.mentionedJid (standard WhatsApp)
+          // 3. msg.extendedTextMessage.contextInfo.mentionedJid
+          const msgAnyMention = msg as Record<string, unknown>;
+          const mentionedJids: string[] = 
+            (msgAnyMention.mentionedJidList as string[]) ||
+            (msgAnyMention.mentionedJid as string[]) ||
+            ((contextInfo as Record<string, unknown>)?.mentionedJid as string[]) ||
+            ((msg.extendedTextMessage?.contextInfo as Record<string, unknown>)?.mentionedJid as string[]) ||
+            [];
+          
+          if (mentionedJids.length > 0) {
+            mentionMap = {};
+            // Also check if UAZAPI sends mention names (groupMentions or similar)
+            const groupMentions = (msgAnyMention.groupMentions || msgAnyMention.mentions) as Array<{ id?: string; jid?: string; name?: string; pushName?: string; notify?: string }> | undefined;
+            
+            for (const jid of mentionedJids) {
+              // Extract the number part from JID (e.g., "5511999887766@s.whatsapp.net" -> "5511999887766")
+              const jidNumber = jid.split("@")[0];
+              
+              // Try to find name from groupMentions array
+              let mentionName = "";
+              if (groupMentions) {
+                const found = groupMentions.find(m => 
+                  (m.id || m.jid || "").includes(jidNumber)
+                );
+                if (found) {
+                  mentionName = found.name || found.pushName || found.notify || "";
+                }
+              }
+              
+              // Store the mapping (jidNumber -> name, name may be empty for now)
+              if (jidNumber) {
+                mentionMap[jidNumber] = mentionName;
+              }
+            }
+            
+            // If we have no names yet, try to resolve from zapp_conversations
+            const unknownJids = Object.entries(mentionMap).filter(([, name]) => !name).map(([jid]) => jid);
+            if (unknownJids.length > 0) {
+              // Build possible phone formats to search
+              const phoneFormats = unknownJids.flatMap(jid => [`+${jid}`, jid]);
+              const { data: contacts } = await supabase
+                .from("zapp_conversations")
+                .select("phone_e164, contact_name")
+                .eq("account_id", accountId)
+                .eq("is_group", false)
+                .in("phone_e164", phoneFormats)
+                .not("contact_name", "is", null);
+              
+              if (contacts) {
+                for (const contact of contacts) {
+                  const normalizedPhone = contact.phone_e164.replace(/^\+/, "");
+                  if (mentionMap[normalizedPhone] === "") {
+                    mentionMap[normalizedPhone] = contact.contact_name || "";
+                  }
+                }
+              }
+              
+              // Also try clients table for remaining unknowns
+              const stillUnknown = Object.entries(mentionMap).filter(([, name]) => !name).map(([jid]) => `+${jid}`);
+              if (stillUnknown.length > 0) {
+                const { data: clients } = await supabase
+                  .from("clients")
+                  .select("phone_e164, full_name")
+                  .eq("account_id", accountId)
+                  .in("phone_e164", stillUnknown);
+                
+                if (clients) {
+                  for (const client of clients) {
+                    const normalizedPhone = client.phone_e164.replace(/^\+/, "");
+                    if (mentionMap[normalizedPhone] === "") {
+                      mentionMap[normalizedPhone] = client.full_name || "";
+                    }
+                  }
+                }
+              }
+            }
+            
+            // Clean up: remove entries with no name resolved
+            // Keep them anyway so client knows it's a mention even without a name
+            console.log(`[WEBHOOK] Mention map built:`, JSON.stringify(mentionMap));
+          }
+        }
+        
 
 
 
