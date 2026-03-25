@@ -991,28 +991,62 @@ serve(async (req) => {
                 }
               }
               
-              // Also try clients table for remaining unknowns
-              const stillUnknown = Object.entries(mentionMap).filter(([, name]) => !name).map(([jid]) => `+${jid}`);
+              // Also try clients table for remaining unknowns - use broader matching
+              const stillUnknown = Object.entries(mentionMap!).filter(([, name]) => !name).map(([jid]) => jid);
               if (stillUnknown.length > 0) {
+                // Try exact match first
+                const phoneFormatsForClients = stillUnknown.flatMap(jid => [`+${jid}`, jid]);
                 const { data: clients } = await supabase
                   .from("clients")
                   .select("phone_e164, full_name")
                   .eq("account_id", accountId)
-                  .in("phone_e164", stillUnknown);
+                  .in("phone_e164", phoneFormatsForClients);
                 
                 if (clients) {
                   for (const client of clients) {
                     const normalizedPhone = client.phone_e164.replace(/^\+/, "");
-                    if (mentionMap[normalizedPhone] === "") {
-                      mentionMap[normalizedPhone] = client.full_name || "";
+                    if (mentionMap![normalizedPhone] === "") {
+                      mentionMap![normalizedPhone] = client.full_name || "";
+                    }
+                  }
+                }
+                
+                // For still-unknown, try partial matching by last 8 digits
+                const finalUnknown = Object.entries(mentionMap!).filter(([, name]) => !name).map(([jid]) => jid);
+                if (finalUnknown.length > 0) {
+                  // Query all clients for this account and do partial phone matching
+                  const { data: allClients } = await supabase
+                    .from("clients")
+                    .select("phone_e164, full_name")
+                    .eq("account_id", accountId)
+                    .not("phone_e164", "is", null)
+                    .not("full_name", "is", null)
+                    .limit(500);
+                  
+                  if (allClients) {
+                    for (const jid of finalUnknown) {
+                      const last8 = jid.slice(-8);
+                      const match = allClients.find(c => {
+                        const cDigits = c.phone_e164.replace(/\D/g, "");
+                        return cDigits.endsWith(last8) || jid.endsWith(cDigits.slice(-8));
+                      });
+                      if (match?.full_name) {
+                        mentionMap![jid] = match.full_name;
+                      }
                     }
                   }
                 }
               }
             }
             
-            // Clean up: remove entries with no name resolved
-            // Keep them anyway so client knows it's a mention even without a name
+            // Clean up: remove entries with empty name (keep only resolved ones)
+            if (mentionMap) {
+              const cleaned: Record<string, string> = {};
+              for (const [k, v] of Object.entries(mentionMap)) {
+                if (v) cleaned[k] = v;
+              }
+              mentionMap = Object.keys(cleaned).length > 0 ? cleaned : null;
+            }
             console.log(`[WEBHOOK] Mention map built:`, JSON.stringify(mentionMap));
           }
         }
