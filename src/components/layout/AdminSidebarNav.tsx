@@ -44,14 +44,6 @@ const navGroups: NavGroup[] = [
       { id: "audit", label: "Auditoria", icon: FileText },
     ],
   },
-  {
-    title: "Agentes IA (Zad)",
-    items: [
-      { id: "zad-operacoes", label: "Operações", icon: Briefcase },
-      { id: "zad-financas", label: "Finanças", icon: DollarSign },
-      { id: "zad-vendas", label: "Vendas", icon: TrendingUp },
-    ],
-  },
 ];
 
 export function AdminSidebarNav({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {

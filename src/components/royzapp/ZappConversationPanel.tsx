@@ -9,7 +9,7 @@ import {
   Filter,
   MoreVertical,
   Check,
-  Bot,
+  
   ArrowDownToLine,
   Pin,
   RefreshCw,
@@ -46,7 +46,7 @@ import { MeetingsPanel } from "@/components/sales/videocall/MeetingsPanel";
 import { ZappFinancePanel } from "./ZappFinancePanel";
 import { getInitials } from "./types";
 import type { ConversationAssignment, Agent, ZappTag, Department } from "./types";
-import { ZappAIAgentItem, type AIAgent } from "./ZappAIAgentItem";
+
 
 interface ZappConversationPanelProps {
   currentUser: { name: string; avatar_url: string | null; role?: string } | null;
@@ -152,10 +152,6 @@ interface ZappConversationPanelProps {
   onRefreshMessages?: () => void;
   isRefreshingMessages?: boolean;
   
-  // AI Agents
-  aiAgents?: AIAgent[];
-  selectedAIAgent?: AIAgent | null;
-  onSelectAIAgent?: (agent: AIAgent) => void;
 }
 
 export const ZappConversationPanel = memo(function ZappConversationPanel({
@@ -243,9 +239,6 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onPullFromQueue,
   onRefreshMessages,
   isRefreshingMessages,
-  aiAgents = [],
-  selectedAIAgent,
-  onSelectAIAgent,
 }: ZappConversationPanelProps) {
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
@@ -631,32 +624,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       <ScrollArea className="flex-1">
         {activeView === "inbox" && (
           <div className="divide-y divide-zapp-border">
-            {/* AI Agents Section */}
-            {aiAgents.length > 0 && onSelectAIAgent && (
-              <>
-                <div className="px-4 py-2 bg-zapp-bg-dark">
-                  <span className="text-xs font-medium text-zapp-text-muted uppercase tracking-wider flex items-center gap-1.5">
-                    <Bot className="h-3.5 w-3.5" />
-                    Assistentes IA
-                  </span>
-                </div>
-                {aiAgents.map((agent) => (
-                  <ZappAIAgentItem
-                    key={agent.id}
-                    agent={agent}
-                    isSelected={selectedAIAgent?.id === agent.id}
-                    onSelect={onSelectAIAgent}
-                  />
-                ))}
-                <div className="px-4 py-2 bg-zapp-bg-dark">
-                  <span className="text-xs font-medium text-zapp-text-muted uppercase tracking-wider">
-                    Conversas
-                  </span>
-                </div>
-              </>
-            )}
-            
-            {filteredAssignments.length === 0 && aiAgents.length === 0 ? (
+            {filteredAssignments.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
                 <div className="w-20 h-20 rounded-full bg-zapp-panel flex items-center justify-center mb-4">
                   <MessageSquare className="h-10 w-10 text-zapp-text-muted" />
@@ -682,7 +650,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                       <ZappConversationItem
                         key={assignment.id}
                         assignment={assignment}
-                        isSelected={selectedConversation?.id === assignment.id && !selectedAIAgent}
+                        isSelected={selectedConversation?.id === assignment.id}
                         currentAgentId={currentAgentId}
                         clientProducts={clientProducts}
                         leadDealStages={leadDealStages}
@@ -710,7 +678,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                         <ZappConversationItem
                           key={assignment.id}
                           assignment={assignment}
-                          isSelected={selectedConversation?.id === assignment.id && !selectedAIAgent}
+                          isSelected={selectedConversation?.id === assignment.id}
                           currentAgentId={currentAgentId}
                           clientProducts={clientProducts}
                           leadDealStages={leadDealStages}
@@ -737,7 +705,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                             <ZappConversationItem
                               key={assignment.id}
                               assignment={assignment}
-                              isSelected={selectedConversation?.id === assignment.id && !selectedAIAgent}
+                              isSelected={selectedConversation?.id === assignment.id}
                               currentAgentId={currentAgentId}
                               clientProducts={clientProducts}
                               leadDealStages={leadDealStages}
@@ -762,7 +730,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                   <ZappConversationItem
                     key={assignment.id}
                     assignment={assignment}
-                    isSelected={selectedConversation?.id === assignment.id && !selectedAIAgent}
+                    isSelected={selectedConversation?.id === assignment.id}
                     currentAgentId={currentAgentId}
                     clientProducts={clientProducts}
                     leadDealStages={leadDealStages}

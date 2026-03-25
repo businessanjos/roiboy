@@ -13,8 +13,6 @@ export * from "./ZappDepartmentList";
 export * from "./ZappSidebarNav";
 export * from "./ZappConversationPanel";
 export * from "./ZappChatView";
-export * from "./ZappAIAgentItem";
-export * from "./ZappAIAgentChat";
 export * from "./ZappSectorSelector";
 export * from "./ZappMarketingList";
 export * from "./ZappCallButton";

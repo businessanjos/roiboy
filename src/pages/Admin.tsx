@@ -55,7 +55,7 @@ import { CouponsManager } from "@/components/admin/CouponsManager";
 import { SystemStatusMonitor } from "@/components/admin/SystemStatusMonitor";
 import { Tag, BookOpen, Activity as ActivityIcon, Cloud, Map, Sparkles, Briefcase, TrendingUp as TrendingUpIcon, Users as UsersIcon, Calendar, DollarSign as DollarSignIcon, Lightbulb, FileText as FileTextIcon, Receipt, RefreshCcw, CreditCard as CreditCardIcon, PieChart, Target, Bell, Building2 as Building2Icon, BarChart3 } from "lucide-react";
 import { CloudUsageMonitor } from "@/components/admin/CloudUsageMonitor";
-import { SectorAgentConfig } from "@/components/admin/SectorAgentConfig";
+
 import SystemMap from "@/pages/admin/SystemMap";
 
 interface SubscriptionPlan {
@@ -276,65 +276,6 @@ export default function Admin() {
         return <CouponsManager />;
       case 'cloud':
         return <CloudUsageMonitor />;
-      case 'zad-operacoes':
-        return (
-          <SectorAgentConfig
-            sectorId="operacoes"
-            sectorName="Operações (CX/CS)"
-            sectorIcon={<Briefcase className="h-6 w-6 text-white" />}
-            sectorColor="from-blue-500/20 to-indigo-500/20"
-            featuresList={[
-              { key: "roi_analysis", label: "Análise de ROI", description: "Calcular e monitorar retorno do cliente", icon: <TrendingUpIcon className="h-5 w-5 text-green-500" /> },
-              { key: "risk_detection", label: "Detecção de Riscos", description: "Identificar sinais de churn e insatisfação", icon: <Bell className="h-5 w-5 text-red-500" /> },
-              { key: "vnps_tracking", label: "Monitorar V-NPS", description: "Acompanhar satisfação virtual", icon: <Target className="h-5 w-5 text-purple-500" /> },
-              { key: "engagement_metrics", label: "Métricas de Engajamento", description: "Analisar participação e interações", icon: <BarChart3 className="h-5 w-5 text-cyan-500" /> },
-              { key: "event_management", label: "Gestão de Eventos/Lives", description: "Organizar e acompanhar eventos", icon: <Calendar className="h-5 w-5 text-blue-500" /> },
-              { key: "client_health", label: "Health Score", description: "Calcular saúde do cliente", icon: <Activity className="h-5 w-5 text-emerald-500" /> },
-              { key: "journey_tracking", label: "Jornada do Cliente", description: "Acompanhar stages e checklist", icon: <UsersIcon className="h-5 w-5 text-indigo-500" /> },
-              { key: "cs_support", label: "Suporte ao CS/CX", description: "Auxiliar equipe de experiência", icon: <Lightbulb className="h-5 w-5 text-yellow-500" /> },
-            ]}
-          />
-        );
-      case 'zad-financas':
-        return (
-          <SectorAgentConfig
-            sectorId="financas"
-            sectorName="Finanças"
-            sectorIcon={<DollarSignIcon className="h-6 w-6 text-white" />}
-            sectorColor="from-emerald-500/20 to-green-500/20"
-            featuresList={[
-              { key: "canManageEntries", label: "Lançamentos", description: "Criar receitas e despesas", icon: <FileTextIcon className="h-5 w-5 text-blue-500" /> },
-              { key: "canAnalyzeCashFlow", label: "Fluxo de Caixa", description: "Analisar entradas e saídas", icon: <TrendingUpIcon className="h-5 w-5 text-green-500" /> },
-              { key: "canGenerateReports", label: "Gerar Relatórios", description: "DRE, balanço e mais", icon: <PieChart className="h-5 w-5 text-purple-500" /> },
-              { key: "canClassifyTransactions", label: "Classificar Transações", description: "Categorizar automaticamente", icon: <Target className="h-5 w-5 text-yellow-500" /> },
-              { key: "canManageRecurring", label: "Recorrências", description: "Gerenciar lançamentos recorrentes", icon: <RefreshCcw className="h-5 w-5 text-cyan-500" /> },
-              { key: "canReconcileAccounts", label: "Conciliação", description: "Reconciliar contas bancárias", icon: <Building2Icon className="h-5 w-5 text-indigo-500" /> },
-              { key: "canManageBoletos", label: "Boletos", description: "Gerenciar boletos", icon: <Receipt className="h-5 w-5 text-orange-500" /> },
-              { key: "canManageNotasFiscais", label: "Notas Fiscais", description: "Emitir e consultar NFs", icon: <FileTextIcon className="h-5 w-5 text-red-500" /> },
-              { key: "canAnalyzeProfitability", label: "Rentabilidade", description: "Analisar margens e lucro", icon: <BarChart3 className="h-5 w-5 text-emerald-500" /> },
-              { key: "canManageBudget", label: "Orçamento", description: "Planejar e acompanhar", icon: <Target className="h-5 w-5 text-pink-500" /> },
-              { key: "canAlertDueDates", label: "Alertas de Vencimento", description: "Notificar contas a vencer", icon: <Bell className="h-5 w-5 text-amber-500" /> },
-              { key: "canManageSuppliers", label: "Fornecedores", description: "Gerenciar fornecedores", icon: <Building2Icon className="h-5 w-5 text-slate-500" /> },
-            ]}
-          />
-        );
-      case 'zad-vendas':
-        return (
-          <SectorAgentConfig
-            sectorId="vendas"
-            sectorName="Vendas"
-            sectorIcon={<TrendingUpIcon className="h-6 w-6 text-white" />}
-            sectorColor="from-orange-500/20 to-red-500/20"
-            featuresList={[
-              { key: "canManageDeals", label: "Gerenciar Deals", description: "Criar e acompanhar negócios", icon: <Briefcase className="h-5 w-5 text-blue-500" /> },
-              { key: "canTrackPipeline", label: "Pipeline", description: "Visualizar funil de vendas", icon: <BarChart3 className="h-5 w-5 text-green-500" /> },
-              { key: "canManageLeads", label: "Leads", description: "Captar e qualificar leads", icon: <UsersIcon className="h-5 w-5 text-purple-500" /> },
-              { key: "canAnalyzeSales", label: "Análise de Vendas", description: "Métricas e performance", icon: <PieChart className="h-5 w-5 text-orange-500" /> },
-              { key: "canForecastRevenue", label: "Previsão de Receita", description: "Projetar faturamento", icon: <TrendingUpIcon className="h-5 w-5 text-emerald-500" /> },
-              { key: "canSuggestStrategies", label: "Estratégias", description: "Sugerir táticas de venda", icon: <Lightbulb className="h-5 w-5 text-yellow-500" /> },
-            ]}
-          />
-        );
       case 'map':
         return <SystemMap />;
       default:

@@ -14,11 +14,10 @@ import {
   ZappTag,
   Department,
   ConversationAssignment,
-  ZappAIAgentChat,
 } from "@/components/royzapp";
 import { normalizeSearchText, normalizePhone, matchesSearchQuery } from "@/components/royzapp/types";
 import { ZappSectorSelector } from "@/components/royzapp/ZappSectorSelector";
-import type { AIAgent } from "@/components/royzapp/ZappAIAgentItem";
+
 import {
   ZappDepartmentDialog,
   ZappAgentDialog,
@@ -817,10 +816,6 @@ export default function RoyZapp() {
   const [newConversationClients, setNewConversationClients] = useState<any[]>([]);
   const [creatingConversation, setCreatingConversation] = useState(false);
 
-  // AI Agents state
-  const [aiAgents, setAiAgents] = useState<AIAgent[]>([]);
-  const [selectedAIAgent, setSelectedAIAgent] = useState<AIAgent | null>(null);
-
   // Playbook dialog state for chat
   const [playbookDialogOpen, setPlaybookDialogOpen] = useState(false);
   
@@ -835,23 +830,6 @@ export default function RoyZapp() {
   
   // Permanent delete conversation dialog state
   const [permanentDeleteDialogOpen, setPermanentDeleteDialogOpen] = useState(false);
-
-  // Fetch AI agents
-  useEffect(() => {
-    const fetchAIAgents = async () => {
-      const { data, error } = await supabase
-        .from("ai_sector_agents")
-        .select("id, sector_id, name, display_name, avatar_url, greeting_message, is_enabled")
-        .eq("is_enabled", true)
-        .order("name");
-
-      if (!error && data) {
-        setAiAgents(data as AIAgent[]);
-      }
-    };
-
-    fetchAIAgents();
-  }, []);
 
   // Ref to track current conversation ID for realtime validation
   const currentConversationIdRef = useRef<string | null>(null);
@@ -1263,7 +1241,6 @@ export default function RoyZapp() {
       
       // Switch to "mine" tab and select the conversation
       setInboxTab("mine");
-      setSelectedAIAgent(null);
       setSelectedConversation({
         ...nextConversation,
         agent_id: currentAgent.id,
@@ -4121,7 +4098,7 @@ export default function RoyZapp() {
           importLimit={importLimit}
           importingConversations={importingConversations}
           onSelectConversation={(a) => {
-            setSelectedAIAgent(null); // Clear AI agent when selecting regular conversation
+            
             setSelectedConversation(a);
             const zappConvId = a.zapp_conversation?.id;
             if (zappConvId && (a.zapp_conversation?.unread_count || 0) > 0) {
@@ -4218,9 +4195,6 @@ export default function RoyZapp() {
           onRequestNotificationPermission={requestNotificationPermission}
           onRefreshMessages={refreshMessages}
           isRefreshingMessages={isRefreshingMessages}
-          aiAgents={[]} // Hidden for now - TODO: configure AI agents properly
-          selectedAIAgent={null}
-          onSelectAIAgent={() => {}} // Disabled for now
         />
       </div>
 
@@ -4228,18 +4202,10 @@ export default function RoyZapp() {
       <div 
         className={cn(
           "flex-1 min-w-0 flex flex-col overflow-hidden",
-          !selectedConversation && !selectedAIAgent ? "hidden lg:flex" : "flex"
+          !selectedConversation ? "hidden lg:flex" : "flex"
         )}
       >
-        {selectedAIAgent ? (
-          <ZappAIAgentChat
-            agent={selectedAIAgent}
-            currentUserName={currentUser?.name || "Usuário"}
-            currentUserAvatar={currentUser?.avatar_url || null}
-            onBack={() => setSelectedAIAgent(null)}
-            isMobile={!!selectedAIAgent}
-          />
-        ) : (
+        {(
           <ZappChatView
             selectedConversation={selectedConversation}
           messages={messages}
