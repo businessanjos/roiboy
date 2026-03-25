@@ -115,8 +115,6 @@ export function ZappChatView({
   filePreview,
   onSetFilePreview,
   spellingEnabled = true,
-  suggestionsEnabled = true,
-  autoLearningEnabled = true,
   onlineAgents,
   totalQueueConversations,
   activeConversations,
