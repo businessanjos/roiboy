@@ -56,34 +56,6 @@ import { CloudUsageMonitor } from "@/components/admin/CloudUsageMonitor";
 
 import SystemMap from "@/pages/admin/SystemMap";
 
-interface SubscriptionPlan {
-  id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  billing_period: string;
-  trial_days: number | null;
-  max_clients: number | null;
-  max_users: number | null;
-  max_ai_analyses: number | null;
-  features: Record<string, boolean> | string[] | null;
-  is_active: boolean;
-  created_at: string;
-  plan_type: string;
-}
-
-// Helper to get features as array
-const getFeaturesArray = (features: Record<string, boolean> | string[] | null): string[] => {
-  if (!features) return [];
-  if (Array.isArray(features)) return features;
-  if (typeof features === 'object') {
-    return Object.entries(features)
-      .filter(([_, v]) => v === true)
-      .map(([k]) => k);
-  }
-  return [];
-};
-
 interface Account {
   id: string;
   name: string;
