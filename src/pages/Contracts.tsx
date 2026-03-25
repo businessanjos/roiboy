@@ -2037,6 +2037,74 @@ export default function Contracts() {
             )}
           </CardContent>
         </Card>
+
+        {/* Pagination Controls */}
+        {totalFilteredContracts > contractsPageSize && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 py-4">
+            <p className="text-sm text-muted-foreground">
+              Mostrando {((contractsPage - 1) * contractsPageSize) + 1}–{Math.min(contractsPage * contractsPageSize, totalFilteredContracts)} de {totalFilteredContracts} contratos
+            </p>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 mr-4">
+                {[20, 50, 100].map((size) => (
+                  <Button
+                    key={size}
+                    variant={contractsPageSize === size ? "default" : "outline"}
+                    size="sm"
+                    className="h-8 w-10 text-xs"
+                    onClick={() => {
+                      setContractsPageSize(size);
+                      setContractsPage(1);
+                    }}
+                  >
+                    {size}
+                  </Button>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setContractsPage(p => Math.max(1, p - 1))}
+                disabled={contractsPage <= 1}
+              >
+                Anterior
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  let pageNum: number;
+                  if (totalPages <= 7) {
+                    pageNum = i + 1;
+                  } else if (contractsPage <= 4) {
+                    pageNum = i + 1;
+                  } else if (contractsPage >= totalPages - 3) {
+                    pageNum = totalPages - 6 + i;
+                  } else {
+                    pageNum = contractsPage - 3 + i;
+                  }
+                  return (
+                    <Button
+                      key={pageNum}
+                      variant={pageNum === contractsPage ? "default" : "outline"}
+                      size="sm"
+                      className="w-9 h-9"
+                      onClick={() => setContractsPage(pageNum)}
+                    >
+                      {pageNum}
+                    </Button>
+                  );
+                })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setContractsPage(p => Math.min(totalPages, p + 1))}
+                disabled={contractsPage >= totalPages}
+              >
+                Próximo
+              </Button>
+            </div>
+          </div>
+        )}
       )}
           </TabsContent>
 
