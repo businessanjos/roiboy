@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
-import { ConversationView } from "@/components/client/ConversationView";
+
 import { ClientFinancial } from "@/components/client/ClientFinancial";
 import { SalesPerformance } from "@/components/client/SalesPerformance";
 import { ClientAgenda } from "@/components/client/ClientAgenda";
@@ -2261,30 +2261,6 @@ export default function ClientDetail() {
                     clientId={id!} 
                     clientName={client?.full_name}
                     onCommentAdded={refreshTimeline}
-                  />
-                </CardContent>
-              </Card>
-            );
-          case "whatsapp":
-            return (
-              <Card className="shadow-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Conversas WhatsApp
-                  </CardTitle>
-                  <CardDescription>
-                    Histórico de mensagens do WhatsApp com o cliente
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <ConversationView 
-                    messages={timeline.filter(e => 
-                      e.type === "message" && 
-                      (e.metadata?.source === "whatsapp" || 
-                       e.metadata?.source === "whatsapp_audio_transcript")
-                    )} 
-                    clientName={client?.full_name}
                   />
                 </CardContent>
               </Card>

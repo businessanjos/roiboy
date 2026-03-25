@@ -22,7 +22,7 @@ const navGroups: NavGroup[] = [
     title: "Principal",
     items: [
       { id: "timeline", label: "Timeline", icon: Clock },
-      { id: "whatsapp", label: "WhatsApp", icon: MessageSquare },
+      
       { id: "agenda", label: "Agenda", icon: Calendar },
     ],
   },
