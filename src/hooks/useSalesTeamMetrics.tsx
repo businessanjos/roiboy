@@ -133,12 +133,11 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
 
-        // Scheduling tasks (agendamentos + no-show) via activity_types
+        // Scheduling tasks (agendamentos + no-show) via activity_types AND title
         supabase
           .from("internal_tasks")
-          .select("assigned_to, activity_types!internal_tasks_activity_type_id_fkey(name)")
+          .select("assigned_to, title, activity_types!internal_tasks_activity_type_id_fkey(name)")
           .eq("account_id", currentUser.account_id)
-          .not("activity_type_id", "is", null)
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
       ]);
