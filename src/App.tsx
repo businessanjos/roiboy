@@ -61,7 +61,7 @@ const PublicEventFeedback = lazyRetry(() => import("./pages/PublicEventFeedback"
 const Admin = lazyRetry(() => import("./pages/Admin"));
 const EventCheckin = lazyRetry(() => import("./pages/EventCheckin"));
 const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
-const ChoosePlan = lazyRetry(() => import("./pages/ChoosePlan"));
+
 const TermsOfService = lazyRetry(() => import("./pages/TermsOfService"));
 const PrivacyPolicy = lazyRetry(() => import("./pages/PrivacyPolicy"));
 
