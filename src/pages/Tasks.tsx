@@ -196,7 +196,7 @@ export default function Tasks() {
   const [selectedDealForDetail, setSelectedDealForDetail] = useState<FullDeal | null>(null);
   const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const TASKS_PER_PAGE = 50;
+  const [pageSize, setPageSize] = useState(20);
 
   // Custom task statuses
   const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
