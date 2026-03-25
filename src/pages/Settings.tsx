@@ -45,8 +45,6 @@ export default function Settings() {
         return (
           <div className="space-y-6">
             <PlanUsageCard />
-            <SubscriptionManager />
-            <BillingContent />
           </div>
         );
       case "team":
