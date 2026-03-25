@@ -59,7 +59,7 @@ const PublicEventRegistration = lazyRetry(() => import("./pages/PublicEventRegis
 const PublicEventFeedback = lazyRetry(() => import("./pages/PublicEventFeedback"));
 const Presentation = lazyRetry(() => import("./pages/Presentation"));
 const ExtensionPreview = lazyRetry(() => import("./pages/ExtensionPreview"));
-const ApiDocs = lazyRetry(() => import("./pages/ApiDocs"));
+
 const Admin = lazyRetry(() => import("./pages/Admin"));
 const EventCheckin = lazyRetry(() => import("./pages/EventCheckin"));
 const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
@@ -71,7 +71,7 @@ const Home = lazyRetry(() => import("./pages/Home"));
 const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
 const SalesMeetings = lazyRetry(() => import("./pages/SalesMeetings"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
-const WhatsAppGroups = lazyRetry(() => import("./pages/WhatsAppGroups"));
+
 const PublicMembersBook = lazyRetry(() => import("./pages/PublicMembersBook"));
 
 const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
@@ -201,11 +201,11 @@ const App = () => (
                             <Route path="/team" element={<Navigate to="/settings" replace />} />
                             <Route path="/profile" element={<Navigate to="/settings?tab=profile" replace />} />
                             <Route path="/notifications" element={<Notifications />} />
-                            <Route path="/api-docs" element={<ApiDocs />} />
+                            
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/account-settings" element={<AccountSettings />} />
                             <Route path="/reminders" element={<Reminders />} />
-                            <Route path="/whatsapp-groups" element={<WhatsAppGroups />} />
+                            
                             <Route path="/roy-zapp" element={<RoyZapp />} />
                             <Route path="/mentor-agenda" element={<MentorAgenda />} />
                             

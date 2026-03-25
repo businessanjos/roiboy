@@ -241,18 +241,6 @@ const systemMap: SystemNode[] = [
     ],
   },
 
-
-  {
-    id: "whatsapp-groups",
-    name: "Grupos WhatsApp",
-    description: "Gestão de grupos de clientes",
-    icon: <Users className="h-5 w-5" />,
-    status: "active",
-    children: [
-      { id: "groups-list", name: "Lista de Grupos", description: "Grupos monitorados", icon: <Users className="h-4 w-4" />, status: "active" },
-      { id: "groups-engagement", name: "Engajamento", description: "Métricas de participação", icon: <BarChart3 className="h-4 w-4" />, status: "active" },
-    ],
-  },
   {
     id: "settings",
     name: "Configurações",

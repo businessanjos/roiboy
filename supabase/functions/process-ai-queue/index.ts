@@ -14,52 +14,7 @@ const MAX_PROCESSING_TIME_MS = 25000;
 // JOB HANDLERS
 // ============================================
 
-async function handleAiAnalysis(
-  supabase: ReturnType<typeof createClient>,
-  job: { id: string; account_id: string; message_id: string | null; client_id: string | null },
-  supabaseUrl: string,
-  supabaseKey: string,
-) {
-  if (!job.message_id) {
-    return "skipped";
-  }
-
-  const { data: message, error: msgError } = await supabase
-    .from("zapp_messages")
-    .select("content")
-    .eq("id", job.message_id)
-    .single();
-
-  if (msgError || !message) {
-    throw new Error(`Message not found: ${job.message_id}`);
-  }
-
-  const content = message.content || "";
-
-  if (content.length <= 10 || content.startsWith("[")) {
-    return "skipped";
-  }
-
-  const response = await fetch(`${supabaseUrl}/functions/v1/analyze-message`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${supabaseKey}`,
-    },
-    body: JSON.stringify({
-      account_id: job.account_id,
-      client_id: job.client_id,
-      message_content: content,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`analyze-message failed: ${response.status} - ${errorText}`);
-  }
-
-  return "completed";
-}
+// handleAiAnalysis removed — analyze-message edge function was decommissioned
 
 async function handleClientAnalysis(
   supabase: ReturnType<typeof createClient>,
@@ -133,19 +88,7 @@ async function handleClientAnalysis(
         sent_at: timestamp,
       });
 
-    // Queue AI analysis as sub-job
-    if (content.length > 10 && !content.startsWith("[") && insertedMsgId) {
-      await supabase
-        .from("ai_analysis_queue")
-        .insert({
-          account_id: accountId,
-          message_id: insertedMsgId,
-          client_id: linkedClientId,
-          job_type: "ai_analysis",
-          status: "pending",
-          priority: 0,
-        });
-    }
+    // AI analysis sub-job removed (analyze-message decommissioned)
   } else {
     // --- LEAD PATH ---
     const normalizedPhone = phone.replace(/^\+/, "");
@@ -382,8 +325,8 @@ serve(async (req) => {
 
         switch (jobType) {
           case "ai_analysis":
-            result = await handleAiAnalysis(supabase, job, supabaseUrl, supabaseKey);
-            break;
+            // Decommissioned — mark as skipped
+            result = "skipped";
           case "client_analysis":
             result = await handleClientAnalysis(supabase, job as { id: string; account_id: string; client_id: string | null; payload: Record<string, unknown> | null });
             break;
