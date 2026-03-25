@@ -650,7 +650,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                       <ZappConversationItem
                         key={assignment.id}
                         assignment={assignment}
-                        isSelected={selectedConversation?.id === assignment.id && !selectedAIAgent}
+                        isSelected={selectedConversation?.id === assignment.id}
                         currentAgentId={currentAgentId}
                         clientProducts={clientProducts}
                         leadDealStages={leadDealStages}
@@ -678,7 +678,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                         <ZappConversationItem
                           key={assignment.id}
                           assignment={assignment}
-                          isSelected={selectedConversation?.id === assignment.id && !selectedAIAgent}
+                          isSelected={selectedConversation?.id === assignment.id}
                           currentAgentId={currentAgentId}
                           clientProducts={clientProducts}
                           leadDealStages={leadDealStages}
@@ -705,7 +705,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                             <ZappConversationItem
                               key={assignment.id}
                               assignment={assignment}
-                              isSelected={selectedConversation?.id === assignment.id && !selectedAIAgent}
+                              isSelected={selectedConversation?.id === assignment.id}
                               currentAgentId={currentAgentId}
                               clientProducts={clientProducts}
                               leadDealStages={leadDealStages}
@@ -730,7 +730,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                   <ZappConversationItem
                     key={assignment.id}
                     assignment={assignment}
-                    isSelected={selectedConversation?.id === assignment.id && !selectedAIAgent}
+                    isSelected={selectedConversation?.id === assignment.id}
                     currentAgentId={currentAgentId}
                     clientProducts={clientProducts}
                     leadDealStages={leadDealStages}
