@@ -729,10 +729,12 @@ export default function Clients() {
     fetchProducts();
     fetchCustomFields();
     // Note: teamUsers now comes from edge function response
-  }, [currentSector?.id, currentUser?.account_id]);
+  }, [currentSector?.id, currentUser?.account_id, currentPage]);
   
   // Refetch clients when filters change (server-side filtering) - 800ms debounce to reduce API calls
+  // Reset to page 1 when filters change
   useEffect(() => {
+    setCurrentPage(1);
     const timer = setTimeout(() => {
       fetchClients();
     }, 800);
