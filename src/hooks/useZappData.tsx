@@ -389,7 +389,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
         `)
         .eq("account_id", currentUser.account_id)
         .order("updated_at", { ascending: false })
-        .limit(500);
+        .limit(1000);
       
       // CRITICAL: If sector is selected, ONLY fetch that department's assignments
       if (sectorId && targetDepartmentId) {
