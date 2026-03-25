@@ -189,14 +189,17 @@ function applyWhatsAppFormatting(text: string, keyPrefix: string = ""): React.Re
 }
 
 // Function to detect and render links in text with WhatsApp formatting
-function renderTextWithLinks(text: string): React.ReactNode {
+function renderTextWithLinks(text: string, mentionMap?: Record<string, string> | null): React.ReactNode {
+  // First resolve mentions JIDs to names
+  const resolvedText = resolveMentions(text, mentionMap);
+  
   // URL regex pattern
   const urlRegex = /(https?:\/\/[^\s<]+[^<.,:;"')\]\s])/g;
   
-  const parts = text.split(urlRegex);
+  const parts = resolvedText.split(urlRegex);
   
   if (parts.length === 1) {
-    return applyWhatsAppFormatting(text, "fmt");
+    return applyWhatsAppFormatting(resolvedText, "fmt");
   }
   
   return parts.map((part, index) => {
