@@ -689,8 +689,6 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          {/* ROI Events Feed - Full Width */}
-          <ROIEventsFeed />
         </TabsContent>
 
         {/* CX Tab */}

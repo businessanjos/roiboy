@@ -2666,15 +2666,6 @@ export default function Clients() {
                         </Tooltip>
                       </TooltipProvider>
                       
-                      {vnpsMap[client.id] && (
-                        <VNPSBadge
-                          score={vnpsMap[client.id].vnps_score}
-                          vnpsClass={vnpsMap[client.id].vnps_class}
-                          trend={vnpsMap[client.id].trend}
-                          size="sm"
-                        />
-                      )}
-                      <StatusIndicator status={client.status} size="sm" />
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>

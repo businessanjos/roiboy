@@ -1747,7 +1747,7 @@ export default function ClientDetail() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">{client.full_name}</h1>
-              <StatusIndicator status={client.status} size="sm" />
+              
               <Button 
                 variant="ghost" 
                 size="sm" 

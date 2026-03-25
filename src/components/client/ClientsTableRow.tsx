@@ -292,19 +292,6 @@ export const ClientsTableRow = memo(function ClientsTableRow({
         </TooltipProvider>
       </TableCell>
 
-      {/* V-NPS Cell */}
-      <TableCell className="text-center">
-      {vnpsData ? (
-          <VNPSBadge
-            score={vnpsData.vnps_score}
-            vnpsClass={vnpsData.vnps_class as "detractor" | "neutral" | "promoter"}
-            trend={vnpsData.trend as "up" | "flat" | "down" | undefined}
-            size="sm"
-          />
-        ) : (
-          <span className="text-xs text-muted-foreground">—</span>
-        )}
-      </TableCell>
 
       {/* Responsible Cell */}
       <TableCell className="text-center">
