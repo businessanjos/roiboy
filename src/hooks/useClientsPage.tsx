@@ -111,28 +111,6 @@ export function useClientsPage() {
       if (data && data.length > 0) {
         const clientIds = data.map(c => c.id);
         
-        // Fetch V-NPS and Scores using optimized RPCs (1 row per client)
-        const [vnpsRes, scoresRes] = await Promise.all([
-          supabase.rpc("get_latest_vnps_for_clients", { p_client_ids: clientIds }),
-          supabase.rpc("get_latest_scores_for_clients", { p_client_ids: clientIds }),
-        ]);
-        
-        const vnpsGrouped: Record<string, VNPSData> = {};
-        (vnpsRes.data || []).forEach((v: any) => {
-          vnpsGrouped[v.client_id] = v;
-        });
-        setVnpsMap(vnpsGrouped);
-
-        const scoresGrouped: Record<string, ScoreData> = {};
-        (scoresRes.data || []).forEach((s: any) => {
-          scoresGrouped[s.client_id] = {
-            escore: s.escore,
-            roizometer: s.roizometer,
-            quadrant: s.quadrant,
-            trend: s.trend,
-          };
-        });
-        setScoreMap(scoresGrouped);
 
         // Fetch ALL contracts (all statuses to show contracts correctly)
         const { data: contractsData } = await supabase

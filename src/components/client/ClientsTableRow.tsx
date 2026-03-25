@@ -200,64 +200,6 @@ export const ClientsTableRow = memo(function ClientsTableRow({
         </button>
       </TableCell>
 
-      {/* Roizometer Cell */}
-      <TableCell className="text-center">
-        {scoreData ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={cn(
-                  "inline-flex items-center justify-center min-w-[40px] px-2 py-1 rounded-md text-xs font-bold",
-                  scoreData.roizometer >= 70
-                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                    : scoreData.roizometer >= 40
-                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                      : "bg-destructive/10 text-destructive"
-                )}>
-                  {scoreData.roizometer}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-xs">
-                  <p className="font-medium">Roizômetro: {scoreData.roizometer}%</p>
-                  <p className="text-muted-foreground">Percepção de ROI do cliente</p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          <span className="text-xs text-muted-foreground">—</span>
-        )}
-      </TableCell>
-
-      {/* E-Score Cell */}
-      <TableCell className="text-center">
-        {scoreData ? (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={cn(
-                  "inline-flex items-center justify-center min-w-[40px] px-2 py-1 rounded-md text-xs font-bold",
-                  scoreData.escore >= 70
-                    ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                    : scoreData.escore >= 40
-                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                      : "bg-destructive/10 text-destructive"
-                )}>
-                  {scoreData.escore}
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <div className="text-xs">
-                  <p className="font-medium">E-Score: {scoreData.escore}</p>
-                  <p className="text-muted-foreground">Engajamento do cliente</p>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ) : (
-          <span className="text-xs text-muted-foreground">—</span>
-        )}
       </TableCell>
 
       {/* WhatsApp Cell */}
