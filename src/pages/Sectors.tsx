@@ -10,7 +10,7 @@ import { ArrowRight, BarChart3, Wallet, Target, Palette, MessageCircle, Zap } fr
 import eternumSimbolo from "@/assets/simbolo-eternum.png";
 
 // Sectors accessible by sales rep roles
-const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "roychat", "configuracoes"];
+const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "configuracoes"];
 const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 
 // Visual identity for each core sector — accent color + geometric pattern
