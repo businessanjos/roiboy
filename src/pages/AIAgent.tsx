@@ -357,6 +357,7 @@ export default function AIAgent() {
             </p>
           </div>
         </div>
+        <div className="flex gap-2">
           <Button 
             variant={showSettings ? "secondary" : "outline"} 
             size="sm" 
