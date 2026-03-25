@@ -1896,7 +1896,7 @@ export default function Contracts() {
       {activeTab !== "triagem" && (
         <Card>
           <CardContent className="p-0">
-            {filteredContracts.length === 0 ? (
+            {totalFilteredContracts === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <FileText className="h-12 w-12 mb-4 opacity-50" />
                 <p className="text-lg font-medium">Nenhum contrato encontrado</p>
