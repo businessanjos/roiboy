@@ -2251,58 +2251,6 @@ export default function Clients() {
                           </button>
                         </TableCell>
                         <TableCell className="text-center">
-                          {(() => {
-                            const whatsappData = whatsappMap[client.id];
-                            const hasMessages = whatsappData && whatsappData.messageCount > 0;
-                            const lastMessage = whatsappData?.lastMessageAt;
-                            
-                            return (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <div className={cn(
-                                      "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium",
-                                      hasMessages 
-                                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                        : "bg-muted text-muted-foreground"
-                                    )}>
-                                      {hasMessages ? (
-                                        <>
-                                          <Wifi className="h-3 w-3" />
-                                          <span>{whatsappData.messageCount}</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <WifiOff className="h-3 w-3" />
-                                          <span>—</span>
-                                        </>
-                                      )}
-                                    </div>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    {hasMessages ? (
-                                      <div className="text-xs">
-                                        <p className="font-medium text-green-600 dark:text-green-400">Conectado</p>
-                                        <p>{whatsappData.messageCount} mensagem{whatsappData.messageCount !== 1 ? 's' : ''} capturada{whatsappData.messageCount !== 1 ? 's' : ''}</p>
-                                        {lastMessage && (
-                                          <p className="text-muted-foreground mt-1">
-                                            Última: {format(new Date(lastMessage), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                                          </p>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <div className="text-xs">
-                                        <p className="font-medium">Não conectado</p>
-                                        <p className="text-muted-foreground">Nenhuma mensagem capturada ainda</p>
-                                      </div>
-                                    )}
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            );
-                          })()}
-                        </TableCell>
-                        <TableCell className="text-center">
                           <Select
                             value={client.responsible_user_id || "none"}
                             onValueChange={async (value) => {
