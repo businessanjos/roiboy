@@ -357,15 +357,6 @@ export default function AIAgent() {
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant={showScoreSettings ? "secondary" : "outline"} 
-            size="sm" 
-            onClick={() => setShowScoreSettings(!showScoreSettings)}
-          >
-            <Scale className="h-4 w-4 mr-2" />
-            Pesos e Limiares
-          </Button>
           <Button 
             variant={showSettings ? "secondary" : "outline"} 
             size="sm" 
