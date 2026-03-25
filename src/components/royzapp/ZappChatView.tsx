@@ -42,9 +42,6 @@ interface ZappChatViewProps {
   onSetFilePreview?: (preview: { file: File; url: string } | null) => void;
   // AI Settings
   spellingEnabled?: boolean;
-  suggestionsEnabled?: boolean;
-  autoLearningEnabled?: boolean;
-  onToggleSuggestions?: () => void;
   // Stats for empty state
   onlineAgents: number;
   totalQueueConversations: number;
