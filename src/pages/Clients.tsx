@@ -576,8 +576,6 @@ export default function Clients() {
         }
       });
       
-      setVnpsMap(vnpsGrouped);
-      setScoreMap(scoresGrouped);
       setContractMap(contractsGrouped);
       setWhatsappMap(whatsappGrouped);
       setPendingFormSends(pendingFormsGrouped);
