@@ -112,8 +112,6 @@ interface ZappConversationPanelProps {
   
   // AI Settings
   spellingEnabled?: boolean;
-  suggestionsEnabled?: boolean;
-  autoLearningEnabled?: boolean;
   
   // System Notifications
   notificationPermission?: "granted" | "denied" | "default" | "unsupported";
