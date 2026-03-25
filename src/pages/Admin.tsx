@@ -315,13 +315,87 @@ function DashboardTab({ accounts, users }: { accounts: Account[]; users: User[] 
     }
   });
 
-  // ========== MRR GROWTH (Compare to last month) ==========
-  const { data: mrrGrowthData } = useQuery({
-    queryKey: ['admin-mrr-growth'],
-    queryFn: async () => {
-      const lastMonth = subMonths(new Date(), 1);
-      const lastMonthStart = startOfMonth(lastMonth);
-      const lastMonthEnd = endOfMonth(lastMonth);
+  return (
+    <div className="space-y-6">
+      {/* AI Usage Metrics */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-medium flex items-center gap-2">
+            <Cpu className="h-5 w-5 text-emerald-500" />
+            Uso de IA Agregado (Últimos 30 dias)
+          </CardTitle>
+          <CardDescription>Consumo e custos de inteligência artificial</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="p-4 rounded-lg bg-emerald-500/10 text-center">
+              <p className="text-3xl font-bold text-emerald-600">
+                R$ {(aiStats?.totalCost || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Custo Total (30d)</p>
+            </div>
+            <div className="p-4 rounded-lg bg-blue-500/10 text-center">
+              <p className="text-3xl font-bold text-blue-600">{(aiStats?.totalAnalyses || 0).toLocaleString('pt-BR')}</p>
+              <p className="text-sm text-muted-foreground mt-1">Análises Totais</p>
+            </div>
+            <div className="p-4 rounded-lg bg-purple-500/10 text-center">
+              <p className="text-3xl font-bold text-purple-600">{aiStats?.accountsUsingAI || 0}</p>
+              <p className="text-sm text-muted-foreground mt-1">Contas Usando IA</p>
+            </div>
+            <div className="p-4 rounded-lg bg-amber-500/10 text-center">
+              <p className="text-3xl font-bold text-amber-600">
+                R$ {(aiStats?.costPerAnalysis || 0).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Custo por Análise</p>
+            </div>
+            <div className="p-4 rounded-lg bg-primary/10 text-center">
+              <p className="text-3xl font-bold text-primary">{(aiStats?.todayAnalyses || 0).toLocaleString('pt-BR')}</p>
+              <p className="text-sm text-muted-foreground mt-1">Análises Hoje</p>
+              <p className="text-xs text-muted-foreground">R$ {(aiStats?.todayCost || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-border/50">
+            <div className="grid grid-cols-3 gap-4 text-center text-sm">
+              <div>
+                <p className="text-muted-foreground">Tokens de Entrada</p>
+                <p className="font-semibold">{((aiStats?.totalInputTokens || 0) / 1_000_000).toFixed(2)}M</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Tokens de Saída</p>
+                <p className="font-semibold">{((aiStats?.totalOutputTokens || 0) / 1_000_000).toFixed(2)}M</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Média por Conta</p>
+                <p className="font-semibold">{(aiStats?.avgPerAccount || 0).toFixed(1)} análises</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats Grid */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={Building2} label="Total de Contas" value={accounts.length} />
+        <StatCard icon={UserCheck} label="Contas Ativas" value={activeAccounts} variant="success" />
+        <StatCard icon={Users} label="Usuários" value={users.length} />
+        <StatCard icon={Users} label="Clientes" value={totalClients} />
+      </div>
+
+      {/* Distribution */}
+      <Card className="border-0 shadow-sm">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-medium">Distribuição por Status</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <StatusBar label="Ativas" value={activeAccounts} total={accounts.length} color="bg-emerald-500" />
+          <StatusBar label="Trial" value={trialAccounts} total={accounts.length} color="bg-amber-500" />
+          <StatusBar label="Suspensas" value={suspendedAccounts} total={accounts.length} color="bg-red-500" />
+          <StatusBar label="Canceladas" value={cancelledAccounts} total={accounts.length} color="bg-muted-foreground/50" />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
       
       // Get accounts created before last month end that had active status
       const accountsLastMonth = accounts.filter(a => {
