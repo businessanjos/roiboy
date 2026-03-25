@@ -198,7 +198,7 @@ interface Client {
 export default function Contracts() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { syncDocumentStatus, getLocalDocuments, loading: zapSignLoading } = useZapSign();
+  
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
