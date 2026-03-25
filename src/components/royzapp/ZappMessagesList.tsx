@@ -14,6 +14,26 @@ interface ZappMessagesListProps {
   onRetryMediaDownload?: (messageId: string) => void;
 }
 
+// Build a fallback mention map from sender_phone data in group messages
+// Maps phone numbers (without +) to sender names
+function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const msg of messages) {
+    if (msg.sender_name && msg.sender_name !== "Desconhecido") {
+      // Try to extract phone digits from sender_phone (e.g., "+5511999887766" -> "5511999887766")
+      // Note: WhatsApp JIDs in mentions may use different formats, so we store multiple variants
+      const phone = msg.sender_phone;
+      if (phone) {
+        const digits = phone.replace(/\D/g, "");
+        if (digits && !map[digits]) {
+          map[digits] = msg.sender_name;
+        }
+      }
+    }
+  }
+  return map;
+}
+
 export function ZappMessagesList({
   messages,
   isGroup,
@@ -109,10 +129,28 @@ export function ZappMessagesList({
     return result;
   }, [messages]);
 
+  // Build fallback mention map from sender_phone data for groups
+  const fallbackMentionMap = useMemo(() => {
+    if (!isGroup) return {};
+    return buildFallbackMentionMap(deduplicatedMessages);
+  }, [isGroup, deduplicatedMessages]);
+
+  // Enrich messages: for messages with @<number> mentions but no mention_map, inject fallback
+  const enrichedMessages = useMemo(() => {
+    if (!isGroup) return deduplicatedMessages;
+    const mentionRegex = /@\d{5,}/;
+    return deduplicatedMessages.map(msg => {
+      if (msg.content && mentionRegex.test(msg.content) && !msg.mention_map) {
+        return { ...msg, mention_map: fallbackMentionMap };
+      }
+      return msg;
+    });
+  }, [deduplicatedMessages, isGroup, fallbackMentionMap]);
+
   // Scroll to quoted message handler
   const handleScrollToQuoted = useCallback((quotedMessageId: string) => {
     // Find message by external_message_id OR local id
-    const targetMessage = deduplicatedMessages.find(
+    const targetMessage = enrichedMessages.find(
       m => m.external_message_id === quotedMessageId || m.id === quotedMessageId
     );
     
@@ -126,37 +164,37 @@ export function ZappMessagesList({
         setTimeout(() => setHighlightedMessageId(null), 2000);
       }
     }
-  }, [deduplicatedMessages]);
+  }, [enrichedMessages]);
 
   // Clean up old refs when messages change
   useEffect(() => {
-    const currentIds = new Set(deduplicatedMessages.map(m => m.id));
+    const currentIds = new Set(enrichedMessages.map(m => m.id));
     messageRefs.current.forEach((_, id) => {
       if (!currentIds.has(id)) {
         messageRefs.current.delete(id);
       }
     });
-  }, [deduplicatedMessages]);
+  }, [enrichedMessages]);
 
   // Auto-scroll to bottom when messages change
   useLayoutEffect(() => {
-    if (messagesEndRef.current && deduplicatedMessages.length > 0) {
+    if (messagesEndRef.current && enrichedMessages.length > 0) {
       messagesEndRef.current.scrollIntoView({ behavior: "instant" });
     }
-  }, [deduplicatedMessages]);
+  }, [enrichedMessages]);
 
   return (
     <ScrollArea className="flex-1 px-2 sm:px-4 py-2">
       <div className="space-y-1 w-full min-w-0">
-        {deduplicatedMessages.length === 0 ? (
+        {enrichedMessages.length === 0 ? (
           <div className="text-center py-8">
             <MessageSquare className="h-8 w-8 text-zapp-text-muted mx-auto mb-2" />
             <p className="text-zapp-text-muted text-sm">Nenhuma mensagem ainda</p>
           </div>
         ) : (
-          deduplicatedMessages.map((message, index) => {
+          enrichedMessages.map((message, index) => {
             const showTimestamp = index === 0 ||
-              new Date(message.created_at).toDateString() !== new Date(deduplicatedMessages[index - 1].created_at).toDateString();
+              new Date(message.created_at).toDateString() !== new Date(enrichedMessages[index - 1].created_at).toDateString();
 
             return (
               <div
