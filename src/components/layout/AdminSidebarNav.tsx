@@ -29,11 +29,8 @@ const navGroups: NavGroup[] = [
   {
     title: "Gestão",
     items: [
-      { id: "plans", label: "Planos", icon: Package },
       { id: "accounts", label: "Contas", icon: Building2 },
       { id: "users", label: "Usuários", icon: Users },
-      { id: "payments", label: "Pagamentos", icon: Wallet },
-      { id: "coupons", label: "Cupons", icon: Tag },
     ],
   },
   {
