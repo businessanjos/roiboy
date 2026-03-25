@@ -72,7 +72,6 @@ export function useClientsPage() {
 
   const [clients, setClients] = useState<any[]>([]);
   const [contractMap, setContractMap] = useState<Record<string, ContractData>>({});
-  const [contractMap, setContractMap] = useState<Record<string, ContractData>>({});
   const [whatsappMap, setWhatsappMap] = useState<Record<string, WhatsAppData>>({});
   const [loading, setLoading] = useState(true);
 
