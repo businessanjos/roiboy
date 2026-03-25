@@ -62,14 +62,8 @@ const SECTOR_IDENTITY: Record<string, {
     patternClass: "sector-pattern-zapp",
     overrideIcon: Zap,
   },
-  roychat: {
-    accent: "border-l-rose-500",
-    hoverBorder: "hover:border-rose-500/30",
-    hoverIconBg: "group-hover:bg-rose-500/10",
-    hoverIconColor: "group-hover:text-rose-600",
-    patternClass: "sector-pattern-chat",
-    overrideIcon: MessageCircle,
-  },
+
+
 };
 
 function SectorPattern({ sectorId }: { sectorId: string }) {
