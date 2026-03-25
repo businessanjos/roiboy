@@ -405,8 +405,8 @@ function DashboardTab({ accounts, users }: { accounts: Account[]; users: User[] 
       
       // Estimate last month MRR (simplified - assumes same plans)
       const lastMonthMrr = accountsLastMonth.reduce((sum, account) => {
-        const plan = plans.find(p => p.id === account.plan_id);
-        if (!plan) return sum;
+
+
         
         const monthlyPrice = plan.billing_period === 'annual' ? plan.price / 12 :
                              plan.billing_period === 'semiannual' ? plan.price / 6 :
