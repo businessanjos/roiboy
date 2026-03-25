@@ -1046,6 +1046,9 @@ export function useZappData(options: UseZappDataOptions = {}) {
     // Each instance (phone number) has its own separate conversation with the same contact
     if (integrationId) {
       const beforeCount = filtered.length;
+      // Find current sector's department ID for multi-sector group detection
+      const currentSectorDeptId = departments.find(d => d.sector_id === sectorId)?.id;
+      
       filtered = filtered.filter(a => {
         const zappConv = a.zapp_conversation as { 
           integration_id?: string; 
@@ -1056,13 +1059,14 @@ export function useZappData(options: UseZappDataOptions = {}) {
         const convSectorId = zappConv?.sector_id;
         // Include conversation if:
         // 1. It belongs to this exact integration, OR
-        // 2. It has no integration_id (legacy) but belongs to the same sector
-        // NOTE: Groups are NOT exempt - they follow the same isolation rules as direct messages
-        //       If two instances are in the same group, each will have its own zapp_conversation
+        // 2. It has no integration_id (legacy) but belongs to the same sector, OR
+        // 3. It's a GROUP with an assignment in the current sector's department
+        //    (multi-sector groups: e.g., a group from Diretoria with an assignment in Operações)
         const matchesIntegration = convIntegrationId === integrationId;
         const isLegacySameSector = !convIntegrationId && convSectorId === sectorId;
+        const isMultiSectorGroup = zappConv?.is_group && currentSectorDeptId && a.department_id === currentSectorDeptId;
         
-        return matchesIntegration || isLegacySameSector;
+        return matchesIntegration || isLegacySameSector || isMultiSectorGroup;
       });
       
       if (filtered.length !== beforeCount) {
