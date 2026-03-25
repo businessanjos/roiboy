@@ -210,7 +210,7 @@ const App = () => (
                             <Route path="/mentor-agenda" element={<MentorAgenda />} />
                             <Route path="/ai-agent" element={<AIAgent />} />
                             <Route path="/billing" element={<BillingPortal />} />
-                            <Route path="/team-chat" element={<TeamChat />} />
+                            
                             <Route path="/marketing" element={<Marketing />} />
                             <Route path="/content-calendar" element={<ContentCalendar />} />
                             <Route path="/social-media" element={<SocialMedia />} />
