@@ -296,7 +296,7 @@ export default function Clients() {
   const [fieldValues, setFieldValues] = useState<Record<string, Record<string, any>>>({});
   const [accountId, setAccountId] = useState<string | null>(null);
   const [fieldsDialogOpen, setFieldsDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"cards" | "table" | "kanban" | "onboarding">("table");
+  const [viewMode, setViewMode] = useState<"cards" | "table" | "onboarding">("table");
   const [teamUsers, setTeamUsers] = useState<{ id: string; name: string; email: string }[]>([]);
   const [clientStages, setClientStages] = useState<Array<{ id: string; name: string; color: string; display_order: number }>>([]);
   
