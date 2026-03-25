@@ -1967,7 +1967,7 @@ export default function Clients() {
                     <SelectItem value="expired">Expirado</SelectItem>
                     <SelectItem value="urgent">Expira em 30 dias</SelectItem>
                     <SelectItem value="warning">Expira em 60 dias</SelectItem>
-                    <SelectItem value="ok">Vigente</SelectItem>
+                    
                     <SelectItem value="pending">Pendente</SelectItem>
                     <SelectItem value="cancelled">Cancelado</SelectItem>
                     <SelectItem value="suspended">Suspenso</SelectItem>
