@@ -31,6 +31,7 @@ export interface Message {
   media_filename?: string | null;
   audio_duration_sec?: number | null;
   sender_name?: string | null;
+  sender_phone?: string | null;
   delivery_status?: "pending" | "sent" | "delivered" | "read" | "failed" | null;
   media_download_status?: "pending" | "downloading" | "completed" | "failed" | null;
   external_message_id?: string | null;
