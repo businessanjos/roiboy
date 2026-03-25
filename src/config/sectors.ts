@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
 
-export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "roychat" | "configuracoes";
+export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "configuracoes";
 
 export interface NavItem {
   to: string;
@@ -70,7 +70,7 @@ export const sectors: Sector[] = [
       { to: "/forms", icon: FileText, label: "Formulários", permission: PERMISSIONS.FORMS_VIEW },
       { to: "/reminders", icon: BellRing, label: "Lembretes", permission: PERMISSIONS.SETTINGS_VIEW },
       { to: "/whatsapp-groups", icon: UsersRound, label: "Grupos WhatsApp", permission: PERMISSIONS.SETTINGS_VIEW },
-      { to: "/team-chat", icon: MessageCircle, label: "ROY Chat" },
+      
       { to: "/ai-agent", icon: Bot, label: "Agente ROY", permission: PERMISSIONS.SETTINGS_VIEW },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
@@ -103,19 +103,8 @@ export const sectors: Sector[] = [
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
-  {
-    id: "roychat",
-    name: "ROY Chat",
-    description: "Chat interno para comunicação da equipe",
-    icon: MessageCircle,
-    color: "text-indigo-600",
-    bgColor: "bg-indigo-500/10",
-    defaultRoute: "/team-chat",
-    navItems: [
-      { to: "/team-chat", icon: MessageCircle, label: "ROY Chat", permission: PERMISSIONS.TEAM_VIEW },
-      { to: "/notifications", icon: Bell, label: "Notificações" },
-    ],
-  },
+
+
   {
     id: "vendas",
     name: "Vendas",

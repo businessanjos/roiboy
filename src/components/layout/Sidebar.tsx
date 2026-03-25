@@ -176,7 +176,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
     });
   }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role, currentUser?.team_role_name]);
 
-  const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "roychat", "configuracoes"];
+  const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "configuracoes"];
 
   const isSalesRep = useMemo(() => {
     const role = currentUser?.team_role_name;
@@ -534,7 +534,7 @@ export function Sidebar() {
   const location = useLocation();
 
   // Hide sidebar entirely when no sector is selected, on home/sector selection, or on notifications page
-  if (isMobile || !currentSector || location.pathname === "/notifications" || location.pathname === "/setores" || location.pathname === "/" || location.pathname.startsWith("/team-chat")) {
+  if (isMobile || !currentSector || location.pathname === "/notifications" || location.pathname === "/setores" || location.pathname === "/") {
     return null;
   }
 

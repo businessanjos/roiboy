@@ -83,7 +83,7 @@ const Contracts = lazyRetry(() => import("./pages/Contracts"));
 const SalesPipeline = lazyRetry(() => import("./pages/SalesPipeline"));
 const SalesTeam = lazyRetry(() => import("./pages/SalesTeam"));
 const Leads = lazyRetry(() => import("./pages/Leads"));
-const TeamChat = lazyRetry(() => import("./pages/TeamChat"));
+
 const Marketing = lazyRetry(() => import("./pages/Marketing"));
 const ContentCalendar = lazyRetry(() => import("./pages/ContentCalendar"));
 const SocialMedia = lazyRetry(() => import("./pages/SocialMedia"));
@@ -210,7 +210,7 @@ const App = () => (
                             <Route path="/mentor-agenda" element={<MentorAgenda />} />
                             <Route path="/ai-agent" element={<AIAgent />} />
                             <Route path="/billing" element={<BillingPortal />} />
-                            <Route path="/team-chat" element={<TeamChat />} />
+                            
                             <Route path="/marketing" element={<Marketing />} />
                             <Route path="/content-calendar" element={<ContentCalendar />} />
                             <Route path="/social-media" element={<SocialMedia />} />
@@ -218,7 +218,7 @@ const App = () => (
                             <Route path="/marketing-insights" element={<MarketingInsights />} />
                             <Route path="/insights" element={<Insights />} />
                             <Route path="/insights/:dashboardId" element={<Insights />} />
-                            <Route path="/team-chat/:chatId" element={<TeamChat />} />
+                            
                             <Route path="/admin" element={<Admin />} />
                             <Route path="/admin/whatsapp-diagnostics" element={<WhatsAppDiagnostics />} />
                             <Route path="/sales-scripts" element={<SalesScripts />} />

@@ -10,7 +10,7 @@ import { ArrowRight, BarChart3, Wallet, Target, Palette, MessageCircle, Zap } fr
 import eternumSimbolo from "@/assets/simbolo-eternum.png";
 
 // Sectors accessible by sales rep roles
-const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "roychat", "configuracoes"];
+const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "configuracoes"];
 const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 
 // Visual identity for each core sector — accent color + geometric pattern
@@ -62,14 +62,8 @@ const SECTOR_IDENTITY: Record<string, {
     patternClass: "sector-pattern-zapp",
     overrideIcon: Zap,
   },
-  roychat: {
-    accent: "border-l-rose-500",
-    hoverBorder: "hover:border-rose-500/30",
-    hoverIconBg: "group-hover:bg-rose-500/10",
-    hoverIconColor: "group-hover:text-rose-600",
-    patternClass: "sector-pattern-chat",
-    overrideIcon: MessageCircle,
-  },
+
+
 };
 
 function SectorPattern({ sectorId }: { sectorId: string }) {
@@ -106,15 +100,8 @@ function SectorPattern({ sectorId }: { sectorId: string }) {
         <polygon points="40,8 50,30 74,30 55,46 62,70 40,56 18,70 25,46 6,30 30,30" stroke="currentColor" strokeWidth="2" fill="none" />
       </svg>
     ),
-    roychat: (
-      <svg className="absolute right-3 bottom-3 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity duration-500" width="80" height="80" viewBox="0 0 80 80">
-        <rect x="10" y="15" width="55" height="38" rx="8" stroke="currentColor" strokeWidth="2" fill="none" />
-        <polyline points="20,53 28,65 36,53" stroke="currentColor" strokeWidth="2" fill="none" />
-        <circle cx="28" cy="34" r="3" fill="currentColor" />
-        <circle cx="40" cy="34" r="3" fill="currentColor" />
-        <circle cx="52" cy="34" r="3" fill="currentColor" />
-      </svg>
-    ),
+
+
   };
   return <>{patterns[sectorId] || null}</>;
 }
@@ -163,7 +150,7 @@ export default function Sectors() {
     return sectors;
   }, [isSalesRep, isManager]);
 
-  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "royzapp", "roychat"];
+  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "royzapp"];
   const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);
 
   return (
