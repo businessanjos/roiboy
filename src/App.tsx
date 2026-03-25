@@ -201,7 +201,7 @@ const App = () => (
                             <Route path="/team" element={<Navigate to="/settings" replace />} />
                             <Route path="/profile" element={<Navigate to="/settings?tab=profile" replace />} />
                             <Route path="/notifications" element={<Notifications />} />
-                            <Route path="/api-docs" element={<ApiDocs />} />
+                            
                             <Route path="/settings" element={<Settings />} />
                             <Route path="/account-settings" element={<AccountSettings />} />
                             <Route path="/reminders" element={<Reminders />} />
