@@ -15,18 +15,33 @@ interface ZappMessagesListProps {
 }
 
 // Build a fallback mention map from sender_phone data in group messages
-// Maps phone numbers (without +) to sender names
+// Maps phone numbers (without +) to sender names, with multiple digit variants for matching
 function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
   const map: Record<string, string> = {};
   for (const msg of messages) {
     if (msg.sender_name && msg.sender_name !== "Desconhecido") {
-      // Try to extract phone digits from sender_phone (e.g., "+5511999887766" -> "5511999887766")
-      // Note: WhatsApp JIDs in mentions may use different formats, so we store multiple variants
       const phone = msg.sender_phone;
       if (phone) {
         const digits = phone.replace(/\D/g, "");
-        if (digits && !map[digits]) {
-          map[digits] = msg.sender_name;
+        if (digits) {
+          // Store full number and partial variants for flexible matching
+          if (!map[digits]) map[digits] = msg.sender_name;
+          const last8 = digits.slice(-8);
+          const last9 = digits.slice(-9);
+          if (last8 && !map[last8]) map[last8] = msg.sender_name;
+          if (last9 && !map[last9]) map[last9] = msg.sender_name;
+        }
+      }
+    }
+    // Also merge any existing mention_map from the message into the fallback
+    if (msg.mention_map) {
+      for (const [key, name] of Object.entries(msg.mention_map)) {
+        if (name && !map[key]) {
+          map[key] = name;
+          const last8 = key.slice(-8);
+          const last9 = key.slice(-9);
+          if (last8 && !map[last8]) map[last8] = name;
+          if (last9 && !map[last9]) map[last9] = name;
         }
       }
     }
