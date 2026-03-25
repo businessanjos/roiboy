@@ -2044,7 +2044,7 @@ export default function Contracts() {
         </Card>
       )}
           </TabsContent>
-        )}
+
       </Tabs>
 
       {/* New Contract Dialog */}
