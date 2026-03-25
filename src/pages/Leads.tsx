@@ -1106,7 +1106,7 @@ export default function Leads() {
     setFilterSource("all");
   };
 
-  const filteredLeads = leads.filter((lead) => {
+  const filteredLeads = useMemo(() => leads.filter((lead) => {
     const matchesSearch =
       lead.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lead.phone?.includes(searchQuery) ||
@@ -1115,7 +1115,20 @@ export default function Leads() {
     const matchesSource = filterSource === "all" || lead.source === filterSource;
     
     return matchesSearch && matchesSource;
-  });
+  }), [leads, searchQuery, filterSource]);
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / LEADS_PER_PAGE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedLeads = useMemo(() => {
+    const start = (safePage - 1) * LEADS_PER_PAGE;
+    return filteredLeads.slice(start, start + LEADS_PER_PAGE);
+  }, [filteredLeads, safePage, LEADS_PER_PAGE]);
+
+  // Reset page on filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterSource]);
 
   const getInitials = (name: string) => {
     return name
