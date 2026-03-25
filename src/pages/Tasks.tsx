@@ -1392,11 +1392,22 @@ export default function Tasks() {
           ))}
 
           {/* Pagination Controls */}
-          {sortedTasks.length > TASKS_PER_PAGE && (
+          {sortedTasks.length > pageSize && (
             <div className="flex items-center justify-between px-2 py-3">
-              <p className="text-sm text-muted-foreground">
-                Mostrando {((safePage - 1) * TASKS_PER_PAGE) + 1}–{Math.min(safePage * TASKS_PER_PAGE, sortedTasks.length)} de {sortedTasks.length} tarefas
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Mostrando {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, sortedTasks.length)} de {sortedTasks.length} tarefas
+                </p>
+                <select
+                  value={pageSize}
+                  onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                >
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
               <div className="flex items-center gap-1">
                 <Button
                   variant="outline"
