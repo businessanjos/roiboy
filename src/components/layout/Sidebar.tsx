@@ -149,8 +149,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
 
     // Super admins have access to everything
     if (isSuperAdmin) {
-      const sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
-      return [...sectorItems, ...superAdminNavItems];
+      return currentSector.navItems.filter(item => item.to !== "/notifications");
     }
     
     let sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
