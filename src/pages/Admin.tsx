@@ -967,7 +967,7 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
                     />
                   </TableHead>
                   <TableHead className="font-medium">Nome</TableHead>
-                  <TableHead className="font-medium">Plano</TableHead>
+                  
                   <TableHead className="font-medium">Status</TableHead>
                   <TableHead className="font-medium text-center">Usuários</TableHead>
                   <TableHead className="font-medium text-center">Clientes</TableHead>
