@@ -37,8 +37,6 @@ interface ClientsTableRowProps {
 
 export const ClientsTableRow = memo(function ClientsTableRow({
   client,
-  vnpsData,
-  scoreData,
   contractData,
   whatsappData,
   customFields,

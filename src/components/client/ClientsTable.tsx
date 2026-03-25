@@ -81,8 +81,6 @@ export const ClientsTable = memo(function ClientsTable({
               <ClientsTableRow
                 key={client.id}
                 client={client}
-                vnpsData={vnpsMap[client.id]}
-                scoreData={scoreMap[client.id]}
                 contractData={contractMap[client.id]}
                 whatsappData={whatsappMap[client.id]}
                 customFields={customFields}
