@@ -12342,6 +12342,7 @@ export type Database = {
           media_mimetype: string | null
           media_type: string | null
           media_url: string | null
+          mention_map: Json | null
           message_type: string | null
           quoted_content: string | null
           quoted_message_id: string | null
@@ -12373,6 +12374,7 @@ export type Database = {
           media_mimetype?: string | null
           media_type?: string | null
           media_url?: string | null
+          mention_map?: Json | null
           message_type?: string | null
           quoted_content?: string | null
           quoted_message_id?: string | null
@@ -12404,6 +12406,7 @@ export type Database = {
           media_mimetype?: string | null
           media_type?: string | null
           media_url?: string | null
+          mention_map?: Json | null
           message_type?: string | null
           quoted_content?: string | null
           quoted_message_id?: string | null

@@ -1,0 +1,1 @@
+ALTER TABLE public.zapp_messages ADD COLUMN IF NOT EXISTS mention_map jsonb DEFAULT NULL;
