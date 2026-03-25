@@ -685,7 +685,7 @@ export function ClientFollowup({ clientId }: ClientFollowupProps) {
 
   const uploadFile = async (file: File): Promise<{ url: string; name: string; size: number }> => {
     const fileExt = file.name.split(".").pop();
-    const fileName = `${clientId}/${Date.now()}.${fileExt}`;
+    const fileName = `${currentUser?.account_id}/${clientId}/${Date.now()}.${fileExt}`;
 
     const { error: uploadError } = await supabase.storage
       .from("client-followups")
