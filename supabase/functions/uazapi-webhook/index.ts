@@ -1629,7 +1629,9 @@ serve(async (req) => {
               console.log(`[RACE GUARD] Keeping assignment ${existingAssignment.id} as closed`);
             } else if (existingAssignment.status === "closed") {
               // Reopen closed conversations only for inbound messages
-              newStatus = direction === "inbound" ? "triage" : "closed";
+              // GROUPS FIX: Grupos dispensados (closed) NÃO devem ser reabertos automaticamente
+              // Apenas conversas individuais devem ser reabertas
+              newStatus = (direction === "inbound" && !isGroupMessage) ? "triage" : "closed";
             } else if (direction === "outbound" && existingAssignment.status !== "closed") {
               // Outbound message: we're waiting for client response
               newStatus = "waiting";
@@ -1891,13 +1893,16 @@ serve(async (req) => {
               }
               
               // CORREÇÃO: Se reabrindo conversa fechada, limpar atendente para voltar à fila
-              const isReopeningFromClosed = existingAssignment.status === "closed";
+              // GROUPS FIX: Grupos dispensados (closed) NÃO devem ser reabertos automaticamente
+              // Apenas conversas individuais devem ser reabertas quando o cliente manda mensagem
+              const isReopeningFromClosed = existingAssignment.status === "closed" && !isGroupMsg;
               
               await supabase
                 .from("zapp_conversation_assignments")
                 .update({
-                  updated_at: timestamp,
+                  updated_at: isReopeningFromClosed ? timestamp : (existingAssignment.status === "closed" ? existingAssignment.updated_at : timestamp),
                   // If conversation was closed and client sends new message, reopen to triage
+                  // But NOT for groups - they stay closed when dismissed
                   status: isReopeningFromClosed ? "triage" : existingAssignment.status,
                   // Limpar agent_id quando reabrindo de closed para que volte à Fila
                   ...(isReopeningFromClosed ? { agent_id: null, assigned_at: null } : {}),
