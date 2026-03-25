@@ -3224,54 +3224,45 @@ export default function RoyZapp() {
         onUseItem={async (item, processedText) => {
           // Insert text content into message input
           if (item.content_type === 'text' && processedText) {
-            setMessageInput(processedText);
-            messageInputRef.current?.focus();
+            messaging.setMessageInput(processedText);
+            messaging.messageInputRef.current?.focus();
           } else if (item.content_type === 'image' && item.media_url) {
-            // For image items, download and set as image preview
             try {
               const response = await fetch(item.media_url);
               if (!response.ok) throw new Error('Failed to fetch image');
-              
               const blob = await response.blob();
               const fileName = item.name || 'playbook-image.jpg';
               const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
               const url = URL.createObjectURL(blob);
-              
-              // Include caption from playbook item
-              setImagePreview({ file, url, caption: item.media_caption || undefined });
+              messaging.setImagePreview({ file, url, caption: item.media_caption || undefined });
               toast.success(item.media_caption ? "Imagem com legenda anexada! Clique em enviar." : "Imagem anexada! Clique em enviar.");
-              messageInputRef.current?.focus();
+              messaging.messageInputRef.current?.focus();
             } catch (error) {
               console.error('Error loading playbook image:', error);
               toast.error("Erro ao carregar imagem do playbook");
             }
           } else if (item.content_type === 'audio' && item.media_url) {
-            // For audio items, download and send directly
             try {
               toast.info("Enviando áudio...");
               const response = await fetch(item.media_url);
               if (!response.ok) throw new Error('Failed to fetch audio');
               const blob = await response.blob();
-              await sendAudioMessage(blob);
+              await messaging.sendMediaMessage(new File([blob], 'audio.webm', { type: blob.type || 'audio/webm' }), 'document');
             } catch (error) {
               console.error('Error sending playbook audio:', error);
               toast.error("Erro ao enviar áudio do playbook");
             }
           } else if ((item.content_type === 'video' || item.content_type === 'document') && item.media_url) {
-            // For video and document items, download and send directly
             try {
               const mediaTypeLabel = item.content_type === 'video' ? 'vídeo' : 'documento';
               toast.info(`Enviando ${mediaTypeLabel}...`);
-              
               const response = await fetch(item.media_url);
               if (!response.ok) throw new Error(`Failed to fetch ${item.content_type}`);
-              
               const blob = await response.blob();
               const fileName = item.media_filename || item.name || `playbook-file`;
               const mimeType = blob.type || (item.content_type === 'video' ? 'video/mp4' : 'application/octet-stream');
               const file = new File([blob], fileName, { type: mimeType });
-              
-              await sendMediaMessage(file, item.content_type === 'video' ? 'video' : 'document', item.media_caption || undefined);
+              await messaging.sendMediaMessage(file, item.content_type === 'video' ? 'video' : 'document', item.media_caption || undefined);
             } catch (error) {
               console.error(`Error sending playbook ${item.content_type}:`, error);
               toast.error(`Erro ao enviar ${item.content_type === 'video' ? 'vídeo' : 'documento'} do playbook`);
