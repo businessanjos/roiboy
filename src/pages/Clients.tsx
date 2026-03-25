@@ -421,8 +421,6 @@ export default function Clients() {
       };
 
       const rows = allClients.map((client: any) => {
-        const vnps = client.vnps;
-        const score = client.score;
         const contract = client.contract;
         const responsible = client.responsible_user;
         const productNames = client.products?.map((p: any) => p.name).filter(Boolean).join(", ") || "";
