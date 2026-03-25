@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 import { useZappData, Message, TeamUser, InboundMessageData } from "@/hooks/useZappData";
+import { useZappMessaging } from "@/hooks/useZappMessaging";
 import { useZappNotifications } from "@/hooks/useZappNotifications";
 import { toast } from "sonner";
 import { format } from "date-fns";
