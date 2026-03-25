@@ -31,6 +31,10 @@ export interface SalesRepMetrics {
   assigned_leads: number;
   converted_leads: number;
   entry_value_total: number;
+
+  // Scheduling metrics
+  scheduled_calls: number;
+  noshow_calls: number;
 }
 
 interface UseSalesTeamMetricsOptions {
@@ -96,7 +100,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       }
 
       // Fetch all metrics in parallel
-      const [callsData, dealsData, tasksData, leadsData] = await Promise.all([
+      const [callsData, dealsData, tasksData, leadsData, schedulingData] = await Promise.all([
         // Calls - from threecplus_call_logs (3C Plus telephony)
         supabase
           .from("threecplus_call_logs")
@@ -128,6 +132,15 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           .eq("account_id", currentUser.account_id)
           .gte("created_at", dateFilter.start)
           .lte("created_at", dateFilter.end),
+
+        // Scheduling tasks (agendamentos + no-show) via activity_types
+        supabase
+          .from("internal_tasks")
+          .select("assigned_to, activity_types!internal_tasks_activity_type_id_fkey(name)")
+          .eq("account_id", currentUser.account_id)
+          .not("activity_type_id", "is", null)
+          .gte("created_at", dateFilter.start)
+          .lte("created_at", dateFilter.end),
       ]);
 
       // Process metrics for each user
@@ -156,6 +169,8 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           assigned_leads: 0,
           converted_leads: 0,
           entry_value_total: 0,
+          scheduled_calls: 0,
+          noshow_calls: 0,
         };
       }
 
@@ -259,7 +274,22 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         }
       }
 
-      // Convert to array and sort by won value
+      // Aggregate scheduling metrics (agendamentos x no-show)
+      if (schedulingData.data) {
+        for (const task of schedulingData.data as any[]) {
+          const activityName = (task.activity_types as any)?.name?.toLowerCase() || "";
+          if (task.assigned_to && metricsMap[task.assigned_to]) {
+            if (activityName.includes("call comercial agendada") || activityName.includes("agendamento") || activityName.includes("agendada")) {
+              metricsMap[task.assigned_to].scheduled_calls++;
+            }
+            if (activityName.includes("no-show") || activityName.includes("no show") || activityName.includes("noshow")) {
+              metricsMap[task.assigned_to].noshow_calls++;
+            }
+          }
+        }
+      }
+
+
       const metricsArray = Object.values(metricsMap)
         .filter(m => m.total_deals > 0 || m.total_calls > 0 || m.total_tasks > 0 || m.assigned_leads > 0)
         .sort((a, b) => {
@@ -290,6 +320,8 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         total_tasks: acc.total_tasks + m.total_tasks,
         completed_tasks: acc.completed_tasks + m.completed_tasks,
         assigned_leads: acc.assigned_leads + m.assigned_leads,
+        scheduled_calls: acc.scheduled_calls + m.scheduled_calls,
+        noshow_calls: acc.noshow_calls + m.noshow_calls,
       }),
       {
         total_calls: 0,
@@ -301,6 +333,8 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         total_tasks: 0,
         completed_tasks: 0,
         assigned_leads: 0,
+        scheduled_calls: 0,
+        noshow_calls: 0,
       }
     );
   }, [metrics]);

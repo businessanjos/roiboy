@@ -13,6 +13,8 @@ import {
   Clock,
   TrendingUp,
   ChevronRight,
+  CalendarCheck,
+  UserX,
 } from "lucide-react";
 import { SalesRepMetrics } from "@/hooks/useSalesTeamMetrics";
 
@@ -150,7 +152,32 @@ export const SalesRepCard = memo(forwardRef<HTMLDivElement, SalesRepCardProps>(
           </div>
         </div>
 
-        {/* Leads */}
+        {/* Scheduling Metrics */}
+        {(rep.scheduled_calls > 0 || rep.noshow_calls > 0) && (
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-indigo-500/10 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <CalendarCheck className="h-4 w-4 text-indigo-500" />
+                <span className="text-xs font-medium text-muted-foreground">Agendamentos</span>
+              </div>
+              <span className="text-lg font-bold">{rep.scheduled_calls}</span>
+            </div>
+            <div className={`rounded-lg p-3 ${rep.noshow_calls > 0 ? 'bg-red-500/10' : 'bg-muted/50'}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <UserX className={`h-4 w-4 ${rep.noshow_calls > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
+                <span className="text-xs font-medium text-muted-foreground">No-Show</span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className={`text-lg font-bold ${rep.noshow_calls > 0 ? 'text-red-600' : ''}`}>{rep.noshow_calls}</span>
+                {rep.scheduled_calls > 0 && (
+                  <span className="text-xs text-muted-foreground">
+                    ({Math.round((rep.noshow_calls / rep.scheduled_calls) * 100)}%)
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         {rep.assigned_leads > 0 && (
           <div className="flex items-center justify-between pt-3 border-t">
             <div className="flex items-center gap-2">
