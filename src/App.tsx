@@ -59,7 +59,7 @@ const PublicEventRegistration = lazyRetry(() => import("./pages/PublicEventRegis
 const PublicEventFeedback = lazyRetry(() => import("./pages/PublicEventFeedback"));
 const Presentation = lazyRetry(() => import("./pages/Presentation"));
 const ExtensionPreview = lazyRetry(() => import("./pages/ExtensionPreview"));
-const ApiDocs = lazyRetry(() => import("./pages/ApiDocs"));
+
 const Admin = lazyRetry(() => import("./pages/Admin"));
 const EventCheckin = lazyRetry(() => import("./pages/EventCheckin"));
 const Onboarding = lazyRetry(() => import("./pages/Onboarding"));
