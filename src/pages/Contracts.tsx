@@ -85,7 +85,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useZapSign } from "@/hooks/useZapSign";
+
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -198,12 +198,12 @@ interface Client {
 export default function Contracts() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { syncDocumentStatus, getLocalDocuments, loading: zapSignLoading } = useZapSign();
+  
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
+  
   const [importing, setImporting] = useState(false);
   const [searchTerm, setSearchTerm] = usePersistedFilter<string>("contracts", "searchTerm", "");
   const [statusFilter, setStatusFilter] = usePersistedFilter<string>("contracts", "statusFilter", "all");
@@ -1371,47 +1371,6 @@ export default function Contracts() {
     }
   };
 
-  const handleSyncZapSign = async () => {
-    setSyncing(true);
-    try {
-      // Get all ZapSign documents from local database
-      const documents = await getLocalDocuments();
-      
-      if (!documents || documents.length === 0) {
-        toast.info("Nenhum documento ZapSign encontrado para sincronizar");
-        setSyncing(false);
-        return;
-      }
-
-      let syncedCount = 0;
-      let errorCount = 0;
-
-      // Sync each document status
-      for (const doc of documents) {
-        try {
-          await syncDocumentStatus(doc.zapsign_doc_token);
-          syncedCount++;
-        } catch (error) {
-          console.error(`Error syncing document ${doc.zapsign_doc_token}:`, error);
-          errorCount++;
-        }
-      }
-
-      // Refresh contracts list
-      await fetchContracts();
-
-      if (errorCount > 0) {
-        toast.warning(`Sincronizados ${syncedCount} documentos. ${errorCount} erros.`);
-      } else {
-        toast.success(`${syncedCount} documentos sincronizados com ZapSign`);
-      }
-    } catch (error) {
-      console.error("Error syncing ZapSign:", error);
-      toast.error("Erro ao sincronizar com ZapSign");
-    } finally {
-      setSyncing(false);
-    }
-  };
 
   // Filter out child contracts (renewals linked via parent_contract_id) to avoid duplication
   const rootContracts = useMemo(() => {
@@ -1632,19 +1591,6 @@ export default function Contracts() {
                 disabled={importing}
               />
             </label>
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={handleSyncZapSign}
-            disabled={syncing}
-          >
-            {syncing ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            ZapSign
           </Button>
           <Button size="sm" onClick={openNewContractDialog}>
             <Plus className="h-4 w-4 mr-2" />

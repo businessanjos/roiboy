@@ -72,7 +72,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ZapSignDialog } from "@/components/zapsign/ZapSignDialog";
+
 
 interface Contract {
   id: string;
@@ -161,9 +161,6 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   // Products state
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   
-  // ZapSign dialog state
-  const [zapSignDialogOpen, setZapSignDialogOpen] = useState(false);
-  const [zapSignContractId, setZapSignContractId] = useState<string | undefined>(undefined);
 
   // Status action dialog state
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
@@ -659,17 +656,6 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
           {contracts.length} contrato{contracts.length !== 1 ? "s" : ""} registrado{contracts.length !== 1 ? "s" : ""}
         </p>
         <div className="flex items-center gap-2">
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={() => {
-              setZapSignContractId(undefined);
-              setZapSignDialogOpen(true);
-            }}
-          >
-            <PenTool className="h-4 w-4 mr-1" />
-            ZapSign
-          </Button>
           <Dialog open={dialogOpen} onOpenChange={(open) => {
             setDialogOpen(open);
             if (!open) resetForm();
@@ -1200,12 +1186,6 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
         </DialogContent>
       </Dialog>
 
-      <ZapSignDialog
-        open={zapSignDialogOpen}
-        onOpenChange={setZapSignDialogOpen}
-        clientId={clientId}
-        contractId={zapSignContractId}
-      />
     </div>
   );
 }
