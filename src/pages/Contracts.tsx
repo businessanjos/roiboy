@@ -203,7 +203,7 @@ export default function Contracts() {
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
+  
   const [importing, setImporting] = useState(false);
   const [searchTerm, setSearchTerm] = usePersistedFilter<string>("contracts", "searchTerm", "");
   const [statusFilter, setStatusFilter] = usePersistedFilter<string>("contracts", "statusFilter", "all");
