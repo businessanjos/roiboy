@@ -274,7 +274,22 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
         }
       }
 
-      // Convert to array and sort by won value
+      // Aggregate scheduling metrics (agendamentos x no-show)
+      if (schedulingData.data) {
+        for (const task of schedulingData.data as any[]) {
+          const activityName = (task.activity_types as any)?.name?.toLowerCase() || "";
+          if (task.assigned_to && metricsMap[task.assigned_to]) {
+            if (activityName.includes("call comercial agendada") || activityName.includes("agendamento") || activityName.includes("agendada")) {
+              metricsMap[task.assigned_to].scheduled_calls++;
+            }
+            if (activityName.includes("no-show") || activityName.includes("no show") || activityName.includes("noshow")) {
+              metricsMap[task.assigned_to].noshow_calls++;
+            }
+          }
+        }
+      }
+
+
       const metricsArray = Object.values(metricsMap)
         .filter(m => m.total_deals > 0 || m.total_calls > 0 || m.total_tasks > 0 || m.assigned_leads > 0)
         .sort((a, b) => {
