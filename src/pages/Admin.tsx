@@ -213,29 +213,23 @@ export default function Admin() {
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardTab accounts={accounts} users={allUsers} plans={plans} />;
+        return <DashboardTab accounts={accounts} users={allUsers} />;
       case 'status':
         return <SystemStatusMonitor />;
-      case 'plans':
-        return <PlansTab plans={plans} isLoading={loadingPlans} />;
       case 'accounts':
-        return <AccountsTab accounts={accounts} plans={plans} allUsers={allUsers} isLoading={loadingAccounts} />;
+        return <AccountsTab accounts={accounts} allUsers={allUsers} isLoading={loadingAccounts} />;
       case 'users':
         return <UsersTab users={allUsers} accounts={accounts} isLoading={loadingUsers} />;
-      case 'payments':
-        return <AdminPaymentsManager />;
       case 'audit':
         return <AuditLogViewer />;
       case 'costs':
         return <AICostsTab accounts={accounts} />;
-      case 'coupons':
-        return <CouponsManager />;
       case 'cloud':
         return <CloudUsageMonitor />;
       case 'map':
         return <SystemMap />;
       default:
-        return <DashboardTab accounts={accounts} users={allUsers} plans={plans} />;
+        return <DashboardTab accounts={accounts} users={allUsers} />;
     }
   };
 
