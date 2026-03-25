@@ -22,7 +22,7 @@ function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
     if (msg.sender_name && msg.sender_name !== "Desconhecido") {
       // Try to extract phone digits from sender_phone (e.g., "+5511999887766" -> "5511999887766")
       // Note: WhatsApp JIDs in mentions may use different formats, so we store multiple variants
-      const phone = (msg as any).sender_phone;
+      const phone = msg.sender_phone;
       if (phone) {
         const digits = phone.replace(/\D/g, "");
         if (digits && !map[digits]) {
