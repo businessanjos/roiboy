@@ -39,7 +39,6 @@ import { SalesRepCard } from "./SalesRepCard";
 import { SalesRepRow } from "./SalesRepRow";
 import { SalesRepDetailSheet } from "./SalesRepDetailSheet";
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent } from "@/components/ui/card";
 
 type PeriodOption = "7d" | "30d" | "90d" | "all" | "custom";
 
