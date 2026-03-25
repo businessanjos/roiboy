@@ -4188,18 +4188,10 @@ export default function RoyZapp() {
       <div 
         className={cn(
           "flex-1 min-w-0 flex flex-col overflow-hidden",
-          !selectedConversation && !selectedAIAgent ? "hidden lg:flex" : "flex"
+          !selectedConversation ? "hidden lg:flex" : "flex"
         )}
       >
-        {selectedAIAgent ? (
-          <ZappAIAgentChat
-            agent={selectedAIAgent}
-            currentUserName={currentUser?.name || "Usuário"}
-            currentUserAvatar={currentUser?.avatar_url || null}
-            onBack={() => setSelectedAIAgent(null)}
-            isMobile={!!selectedAIAgent}
-          />
-        ) : (
+        {(
           <ZappChatView
             selectedConversation={selectedConversation}
           messages={messages}

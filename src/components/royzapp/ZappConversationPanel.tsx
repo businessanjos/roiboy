@@ -624,28 +624,6 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       <ScrollArea className="flex-1">
         {activeView === "inbox" && (
           <div className="divide-y divide-zapp-border">
-            {/* AI Agents Section */}
-            {aiAgents.length > 0 && onSelectAIAgent && (
-              <>
-                <div className="px-4 py-2 bg-zapp-bg-dark">
-                  <span className="text-xs font-medium text-zapp-text-muted uppercase tracking-wider flex items-center gap-1.5">
-                    <Bot className="h-3.5 w-3.5" />
-                    Assistentes IA
-                  </span>
-                </div>
-                {aiAgents.map((agent) => (
-                  <ZappAIAgentItem
-                    key={agent.id}
-                    agent={agent}
-                    isSelected={selectedAIAgent?.id === agent.id}
-                    onSelect={onSelectAIAgent}
-                  />
-                ))}
-                <div className="px-4 py-2 bg-zapp-bg-dark">
-                  <span className="text-xs font-medium text-zapp-text-muted uppercase tracking-wider">
-                    Conversas
-                  </span>
-                </div>
               </>
             )}
             
