@@ -253,8 +253,6 @@ export default function Clients() {
   const { logAudit } = useAuditLog();
   const { currentSector } = useSector();
   const [clients, setClients] = useState<any[]>([]);
-  const [vnpsMap, setVnpsMap] = useState<Record<string, any>>({});
-  const [scoreMap, setScoreMap] = useState<Record<string, { escore: number; roizometer: number; quadrant: string; trend: string }>>({});
   const [contractMap, setContractMap] = useState<Record<string, { status: string; start_date: string | null; end_date: string | null }>>({});
   const [whatsappMap, setWhatsappMap] = useState<Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }>>({});
   const [loading, setLoading] = useState(true);
@@ -265,7 +263,7 @@ export default function Clients() {
   const [filterClientStatus, setFilterClientStatus] = usePersistedFilter<string>("clients", "clientStatus", "all");
   const [filterStatus, setFilterStatus] = usePersistedFilter<string>("clients", "status", "all"); // Keep for backward compatibility
   const [filterProduct, setFilterProduct] = usePersistedFilter<string>("clients", "product", "all");
-  const [filterVNPS, setFilterVNPS] = usePersistedFilter<string>("clients", "vnps", "all");
+  
   const [filterContract, setFilterContract] = usePersistedFilter<string>("clients", "contract", "all");
   const [filterResponsible, setFilterResponsible] = usePersistedFilter<string>("clients", "responsible", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<"recent" | "alphabetical">("clients", "sortOrder", "recent");
@@ -362,7 +360,7 @@ export default function Clients() {
       if (searchQuery) baseParams["search"] = searchQuery;
       if (filterResponsible !== "all") baseParams["responsible_user_id"] = filterResponsible;
       if (filterProduct !== "all") baseParams["product_id"] = filterProduct;
-      if (filterVNPS !== "all") baseParams["vnps_class"] = filterVNPS;
+      
       if (filterContract !== "all") baseParams["contract_filter"] = filterContract;
       if (filterClientStatus !== "all") baseParams["client_status"] = filterClientStatus;
       baseParams["sort"] = sortOrder;
@@ -423,8 +421,6 @@ export default function Clients() {
       };
 
       const rows = allClients.map((client: any) => {
-        const vnps = client.vnps;
-        const score = client.score;
         const contract = client.contract;
         const responsible = client.responsible_user;
         const productNames = client.products?.map((p: any) => p.name).filter(Boolean).join(", ") || "";
@@ -443,10 +439,6 @@ export default function Clients() {
           "Status Contrato": contract?.status || "",
           "Início Contrato": contract?.start_date || "",
           "Fim Contrato": contract?.end_date || "",
-          "V-NPS": vnps?.vnps_score ?? "",
-          "Classe V-NPS": vnps?.vnps_class || "",
-          "E-Score": score?.escore ?? "",
-          "Roizômetro": score?.roizometer ?? "",
           "Responsável": responsible?.name || "",
           "Tags": tags,
           "Observações": client.notes || "",
@@ -516,7 +508,7 @@ export default function Clients() {
       if (searchQuery) params.set("search", searchQuery);
       if (filterResponsible !== "all") params.set("responsible_user_id", filterResponsible);
       if (filterProduct !== "all") params.set("product_id", filterProduct);
-      if (filterVNPS !== "all") params.set("vnps_class", filterVNPS);
+      
       if (filterContract !== "all") params.set("contract_filter", filterContract);
       if (filterClientStatus !== "all") params.set("client_status", filterClientStatus);
       params.set("sort", sortOrder);
@@ -558,19 +550,11 @@ export default function Clients() {
       }
       
       // Build maps from enriched data
-      const vnpsGrouped: Record<string, any> = {};
-      const scoresGrouped: Record<string, { escore: number; roizometer: number; quadrant: string; trend: string }> = {};
       const contractsGrouped: Record<string, { status: string; start_date: string | null; end_date: string | null }> = {};
       const whatsappGrouped: Record<string, { hasConversation: boolean; messageCount: number; lastMessageAt: string | null }> = {};
       const pendingFormsGrouped: Record<string, { formId: string; formTitle: string; sentAt: string }[]> = {};
       
       result.clients.forEach((client: any) => {
-        if (client.vnps) {
-          vnpsGrouped[client.id] = client.vnps;
-        }
-        if (client.score) {
-          scoresGrouped[client.id] = client.score;
-        }
         if (client.contract) {
           contractsGrouped[client.id] = {
             status: client.contract.status,
@@ -592,8 +576,6 @@ export default function Clients() {
         }
       });
       
-      setVnpsMap(vnpsGrouped);
-      setScoreMap(scoresGrouped);
       setContractMap(contractsGrouped);
       setWhatsappMap(whatsappGrouped);
       setPendingFormSends(pendingFormsGrouped);
@@ -750,7 +732,7 @@ export default function Clients() {
       fetchClients();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterVNPS, filterContract, filterClientStatus, sortOrder]);
+  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, sortOrder]);
 
   // Fetch client stages when account is available
   useEffect(() => {
@@ -1258,7 +1240,6 @@ export default function Clients() {
   const activeFilterCount = [
     filterClientStatus !== "all",
     filterProduct !== "all",
-    filterVNPS !== "all",
     filterContract !== "all",
     filterResponsible !== "all",
   ].filter(Boolean).length;
@@ -1266,7 +1247,6 @@ export default function Clients() {
   const clearAllFilters = () => {
     setFilterClientStatus("all");
     setFilterProduct("all");
-    setFilterVNPS("all");
     setFilterContract("all");
     setFilterResponsible("all");
   };
@@ -1966,22 +1946,6 @@ export default function Clients() {
                 </Select>
               </div>
 
-              {/* V-NPS Filter */}
-              <div className="space-y-1.5 min-w-[140px]">
-                <Label className="text-xs text-muted-foreground">V-NPS</Label>
-                <Select value={filterVNPS} onValueChange={setFilterVNPS}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="promoter">Promotor</SelectItem>
-                    <SelectItem value="neutral">Neutro</SelectItem>
-                    <SelectItem value="detractor">Detrator</SelectItem>
-                    <SelectItem value="none">Sem V-NPS</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
               {/* Contract Filter */}
               <div className="space-y-1.5 min-w-[160px]">
@@ -2060,14 +2024,6 @@ export default function Clients() {
                     </button>
                   </Badge>
                 )}
-                {filterVNPS !== "all" && (
-                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
-                    V-NPS: {filterVNPS === "promoter" ? "Promotor" : filterVNPS === "neutral" ? "Neutro" : filterVNPS === "detractor" ? "Detrator" : "Sem V-NPS"}
-                    <button onClick={() => setFilterVNPS("all")} className="hover:text-destructive">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </Badge>
-                )}
                 {filterContract !== "all" && (
                   <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
                     Contrato: {filterContract === "active" ? "Ativo" : filterContract === "expired" ? "Expirado" : filterContract === "urgent" ? "30 dias" : filterContract === "warning" ? "60 dias" : filterContract === "ok" ? "Vigente" : filterContract === "pending" ? "Pendente" : filterContract === "cancelled" ? "Cancelado" : filterContract === "suspended" ? "Suspenso" : "Sem contrato"}
@@ -2107,10 +2063,7 @@ export default function Clients() {
                     <TableHead className="font-medium sticky left-0 bg-muted z-20 w-[240px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Cliente</TableHead>
                     <TableHead className="font-medium text-center w-[160px]">Produto</TableHead>
                     <TableHead className="font-medium text-center min-w-[140px]">Contrato</TableHead>
-                    <TableHead className="font-medium text-center min-w-[80px]">Roizômetro</TableHead>
-                    <TableHead className="font-medium text-center min-w-[80px]">E-Score</TableHead>
                     <TableHead className="font-medium text-center min-w-[100px]">Conexão</TableHead>
-                    <TableHead className="font-medium text-center min-w-[80px]">V-NPS</TableHead>
                     <TableHead className="font-medium text-center min-w-[120px]">Responsável</TableHead>
                     <TableHead className="font-medium text-right min-w-[80px]">Ação</TableHead>
                   </TableRow>
@@ -2296,62 +2249,6 @@ export default function Clients() {
                               </TooltipProvider>
                             )}
                           </button>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {scoreMap[client.id] ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className={cn(
-                                    "inline-flex items-center justify-center min-w-[40px] px-2 py-1 rounded-md text-xs font-bold",
-                                    scoreMap[client.id].roizometer >= 70
-                                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                      : scoreMap[client.id].roizometer >= 40
-                                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                        : "bg-destructive/10 text-destructive"
-                                  )}>
-                                    {scoreMap[client.id].roizometer}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="text-xs">
-                                    <p className="font-medium">Roizômetro: {scoreMap[client.id].roizometer}%</p>
-                                    <p className="text-muted-foreground">Percepção de ROI do cliente</p>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {scoreMap[client.id] ? (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className={cn(
-                                    "inline-flex items-center justify-center min-w-[40px] px-2 py-1 rounded-md text-xs font-bold",
-                                    scoreMap[client.id].escore >= 70
-                                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                      : scoreMap[client.id].escore >= 40
-                                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                        : "bg-destructive/10 text-destructive"
-                                  )}>
-                                    {scoreMap[client.id].escore}
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <div className="text-xs">
-                                    <p className="font-medium">E-Score: {scoreMap[client.id].escore}</p>
-                                    <p className="text-muted-foreground">Engajamento do cliente</p>
-                                  </div>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
                         </TableCell>
                         <TableCell className="text-center">
                           {(() => {

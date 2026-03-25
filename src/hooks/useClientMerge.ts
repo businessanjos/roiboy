@@ -236,27 +236,6 @@ export function useClientMerge() {
         console.error("Error transferring attendance:", attendanceError);
       }
 
-      // 13. Transfer vnps_snapshots
-      const { error: vnpsError } = await supabase
-        .from("vnps_snapshots")
-        .update({ client_id: targetClientId })
-        .eq("client_id", sourceClientId)
-        .eq("account_id", currentUser.account_id);
-
-      if (vnpsError) {
-        console.error("Error transferring vnps snapshots:", vnpsError);
-      }
-
-      // 14. Transfer score_snapshots
-      const { error: scoreError } = await supabase
-        .from("score_snapshots")
-        .update({ client_id: targetClientId })
-        .eq("client_id", sourceClientId)
-        .eq("account_id", currentUser.account_id);
-
-      if (scoreError) {
-        console.error("Error transferring score snapshots:", scoreError);
-      }
 
       // 15. Transfer boletos
       const { error: boletosError } = await supabase

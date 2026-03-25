@@ -73,52 +73,14 @@ interface ContractData {
   client_id: string;
 }
 
-interface ClientWithScore {
+interface ContractDataDashboard {
   id: string;
-  full_name: string;
-  phone_e164: string;
-  status: "active" | "paused" | "churn_risk" | "churned" | "no_contract";
-  roizometer: number;
-  escore: number;
-  quadrant: "highE_lowROI" | "lowE_highROI" | "lowE_lowROI" | "highE_highROI";
-  trend: "up" | "flat" | "down";
-  last_risk?: string;
-  recommendation?: string;
-  vnps_score?: number;
-  vnps_class?: "promoter" | "neutral" | "detractor";
-  product_ids?: string[];
-  hasActiveContract?: boolean;
-}
-
-interface Product {
-  id: string;
-  name: string;
-}
-
-interface LifeEvent {
-  id: string;
+  status: string;
+  status_changed_at: string | null;
+  cancelled_at: string | null;
+  start_date: string;
+  value: number;
   client_id: string;
-  client_name: string;
-  event_type: string;
-  title: string;
-  event_date: string | null;
-  is_recurring: boolean;
-  source: string;
-}
-
-interface ROIStats {
-  totalROIEvents: number;
-  tangibleCount: number;
-  intangibleCount: number;
-  highImpactCount: number;
-  recentCategories: { category: string; count: number }[];
-}
-
-interface RiskStats {
-  totalRiskEvents: number;
-  highRiskCount: number;
-  mediumRiskCount: number;
-  lowRiskCount: number;
 }
 
 const EVENT_TYPE_ICONS: Record<string, any> = {
@@ -145,8 +107,6 @@ export default function Dashboard() {
     products, 
     clients, 
     upcomingEvents, 
-    roiStats, 
-    riskStats, 
     contractData, 
     isLoading: loading, 
     refetchAll 
@@ -156,9 +116,7 @@ export default function Dashboard() {
   const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
   
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = usePersistedFilter<string>("dashboard", "statusFilter", "all");
-  const [quadrantFilter, setQuadrantFilter] = usePersistedFilter<string>("dashboard", "quadrantFilter", "all");
-  const [productFilter, setProductFilter] = usePersistedFilter<string>("dashboard", "productFilter", "all");
+  
   const [gestaoProductFilter, setGestaoProductFilter] = useState<string>("all");
   const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("6");
   const [gestaoCustomDateRange, setGestaoCustomDateRange] = useState<DateRange | undefined>(undefined);
@@ -434,43 +392,6 @@ export default function Dashboard() {
     };
   }, [refetchAll, currentUser?.account_id]);
 
-  const filteredClients = useMemo(() => clients.filter((client) => {
-    const matchesSearch =
-      client.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      client.phone_e164.includes(searchQuery);
-    const matchesStatus = statusFilter === "all" || client.status === statusFilter;
-    const matchesQuadrant = quadrantFilter === "all" || client.quadrant === quadrantFilter;
-    const matchesProduct = productFilter === "all" || (client.product_ids?.includes(productFilter) ?? false);
-    return matchesSearch && matchesStatus && matchesQuadrant && matchesProduct;
-  }), [clients, searchQuery, statusFilter, quadrantFilter, productFilter]);
-
-  const { totalClients, churnRiskCount, promoterCount, detractorCount, avgROI, avgEScore } = useMemo(() => ({
-    totalClients: clients.length,
-    churnRiskCount: clients.filter((c) => c.status === "churn_risk" || c.status === "churned").length,
-    promoterCount: clients.filter((c) => c.vnps_class === "promoter").length,
-    detractorCount: clients.filter((c) => c.vnps_class === "detractor").length,
-    avgROI: clients.length > 0 ? Math.round(clients.reduce((acc, c) => acc + c.roizometer, 0) / clients.length) : 0,
-    avgEScore: clients.length > 0 ? Math.round(clients.reduce((acc, c) => acc + c.escore, 0) / clients.length) : 0,
-  }), [clients]);
-
-  const topRiskClients = useMemo(() => [...clients]
-    .filter((c) => c.status === "churn_risk" || c.status === "churned")
-    .sort((a, b) => a.roizometer - b.roizometer)
-    .slice(0, 5), [clients]);
-
-  const getCategoryLabel = (cat: string) => {
-    const labels: Record<string, string> = {
-      revenue: "Receita",
-      cost: "Custos",
-      time: "Tempo",
-      process: "Processos",
-      clarity: "Clareza",
-      confidence: "Confiança",
-      tranquility: "Tranquilidade",
-      status_direction: "Direção",
-    };
-    return labels[cat] || cat;
-  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 animate-fade-in">
@@ -515,7 +436,7 @@ export default function Dashboard() {
       {/* Tabs */}
       <Tabs defaultValue="gestao" className="space-y-4 sm:space-y-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
-          <TabsList className="grid w-full grid-cols-4 max-w-md sm:max-w-lg h-9 sm:h-10">
+          <TabsList className="grid w-full grid-cols-3 max-w-md sm:max-w-lg h-9 sm:h-10">
             <TabsTrigger value="gestao" className="gap-1.5 text-xs sm:text-sm">
               <Settings2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>Gestão</span>
@@ -527,10 +448,6 @@ export default function Dashboard() {
             <TabsTrigger value="suporte" className="gap-1.5 text-xs sm:text-sm">
               <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>Suporte</span>
-            </TabsTrigger>
-            <TabsTrigger value="roi" className="gap-1.5 text-xs sm:text-sm">
-              <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>ROI</span>
             </TabsTrigger>
           </TabsList>
 
@@ -628,70 +545,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ROI Tab */}
-        <TabsContent value="roi" className="space-y-6">
-          {/* ROI Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">ROIzômetro Médio</p>
-                    <p className="text-3xl font-bold text-foreground">{avgROI}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Target className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Eventos ROI (30d)</p>
-                    <p className="text-3xl font-bold text-foreground">{roiStats?.totalROIEvents || 0}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-success/10 flex items-center justify-center">
-                    <TrendingUp className="h-6 w-6 text-success" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Eventos de Risco (30d)</p>
-                    <p className="text-3xl font-bold text-danger">{riskStats?.totalRiskEvents || 0}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-danger/10 flex items-center justify-center">
-                    <AlertTriangle className="h-6 w-6 text-danger" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Alto Impacto</p>
-                    <p className="text-3xl font-bold text-primary">{roiStats?.highImpactCount || 0}</p>
-                  </div>
-                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Star className="h-6 w-6 text-primary" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-        </TabsContent>
-
-        {/* CX Tab */}
         <TabsContent value="cx" className="space-y-6">
           {/* CX Stats Card */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -24,7 +24,7 @@ import {
   ZappAgentDialog,
   ZappTagDialog,
   
-  ZappRiskDialog,
+  
   ZappTransferDialog,
   ZappConversationTagDialog,
   ZappContactPickerDialog,
@@ -790,19 +790,6 @@ export default function RoyZapp() {
   const [clientEditSheetOpen, setClientEditSheetOpen] = useState(false);
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
 
-  // ROI dialog state
-  const [roiDialogOpen, setRoiDialogOpen] = useState(false);
-  const [roiType, setRoiType] = useState("tangible");
-  const [roiCategory, setRoiCategory] = useState("revenue");
-  const [roiEvidence, setRoiEvidence] = useState("");
-  const [roiImpact, setRoiImpact] = useState("medium");
-  const [uploadingRoi, setUploadingRoi] = useState(false);
-
-  // Risk dialog state
-  const [riskDialogOpen, setRiskDialogOpen] = useState(false);
-  const [riskLevel, setRiskLevel] = useState("medium");
-  const [riskReason, setRiskReason] = useState("");
-  const [uploadingRisk, setUploadingRisk] = useState(false);
 
   // Contact picker dialog state
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
@@ -1369,70 +1356,6 @@ export default function RoyZapp() {
   };
 
   // Add ROI event
-  const handleAddRoi = async () => {
-    const clientId = selectedConversation?.zapp_conversation?.client_id;
-    if (!clientId || !currentUser?.account_id || !roiEvidence.trim()) {
-      toast.error("Preencha a evidência do ROI");
-      return;
-    }
-
-    setUploadingRoi(true);
-    try {
-      const { error } = await supabase.from("roi_events").insert({
-        account_id: currentUser.account_id,
-        client_id: clientId,
-        source: "manual" as const,
-        roi_type: roiType as "tangible" | "intangible",
-        category: roiCategory as any,
-        evidence_snippet: roiEvidence,
-        impact: roiImpact as "low" | "medium" | "high",
-        happened_at: new Date().toISOString(),
-      });
-
-      if (error) throw error;
-
-      toast.success("ROI adicionado com sucesso!");
-      setRoiDialogOpen(false);
-      setRoiEvidence("");
-    } catch (error) {
-      console.error("Error adding ROI:", error);
-      toast.error("Erro ao adicionar ROI");
-    } finally {
-      setUploadingRoi(false);
-    }
-  };
-
-  // Add Risk event
-  const handleAddRisk = async () => {
-    const clientId = selectedConversation?.zapp_conversation?.client_id;
-    if (!clientId || !currentUser?.account_id || !riskReason.trim()) {
-      toast.error("Preencha o motivo do risco");
-      return;
-    }
-
-    setUploadingRisk(true);
-    try {
-      const { error } = await supabase.from("risk_events").insert({
-        account_id: currentUser.account_id,
-        client_id: clientId,
-        source: "system" as const,
-        risk_level: riskLevel as "low" | "medium" | "high",
-        reason: riskReason,
-        happened_at: new Date().toISOString(),
-      });
-
-      if (error) throw error;
-
-      toast.success("Risco adicionado com sucesso!");
-      setRiskDialogOpen(false);
-      setRiskReason("");
-    } catch (error) {
-      console.error("Error adding risk:", error);
-      toast.error("Erro ao adicionar risco");
-    } finally {
-      setUploadingRisk(false);
-    }
-  };
 
   // Helper to get contact info from assignment (prefers zapp_conversation, falls back to conversation)
   const getContactInfo = useCallback((assignment: ConversationAssignment) => {
@@ -4356,8 +4279,8 @@ export default function RoyZapp() {
           onReleaseToQueue={releaseToQueue}
           onUpdateStatus={updateConversationStatus}
           onOpenTransfer={() => setTransferDialogOpen(true)}
-          onOpenRoiDialog={() => setRoiDialogOpen(true)}
-          onOpenRiskDialog={() => setRiskDialogOpen(true)}
+          onOpenRoiDialog={() => {}}
+          onOpenRiskDialog={() => {}}
           onOpenAddClient={openAddContactDialog}
           onOpenLinkClient={() => setLinkClientDialogOpen(true)}
           onClientLinked={() => fetchData()}
@@ -4497,17 +4420,6 @@ export default function RoyZapp() {
       />
 
 
-      {/* Risk Dialog */}
-      <ZappRiskDialog
-        open={riskDialogOpen}
-        onOpenChange={setRiskDialogOpen}
-        riskLevel={riskLevel}
-        riskReason={riskReason}
-        uploading={uploadingRisk}
-        onLevelChange={setRiskLevel}
-        onReasonChange={setRiskReason}
-        onSave={handleAddRisk}
-      />
 
       {/* Transfer Dialog */}
       <ZappTransferDialog

@@ -2,7 +2,7 @@ export * from "./ZappDepartmentDialog";
 export * from "./ZappAgentDialog";
 export * from "./ZappTagDialog";
 
-export * from "./ZappRiskDialog";
+
 export * from "./ZappTransferDialog";
 export * from "./ZappConversationTagDialog";
 export * from "./ZappContactPickerDialog";
