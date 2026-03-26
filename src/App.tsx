@@ -69,6 +69,7 @@ const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
 
 const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
+import { ZappErrorBoundary } from "@/components/royzapp/ZappErrorBoundary";
 const BillingPortal = lazyRetry(() => import("./pages/BillingPortal"));
 const Sectors = lazyRetry(() => import("./pages/Sectors"));
 const Contracts = lazyRetry(() => import("./pages/Contracts"));
