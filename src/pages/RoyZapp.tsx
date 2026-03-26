@@ -2460,27 +2460,27 @@ export default function RoyZapp() {
 
       {/* Tag Dialog */}
       <ZappTagDialog
-        open={tagDialogOpen}
-        onOpenChange={setTagDialogOpen}
-        editingTag={editingTag}
-        form={tagForm}
-        onFormChange={setTagForm}
-        onSave={saveTag}
-        saving={savingTag}
-        deletingId={deletingTagId}
-        onDeleteConfirm={deleteTag}
-        onDeleteCancel={() => setDeletingTagId(null)}
+        open={crud.tagDialogOpen}
+        onOpenChange={crud.setTagDialogOpen}
+        editingTag={crud.editingTag}
+        form={crud.tagForm}
+        onFormChange={crud.setTagForm}
+        onSave={crud.saveTag}
+        saving={crud.savingTag}
+        deletingId={crud.deletingTagId}
+        onDeleteConfirm={crud.deleteTag}
+        onDeleteCancel={() => crud.setDeletingTagId(null)}
       />
 
       {/* Conversation Tagging Dialog */}
       <ZappConversationTagDialog
-        open={conversationTagDialogOpen}
-        onOpenChange={setConversationTagDialogOpen}
+        open={crud.conversationTagDialogOpen}
+        onOpenChange={crud.setConversationTagDialogOpen}
         tags={tags}
-        selectedTags={selectedConversationTags}
-        onToggleTag={toggleConversationTag}
-        onSave={saveConversationTags}
-        saving={savingConversationTags}
+        selectedTags={crud.selectedConversationTags}
+        onToggleTag={crud.toggleConversationTag}
+        onSave={crud.saveConversationTags}
+        saving={crud.savingConversationTags}
         onNavigateToTags={() => setActiveView("tags")}
       />
 
