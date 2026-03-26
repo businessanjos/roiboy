@@ -794,50 +794,9 @@ export default function RoyZapp() {
   // Refresh messages state
   const [isRefreshingMessages, setIsRefreshingMessages] = useState(false);
 
-  // Department dialog state
-  const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
-  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
-  const [departmentForm, setDepartmentForm] = useState({
-    name: "",
-    description: "",
-    color: "#25D366",
-    auto_distribution: true,
-    sector_id: "" as string,
-  });
-  const [savingDepartment, setSavingDepartment] = useState(false);
-  const [deletingDepartmentId, setDeletingDepartmentId] = useState<string | null>(null);
-
-  // Agent dialog state
-  const [agentDialogOpen, setAgentDialogOpen] = useState(false);
-  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
-  const [agentForm, setAgentForm] = useState({
-    user_id: "",
-    department_id: "",
-    max_concurrent_chats: 5,
-  });
-  const [savingAgent, setSavingAgent] = useState(false);
-  const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
-
   // Transfer dialog
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [transferTarget, setTransferTarget] = useState<{ type: "agent" | "department"; id: string }>({ type: "agent", id: "" });
-
-  // Tag dialog state
-  const [tagDialogOpen, setTagDialogOpen] = useState(false);
-  const [editingTag, setEditingTag] = useState<ZappTag | null>(null);
-  const [tagForm, setTagForm] = useState({
-    name: "",
-    description: "",
-    color: "#6b7c85",
-  });
-  const [savingTag, setSavingTag] = useState(false);
-  const [deletingTagId, setDeletingTagId] = useState<string | null>(null);
-  
-  // Conversation tagging dialog
-  const [conversationTagDialogOpen, setConversationTagDialogOpen] = useState(false);
-  const [taggingAssignmentId, setTaggingAssignmentId] = useState<string | null>(null);
-  const [selectedConversationTags, setSelectedConversationTags] = useState<string[]>([]);
-  const [savingConversationTags, setSavingConversationTags] = useState(false);
   
   // Client quick edit sheet
   const [clientEditSheetOpen, setClientEditSheetOpen] = useState(false);
