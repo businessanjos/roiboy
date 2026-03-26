@@ -1636,12 +1636,12 @@ export default function Contracts() {
     const totalValue = activeContracts.reduce((sum, c) => sum + (c.value || 0), 0);
     const expiringSoon = activeContracts.filter(c => {
       if (!c.end_date) return false;
-      const daysUntilExpiry = differenceInDays(new Date(c.end_date), new Date());
+      const daysUntilExpiry = differenceInDays(parseLocalDate(c.end_date)!, new Date());
       return daysUntilExpiry >= 0 && daysUntilExpiry <= 30;
     });
     const expired = activeContracts.filter(c => {
       if (!c.end_date) return false;
-      return isPast(new Date(c.end_date));
+      return isPast(parseLocalDate(c.end_date)!);
     });
 
     return {
