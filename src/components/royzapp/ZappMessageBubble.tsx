@@ -87,14 +87,17 @@ function resolveMentions(text: string, mentionMap?: Record<string, string> | nul
     // Direct lookup
     if (mentionMap[jidNumber]) return `@${mentionMap[jidNumber]}`;
     
-    // Try partial matching with multiple digit lengths (8, 9, 10, 11) to handle country code / 9th digit mismatches
-    const suffixes = [8, 9, 10, 11];
-    for (const [key, name] of Object.entries(mentionMap)) {
-      if (!name) continue;
-      for (const len of suffixes) {
-        const jidSuffix = jidNumber.slice(-len);
+    // Try partial matching: prioritize LONGER suffix matches to avoid false positives
+    // Check 11 digits first, then 10, 9, 8 — return first match at highest precision
+    const suffixLengths = [11, 10, 9, 8];
+    for (const len of suffixLengths) {
+      const jidSuffix = jidNumber.slice(-len);
+      if (jidSuffix.length < len) continue;
+      
+      for (const [key, name] of Object.entries(mentionMap)) {
+        if (!name) continue;
         const keySuffix = key.slice(-len);
-        if (jidSuffix.length >= len && keySuffix.length >= len && jidSuffix === keySuffix) {
+        if (keySuffix.length >= len && jidSuffix === keySuffix) {
           return `@${name}`;
         }
       }
