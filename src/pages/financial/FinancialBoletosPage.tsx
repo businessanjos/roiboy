@@ -276,6 +276,16 @@ export default function FinancialBoletosPage() {
     });
   }, [boletos, search, statusFilter]);
 
+  const {
+    paginatedItems: paginatedBoletos,
+    currentPage,
+    pageSize,
+    totalPages,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = useTablePagination(filteredBoletos);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
