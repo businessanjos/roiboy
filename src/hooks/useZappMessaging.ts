@@ -987,11 +987,14 @@ export function useZappMessaging({
           ));
         }
         
+        const contactPreview = `📇 ${client.full_name}`;
         await supabase.from("zapp_conversations").update({
           last_message_at: now,
-          last_message_preview: `📇 ${client.full_name}`,
+          last_message_preview: contactPreview,
           unread_count: 0,
         }).eq("id", selectedConversation.zapp_conversation_id);
+        
+        onConversationUpdated?.(selectedConversation.zapp_conversation_id, now, contactPreview);
       }
       
       toast.success("Contato enviado!");
