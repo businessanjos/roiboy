@@ -249,32 +249,7 @@ export default function RoyZapp() {
     });
     // Don't clear selection - let createConversationWithContact create the correct one
   }, [selectedConversation, assignments, selectedIntegrationId, currentUser?.account_id]);
-  
-  // Function to dismiss group conversation (close assignment)
-  const dismissGroupConversation = async () => {
-    if (!selectedConversation) return;
-    
-    try {
-      const { error } = await supabase
-        .from("zapp_conversation_assignments")
-        .update({ 
-          status: "closed", 
-          closed_at: new Date().toISOString(),
-          agent_id: null,
-          assigned_at: null,
-        })
-        .eq("id", selectedConversation.id);
-      
-      if (error) throw error;
-      
-      toast.success("Grupo dispensado!");
-      setSelectedConversation(null);
-      setAssignments(prev => prev.filter(a => a.id !== selectedConversation.id));
-    } catch (error) {
-      console.error("Error dismissing group:", error);
-      toast.error("Erro ao dispensar grupo");
-    }
-  };
+  // dismissGroupConversation is now in convActions hook
 
   // Handle URL parameters for auto-selecting or creating conversations
   const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
@@ -673,6 +648,39 @@ export default function RoyZapp() {
     fetchData,
   });
 
+  // Conversation actions hook (assign, release, transfer, delete, flags)
+  const convActions = useZappConversationActions({
+    currentAgent,
+    assignments,
+    selectedConversation,
+    filterStatus,
+    isAdmin,
+    agents,
+    setAssignments,
+    setSelectedConversation,
+    setInboxTab,
+    setFilterStatus,
+    fetchData,
+    markAsRead: (conversationId: string) => {
+      // Inline markAsRead for the hook - same logic
+      supabase
+        .from("zapp_conversations")
+        .update({ unread_count: 0 })
+        .eq("id", conversationId)
+        .then();
+      setAssignments(prev => prev.map(a => 
+        a.zapp_conversation?.id === conversationId 
+          ? { ...a, zapp_conversation: { ...a.zapp_conversation!, unread_count: 0 } }
+          : a
+      ));
+    },
+    getAgentName: (agentId: string | null) => {
+      if (!agentId) return null;
+      const agent = agents.find(a => a.id === agentId);
+      return agent?.user?.name || null;
+    },
+  });
+
   // Notification system - handle view chat callback
   const handleNotificationViewChat = useCallback((conversationId: string) => {
     const assignment = assignments.find(
@@ -761,50 +769,9 @@ export default function RoyZapp() {
   // Refresh messages state
   const [isRefreshingMessages, setIsRefreshingMessages] = useState(false);
 
-  // Department dialog state
-  const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
-  const [editingDepartment, setEditingDepartment] = useState<Department | null>(null);
-  const [departmentForm, setDepartmentForm] = useState({
-    name: "",
-    description: "",
-    color: "#25D366",
-    auto_distribution: true,
-    sector_id: "" as string,
-  });
-  const [savingDepartment, setSavingDepartment] = useState(false);
-  const [deletingDepartmentId, setDeletingDepartmentId] = useState<string | null>(null);
-
-  // Agent dialog state
-  const [agentDialogOpen, setAgentDialogOpen] = useState(false);
-  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
-  const [agentForm, setAgentForm] = useState({
-    user_id: "",
-    department_id: "",
-    max_concurrent_chats: 5,
-  });
-  const [savingAgent, setSavingAgent] = useState(false);
-  const [deletingAgentId, setDeletingAgentId] = useState<string | null>(null);
-
   // Transfer dialog
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [transferTarget, setTransferTarget] = useState<{ type: "agent" | "department"; id: string }>({ type: "agent", id: "" });
-
-  // Tag dialog state
-  const [tagDialogOpen, setTagDialogOpen] = useState(false);
-  const [editingTag, setEditingTag] = useState<ZappTag | null>(null);
-  const [tagForm, setTagForm] = useState({
-    name: "",
-    description: "",
-    color: "#6b7c85",
-  });
-  const [savingTag, setSavingTag] = useState(false);
-  const [deletingTagId, setDeletingTagId] = useState<string | null>(null);
-  
-  // Conversation tagging dialog
-  const [conversationTagDialogOpen, setConversationTagDialogOpen] = useState(false);
-  const [taggingAssignmentId, setTaggingAssignmentId] = useState<string | null>(null);
-  const [selectedConversationTags, setSelectedConversationTags] = useState<string[]>([]);
-  const [savingConversationTags, setSavingConversationTags] = useState(false);
   
   // Client quick edit sheet
   const [clientEditSheetOpen, setClientEditSheetOpen] = useState(false);
@@ -843,422 +810,23 @@ export default function RoyZapp() {
 
   // Message fetching and realtime are now handled by useZappMessaging hook
 
-  // Department functions
-  const openDepartmentDialog = (dept?: Department) => {
-    if (dept) {
-      setEditingDepartment(dept);
-      setDepartmentForm({
-        name: dept.name,
-        description: dept.description || "",
-        color: dept.color,
-        auto_distribution: dept.auto_distribution,
-        sector_id: (dept as any).sector_id || "",
-      });
-    } else {
-      setEditingDepartment(null);
-      setDepartmentForm({
-        name: "",
-        description: "",
-        color: "#25D366",
-        auto_distribution: true,
-        sector_id: "",
-      });
-    }
-    setDepartmentDialogOpen(true);
-  };
+  // Department, Agent, Tag CRUD functions are now in crud hook (useZappCrudOperations)
 
-  const saveDepartment = async () => {
-    if (!currentUser?.account_id || !departmentForm.name.trim()) {
-      toast.error("Nome do departamento é obrigatório");
-      return;
-    }
+  // Conversation actions (assign, release, status, delete, flags, read/unread) are now in convActions hook
 
-    setSavingDepartment(true);
-    try {
-      if (editingDepartment) {
-        const { error } = await supabase
-          .from("zapp_departments")
-          .update({
-            name: departmentForm.name.trim(),
-            description: departmentForm.description.trim() || null,
-            color: departmentForm.color,
-            auto_distribution: departmentForm.auto_distribution,
-            sector_id: departmentForm.sector_id || null,
-          })
-          .eq("id", editingDepartment.id);
-
-        if (error) throw error;
-        toast.success("Departamento atualizado!");
-      } else {
-        const { error } = await supabase.from("zapp_departments").insert({
-          account_id: currentUser.account_id,
-          name: departmentForm.name.trim(),
-          description: departmentForm.description.trim() || null,
-          color: departmentForm.color,
-          auto_distribution: departmentForm.auto_distribution,
-          sector_id: departmentForm.sector_id || null,
-          display_order: departments.length,
-        });
-
-        if (error) throw error;
-        toast.success("Departamento criado!");
-      }
-
-      setDepartmentDialogOpen(false);
-      fetchData();
-    } catch (error: any) {
-      console.error("Error saving department:", error);
-      toast.error(error.message || "Erro ao salvar departamento");
-    } finally {
-      setSavingDepartment(false);
-    }
-  };
-
-  const deleteDepartment = async (id: string) => {
-    try {
-      const { error } = await supabase.from("zapp_departments").delete().eq("id", id);
-      if (error) throw error;
-      toast.success("Departamento excluído!");
-      fetchData();
-    } catch (error: any) {
-      console.error("Error deleting department:", error);
-      toast.error(error.message || "Erro ao excluir departamento");
-    } finally {
-      setDeletingDepartmentId(null);
-    }
-  };
-
-  // Agent functions
-  const openAgentDialog = (agent?: Agent) => {
-    if (agent) {
-      setEditingAgent(agent);
-      setAgentForm({
-        user_id: agent.user_id,
-        department_id: agent.department_id || "",
-        max_concurrent_chats: agent.max_concurrent_chats,
-      });
-    } else {
-      setEditingAgent(null);
-      setAgentForm({
-        user_id: "",
-        department_id: "",
-        max_concurrent_chats: 5,
-      });
-    }
-    setAgentDialogOpen(true);
-  };
-
-  const saveAgent = async () => {
-    if (!currentUser?.account_id || !agentForm.user_id) {
-      toast.error("Selecione um usuário");
-      return;
-    }
-
-    setSavingAgent(true);
-    try {
-      if (editingAgent) {
-        const { error } = await supabase
-          .from("zapp_agents")
-          .update({
-            department_id: agentForm.department_id || null,
-            max_concurrent_chats: agentForm.max_concurrent_chats,
-          })
-          .eq("id", editingAgent.id);
-
-        if (error) throw error;
-        toast.success("Atendente atualizado!");
-      } else {
-        const { error } = await supabase.from("zapp_agents").insert({
-          account_id: currentUser.account_id,
-          user_id: agentForm.user_id,
-          department_id: agentForm.department_id || null,
-          max_concurrent_chats: agentForm.max_concurrent_chats,
-        });
-
-        if (error) throw error;
-        toast.success("Atendente adicionado!");
-      }
-
-      setAgentDialogOpen(false);
-      fetchData();
-    } catch (error: any) {
-      console.error("Error saving agent:", error);
-      toast.error(error.message || "Erro ao salvar atendente");
-    } finally {
-      setSavingAgent(false);
-    }
-  };
-
-  const deleteAgent = async (id: string) => {
-    try {
-      const { error } = await supabase.from("zapp_agents").delete().eq("id", id);
-      if (error) throw error;
-      toast.success("Atendente removido!");
-      fetchData();
-    } catch (error: any) {
-      console.error("Error deleting agent:", error);
-      toast.error(error.message || "Erro ao remover atendente");
-    } finally {
-      setDeletingAgentId(null);
-    }
-  };
-
-  const toggleAgentOnline = async (agent: Agent) => {
-    try {
-      const { error } = await supabase
-        .from("zapp_agents")
-        .update({ is_online: !agent.is_online, last_activity_at: new Date().toISOString() })
-        .eq("id", agent.id);
-
-      if (error) throw error;
-      fetchData();
-    } catch (error: any) {
-      console.error("Error toggling agent status:", error);
-      toast.error("Erro ao alterar status");
-    }
-  };
-
-  // Assign conversation to current agent (pull from queue)
-  const assignToMe = async (assignmentId: string) => {
-    if (!currentAgent) {
-      toast.error("Você não está cadastrado como atendente");
-      return;
-    }
-
-    // VERIFICAÇÃO DE ISOLAMENTO: Checar se já está atribuída a outro agente
-    const assignment = assignments.find(a => a.id === assignmentId);
-    if (assignment?.agent_id && assignment.agent_id !== currentAgent.id) {
-      const agentName = getAgentName(assignment.agent_id) || "outro atendente";
-      toast.warning(`Este contato já está em atendimento por ${agentName}`);
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from("zapp_conversation_assignments")
-        .update({ 
-          agent_id: currentAgent.id, 
-          status: "active",
-          assigned_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", assignmentId);
-
-      if (error) throw error;
-      
-      toast.success("Conversa atribuída a você!");
-      fetchData();
-      
-      // Update selected conversation locally
-      if (selectedConversation?.id === assignmentId) {
-        setSelectedConversation(prev => prev ? {
-          ...prev,
-          agent_id: currentAgent.id,
-          status: "active" as const,
-          agent: { ...currentAgent }
-        } : null);
-      }
-    } catch (error: any) {
-      console.error("Error assigning conversation:", error);
-      toast.error(error.message || "Erro ao atribuir conversa");
-    }
-  };
-
-  // Pull next available conversation from queue
-  const pullFromQueue = async () => {
-    if (!currentAgent) {
-      toast.error("Você não está cadastrado como atendente");
-      return;
-    }
-
-    // Find the oldest unassigned conversation
-    const unassignedConversations = assignments.filter(a => 
-      a.agent_id === null && 
-      a.status !== "closed" && 
-      !a.zapp_conversation?.is_archived
-    ).sort((a, b) => {
-      // Sort by last_message_at ascending (oldest first)
-      const dateA = new Date(a.zapp_conversation?.last_message_at || a.created_at).getTime();
-      const dateB = new Date(b.zapp_conversation?.last_message_at || b.created_at).getTime();
-      return dateA - dateB;
-    });
-
-    if (unassignedConversations.length === 0) {
-      toast.info("Não há conversas na fila");
-      return;
-    }
-
-    const nextConversation = unassignedConversations[0];
-    
-    try {
-      const { error } = await supabase
-        .from("zapp_conversation_assignments")
-        .update({ 
-          agent_id: currentAgent.id, 
-          status: "active",
-          assigned_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", nextConversation.id);
-
-      if (error) throw error;
-      
-      toast.success("Conversa puxada da fila!");
-      fetchData();
-      
-      // Switch to "mine" tab and select the conversation
-      setInboxTab("mine");
-      setSelectedConversation({
-        ...nextConversation,
-        agent_id: currentAgent.id,
-        status: "active" as const,
-        agent: { ...currentAgent }
-      });
-      
-      // Mark as read
-      const zappConvId = nextConversation.zapp_conversation?.id;
-      if (zappConvId && (nextConversation.zapp_conversation?.unread_count || 0) > 0) {
-        markAsRead(zappConvId);
-      }
-    } catch (error: any) {
-      console.error("Error pulling from queue:", error);
-      toast.error(error.message || "Erro ao puxar da fila");
-    }
-  };
-
-  // Release conversation back to queue
-  const releaseToQueue = async (assignmentId: string) => {
-    try {
-      const releasedAt = new Date().toISOString();
-
-      const { error } = await supabase
-        .from("zapp_conversation_assignments")
-        .update({ 
-          agent_id: null, 
-          status: "pending",
-          assigned_at: null,
-          closed_at: null,
-          updated_at: releasedAt
-        })
-        .eq("id", assignmentId);
-
-      if (error) throw error;
-      
-      toast.success("Conversa devolvida para a fila!");
-
-      // If user was viewing finalized conversations, switch back so the returned ticket is visible
-      if (filterStatus === "closed") {
-        setFilterStatus("all");
-      }
-      setInboxTab("queue");
-
-      // Update local list immediately so it appears in queue without waiting for refetch
-      setAssignments(prev => prev.map(a => 
-        a.id === assignmentId
-          ? {
-              ...a,
-              agent_id: null,
-              assigned_at: null,
-              closed_at: null,
-              updated_at: releasedAt,
-              status: "pending" as const,
-              agent: null,
-            }
-          : a
-      ));
-      
-      // Update selected conversation locally
-      if (selectedConversation?.id === assignmentId) {
-        setSelectedConversation(prev => prev ? {
-          ...prev,
-          agent_id: null,
-          assigned_at: null,
-          closed_at: null,
-          status: "pending" as const,
-          updated_at: releasedAt,
-          agent: null
-        } : null);
-      }
-
-      fetchData();
-    } catch (error: any) {
-      console.error("Error releasing conversation:", error);
-      toast.error(error.message || "Erro ao devolver conversa");
-    }
-  };
-
-  // Update conversation status
-  const updateConversationStatus = async (assignmentId: string, newStatus: "triage" | "pending" | "active" | "waiting" | "closed") => {
-    try {
-      const updateData: Record<string, string | null> = { 
-        status: newStatus,
-        updated_at: new Date().toISOString()
-      };
-      
-      // If closing, set closed_at timestamp and clear agent to prevent ghost reappearance
-      if (newStatus === "closed") {
-        updateData.closed_at = new Date().toISOString();
-        updateData.agent_id = null;
-        updateData.assigned_at = null;
-      } else {
-        // Any reopen / non-closed status must clear closed metadata
-        updateData.closed_at = null;
-      }
-      
-      const { error } = await supabase
-        .from("zapp_conversation_assignments")
-        .update(updateData)
-        .eq("id", assignmentId);
-
-      if (error) throw error;
-      
-      toast.success(`Status alterado para: ${STATUS_CONFIG[newStatus].label}`);
-      fetchData();
-      
-      // When closing, clear selection so conversation disappears from view
-      if (newStatus === "closed" && selectedConversation?.id === assignmentId) {
-        setSelectedConversation(null);
-      } else if (selectedConversation?.id === assignmentId) {
-        // For other status changes, just update locally
-        setSelectedConversation(prev => prev ? {
-          ...prev,
-          status: newStatus
-        } : null);
-      }
-    } catch (error: any) {
-      console.error("Error updating conversation status:", error);
-      toast.error(error.message || "Erro ao atualizar status");
-    }
-  };
-
-  // Add ROI event
-
-  // Helper to get contact info from assignment (prefers zapp_conversation, falls back to conversation)
+  // Helper to get contact info from assignment
   const getContactInfo = useCallback((assignment: ConversationAssignment) => {
     const zc = assignment.zapp_conversation;
     const c = assignment.conversation?.client;
-    
-    // IMPORTANTE: Para GRUPOS, sempre usar contact_name (nome do grupo no WhatsApp)
-    // Para conversas individuais, priorizar cliente/lead vinculado
-    // Isso mantém consistência entre sidebar e header
     const name = zc?.is_group 
       ? (zc?.contact_name || "Grupo sem nome")
       : (zc?.client?.full_name || zc?.lead?.full_name || zc?.contact_name || c?.full_name || zc?.phone_e164 || "Desconhecido");
     const phone = zc?.phone_e164 || c?.phone_e164 || "";
-    
-    // Build searchable text with all relevant fields
     const searchableText = normalizeSearchText([
-      zc?.client?.full_name,
-      zc?.lead?.full_name,
-      zc?.contact_name,
-      c?.full_name,
-      phone,
-      zc?.last_message_preview,
+      zc?.client?.full_name, zc?.lead?.full_name, zc?.contact_name, c?.full_name, phone, zc?.last_message_preview,
     ].filter(Boolean).join(" "));
-    
     return {
-      name,
-      phone,
+      name, phone,
       avatar: zc?.client?.avatar_url || zc?.avatar_url || c?.avatar_url || null,
       clientId: zc?.client_id || c?.id || null,
       isClient: !!(zc?.client_id || c?.id),
@@ -1276,141 +844,11 @@ export default function RoyZapp() {
     };
   }, []);
 
-  // Conversation management functions
-  const updateConversationFlag = async (
-    conversationId: string, 
-    field: "is_archived" | "is_muted" | "is_pinned" | "is_favorite" | "is_blocked",
-    value: boolean
-  ) => {
-    try {
-      const updateData: Record<string, any> = { [field]: value };
-      
-      // Add timestamp for pinned
-      if (field === "is_pinned") {
-        updateData.pinned_at = value ? new Date().toISOString() : null;
-      }
-      if (field === "is_archived") {
-        updateData.archived_at = value ? new Date().toISOString() : null;
-      }
-      
-      const { error } = await supabase
-        .from("zapp_conversations")
-        .update(updateData)
-        .eq("id", conversationId);
-
-      if (error) throw error;
-      
-      const messages: Record<string, { on: string; off: string }> = {
-        is_archived: { on: "Conversa arquivada!", off: "Conversa desarquivada!" },
-        is_muted: { on: "Notificações silenciadas!", off: "Notificações reativadas!" },
-        is_pinned: { on: "Conversa fixada!", off: "Conversa desafixada!" },
-        is_favorite: { on: "Adicionado aos favoritos!", off: "Removido dos favoritos!" },
-        is_blocked: { on: "Contato bloqueado!", off: "Contato desbloqueado!" },
-      };
-      
-      toast.success(value ? messages[field].on : messages[field].off);
-      fetchData();
-    } catch (error: any) {
-      console.error(`Error updating ${field}:`, error);
-      toast.error("Erro ao atualizar conversa");
-    }
-  };
-
-  const markAsRead = async (conversationId: string) => {
-    try {
-      const { error } = await supabase
-        .from("zapp_conversations")
-        .update({ unread_count: 0 })
-        .eq("id", conversationId);
-
-      if (error) throw error;
-      
-      // Update local state
-      setAssignments(prev => prev.map(a => 
-        a.zapp_conversation?.id === conversationId 
-          ? { ...a, zapp_conversation: { ...a.zapp_conversation!, unread_count: 0 } }
-          : a
-      ));
-    } catch (error: any) {
-      console.error("Error marking as read:", error);
-    }
-  };
-
-  const markAsUnread = async (conversationId: string) => {
-    try {
-      const { error } = await supabase
-        .from("zapp_conversations")
-        .update({ unread_count: 1 })
-        .eq("id", conversationId);
-
-      if (error) throw error;
-      toast.success("Marcada como não lida!");
-      
-      // Update local state instead of refetching
-      setAssignments(prev => prev.map(a => 
-        a.zapp_conversation?.id === conversationId 
-          ? { ...a, zapp_conversation: { ...a.zapp_conversation!, unread_count: 1 } }
-          : a
-      ));
-    } catch (error: any) {
-      console.error("Error marking as unread:", error);
-      toast.error("Erro ao marcar como não lida");
-    }
-  };
-
-  const deleteConversation = async (assignmentId: string) => {
-    try {
-      // Close the assignment (soft delete)
-      const { error } = await supabase
-        .from("zapp_conversation_assignments")
-        .update({ status: "closed", closed_at: new Date().toISOString(), agent_id: null, assigned_at: null })
-        .eq("id", assignmentId);
-
-      if (error) throw error;
-      
-      toast.success("Conversa apagada!");
-      if (selectedConversation?.id === assignmentId) {
-        setSelectedConversation(null);
-      }
-      fetchData();
-    } catch (error: any) {
-      console.error("Error deleting conversation:", error);
-      toast.error("Erro ao apagar conversa");
-    }
-  };
-
-  // Permanent delete conversation (removes from database entirely)
-  const permanentlyDeleteConversation = async () => {
-    if (!selectedConversation?.zapp_conversation_id && !selectedConversation?.zapp_conversation?.id) {
-      toast.error("Conversa não encontrada");
-      return;
-    }
-    
-    const conversationId = selectedConversation.zapp_conversation_id || selectedConversation.zapp_conversation?.id;
-    
-    try {
-      // Delete the zapp_conversation - cascade will handle:
-      // - zapp_messages (ON DELETE CASCADE)
-      // - zapp_conversation_assignments (ON DELETE CASCADE)
-      // - zapp_client_suggestions (ON DELETE CASCADE)
-      // Note: lead_id and client_id in other tables have ON DELETE SET NULL,
-      // so leads and clients are preserved
-      
-      const { error } = await supabase
-        .from("zapp_conversations")
-        .delete()
-        .eq("id", conversationId);
-
-      if (error) throw error;
-      
-      toast.success("Conversa excluída permanentemente!");
-      setSelectedConversation(null);
-      setPermanentDeleteDialogOpen(false);
-      fetchData();
-    } catch (error: any) {
-      console.error("Error permanently deleting conversation:", error);
-      toast.error("Erro ao excluir conversa");
-    }
+  // Helper to get agent name by id
+  const getAgentName = (agentId: string | null) => {
+    if (!agentId) return null;
+    const agent = agents.find(a => a.id === agentId);
+    return agent?.user?.name || null;
   };
 
   // All messaging functions (send, media, audio, delete, edit, contact, quick replies, formatting)
@@ -1420,7 +858,7 @@ export default function RoyZapp() {
   const availableUsers = teamUsers.filter(
     (user) => {
       const isCommercial = COMMERCIAL_NAMES.some(name => user.name.toLowerCase().includes(name));
-      const isNotAlreadyAgent = !agents.some((agent) => agent.user_id === user.id) || editingAgent?.user_id === user.id;
+      const isNotAlreadyAgent = !agents.some((agent) => agent.user_id === user.id) || crud.editingAgent?.user_id === user.id;
       return isCommercial && isNotAlreadyAgent;
     }
   );
@@ -2529,12 +1967,7 @@ export default function RoyZapp() {
     });
   }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, currentUser?.team_role_name]);
 
-  // Helper to get agent name by id
-  const getAgentName = (agentId: string | null) => {
-    if (!agentId) return null;
-    const agent = agents.find(a => a.id === agentId);
-    return agent?.user?.name || null;
-  };
+  // getAgentName is defined above (near line 873)
 
   // Memoized stats to avoid recalculating on every render
   // Admin/Gestor veem todas as conversas; atendentes comuns só veem as suas
@@ -2674,152 +2107,7 @@ export default function RoyZapp() {
       setSelectedIntegrationId(integrationId);
     }} />;
   }
-
-  // Tag functions
-  const openTagDialog = (tag?: ZappTag) => {
-    if (tag) {
-      setEditingTag(tag);
-      setTagForm({
-        name: tag.name,
-        description: tag.description || "",
-        color: tag.color,
-      });
-    } else {
-      setEditingTag(null);
-      setTagForm({
-        name: "",
-        description: "",
-        color: "#6b7c85",
-      });
-    }
-    setTagDialogOpen(true);
-  };
-
-  const saveTag = async () => {
-    if (!currentUser?.account_id || !tagForm.name.trim()) {
-      toast.error("Nome da tag é obrigatório");
-      return;
-    }
-
-    setSavingTag(true);
-    try {
-      if (editingTag) {
-        const { error } = await supabase
-          .from("zapp_tags")
-          .update({
-            name: tagForm.name.trim(),
-            description: tagForm.description.trim() || null,
-            color: tagForm.color,
-          })
-          .eq("id", editingTag.id);
-
-        if (error) throw error;
-        toast.success("Tag atualizada!");
-      } else {
-        const { error } = await supabase.from("zapp_tags").insert({
-          account_id: currentUser.account_id,
-          name: tagForm.name.trim(),
-          description: tagForm.description.trim() || null,
-          color: tagForm.color,
-          display_order: tags.length,
-        });
-
-        if (error) throw error;
-        toast.success("Tag criada!");
-      }
-
-      setTagDialogOpen(false);
-      fetchData();
-    } catch (error: any) {
-      console.error("Error saving tag:", error);
-      toast.error(error.message || "Erro ao salvar tag");
-    } finally {
-      setSavingTag(false);
-    }
-  };
-
-  const deleteTag = async (id: string) => {
-    try {
-      const { error } = await supabase.from("zapp_tags").delete().eq("id", id);
-      if (error) throw error;
-      toast.success("Tag excluída!");
-      fetchData();
-    } catch (error: any) {
-      console.error("Error deleting tag:", error);
-      toast.error(error.message || "Erro ao excluir tag");
-    } finally {
-      setDeletingTagId(null);
-    }
-  };
-
-  // Open conversation tagging dialog
-  const openConversationTagDialog = async (assignmentId: string) => {
-    setTaggingAssignmentId(assignmentId);
-    
-    // Fetch existing tags for this conversation
-    try {
-      const { data, error } = await supabase
-        .from("zapp_conversation_tags")
-        .select("tag_id")
-        .eq("assignment_id", assignmentId);
-      
-      if (error) throw error;
-      setSelectedConversationTags(data?.map(t => t.tag_id) || []);
-    } catch (error) {
-      console.error("Error fetching conversation tags:", error);
-      setSelectedConversationTags([]);
-    }
-    
-    setConversationTagDialogOpen(true);
-  };
-
-  // Toggle tag for conversation
-  const toggleConversationTag = (tagId: string) => {
-    setSelectedConversationTags(prev => 
-      prev.includes(tagId) 
-        ? prev.filter(id => id !== tagId)
-        : [...prev, tagId]
-    );
-  };
-
-  // Save conversation tags
-  const saveConversationTags = async () => {
-    if (!taggingAssignmentId || !currentUser?.account_id) return;
-    
-    setSavingConversationTags(true);
-    try {
-      // Delete existing tags for this conversation
-      await supabase
-        .from("zapp_conversation_tags")
-        .delete()
-        .eq("assignment_id", taggingAssignmentId);
-      
-      // Insert new tags
-      if (selectedConversationTags.length > 0) {
-        const { error } = await supabase
-          .from("zapp_conversation_tags")
-          .insert(
-            selectedConversationTags.map(tagId => ({
-              account_id: currentUser.account_id,
-              assignment_id: taggingAssignmentId,
-              tag_id: tagId,
-              created_by: currentUser.id,
-            }))
-          );
-        
-        if (error) throw error;
-      }
-      
-      toast.success("Tags atualizadas!");
-      setConversationTagDialogOpen(false);
-    } catch (error: any) {
-      console.error("Error saving conversation tags:", error);
-      toast.error(error.message || "Erro ao salvar tags");
-    } finally {
-      setSavingConversationTags(false);
-    }
-  };
-
+  // Tag and conversation tag functions are now in crud hook
 
   return (
     <div className="flex flex-row flex-1 min-h-0 w-full overflow-hidden bg-zapp-bg">
@@ -2885,52 +2173,23 @@ export default function RoyZapp() {
             setSelectedConversation(a);
             const zappConvId = a.zapp_conversation?.id;
             if (zappConvId && (a.zapp_conversation?.unread_count || 0) > 0) {
-              markAsRead(zappConvId);
+              convActions.markAsRead(zappConvId);
             }
           }}
           onOpenNewConversationDialog={openNewConversationDialog}
-          onOpenAgentDialog={openAgentDialog}
-          onToggleAgentOnline={toggleAgentOnline}
-          onDeleteAgent={setDeletingAgentId}
-          onOpenDepartmentDialog={openDepartmentDialog}
-          onDeleteDepartment={setDeletingDepartmentId}
-          onOpenTagDialog={openTagDialog}
-          onDeleteTag={setDeletingTagId}
-          onMarkAsRead={markAsRead}
-          onMarkAsUnread={markAsUnread}
-          onUpdateFlag={updateConversationFlag}
-          onOpenTagConversationDialog={openConversationTagDialog}
-          onDeleteConversation={deleteConversation}
-          onDismissConversation={async (assignmentId) => {
-            // Find the assignment to dismiss
-            const assignment = assignments.find(a => a.id === assignmentId);
-            if (!assignment) return;
-            
-            try {
-              const { error } = await supabase
-                .from("zapp_conversation_assignments")
-                .update({ 
-                  status: "closed", 
-                  closed_at: new Date().toISOString() 
-                })
-                .eq("id", assignmentId);
-              
-              if (error) throw error;
-              
-              toast.success("Grupo dispensado!");
-              
-              // Clear selection if this was the selected conversation
-              if (selectedConversation?.id === assignmentId) {
-                setSelectedConversation(null);
-              }
-              
-              // Remove from local state
-              setAssignments(prev => prev.filter(a => a.id !== assignmentId));
-            } catch (error) {
-              console.error("Error dismissing group:", error);
-              toast.error("Erro ao dispensar grupo");
-            }
-          }}
+          onOpenAgentDialog={crud.openAgentDialog}
+          onToggleAgentOnline={crud.toggleAgentOnline}
+          onDeleteAgent={crud.setDeletingAgentId}
+          onOpenDepartmentDialog={crud.openDepartmentDialog}
+          onDeleteDepartment={crud.setDeletingDepartmentId}
+          onOpenTagDialog={crud.openTagDialog}
+          onDeleteTag={crud.setDeletingTagId}
+          onMarkAsRead={convActions.markAsRead}
+          onMarkAsUnread={convActions.markAsUnread}
+          onUpdateFlag={convActions.updateConversationFlag}
+          onOpenTagConversationDialog={crud.openConversationTagDialog}
+          onDeleteConversation={convActions.deleteConversation}
+          onDismissConversation={convActions.dismissByAssignmentId}
           onToggleWhatsAppConnection={toggleWhatsAppConnection}
           onRoundRobinChange={(checked) => {
             setRoundRobinEnabled(checked);
@@ -2963,7 +2222,7 @@ export default function RoyZapp() {
             localStorage.setItem("zapp_spelling_enabled", String(checked));
           }}
           getAgentName={getAgentName}
-          onPullFromQueue={pullFromQueue}
+          onPullFromQueue={convActions.pullFromQueue}
           notificationPermission={notificationPermission}
           onRequestNotificationPermission={requestNotificationPermission}
           onRefreshMessages={refreshMessages}
@@ -3007,9 +2266,9 @@ export default function RoyZapp() {
              setEditingClientId(id);
              setClientEditSheetOpen(true);
            }}
-           onAssignToMe={assignToMe}
-           onReleaseToQueue={releaseToQueue}
-           onUpdateStatus={updateConversationStatus}
+           onAssignToMe={convActions.assignToMe}
+           onReleaseToQueue={convActions.releaseToQueue}
+           onUpdateStatus={convActions.updateConversationStatus}
            onOpenTransfer={() => setTransferDialogOpen(true)}
            onOpenRoiDialog={() => {}}
            onOpenRiskDialog={() => {}}
@@ -3019,7 +2278,7 @@ export default function RoyZapp() {
            onDeleteConversation={() => setPermanentDeleteDialogOpen(true)}
            onDismissConversation={
              selectedConversation?.zapp_conversation?.is_group 
-               ? dismissGroupConversation 
+               ? convActions.dismissGroupConversation 
                : undefined
            }
            onOpenEditGroup={
@@ -3079,32 +2338,32 @@ export default function RoyZapp() {
 
       {/* Department Dialog */}
       <ZappDepartmentDialog
-        open={departmentDialogOpen}
-        onOpenChange={setDepartmentDialogOpen}
-        editingDepartment={editingDepartment}
-        form={departmentForm}
-        onFormChange={setDepartmentForm}
-        onSave={saveDepartment}
-        saving={savingDepartment}
-        deletingId={deletingDepartmentId}
-        onDeleteConfirm={deleteDepartment}
-        onDeleteCancel={() => setDeletingDepartmentId(null)}
+        open={crud.departmentDialogOpen}
+        onOpenChange={crud.setDepartmentDialogOpen}
+        editingDepartment={crud.editingDepartment}
+        form={crud.departmentForm}
+        onFormChange={crud.setDepartmentForm}
+        onSave={crud.saveDepartment}
+        saving={crud.savingDepartment}
+        deletingId={crud.deletingDepartmentId}
+        onDeleteConfirm={crud.deleteDepartment}
+        onDeleteCancel={() => crud.setDeletingDepartmentId(null)}
       />
 
       {/* Agent Dialog */}
       <ZappAgentDialog
-        open={agentDialogOpen}
-        onOpenChange={setAgentDialogOpen}
-        editingAgent={editingAgent}
-        form={agentForm}
-        onFormChange={setAgentForm}
-        onSave={saveAgent}
-        saving={savingAgent}
+        open={crud.agentDialogOpen}
+        onOpenChange={crud.setAgentDialogOpen}
+        editingAgent={crud.editingAgent}
+        form={crud.agentForm}
+        onFormChange={crud.setAgentForm}
+        onSave={crud.saveAgent}
+        saving={crud.savingAgent}
         availableUsers={availableUsers}
         departments={departments}
-        deletingId={deletingAgentId}
-        onDeleteConfirm={deleteAgent}
-        onDeleteCancel={() => setDeletingAgentId(null)}
+        deletingId={crud.deletingAgentId}
+        onDeleteConfirm={crud.deleteAgent}
+        onDeleteCancel={() => crud.setDeletingAgentId(null)}
       />
 
 
@@ -3120,78 +2379,35 @@ export default function RoyZapp() {
         currentAgentId={selectedConversation?.agent_id}
         onTransfer={async () => {
           if (!selectedConversation || !transferTarget.id) return;
-          
-          try {
-            if (transferTarget.type === "agent") {
-              // Transfer to another agent
-              const { error } = await supabase
-                .from('zapp_conversation_assignments')
-                .update({ 
-                  agent_id: transferTarget.id,
-                  status: 'active' as const,
-                  assigned_at: new Date().toISOString(),
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', selectedConversation.id);
-              
-              if (error) throw error;
-              
-              const targetAgent = agents.find(a => a.id === transferTarget.id);
-              toast.success(`Conversa transferida para ${targetAgent?.user?.name || 'atendente'}`);
-            } else {
-              // Transfer to department (put back in queue)
-              const { error } = await supabase
-                .from('zapp_conversation_assignments')
-                .update({ 
-                  agent_id: null,
-                  department_id: transferTarget.id,
-                  status: 'pending' as const,
-                  assigned_at: null,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', selectedConversation.id);
-              
-              if (error) throw error;
-              
-              const targetDept = departments.find(d => d.id === transferTarget.id);
-              toast.success(`Conversa transferida para fila de ${targetDept?.name || 'departamento'}`);
-            }
-            
-            // Clear selection and close dialog
-            setSelectedConversation(null);
-            setTransferDialogOpen(false);
-            setTransferTarget({ type: "agent", id: "" });
-            fetchData();
-          } catch (error) {
-            console.error("[RoyZapp] Error transferring conversation:", error);
-            toast.error("Erro ao transferir conversa");
-          }
+          await convActions.transferConversation(transferTarget);
+          setTransferDialogOpen(false);
+          setTransferTarget({ type: "agent", id: "" });
         }}
       />
 
       {/* Tag Dialog */}
       <ZappTagDialog
-        open={tagDialogOpen}
-        onOpenChange={setTagDialogOpen}
-        editingTag={editingTag}
-        form={tagForm}
-        onFormChange={setTagForm}
-        onSave={saveTag}
-        saving={savingTag}
-        deletingId={deletingTagId}
-        onDeleteConfirm={deleteTag}
-        onDeleteCancel={() => setDeletingTagId(null)}
+        open={crud.tagDialogOpen}
+        onOpenChange={crud.setTagDialogOpen}
+        editingTag={crud.editingTag}
+        form={crud.tagForm}
+        onFormChange={crud.setTagForm}
+        onSave={crud.saveTag}
+        saving={crud.savingTag}
+        deletingId={crud.deletingTagId}
+        onDeleteConfirm={crud.deleteTag}
+        onDeleteCancel={() => crud.setDeletingTagId(null)}
       />
 
       {/* Conversation Tagging Dialog */}
       <ZappConversationTagDialog
-        open={conversationTagDialogOpen}
-        onOpenChange={setConversationTagDialogOpen}
+        open={crud.conversationTagDialogOpen}
+        onOpenChange={crud.setConversationTagDialogOpen}
         tags={tags}
-        selectedTags={selectedConversationTags}
-        onToggleTag={toggleConversationTag}
-        onSave={saveConversationTags}
-        saving={savingConversationTags}
+        selectedTags={crud.selectedConversationTags}
+        onToggleTag={crud.toggleConversationTag}
+        onSave={crud.saveConversationTags}
+        saving={crud.savingConversationTags}
         onNavigateToTags={() => setActiveView("tags")}
       />
 
@@ -3414,7 +2630,7 @@ export default function RoyZapp() {
             </AlertDialogCancel>
             <AlertDialogAction 
               className="bg-red-500 hover:bg-red-600 text-white"
-              onClick={permanentlyDeleteConversation}
+              onClick={convActions.permanentlyDeleteConversation}
             >
               Excluir
             </AlertDialogAction>
