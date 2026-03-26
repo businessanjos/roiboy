@@ -505,11 +505,62 @@ export default function SalesScripts() {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><BarChart3 className="w-5 h-5 text-primary" />Análise de Call</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="flex items-center gap-2 flex-wrap">
               {viewingAnalysis && new Date(viewingAnalysis.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-              {viewingAnalysis?.deal_name && <Badge variant="secondary" className="ml-2 text-xs"><Target className="w-3 h-3 mr-1" />{viewingAnalysis.deal_name}</Badge>}
+              {viewingAnalysis?.deal_name && <Badge variant="secondary" className="text-xs"><Target className="w-3 h-3 mr-1" />{viewingAnalysis.deal_name}</Badge>}
+              {viewingAnalysis?.client_name && <Badge variant="outline" className="text-xs"><UserCheck className="w-3 h-3 mr-1" />{viewingAnalysis.client_name}</Badge>}
+              {(() => { const oc = getOutcomeConfig(viewingAnalysis?.call_outcome || null); if (!oc) return null; const OcIcon = oc.icon; return <Badge variant="secondary" className={cn("text-xs", oc.bgColor, oc.color)}><OcIcon className="w-3 h-3 mr-1" />{oc.label}</Badge>; })()}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Outcome editor for existing analyses */}
+          <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+            <p className="text-sm font-medium flex items-center gap-2"><Crown className="w-4 h-4 text-primary" />Classificar resultado</p>
+            <div className="grid grid-cols-2 gap-2">
+              {CALL_OUTCOMES.map(outcome => {
+                const Icon = outcome.icon;
+                const isSelected = viewingAnalysis?.call_outcome === outcome.value;
+                return (
+                  <Card 
+                    key={outcome.value} 
+                    className={cn("cursor-pointer transition-all border-2", isSelected ? `${outcome.borderColor} ${outcome.bgColor}` : "border-transparent hover:border-border")} 
+                    onClick={() => {
+                      if (!viewingAnalysis) return;
+                      const newOutcome = isSelected ? null : outcome.value;
+                      setViewingAnalysis({ ...viewingAnalysis, call_outcome: newOutcome });
+                      updateAnalysisOutcomeMutation.mutate({ id: viewingAnalysis.id, call_outcome: newOutcome, client_id: viewingAnalysis.client_id || null, outcome_notes: viewingAnalysis.outcome_notes || null });
+                    }}
+                  >
+                    <CardContent className="p-2.5 flex items-center gap-2">
+                      <Icon className={cn("w-4 h-4 shrink-0", isSelected ? outcome.color : "text-muted-foreground")} />
+                      <div className="min-w-0">
+                        <p className={cn("text-xs font-medium", isSelected ? outcome.color : "")}>{outcome.label}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Vincular cliente</Label>
+              <Select value={viewingAnalysis?.client_id || 'none'} onValueChange={v => {
+                if (!viewingAnalysis) return;
+                const newClientId = v === 'none' ? null : v;
+                const newClientName = newClientId ? clients.find((c: any) => c.id === newClientId)?.full_name || null : null;
+                setViewingAnalysis({ ...viewingAnalysis, client_id: newClientId, client_name: newClientName });
+                updateAnalysisOutcomeMutation.mutate({ id: viewingAnalysis.id, call_outcome: viewingAnalysis.call_outcome || null, client_id: newClientId, outcome_notes: viewingAnalysis.outcome_notes || null });
+              }}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {clients.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>{c.full_name}{c.company_name ? ` — ${c.company_name}` : ''}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="max-w-none"><MarkdownRenderer content={viewingAnalysis?.analysis || ''} /></div>
           <DialogFooter><Button variant="outline" size="sm" onClick={() => viewingAnalysis && handleCopy(viewingAnalysis.analysis)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" onClick={() => { if (viewingAnalysis) exportSalesCallToPDF({ analysis: viewingAnalysis.analysis, createdAt: viewingAnalysis.created_at }); }}><Download className="w-4 h-4 mr-2" />PDF</Button></DialogFooter>
         </DialogContent>
