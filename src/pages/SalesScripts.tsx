@@ -134,9 +134,19 @@ export default function SalesScripts() {
   const { data: savedAnalyses = [], isLoading: loadingAnalyses } = useQuery({
     queryKey: ['sales-call-analyses', accountId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('sales_call_analyses').select('*, deal:deals!sales_call_analyses_deal_id_fkey(id, title)').eq('account_id', accountId!).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('sales_call_analyses').select('*, deal:deals!sales_call_analyses_deal_id_fkey(id, title), client:clients!sales_call_analyses_client_id_fkey(id, full_name)').eq('account_id', accountId!).order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []).map((a: any) => ({ ...a, deal_name: a.deal?.title || null }));
+      return (data || []).map((a: any) => ({ ...a, deal_name: a.deal?.title || null, client_name: a.client?.full_name || null }));
+    },
+    enabled: !!accountId,
+  });
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients-for-analysis', accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('clients').select('id, full_name, city, state, company_name').eq('account_id', accountId!).order('full_name').limit(500);
+      if (error) throw error;
+      return data as any[];
     },
     enabled: !!accountId,
   });
