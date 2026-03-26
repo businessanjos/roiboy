@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Agent, ZappTag, Department } from "@/components/royzapp";
 
 interface UseZappCrudOperationsProps {
+  userId: string | undefined;
   accountId: string | undefined;
   departments: Department[];
   tags: ZappTag[];
