@@ -945,7 +945,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <div className="text-sm">
                           <div className="flex items-center gap-2">
-                            {format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}
+                            {format(parseLocalDate(contract.start_date)!, "dd/MM/yyyy", { locale: ptBR })}
                             {contract.parent_contract_id && (
                               <Badge variant="outline" className="text-xs py-0 px-1">
                                 Renovação
@@ -954,7 +954,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                           </div>
                           {contract.end_date && (
                             <div className="text-muted-foreground">
-                              até {format(new Date(contract.end_date), "dd/MM/yyyy", { locale: ptBR })}
+                              até {format(parseLocalDate(contract.end_date)!, "dd/MM/yyyy", { locale: ptBR })}
                             </div>
                           )}
                         </div>

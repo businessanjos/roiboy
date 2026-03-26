@@ -389,9 +389,9 @@ export function ContractDialog({
                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {format(new Date(contract.start_date), "dd/MM/yy", { locale: ptBR })}
+                            {format(parseLocalDate(contract.start_date)!, "dd/MM/yy", { locale: ptBR })}
                             {contract.end_date && (
-                              <> - {format(new Date(contract.end_date), "dd/MM/yy", { locale: ptBR })}</>
+                              <> - {format(parseLocalDate(contract.end_date)!, "dd/MM/yy", { locale: ptBR })}</>
                             )}
                           </span>
                           <span className="flex items-center gap-1 font-medium text-foreground">

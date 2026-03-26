@@ -368,7 +368,7 @@ export function ContractTriageQueue({
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">
-                      {format(new Date(contract.start_date), "dd/MM/yyyy", {
+                      {format(parseLocalDate(contract.start_date)!, "dd/MM/yyyy", {
                         locale: ptBR,
                       })}
                     </span>
