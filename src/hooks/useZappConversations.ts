@@ -4,6 +4,7 @@ import { ConversationAssignment } from "@/components/royzapp";
 import { Department } from "@/components/royzapp";
 import { SectorId } from "@/config/sectors";
 import { Message, InboundMessageData } from "@/hooks/useZappData";
+import { withRetry } from "@/lib/retryFetch";
 
 const REALTIME_DEBOUNCE_MS = 5000; // Increased for high-volume (was 3s)
 const MIN_FETCH_INTERVAL_MS = 5000; // Increased for high-volume (was 3s)
@@ -104,36 +105,39 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     lastFetchTimeRef.current = now;
 
     try {
-      const { data: dept } = await supabase
-        .from("zapp_departments")
-        .select("id")
-        .eq("account_id", accountId)
-        .eq("sector_id", sectorId)
-        .maybeSingle();
+      const result = await withRetry(async () => {
+        const { data: dept } = await supabase
+          .from("zapp_departments")
+          .select("id")
+          .eq("account_id", accountId)
+          .eq("sector_id", sectorId)
+          .maybeSingle();
 
-      if (!dept) {
+        if (!dept) return null;
+
+        const { data: assignmentsData, error } = await supabase
+          .from("zapp_conversation_assignments")
+          .select(ASSIGNMENTS_SELECT)
+          .eq("account_id", accountId)
+          .eq("department_id", dept.id)
+          .order("updated_at", { ascending: false })
+          .limit(1000);
+
+        if (error) throw error;
+        return { deptId: dept.id, assignments: assignmentsData || [] };
+      }, 2, 1500);
+
+      if (!result) {
         setAssignments([]);
         currentDepartmentIdRef.current = null;
         return;
       }
 
-      currentDepartmentIdRef.current = dept.id;
+      currentDepartmentIdRef.current = result.deptId;
+      console.log(`[ZappConversations] Fetched ${result.assignments.length} assignments for department ${result.deptId}`);
+      setAssignments(result.assignments);
 
-      const { data: assignmentsData, error } = await supabase
-        .from("zapp_conversation_assignments")
-        .select(ASSIGNMENTS_SELECT)
-        .eq("account_id", accountId)
-        .eq("department_id", dept.id)
-        .order("updated_at", { ascending: false })
-        .limit(1000);
-
-      if (error) throw error;
-
-      const filtered = assignmentsData || [];
-      console.log(`[ZappConversations] Fetched ${filtered.length} assignments for department ${dept.id}`);
-      setAssignments(filtered);
-
-      await fetchSupplementaryData(filtered);
+      await fetchSupplementaryData(result.assignments);
     } catch (error) {
       console.error("Error fetching assignments:", error);
     }
@@ -145,20 +149,28 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
     currentDepartmentIdRef.current = departmentId;
 
-    const { data, error } = await supabase
-      .from("zapp_conversation_assignments")
-      .select(ASSIGNMENTS_SELECT)
-      .eq("account_id", accountId)
-      .eq("department_id", departmentId)
-      .order("updated_at", { ascending: false })
-      .limit(1000);
+    try {
+      const data = await withRetry(async () => {
+        const { data, error } = await supabase
+          .from("zapp_conversation_assignments")
+          .select(ASSIGNMENTS_SELECT)
+          .eq("account_id", accountId)
+          .eq("department_id", departmentId)
+          .order("updated_at", { ascending: false })
+          .limit(1000);
 
-    if (error) throw error;
+        if (error) throw error;
+        return data;
+      }, 3, 1500);
 
-    const result = data || [];
-    setAssignments(result);
-    await fetchSupplementaryData(result);
-    return result;
+      const result = data || [];
+      setAssignments(result);
+      await fetchSupplementaryData(result);
+      return result;
+    } catch (error) {
+      console.error("Error fetching assignments for department:", error);
+      return [];
+    }
   }, [accountId, ASSIGNMENTS_SELECT, fetchSupplementaryData]);
 
   // Debounced fetch for realtime
