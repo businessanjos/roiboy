@@ -161,82 +161,10 @@ export function ZappMessagesList({
     return buildFallbackMentionMap(deduplicatedMessages);
   }, [isGroup, deduplicatedMessages]);
 
-  // DB-resolved mention map for JIDs not found in fallback
-  const [dbMentionMap, setDbMentionMap] = useState<Record<string, string>>({});
-
-  // Find unresolved JIDs and query DB for their names
-  const unresolvedJids = useMemo(() => {
-    if (!isGroup) return [];
-    return extractUnresolvedJids(deduplicatedMessages, { ...fallbackMentionMap, ...dbMentionMap });
-  }, [isGroup, deduplicatedMessages, fallbackMentionMap, dbMentionMap]);
-
-  useEffect(() => {
-    if (unresolvedJids.length === 0) return;
-    
-    const resolveFromDb = async () => {
-      // Build phone variants for each JID: +<jid>, <jid>, and Brazilian format attempts
-      const phoneVariants: string[] = [];
-      for (const jid of unresolvedJids) {
-        phoneVariants.push(`+${jid}`, jid);
-        // Try adding/removing country code 55
-        if (!jid.startsWith("55") && jid.length <= 11) {
-          phoneVariants.push(`+55${jid}`, `55${jid}`);
-        }
-        if (jid.startsWith("55")) {
-          const withoutCC = jid.slice(2);
-          phoneVariants.push(`+${withoutCC}`, withoutCC);
-        }
-        // Brazilian numbers: try with/without 9th digit
-        const digits = jid.startsWith("55") ? jid.slice(2) : jid;
-        if (digits.length >= 10) {
-          const ddd = digits.slice(0, 2);
-          const num = digits.slice(2);
-          // Add 9th digit
-          if (num.length === 8) {
-            phoneVariants.push(`+55${ddd}9${num}`, `55${ddd}9${num}`);
-          }
-          // Remove 9th digit  
-          if (num.length === 9 && num.startsWith("9")) {
-            phoneVariants.push(`+55${ddd}${num.slice(1)}`, `55${ddd}${num.slice(1)}`);
-          }
-        }
-      }
-
-      const uniqueVariants = [...new Set(phoneVariants)].slice(0, 50);
-      const resolved: Record<string, string> = {};
-
-      // Query zapp_group_participants for sender names in this group
-      // (zapp_contacts table does not exist, skip that lookup)
-
-      // Query clients table for remaining
-      const { data: clients } = await supabase
-        .from("clients")
-        .select("phone_e164, full_name")
-        .in("phone_e164", uniqueVariants);
-
-      if (clients) {
-        for (const c of clients) {
-          if (c.full_name && c.phone_e164) {
-            const norm = c.phone_e164.replace(/^\+/, "");
-            if (!resolved[norm]) resolved[norm] = c.full_name;
-            if (!resolved[norm.slice(-8)]) resolved[norm.slice(-8)] = c.full_name;
-            if (!resolved[norm.slice(-9)]) resolved[norm.slice(-9)] = c.full_name;
-          }
-        }
-      }
-
-      if (Object.keys(resolved).length > 0) {
-        setDbMentionMap(prev => ({ ...prev, ...resolved }));
-      }
-    };
-
-    resolveFromDb();
-  }, [unresolvedJids.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Combined mention map: fallback + DB resolved
+  // Combined mention map: only use fallback from sender data + webhook mention_map
   const combinedMentionMap = useMemo(() => {
-    return { ...fallbackMentionMap, ...dbMentionMap };
-  }, [fallbackMentionMap, dbMentionMap]);
+    return fallbackMentionMap;
+  }, [fallbackMentionMap]);
 
   // Enrich messages: merge combined mention names into mention_map for better resolution
   const enrichedMessages = useMemo(() => {
