@@ -146,20 +146,28 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
     currentDepartmentIdRef.current = departmentId;
 
-    const { data, error } = await supabase
-      .from("zapp_conversation_assignments")
-      .select(ASSIGNMENTS_SELECT)
-      .eq("account_id", accountId)
-      .eq("department_id", departmentId)
-      .order("updated_at", { ascending: false })
-      .limit(1000);
+    try {
+      const data = await withRetry(async () => {
+        const { data, error } = await supabase
+          .from("zapp_conversation_assignments")
+          .select(ASSIGNMENTS_SELECT)
+          .eq("account_id", accountId)
+          .eq("department_id", departmentId)
+          .order("updated_at", { ascending: false })
+          .limit(1000);
 
-    if (error) throw error;
+        if (error) throw error;
+        return data;
+      }, 3, 1500);
 
-    const result = data || [];
-    setAssignments(result);
-    await fetchSupplementaryData(result);
-    return result;
+      const result = data || [];
+      setAssignments(result);
+      await fetchSupplementaryData(result);
+      return result;
+    } catch (error) {
+      console.error("Error fetching assignments for department:", error);
+      return [];
+    }
   }, [accountId, ASSIGNMENTS_SELECT, fetchSupplementaryData]);
 
   // Debounced fetch for realtime
