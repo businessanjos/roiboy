@@ -427,7 +427,10 @@ export function useZappConversations(options: UseZappConversationsOptions) {
                 (m.external_message_id && newMsg.external_message_id && m.external_message_id === newMsg.external_message_id)
               );
               if (exists) return prev;
-              return [...prev, newFormattedMsg];
+              // Insert in chronological order based on sent_at/created_at
+              const updated = [...prev, newFormattedMsg];
+              updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+              return updated;
             });
           }
 
