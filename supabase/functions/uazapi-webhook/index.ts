@@ -1929,7 +1929,8 @@ serve(async (req) => {
               existingZappConvo = fallbackData;
             }
           } else {
-            // For direct messages, search by phone_e164 + sector
+            // For direct messages, search by phone_e164 + integration_id (or sector fallback)
+            // CRITICAL: Use integration_id first for multi-instance isolation
             let directQuery = supabase
               .from("zapp_conversations")
               .select("id, unread_count")
@@ -1937,12 +1938,29 @@ serve(async (req) => {
               .eq("phone_e164", phone)
               .eq("is_group", false);
             
-            if (sectorId) {
+            if (integrationId) {
+              directQuery = directQuery.eq("integration_id", integrationId);
+            } else if (sectorId) {
               directQuery = directQuery.eq("sector_id", sectorId);
             }
             
-            const { data } = await directQuery.maybeSingle();
+            const { data } = await directQuery.order("last_message_at", { ascending: false }).limit(1).maybeSingle();
             existingZappConvo = data;
+            
+            // Fallback: search by sector if integration_id didn't match
+            if (!existingZappConvo && integrationId && sectorId) {
+              const { data: sectorFallback } = await supabase
+                .from("zapp_conversations")
+                .select("id, unread_count")
+                .eq("account_id", accountId)
+                .eq("phone_e164", phone)
+                .eq("sector_id", sectorId)
+                .eq("is_group", false)
+                .order("last_message_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              existingZappConvo = sectorFallback;
+            }
           }
 
           if (existingZappConvo) {
@@ -1983,7 +2001,8 @@ serve(async (req) => {
                 external_thread_id: msg.key.remoteJid,
                 is_group: isGroupMsg,
                 group_jid: groupJid,
-                sector_id: sectorId || null, // CRITICAL: Associate with sector for isolation
+                sector_id: sectorId || null,
+                integration_id: integrationId || null, // CRITICAL: Set integration_id to prevent duplicates
                 last_message_at: timestamp,
                 last_message_preview: isGroupMsg 
                   ? `${contactName}: ${content.substring(0, 80)}`
