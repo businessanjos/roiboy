@@ -289,14 +289,14 @@ const ContractTableRow = memo(function ContractTableRow({
       <TableCell>
         <div className="flex flex-col gap-0.5">
           <span className="text-sm">
-            {format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}
+            {format(parseLocalDate(contract.start_date)!, "dd/MM/yyyy", { locale: ptBR })}
             {contract.end_date && (
               <span className="text-muted-foreground"> →</span>
             )}
           </span>
           {contract.end_date && (
             <span className="text-sm">
-              {format(new Date(contract.end_date), "dd/MM/yyyy", { locale: ptBR })}
+              {format(parseLocalDate(contract.end_date)!, "dd/MM/yyyy", { locale: ptBR })}
             </span>
           )}
           {contract.status === "active" && getExpiryBadgeStatic(contract.end_date)}
