@@ -2368,32 +2368,32 @@ export default function RoyZapp() {
 
       {/* Department Dialog */}
       <ZappDepartmentDialog
-        open={departmentDialogOpen}
-        onOpenChange={setDepartmentDialogOpen}
-        editingDepartment={editingDepartment}
-        form={departmentForm}
-        onFormChange={setDepartmentForm}
-        onSave={saveDepartment}
-        saving={savingDepartment}
-        deletingId={deletingDepartmentId}
-        onDeleteConfirm={deleteDepartment}
-        onDeleteCancel={() => setDeletingDepartmentId(null)}
+        open={crud.departmentDialogOpen}
+        onOpenChange={crud.setDepartmentDialogOpen}
+        editingDepartment={crud.editingDepartment}
+        form={crud.departmentForm}
+        onFormChange={crud.setDepartmentForm}
+        onSave={crud.saveDepartment}
+        saving={crud.savingDepartment}
+        deletingId={crud.deletingDepartmentId}
+        onDeleteConfirm={crud.deleteDepartment}
+        onDeleteCancel={() => crud.setDeletingDepartmentId(null)}
       />
 
       {/* Agent Dialog */}
       <ZappAgentDialog
-        open={agentDialogOpen}
-        onOpenChange={setAgentDialogOpen}
-        editingAgent={editingAgent}
-        form={agentForm}
-        onFormChange={setAgentForm}
-        onSave={saveAgent}
-        saving={savingAgent}
+        open={crud.agentDialogOpen}
+        onOpenChange={crud.setAgentDialogOpen}
+        editingAgent={crud.editingAgent}
+        form={crud.agentForm}
+        onFormChange={crud.setAgentForm}
+        onSave={crud.saveAgent}
+        saving={crud.savingAgent}
         availableUsers={availableUsers}
         departments={departments}
-        deletingId={deletingAgentId}
-        onDeleteConfirm={deleteAgent}
-        onDeleteCancel={() => setDeletingAgentId(null)}
+        deletingId={crud.deletingAgentId}
+        onDeleteConfirm={crud.deleteAgent}
+        onDeleteCancel={() => crud.setDeletingAgentId(null)}
       />
 
 
