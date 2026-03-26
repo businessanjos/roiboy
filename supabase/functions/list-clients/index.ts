@@ -312,6 +312,7 @@ Deno.serve(async (req) => {
         cnpj,
         instagram,
         notes,
+        stage_id,
         client_products (
           product_id,
           products:product_id (
