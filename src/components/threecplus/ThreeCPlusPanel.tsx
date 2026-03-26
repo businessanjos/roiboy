@@ -380,8 +380,8 @@ export function ThreeCPlusPanel() {
                 <Button
                   size="icon"
                   onClick={handleManualCall}
-                  disabled={!manualPhone.trim() || loading}
-                  className="shrink-0"
+                  disabled={!manualPhone.trim() || loading || !canDialManually}
+                  title={!canDialManually ? "Entre em uma campanha e aguarde o status Ocioso" : "Discar"}
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
