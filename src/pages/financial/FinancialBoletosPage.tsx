@@ -595,7 +595,7 @@ export default function FinancialBoletosPage() {
               ))}
             </div>
           ) : (
-            <Table>
+            <>
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
