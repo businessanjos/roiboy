@@ -1,9 +1,8 @@
-import { useRef, useLayoutEffect, useMemo, useState, useCallback, useEffect } from "react";
+import { useRef, useLayoutEffect, useMemo, useCallback } from "react";
 import { MessageSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message } from "@/hooks/useZappData";
 import { ZappMessageBubble } from "./ZappMessageBubble";
-import { supabase } from "@/integrations/supabase/client";
 
 interface ZappMessagesListProps {
   messages: Message[];
