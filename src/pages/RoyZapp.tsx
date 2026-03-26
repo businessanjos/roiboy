@@ -846,7 +846,7 @@ export default function RoyZapp() {
   const availableUsers = teamUsers.filter(
     (user) => {
       const isCommercial = COMMERCIAL_NAMES.some(name => user.name.toLowerCase().includes(name));
-      const isNotAlreadyAgent = !agents.some((agent) => agent.user_id === user.id) || editingAgent?.user_id === user.id;
+      const isNotAlreadyAgent = !agents.some((agent) => agent.user_id === user.id) || crud.editingAgent?.user_id === user.id;
       return isCommercial && isNotAlreadyAgent;
     }
   );
