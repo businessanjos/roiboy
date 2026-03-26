@@ -448,6 +448,8 @@ export default function RoyZapp() {
             .update({ 
               status: "triage", 
               agent_id: null,
+              assigned_at: null,
+              closed_at: null,
               updated_at: new Date().toISOString() 
             })
             .eq("id", closedAssignment.id);
@@ -1190,6 +1192,9 @@ export default function RoyZapp() {
         updateData.closed_at = new Date().toISOString();
         updateData.agent_id = null;
         updateData.assigned_at = null;
+      } else {
+        // Any reopen / non-closed status must clear closed metadata
+        updateData.closed_at = null;
       }
       
       const { error } = await supabase
@@ -2043,6 +2048,7 @@ export default function RoyZapp() {
               status: currentAgent ? "active" : "triage",  // Active if agent, triage otherwise
               agent_id: currentAgent?.id || null,  // Assign to current agent if available
               assigned_at: currentAgent ? new Date().toISOString() : null,
+              closed_at: null,
               updated_at: new Date().toISOString() 
             })
             .eq("id", closedAssignment.id);

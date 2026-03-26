@@ -341,9 +341,32 @@ export function useZappConversations(options: UseZappConversationsOptions) {
         { event: '*', schema: 'public', table: 'zapp_conversation_assignments', filter: `account_id=eq.${accountId}` },
         (payload) => {
           if (!sectorId) return;
-          const payloadDeptId = (payload.new as any)?.department_id;
+
+          const row = ((payload.new as any) ?? (payload.old as any)) || {};
+          const payloadDeptId = row.department_id;
           const currentDeptId = currentDepartmentIdRef.current;
           if (payloadDeptId && currentDeptId && payloadDeptId !== currentDeptId) return;
+
+          if (payload.eventType === 'UPDATE' && payload.new) {
+            const next = payload.new as any;
+            setAssignments(prev => prev.map(assignment =>
+              assignment.id === next.id
+                ? {
+                    ...assignment,
+                    status: next.status,
+                    agent_id: next.agent_id,
+                    assigned_at: next.assigned_at,
+                    closed_at: next.closed_at,
+                    updated_at: next.updated_at,
+                    department_id: next.department_id,
+                  }
+                : assignment
+            ));
+          } else if (payload.eventType === 'DELETE' && payload.old) {
+            const previous = payload.old as any;
+            setAssignments(prev => prev.filter(assignment => assignment.id !== previous.id));
+          }
+
           maybeThrottle(debouncedFetchAssignments);
         }
       )
