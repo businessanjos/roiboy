@@ -448,6 +448,8 @@ export default function RoyZapp() {
             .update({ 
               status: "triage", 
               agent_id: null,
+              assigned_at: null,
+              closed_at: null,
               updated_at: new Date().toISOString() 
             })
             .eq("id", closedAssignment.id);
