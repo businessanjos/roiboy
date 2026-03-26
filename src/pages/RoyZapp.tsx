@@ -575,6 +575,38 @@ export default function RoyZapp() {
     getContactInfo,
   });
 
+  // Handle URL parameters for auto-selecting or creating conversations
+  useEffect(() => {
+    if (urlParamsProcessed || loading || !currentUser?.account_id) return;
+    
+    const conversationId = searchParams.get('conversation');
+    const newPhone = searchParams.get('newPhone');
+    const newName = searchParams.get('newName');
+    const leadId = searchParams.get('leadId');
+    const clientId = searchParams.get('clientId');
+    
+    if (conversationId && assignments.length > 0) {
+      const assignment = assignments.find(a => a.zapp_conversation_id === conversationId);
+      if (assignment) {
+        setSelectedConversation(assignment);
+        setUrlParamsProcessed(true);
+        return;
+      }
+    }
+    
+    if (newPhone && currentAgent && !conversationId) {
+      setUrlParamsProcessed(true);
+      const contact = {
+        id: leadId || clientId || '',
+        full_name: decodeURIComponent(newName || ''),
+        phone_e164: `+${newPhone}`,
+        avatar_url: null,
+      };
+      if (leadId || clientId) {
+        contactOps.createConversationFromUrl(contact, !!leadId);
+      }
+    }
+  }, [assignments, loading, currentUser?.account_id, currentAgent, searchParams, urlParamsProcessed, contactOps]);
 
   const getAgentName = (agentId: string | null) => {
     if (!agentId) return null;
