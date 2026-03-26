@@ -970,10 +970,19 @@ serve(async (req) => {
         }
         
         // Debug: Log quote-related data when it IS a reply
-        if (quotedMsg || quotedMsgId) {
-          console.log(`[QUOTE] Found quote for ${messageId}: id=${quotedMsgId}, hasContent=${!!quotedContent}, sender=${quotedSenderName}`);
-          if (!quotedContent) {
-            console.log(`[QUOTE-MISSING] No content for ${messageId}, quotedMsg keys: ${quotedMsg ? Object.keys(quotedMsg).join(',') : 'null'}`);
+        if (quotedMsg || quotedMsgId || rawQuoted) {
+          console.log(`[QUOTE] Found quote for ${messageId}: id=${quotedMsgId}, hasContent=${!!quotedContent}, sender=${quotedSenderName}, rawType=${typeof rawQuoted}`);
+          if (!quotedContent && quotedMsg) {
+            // Dump first 300 chars of the quotedMsg to understand structure
+            try {
+              const dump = JSON.stringify(quotedMsg).substring(0, 300);
+              console.log(`[QUOTE-MISSING] No content for ${messageId}, quotedMsg dump: ${dump}`);
+            } catch { 
+              console.log(`[QUOTE-MISSING] No content for ${messageId}, quotedMsg keys: ${Object.keys(quotedMsg).join(',')}`);
+            }
+          }
+          if (!quotedMsg && rawQuoted) {
+            console.log(`[QUOTE-RAW] rawQuoted type=${typeof rawQuoted}, preview=${String(rawQuoted).substring(0, 200)}`);
           }
         }
         
