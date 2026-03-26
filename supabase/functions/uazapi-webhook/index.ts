@@ -874,17 +874,6 @@ serve(async (req) => {
                             (nestedContextInfo?.stanzaId as string) ||
                             null;
         
-        // Debug: Log quote-related data when it IS a reply
-        if (quotedMsg || quotedMsgId) {
-          console.log(`[QUOTE] Found quote for ${messageId}: id=${quotedMsgId}, hasContent=${!!quotedContent || !!quotedMsg}, sender=${quotedSenderName}`);
-        } else {
-          // Only log when msg.quoted is a truthy object (actual reply data that we failed to parse)
-          const rawQuoted = msgAnyQuote.quoted;
-          if (rawQuoted && typeof rawQuoted === 'object' && rawQuoted !== null) {
-            console.log(`[QUOTE-DEBUG] Message ${messageId} has quoted object but no data extracted. Keys: ${Object.keys(rawQuoted as Record<string, unknown>).join(', ')}`);
-          }
-        }
-        
         // Extract quoted content from various formats (UAZAPI sends in different ways)
         let quotedContent: string | null = null;
         if (quotedMsg) {
@@ -898,6 +887,9 @@ serve(async (req) => {
             ((quotedMsg.imageMessage as Record<string, unknown>)?.caption as string) ||
             ((quotedMsg.videoMessage as Record<string, unknown>)?.caption as string) ||
             ((quotedMsg.documentMessage as Record<string, unknown>)?.caption as string) ||
+            // Also check nested message format
+            ((quotedMsg.message as Record<string, unknown>)?.conversation as string) ||
+            ((quotedMsg.message as Record<string, unknown>)?.extendedTextMessage as Record<string, unknown>)?.text as string ||
             null;
           
           // If still no content and it's media, show placeholder
@@ -916,6 +908,38 @@ serve(async (req) => {
             } else if (quotedType.toLowerCase().includes("sticker") || quotedMsg.stickerMessage) {
               quotedContent = "🎨 Figurinha";
             }
+          }
+        }
+        
+        // FALLBACK: If we have a quoted message ID but no content, look up from DB
+        if (quotedMsgId && !quotedContent) {
+          try {
+            const { data: origMsg } = await supabase
+              .from("zapp_messages")
+              .select("content, message_type, sender_name, direction")
+              .eq("external_message_id", quotedMsgId)
+              .limit(1)
+              .maybeSingle();
+            
+            if (origMsg) {
+              quotedContent = origMsg.content || 
+                (origMsg.message_type === 'image' ? '📷 Imagem' :
+                 origMsg.message_type === 'video' ? '🎬 Vídeo' :
+                 origMsg.message_type === 'audio' ? '🎤 Áudio' :
+                 origMsg.message_type === 'document' ? '📄 Documento' :
+                 origMsg.message_type === 'sticker' ? '🎨 Figurinha' : null);
+              console.log(`[QUOTE-DB] Resolved quoted content from DB for ${messageId}: "${quotedContent?.substring(0, 50)}..."`);
+            }
+          } catch (dbErr) {
+            console.log(`[QUOTE-DB] Failed to resolve quoted content for ${messageId}: ${dbErr}`);
+          }
+        }
+        
+        // Debug: Log quote-related data when it IS a reply
+        if (quotedMsg || quotedMsgId) {
+          console.log(`[QUOTE] Found quote for ${messageId}: id=${quotedMsgId}, hasContent=${!!quotedContent}, sender=${quotedSenderName}`);
+          if (!quotedContent) {
+            console.log(`[QUOTE-MISSING] No content for ${messageId}, quotedMsg keys: ${quotedMsg ? Object.keys(quotedMsg).join(',') : 'null'}`);
           }
         }
         

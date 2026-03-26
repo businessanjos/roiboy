@@ -165,24 +165,56 @@ export function ZappMessagesList({
     return fallbackMentionMap;
   }, [fallbackMentionMap]);
 
-  // Enrich messages: merge combined mention names into mention_map for better resolution
+  // Build a lookup map by external_message_id for quoted content resolution
+  const messagesByExternalId = useMemo(() => {
+    const map = new Map<string, Message>();
+    for (const msg of deduplicatedMessages) {
+      if (msg.external_message_id) {
+        map.set(msg.external_message_id, msg);
+      }
+    }
+    return map;
+  }, [deduplicatedMessages]);
+
+  // Enrich messages: merge mention names + fill missing quoted content from loaded messages
   const enrichedMessages = useMemo(() => {
-    if (!isGroup) return deduplicatedMessages;
     const mentionRegex = /@\d{5,}/;
     return deduplicatedMessages.map(msg => {
-      if (msg.content && mentionRegex.test(msg.content)) {
-        // Merge: existing mention_map + combined (existing takes priority)
-        const merged = { ...combinedMentionMap, ...(msg.mention_map || {}) };
-        // Remove empty-string values (webhook stores "" for unresolved)
+      let enriched = msg;
+
+      // Fill missing quoted_content by looking up the original message
+      if (msg.quoted_message_id && !msg.quoted_content) {
+        const originalMsg = messagesByExternalId.get(msg.quoted_message_id);
+        if (originalMsg) {
+          const resolvedContent = originalMsg.content || 
+            (originalMsg.message_type === 'image' ? '📷 Imagem' :
+             originalMsg.message_type === 'video' ? '🎬 Vídeo' :
+             originalMsg.message_type === 'audio' ? '🎤 Áudio' :
+             originalMsg.message_type === 'document' ? '📄 Documento' :
+             originalMsg.message_type === 'sticker' ? '🎨 Figurinha' : null);
+          const resolvedSender = msg.quoted_sender_name || originalMsg.sender_name || 
+            (originalMsg.is_from_client ? 'Cliente' : 'Você');
+          enriched = { 
+            ...enriched, 
+            quoted_content: resolvedContent, 
+            quoted_sender_name: resolvedSender 
+          };
+        }
+      }
+
+      // Merge mention names for group messages
+      if (isGroup && enriched.content && mentionRegex.test(enriched.content)) {
+        const merged = { ...combinedMentionMap, ...(enriched.mention_map || {}) };
         const cleaned: Record<string, string> = {};
         for (const [k, v] of Object.entries(merged)) {
           if (v) cleaned[k] = v;
         }
-        return { ...msg, mention_map: Object.keys(cleaned).length > 0 ? cleaned : null };
+        enriched = { ...enriched, mention_map: Object.keys(cleaned).length > 0 ? cleaned : null };
       }
-      return msg;
+
+      return enriched;
     });
-  }, [deduplicatedMessages, isGroup, combinedMentionMap]);
+  }, [deduplicatedMessages, isGroup, combinedMentionMap, messagesByExternalId]);
 
   // Scroll to quoted message handler
   const handleScrollToQuoted = useCallback((quotedMessageId: string) => {
