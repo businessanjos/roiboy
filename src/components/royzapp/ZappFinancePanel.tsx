@@ -166,7 +166,7 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
   };
 
   const getDaysOverdue = (dueDate: string) => {
-    const days = differenceInDays(new Date(), new Date(dueDate));
+    const days = differenceInDays(new Date(), parseLocalDate(dueDate)!);
     return days > 0 ? days : 0;
   };
 
