@@ -250,34 +250,7 @@ export default function RoyZapp() {
     // Don't clear selection - let createConversationWithContact create the correct one
   }, [selectedConversation, assignments, selectedIntegrationId, currentUser?.account_id]);
   
-  // Function to dismiss group conversation (close assignment)
-  const dismissGroupConversation = async () => {
-    if (!selectedConversation) return;
-    
-    try {
-      // Close this assignment (removes from current sector's list)
-      const { error } = await supabase
-        .from("zapp_conversation_assignments")
-        .update({ 
-          status: "closed", 
-          closed_at: new Date().toISOString(),
-          agent_id: null,
-          assigned_at: null,
-        })
-        .eq("id", selectedConversation.id);
-      
-      if (error) throw error;
-      
-      toast.success("Grupo dispensado!");
-      setSelectedConversation(null);
-      
-      // Remove from local state immediately
-      setAssignments(prev => prev.filter(a => a.id !== selectedConversation.id));
-    } catch (error) {
-      console.error("Error dismissing group:", error);
-      toast.error("Erro ao dispensar grupo");
-    }
-  };
+  // Dismiss group is now in useZappConversationActions
 
   // Handle URL parameters for auto-selecting or creating conversations
   const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
