@@ -93,7 +93,7 @@ export function useClientsPage() {
       .select(`
         id, full_name, phone_e164, status, responsible_user_id, stage_id, 
         instagram, emails, tags, created_at, account_id, company_name,
-        birth_date, cnpj, cpf, notes, additional_phones,
+        birth_date, cnpj, cpf, notes, additional_phones, mls_level, business_segment,
         client_products (
           product_id,
           products (

@@ -10,7 +10,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { CustomField } from "@/components/custom-fields";
 import { FieldValueEditor } from "@/components/custom-fields";
-import { CheckCircle2, AlertCircle, MessageCircle, Wifi, WifiOff, ArrowRight, Trash2, Clock, PauseCircle, XCircle, Ban } from "lucide-react";
+import { CheckCircle2, AlertCircle, MessageCircle, Wifi, WifiOff, ArrowRight, Trash2, Clock, PauseCircle, XCircle, Ban, GraduationCap, Briefcase } from "lucide-react";
+import { getMlsBadgeClasses, getMlsLevelLabel } from "@/lib/mls-utils";
 import { cn } from "@/lib/utils";
 import { 
   getInitials, 
@@ -122,6 +123,38 @@ export const ClientsTableRow = memo(function ClientsTableRow({
             </TooltipProvider>
           )}
         </button>
+      </TableCell>
+
+      {/* MLS Level / Graduação Cell */}
+      <TableCell className="text-center">
+        {client.mls_level ? (
+          <Badge className={cn("text-xs", getMlsBadgeClasses(client.mls_level))}>
+            {getMlsLevelLabel(client.mls_level)}
+          </Badge>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
+      </TableCell>
+
+      {/* Business Segment / Área de Atuação Cell */}
+      <TableCell className="text-center">
+        {client.business_segment ? (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="text-xs max-w-[130px] truncate">
+                  <Briefcase className="h-3 w-3 mr-1 flex-shrink-0" />
+                  {client.business_segment}
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">{client.business_segment}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <span className="text-xs text-muted-foreground">—</span>
+        )}
       </TableCell>
 
       {/* Contract Cell */}
