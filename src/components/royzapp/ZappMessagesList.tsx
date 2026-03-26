@@ -233,18 +233,17 @@ export function ZappMessagesList({
       const uniqueVariants = [...new Set(phoneVariants)].slice(0, 50);
       const resolved: Record<string, string> = {};
 
-      // Query zapp_contacts first
+      // Query zapp_contacts first (table may not be in generated types, use rpc-style)
       const { data: contacts } = await supabase
-        .from("zapp_contacts")
+        .from("zapp_contacts" as any)
         .select("phone_e164, contact_name")
-        .in("phone_e164", uniqueVariants);
+        .in("phone_e164", uniqueVariants) as { data: { phone_e164: string; contact_name: string | null }[] | null };
 
       if (contacts) {
         for (const c of contacts) {
           if (c.contact_name) {
             const norm = c.phone_e164.replace(/^\+/, "");
             resolved[norm] = c.contact_name;
-            // Also store partial variants
             resolved[norm.slice(-8)] = c.contact_name;
             resolved[norm.slice(-9)] = c.contact_name;
           }
