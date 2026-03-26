@@ -1100,7 +1100,7 @@ export default function RoyZapp() {
            onOpenTransfer={() => setTransferDialogOpen(true)}
            onOpenRoiDialog={() => {}}
            onOpenRiskDialog={() => {}}
-           onOpenAddClient={openAddContactDialog}
+           onOpenAddClient={contactOps.openAddContactDialog}
            onOpenLinkClient={() => setLinkClientDialogOpen(true)}
            onClientLinked={() => fetchData()}
            onDeleteConversation={() => setPermanentDeleteDialogOpen(true)}
