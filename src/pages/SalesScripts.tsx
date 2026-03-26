@@ -445,6 +445,24 @@ export default function SalesScripts() {
                 </Card>
               );
             })}</div></div>}
+              </TabsContent>
+
+              <TabsContent value="icp" className="mt-4">
+                <ICPDashboard />
+              </TabsContent>
+
+              <TabsContent value="comparative" className="mt-4">
+                <CallComparative />
+              </TabsContent>
+
+              <TabsContent value="ideal-script" className="mt-4">
+                <IdealScriptGenerator />
+              </TabsContent>
+
+              <TabsContent value="ranking" className="mt-4">
+                <CloserRanking />
+              </TabsContent>
+            </Tabs>
           </div>
         </TabsContent>
 
