@@ -2001,7 +2001,8 @@ serve(async (req) => {
                 external_thread_id: msg.key.remoteJid,
                 is_group: isGroupMsg,
                 group_jid: groupJid,
-                sector_id: sectorId || null, // CRITICAL: Associate with sector for isolation
+                sector_id: sectorId || null,
+                integration_id: integrationId || null, // CRITICAL: Set integration_id to prevent duplicates
                 last_message_at: timestamp,
                 last_message_preview: isGroupMsg 
                   ? `${contactName}: ${content.substring(0, 80)}`
