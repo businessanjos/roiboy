@@ -287,10 +287,10 @@ export default function RoyZapp() {
       };
       
       if (leadId || clientId) {
-        createConversationFromUrl(contact, !!leadId);
+        contactOps.createConversationFromUrl(contact, !!leadId);
       }
     }
-  }, [assignments, loading, currentUser?.account_id, currentAgent, searchParams, urlParamsProcessed]);
+  }, [assignments, loading, currentUser?.account_id, currentAgent, searchParams, urlParamsProcessed, contactOps]);
 
   // Helper function to create conversation from URL params
   const createConversationFromUrl = async (contact: { id: string; full_name: string; phone_e164: string; avatar_url: null }, isLead: boolean) => {
