@@ -119,10 +119,10 @@ export function useClientsWithScores() {
       for (let i = 0; i < clientIds.length; i += BATCH_SIZE) {
         const batch = clientIds.slice(i, i + BATCH_SIZE);
         productPromises.push(
-          supabase.from("client_products").select("client_id, product_id").in("client_id", batch).then(r => r.data || [])
+          (async () => { const { data } = await supabase.from("client_products").select("client_id, product_id").in("client_id", batch); return data || []; })()
         );
         activeContractPromises.push(
-          supabase.from("client_contracts").select("client_id").eq("status", "active").in("client_id", batch).then(r => r.data || [])
+          (async () => { const { data } = await supabase.from("client_contracts").select("client_id").eq("status", "active").in("client_id", batch); return data || []; })()
         );
       }
 
