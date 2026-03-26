@@ -1741,7 +1741,7 @@ export default function Contracts() {
       </div>
 
       {/* Compact Stats Strip */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
         <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium">
           <FileText className="h-3 w-3" />
           {stats.total} Total
