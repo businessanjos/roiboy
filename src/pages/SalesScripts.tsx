@@ -337,12 +337,96 @@ export default function SalesScripts() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Call Outcome Selector */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><Crown className="w-4 h-4 text-primary" />Resultado da Call</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {CALL_OUTCOMES.map(outcome => {
+                    const Icon = outcome.icon;
+                    const isSelected = callOutcome === outcome.value;
+                    return (
+                      <Card 
+                        key={outcome.value} 
+                        className={cn(
+                          "cursor-pointer transition-all border-2",
+                          isSelected ? `${outcome.borderColor} ${outcome.bgColor}` : "border-transparent hover:border-border"
+                        )} 
+                        onClick={() => setCallOutcome(isSelected ? null : outcome.value)}
+                      >
+                        <CardContent className="p-3 flex items-center gap-2">
+                          <Icon className={cn("w-4 h-4 shrink-0", isSelected ? outcome.color : "text-muted-foreground")} />
+                          <div className="min-w-0">
+                            <p className={cn("text-sm font-medium", isSelected ? outcome.color : "")}>{outcome.label}</p>
+                            <p className="text-xs text-muted-foreground">{outcome.description}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Client Selector (for ICP profiling) */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><UserCheck className="w-4 h-4 text-primary" />Vincular ao cliente (para perfil ICP)</Label>
+                <Select value={selectedClientId || 'none'} onValueChange={v => setSelectedClientId(v === 'none' ? null : v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {clients.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.full_name}{c.company_name ? ` — ${c.company_name}` : ''}{c.city ? ` (${c.city}/${c.state || ''})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Outcome Notes */}
+              {callOutcome && (
+                <div className="space-y-2">
+                  <Label>Observações sobre o resultado</Label>
+                  <Input placeholder="Ex: Vendeu plano premium, cliente muito engajado..." value={outcomeNotes} onChange={e => setOutcomeNotes(e.target.value)} />
+                </div>
+              )}
+
               <div className="border border-dashed border-border rounded-lg p-4">{transcriptFile ? (<div className="flex items-center justify-between"><div className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /><span className="text-sm truncate">{transcriptFile.name}</span></div><Button variant="ghost" size="sm" onClick={() => setTranscriptFile(null)}><Trash2 className="w-4 h-4" /></Button></div>) : (<label htmlFor="transcript-file" className="flex flex-col items-center gap-2 cursor-pointer py-2"><Upload className="w-8 h-8 text-muted-foreground" /><span className="text-sm text-muted-foreground">Clique para enviar</span><span className="text-xs text-muted-foreground">TXT, PDF, Word</span><input id="transcript-file" type="file" className="hidden" accept=".txt,.pdf,.doc,.docx" onChange={e => { if (e.target.files?.[0]) setTranscriptFile(e.target.files[0]); }} /></label>)}</div>
               <Textarea placeholder="Ou cole a transcrição aqui..." value={transcriptText} onChange={e => setTranscriptText(e.target.value)} className="min-h-[200px] font-mono text-sm" />
               <Button onClick={() => analyzeTranscriptMutation.mutate()} disabled={analyzeTranscriptMutation.isPending || (!transcriptText.trim() && !transcriptFile)} className="w-full">{analyzeTranscriptMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analisando...</> : <><BarChart3 className="w-4 h-4 mr-2" />Analisar Call</>}</Button>
             </CardContent></Card>
             {transcriptAnalysis && <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-primary" />Resultado da Análise</CardTitle></CardHeader><CardContent><MarkdownRenderer content={transcriptAnalysis} /><div className="flex gap-2 mt-4"><Button variant="outline" size="sm" onClick={() => handleCopy(transcriptAnalysis)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" onClick={() => exportSalesCallToPDF({ analysis: transcriptAnalysis, createdAt: new Date().toISOString() })}><Download className="w-4 h-4 mr-2" />PDF</Button></div></CardContent></Card>}
-            {savedAnalyses.length > 0 && <div><h3 className="text-base font-semibold mb-3">Análises Salvas ({savedAnalyses.length})</h3><div className="space-y-2">{savedAnalyses.map(a => (<Card key={a.id} className="cursor-pointer hover:border-primary/30" onClick={() => setViewingAnalysis(a)}><CardContent className="p-4 flex items-center justify-between"><div className="flex-1 min-w-0"><p className="text-sm font-medium">{new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>{a.deal_name && <Badge variant="secondary" className="text-xs mt-1"><Target className="w-3 h-3 mr-1" />{a.deal_name}</Badge>}{a.transcript_preview && <p className="text-xs text-muted-foreground truncate mt-1">{a.transcript_preview}</p>}</div><div className="flex gap-1" onClick={e => e.stopPropagation()}><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteAnalysisDialog(a)}><Trash2 className="w-4 h-4" /></Button></div></CardContent></Card>))}</div></div>}
+            
+            {/* Saved Analyses with outcome badges */}
+            {savedAnalyses.length > 0 && <div><h3 className="text-base font-semibold mb-3">Análises Salvas ({savedAnalyses.length})</h3><div className="space-y-2">{savedAnalyses.map(a => {
+              const outcomeConf = getOutcomeConfig(a.call_outcome);
+              const OutcomeIcon = outcomeConf?.icon;
+              return (
+                <Card key={a.id} className="cursor-pointer hover:border-primary/30" onClick={() => setViewingAnalysis(a)}>
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium">{new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                        {outcomeConf && (
+                          <Badge variant="secondary" className={cn("text-xs", outcomeConf.bgColor, outcomeConf.color)}>
+                            {OutcomeIcon && <OutcomeIcon className="w-3 h-3 mr-1" />}
+                            {outcomeConf.label}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap mt-1">
+                        {a.deal_name && <Badge variant="secondary" className="text-xs"><Target className="w-3 h-3 mr-1" />{a.deal_name}</Badge>}
+                        {a.client_name && <Badge variant="outline" className="text-xs"><UserCheck className="w-3 h-3 mr-1" />{a.client_name}</Badge>}
+                      </div>
+                      {a.transcript_preview && <p className="text-xs text-muted-foreground truncate mt-1">{a.transcript_preview}</p>}
+                    </div>
+                    <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteAnalysisDialog(a)}><Trash2 className="w-4 h-4" /></Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}</div></div>}
           </div>
         </TabsContent>
 
