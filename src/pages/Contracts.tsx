@@ -88,6 +88,7 @@ import {
 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
 import { InstallmentsEditor, InstallmentDetail } from "@/components/contracts/InstallmentsEditor";

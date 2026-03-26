@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { withRetry } from "@/lib/retryFetch";
 import { useLinkedClients, getLinkedClientName } from "@/hooks/useLinkedClients";
 import { Button } from "@/components/ui/button";
