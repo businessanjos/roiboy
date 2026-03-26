@@ -663,7 +663,16 @@ export default function RoyZapp() {
     navigate,
     onConversationUpdated: handleConversationUpdated,
   });
-  
+
+  // CRUD operations hook (departments, agents, tags)
+  const crud = useZappCrudOperations({
+    userId: currentUser?.id,
+    accountId: currentUser?.account_id,
+    departments,
+    tags,
+    fetchData,
+  });
+
   // Notification system - handle view chat callback
   const handleNotificationViewChat = useCallback((conversationId: string) => {
     const assignment = assignments.find(
