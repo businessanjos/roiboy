@@ -325,8 +325,21 @@ export default function SalesScripts() {
 
         {/* ANALYSIS */}
         <TabsContent value="analysis">
-          <div className="space-y-6">
-            <div><h2 className="text-lg font-semibold mb-1">Análise de Calls de Vendas</h2><p className="text-sm text-muted-foreground">Envie transcrições para identificar objeções, erros e melhorias</p></div>
+          <div className="space-y-4">
+            <div><h2 className="text-lg font-semibold mb-1">Central de Calls</h2><p className="text-sm text-muted-foreground">Análise, ICP, comparativo e ranking do time</p></div>
+
+            <Tabs value={analysisSubTab} onValueChange={setAnalysisSubTab}>
+              <div className="overflow-x-auto -mx-4 px-4">
+                <TabsList className="h-9 p-0.5 bg-muted/60 gap-0.5 inline-flex w-auto">
+                  <TabsTrigger value="analyze" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Mic className="w-3.5 h-3.5" />Analisar</TabsTrigger>
+                  <TabsTrigger value="icp" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Target className="w-3.5 h-3.5" />ICP</TabsTrigger>
+                  <TabsTrigger value="comparative" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><TrendingUp className="w-3.5 h-3.5" />Comparativo</TabsTrigger>
+                  <TabsTrigger value="ideal-script" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Crown className="w-3.5 h-3.5" />Script Ideal</TabsTrigger>
+                  <TabsTrigger value="ranking" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1"><Trophy className="w-3.5 h-3.5" />Ranking</TabsTrigger>
+                </TabsList>
+              </div>
+
+              <TabsContent value="analyze" className="space-y-6 mt-4">
             <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Mic className="w-5 h-5 text-primary" />Transcrição da Call</CardTitle></CardHeader><CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Vincular a um card do pipeline (opcional)</Label>
