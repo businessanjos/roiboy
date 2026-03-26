@@ -195,7 +195,7 @@ const App = () => (
                             <Route path="/account-settings" element={<AccountSettings />} />
                             <Route path="/reminders" element={<Reminders />} />
                             
-                            <Route path="/roy-zapp" element={<RoyZapp />} />
+                            <Route path="/roy-zapp" element={<ZappErrorBoundary><RoyZapp /></ZappErrorBoundary>} />
                             
                             
                             <Route path="/billing" element={<BillingPortal />} />
