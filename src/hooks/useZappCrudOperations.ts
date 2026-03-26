@@ -357,7 +357,7 @@ export function useZappCrudOperations({
               account_id: accountId,
               assignment_id: taggingAssignmentId,
               tag_id: tagId,
-              created_by: accountId, // Will be overridden
+              created_by: userId || accountId,
             }))
           );
         
