@@ -1441,7 +1441,7 @@ export default function Contracts() {
       }
 
       // Determine status based on start_date
-      const startDate = new Date(formData.start_date);
+      const startDate = parseLocalDate(formData.start_date) || new Date();
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const isFutureStart = startDate > today;
