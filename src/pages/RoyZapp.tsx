@@ -673,6 +673,39 @@ export default function RoyZapp() {
     fetchData,
   });
 
+  // Conversation actions hook (assign, release, transfer, delete, flags)
+  const convActions = useZappConversationActions({
+    currentAgent,
+    assignments,
+    selectedConversation,
+    filterStatus,
+    isAdmin,
+    agents,
+    setAssignments,
+    setSelectedConversation,
+    setInboxTab,
+    setFilterStatus,
+    fetchData,
+    markAsRead: (conversationId: string) => {
+      // Inline markAsRead for the hook - same logic
+      supabase
+        .from("zapp_conversations")
+        .update({ unread_count: 0 })
+        .eq("id", conversationId)
+        .then();
+      setAssignments(prev => prev.map(a => 
+        a.zapp_conversation?.id === conversationId 
+          ? { ...a, zapp_conversation: { ...a.zapp_conversation!, unread_count: 0 } }
+          : a
+      ));
+    },
+    getAgentName: (agentId: string | null) => {
+      if (!agentId) return null;
+      const agent = agents.find(a => a.id === agentId);
+      return agent?.user?.name || null;
+    },
+  });
+
   // Notification system - handle view chat callback
   const handleNotificationViewChat = useCallback((conversationId: string) => {
     const assignment = assignments.find(
