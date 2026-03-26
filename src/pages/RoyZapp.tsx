@@ -630,6 +630,24 @@ export default function RoyZapp() {
     return saved !== null ? saved === "true" : true;
   });
   
+  // Callback to update local assignment state when a message is sent
+  const handleConversationUpdated = useCallback((conversationId: string, lastMessageAt: string, lastMessagePreview: string) => {
+    setAssignments(prev => prev.map(a => {
+      if (a.zapp_conversation_id === conversationId || a.zapp_conversation?.id === conversationId) {
+        return {
+          ...a,
+          zapp_conversation: a.zapp_conversation ? {
+            ...a.zapp_conversation,
+            last_message_at: lastMessageAt,
+            last_message_preview: lastMessagePreview,
+            unread_count: 0,
+          } : a.zapp_conversation,
+        };
+      }
+      return a;
+    }));
+  }, [setAssignments]);
+
   // Messaging hook - handles send, recording, media, quick replies, etc.
   const messaging = useZappMessaging({
     selectedConversation,
@@ -642,6 +660,7 @@ export default function RoyZapp() {
     userSignature,
     signatureEnabled,
     navigate,
+    onConversationUpdated: handleConversationUpdated,
   });
   
   // Notification system - handle view chat callback

@@ -15,6 +15,7 @@ interface UseZappMessagingProps {
   userSignature: string;
   signatureEnabled: boolean;
   navigate: (path: string) => void;
+  onConversationUpdated?: (conversationId: string, lastMessageAt: string, lastMessagePreview: string) => void;
 }
 
 export function useZappMessaging({
@@ -28,6 +29,7 @@ export function useZappMessaging({
   userSignature,
   signatureEnabled,
   navigate,
+  onConversationUpdated,
 }: UseZappMessagingProps) {
   // Message input state
   const [messageInput, setMessageInput] = useState("");
@@ -306,6 +308,8 @@ export function useZappMessaging({
             last_message_preview: messageContent.substring(0, 100),
             unread_count: 0,
           }).eq("id", conversationId);
+          
+          onConversationUpdated?.(conversationId, now, messageContent.substring(0, 100));
         }
       } catch (error: any) {
         console.error("Error sending message:", error);
@@ -415,6 +419,8 @@ export function useZappMessaging({
                 last_message_preview: messageContent.substring(0, 100),
                 unread_count: 0,
               }).eq("id", conversationId);
+              
+              onConversationUpdated?.(conversationId, now, messageContent.substring(0, 100));
             }
             
             return;
@@ -543,11 +549,14 @@ export function useZappMessaging({
           ));
         }
         
+        const mediaPreview = mediaType === "image" ? "📷 Imagem" : mediaType === "video" ? "🎬 Vídeo" : `📎 ${file.name}`;
         await supabase.from("zapp_conversations").update({
           last_message_at: now,
-          last_message_preview: mediaType === "image" ? "📷 Imagem" : mediaType === "video" ? "🎬 Vídeo" : `📎 ${file.name}`,
+          last_message_preview: mediaPreview,
           unread_count: 0,
         }).eq("id", selectedConversation.zapp_conversation_id);
+        
+        onConversationUpdated?.(selectedConversation.zapp_conversation_id, now, mediaPreview);
       }
       
       toast.success(mediaType === "image" ? "Imagem enviada!" : mediaType === "video" ? "Vídeo enviado!" : "Arquivo enviado!");
@@ -789,6 +798,8 @@ export function useZappMessaging({
           last_message_preview: "🎤 Áudio",
           unread_count: 0,
         }).eq("id", selectedConversation.zapp_conversation_id);
+        
+        onConversationUpdated?.(selectedConversation.zapp_conversation_id, now, "🎤 Áudio");
       }
       
       toast.success("Áudio enviado!");
@@ -976,11 +987,14 @@ export function useZappMessaging({
           ));
         }
         
+        const contactPreview = `📇 ${client.full_name}`;
         await supabase.from("zapp_conversations").update({
           last_message_at: now,
-          last_message_preview: `📇 ${client.full_name}`,
+          last_message_preview: contactPreview,
           unread_count: 0,
         }).eq("id", selectedConversation.zapp_conversation_id);
+        
+        onConversationUpdated?.(selectedConversation.zapp_conversation_id, now, contactPreview);
       }
       
       toast.success("Contato enviado!");
