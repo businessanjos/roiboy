@@ -1740,137 +1740,80 @@ export default function Contracts() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4 text-center">
-            <div className="p-2 rounded-lg bg-primary/10 w-fit mx-auto mb-2">
-              <FileText className="h-5 w-5 text-primary" />
-            </div>
-            <p className="text-2xl font-bold">{stats.total}</p>
-            <p className="text-xs text-muted-foreground">Total</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4 text-center">
-            <div className="p-2 rounded-lg bg-green-500/10 w-fit mx-auto mb-2">
-              <CheckCircle className="h-5 w-5 text-green-600" />
-            </div>
-            <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-            <p className="text-xs text-muted-foreground">Ativos</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4 text-center">
-            <div className="p-2 rounded-lg bg-blue-500/10 w-fit mx-auto mb-2">
-              <Clock className="h-5 w-5 text-blue-600" />
-            </div>
-            <p className="text-2xl font-bold text-blue-600">{stats.pending}</p>
-            <p className="text-xs text-muted-foreground">Pendentes</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4 text-center">
-            <div className="p-2 rounded-lg bg-indigo-500/10 w-fit mx-auto mb-2">
-              <Clock className="h-5 w-5 text-indigo-600" />
-            </div>
-            <p className="text-2xl font-bold text-indigo-600">{stats.scheduled}</p>
-            <p className="text-xs text-muted-foreground">A Iniciar</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4 text-center">
-            <div className="p-2 rounded-lg bg-orange-500/10 w-fit mx-auto mb-2">
-              <Ban className="h-5 w-5 text-orange-600" />
-            </div>
-            <p className="text-2xl font-bold text-orange-600">{stats.suspended}</p>
-            <p className="text-xs text-muted-foreground">Suspensos</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4 text-center">
-            <div className="p-2 rounded-lg bg-amber-500/10 w-fit mx-auto mb-2">
-              <PauseCircle className="h-5 w-5 text-amber-600" />
-            </div>
-            <p className="text-2xl font-bold text-amber-600">{stats.paused}</p>
-            <p className="text-xs text-muted-foreground">Pausados</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4 text-center">
-            <div className="p-2 rounded-lg bg-red-500/10 w-fit mx-auto mb-2">
-              <XCircle className="h-5 w-5 text-red-600" />
-            </div>
-            <p className="text-2xl font-bold text-red-600">{stats.cancelled}</p>
-            <p className="text-xs text-muted-foreground">Cancelados</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4 text-center">
-            <div className="p-2 rounded-lg bg-slate-500/10 w-fit mx-auto mb-2">
-              <Ban className="h-5 w-5 text-slate-600" />
-            </div>
-            <p className="text-2xl font-bold text-slate-600">{stats.ended}</p>
-            <p className="text-xs text-muted-foreground">Encerrados</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4 text-center">
-            <div className="p-2 rounded-lg bg-rose-500/10 w-fit mx-auto mb-2">
-              <XCircle className="h-5 w-5 text-rose-600" />
-            </div>
-            <p className="text-2xl font-bold text-rose-600">{stats.dismissed}</p>
-            <p className="text-xs text-muted-foreground">Demitidas</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4 text-center">
-            <div className="p-2 rounded-lg bg-pink-500/10 w-fit mx-auto mb-2">
-              <XCircle className="h-5 w-5 text-pink-600" />
-            </div>
-            <p className="text-2xl font-bold text-pink-600">{stats.dropout_7d}</p>
-            <p className="text-xs text-muted-foreground">Desistência 7D</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4 text-center">
-            <div className="p-2 rounded-lg bg-emerald-500/10 w-fit mx-auto mb-2">
-              <TrendingUp className="h-5 w-5 text-emerald-600" />
-            </div>
-            <p className="text-lg font-bold text-emerald-600">{formatCurrency(stats.totalValue)}</p>
-            <p className="text-xs text-muted-foreground">Valor Total</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4 text-center">
-            <div className="p-2 rounded-lg bg-amber-500/10 w-fit mx-auto mb-2">
-              <Clock className="h-5 w-5 text-amber-600" />
-            </div>
-            <p className="text-2xl font-bold text-amber-600">{stats.expiringSoon}</p>
-            <p className="text-xs text-muted-foreground">Vencendo</p>
-          </CardContent>
-        </Card>
-
-        <Card className="hover:shadow-md transition-shadow">
-          <CardContent className="p-4 text-center">
-            <div className="p-2 rounded-lg bg-red-500/10 w-fit mx-auto mb-2">
-              <AlertTriangle className="h-5 w-5 text-red-600" />
-            </div>
-            <p className="text-2xl font-bold text-red-600">{stats.expired}</p>
-            <p className="text-xs text-muted-foreground">Vencidos</p>
-          </CardContent>
-        </Card>
+      {/* Compact Stats Strip */}
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium">
+          <FileText className="h-3 w-3" />
+          {stats.total} Total
+        </Badge>
+        <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-green-600 border-green-600/30 bg-green-500/5">
+          <CheckCircle className="h-3 w-3" />
+          {stats.active} Ativos
+        </Badge>
+        {stats.pending > 0 && (
+          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-blue-600 border-blue-600/30 bg-blue-500/5">
+            <Clock className="h-3 w-3" />
+            {stats.pending} Pendentes
+          </Badge>
+        )}
+        {stats.scheduled > 0 && (
+          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-indigo-600 border-indigo-600/30 bg-indigo-500/5">
+            <Clock className="h-3 w-3" />
+            {stats.scheduled} A Iniciar
+          </Badge>
+        )}
+        {stats.suspended > 0 && (
+          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-orange-600 border-orange-600/30 bg-orange-500/5">
+            <Ban className="h-3 w-3" />
+            {stats.suspended} Suspensos
+          </Badge>
+        )}
+        {stats.paused > 0 && (
+          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-amber-600 border-amber-600/30 bg-amber-500/5">
+            <PauseCircle className="h-3 w-3" />
+            {stats.paused} Pausados
+          </Badge>
+        )}
+        {stats.cancelled > 0 && (
+          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-red-600 border-red-600/30 bg-red-500/5">
+            <XCircle className="h-3 w-3" />
+            {stats.cancelled} Cancelados
+          </Badge>
+        )}
+        {stats.ended > 0 && (
+          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-muted-foreground">
+            <Ban className="h-3 w-3" />
+            {stats.ended} Encerrados
+          </Badge>
+        )}
+        {stats.dismissed > 0 && (
+          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-rose-600 border-rose-600/30 bg-rose-500/5">
+            <XCircle className="h-3 w-3" />
+            {stats.dismissed} Demitidas
+          </Badge>
+        )}
+        {stats.dropout_7d > 0 && (
+          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-pink-600 border-pink-600/30 bg-pink-500/5">
+            <XCircle className="h-3 w-3" />
+            {stats.dropout_7d} Desistência 7D
+          </Badge>
+        )}
+        <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-emerald-600 border-emerald-600/30 bg-emerald-500/5">
+          <TrendingUp className="h-3 w-3" />
+          {formatCurrency(stats.totalValue)}
+        </Badge>
+        {stats.expiringSoon > 0 && (
+          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-amber-600 border-amber-600/30 bg-amber-500/5">
+            <Clock className="h-3 w-3" />
+            {stats.expiringSoon} Vencendo
+          </Badge>
+        )}
+        {stats.expired > 0 && (
+          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-red-600 border-red-600/30 bg-red-500/5">
+            <AlertTriangle className="h-3 w-3" />
+            {stats.expired} Vencidos
+          </Badge>
+        )}
       </div>
 
       {/* Tabs for Reconciliation Status */}
