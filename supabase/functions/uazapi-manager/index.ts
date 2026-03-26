@@ -193,16 +193,57 @@ serve(async (req) => {
     let result: unknown = { success: true };
 
     if (action === "status") {
-      const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET");
-      const all = extractInstancesList(allRaw);
-      const inst = all.find((i) => getInstanceName(i) === instanceName);
-      const instanceStatus = getInstanceStatus(inst || {});
-      const connected = instanceStatus === "connected" || instanceStatus === "open";
+      let instanceStatus: string | undefined = "unknown";
+      let connected = false;
+      let owner: string | undefined;
+
+      // Try admin endpoint first
+      try {
+        const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET");
+        const all = extractInstancesList(allRaw);
+        const inst = all.find((i) => getInstanceName(i) === instanceName);
+        instanceStatus = getInstanceStatus(inst || {});
+        connected = instanceStatus === "connected" || instanceStatus === "open";
+        owner = inst ? getInstanceOwner(inst) : undefined;
+      } catch (adminErr) {
+        console.warn(`[uazapi-manager] Admin fetchInstances failed, trying instance-level status check for: ${instanceName}`);
+        
+        // Fallback: use instance token to check status directly
+        if (token) {
+          try {
+            const instanceInfo = await uazapiInstance("/status", "GET", token);
+            console.log(`[uazapi-manager] Instance status fallback response:`, JSON.stringify(instanceInfo).substring(0, 300));
+            
+            // Try multiple response formats
+            const state = instanceInfo?.state || instanceInfo?.status || instanceInfo?.instance?.state || instanceInfo?.data?.state;
+            instanceStatus = state || "unknown";
+            connected = instanceStatus === "connected" || instanceStatus === "open";
+            owner = instanceInfo?.owner || instanceInfo?.phone || instanceInfo?.number;
+            
+            // If /status doesn't work, try sending a simple presence check
+            if (instanceStatus === "unknown") {
+              try {
+                const meInfo = await uazapiInstance("/me", "GET", token);
+                if (meInfo && (meInfo.id || meInfo.wid || meInfo.phone || meInfo.number)) {
+                  connected = true;
+                  instanceStatus = "connected";
+                  owner = meInfo.phone || meInfo.number || meInfo.id;
+                  console.log(`[uazapi-manager] /me endpoint confirmed connected:`, owner);
+                }
+              } catch {
+                console.log(`[uazapi-manager] /me endpoint also failed`);
+              }
+            }
+          } catch (instErr) {
+            console.warn(`[uazapi-manager] Instance-level status check also failed:`, instErr);
+          }
+        }
+      }
 
       result = {
         state: instanceStatus || "unknown",
         connected,
-        owner: inst ? getInstanceOwner(inst) : undefined,
+        owner,
       };
 
       if (intData?.id) {
