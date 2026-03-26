@@ -9,6 +9,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { withRetry } from "@/lib/retryFetch";
 import { useNavigate } from "react-router-dom";
 import { ZappPinDialog } from "./dialogs/ZappPinDialog";
 import {
