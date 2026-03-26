@@ -368,7 +368,7 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
                           )}
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {format(new Date(entry.due_date), "dd/MM", { locale: ptBR })}
+                            {format(parseLocalDate(entry.due_date)!, "dd/MM", { locale: ptBR })}
                           </span>
                         </div>
                       </div>
