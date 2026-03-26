@@ -430,6 +430,16 @@ export default function FinancialEntriesPage() {
     return matchesSearch && matchesStatus && matchesCategory && matchesConciliation;
   });
 
+  const {
+    paginatedItems: paginatedEntries,
+    currentPage,
+    pageSize,
+    totalPages,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = useTablePagination(filteredEntries);
+
   // Calculate totals
   const totals = filteredEntries.reduce(
     (acc, entry) => {
