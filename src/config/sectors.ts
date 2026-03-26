@@ -44,6 +44,7 @@ export interface NavItem {
   icon: LucideIcon;
   label: string;
   permission?: Permission | Permission[];
+  group?: string;
 }
 
 export interface Sector {
