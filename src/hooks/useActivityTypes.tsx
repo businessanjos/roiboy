@@ -30,10 +30,10 @@ export function useActivityTypes(sectorId?: string | null) {
       
       const allTypes = data as ActivityType[];
       
-      // Filter by sector: include types for the specified sector OR types with no sector (null)
+      // Filter by sector: only include types that explicitly belong to the specified sector
       if (sectorId) {
         return allTypes.filter(
-          type => type.sector_id === null || type.sector_id === sectorId
+          type => type.sector_id === sectorId
         );
       }
       

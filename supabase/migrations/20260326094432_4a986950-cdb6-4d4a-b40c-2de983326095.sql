@@ -1,0 +1,1 @@
+UPDATE public.activity_types SET sector_id = 'operacoes' WHERE sector_id IS NULL;
