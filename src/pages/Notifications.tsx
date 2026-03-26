@@ -138,10 +138,8 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
         </div>
       </div>
 
-      {/* Push notification preferences */}
-      {notificationPermission === "granted" && (
-        <PushNotificationPreferences />
-      )}
+      {/* Push notification preferences - always visible */}
+      <PushNotificationPreferences />
 
       {/* Category tabs */}
       <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
