@@ -58,35 +58,7 @@ function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
   return map;
 }
 
-// Extract unresolved JIDs from message contents
-function extractUnresolvedJids(messages: Message[], mentionMap: Record<string, string>): string[] {
-  const mentionRegex = /@(\d{5,})/g;
-  const unresolved = new Set<string>();
-  
-  for (const msg of messages) {
-    if (!msg.content) continue;
-    let match;
-    mentionRegex.lastIndex = 0;
-    while ((match = mentionRegex.exec(msg.content)) !== null) {
-      const jid = match[1];
-      // Check if already resolved
-      if (mentionMap[jid]) continue;
-      // Check partial matches
-      const last8 = jid.slice(-8);
-      const last9 = jid.slice(-9);
-      let found = false;
-      for (const key of Object.keys(mentionMap)) {
-        if (key.endsWith(last8) || key.endsWith(last9) || 
-            jid.endsWith(key.slice(-8)) || jid.endsWith(key.slice(-9))) {
-          found = true;
-          break;
-        }
-      }
-      if (!found) unresolved.add(jid);
-    }
-  }
-  return Array.from(unresolved);
-}
+// extractUnresolvedJids removed — no longer doing DB lookups for mentions
 
 export function ZappMessagesList({
   messages,
