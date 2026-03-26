@@ -1119,29 +1119,58 @@ export default function RoyZapp() {
   // Release conversation back to queue
   const releaseToQueue = async (assignmentId: string) => {
     try {
+      const releasedAt = new Date().toISOString();
+
       const { error } = await supabase
         .from("zapp_conversation_assignments")
         .update({ 
           agent_id: null, 
           status: "pending",
-          updated_at: new Date().toISOString()
+          assigned_at: null,
+          closed_at: null,
+          updated_at: releasedAt
         })
         .eq("id", assignmentId);
 
       if (error) throw error;
       
       toast.success("Conversa devolvida para a fila!");
-      fetchData();
+
+      // If user was viewing finalized conversations, switch back so the returned ticket is visible
+      if (filterStatus === "closed") {
+        setFilterStatus("all");
+      }
+      setInboxTab("queue");
+
+      // Update local list immediately so it appears in queue without waiting for refetch
+      setAssignments(prev => prev.map(a => 
+        a.id === assignmentId
+          ? {
+              ...a,
+              agent_id: null,
+              assigned_at: null,
+              closed_at: null,
+              updated_at: releasedAt,
+              status: "pending" as const,
+              agent: null,
+            }
+          : a
+      ));
       
       // Update selected conversation locally
       if (selectedConversation?.id === assignmentId) {
         setSelectedConversation(prev => prev ? {
           ...prev,
           agent_id: null,
+          assigned_at: null,
+          closed_at: null,
           status: "pending" as const,
+          updated_at: releasedAt,
           agent: null
         } : null);
       }
+
+      fetchData();
     } catch (error: any) {
       console.error("Error releasing conversation:", error);
       toast.error(error.message || "Erro ao devolver conversa");
