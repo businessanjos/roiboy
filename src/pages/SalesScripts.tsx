@@ -179,7 +179,7 @@ export default function SalesScripts() {
   // Mutations
   const saveMaterialMutation = useMutation({
     mutationFn: async (form: typeof materialForm) => {
-      const payload: any = { account_id: accountId!, material_type: form.material_type, title: form.title, content: form.content || '', is_active: true };
+      const payload: any = { account_id: accountId!, material_type: form.material_type, title: form.title, content: form.content || '', is_active: true, user_id: currentUser?.id! };
       if (editingMaterial) {
         const { error } = await supabase.from('sales_materials').update(payload).eq('id', editingMaterial.id);
         if (error) throw error;
