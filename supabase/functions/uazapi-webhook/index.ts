@@ -853,7 +853,12 @@ serve(async (req) => {
         // 2. msg.contextInfo - Standard WhatsApp format
         // 3. msg.extendedTextMessage?.contextInfo
         // 4. msg.quotedMsg - Alternative format
-        const contextInfo = msg.contextInfo || msg.extendedTextMessage?.contextInfo || (msgAnyQuote.contextInfo as Record<string, unknown>);
+        // 5. msg.message?.extendedTextMessage?.contextInfo (Baileys nested format)
+        const nestedMessage = msgAnyQuote.message as Record<string, unknown> | undefined;
+        const nestedExtended = nestedMessage?.extendedTextMessage as Record<string, unknown> | undefined;
+        const nestedContextInfo = nestedExtended?.contextInfo as Record<string, unknown> | undefined;
+        
+        const contextInfo = msg.contextInfo || msg.extendedTextMessage?.contextInfo || (msgAnyQuote.contextInfo as Record<string, unknown>) || nestedContextInfo;
         
         // CRITICAL FIX: UAZAPI uses 'quoted' field for quoted messages
         const uazapiQuoted = msgAnyQuote.quoted as Record<string, unknown>;
@@ -865,8 +870,28 @@ serve(async (req) => {
         const quotedMsgId = msg.quotedMessageId || 
                             (uazapiQuoted?.id as string) ||
                             (uazapiQuoted?.messageid as string) ||
-                            (contextInfo?.stanzaId as string) || 
+                            (contextInfo?.stanzaId as string) ||
+                            (nestedContextInfo?.stanzaId as string) ||
                             null;
+        
+        // Debug: Log quote-related keys when message looks like a reply but no quote data found
+        if (!quotedMsg && !quotedMsgId) {
+          const quoteKeys = Object.keys(msgAnyQuote).filter(k => 
+            k.toLowerCase().includes('quot') || k.toLowerCase().includes('reply') || 
+            k.toLowerCase().includes('context') || k === 'message'
+          );
+          if (quoteKeys.length > 0) {
+            console.log(`[QUOTE-DEBUG] Message ${messageId} has potential quote keys: ${quoteKeys.join(', ')}`);
+            for (const k of quoteKeys) {
+              const val = msgAnyQuote[k];
+              if (val && typeof val === 'object') {
+                console.log(`[QUOTE-DEBUG] ${k} keys: ${Object.keys(val as Record<string, unknown>).join(', ')}`);
+              }
+            }
+          }
+        } else if (quotedMsg || quotedMsgId) {
+          console.log(`[QUOTE] Found quote data for ${messageId}: id=${quotedMsgId}, hasContent=${!!quotedMsg}`);
+        }
         
         // Extract quoted content from various formats (UAZAPI sends in different ways)
         let quotedContent: string | null = null;

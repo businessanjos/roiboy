@@ -399,7 +399,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
               id: newMsg.id,
               content: newMsg.content,
               is_from_client: newMsg.direction === 'inbound',
-              created_at: newMsg.created_at,
+              created_at: newMsg.sent_at || newMsg.created_at,
               message_type: newMsg.message_type || 'text',
               media_url: newMsg.media_url,
               media_type: newMsg.media_type,
@@ -407,6 +407,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
               media_filename: newMsg.media_filename,
               audio_duration_sec: newMsg.audio_duration_sec,
               sender_name: newMsg.sender_name,
+              sender_phone: newMsg.sender_phone || null,
               delivery_status: newMsg.delivery_status,
               media_download_status: newMsg.media_download_status,
               external_message_id: newMsg.external_message_id,
@@ -415,7 +416,9 @@ export function useZappConversations(options: UseZappConversationsOptions) {
               quoted_message_id: newMsg.quoted_message_id,
               quoted_content: newMsg.quoted_content,
               quoted_sender_name: newMsg.quoted_sender_name,
-              is_edited: newMsg.is_edited,
+              is_edited: newMsg.is_edited || false,
+              updated_at: newMsg.updated_at || null,
+              mention_map: newMsg.mention_map || null,
             };
 
             setMessages(prev => {
@@ -424,7 +427,10 @@ export function useZappConversations(options: UseZappConversationsOptions) {
                 (m.external_message_id && newMsg.external_message_id && m.external_message_id === newMsg.external_message_id)
               );
               if (exists) return prev;
-              return [...prev, newFormattedMsg];
+              // Insert in chronological order based on sent_at/created_at
+              const updated = [...prev, newFormattedMsg];
+              updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+              return updated;
             });
           }
 
