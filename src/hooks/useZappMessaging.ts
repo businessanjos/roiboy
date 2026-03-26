@@ -279,12 +279,20 @@ export function useZappMessaging({
           body: payload,
         });
         
-        if (error) throw error;
+        if (error) {
+          console.error("[ZAPP-SEND] Edge function error:", JSON.stringify(error));
+          throw error;
+        }
+        if (sendResult?.error) {
+          console.error("[ZAPP-SEND] Edge function returned error:", sendResult.error);
+          throw new Error(sendResult.error);
+        }
+        console.log("[ZAPP-SEND] Edge function OK");
         
         const externalId = sendResult?.data?.id || sendResult?.data?.messageid || sendResult?.id || sendResult?.messageid || null;
         
         if (conversationId) {
-          const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
+          const { data: insertedMessage, error: insertErr } = await supabase.from("zapp_messages").insert({
             account_id: accountId,
             zapp_conversation_id: conversationId,
             direction: "outbound",
@@ -298,6 +306,10 @@ export function useZappMessaging({
               ? (replyContext.sender_name || "Cliente") 
               : "Você",
           }).select("id").single();
+
+          if (insertErr) {
+            console.error("[ZAPP-SEND] Insert zapp_messages error:", insertErr);
+          }
           
           if (insertedMessage) {
             setMessages(prev => prev.map(m => 
@@ -393,10 +405,13 @@ export function useZappMessaging({
               body: retryPayload,
             });
             
-            if (retryError) throw retryError;
+            if (retryError) {
+              console.error("[ZAPP-SEND] Retry edge function error:", JSON.stringify(retryError));
+              throw retryError;
+            }
             
             if (conversationId) {
-              const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
+              const { data: insertedMessage, error: retryInsertErr } = await supabase.from("zapp_messages").insert({
                 account_id: accountId,
                 zapp_conversation_id: conversationId,
                 direction: "outbound",
@@ -409,6 +424,10 @@ export function useZappMessaging({
                   ? (replyContext.sender_name || "Cliente") 
                   : "Você",
               }).select("id").single();
+
+              if (retryInsertErr) {
+                console.error("[ZAPP-SEND] Retry insert error:", retryInsertErr);
+              }
               
               if (insertedMessage) {
                 setMessages(prev => prev.map(m => 
@@ -990,12 +1009,15 @@ export function useZappMessaging({
       }
       
       const { data: contactSendResult, error } = await supabase.functions.invoke("uazapi-manager", { body: payload });
-      if (error) throw error;
+      if (error) {
+        console.error("[ZAPP-CONTACT] Edge function error:", JSON.stringify(error));
+        throw error;
+      }
       
       const contactExternalId = contactSendResult?.data?.id || contactSendResult?.data?.messageid || contactSendResult?.id || contactSendResult?.messageid || null;
       
       if (selectedConversation.zapp_conversation_id) {
-        const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
+        const { data: insertedMessage, error: contactInsertErr } = await supabase.from("zapp_messages").insert({
           account_id: currentUser!.account_id,
           zapp_conversation_id: selectedConversation.zapp_conversation_id,
           direction: "outbound",
@@ -1004,6 +1026,11 @@ export function useZappMessaging({
           sent_at: now,
           external_message_id: contactExternalId,
         }).select("id").single();
+
+        if (contactInsertErr) {
+          console.error("[ZAPP-CONTACT] Insert error:", contactInsertErr);
+          toast.error("Contato enviado mas falha ao salvar: " + contactInsertErr.message);
+        }
         
         if (insertedMessage) {
           setMessages(prev => prev.map(m => 
