@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useTablePagination } from "@/hooks/useTablePagination";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -143,6 +145,16 @@ export function FinancialClientsTab() {
     // recent - assume clients are returned sorted by created_at or use full_name as fallback
     return 0;
   });
+
+  const {
+    paginatedItems: paginatedClients,
+    currentPage: clientPage,
+    pageSize: clientPageSize,
+    totalPages: clientTotalPages,
+    totalItems: clientTotalItems,
+    handlePageChange: handleClientPageChange,
+    handlePageSizeChange: handleClientPageSizeChange,
+  } = useTablePagination(filteredClients);
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -637,8 +649,9 @@ export function FinancialClientsTab() {
               {searchTerm ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
             </p>
           ) : (
-            <div className="space-y-2 max-h-[500px] overflow-y-auto">
-              {filteredClients.map((client) => {
+            <>
+            <div className="space-y-2">
+              {paginatedClients.map((client) => {
                 const doc = getDocumentDisplay(client);
                 return (
                   <div
@@ -707,6 +720,15 @@ export function FinancialClientsTab() {
                 );
               })}
             </div>
+            <TablePagination
+              currentPage={clientPage}
+              totalPages={clientTotalPages}
+              totalItems={clientTotalItems}
+              pageSize={clientPageSize}
+              onPageChange={handleClientPageChange}
+              onPageSizeChange={handleClientPageSizeChange}
+            />
+            </>
           )}
         </CardContent>
       </Card>
