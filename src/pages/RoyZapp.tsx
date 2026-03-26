@@ -7,6 +7,7 @@ import { useZappMessaging } from "@/hooks/useZappMessaging";
 import { useZappNotifications } from "@/hooks/useZappNotifications";
 import { useZappConversationActions } from "@/hooks/useZappConversationActions";
 import { useZappCrudOperations } from "@/hooks/useZappCrudOperations";
+import { useZappContactOperations } from "@/hooks/useZappContactOperations";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
