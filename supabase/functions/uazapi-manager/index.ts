@@ -279,8 +279,7 @@ serve(async (req) => {
       
       const textBody: Record<string, unknown> = { number: cleanPhone, text: message };
       if (payload.quoted_message_id) {
-        textBody.quotedMsgId = payload.quoted_message_id;
-        textBody.quoted = payload.quoted_message_id;
+        textBody.replyid = payload.quoted_message_id;
       }
       if (payload.mentions) textBody.mentions = payload.mentions;
       
@@ -299,7 +298,7 @@ serve(async (req) => {
         file: payload.media_url,
         text: payload.caption || ""
       };
-      if (payload.quoted_message_id) { mediaBody.quotedMsgId = payload.quoted_message_id; mediaBody.quoted = payload.quoted_message_id; }
+      if (payload.quoted_message_id) { mediaBody.replyid = payload.quoted_message_id; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
       result = await uazapiInstance("/send/media", "POST", token!, mediaBody);
@@ -309,7 +308,7 @@ serve(async (req) => {
       const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
       
       const groupBody: Record<string, unknown> = { number: jid, text: message };
-      if (payload.quoted_message_id) { groupBody.quotedMsgId = payload.quoted_message_id; groupBody.quoted = payload.quoted_message_id; }
+      if (payload.quoted_message_id) { groupBody.replyid = payload.quoted_message_id; }
       if (payload.mentions) groupBody.mentions = payload.mentions;
       
       result = await uazapiInstance("/send/text", "POST", token!, groupBody);
@@ -324,7 +323,7 @@ serve(async (req) => {
         file: payload.media_url,
         text: payload.caption || ""
       };
-      if (payload.quoted_message_id) { mediaBody.quotedMsgId = payload.quoted_message_id; mediaBody.quoted = payload.quoted_message_id; }
+      if (payload.quoted_message_id) { mediaBody.replyid = payload.quoted_message_id; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
       result = await uazapiInstance("/send/media", "POST", token!, mediaBody);
