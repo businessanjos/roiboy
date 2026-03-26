@@ -309,7 +309,7 @@ serve(async (req) => {
       const jid = group_id?.includes("@g.us") ? group_id : `${group_id}@g.us`;
       
       const groupBody: Record<string, unknown> = { number: jid, text: message };
-      if (payload.quoted_message_id) groupBody.replyid = payload.quoted_message_id;
+      if (payload.quoted_message_id) { groupBody.quotedMsgId = payload.quoted_message_id; groupBody.quoted = payload.quoted_message_id; }
       if (payload.mentions) groupBody.mentions = payload.mentions;
       
       result = await uazapiInstance("/send/text", "POST", token!, groupBody);
