@@ -810,6 +810,7 @@ export default function FinancialNotasFiscaisPage() {
               ))}
             </div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -914,6 +915,7 @@ export default function FinancialNotasFiscaisPage() {
               onPageChange={handlePageChange}
               onPageSizeChange={handlePageSizeChange}
             />
+            </>
           )}
         </CardContent>
       </Card>

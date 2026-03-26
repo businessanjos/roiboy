@@ -321,6 +321,7 @@ export default function FinancialAgingPage() {
                 </p>
               </div>
             ) : (
+              <>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -388,6 +389,7 @@ export default function FinancialAgingPage() {
                 onPageChange={handleAgingPageChange}
                 onPageSizeChange={handleAgingPageSizeChange}
               />
+              </>
             )}
           </ScrollArea>
         </CardContent>

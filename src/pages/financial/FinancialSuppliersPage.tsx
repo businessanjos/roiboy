@@ -601,6 +601,7 @@ export default function FinancialSuppliersPage() {
               {searchTerm ? "Nenhum fornecedor encontrado" : "Nenhum fornecedor cadastrado"}
             </p>
           ) : (
+            <>
             <div className="space-y-2">
               {paginatedSuppliers.map((supplier) => (
                 <div
@@ -664,6 +665,7 @@ export default function FinancialSuppliersPage() {
               onPageChange={handleSupplierPageChange}
               onPageSizeChange={handleSupplierPageSizeChange}
             />
+            </>
           )}
         </CardContent>
           </Card>
