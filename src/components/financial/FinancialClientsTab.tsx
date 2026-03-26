@@ -719,6 +719,14 @@ export function FinancialClientsTab() {
                 );
               })}
             </div>
+            <TablePagination
+              currentPage={clientPage}
+              totalPages={clientTotalPages}
+              totalItems={clientTotalItems}
+              pageSize={clientPageSize}
+              onPageChange={handleClientPageChange}
+              onPageSizeChange={handleClientPageSizeChange}
+            />
           )}
         </CardContent>
       </Card>

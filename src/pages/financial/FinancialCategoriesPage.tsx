@@ -223,6 +223,7 @@ export default function FinancialCategoriesPage() {
               </Button>
             </div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -234,7 +235,7 @@ export default function FinancialCategoriesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {categories.map((category) => (
+                {paginatedCategories.map((category) => (
                   <TableRow key={category.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -292,6 +293,15 @@ export default function FinancialCategoriesPage() {
                 ))}
               </TableBody>
             </Table>
+            <TablePagination
+              currentPage={catPage}
+              totalPages={catTotalPages}
+              totalItems={catTotalItems}
+              pageSize={catPageSize}
+              onPageChange={handleCatPageChange}
+              onPageSizeChange={handleCatPageSizeChange}
+            />
+            </>
           )}
         </CardContent>
       </Card>
