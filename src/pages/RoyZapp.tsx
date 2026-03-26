@@ -199,34 +199,17 @@ export default function RoyZapp() {
   const [filterAgentId, setFilterAgentId] = useState<string>("all");
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
   
-  // Sync selectedConversation when assignments are updated (e.g., after linking to a lead or editing group name)
+  // Keep the open chat synced with the latest assignment object from the list
   useEffect(() => {
-    if (selectedConversation && assignments.length > 0) {
-      const updatedAssignment = assignments.find(a => a.id === selectedConversation.id);
-      if (updatedAssignment) {
-        // Check if the linked client, lead, OR contact_name has changed
-        const currentClientId = selectedConversation.zapp_conversation?.client_id;
-        const updatedClientId = updatedAssignment.zapp_conversation?.client_id;
-        const currentLeadId = selectedConversation.zapp_conversation?.lead_id;
-        const updatedLeadId = updatedAssignment.zapp_conversation?.lead_id;
-        const currentClientName = selectedConversation.zapp_conversation?.client?.full_name;
-        const updatedClientName = updatedAssignment.zapp_conversation?.client?.full_name;
-        const currentLeadName = selectedConversation.zapp_conversation?.lead?.full_name;
-        const updatedLeadName = updatedAssignment.zapp_conversation?.lead?.full_name;
-        // Track contact_name for groups
-        const currentContactName = selectedConversation.zapp_conversation?.contact_name;
-        const updatedContactName = updatedAssignment.zapp_conversation?.contact_name;
-        
-        if (currentClientId !== updatedClientId || 
-            currentLeadId !== updatedLeadId ||
-            currentClientName !== updatedClientName ||
-            currentLeadName !== updatedLeadName ||
-            currentContactName !== updatedContactName) {
-          setSelectedConversation(updatedAssignment);
-        }
-      }
+    if (!selectedConversation) return;
+
+    const updatedAssignment = assignments.find((a) => a.id === selectedConversation.id);
+    if (!updatedAssignment) return;
+
+    if (updatedAssignment !== selectedConversation) {
+      setSelectedConversation(updatedAssignment);
     }
-  }, [assignments]);
+  }, [assignments, selectedConversation]);
 
   // Detect when selected conversation is not in current assignments list
   // For MULTI-INSTANCE architecture: each instance has its own conversation with the same contact
@@ -646,6 +629,23 @@ export default function RoyZapp() {
       }
       return a;
     }));
+
+    setSelectedConversation(prev => {
+      if (!prev) return prev;
+
+      const isSameConversation = prev.zapp_conversation_id === conversationId || prev.zapp_conversation?.id === conversationId;
+      if (!isSameConversation) return prev;
+
+      return {
+        ...prev,
+        zapp_conversation: prev.zapp_conversation ? {
+          ...prev.zapp_conversation,
+          last_message_at: lastMessageAt,
+          last_message_preview: lastMessagePreview,
+          unread_count: 0,
+        } : prev.zapp_conversation,
+      };
+    });
   }, [setAssignments]);
 
   // Messaging hook - handles send, recording, media, quick replies, etc.
