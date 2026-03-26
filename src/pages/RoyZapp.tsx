@@ -839,6 +839,43 @@ export default function RoyZapp() {
 
   // Conversation actions (assign, release, status, delete, flags, read/unread) are now in convActions hook
 
+  // Helper to get contact info from assignment
+  const getContactInfo = useCallback((assignment: ConversationAssignment) => {
+    const zc = assignment.zapp_conversation;
+    const c = assignment.conversation?.client;
+    const name = zc?.is_group 
+      ? (zc?.contact_name || "Grupo sem nome")
+      : (zc?.client?.full_name || zc?.lead?.full_name || zc?.contact_name || c?.full_name || zc?.phone_e164 || "Desconhecido");
+    const phone = zc?.phone_e164 || c?.phone_e164 || "";
+    const searchableText = normalizeSearchText([
+      zc?.client?.full_name, zc?.lead?.full_name, zc?.contact_name, c?.full_name, phone, zc?.last_message_preview,
+    ].filter(Boolean).join(" "));
+    return {
+      name, phone,
+      avatar: zc?.client?.avatar_url || zc?.avatar_url || c?.avatar_url || null,
+      clientId: zc?.client_id || c?.id || null,
+      isClient: !!(zc?.client_id || c?.id),
+      isGroup: zc?.is_group || false,
+      lastMessage: zc?.last_message_preview || null,
+      lastMessagePreview: zc?.last_message_preview || "",
+      unreadCount: zc?.unread_count || 0,
+      lastMessageAt: zc?.last_message_at || assignment.updated_at,
+      isPinned: zc?.is_pinned || false,
+      isMuted: zc?.is_muted || false,
+      isArchived: zc?.is_archived || false,
+      isFavorite: zc?.is_favorite || false,
+      isBlocked: zc?.is_blocked || false,
+      searchableText,
+    };
+  }, []);
+
+  // Helper to get agent name by id
+  const getAgentName = (agentId: string | null) => {
+    if (!agentId) return null;
+    const agent = agents.find(a => a.id === agentId);
+    return agent?.user?.name || null;
+  };
+
   // All messaging functions (send, media, audio, delete, edit, contact, quick replies, formatting)
   // are now handled by the useZappMessaging hook (messaging.*)
   // Filter users not already agents — only commercial team members
