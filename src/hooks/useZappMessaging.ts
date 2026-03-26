@@ -549,11 +549,14 @@ export function useZappMessaging({
           ));
         }
         
+        const mediaPreview = mediaType === "image" ? "📷 Imagem" : mediaType === "video" ? "🎬 Vídeo" : `📎 ${file.name}`;
         await supabase.from("zapp_conversations").update({
           last_message_at: now,
-          last_message_preview: mediaType === "image" ? "📷 Imagem" : mediaType === "video" ? "🎬 Vídeo" : `📎 ${file.name}`,
+          last_message_preview: mediaPreview,
           unread_count: 0,
         }).eq("id", selectedConversation.zapp_conversation_id);
+        
+        onConversationUpdated?.(selectedConversation.zapp_conversation_id, now, mediaPreview);
       }
       
       toast.success(mediaType === "image" ? "Imagem enviada!" : mediaType === "video" ? "Vídeo enviado!" : "Arquivo enviado!");
