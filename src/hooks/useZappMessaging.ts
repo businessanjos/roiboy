@@ -539,9 +539,8 @@ export function useZappMessaging({
         console.error("[ZAPP-MEDIA] Edge function data error:", data.error);
         throw new Error(data.error || "Falha ao enviar mídia");
       }
-      console.log("[ZAPP-MEDIA] Edge function OK, externalId:", externalId);
-      
       const externalId = data?.data?.id || data?.data?.messageid || data?.id || data?.messageid || null;
+      console.log("[ZAPP-MEDIA] Edge function OK, externalId:", externalId);
       
       if (selectedConversation.zapp_conversation_id) {
         const { data: insertedMessage, error: insertError } = await supabase.from("zapp_messages").insert({
