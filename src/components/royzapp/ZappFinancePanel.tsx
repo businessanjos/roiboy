@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { format, differenceInDays, isPast, isToday, addDays } from "date-fns";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -107,13 +108,13 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
     const overdueByClient = new Map<string, DelinquentClient>();
     
     receivables
-      .filter(r => r.client_id && isPast(new Date(r.due_date)) && !isToday(new Date(r.due_date)))
+      .filter(r => r.client_id && isPast(parseLocalDate(r.due_date)!) && !isToday(parseLocalDate(r.due_date)!))
       .forEach(r => {
         const existing = overdueByClient.get(r.client_id!);
         if (existing) {
           existing.total_overdue += r.amount;
           existing.overdue_count += 1;
-          if (new Date(r.due_date) < new Date(existing.oldest_due_date)) {
+          if (parseLocalDate(r.due_date)! < parseLocalDate(existing.oldest_due_date)!) {
             existing.oldest_due_date = r.due_date;
           }
         } else {
@@ -137,12 +138,12 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
     const next7Days = addDays(now, 7);
     
     const receivablesDue = receivables.filter(r => {
-      const dueDate = new Date(r.due_date);
+      const dueDate = parseLocalDate(r.due_date)!;
       return dueDate <= next7Days;
     });
     
     const payablesDue = payables.filter(p => {
-      const dueDate = new Date(p.due_date);
+      const dueDate = parseLocalDate(p.due_date)!;
       return dueDate <= next7Days;
     });
     
@@ -165,12 +166,12 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
   };
 
   const getDaysOverdue = (dueDate: string) => {
-    const days = differenceInDays(new Date(), new Date(dueDate));
+    const days = differenceInDays(new Date(), parseLocalDate(dueDate)!);
     return days > 0 ? days : 0;
   };
 
   const getDueDateBadge = (dueDate: string) => {
-    const date = new Date(dueDate);
+    const date = parseLocalDate(dueDate)!;
     const daysOverdue = getDaysOverdue(dueDate);
     
     if (isToday(date)) {
@@ -322,7 +323,7 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
                           )}
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {format(new Date(entry.due_date), "dd/MM", { locale: ptBR })}
+                            {format(parseLocalDate(entry.due_date)!, "dd/MM", { locale: ptBR })}
                           </span>
                         </div>
                       </div>
@@ -367,7 +368,7 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
                           )}
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            {format(new Date(entry.due_date), "dd/MM", { locale: ptBR })}
+                            {format(parseLocalDate(entry.due_date)!, "dd/MM", { locale: ptBR })}
                           </span>
                         </div>
                       </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -453,11 +454,11 @@ export function ChurnReportSection() {
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            {format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}
+                            {format(parseLocalDate(contract.start_date)!, "dd/MM/yyyy", { locale: ptBR })}
                             {contract.end_date && (
                               <span className="text-muted-foreground">
                                 {" → "}
-                                {format(new Date(contract.end_date), "dd/MM/yyyy", { locale: ptBR })}
+                                {format(parseLocalDate(contract.end_date)!, "dd/MM/yyyy", { locale: ptBR })}
                               </span>
                             )}
                           </div>

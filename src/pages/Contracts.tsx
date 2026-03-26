@@ -88,6 +88,7 @@ import {
 
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
 import { InstallmentsEditor, InstallmentDetail } from "@/components/contracts/InstallmentsEditor";
@@ -195,7 +196,7 @@ const formatCurrencyStatic = (value: number) => {
 
 const getExpiryBadgeStatic = (endDate: string | null) => {
   if (!endDate) return null;
-  const daysUntilExpiry = differenceInDays(new Date(endDate), new Date());
+  const daysUntilExpiry = differenceInDays(parseLocalDate(endDate)!, new Date());
   
   if (daysUntilExpiry < 0) {
     return (
@@ -288,14 +289,14 @@ const ContractTableRow = memo(function ContractTableRow({
       <TableCell>
         <div className="flex flex-col gap-0.5">
           <span className="text-sm">
-            {format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}
+            {format(parseLocalDate(contract.start_date)!, "dd/MM/yyyy", { locale: ptBR })}
             {contract.end_date && (
               <span className="text-muted-foreground"> →</span>
             )}
           </span>
           {contract.end_date && (
             <span className="text-sm">
-              {format(new Date(contract.end_date), "dd/MM/yyyy", { locale: ptBR })}
+              {format(parseLocalDate(contract.end_date)!, "dd/MM/yyyy", { locale: ptBR })}
             </span>
           )}
           {contract.status === "active" && getExpiryBadgeStatic(contract.end_date)}
@@ -1440,7 +1441,7 @@ export default function Contracts() {
       }
 
       // Determine status based on start_date
-      const startDate = new Date(formData.start_date);
+      const startDate = parseLocalDate(formData.start_date) || new Date();
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const isFutureStart = startDate > today;
@@ -1575,7 +1576,7 @@ export default function Contracts() {
         contract.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contract.notes?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const isExpired = contract.end_date && isPast(new Date(contract.end_date)) && contract.status === "active";
+      const isExpired = contract.end_date && isPast(parseLocalDate(contract.end_date)!) && contract.status === "active";
       const matchesStatus = statusFilter === "all" || 
         (statusFilter === "expired" ? isExpired : contract.status === statusFilter);
       const matchesType = typeFilter === "all" || contract.contract_type === typeFilter;
@@ -1635,12 +1636,12 @@ export default function Contracts() {
     const totalValue = activeContracts.reduce((sum, c) => sum + (c.value || 0), 0);
     const expiringSoon = activeContracts.filter(c => {
       if (!c.end_date) return false;
-      const daysUntilExpiry = differenceInDays(new Date(c.end_date), new Date());
+      const daysUntilExpiry = differenceInDays(parseLocalDate(c.end_date)!, new Date());
       return daysUntilExpiry >= 0 && daysUntilExpiry <= 30;
     });
     const expired = activeContracts.filter(c => {
       if (!c.end_date) return false;
-      return isPast(new Date(c.end_date));
+      return isPast(parseLocalDate(c.end_date)!);
     });
 
     return {

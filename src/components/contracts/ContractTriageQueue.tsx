@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -181,7 +182,7 @@ export function ContractTriageQueue({
         
         // 3. Status filter
         const isExpired = contract.end_date && 
-          new Date(contract.end_date) < new Date() && 
+          parseLocalDate(contract.end_date)! < new Date() && 
           contract.status === "active";
         const matchesStatus = statusFilter === "all" || 
           (statusFilter === "expired" ? isExpired : contract.status === statusFilter);
@@ -367,7 +368,7 @@ export function ContractTriageQueue({
                   </TableCell>
                   <TableCell>
                     <span className="text-sm">
-                      {format(new Date(contract.start_date), "dd/MM/yyyy", {
+                      {format(parseLocalDate(contract.start_date)!, "dd/MM/yyyy", {
                         locale: ptBR,
                       })}
                     </span>

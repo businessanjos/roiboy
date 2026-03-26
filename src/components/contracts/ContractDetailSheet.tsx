@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { withRetry } from "@/lib/retryFetch";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -492,7 +493,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
                 />
               ) : (
                 <p className="text-sm font-medium">
-                  {format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}
+                  {format(parseLocalDate(contract.start_date)!, "dd/MM/yyyy", { locale: ptBR })}
                 </p>
               )}
             </div>
@@ -510,7 +511,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
               ) : (
                 <p className="text-sm font-medium">
                   {contract.end_date
-                    ? format(new Date(contract.end_date), "dd/MM/yyyy", { locale: ptBR })
+                    ? format(parseLocalDate(contract.end_date)!, "dd/MM/yyyy", { locale: ptBR })
                     : "—"}
                 </p>
               )}

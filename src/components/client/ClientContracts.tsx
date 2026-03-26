@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { parseLocalDate } from "@/lib/dateUtils";
 import { withRetry } from "@/lib/retryFetch";
 import { useLinkedClients, getLinkedClientName } from "@/hooks/useLinkedClients";
 import { Button } from "@/components/ui/button";
@@ -265,7 +266,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   const openRenewalDialog = (contract: Contract) => {
     setRenewingContract(contract);
     const nextDay = contract.end_date 
-      ? format(new Date(new Date(contract.end_date).getTime() + 86400000), "yyyy-MM-dd")
+      ? format(new Date(parseLocalDate(contract.end_date)!.getTime() + 86400000), "yyyy-MM-dd")
       : format(new Date(), "yyyy-MM-dd");
     const parsed = parsePaymentOption(contract.payment_option);
     setFormData({
@@ -574,7 +575,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       return { label: "Sem término", variant: "secondary" as const, icon: Clock, className: "", reason: null };
     }
     
-    const endDate = new Date(contract.end_date);
+    const endDate = parseLocalDate(contract.end_date)!;
     const daysRemaining = differenceInDays(endDate, new Date());
     
     if (isPast(endDate)) {
@@ -944,7 +945,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <div className="text-sm">
                           <div className="flex items-center gap-2">
-                            {format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}
+                            {format(parseLocalDate(contract.start_date)!, "dd/MM/yyyy", { locale: ptBR })}
                             {contract.parent_contract_id && (
                               <Badge variant="outline" className="text-xs py-0 px-1">
                                 Renovação
@@ -953,7 +954,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                           </div>
                           {contract.end_date && (
                             <div className="text-muted-foreground">
-                              até {format(new Date(contract.end_date), "dd/MM/yyyy", { locale: ptBR })}
+                              até {format(parseLocalDate(contract.end_date)!, "dd/MM/yyyy", { locale: ptBR })}
                             </div>
                           )}
                         </div>
