@@ -2045,6 +2045,7 @@ export default function RoyZapp() {
               status: currentAgent ? "active" : "triage",  // Active if agent, triage otherwise
               agent_id: currentAgent?.id || null,  // Assign to current agent if available
               assigned_at: currentAgent ? new Date().toISOString() : null,
+              closed_at: null,
               updated_at: new Date().toISOString() 
             })
             .eq("id", closedAssignment.id);
