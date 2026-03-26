@@ -657,7 +657,7 @@ export default function FinancialEntriesPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredEntries.map((entry) => {
+                    {paginatedEntries.map((entry) => {
                       const StatusIcon = statusConfig[entry.status]?.icon || Clock;
                       const isOverdue = entry.status === "pending" && isBefore(parseISO(entry.due_date), new Date());
                       
