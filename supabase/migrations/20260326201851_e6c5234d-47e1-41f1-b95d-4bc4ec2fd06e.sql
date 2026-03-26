@@ -1,0 +1,2 @@
+UPDATE public.integrations SET status = 'connected'::integration_status WHERE id = '6c3d00d4-4965-4a62-b628-1ac04b610ea5';
+UPDATE public.integrations SET status = 'connected'::integration_status WHERE id = 'c3baa312-78b9-400f-802a-705d56731f90';
