@@ -46,6 +46,13 @@ const MATERIAL_TYPES = [
   { value: 'process', label: 'Processo de Vendas', icon: ArrowRight, description: 'Etapas do funil' },
 ];
 
+const CALL_OUTCOMES = [
+  { value: 'success', label: 'Call Campeã ✅', icon: Crown, color: 'text-green-600', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30', description: 'Venda fechada ou reunião agendada' },
+  { value: 'partial', label: 'Parcial', icon: CalendarClock, color: 'text-amber-500', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/30', description: 'Houve avanço mas sem fechamento' },
+  { value: 'failure', label: 'Sem sucesso', icon: ThumbsDown, color: 'text-red-500', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/30', description: 'Não houve avanço' },
+  { value: 'no_answer', label: 'Sem resposta', icon: PhoneOff, color: 'text-muted-foreground', bgColor: 'bg-muted', borderColor: 'border-muted', description: 'Lead não atendeu' },
+];
+
 const SCRIPT_TYPES = [
   { value: 'cold_call', label: 'Prospecção / Cold Call', icon: Phone, description: 'Primeiro contato' },
   { value: 'sdr', label: 'Processo SDR', icon: Users, description: 'Fluxo completo de SDR' },
