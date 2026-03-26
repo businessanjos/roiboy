@@ -278,7 +278,10 @@ serve(async (req) => {
       }
       
       const textBody: Record<string, unknown> = { number: cleanPhone, text: message };
-      if (payload.quoted_message_id) textBody.replyid = payload.quoted_message_id;
+      if (payload.quoted_message_id) {
+        textBody.quotedMsgId = payload.quoted_message_id;
+        textBody.quoted = payload.quoted_message_id;
+      }
       if (payload.mentions) textBody.mentions = payload.mentions;
       
       result = await uazapiInstance("/send/text", "POST", token!, textBody);

@@ -935,15 +935,7 @@ serve(async (req) => {
           }
         }
         
-        // Debug: Log quote-related data when it IS a reply
-        if (quotedMsg || quotedMsgId) {
-          console.log(`[QUOTE] Found quote for ${messageId}: id=${quotedMsgId}, hasContent=${!!quotedContent}, sender=${quotedSenderName}`);
-          if (!quotedContent) {
-            console.log(`[QUOTE-MISSING] No content for ${messageId}, quotedMsg keys: ${quotedMsg ? Object.keys(quotedMsg).join(',') : 'null'}`);
-          }
-        }
-        
-        // Extract quoted sender name
+        // Extract quoted sender name (MUST be before debug log to avoid temporal dead zone)
         // UAZAPI format: quoted.sender, quoted.senderName, quoted.sender_pn
         const quotedParticipant = (uazapiQuoted?.sender as string) ||
                                   (uazapiQuoted?.sender_pn as string) ||
@@ -959,6 +951,14 @@ serve(async (req) => {
           quotedSenderName = quotedParticipant.split("@")[0];
           if (quotedSenderName && /^\d+$/.test(quotedSenderName)) {
             quotedSenderName = `+${quotedSenderName}`;
+          }
+        }
+        
+        // Debug: Log quote-related data when it IS a reply
+        if (quotedMsg || quotedMsgId) {
+          console.log(`[QUOTE] Found quote for ${messageId}: id=${quotedMsgId}, hasContent=${!!quotedContent}, sender=${quotedSenderName}`);
+          if (!quotedContent) {
+            console.log(`[QUOTE-MISSING] No content for ${messageId}, quotedMsg keys: ${quotedMsg ? Object.keys(quotedMsg).join(',') : 'null'}`);
           }
         }
         
