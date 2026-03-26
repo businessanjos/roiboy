@@ -2252,7 +2252,7 @@ export default function RoyZapp() {
             localStorage.setItem("zapp_spelling_enabled", String(checked));
           }}
           getAgentName={getAgentName}
-          onPullFromQueue={pullFromQueue}
+          onPullFromQueue={convActions.pullFromQueue}
           notificationPermission={notificationPermission}
           onRequestNotificationPermission={requestNotificationPermission}
           onRefreshMessages={refreshMessages}
