@@ -493,7 +493,7 @@ export function ContractDetailSheet({ contract, open, onOpenChange, onUpdate }: 
                 />
               ) : (
                 <p className="text-sm font-medium">
-                  {format(new Date(contract.start_date), "dd/MM/yyyy", { locale: ptBR })}
+                  {format(parseLocalDate(contract.start_date)!, "dd/MM/yyyy", { locale: ptBR })}
                 </p>
               )}
             </div>
