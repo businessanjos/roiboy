@@ -3,6 +3,7 @@ import { MessageSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message } from "@/hooks/useZappData";
 import { ZappMessageBubble } from "./ZappMessageBubble";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ZappMessagesListProps {
   messages: Message[];
@@ -28,8 +29,12 @@ function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
           if (!map[digits]) map[digits] = msg.sender_name;
           const last8 = digits.slice(-8);
           const last9 = digits.slice(-9);
+          const last10 = digits.slice(-10);
+          const last11 = digits.slice(-11);
           if (last8 && !map[last8]) map[last8] = msg.sender_name;
           if (last9 && !map[last9]) map[last9] = msg.sender_name;
+          if (last10 && !map[last10]) map[last10] = msg.sender_name;
+          if (last11 && !map[last11]) map[last11] = msg.sender_name;
         }
       }
     }
@@ -40,13 +45,47 @@ function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
           map[key] = name;
           const last8 = key.slice(-8);
           const last9 = key.slice(-9);
+          const last10 = key.slice(-10);
+          const last11 = key.slice(-11);
           if (last8 && !map[last8]) map[last8] = name;
           if (last9 && !map[last9]) map[last9] = name;
+          if (last10 && !map[last10]) map[last10] = name;
+          if (last11 && !map[last11]) map[last11] = name;
         }
       }
     }
   }
   return map;
+}
+
+// Extract unresolved JIDs from message contents
+function extractUnresolvedJids(messages: Message[], mentionMap: Record<string, string>): string[] {
+  const mentionRegex = /@(\d{5,})/g;
+  const unresolved = new Set<string>();
+  
+  for (const msg of messages) {
+    if (!msg.content) continue;
+    let match;
+    mentionRegex.lastIndex = 0;
+    while ((match = mentionRegex.exec(msg.content)) !== null) {
+      const jid = match[1];
+      // Check if already resolved
+      if (mentionMap[jid]) continue;
+      // Check partial matches
+      const last8 = jid.slice(-8);
+      const last9 = jid.slice(-9);
+      let found = false;
+      for (const key of Object.keys(mentionMap)) {
+        if (key.endsWith(last8) || key.endsWith(last9) || 
+            jid.endsWith(key.slice(-8)) || jid.endsWith(key.slice(-9))) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) unresolved.add(jid);
+    }
+  }
+  return Array.from(unresolved);
 }
 
 export function ZappMessagesList({
@@ -150,14 +189,105 @@ export function ZappMessagesList({
     return buildFallbackMentionMap(deduplicatedMessages);
   }, [isGroup, deduplicatedMessages]);
 
-  // Enrich messages: merge fallback mention names into mention_map for better resolution
+  // DB-resolved mention map for JIDs not found in fallback
+  const [dbMentionMap, setDbMentionMap] = useState<Record<string, string>>({});
+
+  // Find unresolved JIDs and query DB for their names
+  const unresolvedJids = useMemo(() => {
+    if (!isGroup) return [];
+    return extractUnresolvedJids(deduplicatedMessages, { ...fallbackMentionMap, ...dbMentionMap });
+  }, [isGroup, deduplicatedMessages, fallbackMentionMap, dbMentionMap]);
+
+  useEffect(() => {
+    if (unresolvedJids.length === 0) return;
+    
+    const resolveFromDb = async () => {
+      // Build phone variants for each JID: +<jid>, <jid>, and Brazilian format attempts
+      const phoneVariants: string[] = [];
+      for (const jid of unresolvedJids) {
+        phoneVariants.push(`+${jid}`, jid);
+        // Try adding/removing country code 55
+        if (!jid.startsWith("55") && jid.length <= 11) {
+          phoneVariants.push(`+55${jid}`, `55${jid}`);
+        }
+        if (jid.startsWith("55")) {
+          const withoutCC = jid.slice(2);
+          phoneVariants.push(`+${withoutCC}`, withoutCC);
+        }
+        // Brazilian numbers: try with/without 9th digit
+        const digits = jid.startsWith("55") ? jid.slice(2) : jid;
+        if (digits.length >= 10) {
+          const ddd = digits.slice(0, 2);
+          const num = digits.slice(2);
+          // Add 9th digit
+          if (num.length === 8) {
+            phoneVariants.push(`+55${ddd}9${num}`, `55${ddd}9${num}`);
+          }
+          // Remove 9th digit  
+          if (num.length === 9 && num.startsWith("9")) {
+            phoneVariants.push(`+55${ddd}${num.slice(1)}`, `55${ddd}${num.slice(1)}`);
+          }
+        }
+      }
+
+      const uniqueVariants = [...new Set(phoneVariants)].slice(0, 50);
+      const resolved: Record<string, string> = {};
+
+      // Query zapp_contacts first (table may not be in generated types, use rpc-style)
+      const { data: contacts } = await supabase
+        .from("zapp_contacts" as any)
+        .select("phone_e164, contact_name")
+        .in("phone_e164", uniqueVariants) as { data: { phone_e164: string; contact_name: string | null }[] | null };
+
+      if (contacts) {
+        for (const c of contacts) {
+          if (c.contact_name) {
+            const norm = c.phone_e164.replace(/^\+/, "");
+            resolved[norm] = c.contact_name;
+            resolved[norm.slice(-8)] = c.contact_name;
+            resolved[norm.slice(-9)] = c.contact_name;
+          }
+        }
+      }
+
+      // Query clients table for remaining
+      const { data: clients } = await supabase
+        .from("clients")
+        .select("phone_e164, full_name")
+        .in("phone_e164", uniqueVariants);
+
+      if (clients) {
+        for (const c of clients) {
+          if (c.full_name && c.phone_e164) {
+            const norm = c.phone_e164.replace(/^\+/, "");
+            if (!resolved[norm]) resolved[norm] = c.full_name;
+            if (!resolved[norm.slice(-8)]) resolved[norm.slice(-8)] = c.full_name;
+            if (!resolved[norm.slice(-9)]) resolved[norm.slice(-9)] = c.full_name;
+          }
+        }
+      }
+
+      if (Object.keys(resolved).length > 0) {
+        setDbMentionMap(prev => ({ ...prev, ...resolved }));
+      }
+    };
+
+    resolveFromDb();
+  }, [unresolvedJids.join(",")]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Combined mention map: fallback + DB resolved
+  const combinedMentionMap = useMemo(() => {
+    return { ...fallbackMentionMap, ...dbMentionMap };
+  }, [fallbackMentionMap, dbMentionMap]);
+
+  // Enrich messages: merge combined mention names into mention_map for better resolution
   const enrichedMessages = useMemo(() => {
     if (!isGroup) return deduplicatedMessages;
     const mentionRegex = /@\d{5,}/;
     return deduplicatedMessages.map(msg => {
       if (msg.content && mentionRegex.test(msg.content)) {
-        // Merge: existing mention_map + fallback (existing takes priority)
-        const merged = { ...fallbackMentionMap, ...(msg.mention_map || {}) };
+        // Merge: existing mention_map + combined (existing takes priority)
+        const merged = { ...combinedMentionMap, ...(msg.mention_map || {}) };
         // Remove empty-string values (webhook stores "" for unresolved)
         const cleaned: Record<string, string> = {};
         for (const [k, v] of Object.entries(merged)) {
@@ -167,7 +297,7 @@ export function ZappMessagesList({
       }
       return msg;
     });
-  }, [deduplicatedMessages, isGroup, fallbackMentionMap]);
+  }, [deduplicatedMessages, isGroup, combinedMentionMap]);
 
   // Scroll to quoted message handler
   const handleScrollToQuoted = useCallback((quotedMessageId: string) => {
