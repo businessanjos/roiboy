@@ -252,47 +252,8 @@ export default function RoyZapp() {
   }, [selectedConversation, assignments, selectedIntegrationId, currentUser?.account_id]);
   // dismissGroupConversation is now in convActions hook
 
-  // Handle URL parameters for auto-selecting or creating conversations
+  // URL params processing is done below after contactOps hook is initialized
   const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
-  
-  useEffect(() => {
-    if (urlParamsProcessed || loading || !currentUser?.account_id) return;
-    
-    const conversationId = searchParams.get('conversation');
-    const newPhone = searchParams.get('newPhone');
-    const newName = searchParams.get('newName');
-    const leadId = searchParams.get('leadId');
-    const clientId = searchParams.get('clientId');
-    
-    // If conversation ID is provided, select it
-    if (conversationId && assignments.length > 0) {
-      const assignment = assignments.find(a => a.zapp_conversation_id === conversationId);
-      if (assignment) {
-        setSelectedConversation(assignment);
-        setUrlParamsProcessed(true);
-        return;
-      }
-    }
-    
-    // If newPhone is provided and no agent yet (wait for agent to load)
-    if (newPhone && currentAgent && !conversationId) {
-      setUrlParamsProcessed(true);
-      
-      // Create conversation with the lead/client
-      const contact = {
-        id: leadId || clientId || '',
-        full_name: decodeURIComponent(newName || ''),
-        phone_e164: `+${newPhone}`,
-        avatar_url: null,
-      };
-      
-      if (leadId || clientId) {
-        contactOps.createConversationFromUrl(contact, !!leadId);
-      }
-    }
-  }, [assignments, loading, currentUser?.account_id, currentAgent, searchParams, urlParamsProcessed, contactOps]);
-
-  // createConversationFromUrl is now in contactOps hook
   
   // Messaging state is now managed by useZappMessaging hook (messaging.*)
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
