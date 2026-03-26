@@ -5,6 +5,8 @@ import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 import { useZappData, Message, TeamUser, InboundMessageData } from "@/hooks/useZappData";
 import { useZappMessaging } from "@/hooks/useZappMessaging";
 import { useZappNotifications } from "@/hooks/useZappNotifications";
+import { useZappConversationActions } from "@/hooks/useZappConversationActions";
+import { useZappCrudOperations } from "@/hooks/useZappCrudOperations";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -253,7 +255,6 @@ export default function RoyZapp() {
     if (!selectedConversation) return;
     
     try {
-      // Close this assignment (removes from current sector's list)
       const { error } = await supabase
         .from("zapp_conversation_assignments")
         .update({ 
@@ -268,8 +269,6 @@ export default function RoyZapp() {
       
       toast.success("Grupo dispensado!");
       setSelectedConversation(null);
-      
-      // Remove from local state immediately
       setAssignments(prev => prev.filter(a => a.id !== selectedConversation.id));
     } catch (error) {
       console.error("Error dismissing group:", error);
@@ -664,7 +663,16 @@ export default function RoyZapp() {
     navigate,
     onConversationUpdated: handleConversationUpdated,
   });
-  
+
+  // CRUD operations hook (departments, agents, tags)
+  const crud = useZappCrudOperations({
+    userId: currentUser?.id,
+    accountId: currentUser?.account_id,
+    departments,
+    tags,
+    fetchData,
+  });
+
   // Notification system - handle view chat callback
   const handleNotificationViewChat = useCallback((conversationId: string) => {
     const assignment = assignments.find(
