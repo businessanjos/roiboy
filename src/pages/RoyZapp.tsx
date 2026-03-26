@@ -1290,20 +1290,19 @@ export default function RoyZapp() {
 
       {/* Add Client/Lead Dialog */}
       <ZappAddContactDialog
-        open={addContactDialogOpen}
-        onOpenChange={setAddContactDialogOpen}
-        phone={addContactPhone}
-        contactName={addContactName}
+        open={contactOps.addContactDialogOpen}
+        onOpenChange={contactOps.setAddContactDialogOpen}
+        phone={contactOps.addContactPhone}
+        contactName={contactOps.addContactName}
         showLeadOption={hasVendasAccess}
-        onSaveClient={saveNewClient}
-        onSaveLead={saveNewLead}
-        savingClient={savingNewClient}
-        savingLead={savingNewLead}
+        onSaveClient={contactOps.saveNewClient}
+        onSaveLead={contactOps.saveNewLead}
+        savingClient={contactOps.savingNewClient}
+        savingLead={contactOps.savingNewLead}
         accountId={currentUser?.account_id}
         conversationId={selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id}
         onLinked={() => {
           fetchData();
-          // Update selected conversation
           if (selectedConversation) {
             const zappConvId = selectedConversation.zapp_conversation_id || selectedConversation.zapp_conversation?.id;
             if (zappConvId) {
@@ -1315,13 +1314,13 @@ export default function RoyZapp() {
 
       {/* New Conversation Dialog */}
       <ZappNewConversationDialog
-        open={newConversationDialogOpen}
-        onOpenChange={setNewConversationDialogOpen}
-        searchQuery={newConversationSearch}
-        onSearchChange={setNewConversationSearch}
-        clients={filteredNewConversationClients}
-        onSelectClient={createConversationWithContact}
-        creating={creatingConversation}
+        open={contactOps.newConversationDialogOpen}
+        onOpenChange={contactOps.setNewConversationDialogOpen}
+        searchQuery={contactOps.newConversationSearch}
+        onSearchChange={contactOps.setNewConversationSearch}
+        clients={contactOps.newConversationClients}
+        onSelectClient={contactOps.createConversationWithContact}
+        creating={contactOps.creatingConversation}
         isLeadMode={selectedSectorId === "vendas"}
       />
 
