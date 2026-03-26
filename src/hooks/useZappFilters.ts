@@ -49,10 +49,18 @@ export function useZappFilters(options: UseZappFiltersOptions) {
           setWhatsappConnected(false);
           setWhatsappInstanceName(null);
         } else {
-          const state = response.data?.state || response.data?.data?.state;
-          const connected = state === "open" || state === "connected" || response.data?.connected || response.data?.data?.connected;
+          const data = response.data?.data || response.data;
+          const state = data?.state;
+          const checkedInstance = typeof state === 'object' ? state?.checked_instance : null;
+          const connected = 
+            state === "open" || 
+            state === "connected" || 
+            data?.connected === true || 
+            checkedInstance?.connection_status === "connected" ||
+            checkedInstance?.is_healthy === true;
           setWhatsappConnected(connected);
-          setWhatsappInstanceName(response.data?.instance || response.data?.data?.instance || null);
+          const instanceName = data?.instance || checkedInstance?.name || null;
+          setWhatsappInstanceName(instanceName);
         }
       }
     } catch (error) {
