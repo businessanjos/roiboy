@@ -29,6 +29,7 @@ export function useZappMessaging({
   userSignature,
   signatureEnabled,
   navigate,
+  onConversationUpdated,
 }: UseZappMessagingProps) {
   // Message input state
   const [messageInput, setMessageInput] = useState("");
