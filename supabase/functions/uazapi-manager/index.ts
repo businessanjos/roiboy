@@ -323,7 +323,7 @@ serve(async (req) => {
         file: payload.media_url,
         text: payload.caption || ""
       };
-      if (payload.quoted_message_id) { mediaBody.quotedMsgId = payload.quoted_message_id; mediaBody.quoted = payload.quoted_message_id; }
+      if (payload.quoted_message_id) { mediaBody.replyid = payload.quoted_message_id; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
       result = await uazapiInstance("/send/media", "POST", token!, mediaBody);
