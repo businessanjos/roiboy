@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useTablePagination } from "@/hooks/useTablePagination";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -430,6 +432,16 @@ export default function FinancialEntriesPage() {
     return matchesSearch && matchesStatus && matchesCategory && matchesConciliation;
   });
 
+  const {
+    paginatedItems: paginatedEntries,
+    currentPage,
+    pageSize,
+    totalPages,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = useTablePagination(filteredEntries);
+
   // Calculate totals
   const totals = filteredEntries.reduce(
     (acc, entry) => {
@@ -632,6 +644,7 @@ export default function FinancialEntriesPage() {
                   </Button>
                 </div>
               ) : (
+                <>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -645,7 +658,7 @@ export default function FinancialEntriesPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredEntries.map((entry) => {
+                    {paginatedEntries.map((entry) => {
                       const StatusIcon = statusConfig[entry.status]?.icon || Clock;
                       const isOverdue = entry.status === "pending" && isBefore(parseISO(entry.due_date), new Date());
                       
@@ -750,6 +763,15 @@ export default function FinancialEntriesPage() {
                     })}
                   </TableBody>
                 </Table>
+                <TablePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={totalItems}
+                  pageSize={pageSize}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={handlePageSizeChange}
+                />
+                </>
               )}
             </CardContent>
           </Card>

@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { useTablePagination } from "@/hooks/useTablePagination";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -316,6 +318,16 @@ export default function FinancialNotasFiscaisPage() {
       return matchesSearch && matchesStatus && matchesType;
     });
   }, [notas, search, statusFilter, typeFilter]);
+
+  const {
+    paginatedItems: paginatedNotas,
+    currentPage,
+    pageSize,
+    totalPages,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = useTablePagination(filteredNotas);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -798,6 +810,7 @@ export default function FinancialNotasFiscaisPage() {
               ))}
             </div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -818,7 +831,7 @@ export default function FinancialNotasFiscaisPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredNotas.map((nota) => (
+                  paginatedNotas.map((nota) => (
                     <TableRow key={nota.id}>
                       <TableCell>
                         <Badge variant="outline">
@@ -894,6 +907,15 @@ export default function FinancialNotasFiscaisPage() {
                 )}
               </TableBody>
             </Table>
+            <TablePagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            />
+            </>
           )}
         </CardContent>
       </Card>

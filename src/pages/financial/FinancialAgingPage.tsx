@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { useTablePagination } from "@/hooks/useTablePagination";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -160,6 +162,16 @@ export default function FinancialAgingPage() {
     return matchesSearch && matchesBucket;
   });
 
+  const {
+    paginatedItems: paginatedAgingEntries,
+    currentPage: agingPage,
+    pageSize: agingPageSize,
+    totalPages: agingTotalPages,
+    totalItems: agingTotalItems,
+    handlePageChange: handleAgingPageChange,
+    handlePageSizeChange: handleAgingPageSizeChange,
+  } = useTablePagination(filteredEntries);
+
   return (
     <div className="p-6 space-y-6">
       <Card>
@@ -309,6 +321,7 @@ export default function FinancialAgingPage() {
                 </p>
               </div>
             ) : (
+              <>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -321,7 +334,7 @@ export default function FinancialAgingPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEntries.map((entry) => {
+                  {paginatedAgingEntries.map((entry) => {
                     const bucket = agingBuckets.find(b => 
                       entry.days_overdue >= b.min && (b.max === null || entry.days_overdue <= b.max)
                     );
@@ -368,6 +381,15 @@ export default function FinancialAgingPage() {
                   })}
                 </TableBody>
               </Table>
+              <TablePagination
+                currentPage={agingPage}
+                totalPages={agingTotalPages}
+                totalItems={agingTotalItems}
+                pageSize={agingPageSize}
+                onPageChange={handleAgingPageChange}
+                onPageSizeChange={handleAgingPageSizeChange}
+              />
+              </>
             )}
           </ScrollArea>
         </CardContent>

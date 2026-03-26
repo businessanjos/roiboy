@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useTablePagination } from "@/hooks/useTablePagination";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -201,6 +203,16 @@ export default function FinancialInvoicesPage() {
     return matchesSearch && matchesBankAccount && matchesStatus;
   });
 
+  const {
+    paginatedItems: paginatedEntries,
+    currentPage: invoicePage,
+    pageSize: invoicePageSize,
+    totalPages: invoiceTotalPages,
+    totalItems: invoiceTotalItems,
+    handlePageChange: handleInvoicePageChange,
+    handlePageSizeChange: handleInvoicePageSizeChange,
+  } = useTablePagination(filteredEntries);
+
   // Calculate totals
   const totals = filteredEntries.reduce((acc, entry) => {
     acc.total += entry.amount;
@@ -375,7 +387,7 @@ export default function FinancialInvoicesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredEntries.map((entry) => (
+                paginatedEntries.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell>
                       {format(new Date(entry.due_date), 'dd/MM/yyyy')}
@@ -441,6 +453,14 @@ export default function FinancialInvoicesPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={invoicePage}
+            totalPages={invoiceTotalPages}
+            totalItems={invoiceTotalItems}
+            pageSize={invoicePageSize}
+            onPageChange={handleInvoicePageChange}
+            onPageSizeChange={handleInvoicePageSizeChange}
+          />
         </CardContent>
       </Card>
 

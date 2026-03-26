@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useTablePagination } from "@/hooks/useTablePagination";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -170,6 +172,16 @@ export default function FinancialCommissionsPage() {
     },
     enabled: !!accountId,
   });
+
+  const {
+    paginatedItems: paginatedEntries,
+    currentPage: commPage,
+    pageSize: commPageSize,
+    totalPages: commTotalPages,
+    totalItems: commTotalItems,
+    handlePageChange: handleCommPageChange,
+    handlePageSizeChange: handleCommPageSizeChange,
+  } = useTablePagination(entries);
 
   const { data: users = [] } = useQuery({
     queryKey: ["team-users", accountId],
@@ -441,6 +453,7 @@ export default function FinancialCommissionsPage() {
                   <p>Nenhuma comissão neste período</p>
                 </div>
               ) : (
+                <>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -454,7 +467,7 @@ export default function FinancialCommissionsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {entries.map((entry) => (
+                    {paginatedEntries.map((entry) => (
                       <TableRow key={entry.id}>
                         <TableCell className="font-medium">
                           {entry.user?.full_name || "-"}
@@ -501,6 +514,15 @@ export default function FinancialCommissionsPage() {
                     ))}
                   </TableBody>
                 </Table>
+                <TablePagination
+                  currentPage={commPage}
+                  totalPages={commTotalPages}
+                  totalItems={commTotalItems}
+                  pageSize={commPageSize}
+                  onPageChange={handleCommPageChange}
+                  onPageSizeChange={handleCommPageSizeChange}
+                />
+                </>
               )}
             </TabsContent>
 

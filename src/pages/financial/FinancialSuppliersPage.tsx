@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useTablePagination } from "@/hooks/useTablePagination";
+import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -128,6 +130,16 @@ export default function FinancialSuppliersPage() {
       s.document?.includes(searchTerm) ||
       s.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const {
+    paginatedItems: paginatedSuppliers,
+    currentPage: supplierPage,
+    pageSize: supplierPageSize,
+    totalPages: supplierTotalPages,
+    totalItems: supplierTotalItems,
+    handlePageChange: handleSupplierPageChange,
+    handlePageSizeChange: handleSupplierPageSizeChange,
+  } = useTablePagination(filteredSuppliers);
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
@@ -589,8 +601,9 @@ export default function FinancialSuppliersPage() {
               {searchTerm ? "Nenhum fornecedor encontrado" : "Nenhum fornecedor cadastrado"}
             </p>
           ) : (
+            <>
             <div className="space-y-2">
-              {filteredSuppliers.map((supplier) => (
+              {paginatedSuppliers.map((supplier) => (
                 <div
                   key={supplier.id}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"
@@ -644,6 +657,15 @@ export default function FinancialSuppliersPage() {
                 </div>
               ))}
             </div>
+            <TablePagination
+              currentPage={supplierPage}
+              totalPages={supplierTotalPages}
+              totalItems={supplierTotalItems}
+              pageSize={supplierPageSize}
+              onPageChange={handleSupplierPageChange}
+              onPageSizeChange={handleSupplierPageSizeChange}
+            />
+            </>
           )}
         </CardContent>
           </Card>
