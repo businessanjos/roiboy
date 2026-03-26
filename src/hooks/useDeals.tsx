@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
+import { withRetry } from "@/lib/retryFetch";
 import { DEAL_FIELD_IDS } from "@/utils/dealToClientContractMapping";
 
 export interface DealStage {
@@ -207,22 +208,23 @@ export function useDeals(pipelineId?: string | null) {
       let hasMore = true;
 
       while (hasMore) {
-        let query = supabase
-          .from('deals')
-          .select(selectQuery)
-          .eq('account_id', currentUser.account_id)
-          .order('created_at', { ascending: false })
-          .range(from, from + PAGE_SIZE - 1);
+        const batch = await withRetry(async () => {
+          let query = supabase
+            .from('deals')
+            .select(selectQuery)
+            .eq('account_id', currentUser.account_id)
+            .order('created_at', { ascending: false })
+            .range(from, from + PAGE_SIZE - 1);
 
-        if (pipelineId) {
-          query = query.eq('pipeline_id', pipelineId);
-        }
+          if (pipelineId) {
+            query = query.eq('pipeline_id', pipelineId);
+          }
 
-        const { data, error } = await query;
+          const { data, error } = await query;
+          if (error) throw error;
+          return data || [];
+        }, 3, 1500);
 
-        if (error) throw error;
-
-        const batch = data || [];
         allData = allData.concat(batch);
 
         if (batch.length < PAGE_SIZE) {
