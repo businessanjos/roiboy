@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { MessageSquareText, Plus, Search, Copy, Edit2, Trash2, DollarSign, Clock, Users, ShieldQuestion, Heart, HelpCircle, ArrowRight, Target, Handshake, Trophy, Loader2, Package, Sparkles, BookOpen, FileText, Star, StarOff, Phone, MessageCircle, Presentation, CheckCircle2, AlertCircle, Upload, Download, Mic, BarChart3 } from 'lucide-react';
+import { MessageSquareText, Plus, Search, Copy, Edit2, Trash2, DollarSign, Clock, Users, ShieldQuestion, Heart, HelpCircle, ArrowRight, Target, Handshake, Trophy, Loader2, Package, Sparkles, BookOpen, FileText, Star, StarOff, Phone, MessageCircle, Presentation, CheckCircle2, AlertCircle, Upload, Download, Mic, BarChart3, Crown, ThumbsDown, PhoneOff, CalendarClock, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MarkdownRenderer from '@/components/sales/MarkdownRenderer';
 import CommissionCalculator from '@/components/sales/CommissionCalculator';
@@ -44,6 +44,13 @@ const MATERIAL_TYPES = [
   { value: 'differentials', label: 'Diferenciais', icon: Star, description: 'O que te diferencia' },
   { value: 'objections', label: 'Objeções Comuns', icon: ShieldQuestion, description: 'Objeções e rebatimentos' },
   { value: 'process', label: 'Processo de Vendas', icon: ArrowRight, description: 'Etapas do funil' },
+];
+
+const CALL_OUTCOMES = [
+  { value: 'success', label: 'Call Campeã ✅', icon: Crown, color: 'text-green-600', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30', description: 'Venda fechada ou reunião agendada' },
+  { value: 'partial', label: 'Parcial', icon: CalendarClock, color: 'text-amber-500', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/30', description: 'Houve avanço mas sem fechamento' },
+  { value: 'failure', label: 'Sem sucesso', icon: ThumbsDown, color: 'text-red-500', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/30', description: 'Não houve avanço' },
+  { value: 'no_answer', label: 'Sem resposta', icon: PhoneOff, color: 'text-muted-foreground', bgColor: 'bg-muted', borderColor: 'border-muted', description: 'Lead não atendeu' },
 ];
 
 const SCRIPT_TYPES = [
@@ -97,7 +104,10 @@ export default function SalesScripts() {
   const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
   const [transcriptAnalysis, setTranscriptAnalysis] = useState<string | null>(null);
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
-  const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string; deal_id?: string | null; deal_name?: string | null } | null>(null);
+  const [callOutcome, setCallOutcome] = useState<string | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [outcomeNotes, setOutcomeNotes] = useState('');
+  const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string; deal_id?: string | null; deal_name?: string | null; call_outcome?: string | null; client_id?: string | null; client_name?: string | null; outcome_notes?: string | null } | null>(null);
   const [deleteAnalysisDialog, setDeleteAnalysisDialog] = useState<{ id: string; created_at: string } | null>(null);
 
   // Queries
@@ -124,9 +134,19 @@ export default function SalesScripts() {
   const { data: savedAnalyses = [], isLoading: loadingAnalyses } = useQuery({
     queryKey: ['sales-call-analyses', accountId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('sales_call_analyses').select('*, deal:deals!sales_call_analyses_deal_id_fkey(id, title)').eq('account_id', accountId!).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('sales_call_analyses').select('*, deal:deals!sales_call_analyses_deal_id_fkey(id, title), client:clients!sales_call_analyses_client_id_fkey(id, full_name)').eq('account_id', accountId!).order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []).map((a: any) => ({ ...a, deal_name: a.deal?.title || null }));
+      return (data || []).map((a: any) => ({ ...a, deal_name: a.deal?.title || null, client_name: a.client?.full_name || null }));
+    },
+    enabled: !!accountId,
+  });
+
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients-for-analysis', accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('clients').select('id, full_name, city, state, company_name').eq('account_id', accountId!).order('full_name').limit(500);
+      if (error) throw error;
+      return data as any[];
     },
     enabled: !!accountId,
   });
@@ -219,7 +239,7 @@ export default function SalesScripts() {
     onSuccess: async (data) => {
       setTranscriptAnalysis(data.analysis);
       const preview = (transcriptText || '').substring(0, 200);
-      await supabase.from('sales_call_analyses').insert({ account_id: accountId!, user_id: currentUser?.id!, analysis: data.analysis, transcript_preview: preview || null, deal_id: selectedDealId || null } as any);
+      await supabase.from('sales_call_analyses').insert({ account_id: accountId!, user_id: currentUser?.id!, analysis: data.analysis, transcript_preview: preview || null, deal_id: selectedDealId || null, call_outcome: callOutcome || null, client_id: selectedClientId || null, outcome_notes: outcomeNotes || null } as any);
       queryClient.invalidateQueries({ queryKey: ['sales-call-analyses'] });
       toast.success('Análise concluída e salva!');
     },
@@ -230,6 +250,20 @@ export default function SalesScripts() {
     mutationFn: async (id: string) => { const { error } = await supabase.from('sales_call_analyses').delete().eq('id', id); if (error) throw error; },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-call-analyses'] }); toast.success('Análise excluída!'); setDeleteAnalysisDialog(null); },
   });
+
+  const updateAnalysisOutcomeMutation = useMutation({
+    mutationFn: async ({ id, call_outcome, client_id, outcome_notes }: { id: string; call_outcome: string | null; client_id: string | null; outcome_notes: string | null }) => {
+      const { error } = await supabase.from('sales_call_analyses').update({ call_outcome, client_id, outcome_notes } as any).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-call-analyses'] });
+      toast.success('Resultado da call atualizado!');
+    },
+    onError: () => toast.error('Erro ao atualizar resultado'),
+  });
+
+  const getOutcomeConfig = (outcome: string | null) => CALL_OUTCOMES.find(o => o.value === outcome);
 
   const handleCopy = async (content: string) => { await navigator.clipboard.writeText(content); toast.success('Copiado!'); };
   const filteredScripts = scripts.filter(s => { const ms = searchQuery === '' || s.title.toLowerCase().includes(searchQuery.toLowerCase()) || s.content.toLowerCase().includes(searchQuery.toLowerCase()); const mo = filterObjection === 'all' || s.objection_type === filterObjection; const mf = filterFunnel === 'all' || s.funnel_stage === filterFunnel; return ms && mo && mf; });
@@ -303,12 +337,96 @@ export default function SalesScripts() {
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Call Outcome Selector */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><Crown className="w-4 h-4 text-primary" />Resultado da Call</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {CALL_OUTCOMES.map(outcome => {
+                    const Icon = outcome.icon;
+                    const isSelected = callOutcome === outcome.value;
+                    return (
+                      <Card 
+                        key={outcome.value} 
+                        className={cn(
+                          "cursor-pointer transition-all border-2",
+                          isSelected ? `${outcome.borderColor} ${outcome.bgColor}` : "border-transparent hover:border-border"
+                        )} 
+                        onClick={() => setCallOutcome(isSelected ? null : outcome.value)}
+                      >
+                        <CardContent className="p-3 flex items-center gap-2">
+                          <Icon className={cn("w-4 h-4 shrink-0", isSelected ? outcome.color : "text-muted-foreground")} />
+                          <div className="min-w-0">
+                            <p className={cn("text-sm font-medium", isSelected ? outcome.color : "")}>{outcome.label}</p>
+                            <p className="text-xs text-muted-foreground">{outcome.description}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Client Selector (for ICP profiling) */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><UserCheck className="w-4 h-4 text-primary" />Vincular ao cliente (para perfil ICP)</Label>
+                <Select value={selectedClientId || 'none'} onValueChange={v => setSelectedClientId(v === 'none' ? null : v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Nenhum</SelectItem>
+                    {clients.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.full_name}{c.company_name ? ` — ${c.company_name}` : ''}{c.city ? ` (${c.city}/${c.state || ''})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Outcome Notes */}
+              {callOutcome && (
+                <div className="space-y-2">
+                  <Label>Observações sobre o resultado</Label>
+                  <Input placeholder="Ex: Vendeu plano premium, cliente muito engajado..." value={outcomeNotes} onChange={e => setOutcomeNotes(e.target.value)} />
+                </div>
+              )}
+
               <div className="border border-dashed border-border rounded-lg p-4">{transcriptFile ? (<div className="flex items-center justify-between"><div className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /><span className="text-sm truncate">{transcriptFile.name}</span></div><Button variant="ghost" size="sm" onClick={() => setTranscriptFile(null)}><Trash2 className="w-4 h-4" /></Button></div>) : (<label htmlFor="transcript-file" className="flex flex-col items-center gap-2 cursor-pointer py-2"><Upload className="w-8 h-8 text-muted-foreground" /><span className="text-sm text-muted-foreground">Clique para enviar</span><span className="text-xs text-muted-foreground">TXT, PDF, Word</span><input id="transcript-file" type="file" className="hidden" accept=".txt,.pdf,.doc,.docx" onChange={e => { if (e.target.files?.[0]) setTranscriptFile(e.target.files[0]); }} /></label>)}</div>
               <Textarea placeholder="Ou cole a transcrição aqui..." value={transcriptText} onChange={e => setTranscriptText(e.target.value)} className="min-h-[200px] font-mono text-sm" />
               <Button onClick={() => analyzeTranscriptMutation.mutate()} disabled={analyzeTranscriptMutation.isPending || (!transcriptText.trim() && !transcriptFile)} className="w-full">{analyzeTranscriptMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analisando...</> : <><BarChart3 className="w-4 h-4 mr-2" />Analisar Call</>}</Button>
             </CardContent></Card>
             {transcriptAnalysis && <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-primary" />Resultado da Análise</CardTitle></CardHeader><CardContent><MarkdownRenderer content={transcriptAnalysis} /><div className="flex gap-2 mt-4"><Button variant="outline" size="sm" onClick={() => handleCopy(transcriptAnalysis)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" onClick={() => exportSalesCallToPDF({ analysis: transcriptAnalysis, createdAt: new Date().toISOString() })}><Download className="w-4 h-4 mr-2" />PDF</Button></div></CardContent></Card>}
-            {savedAnalyses.length > 0 && <div><h3 className="text-base font-semibold mb-3">Análises Salvas ({savedAnalyses.length})</h3><div className="space-y-2">{savedAnalyses.map(a => (<Card key={a.id} className="cursor-pointer hover:border-primary/30" onClick={() => setViewingAnalysis(a)}><CardContent className="p-4 flex items-center justify-between"><div className="flex-1 min-w-0"><p className="text-sm font-medium">{new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>{a.deal_name && <Badge variant="secondary" className="text-xs mt-1"><Target className="w-3 h-3 mr-1" />{a.deal_name}</Badge>}{a.transcript_preview && <p className="text-xs text-muted-foreground truncate mt-1">{a.transcript_preview}</p>}</div><div className="flex gap-1" onClick={e => e.stopPropagation()}><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteAnalysisDialog(a)}><Trash2 className="w-4 h-4" /></Button></div></CardContent></Card>))}</div></div>}
+            
+            {/* Saved Analyses with outcome badges */}
+            {savedAnalyses.length > 0 && <div><h3 className="text-base font-semibold mb-3">Análises Salvas ({savedAnalyses.length})</h3><div className="space-y-2">{savedAnalyses.map(a => {
+              const outcomeConf = getOutcomeConfig(a.call_outcome);
+              const OutcomeIcon = outcomeConf?.icon;
+              return (
+                <Card key={a.id} className="cursor-pointer hover:border-primary/30" onClick={() => setViewingAnalysis(a)}>
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium">{new Date(a.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+                        {outcomeConf && (
+                          <Badge variant="secondary" className={cn("text-xs", outcomeConf.bgColor, outcomeConf.color)}>
+                            {OutcomeIcon && <OutcomeIcon className="w-3 h-3 mr-1" />}
+                            {outcomeConf.label}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap mt-1">
+                        {a.deal_name && <Badge variant="secondary" className="text-xs"><Target className="w-3 h-3 mr-1" />{a.deal_name}</Badge>}
+                        {a.client_name && <Badge variant="outline" className="text-xs"><UserCheck className="w-3 h-3 mr-1" />{a.client_name}</Badge>}
+                      </div>
+                      {a.transcript_preview && <p className="text-xs text-muted-foreground truncate mt-1">{a.transcript_preview}</p>}
+                    </div>
+                    <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteAnalysisDialog(a)}><Trash2 className="w-4 h-4" /></Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}</div></div>}
           </div>
         </TabsContent>
 
@@ -387,11 +505,62 @@ export default function SalesScripts() {
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><BarChart3 className="w-5 h-5 text-primary" />Análise de Call</DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="flex items-center gap-2 flex-wrap">
               {viewingAnalysis && new Date(viewingAnalysis.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
-              {viewingAnalysis?.deal_name && <Badge variant="secondary" className="ml-2 text-xs"><Target className="w-3 h-3 mr-1" />{viewingAnalysis.deal_name}</Badge>}
+              {viewingAnalysis?.deal_name && <Badge variant="secondary" className="text-xs"><Target className="w-3 h-3 mr-1" />{viewingAnalysis.deal_name}</Badge>}
+              {viewingAnalysis?.client_name && <Badge variant="outline" className="text-xs"><UserCheck className="w-3 h-3 mr-1" />{viewingAnalysis.client_name}</Badge>}
+              {(() => { const oc = getOutcomeConfig(viewingAnalysis?.call_outcome || null); if (!oc) return null; const OcIcon = oc.icon; return <Badge variant="secondary" className={cn("text-xs", oc.bgColor, oc.color)}><OcIcon className="w-3 h-3 mr-1" />{oc.label}</Badge>; })()}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Outcome editor for existing analyses */}
+          <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+            <p className="text-sm font-medium flex items-center gap-2"><Crown className="w-4 h-4 text-primary" />Classificar resultado</p>
+            <div className="grid grid-cols-2 gap-2">
+              {CALL_OUTCOMES.map(outcome => {
+                const Icon = outcome.icon;
+                const isSelected = viewingAnalysis?.call_outcome === outcome.value;
+                return (
+                  <Card 
+                    key={outcome.value} 
+                    className={cn("cursor-pointer transition-all border-2", isSelected ? `${outcome.borderColor} ${outcome.bgColor}` : "border-transparent hover:border-border")} 
+                    onClick={() => {
+                      if (!viewingAnalysis) return;
+                      const newOutcome = isSelected ? null : outcome.value;
+                      setViewingAnalysis({ ...viewingAnalysis, call_outcome: newOutcome });
+                      updateAnalysisOutcomeMutation.mutate({ id: viewingAnalysis.id, call_outcome: newOutcome, client_id: viewingAnalysis.client_id || null, outcome_notes: viewingAnalysis.outcome_notes || null });
+                    }}
+                  >
+                    <CardContent className="p-2.5 flex items-center gap-2">
+                      <Icon className={cn("w-4 h-4 shrink-0", isSelected ? outcome.color : "text-muted-foreground")} />
+                      <div className="min-w-0">
+                        <p className={cn("text-xs font-medium", isSelected ? outcome.color : "")}>{outcome.label}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Vincular cliente</Label>
+              <Select value={viewingAnalysis?.client_id || 'none'} onValueChange={v => {
+                if (!viewingAnalysis) return;
+                const newClientId = v === 'none' ? null : v;
+                const newClientName = newClientId ? clients.find((c: any) => c.id === newClientId)?.full_name || null : null;
+                setViewingAnalysis({ ...viewingAnalysis, client_id: newClientId, client_name: newClientName });
+                updateAnalysisOutcomeMutation.mutate({ id: viewingAnalysis.id, call_outcome: viewingAnalysis.call_outcome || null, client_id: newClientId, outcome_notes: viewingAnalysis.outcome_notes || null });
+              }}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum</SelectItem>
+                  {clients.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>{c.full_name}{c.company_name ? ` — ${c.company_name}` : ''}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="max-w-none"><MarkdownRenderer content={viewingAnalysis?.analysis || ''} /></div>
           <DialogFooter><Button variant="outline" size="sm" onClick={() => viewingAnalysis && handleCopy(viewingAnalysis.analysis)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" onClick={() => { if (viewingAnalysis) exportSalesCallToPDF({ analysis: viewingAnalysis.analysis, createdAt: viewingAnalysis.created_at }); }}><Download className="w-4 h-4 mr-2" />PDF</Button></DialogFooter>
         </DialogContent>
