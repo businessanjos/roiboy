@@ -883,6 +883,7 @@ serve(async (req) => {
         
         // Extract quoted message ID from multiple sources
         const quotedMsgId = msg.quotedMessageId || 
+                            (typeof rawQuoted === "string" && rawQuoted.trim() ? rawQuoted.trim() : null) ||
                             (uazapiQuoted?.id as string) ||
                             (uazapiQuoted?.messageid as string) ||
                             (contextInfo?.stanzaId as string) ||
