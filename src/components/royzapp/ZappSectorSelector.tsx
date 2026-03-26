@@ -160,33 +160,11 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
         
         console.log("[ZappSectorSelector] Integrations loaded:", integrations);
 
-        // NEW: Fetch sector-level PIN settings
-        const { data: sectorSettings } = await supabase
-          .from("sector_settings")
-          .select("sector_id, pin_hash")
-          .eq("account_id", currentUser.account_id)
-          .in("sector_id", WHATSAPP_SECTOR_IDS);
-        
         // Create a map of sector -> has PIN at sector level
         const sectorPinMap: Record<string, boolean> = {};
         (sectorSettings || []).forEach((s: any) => {
           sectorPinMap[s.sector_id] = !!s.pin_hash;
         });
-        console.log("[ZappSectorSelector] Sector PIN map:", sectorPinMap);
-
-        // Buscar contagem de mensagens não lidas por departamento (setor)
-        const { data: departments } = await supabase
-          .from("zapp_departments")
-          .select("id, sector_id")
-          .eq("account_id", currentUser.account_id)
-          .in("sector_id", WHATSAPP_SECTOR_IDS);
-
-        // Buscar conversas não fechadas com unread > 0
-        const { data: conversations } = await supabase
-          .from("zapp_conversation_assignments")
-          .select("department_id, zapp_conversation:zapp_conversations(unread_count)")
-          .eq("account_id", currentUser.account_id)
-          .neq("status", "closed");
 
         // Calcular unread por departamento
         const unreadByDept: Record<string, number> = {};
