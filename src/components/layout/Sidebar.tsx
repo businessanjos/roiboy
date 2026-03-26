@@ -291,10 +291,22 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {filteredNavItems.map((item, idx) => {
-          const isActive = location.pathname.startsWith(item.to);
+          const isActive = location.pathname === item.to || (item.to !== "/" && location.pathname.startsWith(item.to + "/"));
           const isHighlighted = item.to === "/sales-team";
+          const showGroupHeader = item.group && !collapsed;
           return (
             <div key={item.to}>
+              {showGroupHeader && (
+                <>
+                  <div className={cn("my-1.5 border-t border-border/50", collapsed && "mx-1")} />
+                  <p className="px-3 pt-1 pb-0.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    {item.group}
+                  </p>
+                </>
+              )}
+              {item.group && collapsed && (
+                <div className="my-1.5 border-t border-border/50 mx-1" />
+              )}
               <NavLink
                 to={item.to}
                 onClick={onNavigate}
