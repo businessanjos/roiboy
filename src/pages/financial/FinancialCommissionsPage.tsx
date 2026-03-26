@@ -453,6 +453,7 @@ export default function FinancialCommissionsPage() {
                   <p>Nenhuma comissão neste período</p>
                 </div>
               ) : (
+                <>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -466,7 +467,7 @@ export default function FinancialCommissionsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {entries.map((entry) => (
+                    {paginatedEntries.map((entry) => (
                       <TableRow key={entry.id}>
                         <TableCell className="font-medium">
                           {entry.user?.full_name || "-"}
@@ -513,6 +514,15 @@ export default function FinancialCommissionsPage() {
                     ))}
                   </TableBody>
                 </Table>
+                <TablePagination
+                  currentPage={commPage}
+                  totalPages={commTotalPages}
+                  totalItems={commTotalItems}
+                  pageSize={commPageSize}
+                  onPageChange={handleCommPageChange}
+                  onPageSizeChange={handleCommPageSizeChange}
+                />
+                </>
               )}
             </TabsContent>
 
