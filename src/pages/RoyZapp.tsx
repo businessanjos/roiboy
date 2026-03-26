@@ -7,6 +7,7 @@ import { useZappMessaging } from "@/hooks/useZappMessaging";
 import { useZappNotifications } from "@/hooks/useZappNotifications";
 import { useZappConversationActions } from "@/hooks/useZappConversationActions";
 import { useZappCrudOperations } from "@/hooks/useZappCrudOperations";
+import { useZappContactOperations } from "@/hooks/useZappContactOperations";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -251,287 +252,8 @@ export default function RoyZapp() {
   }, [selectedConversation, assignments, selectedIntegrationId, currentUser?.account_id]);
   // dismissGroupConversation is now in convActions hook
 
-  // Handle URL parameters for auto-selecting or creating conversations
+  // URL params processing is done below after contactOps hook is initialized
   const [urlParamsProcessed, setUrlParamsProcessed] = useState(false);
-  
-  useEffect(() => {
-    if (urlParamsProcessed || loading || !currentUser?.account_id) return;
-    
-    const conversationId = searchParams.get('conversation');
-    const newPhone = searchParams.get('newPhone');
-    const newName = searchParams.get('newName');
-    const leadId = searchParams.get('leadId');
-    const clientId = searchParams.get('clientId');
-    
-    // If conversation ID is provided, select it
-    if (conversationId && assignments.length > 0) {
-      const assignment = assignments.find(a => a.zapp_conversation_id === conversationId);
-      if (assignment) {
-        setSelectedConversation(assignment);
-        setUrlParamsProcessed(true);
-        return;
-      }
-    }
-    
-    // If newPhone is provided and no agent yet (wait for agent to load)
-    if (newPhone && currentAgent && !conversationId) {
-      setUrlParamsProcessed(true);
-      
-      // Create conversation with the lead/client
-      const contact = {
-        id: leadId || clientId || '',
-        full_name: decodeURIComponent(newName || ''),
-        phone_e164: `+${newPhone}`,
-        avatar_url: null,
-      };
-      
-      if (leadId || clientId) {
-        createConversationFromUrl(contact, !!leadId);
-      }
-    }
-  }, [assignments, loading, currentUser?.account_id, currentAgent, searchParams, urlParamsProcessed]);
-
-  // Helper function to create conversation from URL params
-  const createConversationFromUrl = async (contact: { id: string; full_name: string; phone_e164: string; avatar_url: null }, isLead: boolean) => {
-    if (!currentUser?.account_id || !currentAgent) return;
-    
-    setCreatingConversation(true);
-    try {
-      const idField = isLead ? "lead_id" : "client_id";
-      
-      // Normalizar telefone para busca consistente
-      const normalizedPhone = contact.phone_e164.startsWith('+') 
-        ? contact.phone_e164 
-        : `+${contact.phone_e164}`;
-      
-      let zappConvId: string | null = null;
-      
-      // PRIORIZAR busca por telefone + integration_id (cada instância tem sua própria conversa)
-      let convByPhone = await supabase
-        .from("zapp_conversations")
-        .select("id, lead_id, client_id, integration_id")
-        .eq("account_id", currentUser.account_id)
-        .eq("phone_e164", normalizedPhone)
-        .eq("integration_id", selectedIntegrationId)
-        .eq("is_group", false)
-        .maybeSingle();
-      
-      // FALLBACK: Buscar conversa LEGADA (mesmo telefone, mesmo setor, sem integration_id)
-      // Isso resolve duplicação de conversas criadas antes do sistema multi-instância
-      if (!convByPhone?.data && selectedSectorId) {
-        const { data: legacyConv } = await supabase
-          .from("zapp_conversations")
-          .select("id, lead_id, client_id, integration_id")
-          .eq("account_id", currentUser.account_id)
-          .eq("phone_e164", normalizedPhone)
-          .eq("sector_id", selectedSectorId)
-          .is("integration_id", null)
-          .eq("is_group", false)
-          .order("last_message_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        
-        if (legacyConv) {
-          // Migrar conversa legada para o novo formato com integration_id
-          console.log("[RoyZapp] Conversa legada encontrada e migrada:", legacyConv.id);
-          await supabase
-            .from("zapp_conversations")
-            .update({ integration_id: selectedIntegrationId })
-            .eq("id", legacyConv.id);
-          
-          convByPhone = { data: legacyConv, error: null, count: null, status: 200, statusText: "OK" };
-        }
-      }
-      
-      if (convByPhone?.data) {
-        zappConvId = convByPhone.data.id;
-        
-        // Atualizar lead_id/client_id se não estiver vinculado
-        if (isLead && !convByPhone.data.lead_id && contact.id) {
-          await supabase
-            .from("zapp_conversations")
-            .update({ lead_id: contact.id, contact_name: contact.full_name })
-            .eq("id", convByPhone.data.id);
-        } else if (!isLead && !convByPhone.data.client_id && contact.id) {
-          await supabase
-            .from("zapp_conversations")
-            .update({ client_id: contact.id, contact_name: contact.full_name })
-            .eq("id", convByPhone.data.id);
-        }
-      } else {
-        // Não fazer fallback por lead_id/client_id — se o telefone é diferente,
-        // devemos criar uma nova conversa para esse telefone específico.
-        // zappConvId permanece null para forçar criação de nova conversa.
-      }
-      
-      if (zappConvId) {
-        // Buscar TODOS os assignments para esta conversa e departamento (incluindo closed)
-        const { data: existingAssignments } = await supabase
-          .from("zapp_conversation_assignments")
-          .select("id, agent_id, status, department_id")
-          .eq("zapp_conversation_id", zappConvId)
-          .eq("department_id", currentSectorDepartmentId)
-          .order("created_at", { ascending: false });
-        
-        const activeAssignment = existingAssignments?.find(a => a.status !== 'closed');
-        const closedAssignment = existingAssignments?.find(a => a.status === 'closed');
-        
-        if (activeAssignment) {
-          // VERIFICAÇÃO DE ISOLAMENTO: Checar se já está atribuída a outro agente
-          const isManager = currentUser?.team_role_name === "Gestor";
-          const hasFullVisibility = isAdmin || isManager;
-          
-          if (activeAssignment.agent_id && activeAssignment.agent_id !== currentAgent?.id && !hasFullVisibility) {
-            // Buscar nome do agente responsável
-            const responsibleAgent = agents.find(ag => ag.id === activeAssignment.agent_id);
-            const agentName = responsibleAgent?.user?.name || "outro atendente";
-            toast.warning(`Este contato já está em atendimento por ${agentName}`);
-            setCreatingConversation(false);
-            return;
-          }
-          
-          // Apenas abrir a conversa existente (sem mudar o responsável)
-          const { data: assignmentData } = await supabase
-            .from("zapp_conversation_assignments")
-            .select(`
-              *,
-              zapp_conversation:zapp_conversations(*),
-              agent:zapp_agents(*)
-            `)
-            .eq("id", activeAssignment.id)
-            .single();
-          
-          if (assignmentData) {
-            setSelectedConversation(assignmentData);
-            // CRITICAL FIX: Add immediately to local list to prevent race condition
-            setAssignments(prev => {
-              const exists = prev.some(a => a.id === assignmentData.id);
-              if (exists) return prev.map(a => a.id === assignmentData.id ? assignmentData : a);
-              return [assignmentData, ...prev];
-            });
-          }
-          // CRITICAL FIX: Delay fetchData to prevent overwriting local state
-          setTimeout(() => fetchData(), 2000);
-          toast.info("Abrindo conversa existente");
-          setCreatingConversation(false);
-          return;
-        } else if (closedAssignment) {
-          // REABRIR: Atualizar status do assignment existente em vez de criar novo
-          const { error: reopenError } = await supabase
-            .from("zapp_conversation_assignments")
-            .update({ 
-              status: "triage", 
-              agent_id: null,
-              assigned_at: null,
-              closed_at: null,
-              updated_at: new Date().toISOString() 
-            })
-            .eq("id", closedAssignment.id);
-          
-          if (reopenError) throw reopenError;
-          
-          toast.success("Conversa reaberta na Fila!");
-          setInboxTab("queue");
-          
-          // Fetch the reopened assignment
-          const { data: reopenedData } = await supabase
-            .from("zapp_conversation_assignments")
-            .select(`
-              *,
-              zapp_conversation:zapp_conversations(*),
-              agent:zapp_agents(*)
-            `)
-            .eq("id", closedAssignment.id)
-            .single();
-          
-          if (reopenedData) {
-            setSelectedConversation(reopenedData);
-            // CRITICAL FIX: Add immediately to local list to prevent race condition
-            setAssignments(prev => {
-              const exists = prev.some(a => a.id === reopenedData.id);
-              if (exists) return prev.map(a => a.id === reopenedData.id ? reopenedData : a);
-              return [reopenedData, ...prev];
-            });
-          }
-          // CRITICAL FIX: Delay fetchData to prevent overwriting local state
-          setTimeout(() => fetchData(), 2000);
-          setCreatingConversation(false);
-          return;
-        }
-        // Se não tem nenhum assignment para este departamento, continua para criar um abaixo
-      } else {
-        // Criar nova zapp_conversation
-        const baseData = {
-          account_id: currentUser.account_id,
-          phone_e164: normalizedPhone,
-          contact_name: contact.full_name,
-          avatar_url: contact.avatar_url,
-          sector_id: selectedSectorId,
-          integration_id: selectedIntegrationId,
-        };
-        
-        const insertData = isLead 
-          ? { ...baseData, lead_id: contact.id }
-          : { ...baseData, client_id: contact.id };
-        
-        const { data: newConv, error: convError } = await supabase
-          .from("zapp_conversations")
-          .insert(insertData)
-          .select("id")
-          .single();
-        
-        if (convError) throw convError;
-        zappConvId = newConv.id;
-      }
-      
-      // Create assignment in queue (triage) - agent must pull from queue
-      const { error: assignError } = await supabase
-        .from("zapp_conversation_assignments")
-        .insert({
-          account_id: currentUser.account_id,
-          zapp_conversation_id: zappConvId,
-          agent_id: null, // No agent assigned - goes to queue
-          status: "triage", // Triage status for queue
-          department_id: currentSectorDepartmentId,
-        });
-      
-      if (assignError) throw assignError;
-      
-      toast.success("Conversa criada na Fila! Puxe-a para iniciar o atendimento.");
-      setInboxTab("queue"); // Switch to queue tab
-      
-      // Fetch the new assignment directly to avoid stale closure
-      const { data: newAssignmentData } = await supabase
-        .from("zapp_conversation_assignments")
-        .select(`
-          *,
-          zapp_conversation:zapp_conversations(*),
-          agent:zapp_agents(*)
-        `)
-        .eq("zapp_conversation_id", zappConvId)
-        .is("agent_id", null)
-        .neq("status", "closed")
-        .single();
-      
-      if (newAssignmentData) {
-        setSelectedConversation(newAssignmentData);
-        // CRITICAL FIX: Add immediately to local list to prevent race condition
-        setAssignments(prev => {
-          const exists = prev.some(a => a.id === newAssignmentData.id);
-          if (exists) return prev;
-          return [newAssignmentData, ...prev];
-        });
-      }
-      
-      // CRITICAL FIX: Delay fetchData to prevent overwriting local state
-      setTimeout(() => fetchData(), 2000);
-    } catch (error) {
-      console.error("Error creating conversation from URL:", error);
-      toast.error("Erro ao criar conversa");
-    } finally {
-      setCreatingConversation(false);
-    }
-  };
   
   // Messaging state is now managed by useZappMessaging hook (messaging.*)
   const [inboxTab, setInboxTab] = useState<"mine" | "queue">("mine");
@@ -681,7 +403,6 @@ export default function RoyZapp() {
     },
   });
 
-  // Notification system - handle view chat callback
   const handleNotificationViewChat = useCallback((conversationId: string) => {
     const assignment = assignments.find(
       a => a.zapp_conversation_id === conversationId || a.zapp_conversation?.id === conversationId
@@ -780,18 +501,8 @@ export default function RoyZapp() {
 
   // Contact picker and quick replies state are now in useZappMessaging hook (messaging.*)
 
-  // Add client/lead from contact state
-  const [addContactDialogOpen, setAddContactDialogOpen] = useState(false);
-  const [addContactPhone, setAddContactPhone] = useState("");
-  const [addContactName, setAddContactName] = useState("");
-  const [savingNewClient, setSavingNewClient] = useState(false);
-  const [savingNewLead, setSavingNewLead] = useState(false);
+  // Contact state is now in contactOps hook
 
-  // New conversation with client state
-  const [newConversationDialogOpen, setNewConversationDialogOpen] = useState(false);
-  const [newConversationSearch, setNewConversationSearch] = useState("");
-  const [newConversationClients, setNewConversationClients] = useState<any[]>([]);
-  const [creatingConversation, setCreatingConversation] = useState(false);
 
   // Playbook dialog state for chat
   const [playbookDialogOpen, setPlaybookDialogOpen] = useState(false);
@@ -844,7 +555,59 @@ export default function RoyZapp() {
     };
   }, []);
 
-  // Helper to get agent name by id
+  // Contact operations hook (create conversations, search contacts, save client/lead)
+  const contactOps = useZappContactOperations({
+    currentUser,
+    isAdmin,
+    currentAgent,
+    agents,
+    selectedConversation,
+    selectedSectorId,
+    selectedIntegrationId,
+    currentSectorDepartmentId,
+    hasVendasAccess,
+    setAssignments,
+    setSelectedConversation,
+    setInboxTab,
+    setFilterConversationType,
+    fetchData,
+    fetchMessages,
+    getContactInfo,
+  });
+
+  // Handle URL parameters for auto-selecting or creating conversations
+  useEffect(() => {
+    if (urlParamsProcessed || loading || !currentUser?.account_id) return;
+    
+    const conversationId = searchParams.get('conversation');
+    const newPhone = searchParams.get('newPhone');
+    const newName = searchParams.get('newName');
+    const leadId = searchParams.get('leadId');
+    const clientId = searchParams.get('clientId');
+    
+    if (conversationId && assignments.length > 0) {
+      const assignment = assignments.find(a => a.zapp_conversation_id === conversationId);
+      if (assignment) {
+        setSelectedConversation(assignment);
+        setUrlParamsProcessed(true);
+        return;
+      }
+    }
+    
+    if (newPhone && currentAgent && !conversationId) {
+      setUrlParamsProcessed(true);
+      const contact = {
+        id: leadId || clientId || '',
+        full_name: decodeURIComponent(newName || ''),
+        phone_e164: `+${newPhone}`,
+        avatar_url: null,
+      };
+      if (leadId || clientId) {
+        contactOps.createConversationFromUrl(contact, !!leadId);
+      }
+    }
+  }, [assignments, loading, currentUser?.account_id, currentAgent, searchParams, urlParamsProcessed, contactOps]);
+
   const getAgentName = (agentId: string | null) => {
     if (!agentId) return null;
     const agent = agents.find(a => a.id === agentId);
@@ -941,944 +704,9 @@ export default function RoyZapp() {
     }
   }, [selectedIntegrationId, fetchData]);
 
-  // Create client/lead from contact
-  const openAddContactDialog = () => {
-    if (!selectedConversation?.zapp_conversation) return;
-    const contactInfo = getContactInfo(selectedConversation);
-    setAddContactName(contactInfo.name || "");
-    setAddContactPhone(contactInfo.phone || "");
-    setAddContactDialogOpen(true);
-  };
-
-  const saveNewClient = async (data: { full_name: string; phone_e164: string }) => {
-    if (!currentUser?.account_id || !selectedConversation?.zapp_conversation) return;
-    if (!data.full_name.trim() || !data.phone_e164.trim()) {
-      toast.error("Nome e telefone são obrigatórios");
-      return;
-    }
-
-    setSavingNewClient(true);
-    try {
-      // Create the client
-      const { data: newClient, error: clientError } = await supabase
-        .from("clients")
-        .insert({
-          account_id: currentUser.account_id,
-          full_name: data.full_name.trim(),
-          phone_e164: data.phone_e164.trim(),
-          status: "active",
-        })
-        .select("id")
-        .single();
-
-      if (clientError) throw clientError;
-
-      // Link the zapp_conversation to the new client
-      const { error: linkError } = await supabase
-        .from("zapp_conversations")
-        .update({ client_id: newClient.id })
-        .eq("id", selectedConversation.zapp_conversation.id);
-
-      if (linkError) throw linkError;
-
-      toast.success("Cliente cadastrado com sucesso!");
-      setAddContactDialogOpen(false);
-      
-      // Refresh data
-      fetchData();
-    } catch (error: any) {
-      console.error("Error creating client:", error);
-      if (error.code === "23505") {
-        toast.error("Já existe um cliente com este telefone");
-      } else {
-        toast.error(error.message || "Erro ao cadastrar cliente");
-      }
-    } finally {
-      setSavingNewClient(false);
-    }
-  };
-
-  const saveNewLead = async (data: {
-    full_name: string;
-    phone: string;
-    email?: string;
-    source?: string;
-    notes?: string;
-    cpf?: string;
-    rg?: string;
-    birth_date?: string;
-    cnpj?: string;
-    company_name?: string;
-    business_segment?: string;
-    business_niche?: string;
-    street?: string;
-    street_number?: string;
-    complement?: string;
-    neighborhood?: string;
-    city?: string;
-    state?: string;
-    zip_code?: string;
-    business_street?: string;
-    business_street_number?: string;
-    business_complement?: string;
-    business_neighborhood?: string;
-    business_city?: string;
-    business_state?: string;
-    business_zip_code?: string;
-    bank_code?: string;
-    bank_name?: string;
-    bank_agency?: string;
-    bank_account?: string;
-    bank_account_type?: string;
-    pix_key?: string;
-    pix_key_type?: string;
-    instagram?: string;
-  }) => {
-    if (!currentUser?.account_id || !selectedConversation?.zapp_conversation) return;
-    if (!data.full_name.trim()) {
-      toast.error("Nome é obrigatório");
-      return;
-    }
-
-    setSavingNewLead(true);
-    try {
-      // Create the lead with all fields
-      const { data: newLead, error: leadError } = await supabase
-        .from("leads")
-        .insert({
-          account_id: currentUser.account_id,
-          full_name: data.full_name.trim(),
-          phone: data.phone.trim() || null,
-          email: data.email?.trim() || null,
-          source: data.source || "whatsapp",
-          notes: data.notes?.trim() || null,
-          status: "new",
-          responsible_user_id: currentUser.id,
-          // Dados pessoais
-          cpf: data.cpf?.trim() || null,
-          rg: data.rg?.trim() || null,
-          birth_date: data.birth_date || null,
-          // Dados empresa
-          cnpj: data.cnpj?.trim() || null,
-          company_name: data.company_name?.trim() || null,
-          business_segment: data.business_segment?.trim() || null,
-          business_niche: data.business_niche?.trim() || null,
-          // Endereço residencial
-          street: data.street?.trim() || null,
-          street_number: data.street_number?.trim() || null,
-          complement: data.complement?.trim() || null,
-          neighborhood: data.neighborhood?.trim() || null,
-          city: data.city?.trim() || null,
-          state: data.state || null,
-          zip_code: data.zip_code?.trim() || null,
-          // Endereço comercial
-          business_street: data.business_street?.trim() || null,
-          business_street_number: data.business_street_number?.trim() || null,
-          business_complement: data.business_complement?.trim() || null,
-          business_neighborhood: data.business_neighborhood?.trim() || null,
-          business_city: data.business_city?.trim() || null,
-          business_state: data.business_state || null,
-          business_zip_code: data.business_zip_code?.trim() || null,
-          // Dados bancários
-          bank_code: data.bank_code?.trim() || null,
-          bank_name: data.bank_name?.trim() || null,
-          bank_agency: data.bank_agency?.trim() || null,
-          bank_account: data.bank_account?.trim() || null,
-          bank_account_type: data.bank_account_type || "checking",
-          pix_key: data.pix_key?.trim() || null,
-          pix_key_type: data.pix_key_type || null,
-          instagram: data.instagram?.trim() || null,
-          emails: data.email ? [data.email.trim()] : [],
-        })
-        .select("id")
-        .single();
-
-      if (leadError) throw leadError;
-
-      // Link the zapp_conversation to the new lead and update contact_name
-      const { error: linkError } = await supabase
-        .from("zapp_conversations")
-        .update({ 
-          lead_id: newLead.id,
-          contact_name: data.full_name.trim()
-        })
-        .eq("id", selectedConversation.zapp_conversation.id);
-
-      if (linkError) throw linkError;
-
-      toast.success("Lead cadastrado com sucesso!");
-      setAddContactDialogOpen(false);
-      
-      // Update selectedConversation with new lead data
-      setSelectedConversation(prev => {
-        if (!prev || !prev.zapp_conversation) return prev;
-        return {
-          ...prev,
-          zapp_conversation: {
-            ...prev.zapp_conversation,
-            lead_id: newLead.id,
-            lead: {
-              id: newLead.id,
-              full_name: data.full_name.trim(),
-              phone: data.phone.trim() || null,
-              email: data.email?.trim() || null,
-              status: "new",
-            } as any,
-          },
-        };
-      });
-      
-      // Update the assignment in the assignments list
-      setAssignments(prev => prev.map(a => {
-        if (a.id !== selectedConversation.id) return a;
-        return {
-          ...a,
-          zapp_conversation: a.zapp_conversation ? {
-            ...a.zapp_conversation,
-            lead_id: newLead.id,
-            lead: {
-              id: newLead.id,
-              full_name: data.full_name.trim(),
-              phone: data.phone.trim() || null,
-              email: data.email?.trim() || null,
-              status: "new",
-            } as any,
-          } : a.zapp_conversation,
-        };
-      }));
-      
-      // Refresh data in background
-      fetchData();
-    } catch (error: any) {
-      console.error("Error creating lead:", error);
-      toast.error(error.message || "Erro ao cadastrar lead");
-    } finally {
-      setSavingNewLead(false);
-    }
-  };
-
-  // Open new conversation dialog
-  const openNewConversationDialog = () => {
-    if (!currentUser?.account_id) return;
-    setNewConversationSearch("");
-    setNewConversationClients([]);
-    setNewConversationDialogOpen(true);
-  };
-
-  // Dynamic search for all contacts (clients, leads, conversations)
-  const searchContacts = useCallback(async (searchTerm: string) => {
-    if (!currentUser?.account_id || !searchTerm.trim()) {
-      setNewConversationClients([]);
-      return;
-    }
-
-    const trimmedSearch = searchTerm.trim();
-    const normalizedPhone = trimmedSearch.replace(/\D/g, '');
-    // Remove diacritics/accents for accent-insensitive search (e.g., "Letícia" → "Leticia")
-    const textSearch = trimmedSearch
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-    
-    const isPhoneSearch = trimmedSearch.startsWith('+') || 
-      (normalizedPhone.length >= 4 && normalizedPhone.length >= trimmedSearch.replace(/[\s\-\(\)]/g, '').length * 0.7);
-
-    // Search in parallel across all sources
-    const [clientsResult, leadsResult, conversationsResult, groupsResult] = await Promise.all([
-      // 1. Search clients (include all relevant statuses, not just active)
-      supabase
-        .from("clients")
-        .select("id, full_name, phone_e164, avatar_url, status, additional_phones")
-        .eq("account_id", currentUser.account_id)
-        .in("status", ["active", "churn_risk", "churned", "no_contract", "paused"])
-        .or(isPhoneSearch && normalizedPhone.length >= 4 
-          ? `phone_e164.ilike.%${normalizedPhone}%`
-          : `full_name.ilike.%${textSearch}%,phone_e164.ilike.%${textSearch}%`)
-        .order("full_name")
-        .limit(15),
-      
-      // 2. Search unconverted leads (include additional_phones)
-      supabase
-        .from("leads")
-        .select("id, full_name, phone, avatar_url, additional_phones")
-        .eq("account_id", currentUser.account_id)
-        .is("converted_to_client_id", null)
-        .or(isPhoneSearch && normalizedPhone.length >= 4
-          ? `phone.ilike.%${normalizedPhone}%`
-          : `full_name.ilike.%${textSearch}%,phone.ilike.%${textSearch}%`)
-        .order("full_name")
-        .limit(20),
-      
-      // 3. Search existing conversations (WhatsApp contacts)
-      supabase
-        .from("zapp_conversations")
-        .select("id, contact_name, phone_e164, avatar_url, client_id, lead_id")
-        .eq("account_id", currentUser.account_id)
-        .is("is_group", false)
-        .neq("phone_e164", "")
-        .or(isPhoneSearch && normalizedPhone.length >= 4
-          ? `phone_e164.ilike.%${normalizedPhone}%`
-          : `contact_name.ilike.%${textSearch}%,phone_e164.ilike.%${textSearch}%`)
-        .order("last_message_at", { ascending: false })
-        .limit(10),
-      
-      // 4. Search groups by name - NO sector/integration filter
-      // Groups support multi-sector access: any user can find any group in the account.
-      // Sector isolation is enforced when opening/creating the assignment, not at search time.
-      supabase
-        .from("zapp_conversations")
-        .select("id, contact_name, avatar_url, group_jid, sector_id, integration_id")
-        .eq("account_id", currentUser.account_id)
-        .eq("is_group", true)
-        .ilike("contact_name", `%${textSearch}%`)
-        .order("last_message_at", { ascending: false })
-        .limit(25),
-    ]);
-
-    // Debug logging for cross-sector group search
-    console.log("[SearchContacts] Query term:", textSearch);
-    console.log("[SearchContacts] Groups result:", {
-      count: groupsResult.data?.length || 0,
-      error: groupsResult.error,
-      data: groupsResult.data?.slice(0, 5).map(g => ({ id: g.id, name: g.contact_name, sector: g.sector_id }))
-    });
-
-    if (groupsResult.error) {
-      console.error("[SearchContacts] Groups query error:", groupsResult.error);
-      toast.error("Erro ao buscar grupos");
-    }
-
-    // Map results with type indicator
-    const clients: Array<{ id: string; full_name: string; phone_e164: string; avatar_url: string | null; type: 'client' }> = [];
-    for (const c of (clientsResult.data || [])) {
-      const getClientAdditionalPhones = (): Array<{ phone: string; label?: string }> => {
-        if (!Array.isArray(c.additional_phones)) return [];
-        return (c.additional_phones as any[]).map((ap: any) => {
-          if (typeof ap === 'string') return { phone: ap };
-          if (typeof ap === 'object' && ap !== null && ap.number) return { phone: ap.number, label: ap.label };
-          return null;
-        }).filter(Boolean) as Array<{ phone: string; label?: string }>;
-      };
-
-      const clientAdditionalPhones = getClientAdditionalPhones();
-
-      if (isPhoneSearch && normalizedPhone.length >= 4) {
-        const primaryMatches = (c.phone_e164 || '').replace(/\D/g, '').includes(normalizedPhone);
-        if (primaryMatches) {
-          clients.push({ id: c.id, full_name: c.full_name, phone_e164: c.phone_e164, avatar_url: c.avatar_url, type: 'client' });
-        }
-        clientAdditionalPhones.forEach((ap, idx) => {
-          if (ap.phone.replace(/\D/g, '').includes(normalizedPhone)) {
-            clients.push({ id: `${c.id}-alt-${idx}`, full_name: c.full_name, phone_e164: ap.phone, avatar_url: c.avatar_url, type: 'client' });
-          }
-        });
-      } else {
-        clients.push({ id: c.id, full_name: c.full_name, phone_e164: c.phone_e164, avatar_url: c.avatar_url, type: 'client' });
-        clientAdditionalPhones.forEach((ap, idx) => {
-          clients.push({ id: `${c.id}-alt-${idx}`, full_name: c.full_name, phone_e164: ap.phone, avatar_url: c.avatar_url, type: 'client' });
-        });
-      }
-    }
-
-    const leads: Array<{ id: string; full_name: string; phone_e164: string; avatar_url: string | null; type: 'lead' }> = [];
-    for (const l of (leadsResult.data || [])) {
-      // Helper to extract phone from additional_phones entries (can be string or {number, label})
-      const getAdditionalPhones = (): Array<{ phone: string; label?: string }> => {
-        if (!Array.isArray(l.additional_phones)) return [];
-        return (l.additional_phones as any[]).map((ap: any) => {
-          if (typeof ap === 'string') return { phone: ap };
-          if (typeof ap === 'object' && ap !== null && ap.number) return { phone: ap.number, label: ap.label };
-          return null;
-        }).filter(Boolean) as Array<{ phone: string; label?: string }>;
-      };
-
-      const additionalPhones = getAdditionalPhones();
-
-      if (isPhoneSearch && normalizedPhone.length >= 4) {
-        // Phone search: only include numbers that match
-        const primaryMatches = (l.phone || '').replace(/\D/g, '').includes(normalizedPhone);
-        if (primaryMatches) {
-          leads.push({ id: l.id, full_name: l.full_name, phone_e164: l.phone || "", avatar_url: l.avatar_url, type: 'lead' });
-        }
-        additionalPhones.forEach((ap, idx) => {
-          if (ap.phone.replace(/\D/g, '').includes(normalizedPhone)) {
-            leads.push({ id: `${l.id}-alt-${idx}`, full_name: l.full_name, phone_e164: ap.phone, avatar_url: l.avatar_url, type: 'lead' });
-          }
-        });
-      } else {
-        // Name search: show primary phone entry
-        leads.push({ id: l.id, full_name: l.full_name, phone_e164: l.phone || "", avatar_url: l.avatar_url, type: 'lead' });
-        // Also show separate entries for each additional phone
-        additionalPhones.forEach((ap, idx) => {
-          leads.push({ id: `${l.id}-alt-${idx}`, full_name: l.full_name, phone_e164: ap.phone, avatar_url: l.avatar_url, type: 'lead' });
-        });
-      }
-    }
-
-    // Conversations not linked to client or lead
-    const conversations = (conversationsResult.data || [])
-      .filter(conv => !conv.client_id && !conv.lead_id)
-      .map(conv => ({
-        id: conv.id,
-        full_name: conv.contact_name || "Desconhecido",
-        phone_e164: conv.phone_e164,
-        avatar_url: conv.avatar_url,
-        type: 'conversation' as const,
-      }));
-
-    // Map groups
-    const groups = (groupsResult.data || []).map(g => ({
-      id: g.id,
-      full_name: g.contact_name || "Grupo",
-      phone_e164: "",
-      avatar_url: g.avatar_url,
-      type: 'group' as const,
-      group_jid: g.group_jid,
-    }));
-
-    // Combine results removing phone duplicates - PRIORITIZE clients over leads
-    // Order: clients first (any status), then leads, then conversations
-    // This ensures if same phone exists as both client and lead, client wins
-    const phonesSeen = new Set<string>();
-    const combined = [...clients, ...leads, ...conversations].filter(contact => {
-      const phone = contact.phone_e164?.replace(/\D/g, '');
-      if (!phone || phonesSeen.has(phone)) return false;
-      phonesSeen.add(phone);
-      return true;
-    });
-
-    // Add groups (no phone deduplication needed)
-    const finalCombined = [...combined, ...groups];
-
-    // Se não encontrou nenhum contato e a busca parece um telefone válido,
-    // oferecer opção de iniciar conversa com esse número
-    if (combined.length === 0 && groups.length === 0) {
-      const phoneDigits = trimmedSearch.replace(/\D/g, '');
-      if (phoneDigits.length >= 10) {
-        const formattedPhone = trimmedSearch.startsWith('+') 
-          ? trimmedSearch 
-          : `+${phoneDigits}`;
-        finalCombined.push({
-          id: `new-phone-${phoneDigits}`,
-          full_name: formattedPhone,
-          phone_e164: formattedPhone,
-          avatar_url: null,
-          type: 'conversation' as const,
-        });
-      }
-    }
-
-    // Fetch common groups for the found contacts (only for non-group contacts)
-    const phonesForGroupSearch = combined.map(c => c.phone_e164?.replace(/\D/g, '')).filter(Boolean) as string[];
-    
-    if (phonesForGroupSearch.length > 0) {
-      // Fetch group participants separately (no direct FK relation)
-      const { data: groupParticipants } = await supabase
-        .from("whatsapp_group_participants")
-        .select("phone, group_jid")
-        .eq("account_id", currentUser.account_id)
-        .in("phone", phonesForGroupSearch);
-
-      // Get unique group JIDs to fetch group details
-      const groupJids = [...new Set((groupParticipants || []).map(p => p.group_jid))];
-      
-      let groupsMapForCommon = new Map<string, { name: string; avatar_url: string | null }>();
-      if (groupJids.length > 0) {
-        const { data: groupDetails } = await supabase
-          .from("whatsapp_groups")
-          .select("group_jid, name")
-          .eq("account_id", currentUser.account_id)
-          .in("group_jid", groupJids);
-        
-        (groupDetails || []).forEach((g: { group_jid: string; name: string }) => {
-          groupsMapForCommon.set(g.group_jid, { name: g.name, avatar_url: null });
-        });
-      }
-
-      // Create phone -> groups map
-      const phoneToGroups = new Map<string, Array<{name: string, avatar_url: string | null}>>();
-      (groupParticipants || []).forEach((p) => {
-        const phone = p.phone;
-        const groupInfo = groupsMapForCommon.get(p.group_jid);
-        if (!phoneToGroups.has(phone)) {
-          phoneToGroups.set(phone, []);
-        }
-        if (groupInfo) {
-          phoneToGroups.get(phone)!.push({
-            name: groupInfo.name,
-            avatar_url: groupInfo.avatar_url,
-          });
-        }
-      });
-
-      // Add common_groups to individual contacts, then append group results
-      const combinedWithGroups = combined.map(c => ({
-        ...c,
-        common_groups: phoneToGroups.get(c.phone_e164?.replace(/\D/g, '') || '') || [],
-      }));
-
-      setNewConversationClients([...combinedWithGroups, ...groups]);
-    } else {
-      setNewConversationClients(finalCombined);
-    }
-  }, [currentUser?.account_id]);
-
-  // Debounced search effect
-  useEffect(() => {
-    if (!newConversationDialogOpen) return;
-    
-    const timeoutId = setTimeout(() => {
-      searchContacts(newConversationSearch);
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [newConversationSearch, newConversationDialogOpen, searchContacts]);
-
-  // Create new conversation with contact (lead or client based on sector)
-  const createConversationWithContact = async (contact: any) => {
-    if (!currentUser?.account_id) return;
-    
-    // For groups, allow opening even without being an agent
-    const isGroupContact = contact.type === 'group';
-    
-    if (!isGroupContact && !currentAgent) {
-      toast.error("Você precisa estar cadastrado como atendente para iniciar conversas individuais");
-      return;
-    }
-    
-    setCreatingConversation(true);
-    try {
-      // Handle groups specially - they already exist as zapp_conversation
-      if (contact.type === 'group') {
-        const zappConvId = contact.id;
-        
-        // Check for existing assignment in this department
-        const { data: existingAssignments } = await supabase
-          .from("zapp_conversation_assignments")
-          .select("id, agent_id, status, department_id")
-          .eq("zapp_conversation_id", zappConvId)
-          .eq("department_id", currentSectorDepartmentId)
-          .order("created_at", { ascending: false });
-        
-        const activeAssignment = existingAssignments?.find(a => a.status !== 'closed');
-        const closedAssignment = existingAssignments?.find(a => a.status === 'closed');
-        
-        if (activeAssignment) {
-          // Open existing group conversation
-          const { data: assignmentData } = await supabase
-            .from("zapp_conversation_assignments")
-            .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
-            .eq("id", activeAssignment.id)
-            .single();
-          
-          if (assignmentData) {
-            setSelectedConversation(assignmentData);
-            // CRITICAL FIX: Add immediately to local list to prevent race condition
-            setAssignments(prev => {
-              const exists = prev.some(a => a.id === assignmentData.id);
-              if (exists) return prev.map(a => a.id === assignmentData.id ? assignmentData : a);
-              return [assignmentData, ...prev];
-            });
-          }
-          // CRITICAL FIX: Delay fetchData to prevent overwriting local state
-          setTimeout(() => fetchData(), 2000);
-          toast.info("Abrindo grupo existente");
-          setNewConversationDialogOpen(false);
-          setCreatingConversation(false);
-          return;
-        } else if (closedAssignment) {
-          // Reopen closed group - assigned to agent if available, otherwise triage
-          await supabase
-            .from("zapp_conversation_assignments")
-            .update({ 
-              status: currentAgent ? "active" : "triage",  // Active if agent, triage otherwise
-              agent_id: currentAgent?.id || null,  // Assign to current agent if available
-              assigned_at: currentAgent ? new Date().toISOString() : null,
-              closed_at: null,
-              updated_at: new Date().toISOString() 
-            })
-            .eq("id", closedAssignment.id);
-          
-          // Fetch and select the reopened assignment so it appears in sidebar
-          const { data: reopenedData } = await supabase
-            .from("zapp_conversation_assignments")
-            .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
-            .eq("id", closedAssignment.id)
-            .maybeSingle();
-          
-          if (reopenedData) {
-            // Enrich with current agent data for immediate display in "Minhas" tab
-            const enrichedReopened = {
-              ...reopenedData,
-              agent: currentAgent ? { ...currentAgent } : null
-            };
-            setSelectedConversation(enrichedReopened);
-            // CRITICAL: Add immediately to local list so it appears in sidebar
-            setAssignments(prev => {
-              const exists = prev.some(a => a.id === enrichedReopened.id);
-              if (exists) {
-                return prev.map(a => a.id === enrichedReopened.id ? enrichedReopened : a);
-              }
-              return [enrichedReopened, ...prev];
-            });
-          }
-          
-          toast.success("Grupo reaberto!");
-          setNewConversationDialogOpen(false);
-          setInboxTab(currentAgent ? "mine" : "queue"); // Go to correct tab based on agent
-          setFilterConversationType("group"); // Switch to groups tab
-          
-          // CRITICAL FIX: Delay fetchData to prevent overwriting local state
-          setTimeout(() => fetchData(), 2000);
-          
-          setCreatingConversation(false);
-          return;
-        } else {
-          // Create new assignment for group - assigned to agent if available
-          const { data: newAssignment } = await supabase
-            .from("zapp_conversation_assignments")
-            .insert({
-              account_id: currentUser.account_id,
-              zapp_conversation_id: zappConvId,
-              agent_id: currentAgent?.id || null,  // Assign to current agent if available
-              status: currentAgent ? "active" : "triage",  // Active if agent, triage otherwise
-              department_id: currentSectorDepartmentId,
-              assigned_at: currentAgent ? new Date().toISOString() : null,  // Only set if agent
-            })
-            .select(`*, zapp_conversation:zapp_conversations(*), agent:zapp_agents(*)`)
-            .single();
-          
-          if (newAssignment) {
-            // Enrich with current agent data for immediate display in "Minhas" tab
-            const enrichedAssignment = {
-              ...newAssignment,
-              agent: currentAgent ? { ...currentAgent } : null
-            };
-            setSelectedConversation(enrichedAssignment);
-            // CRITICAL: Add immediately to local list so it appears in sidebar
-            setAssignments(prev => [enrichedAssignment, ...prev]);
-          }
-          
-          toast.success("Grupo adicionado!");
-          setNewConversationDialogOpen(false);
-          setInboxTab(currentAgent ? "mine" : "queue"); // Go to correct tab based on agent
-          setFilterConversationType("group"); // Switch to groups tab
-          
-          // CRITICAL FIX: Delay fetchData to prevent overwriting local state
-          setTimeout(() => fetchData(), 2000);
-          
-          setCreatingConversation(false);
-          return;
-        }
-      }
-      
-      // Usar o TIPO do contato selecionado, não o setor
-      const isLeadContact = contact.type === 'lead';
-      const isClientContact = contact.type === 'client';
-      
-      // Normalizar telefone para busca consistente
-      const normalizedPhone = contact.phone_e164?.startsWith('+') 
-        ? contact.phone_e164 
-        : `+${contact.phone_e164}`;
-      
-      let zappConvId: string | null = null;
-      
-      // PRIORIZAR busca por telefone + integration_id (cada instância tem sua própria conversa)
-      let convByPhone = await supabase
-        .from("zapp_conversations")
-        .select("id, lead_id, client_id, integration_id")
-        .eq("account_id", currentUser.account_id)
-        .eq("phone_e164", normalizedPhone)
-        .eq("integration_id", selectedIntegrationId)
-        .eq("is_group", false)
-        .maybeSingle();
-      
-      // FALLBACK: Buscar conversa LEGADA (mesmo telefone, mesmo setor, sem integration_id)
-      // Isso resolve duplicação de conversas criadas antes do sistema multi-instância
-      if (!convByPhone?.data && selectedSectorId) {
-        const { data: legacyConv } = await supabase
-          .from("zapp_conversations")
-          .select("id, lead_id, client_id, integration_id")
-          .eq("account_id", currentUser.account_id)
-          .eq("phone_e164", normalizedPhone)
-          .eq("sector_id", selectedSectorId)
-          .is("integration_id", null)
-          .eq("is_group", false)
-          .order("last_message_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        
-        if (legacyConv) {
-          // Migrar conversa legada para o novo formato com integration_id
-          console.log("[RoyZapp] Conversa legada encontrada e migrada:", legacyConv.id);
-          await supabase
-            .from("zapp_conversations")
-            .update({ integration_id: selectedIntegrationId })
-            .eq("id", legacyConv.id);
-          
-          convByPhone = { data: legacyConv, error: null, count: null, status: 200, statusText: "OK" };
-        }
-      }
-      
-      if (convByPhone?.data) {
-        zappConvId = convByPhone.data.id;
-        
-        // ============================================
-        // AUTO-UNIFY DUPLICATE CONVERSATIONS
-        // ============================================
-        // Check if there's a legacy duplicate (same phone, same sector, no integration_id)
-        // and merge it to eliminate duplicate entries in the conversation list
-        
-        if (selectedSectorId && selectedIntegrationId) {
-          const { data: legacyDuplicate } = await supabase
-            .from("zapp_conversations")
-            .select("id")
-            .eq("account_id", currentUser.account_id)
-            .eq("phone_e164", normalizedPhone)
-            .eq("sector_id", selectedSectorId)
-            .is("integration_id", null)
-            .eq("is_group", false)
-            .neq("id", convByPhone.data.id)
-            .maybeSingle();
-          
-          if (legacyDuplicate) {
-            console.log(`[AUTO-UNIFY] Merging legacy ${legacyDuplicate.id} into ${convByPhone.data.id}`);
-            
-            // 1. Move all messages from legacy to current
-            await supabase
-              .from("zapp_messages")
-              .update({ zapp_conversation_id: convByPhone.data.id })
-              .eq("zapp_conversation_id", legacyDuplicate.id);
-            
-            // 2. Delete assignments from legacy conversation
-            await supabase
-              .from("zapp_conversation_assignments")
-              .delete()
-              .eq("zapp_conversation_id", legacyDuplicate.id);
-            
-            // 3. Delete legacy conversation
-            await supabase
-              .from("zapp_conversations")
-              .delete()
-              .eq("id", legacyDuplicate.id);
-            
-            console.log(`[AUTO-UNIFY] Completed: legacy conversation deleted`);
-          }
-        }
-        
-        // Atualizar lead_id/client_id se não estiver vinculado (baseado no tipo do contato)
-        const realContactId = contact.id.includes('-alt-') ? contact.id.split('-alt-')[0] : contact.id;
-        if (isLeadContact && !convByPhone.data.lead_id && realContactId) {
-          await supabase
-            .from("zapp_conversations")
-            .update({ lead_id: realContactId, contact_name: contact.full_name })
-            .eq("id", convByPhone.data.id);
-        } else if (isClientContact && !convByPhone.data.client_id && realContactId) {
-          await supabase
-            .from("zapp_conversations")
-            .update({ client_id: realContactId, contact_name: contact.full_name })
-            .eq("id", convByPhone.data.id);
-        }
-      } else {
-        // Não fazer fallback por lead_id/client_id — se o telefone é diferente,
-        // devemos criar uma nova conversa para esse telefone específico.
-        // zappConvId permanece null para forçar criação de nova conversa.
-      }
-      
-      if (zappConvId) {
-        // Buscar TODOS os assignments (ativos E fechados) para este departamento
-        const { data: existingAssignments } = await supabase
-          .from("zapp_conversation_assignments")
-          .select("id, agent_id, status, department_id")
-          .eq("zapp_conversation_id", zappConvId)
-          .eq("department_id", currentSectorDepartmentId)
-          .order("created_at", { ascending: false });
-        
-        const activeAssignment = existingAssignments?.find(a => a.status !== 'closed');
-        const closedAssignment = existingAssignments?.find(a => a.status === 'closed');
-        
-        if (activeAssignment) {
-          // VERIFICAÇÃO DE ISOLAMENTO: Checar se já está atribuída a outro agente
-          const isManager = currentUser?.team_role_name === "Gestor";
-          const hasFullVisibility = isAdmin || isManager;
-          
-          if (activeAssignment.agent_id && activeAssignment.agent_id !== currentAgent?.id && !hasFullVisibility) {
-            // Buscar nome do agente responsável
-            const responsibleAgent = agents.find(ag => ag.id === activeAssignment.agent_id);
-            const agentName = responsibleAgent?.user?.name || "outro atendente";
-            toast.warning(`Este contato já está em atendimento por ${agentName}`);
-            setCreatingConversation(false);
-            setNewConversationDialogOpen(false);
-            return;
-          }
-          
-          // Apenas abrir a conversa existente (sem mudar o responsável)
-          const { data: assignmentData } = await supabase
-            .from("zapp_conversation_assignments")
-            .select(`
-              *,
-              zapp_conversation:zapp_conversations(*),
-              agent:zapp_agents(*)
-            `)
-            .eq("id", activeAssignment.id)
-            .single();
-          
-          if (assignmentData) {
-            setSelectedConversation(assignmentData);
-            // CRITICAL FIX: Add immediately to local list to prevent race condition
-            setAssignments(prev => {
-              const exists = prev.some(a => a.id === assignmentData.id);
-              if (exists) return prev.map(a => a.id === assignmentData.id ? assignmentData : a);
-              return [assignmentData, ...prev];
-            });
-          }
-          // CRITICAL FIX: Delay fetchData to prevent overwriting local state
-          setTimeout(() => fetchData(), 2000);
-          toast.info("Abrindo conversa existente");
-          setNewConversationDialogOpen(false);
-          setCreatingConversation(false);
-          return;
-        } else if (closedAssignment) {
-          // REABRIR: Atualizar status do assignment fechado ao invés de criar novo
-          const { error: reopenError } = await supabase
-            .from("zapp_conversation_assignments")
-            .update({ 
-              status: "triage", 
-              agent_id: null,
-              updated_at: new Date().toISOString() 
-            })
-            .eq("id", closedAssignment.id);
-          
-          if (reopenError) throw reopenError;
-          
-          toast.success("Conversa reaberta na Fila!");
-          setInboxTab("queue");
-          setNewConversationDialogOpen(false);
-          
-          // Buscar assignment reaberto para exibir
-          const { data: reopenedData } = await supabase
-            .from("zapp_conversation_assignments")
-            .select(`
-              *,
-              zapp_conversation:zapp_conversations(*),
-              agent:zapp_agents(*)
-            `)
-            .eq("id", closedAssignment.id)
-            .single();
-          
-          if (reopenedData) {
-            setSelectedConversation(reopenedData);
-            // CRITICAL FIX: Add immediately to local list to prevent race condition
-            setAssignments(prev => {
-              const exists = prev.some(a => a.id === reopenedData.id);
-              if (exists) return prev.map(a => a.id === reopenedData.id ? reopenedData : a);
-              return [reopenedData, ...prev];
-            });
-          }
-          // CRITICAL FIX: Delay fetchData to prevent overwriting local state
-          setTimeout(() => fetchData(), 2000);
-          setCreatingConversation(false);
-          return;
-        }
-        // Se não tem nenhum assignment para este departamento, continua para criar
-      } else {
-        // Criar nova zapp_conversation
-        const baseData = {
-          account_id: currentUser.account_id,
-          phone_e164: normalizedPhone,
-          contact_name: contact.full_name,
-          avatar_url: contact.avatar_url,
-          sector_id: selectedSectorId,
-          integration_id: selectedIntegrationId,
-        };
-        
-        // Determinar qual ID usar baseado no TIPO do contato
-        // IMPORTANTE: Se for lead, verificar se existe cliente com mesmo telefone para evitar FK violation
-        let insertData: typeof baseData & { lead_id?: string; client_id?: string } = { ...baseData };
-        
-        if (isLeadContact) {
-          // Verificar se existe cliente com mesmo telefone (qualquer status)
-          const { data: existingClient } = await supabase
-            .from("clients")
-            .select("id")
-            .eq("account_id", currentUser.account_id)
-            .eq("phone_e164", normalizedPhone)
-            .maybeSingle();
-          
-          if (existingClient) {
-            // Cliente existe - usar client_id ao invés de lead_id
-            console.log("Lead tem cliente correspondente, usando client_id:", existingClient.id);
-            insertData = { ...baseData, client_id: existingClient.id };
-          } else {
-            insertData = { ...baseData, lead_id: contact.id };
-          }
-        } else if (isClientContact) {
-          insertData = { ...baseData, client_id: contact.id };
-        }
-        // Se for 'conversation', não adiciona nem lead_id nem client_id
-        
-        const { data: newConv, error: convError } = await supabase
-          .from("zapp_conversations")
-          .insert(insertData)
-          .select("id")
-          .single();
-        
-        if (convError) throw convError;
-        zappConvId = newConv.id;
-      }
-      
-      // Create assignment in queue (triage) - agent must pull from queue
-      const { error: assignError } = await supabase
-        .from("zapp_conversation_assignments")
-        .insert({
-          account_id: currentUser.account_id,
-          zapp_conversation_id: zappConvId,
-          agent_id: null, // No agent assigned - goes to queue
-          status: "triage", // Triage status for queue
-          department_id: currentSectorDepartmentId,
-        });
-      
-      if (assignError) throw assignError;
-      
-      toast.success("Conversa criada na Fila! Puxe-a para iniciar o atendimento.");
-      setNewConversationDialogOpen(false);
-      setInboxTab("queue"); // Switch to queue tab
-      
-      // Fetch the new assignment directly to avoid stale closure
-      const { data: newAssignmentData } = await supabase
-        .from("zapp_conversation_assignments")
-        .select(`
-          *,
-          zapp_conversation:zapp_conversations(*),
-          agent:zapp_agents(*)
-        `)
-        .eq("zapp_conversation_id", zappConvId)
-        .is("agent_id", null)
-        .neq("status", "closed")
-        .single();
-      
-      if (newAssignmentData) {
-        setSelectedConversation(newAssignmentData);
-        // CRITICAL FIX: Add immediately to local list to prevent race condition
-        setAssignments(prev => {
-          const exists = prev.some(a => a.id === newAssignmentData.id);
-          if (exists) return prev;
-          return [newAssignmentData, ...prev];
-        });
-      }
-      
-      // CRITICAL FIX: Delay fetchData to prevent overwriting local state
-      setTimeout(() => fetchData(), 2000);
-    } catch (error: any) {
-      console.error("Error creating conversation:", error);
-      toast.error(error.message || "Erro ao criar conversa");
-    } finally {
-      setCreatingConversation(false);
-    }
-  };
-
-  // Clients/leads for new conversation dialog (already filtered by DB search)
-  const filteredNewConversationClients = newConversationClients;
+  // Contact CRUD functions (saveNewClient, saveNewLead, openAddContactDialog, 
+  // openNewConversationDialog, searchContacts, createConversationWithContact)
+  // are now in contactOps hook
 
 
   // Filtered conversations based on tab (mine vs queue)
@@ -2176,7 +1004,7 @@ export default function RoyZapp() {
               convActions.markAsRead(zappConvId);
             }
           }}
-          onOpenNewConversationDialog={openNewConversationDialog}
+          onOpenNewConversationDialog={contactOps.openNewConversationDialog}
           onOpenAgentDialog={crud.openAgentDialog}
           onToggleAgentOnline={crud.toggleAgentOnline}
           onDeleteAgent={crud.setDeletingAgentId}
@@ -2272,7 +1100,7 @@ export default function RoyZapp() {
            onOpenTransfer={() => setTransferDialogOpen(true)}
            onOpenRoiDialog={() => {}}
            onOpenRiskDialog={() => {}}
-           onOpenAddClient={openAddContactDialog}
+           onOpenAddClient={contactOps.openAddContactDialog}
            onOpenLinkClient={() => setLinkClientDialogOpen(true)}
            onClientLinked={() => fetchData()}
            onDeleteConversation={() => setPermanentDeleteDialogOpen(true)}
@@ -2462,20 +1290,19 @@ export default function RoyZapp() {
 
       {/* Add Client/Lead Dialog */}
       <ZappAddContactDialog
-        open={addContactDialogOpen}
-        onOpenChange={setAddContactDialogOpen}
-        phone={addContactPhone}
-        contactName={addContactName}
+        open={contactOps.addContactDialogOpen}
+        onOpenChange={contactOps.setAddContactDialogOpen}
+        phone={contactOps.addContactPhone}
+        contactName={contactOps.addContactName}
         showLeadOption={hasVendasAccess}
-        onSaveClient={saveNewClient}
-        onSaveLead={saveNewLead}
-        savingClient={savingNewClient}
-        savingLead={savingNewLead}
+        onSaveClient={contactOps.saveNewClient}
+        onSaveLead={contactOps.saveNewLead}
+        savingClient={contactOps.savingNewClient}
+        savingLead={contactOps.savingNewLead}
         accountId={currentUser?.account_id}
         conversationId={selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id}
         onLinked={() => {
           fetchData();
-          // Update selected conversation
           if (selectedConversation) {
             const zappConvId = selectedConversation.zapp_conversation_id || selectedConversation.zapp_conversation?.id;
             if (zappConvId) {
@@ -2487,13 +1314,13 @@ export default function RoyZapp() {
 
       {/* New Conversation Dialog */}
       <ZappNewConversationDialog
-        open={newConversationDialogOpen}
-        onOpenChange={setNewConversationDialogOpen}
-        searchQuery={newConversationSearch}
-        onSearchChange={setNewConversationSearch}
-        clients={filteredNewConversationClients}
-        onSelectClient={createConversationWithContact}
-        creating={creatingConversation}
+        open={contactOps.newConversationDialogOpen}
+        onOpenChange={contactOps.setNewConversationDialogOpen}
+        searchQuery={contactOps.newConversationSearch}
+        onSearchChange={contactOps.setNewConversationSearch}
+        clients={contactOps.newConversationClients}
+        onSelectClient={contactOps.createConversationWithContact}
+        creating={contactOps.creatingConversation}
         isLeadMode={selectedSectorId === "vendas"}
       />
 
