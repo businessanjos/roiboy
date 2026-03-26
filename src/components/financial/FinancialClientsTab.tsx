@@ -728,6 +728,7 @@ export function FinancialClientsTab() {
               onPageChange={handleClientPageChange}
               onPageSizeChange={handleClientPageSizeChange}
             />
+            </>
           )}
         </CardContent>
       </Card>
