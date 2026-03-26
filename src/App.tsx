@@ -38,6 +38,9 @@ function lazyRetry<T extends ComponentType<any>>(
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
+// ZappErrorBoundary - lazy loaded (was eagerly imported, 1.2s load time)
+const ZappErrorBoundary = lazyRetry(() => import("@/components/royzapp/ZappErrorBoundary").then(m => ({ default: m.ZappErrorBoundary })));
+
 // Lazy loaded pages
 const Dashboard = lazyRetry(() => import("./pages/Dashboard"));
 const Clients = lazyRetry(() => import("./pages/Clients"));
