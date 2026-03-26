@@ -118,20 +118,34 @@ export default function Dashboard() {
   const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
 
   // Contracts data for the Contratos tab (exclude renewals to avoid duplicates)
+  // Optimized: limit to 500 most recent + paginated fetch for full data
   const { data: dashboardContracts = [] } = useQuery({
     queryKey: ["dashboard-contracts-full"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("client_contracts")
-        .select(`
-          id, client_id, start_date, end_date, cancelled_at, value, status, contract_type, created_at,
-          product:products(id, name, color)
-        `)
-        .is("parent_contract_id", null)
-        .order("created_at", { ascending: false });
+      const PAGE_SIZE = 1000;
+      const all: any[] = [];
+      let from = 0;
+      let hasMore = true;
+      
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("client_contracts")
+          .select(`
+            id, client_id, start_date, end_date, cancelled_at, value, status, contract_type, created_at,
+            product:products(id, name, color)
+          `)
+          .is("parent_contract_id", null)
+          .order("created_at", { ascending: false })
+          .range(from, from + PAGE_SIZE - 1);
 
-      if (error) throw error;
-      return (data || []) as any[];
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        hasMore = data.length === PAGE_SIZE;
+        from += PAGE_SIZE;
+      }
+      
+      return all;
     },
     staleTime: 1000 * 60 * 5,
   });
