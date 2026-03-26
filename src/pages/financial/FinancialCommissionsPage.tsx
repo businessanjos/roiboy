@@ -173,6 +173,16 @@ export default function FinancialCommissionsPage() {
     enabled: !!accountId,
   });
 
+  const {
+    paginatedItems: paginatedEntries,
+    currentPage: commPage,
+    pageSize: commPageSize,
+    totalPages: commTotalPages,
+    totalItems: commTotalItems,
+    handlePageChange: handleCommPageChange,
+    handlePageSizeChange: handleCommPageSizeChange,
+  } = useTablePagination(entries);
+
   const { data: users = [] } = useQuery({
     queryKey: ["team-users", accountId],
     queryFn: async () => {
