@@ -196,7 +196,7 @@ const formatCurrencyStatic = (value: number) => {
 
 const getExpiryBadgeStatic = (endDate: string | null) => {
   if (!endDate) return null;
-  const daysUntilExpiry = differenceInDays(new Date(endDate), new Date());
+  const daysUntilExpiry = differenceInDays(parseLocalDate(endDate)!, new Date());
   
   if (daysUntilExpiry < 0) {
     return (
