@@ -171,7 +171,7 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
   };
 
   const getDueDateBadge = (dueDate: string) => {
-    const date = new Date(dueDate);
+    const date = parseLocalDate(dueDate)!;
     const daysOverdue = getDaysOverdue(dueDate);
     
     if (isToday(date)) {
