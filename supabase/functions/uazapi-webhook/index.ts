@@ -883,6 +883,7 @@ serve(async (req) => {
         
         // Extract quoted message ID from multiple sources
         const quotedMsgId = msg.quotedMessageId || 
+                            (typeof rawQuoted === "string" && rawQuoted.trim() ? rawQuoted.trim() : null) ||
                             (uazapiQuoted?.id as string) ||
                             (uazapiQuoted?.messageid as string) ||
                             (contextInfo?.stanzaId as string) ||
@@ -931,8 +932,9 @@ serve(async (req) => {
           try {
             const { data: origMsg } = await supabase
               .from("zapp_messages")
-              .select("content, message_type, sender_name, direction")
-              .eq("external_message_id", quotedMsgId)
+              .select("content, message_type, sender_name, direction, external_message_id")
+              .ilike("external_message_id", `%${quotedMsgId}`)
+              .order("created_at", { ascending: false })
               .limit(1)
               .maybeSingle();
             
