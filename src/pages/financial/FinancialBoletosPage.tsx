@@ -704,6 +704,7 @@ export default function FinancialBoletosPage() {
               onPageChange={handlePageChange}
               onPageSizeChange={handlePageSizeChange}
             />
+            </>
           )}
         </CardContent>
       </Card>
