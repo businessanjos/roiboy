@@ -656,6 +656,14 @@ export default function FinancialSuppliersPage() {
                 </div>
               ))}
             </div>
+            <TablePagination
+              currentPage={supplierPage}
+              totalPages={supplierTotalPages}
+              totalItems={supplierTotalItems}
+              pageSize={supplierPageSize}
+              onPageChange={handleSupplierPageChange}
+              onPageSizeChange={handleSupplierPageSizeChange}
+            />
           )}
         </CardContent>
           </Card>

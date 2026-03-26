@@ -453,6 +453,14 @@ export default function FinancialInvoicesPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={invoicePage}
+            totalPages={invoiceTotalPages}
+            totalItems={invoiceTotalItems}
+            pageSize={invoicePageSize}
+            onPageChange={handleInvoicePageChange}
+            onPageSizeChange={handleInvoicePageSizeChange}
+          />
         </CardContent>
       </Card>
 

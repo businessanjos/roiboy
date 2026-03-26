@@ -380,6 +380,14 @@ export default function FinancialAgingPage() {
                   })}
                 </TableBody>
               </Table>
+              <TablePagination
+                currentPage={agingPage}
+                totalPages={agingTotalPages}
+                totalItems={agingTotalItems}
+                pageSize={agingPageSize}
+                onPageChange={handleAgingPageChange}
+                onPageSizeChange={handleAgingPageSizeChange}
+              />
             )}
           </ScrollArea>
         </CardContent>
