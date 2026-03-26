@@ -105,36 +105,39 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     lastFetchTimeRef.current = now;
 
     try {
-      const { data: dept } = await supabase
-        .from("zapp_departments")
-        .select("id")
-        .eq("account_id", accountId)
-        .eq("sector_id", sectorId)
-        .maybeSingle();
+      const result = await withRetry(async () => {
+        const { data: dept } = await supabase
+          .from("zapp_departments")
+          .select("id")
+          .eq("account_id", accountId)
+          .eq("sector_id", sectorId)
+          .maybeSingle();
 
-      if (!dept) {
+        if (!dept) return null;
+
+        const { data: assignmentsData, error } = await supabase
+          .from("zapp_conversation_assignments")
+          .select(ASSIGNMENTS_SELECT)
+          .eq("account_id", accountId)
+          .eq("department_id", dept.id)
+          .order("updated_at", { ascending: false })
+          .limit(1000);
+
+        if (error) throw error;
+        return { deptId: dept.id, assignments: assignmentsData || [] };
+      }, 2, 1500);
+
+      if (!result) {
         setAssignments([]);
         currentDepartmentIdRef.current = null;
         return;
       }
 
-      currentDepartmentIdRef.current = dept.id;
+      currentDepartmentIdRef.current = result.deptId;
+      console.log(`[ZappConversations] Fetched ${result.assignments.length} assignments for department ${result.deptId}`);
+      setAssignments(result.assignments);
 
-      const { data: assignmentsData, error } = await supabase
-        .from("zapp_conversation_assignments")
-        .select(ASSIGNMENTS_SELECT)
-        .eq("account_id", accountId)
-        .eq("department_id", dept.id)
-        .order("updated_at", { ascending: false })
-        .limit(1000);
-
-      if (error) throw error;
-
-      const filtered = assignmentsData || [];
-      console.log(`[ZappConversations] Fetched ${filtered.length} assignments for department ${dept.id}`);
-      setAssignments(filtered);
-
-      await fetchSupplementaryData(filtered);
+      await fetchSupplementaryData(result.assignments);
     } catch (error) {
       console.error("Error fetching assignments:", error);
     }
