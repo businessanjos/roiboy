@@ -247,16 +247,22 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             <div className="flex items-center gap-2">
               <h2 className="text-zapp-text font-medium">ROY zAPP</h2>
               {sectorName && (
-                <Badge 
-                  variant="outline" 
-                  className="text-[10px] px-1.5 py-0 h-4"
-                  style={{ 
-                    borderColor: sectorColor || '#6b7280',
-                    color: sectorColor || '#6b7280'
-                  }}
-                >
-                  {sectorName}
-                </Badge>
+                <div className="flex items-center gap-1.5">
+                  <Badge 
+                    variant="outline" 
+                    className="text-[10px] px-1.5 py-0 h-4"
+                    style={{ 
+                      borderColor: sectorColor || '#6b7280',
+                      color: sectorColor || '#6b7280'
+                    }}
+                  >
+                    {sectorName}
+                  </Badge>
+                  <div 
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${whatsappConnected ? 'bg-emerald-500' : 'bg-red-500'}`}
+                    title={whatsappConnected ? 'WhatsApp conectado' : 'WhatsApp desconectado'}
+                  />
+                </div>
               )}
             </div>
             <p className="text-xs text-zapp-text-muted">{activeConversations} em atendimento</p>
