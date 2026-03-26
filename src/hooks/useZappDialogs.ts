@@ -64,47 +64,49 @@ export function useZappDialogs(options: UseZappDialogsOptions) {
   }> => {
     if (!accountId) return { departments: [], targetDepartmentId: null, usersData: [] };
 
-    // Fetch departments
-    const { data: depts, error: deptsError } = await supabase
-      .from("zapp_departments")
-      .select("*")
-      .eq("account_id", accountId)
-      .order("display_order");
+    // Wrap all queries in retry for network resilience
+    const [deptsResult, parallelResults] = await withRetry(async () => {
+      const deptsRes = await supabase
+        .from("zapp_departments")
+        .select("*")
+        .eq("account_id", accountId)
+        .order("display_order");
 
-    if (deptsError) throw deptsError;
+      if (deptsRes.error) throw deptsRes.error;
+
+      const [agentsRes, usersRes, rolesRes] = await Promise.all([
+        supabase
+          .from("zapp_agents")
+          .select(`*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id, role, is_also_admin), department:zapp_departments(*)`)
+          .eq("account_id", accountId)
+          .order("created_at"),
+        supabase
+          .from("users")
+          .select("id, name, email, avatar_url, role, team_role_id, is_also_admin, team_role:team_roles(id, name, color)")
+          .eq("account_id", accountId)
+          .order("name"),
+        supabase
+          .from("team_roles")
+          .select("id, name, color")
+          .eq("account_id", accountId)
+          .order("display_order"),
+      ]);
+
+      if (agentsRes.error) throw agentsRes.error;
+      if (usersRes.error) throw usersRes.error;
+      if (rolesRes.error) throw rolesRes.error;
+
+      return [deptsRes, { agentsData: agentsRes.data, usersData: usersRes.data, rolesData: rolesRes.data }] as const;
+    }, 3, 1500);
+
+    const depts = deptsResult.data;
+    const { agentsData, usersData, rolesData } = parallelResults;
 
     let targetDepartmentId: string | null = null;
     if (sectorId) {
       const sectorDept = (depts || []).find(d => d.sector_id === sectorId);
       targetDepartmentId = sectorDept?.id || null;
     }
-
-    // Fetch agents, users, roles, tags in parallel
-    const [
-      { data: agentsData, error: agentsError },
-      { data: usersData, error: usersError },
-      { data: rolesData, error: rolesError },
-    ] = await Promise.all([
-      supabase
-        .from("zapp_agents")
-        .select(`*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id, role, is_also_admin), department:zapp_departments(*)`)
-        .eq("account_id", accountId)
-        .order("created_at"),
-      supabase
-        .from("users")
-        .select("id, name, email, avatar_url, role, team_role_id, is_also_admin, team_role:team_roles(id, name, color)")
-        .eq("account_id", accountId)
-        .order("name"),
-      supabase
-        .from("team_roles")
-        .select("id, name, color")
-        .eq("account_id", accountId)
-        .order("display_order"),
-    ]);
-
-    if (agentsError) throw agentsError;
-    if (usersError) throw usersError;
-    if (rolesError) throw rolesError;
 
     // Sync sectors to departments
     const sectorsToSync = sectors.filter(s => s.id !== "configuracoes" && !s.comingSoon);
