@@ -108,13 +108,13 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
     const overdueByClient = new Map<string, DelinquentClient>();
     
     receivables
-      .filter(r => r.client_id && isPast(new Date(r.due_date)) && !isToday(new Date(r.due_date)))
+      .filter(r => r.client_id && isPast(parseLocalDate(r.due_date)!) && !isToday(parseLocalDate(r.due_date)!))
       .forEach(r => {
         const existing = overdueByClient.get(r.client_id!);
         if (existing) {
           existing.total_overdue += r.amount;
           existing.overdue_count += 1;
-          if (new Date(r.due_date) < new Date(existing.oldest_due_date)) {
+          if (parseLocalDate(r.due_date)! < parseLocalDate(existing.oldest_due_date)!) {
             existing.oldest_due_date = r.due_date;
           }
         } else {
