@@ -932,8 +932,9 @@ serve(async (req) => {
           try {
             const { data: origMsg } = await supabase
               .from("zapp_messages")
-              .select("content, message_type, sender_name, direction")
-              .eq("external_message_id", quotedMsgId)
+              .select("content, message_type, sender_name, direction, external_message_id")
+              .ilike("external_message_id", `%${quotedMsgId}`)
+              .order("created_at", { ascending: false })
               .limit(1)
               .maybeSingle();
             
