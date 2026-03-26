@@ -308,6 +308,8 @@ export function useZappMessaging({
             last_message_preview: messageContent.substring(0, 100),
             unread_count: 0,
           }).eq("id", conversationId);
+          
+          onConversationUpdated?.(conversationId, now, messageContent.substring(0, 100));
         }
       } catch (error: any) {
         console.error("Error sending message:", error);
