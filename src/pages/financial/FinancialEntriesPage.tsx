@@ -771,6 +771,7 @@ export default function FinancialEntriesPage() {
                   onPageChange={handlePageChange}
                   onPageSizeChange={handlePageSizeChange}
                 />
+                </>
               )}
             </CardContent>
           </Card>
