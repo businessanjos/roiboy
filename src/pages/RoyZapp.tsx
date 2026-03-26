@@ -844,7 +844,27 @@ export default function RoyZapp() {
     };
   }, []);
 
-  // Helper to get agent name by id
+  // Contact operations hook (create conversations, search contacts, save client/lead)
+  const contactOps = useZappContactOperations({
+    currentUser,
+    isAdmin,
+    currentAgent,
+    agents,
+    selectedConversation,
+    selectedSectorId,
+    selectedIntegrationId,
+    currentSectorDepartmentId,
+    hasVendasAccess,
+    setAssignments,
+    setSelectedConversation,
+    setInboxTab,
+    setFilterConversationType,
+    fetchData,
+    fetchMessages,
+    getContactInfo,
+  });
+
+
   const getAgentName = (agentId: string | null) => {
     if (!agentId) return null;
     const agent = agents.find(a => a.id === agentId);
