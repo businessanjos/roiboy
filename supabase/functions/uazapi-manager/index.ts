@@ -11,21 +11,55 @@ const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 type UazapiInstanceLike = {
   name?: string;
   instance_name?: string;
-  status?: string;
-  state?: string;
+  status?: unknown;
+  state?: unknown;
+  connection_status?: unknown;
   owner?: string;
   phone?: string;
   number?: string;
   token?: string;
   profileName?: string;
   profilePicUrl?: string;
+  is_healthy?: boolean;
+  data?: Record<string, unknown>;
+  checked_instance?: Record<string, unknown>;
   instance?: {
     name?: string;
-    status?: string;
+    status?: unknown;
+    state?: unknown;
+    connection_status?: unknown;
     owner?: string;
+    phone?: string;
+    number?: string;
     token?: string;
+    is_healthy?: boolean;
   };
 };
+
+type StatusSnapshot = {
+  state: string;
+  connected: boolean;
+  owner?: string;
+};
+
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  return value as Record<string, unknown>;
+}
+
+function getString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}
+
+function normalizeConnectionState(value: unknown): string | undefined {
+  const normalized = getString(value)?.toLowerCase();
+  if (!normalized) return undefined;
+  if (normalized === "open") return "connected";
+  if (["close", "closed", "logout", "disconnected"].includes(normalized)) return "disconnected";
+  return normalized;
+}
 
 function extractInstancesList(payload: unknown): UazapiInstanceLike[] {
   if (Array.isArray(payload)) return payload as UazapiInstanceLike[];
@@ -64,19 +98,178 @@ function extractInstancesList(payload: unknown): UazapiInstanceLike[] {
 }
 
 function getInstanceName(instance: UazapiInstanceLike): string | undefined {
-  return instance.name || instance.instance_name || instance.instance?.name;
+  return (
+    instance.name ||
+    instance.instance_name ||
+    getString(instance.checked_instance?.name) ||
+    getString(instance.data?.name) ||
+    getString(instance.data?.instance_name) ||
+    instance.instance?.name
+  );
 }
 
 function getInstanceStatus(instance: UazapiInstanceLike): string | undefined {
-  return instance.status || instance.state || instance.instance?.status;
+  return (
+    normalizeConnectionState(instance.connection_status) ||
+    normalizeConnectionState(instance.status) ||
+    normalizeConnectionState(instance.state) ||
+    normalizeConnectionState(instance.checked_instance?.connection_status) ||
+    normalizeConnectionState(instance.checked_instance?.state) ||
+    normalizeConnectionState(instance.data?.connection_status) ||
+    normalizeConnectionState(instance.data?.status) ||
+    normalizeConnectionState(instance.data?.state) ||
+    normalizeConnectionState(instance.instance?.connection_status) ||
+    normalizeConnectionState(instance.instance?.status) ||
+    normalizeConnectionState(instance.instance?.state)
+  );
 }
 
 function getInstanceOwner(instance: UazapiInstanceLike): string | undefined {
-  return instance.owner || instance.phone || instance.number || instance.instance?.owner;
+  return (
+    instance.owner ||
+    instance.phone ||
+    instance.number ||
+    getString(instance.checked_instance?.owner) ||
+    getString(instance.checked_instance?.phone) ||
+    getString(instance.checked_instance?.number) ||
+    getString(instance.data?.owner) ||
+    getString(instance.data?.phone) ||
+    getString(instance.data?.number) ||
+    instance.instance?.owner ||
+    instance.instance?.phone ||
+    instance.instance?.number
+  );
 }
 
 function getInstanceToken(instance: UazapiInstanceLike): string | undefined {
-  return instance.token || instance.instance?.token;
+  return instance.token || instance.instance?.token || getString(instance.data?.token);
+}
+
+function resolveStatusSnapshot(payload: unknown): StatusSnapshot {
+  const record = asRecord(payload);
+  if (!record) return { state: "unknown", connected: false };
+
+  const nestedStatus = asRecord(record.status);
+  const nestedData = asRecord(record.data);
+  const nestedInstance = asRecord(record.instance);
+  const checkedInstance = asRecord(
+    nestedStatus?.checked_instance ?? record.checked_instance ?? nestedData?.checked_instance,
+  );
+
+  const state = (
+    normalizeConnectionState(record.connection_status) ||
+    normalizeConnectionState(record.state) ||
+    (typeof record.status === "string" ? normalizeConnectionState(record.status) : undefined) ||
+    normalizeConnectionState(nestedStatus?.connection_status) ||
+    normalizeConnectionState(nestedStatus?.state) ||
+    normalizeConnectionState(checkedInstance?.connection_status) ||
+    normalizeConnectionState(checkedInstance?.state) ||
+    normalizeConnectionState(nestedInstance?.connection_status) ||
+    normalizeConnectionState(nestedInstance?.state) ||
+    (typeof nestedInstance?.status === "string" ? normalizeConnectionState(nestedInstance.status) : undefined) ||
+    normalizeConnectionState(nestedData?.connection_status) ||
+    normalizeConnectionState(nestedData?.state) ||
+    (typeof nestedData?.status === "string" ? normalizeConnectionState(nestedData.status) : undefined) ||
+    "unknown"
+  );
+
+  const healthy = [
+    record.is_healthy,
+    nestedStatus?.is_healthy,
+    checkedInstance?.is_healthy,
+    nestedInstance?.is_healthy,
+    nestedData?.is_healthy,
+  ].some((value) => value === true);
+
+  const owner = [
+    record.owner,
+    record.phone,
+    record.number,
+    checkedInstance?.owner,
+    checkedInstance?.phone,
+    checkedInstance?.number,
+    nestedInstance?.owner,
+    nestedInstance?.phone,
+    nestedInstance?.number,
+    nestedData?.owner,
+    nestedData?.phone,
+    nestedData?.number,
+  ]
+    .map(getString)
+    .find(Boolean);
+
+  if (healthy) {
+    return { state: "connected", connected: true, owner };
+  }
+
+  return { state, connected: state === "connected", owner };
+}
+
+async function resolveStatusFromToken(token: string): Promise<StatusSnapshot> {
+  try {
+    const instanceInfo = await uazapiInstance("/status", "GET", token);
+    console.log(`[uazapi-manager] Instance status fallback response:`, JSON.stringify(instanceInfo).substring(0, 300));
+
+    const snapshot = resolveStatusSnapshot(instanceInfo);
+    if (snapshot.state !== "unknown") {
+      return snapshot;
+    }
+  } catch (instErr) {
+    console.warn(`[uazapi-manager] Instance-level status check failed:`, instErr);
+  }
+
+  try {
+    const meInfo = await uazapiInstance("/me", "GET", token);
+    if (meInfo && (meInfo.id || meInfo.wid || meInfo.phone || meInfo.number)) {
+      const owner = meInfo.phone || meInfo.number || meInfo.id;
+      console.log(`[uazapi-manager] /me endpoint confirmed connected:`, owner);
+      return { state: "connected", connected: true, owner };
+    }
+  } catch {
+    console.log(`[uazapi-manager] /me endpoint also failed`);
+  }
+
+  return { state: "unknown", connected: false };
+}
+
+async function resolveLiveStatusesForIntegrations(
+  integrations: Array<{ config?: Record<string, unknown>; status?: string | null }>,
+): Promise<Map<string, StatusSnapshot>> {
+  const snapshots = new Map<string, StatusSnapshot>();
+  const unresolved = new Map<string, string>();
+
+  for (const integration of integrations) {
+    const config = integration.config || {};
+    const instanceName = getString(config.instance_name);
+    const token = getString(config.instance_token);
+    if (instanceName) {
+      unresolved.set(instanceName, token || "");
+    }
+  }
+
+  try {
+    const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET");
+    const all = extractInstancesList(allRaw);
+
+    for (const instance of all) {
+      const name = getInstanceName(instance);
+      if (!name || !unresolved.has(name)) continue;
+      snapshots.set(name, resolveStatusSnapshot(instance));
+      unresolved.delete(name);
+    }
+  } catch (adminErr) {
+    console.warn(`[uazapi-manager] Admin fetchInstances failed while listing sector instances`);
+  }
+
+  await Promise.all(
+    Array.from(unresolved.entries()).map(async ([instanceName, token]) => {
+      if (!token) return;
+      const snapshot = await resolveStatusFromToken(token);
+      snapshots.set(instanceName, snapshot);
+    }),
+  );
+
+  return snapshots;
 }
 
 function normalizeQuotedMessageId(value: unknown): string | undefined {
@@ -202,66 +395,43 @@ serve(async (req) => {
     let result: unknown = { success: true };
 
     if (action === "status") {
-      let instanceStatus: string | undefined = "unknown";
-      let connected = false;
-      let owner: string | undefined;
+      const storedConnected = intData?.status === "connected";
+      let statusSnapshot: StatusSnapshot = {
+        state: storedConnected ? "connected" : "unknown",
+        connected: storedConnected,
+      };
 
-      // Try admin endpoint first
       try {
         const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET");
         const all = extractInstancesList(allRaw);
         const inst = all.find((i) => getInstanceName(i) === instanceName);
-        instanceStatus = getInstanceStatus(inst || {});
-        connected = instanceStatus === "connected" || instanceStatus === "open";
-        owner = inst ? getInstanceOwner(inst) : undefined;
+
+        if (inst) {
+          statusSnapshot = resolveStatusSnapshot(inst);
+        } else if (token) {
+          console.warn(`[uazapi-manager] Instance ${instanceName} not found in admin list, trying instance-level status check`);
+          statusSnapshot = await resolveStatusFromToken(token);
+        }
       } catch (adminErr) {
         console.warn(`[uazapi-manager] Admin fetchInstances failed, trying instance-level status check for: ${instanceName}`);
-        
-        // Fallback: use instance token to check status directly
         if (token) {
-          try {
-            const instanceInfo = await uazapiInstance("/status", "GET", token);
-            console.log(`[uazapi-manager] Instance status fallback response:`, JSON.stringify(instanceInfo).substring(0, 300));
-            
-            // Try multiple response formats
-            const state = instanceInfo?.state || instanceInfo?.status || instanceInfo?.instance?.state || instanceInfo?.data?.state;
-            instanceStatus = state || "unknown";
-            connected = instanceStatus === "connected" || instanceStatus === "open";
-            owner = instanceInfo?.owner || instanceInfo?.phone || instanceInfo?.number;
-            
-            // If /status doesn't work, try sending a simple presence check
-            if (instanceStatus === "unknown") {
-              try {
-                const meInfo = await uazapiInstance("/me", "GET", token);
-                if (meInfo && (meInfo.id || meInfo.wid || meInfo.phone || meInfo.number)) {
-                  connected = true;
-                  instanceStatus = "connected";
-                  owner = meInfo.phone || meInfo.number || meInfo.id;
-                  console.log(`[uazapi-manager] /me endpoint confirmed connected:`, owner);
-                }
-              } catch {
-                console.log(`[uazapi-manager] /me endpoint also failed`);
-              }
-            }
-          } catch (instErr) {
-            console.warn(`[uazapi-manager] Instance-level status check also failed:`, instErr);
-          }
+          statusSnapshot = await resolveStatusFromToken(token);
         }
       }
 
+      const effectiveConnected = statusSnapshot.state === "unknown" ? storedConnected : statusSnapshot.connected;
+      const effectiveState = statusSnapshot.state === "unknown" && storedConnected ? "connected" : statusSnapshot.state;
+
       result = {
-        state: instanceStatus || "unknown",
-        connected,
-        owner,
+        state: effectiveState,
+        connected: effectiveConnected,
+        owner: statusSnapshot.owner,
       };
 
-      // Only update DB status if we got a DEFINITIVE answer from the API.
-      // If instanceStatus is still "unknown", the check failed — do NOT overwrite
-      // a potentially valid "connected" status with "disconnected".
-      if (intData?.id && instanceStatus !== "unknown") {
+      if (intData?.id && statusSnapshot.state !== "unknown") {
         await supabase
           .from("integrations")
-          .update({ status: connected ? "connected" : "disconnected" })
+          .update({ status: statusSnapshot.connected ? "connected" : "disconnected" })
           .eq("id", intData.id);
       }
     
@@ -365,11 +535,12 @@ serve(async (req) => {
       result = { instances: filtered.map(i => {
         const name = getInstanceName(i);
         const linked = name ? linkedMap.get(name) : null;
+        const snapshot = resolveStatusSnapshot(i);
         return {
           ...i,
           name,
-          status: getInstanceStatus(i),
-          owner: getInstanceOwner(i),
+          status: snapshot.connected ? "connected" : snapshot.state === "unknown" ? "disconnected" : snapshot.state,
+          owner: snapshot.owner || getInstanceOwner(i),
           hasToken: !!getInstanceToken(i),
           linked_sector_id: linked?.sector_id || null,
           linked_integration_id: linked?.id || null,
@@ -378,15 +549,72 @@ serve(async (req) => {
       }) };
     
     } else if (action === "list_sector_instances") {
-      const { data: ints } = await supabase.from("integrations").select("id, sector_id, config, status, display_name, pin_hash").eq("account_id", accountId).eq("type", "whatsapp").not("sector_id", "is", null);
-      result = { instances: (ints||[]).map((i:any) => ({ id: i.id, sector_id: i.sector_id, instance_name: i.config?.instance_name, status: i.status, has_pin: !!i.pin_hash })) };
+      const { data: ints } = await supabase
+        .from("integrations")
+        .select("id, sector_id, config, status, display_name, pin_hash, created_at")
+        .eq("account_id", accountId)
+        .eq("type", "whatsapp")
+        .not("sector_id", "is", null);
+
+      const integrations = (ints || []) as any[];
+      const liveStatuses = await resolveLiveStatusesForIntegrations(
+        integrations.map((integration) => ({
+          config: asRecord(integration.config),
+          status: integration.status,
+        })),
+      );
+
+      const pendingStatusUpdates = integrations
+        .map((integration) => {
+          const config = asRecord(integration.config) || {};
+          const currentInstanceName = getString(config.instance_name);
+          const liveStatus = currentInstanceName ? liveStatuses.get(currentInstanceName) : undefined;
+          if (!liveStatus || liveStatus.state === "unknown") return null;
+
+          const nextStatus = liveStatus.connected ? "connected" : "disconnected";
+          if (integration.status === nextStatus) return null;
+
+          return supabase.from("integrations").update({ status: nextStatus }).eq("id", integration.id);
+        })
+        .filter(Boolean);
+
+      if (pendingStatusUpdates.length > 0) {
+        await Promise.all(pendingStatusUpdates);
+      }
+
+      result = {
+        instances: integrations.map((integration: any) => {
+          const config = asRecord(integration.config) || {};
+          const currentInstanceName = getString(config.instance_name) || "";
+          const liveStatus = currentInstanceName ? liveStatuses.get(currentInstanceName) : undefined;
+          const effectiveConnected = !liveStatus || liveStatus.state === "unknown"
+            ? integration.status === "connected"
+            : liveStatus.connected;
+
+          return {
+            id: integration.id,
+            sector_id: integration.sector_id,
+            instance_name: currentInstanceName,
+            status: effectiveConnected ? "connected" : "disconnected",
+            raw_state: liveStatus?.state || integration.status || "unknown",
+            display_name: integration.display_name,
+            has_pin: !!integration.pin_hash,
+            phone_number: getString(config.phone_number) || liveStatus?.owner || getString(config.owner) || "",
+            profile_name: getString(config.profile_name) || getString(config.profileName) || "",
+            profile_pic_url: getString(config.profile_pic_url) || getString(config.profilePicUrl) || "",
+            created_at: integration.created_at,
+            webhook_configured: typeof config.webhook_configured === "boolean" ? config.webhook_configured : undefined,
+          };
+        }),
+      };
     
     } else if (action === "add_instance_to_sector") {
       const allRaw = await uazapiAdmin("/instance/all", "GET");
       const all = extractInstancesList(allRaw);
       const inst = all.find((i) => getInstanceName(i) === payload.instance_name);
       if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      await supabase.from("integrations").insert({ account_id: accountId, type: "whatsapp", sector_id, status: getInstanceStatus(inst) === "connected" ? "connected" : "disconnected", config: { provider: "uazapi", instance_name: payload.instance_name, instance_token: getInstanceToken(inst), owner: getInstanceOwner(inst) } });
+      const statusSnapshot = resolveStatusSnapshot(inst);
+      await supabase.from("integrations").insert({ account_id: accountId, type: "whatsapp", sector_id, status: statusSnapshot.connected ? "connected" : "disconnected", config: { provider: "uazapi", instance_name: payload.instance_name, instance_token: getInstanceToken(inst), owner: getInstanceOwner(inst) } });
       result = { success: true };
     
     } else if (action === "verify_instance_pin") {
