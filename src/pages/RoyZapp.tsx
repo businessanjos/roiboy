@@ -2445,10 +2445,14 @@ export default function RoyZapp() {
       const isManager = currentUser?.team_role_name === "Gestor";
       const hasFullVisibility = isAdmin || isManager;
       
+      // Conversations with no agent should ALWAYS show in queue, regardless of status
+      // This catches orphaned "waiting" conversations with no agent assigned
+      const isUnassigned = a.agent_id === null;
+      
       const matchesTab = (filterArchived || filterStatus === "closed" || skipTabFilterForGroups) ? true : (
         inboxTab === "mine" 
           ? (hasFullVisibility || a.agent_id === currentAgent?.id) // Admin/Gestor veem todas as conversas atribuídas
-          : a.agent_id === null // Fila SEMPRE mostra apenas conversas sem agente (igual para todos)
+          : isUnassigned // Fila mostra conversas sem agente (igual para todos)
       );
       
       const matchesSearch = matchesSearchQuery(contact, searchQuery);
