@@ -5,6 +5,8 @@ import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 import { useZappData, Message, TeamUser, InboundMessageData } from "@/hooks/useZappData";
 import { useZappMessaging } from "@/hooks/useZappMessaging";
 import { useZappNotifications } from "@/hooks/useZappNotifications";
+import { useZappConversationActions } from "@/hooks/useZappConversationActions";
+import { useZappCrudOperations } from "@/hooks/useZappCrudOperations";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
