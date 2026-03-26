@@ -218,6 +218,12 @@ export function useZappMessaging({
     const conversationIntegrationId = (selectedConversation.zapp_conversation as { integration_id?: string | null } | undefined)?.integration_id;
     const effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
     
+    if (!effectiveIntegrationId) {
+      console.error("[ZAPP-SEND] No integration_id available for this conversation");
+      toast.error("WhatsApp não configurado", { description: "Esta conversa não está vinculada a nenhuma instância do WhatsApp. Peça ao administrador para verificar." });
+      return;
+    }
+    
     const replyContext = replyingTo ? { ...replyingTo } : null;
     
     const optimisticMessage: Message = {
