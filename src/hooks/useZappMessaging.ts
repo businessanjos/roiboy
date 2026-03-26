@@ -15,6 +15,7 @@ interface UseZappMessagingProps {
   userSignature: string;
   signatureEnabled: boolean;
   navigate: (path: string) => void;
+  onConversationUpdated?: (conversationId: string, lastMessageAt: string, lastMessagePreview: string) => void;
 }
 
 export function useZappMessaging({
