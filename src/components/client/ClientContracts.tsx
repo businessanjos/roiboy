@@ -266,7 +266,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   const openRenewalDialog = (contract: Contract) => {
     setRenewingContract(contract);
     const nextDay = contract.end_date 
-      ? format(new Date(new Date(contract.end_date).getTime() + 86400000), "yyyy-MM-dd")
+      ? format(new Date(parseLocalDate(contract.end_date)!.getTime() + 86400000), "yyyy-MM-dd")
       : format(new Date(), "yyyy-MM-dd");
     const parsed = parsePaymentOption(contract.payment_option);
     setFormData({
