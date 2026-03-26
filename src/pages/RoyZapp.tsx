@@ -1004,7 +1004,7 @@ export default function RoyZapp() {
               convActions.markAsRead(zappConvId);
             }
           }}
-          onOpenNewConversationDialog={openNewConversationDialog}
+          onOpenNewConversationDialog={contactOps.openNewConversationDialog}
           onOpenAgentDialog={crud.openAgentDialog}
           onToggleAgentOnline={crud.toggleAgentOnline}
           onDeleteAgent={crud.setDeletingAgentId}
