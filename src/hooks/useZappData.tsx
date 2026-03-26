@@ -62,12 +62,23 @@ export function useZappData(options: UseZappDataOptions = {}) {
     sectorId,
   });
 
+  const hasGlobalVisibility =
+    currentUser?.role === "admin" ||
+    currentUser?.role === "super_admin" ||
+    currentUser?.is_also_admin === true ||
+    currentUser?.team_role_name === "Admin" ||
+    currentUser?.team_role_name === "Gestor" ||
+    currentUser?.team_role_names?.includes("Admin") ||
+    currentUser?.team_role_names?.includes("Gestor") ||
+    false;
+
   const conversations = useZappConversations({
     accountId: currentUser?.account_id,
     sectorId,
     integrationId,
     departments: dialogs.departments,
     onNewInboundMessage,
+    hasGlobalVisibility,
   });
 
   const filters = useZappFilters({
