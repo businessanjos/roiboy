@@ -2296,9 +2296,9 @@ export default function RoyZapp() {
              setEditingClientId(id);
              setClientEditSheetOpen(true);
            }}
-           onAssignToMe={assignToMe}
-           onReleaseToQueue={releaseToQueue}
-           onUpdateStatus={updateConversationStatus}
+           onAssignToMe={convActions.assignToMe}
+           onReleaseToQueue={convActions.releaseToQueue}
+           onUpdateStatus={convActions.updateConversationStatus}
            onOpenTransfer={() => setTransferDialogOpen(true)}
            onOpenRoiDialog={() => {}}
            onOpenRiskDialog={() => {}}
@@ -2308,7 +2308,7 @@ export default function RoyZapp() {
            onDeleteConversation={() => setPermanentDeleteDialogOpen(true)}
            onDismissConversation={
              selectedConversation?.zapp_conversation?.is_group 
-               ? dismissGroupConversation 
+               ? convActions.dismissGroupConversation 
                : undefined
            }
            onOpenEditGroup={
