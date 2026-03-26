@@ -146,6 +146,16 @@ export function FinancialClientsTab() {
     return 0;
   });
 
+  const {
+    paginatedItems: paginatedClients,
+    currentPage: clientPage,
+    pageSize: clientPageSize,
+    totalPages: clientTotalPages,
+    totalItems: clientTotalItems,
+    handlePageChange: handleClientPageChange,
+    handlePageSizeChange: handleClientPageSizeChange,
+  } = useTablePagination(filteredClients);
+
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       if (editingClient) {
