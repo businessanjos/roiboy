@@ -9152,27 +9152,36 @@ export type Database = {
         Row: {
           account_id: string
           analysis: string
+          call_outcome: string | null
+          client_id: string | null
           created_at: string
           deal_id: string | null
           id: string
+          outcome_notes: string | null
           transcript_preview: string | null
           user_id: string
         }
         Insert: {
           account_id: string
           analysis: string
+          call_outcome?: string | null
+          client_id?: string | null
           created_at?: string
           deal_id?: string | null
           id?: string
+          outcome_notes?: string | null
           transcript_preview?: string | null
           user_id: string
         }
         Update: {
           account_id?: string
           analysis?: string
+          call_outcome?: string | null
+          client_id?: string | null
           created_at?: string
           deal_id?: string | null
           id?: string
+          outcome_notes?: string | null
           transcript_preview?: string | null
           user_id?: string
         }
@@ -9182,6 +9191,20 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_call_analyses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "sales_call_analyses_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
           {
