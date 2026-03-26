@@ -251,6 +251,20 @@ export default function SalesScripts() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['sales-call-analyses'] }); toast.success('Análise excluída!'); setDeleteAnalysisDialog(null); },
   });
 
+  const updateAnalysisOutcomeMutation = useMutation({
+    mutationFn: async ({ id, call_outcome, client_id, outcome_notes }: { id: string; call_outcome: string | null; client_id: string | null; outcome_notes: string | null }) => {
+      const { error } = await supabase.from('sales_call_analyses').update({ call_outcome, client_id, outcome_notes } as any).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-call-analyses'] });
+      toast.success('Resultado da call atualizado!');
+    },
+    onError: () => toast.error('Erro ao atualizar resultado'),
+  });
+
+  const getOutcomeConfig = (outcome: string | null) => CALL_OUTCOMES.find(o => o.value === outcome);
+
   const handleCopy = async (content: string) => { await navigator.clipboard.writeText(content); toast.success('Copiado!'); };
   const filteredScripts = scripts.filter(s => { const ms = searchQuery === '' || s.title.toLowerCase().includes(searchQuery.toLowerCase()) || s.content.toLowerCase().includes(searchQuery.toLowerCase()); const mo = filterObjection === 'all' || s.objection_type === filterObjection; const mf = filterFunnel === 'all' || s.funnel_stage === filterFunnel; return ms && mo && mf; });
   const getObjectionConfig = (type: string | null) => OBJECTION_TYPES.find(o => o.value === type) || OBJECTION_TYPES[5];
