@@ -203,6 +203,16 @@ export default function FinancialInvoicesPage() {
     return matchesSearch && matchesBankAccount && matchesStatus;
   });
 
+  const {
+    paginatedItems: paginatedEntries,
+    currentPage: invoicePage,
+    pageSize: invoicePageSize,
+    totalPages: invoiceTotalPages,
+    totalItems: invoiceTotalItems,
+    handlePageChange: handleInvoicePageChange,
+    handlePageSizeChange: handleInvoicePageSizeChange,
+  } = useTablePagination(filteredEntries);
+
   // Calculate totals
   const totals = filteredEntries.reduce((acc, entry) => {
     acc.total += entry.amount;

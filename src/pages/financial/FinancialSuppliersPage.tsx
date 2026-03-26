@@ -131,6 +131,16 @@ export default function FinancialSuppliersPage() {
       s.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const {
+    paginatedItems: paginatedSuppliers,
+    currentPage: supplierPage,
+    pageSize: supplierPageSize,
+    totalPages: supplierTotalPages,
+    totalItems: supplierTotalItems,
+    handlePageChange: handleSupplierPageChange,
+    handlePageSizeChange: handleSupplierPageSizeChange,
+  } = useTablePagination(filteredSuppliers);
+
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const payload = {

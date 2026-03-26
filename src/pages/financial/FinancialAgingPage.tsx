@@ -162,6 +162,16 @@ export default function FinancialAgingPage() {
     return matchesSearch && matchesBucket;
   });
 
+  const {
+    paginatedItems: paginatedAgingEntries,
+    currentPage: agingPage,
+    pageSize: agingPageSize,
+    totalPages: agingTotalPages,
+    totalItems: agingTotalItems,
+    handlePageChange: handleAgingPageChange,
+    handlePageSizeChange: handleAgingPageSizeChange,
+  } = useTablePagination(filteredEntries);
+
   return (
     <div className="p-6 space-y-6">
       <Card>
