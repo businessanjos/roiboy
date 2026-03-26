@@ -128,15 +128,35 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
       
       setLoading(true);
       try {
-        // Buscar TODAS as integrações WhatsApp por setor
-        const { data: integrations, error } = await supabase
-          .from("integrations")
-          .select("id, sector_id, status, config, pin_hash")
-          .eq("account_id", currentUser.account_id)
-          .eq("type", "whatsapp")
-          .in("sector_id", WHATSAPP_SECTOR_IDS);
+        const [integrations, sectorSettings, departments, conversations] = await withRetry(async () => {
+          const [intRes, settingsRes, deptsRes, convsRes] = await Promise.all([
+            supabase
+              .from("integrations")
+              .select("id, sector_id, status, config, pin_hash")
+              .eq("account_id", currentUser.account_id)
+              .eq("type", "whatsapp")
+              .in("sector_id", WHATSAPP_SECTOR_IDS),
+            supabase
+              .from("sector_settings")
+              .select("sector_id, pin_hash")
+              .eq("account_id", currentUser.account_id)
+              .in("sector_id", WHATSAPP_SECTOR_IDS),
+            supabase
+              .from("zapp_departments")
+              .select("id, sector_id")
+              .eq("account_id", currentUser.account_id)
+              .in("sector_id", WHATSAPP_SECTOR_IDS),
+            supabase
+              .from("zapp_conversation_assignments")
+              .select("department_id, zapp_conversation:zapp_conversations(unread_count)")
+              .eq("account_id", currentUser.account_id)
+              .neq("status", "closed"),
+          ]);
 
-        if (error) throw error;
+          if (intRes.error) throw intRes.error;
+
+          return [intRes.data, settingsRes.data, deptsRes.data, convsRes.data] as const;
+        }, 3, 1500);
         
         console.log("[ZappSectorSelector] Integrations loaded:", integrations);
 
