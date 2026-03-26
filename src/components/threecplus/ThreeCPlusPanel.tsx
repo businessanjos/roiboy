@@ -244,9 +244,7 @@ export function ThreeCPlusPanel() {
     !loading &&
     extensionLoaded &&
     isConnected &&
-    Boolean(connectionInfo?.has_agent_token) &&
-    Boolean(selectedCampaign) &&
-    (agentStatus === "idle" || agentStatus === "manual_mode");
+    Boolean(connectionInfo?.has_agent_token);
   const showDialSection =
     extensionLoaded &&
     isConnected &&
