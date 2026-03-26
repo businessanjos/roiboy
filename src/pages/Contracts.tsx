@@ -1576,7 +1576,7 @@ export default function Contracts() {
         contract.product?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         contract.notes?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const isExpired = contract.end_date && isPast(new Date(contract.end_date)) && contract.status === "active";
+      const isExpired = contract.end_date && isPast(parseLocalDate(contract.end_date)!) && contract.status === "active";
       const matchesStatus = statusFilter === "all" || 
         (statusFilter === "expired" ? isExpired : contract.status === statusFilter);
       const matchesType = typeFilter === "all" || contract.contract_type === typeFilter;
