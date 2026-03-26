@@ -86,6 +86,7 @@ const SocialMedia = lazyRetry(() => import("./pages/SocialMedia"));
 const MarketingTasks = lazyRetry(() => import("./pages/MarketingTasks"));
 const MarketingInsights = lazyRetry(() => import("./pages/MarketingInsights"));
 const Insights = lazyRetry(() => import("./pages/Insights"));
+const SharedInsights = lazyRetry(() => import("./pages/SharedInsights"));
 const WhatsAppDiagnostics = lazyRetry(() => import("./pages/admin/WhatsAppDiagnostics"));
 // Financial module with sub-routes (lazy loaded)
 const FinancialLayout = lazyRetry(() => import("@/components/financial/FinancialLayout").then(m => ({ default: m.FinancialLayout })));
