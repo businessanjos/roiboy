@@ -682,26 +682,6 @@ export default function RoyZapp() {
     },
   });
 
-  // Contact operations hook (create conversations, search contacts, save client/lead)
-  const contactOps = useZappContactOperations({
-    currentUser,
-    isAdmin,
-    currentAgent,
-    agents,
-    selectedConversation,
-    selectedSectorId,
-    selectedIntegrationId,
-    currentSectorDepartmentId,
-    hasVendasAccess,
-    setAssignments,
-    setSelectedConversation,
-    setInboxTab,
-    setFilterConversationType,
-    fetchData,
-    fetchMessages,
-    getContactInfo,
-  });
-
   const handleNotificationViewChat = useCallback((conversationId: string) => {
     const assignment = assignments.find(
       a => a.zapp_conversation_id === conversationId || a.zapp_conversation?.id === conversationId
