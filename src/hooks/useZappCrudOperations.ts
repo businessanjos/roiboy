@@ -341,7 +341,6 @@ export function useZappCrudOperations({
 
   const saveConversationTags = useCallback(async () => {
     if (!taggingAssignmentId || !accountId) return;
-    const userId = undefined; // Will be set from currentUser in the component
     
     setSavingConversationTags(true);
     try {
