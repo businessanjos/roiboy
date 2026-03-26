@@ -211,8 +211,19 @@ export default function Tasks() {
 
   // Fetch tasks with React Query
   const { data: tasks = [], isLoading: loading } = useQuery({
-    queryKey: ["internal-tasks", filterUser, currentUser?.id],
+    queryKey: ["internal-tasks", filterUser, currentUser?.id, currentSector?.id],
     queryFn: async () => {
+      // First, get activity type IDs for the current sector to filter server-side
+      let sectorActivityTypeIds: string[] | null = null;
+      if (currentSector?.id) {
+        const { data: sectorTypes } = await supabase
+          .from("activity_types")
+          .select("id")
+          .eq("sector_id", currentSector.id)
+          .eq("is_active", true);
+        sectorActivityTypeIds = (sectorTypes || []).map(t => t.id);
+      }
+
       let query = supabase
         .from("internal_tasks")
         .select(`
@@ -234,6 +245,11 @@ export default function Tasks() {
           assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url),
           activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color, sector_id)
         `);
+
+      // Apply server-side sector filter using activity_type_ids
+      if (sectorActivityTypeIds && sectorActivityTypeIds.length > 0) {
+        query = query.in("activity_type_id", sectorActivityTypeIds);
+      }
 
       // Apply server-side user filter to avoid hitting the 1000-row default limit
       if (filterUser === "mine" && currentUser?.id) {
