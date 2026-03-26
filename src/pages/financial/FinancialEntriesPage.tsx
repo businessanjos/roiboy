@@ -644,6 +644,7 @@ export default function FinancialEntriesPage() {
                   </Button>
                 </div>
               ) : (
+                <>
                 <Table>
                   <TableHeader>
                     <TableRow>
