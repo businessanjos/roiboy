@@ -138,12 +138,12 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
     const next7Days = addDays(now, 7);
     
     const receivablesDue = receivables.filter(r => {
-      const dueDate = new Date(r.due_date);
+      const dueDate = parseLocalDate(r.due_date)!;
       return dueDate <= next7Days;
     });
     
     const payablesDue = payables.filter(p => {
-      const dueDate = new Date(p.due_date);
+      const dueDate = parseLocalDate(p.due_date)!;
       return dueDate <= next7Days;
     });
     
