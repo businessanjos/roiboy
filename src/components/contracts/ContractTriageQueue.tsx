@@ -182,7 +182,7 @@ export function ContractTriageQueue({
         
         // 3. Status filter
         const isExpired = contract.end_date && 
-          new Date(contract.end_date) < new Date() && 
+          parseLocalDate(contract.end_date)! < new Date() && 
           contract.status === "active";
         const matchesStatus = statusFilter === "all" || 
           (statusFilter === "expired" ? isExpired : contract.status === statusFilter);
