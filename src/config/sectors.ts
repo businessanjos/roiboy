@@ -99,24 +99,24 @@ export const sectors: Sector[] = [
       { to: "/financial/boletos", icon: FileText, label: "Boletos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/notas-fiscais", icon: Receipt, label: "Notas Fiscais", permission: PERMISSIONS.CLIENTS_VIEW },
       // Gestão
-      { to: "/financial/categories", icon: Filter, label: "Categorias", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/financial/categories", icon: Filter, label: "Categorias", permission: PERMISSIONS.CLIENTS_VIEW, group: "Gestão" },
       { to: "/financial/cost-centers", icon: PiggyBank, label: "Centros de Custo", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/suppliers", icon: Users, label: "Fornecedores", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/recurring", icon: Repeat, label: "Recorrências", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/budget", icon: FileText, label: "Orçamentos", permission: PERMISSIONS.CLIENTS_VIEW },
       // Operações
-      { to: "/financial/reconciliation", icon: Landmark, label: "Conciliação", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/financial/reconciliation", icon: Landmark, label: "Conciliação", permission: PERMISSIONS.CLIENTS_VIEW, group: "Operações" },
       { to: "/financial/sales-reconciliation", icon: FileSignature, label: "Conc. Vendas", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/commissions", icon: Percent, label: "Comissões", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/alerts", icon: Bell, label: "Alertas", permission: PERMISSIONS.CLIENTS_VIEW },
       // Relatórios
-      { to: "/financial/dre", icon: FileText, label: "DRE", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/financial/dre", icon: FileText, label: "DRE", permission: PERMISSIONS.CLIENTS_VIEW, group: "Relatórios" },
       { to: "/financial/drf", icon: Receipt, label: "DRF", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/balance-sheet", icon: Building2, label: "Balanço", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/aging", icon: BarChart3, label: "Aging", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/financial/profitability", icon: DollarSign, label: "Rentabilidade", permission: PERMISSIONS.CLIENTS_VIEW },
       // Outros
-      { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW },
+      { to: "/contracts", icon: FileSignature, label: "Contratos", permission: PERMISSIONS.CLIENTS_VIEW, group: "Outros" },
       { to: "/clients", icon: Users, label: "Clientes Ativos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
