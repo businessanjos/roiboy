@@ -215,6 +215,8 @@ export function useZappMessaging({
     const now = new Date().toISOString();
     const conversationId = selectedConversation.zapp_conversation_id;
     const accountId = currentUser!.account_id;
+    const conversationIntegrationId = (selectedConversation.zapp_conversation as { integration_id?: string | null } | undefined)?.integration_id;
+    const effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
     
     const replyContext = replyingTo ? { ...replyingTo } : null;
     
@@ -253,7 +255,7 @@ export function useZappMessaging({
           action,
           message: messageContent,
           sector_id: selectedSectorId,
-          integration_id: selectedIntegrationId,
+          integration_id: effectiveIntegrationId,
         };
         
         if (isGroup && groupJid) {
@@ -367,7 +369,7 @@ export function useZappMessaging({
               action: retryAction,
               message: messageContent,
               sector_id: selectedSectorId,
-              integration_id: selectedIntegrationId,
+              integration_id: effectiveIntegrationId,
             };
             
             if (isGroup && groupJid) {
@@ -464,6 +466,8 @@ export function useZappMessaging({
     const phone = contactInfo.phone;
     const isGroup = contactInfo.isGroup;
     const groupJid = selectedConversation.zapp_conversation?.group_jid;
+    const conversationIntegrationId = (selectedConversation.zapp_conversation as { integration_id?: string | null } | undefined)?.integration_id;
+    const effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
     
     if (!phone && !groupJid) {
       toast.error("Número de telefone não encontrado");
@@ -512,7 +516,7 @@ export function useZappMessaging({
         caption: caption || "",
         file_name: file.name,
         sector_id: selectedSectorId || "",
-        integration_id: selectedIntegrationId || "",
+        integration_id: effectiveIntegrationId || "",
       };
       
       if (isGroup && groupJid) {
@@ -679,6 +683,8 @@ export function useZappMessaging({
     const phone = contactInfo.phone;
     const isGroup = contactInfo.isGroup;
     const groupJid = selectedConversation.zapp_conversation?.group_jid;
+    const conversationIntegrationId = (selectedConversation.zapp_conversation as { integration_id?: string | null } | undefined)?.integration_id;
+    const effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
     
     if (!phone && !groupJid) {
       toast.error("Número de telefone não encontrado");
@@ -754,7 +760,7 @@ export function useZappMessaging({
           caption: "",
           file_name: `audio_${Date.now()}.webm`,
           sector_id: selectedSectorId || "",
-          integration_id: selectedIntegrationId || "",
+          integration_id: effectiveIntegrationId || "",
         };
         
         if (isGroup && groupJid) {
@@ -922,6 +928,8 @@ export function useZappMessaging({
     const phone = contactInfo.phone;
     const isGroup = contactInfo.isGroup;
     const groupJid = selectedConversation.zapp_conversation?.group_jid;
+    const conversationIntegrationId = (selectedConversation.zapp_conversation as { integration_id?: string | null } | undefined)?.integration_id;
+    const effectiveIntegrationId = conversationIntegrationId || selectedIntegrationId;
     
     if (!phone && !groupJid) {
       toast.error("Número de telefone não encontrado");
@@ -956,7 +964,7 @@ export function useZappMessaging({
         action,
         message: contactMessage,
         sector_id: selectedSectorId || "",
-        integration_id: selectedIntegrationId || "",
+        integration_id: effectiveIntegrationId || "",
       };
       
       if (isGroup && groupJid) {
