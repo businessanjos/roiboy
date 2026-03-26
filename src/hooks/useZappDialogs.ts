@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Agent, Department } from "@/components/royzapp";
 import { sectors, SectorId } from "@/config/sectors";
+import { withRetry } from "@/lib/retryFetch";
 
 interface TeamUser {
   id: string;
