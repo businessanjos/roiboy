@@ -1192,6 +1192,9 @@ export default function RoyZapp() {
         updateData.closed_at = new Date().toISOString();
         updateData.agent_id = null;
         updateData.assigned_at = null;
+      } else {
+        // Any reopen / non-closed status must clear closed metadata
+        updateData.closed_at = null;
       }
       
       const { error } = await supabase
