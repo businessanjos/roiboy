@@ -12,6 +12,7 @@ interface UseZappCrudOperationsProps {
 }
 
 export function useZappCrudOperations({
+  userId,
   accountId,
   departments,
   tags,
