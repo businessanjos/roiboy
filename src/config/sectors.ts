@@ -24,6 +24,14 @@ import {
   UserCheck,
   Instagram,
   LayoutGrid,
+  Receipt,
+  Building2,
+  Filter,
+  PiggyBank,
+  Repeat,
+  Landmark,
+  Percent,
+  DollarSign,
   
   type LucideIcon,
 } from "lucide-react";
