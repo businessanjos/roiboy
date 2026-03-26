@@ -255,7 +255,10 @@ serve(async (req) => {
         owner,
       };
 
-      if (intData?.id) {
+      // Only update DB status if we got a DEFINITIVE answer from the API.
+      // If instanceStatus is still "unknown", the check failed — do NOT overwrite
+      // a potentially valid "connected" status with "disconnected".
+      if (intData?.id && instanceStatus !== "unknown") {
         await supabase
           .from("integrations")
           .update({ status: connected ? "connected" : "disconnected" })
