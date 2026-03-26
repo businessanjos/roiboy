@@ -2170,22 +2170,19 @@ export default function RoyZapp() {
             }
           }}
           onOpenNewConversationDialog={openNewConversationDialog}
-          onOpenAgentDialog={openAgentDialog}
-          onToggleAgentOnline={toggleAgentOnline}
-          onDeleteAgent={setDeletingAgentId}
-          onOpenDepartmentDialog={openDepartmentDialog}
-          onDeleteDepartment={setDeletingDepartmentId}
-          onOpenTagDialog={openTagDialog}
-          onDeleteTag={setDeletingTagId}
-          onMarkAsRead={markAsRead}
-          onMarkAsUnread={markAsUnread}
-          onUpdateFlag={updateConversationFlag}
-          onOpenTagConversationDialog={openConversationTagDialog}
-          onDeleteConversation={deleteConversation}
-          onDismissConversation={async (assignmentId) => {
-            // Find the assignment to dismiss
-            const assignment = assignments.find(a => a.id === assignmentId);
-            if (!assignment) return;
+          onOpenAgentDialog={crud.openAgentDialog}
+          onToggleAgentOnline={crud.toggleAgentOnline}
+          onDeleteAgent={crud.setDeletingAgentId}
+          onOpenDepartmentDialog={crud.openDepartmentDialog}
+          onDeleteDepartment={crud.setDeletingDepartmentId}
+          onOpenTagDialog={crud.openTagDialog}
+          onDeleteTag={crud.setDeletingTagId}
+          onMarkAsRead={convActions.markAsRead}
+          onMarkAsUnread={convActions.markAsUnread}
+          onUpdateFlag={convActions.updateConversationFlag}
+          onOpenTagConversationDialog={crud.openConversationTagDialog}
+          onDeleteConversation={convActions.deleteConversation}
+          onDismissConversation={convActions.dismissByAssignmentId}
             
             try {
               const { error } = await supabase
