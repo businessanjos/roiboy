@@ -59,49 +59,85 @@ export function useProducts() {
   });
 }
 
+// Helper: fetch all rows with automatic pagination (bypasses 1000-row limit)
+async function fetchAllPaginated<T>(
+  queryBuilder: () => any,
+  pageSize = 1000,
+): Promise<T[]> {
+  const all: T[] = [];
+  let from = 0;
+  let hasMore = true;
+  while (hasMore) {
+    const { data, error } = await queryBuilder().range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    all.push(...data);
+    hasMore = data.length === pageSize;
+    from += pageSize;
+  }
+  return all;
+}
+
 // Fetch all clients with active/pending contracts
+// Optimized: uses paginated fetches and batched IN queries (max 200 per batch)
 export function useClientsWithScores() {
   return useQuery({
     queryKey: ["dashboard-clients-optimized"],
     queryFn: async () => {
-      const { data: contractsData, error: contractsError } = await supabase
-        .from("client_contracts")
-        .select("client_id, status")
-        .in("status", ["active", "pending"]);
-
-      if (contractsError) throw contractsError;
+      // Step 1: Get ALL contract client_ids with pagination
+      const contractsData = await fetchAllPaginated<{ client_id: string; status: string }>(
+        () => supabase.from("client_contracts").select("client_id, status").in("status", ["active", "pending"]),
+      );
       
-      const clientIdsWithContracts = [...new Set((contractsData || []).map(c => c.client_id))];
-      
+      const clientIdsWithContracts = [...new Set(contractsData.map(c => c.client_id))];
       if (clientIdsWithContracts.length === 0) return [];
 
-      const { data: clientsData, error: clientsError } = await supabase
-        .from("clients")
-        .select("id, full_name, phone_e164, status")
-        .in("id", clientIdsWithContracts)
-        .order("full_name", { ascending: true });
-
-      if (clientsError) throw clientsError;
-      if (!clientsData || clientsData.length === 0) return [];
+      // Step 2: Fetch clients in batches of 200 to avoid huge URL params
+      const BATCH_SIZE = 200;
+      const clientBatches: ClientBasic[][] = [];
+      
+      for (let i = 0; i < clientIdsWithContracts.length; i += BATCH_SIZE) {
+        const batch = clientIdsWithContracts.slice(i, i + BATCH_SIZE);
+        const { data, error } = await supabase
+          .from("clients")
+          .select("id, full_name, phone_e164, status")
+          .in("id", batch)
+          .order("full_name", { ascending: true });
+        if (error) throw error;
+        if (data) clientBatches.push(data as ClientBasic[]);
+      }
+      
+      const clientsData = clientBatches.flat();
+      if (clientsData.length === 0) return [];
 
       const clientIds = clientsData.map(c => c.id);
 
-      const [clientProductsRes, activeContractsRes] = await Promise.all([
-        supabase.from("client_products").select("client_id, product_id").in("client_id", clientIds),
-        supabase.from("client_contracts").select("client_id").eq("status", "active").in("client_id", clientIds),
+      // Step 3: Fetch products and active contracts in batches too
+      const productPromises: Promise<any[]>[] = [];
+      const activeContractPromises: Promise<any[]>[] = [];
+      
+      for (let i = 0; i < clientIds.length; i += BATCH_SIZE) {
+        const batch = clientIds.slice(i, i + BATCH_SIZE);
+        productPromises.push(
+          (async () => { const { data } = await supabase.from("client_products").select("client_id, product_id").in("client_id", batch); return data || []; })()
+        );
+        activeContractPromises.push(
+          (async () => { const { data } = await supabase.from("client_contracts").select("client_id").eq("status", "active").in("client_id", batch); return data || []; })()
+        );
+      }
+
+      const [productResults, activeResults] = await Promise.all([
+        Promise.all(productPromises),
+        Promise.all(activeContractPromises),
       ]);
 
       const clientProductsMap: Record<string, string[]> = {};
-      (clientProductsRes.data || []).forEach((cp: any) => {
-        if (!clientProductsMap[cp.client_id]) {
-          clientProductsMap[cp.client_id] = [];
-        }
+      productResults.flat().forEach((cp: any) => {
+        if (!clientProductsMap[cp.client_id]) clientProductsMap[cp.client_id] = [];
         clientProductsMap[cp.client_id].push(cp.product_id);
       });
 
-      const activeContractsSet = new Set(
-        (activeContractsRes.data || []).map((c: any) => c.client_id)
-      );
+      const activeContractsSet = new Set(activeResults.flat().map((c: any) => c.client_id));
 
       const clients: ClientBasic[] = clientsData.map((client) => ({
         id: client.id,

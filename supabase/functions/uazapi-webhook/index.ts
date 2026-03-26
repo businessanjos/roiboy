@@ -1405,7 +1405,28 @@ serve(async (req) => {
               });
             }
           } else if (zappConvoError) {
-            console.error("Error creating zapp_conversation:", zappConvoError);
+            // OPTIMIZATION: Handle duplicate key (race condition for groups)
+            // Instead of failing, fetch the existing conversation
+            if (zappConvoError.code === "23505" && isGroupMessage && groupJid) {
+              console.log(`[ZAPP] Duplicate key handled gracefully for group ${groupJid}, fetching existing`);
+              const { data: existingAfterConflict } = await supabase
+                .from("zapp_conversations")
+                .select("id")
+                .eq("account_id", accountId)
+                .eq("group_jid", groupJid)
+                .eq("sector_id", sectorId || "")
+                .limit(1)
+                .maybeSingle();
+              
+              if (existingAfterConflict) {
+                zappConversationId = existingAfterConflict.id;
+                conversationCache.delete(convCacheKey);
+              } else {
+                console.error("Error creating zapp_conversation (duplicate but not found):", zappConvoError);
+              }
+            } else {
+              console.error("Error creating zapp_conversation:", zappConvoError);
+            }
           }
         }
 

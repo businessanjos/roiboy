@@ -38,6 +38,9 @@ function lazyRetry<T extends ComponentType<any>>(
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
+// ZappErrorBoundary - lazy loaded (was eagerly imported, 1.2s load time)
+const ZappErrorBoundary = lazyRetry(() => import("@/components/royzapp/ZappErrorBoundary").then(m => ({ default: m.ZappErrorBoundary })));
+
 // Lazy loaded pages
 const Dashboard = lazyRetry(() => import("./pages/Dashboard"));
 const Clients = lazyRetry(() => import("./pages/Clients"));
@@ -69,7 +72,7 @@ const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
 
 const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
-import { ZappErrorBoundary } from "@/components/royzapp/ZappErrorBoundary";
+
 const BillingPortal = lazyRetry(() => import("./pages/BillingPortal"));
 const Sectors = lazyRetry(() => import("./pages/Sectors"));
 const Contracts = lazyRetry(() => import("./pages/Contracts"));
@@ -84,8 +87,8 @@ const MarketingTasks = lazyRetry(() => import("./pages/MarketingTasks"));
 const MarketingInsights = lazyRetry(() => import("./pages/MarketingInsights"));
 const Insights = lazyRetry(() => import("./pages/Insights"));
 const WhatsAppDiagnostics = lazyRetry(() => import("./pages/admin/WhatsAppDiagnostics"));
-// Financial module with sub-routes
-import { FinancialLayout } from "@/components/financial/FinancialLayout";
+// Financial module with sub-routes (lazy loaded)
+const FinancialLayout = lazyRetry(() => import("@/components/financial/FinancialLayout").then(m => ({ default: m.FinancialLayout })));
 const FinancialEntriesPage = lazyRetry(() => import("./pages/financial/FinancialEntriesPage"));
 const FinancialCashFlowPage = lazyRetry(() => import("./pages/financial/FinancialCashFlowPage"));
 const FinancialBankAccountsPage = lazyRetry(() => import("./pages/financial/FinancialBankAccountsPage"));
