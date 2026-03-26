@@ -247,6 +247,11 @@ export function ThreeCPlusPanel() {
     Boolean(connectionInfo?.has_agent_token) &&
     Boolean(selectedCampaign) &&
     (agentStatus === "idle" || agentStatus === "manual_mode");
+  const showDialSection =
+    extensionLoaded &&
+    isConnected &&
+    Boolean(connectionInfo?.has_agent_token) &&
+    !hasCallActivity;
   const defaultStatusInfo =
     agentStatus !== "offline"
       ? statusInfo
@@ -358,7 +363,7 @@ export function ThreeCPlusPanel() {
         <div className="p-4 space-y-4">
 
           {/* ===== PRIMARY: Manual Dial (no campaign required) ===== */}
-          {canDialManually && !hasCallActivity && (
+          {showDialSection && (
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Discar
@@ -375,8 +380,8 @@ export function ThreeCPlusPanel() {
                 <Button
                   size="icon"
                   onClick={handleManualCall}
-                  disabled={!manualPhone.trim() || loading}
-                  className="shrink-0"
+                  disabled={!manualPhone.trim() || loading || !canDialManually}
+                  title={!canDialManually ? "Entre em uma campanha e aguarde o status Ocioso" : "Discar"}
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
