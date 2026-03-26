@@ -362,9 +362,11 @@ export function useZappConversations(options: UseZappConversationsOptions) {
             );
 
             if (assignment) {
-              const contactName = assignment.zapp_conversation?.contact_name
-                || assignment.zapp_conversation?.client?.full_name
+              // Priority: client name > lead name > contact_name (skip "Desconhecido") > phone
+              const rawContactName = assignment.zapp_conversation?.contact_name;
+              const contactName = assignment.zapp_conversation?.client?.full_name
                 || assignment.zapp_conversation?.lead?.full_name
+                || (rawContactName && rawContactName !== "Desconhecido" ? rawContactName : null)
                 || assignment.zapp_conversation?.phone_e164
                 || "Contato";
 
