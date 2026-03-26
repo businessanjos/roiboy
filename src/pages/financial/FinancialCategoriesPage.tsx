@@ -113,6 +113,16 @@ export default function FinancialCategoriesPage() {
     enabled: !!accountId,
   });
 
+  const {
+    paginatedItems: paginatedCategories,
+    currentPage: catPage,
+    pageSize: catPageSize,
+    totalPages: catTotalPages,
+    totalItems: catTotalItems,
+    handlePageChange: handleCatPageChange,
+    handlePageSizeChange: handleCatPageSizeChange,
+  } = useTablePagination(categories);
+
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const payload = {
