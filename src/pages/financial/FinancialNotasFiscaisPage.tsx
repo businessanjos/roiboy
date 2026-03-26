@@ -830,7 +830,7 @@ export default function FinancialNotasFiscaisPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredNotas.map((nota) => (
+                  paginatedNotas.map((nota) => (
                     <TableRow key={nota.id}>
                       <TableCell>
                         <Badge variant="outline">

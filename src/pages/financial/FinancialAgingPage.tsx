@@ -333,7 +333,7 @@ export default function FinancialAgingPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEntries.map((entry) => {
+                  {paginatedAgingEntries.map((entry) => {
                     const bucket = agingBuckets.find(b => 
                       entry.days_overdue >= b.min && (b.max === null || entry.days_overdue <= b.max)
                     );

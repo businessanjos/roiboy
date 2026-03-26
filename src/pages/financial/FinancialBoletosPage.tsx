@@ -614,7 +614,7 @@ export default function FinancialBoletosPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredBoletos.map((boleto) => (
+                  paginatedBoletos.map((boleto) => (
                     <TableRow key={boleto.id}>
                       <TableCell className="font-medium">
                         {boleto.clients?.full_name || "-"}

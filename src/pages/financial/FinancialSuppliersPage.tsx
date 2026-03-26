@@ -602,7 +602,7 @@ export default function FinancialSuppliersPage() {
             </p>
           ) : (
             <div className="space-y-2">
-              {filteredSuppliers.map((supplier) => (
+              {paginatedSuppliers.map((supplier) => (
                 <div
                   key={supplier.id}
                   className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50"

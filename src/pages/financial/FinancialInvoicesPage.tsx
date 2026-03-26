@@ -387,7 +387,7 @@ export default function FinancialInvoicesPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredEntries.map((entry) => (
+                paginatedEntries.map((entry) => (
                   <TableRow key={entry.id}>
                     <TableCell>
                       {format(new Date(entry.due_date), 'dd/MM/yyyy')}
