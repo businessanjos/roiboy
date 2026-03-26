@@ -1,1 +1,0 @@
-DELETE FROM zapp_conversations WHERE id = '567192a9-76a0-4543-9922-e0db8f15d1af';
