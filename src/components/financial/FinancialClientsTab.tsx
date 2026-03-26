@@ -649,8 +649,8 @@ export function FinancialClientsTab() {
               {searchTerm ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}
             </p>
           ) : (
-            <div className="space-y-2 max-h-[500px] overflow-y-auto">
-              {filteredClients.map((client) => {
+            <div className="space-y-2">
+              {paginatedClients.map((client) => {
                 const doc = getDocumentDisplay(client);
                 return (
                   <div
