@@ -798,6 +798,8 @@ export function useZappMessaging({
           last_message_preview: "🎤 Áudio",
           unread_count: 0,
         }).eq("id", selectedConversation.zapp_conversation_id);
+        
+        onConversationUpdated?.(selectedConversation.zapp_conversation_id, now, "🎤 Áudio");
       }
       
       toast.success("Áudio enviado!");
