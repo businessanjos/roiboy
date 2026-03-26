@@ -1992,12 +1992,7 @@ export default function RoyZapp() {
     });
   }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, currentUser?.team_role_name]);
 
-  // Helper to get agent name by id
-  const getAgentName = (agentId: string | null) => {
-    if (!agentId) return null;
-    const agent = agents.find(a => a.id === agentId);
-    return agent?.user?.name || null;
-  };
+  // getAgentName is defined above (near line 873)
 
   // Memoized stats to avoid recalculating on every render
   // Admin/Gestor veem todas as conversas; atendentes comuns só veem as suas
