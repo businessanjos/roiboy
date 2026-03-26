@@ -1741,75 +1741,75 @@ export default function Contracts() {
       </div>
 
       {/* Compact Stats Strip */}
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium">
+      <div className="flex items-center gap-1 overflow-x-auto pb-1 scrollbar-none">
+        <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0">
           <FileText className="h-3 w-3" />
           {stats.total} Total
         </Badge>
-        <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-green-600 border-green-600/30 bg-green-500/5">
+        <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-green-600 border-green-600/30 bg-green-500/5">
           <CheckCircle className="h-3 w-3" />
           {stats.active} Ativos
         </Badge>
         {stats.pending > 0 && (
-          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-blue-600 border-blue-600/30 bg-blue-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-blue-600 border-blue-600/30 bg-blue-500/5">
             <Clock className="h-3 w-3" />
             {stats.pending} Pendentes
           </Badge>
         )}
         {stats.scheduled > 0 && (
-          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-indigo-600 border-indigo-600/30 bg-indigo-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-indigo-600 border-indigo-600/30 bg-indigo-500/5">
             <Clock className="h-3 w-3" />
             {stats.scheduled} A Iniciar
           </Badge>
         )}
         {stats.suspended > 0 && (
-          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-orange-600 border-orange-600/30 bg-orange-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-orange-600 border-orange-600/30 bg-orange-500/5">
             <Ban className="h-3 w-3" />
             {stats.suspended} Suspensos
           </Badge>
         )}
         {stats.paused > 0 && (
-          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-amber-600 border-amber-600/30 bg-amber-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-amber-600 border-amber-600/30 bg-amber-500/5">
             <PauseCircle className="h-3 w-3" />
             {stats.paused} Pausados
           </Badge>
         )}
         {stats.cancelled > 0 && (
-          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-red-600 border-red-600/30 bg-red-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-red-600 border-red-600/30 bg-red-500/5">
             <XCircle className="h-3 w-3" />
             {stats.cancelled} Cancelados
           </Badge>
         )}
         {stats.ended > 0 && (
-          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-muted-foreground">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-muted-foreground">
             <Ban className="h-3 w-3" />
             {stats.ended} Encerrados
           </Badge>
         )}
         {stats.dismissed > 0 && (
-          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-rose-600 border-rose-600/30 bg-rose-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-rose-600 border-rose-600/30 bg-rose-500/5">
             <XCircle className="h-3 w-3" />
             {stats.dismissed} Demitidas
           </Badge>
         )}
         {stats.dropout_7d > 0 && (
-          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-pink-600 border-pink-600/30 bg-pink-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-pink-600 border-pink-600/30 bg-pink-500/5">
             <XCircle className="h-3 w-3" />
-            {stats.dropout_7d} Desistência 7D
+            {stats.dropout_7d} Desist. 7D
           </Badge>
         )}
-        <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-emerald-600 border-emerald-600/30 bg-emerald-500/5">
+        <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-emerald-600 border-emerald-600/30 bg-emerald-500/5">
           <TrendingUp className="h-3 w-3" />
           {formatCurrency(stats.totalValue)}
         </Badge>
         {stats.expiringSoon > 0 && (
-          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-amber-600 border-amber-600/30 bg-amber-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-amber-600 border-amber-600/30 bg-amber-500/5">
             <Clock className="h-3 w-3" />
             {stats.expiringSoon} Vencendo
           </Badge>
         )}
         {stats.expired > 0 && (
-          <Badge variant="outline" className="gap-1.5 py-1 px-2.5 text-xs font-medium text-red-600 border-red-600/30 bg-red-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-red-600 border-red-600/30 bg-red-500/5">
             <AlertTriangle className="h-3 w-3" />
             {stats.expired} Vencidos
           </Badge>
