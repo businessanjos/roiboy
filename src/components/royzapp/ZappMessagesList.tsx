@@ -3,6 +3,7 @@ import { MessageSquare } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message } from "@/hooks/useZappData";
 import { ZappMessageBubble } from "./ZappMessageBubble";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ZappMessagesListProps {
   messages: Message[];
@@ -28,8 +29,12 @@ function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
           if (!map[digits]) map[digits] = msg.sender_name;
           const last8 = digits.slice(-8);
           const last9 = digits.slice(-9);
+          const last10 = digits.slice(-10);
+          const last11 = digits.slice(-11);
           if (last8 && !map[last8]) map[last8] = msg.sender_name;
           if (last9 && !map[last9]) map[last9] = msg.sender_name;
+          if (last10 && !map[last10]) map[last10] = msg.sender_name;
+          if (last11 && !map[last11]) map[last11] = msg.sender_name;
         }
       }
     }
@@ -40,13 +45,47 @@ function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
           map[key] = name;
           const last8 = key.slice(-8);
           const last9 = key.slice(-9);
+          const last10 = key.slice(-10);
+          const last11 = key.slice(-11);
           if (last8 && !map[last8]) map[last8] = name;
           if (last9 && !map[last9]) map[last9] = name;
+          if (last10 && !map[last10]) map[last10] = name;
+          if (last11 && !map[last11]) map[last11] = name;
         }
       }
     }
   }
   return map;
+}
+
+// Extract unresolved JIDs from message contents
+function extractUnresolvedJids(messages: Message[], mentionMap: Record<string, string>): string[] {
+  const mentionRegex = /@(\d{5,})/g;
+  const unresolved = new Set<string>();
+  
+  for (const msg of messages) {
+    if (!msg.content) continue;
+    let match;
+    mentionRegex.lastIndex = 0;
+    while ((match = mentionRegex.exec(msg.content)) !== null) {
+      const jid = match[1];
+      // Check if already resolved
+      if (mentionMap[jid]) continue;
+      // Check partial matches
+      const last8 = jid.slice(-8);
+      const last9 = jid.slice(-9);
+      let found = false;
+      for (const key of Object.keys(mentionMap)) {
+        if (key.endsWith(last8) || key.endsWith(last9) || 
+            jid.endsWith(key.slice(-8)) || jid.endsWith(key.slice(-9))) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) unresolved.add(jid);
+    }
+  }
+  return Array.from(unresolved);
 }
 
 export function ZappMessagesList({
