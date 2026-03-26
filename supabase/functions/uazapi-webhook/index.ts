@@ -1667,24 +1667,19 @@ serve(async (req) => {
             }
 
           // Create or update zapp_conversation_assignment for the queue
-          // OPTIMIZATION: Check assignment cache first
-          const assignCacheKey = `assign:${zappConversationId}`;
-          let existingAssignment = getCached(assignmentCache, assignCacheKey, CONV_CACHE_TTL_MS) as { id: string; status: string; agent_id: string | null; department_id: string | null; assigned_at: string | null; closed_at: string | null } | null | undefined;
+          // ALWAYS fetch fresh from DB - assignment status changes frequently from UI
+          // and caching caused bugs where closed conversations weren't reopened
+          const { data: existingAssignments } = await supabase
+            .from("zapp_conversation_assignments")
+            .select("id, status, agent_id, department_id, assigned_at, closed_at")
+            .eq("account_id", accountId)
+            .eq("zapp_conversation_id", zappConversationId)
+            .order("department_id", { nullsFirst: false })
+            .limit(5);
           
-          if (existingAssignment === undefined) {
-            const { data: existingAssignments } = await supabase
-              .from("zapp_conversation_assignments")
-              .select("id, status, agent_id, department_id, assigned_at, closed_at")
-              .eq("account_id", accountId)
-              .eq("zapp_conversation_id", zappConversationId)
-              .order("department_id", { nullsFirst: false })
-              .limit(5);
-            
-            existingAssignment = existingAssignments?.find(a => a.department_id !== null) 
-              || existingAssignments?.[0] 
-              || null;
-            setCache(assignmentCache, assignCacheKey, existingAssignment);
-          }
+          const existingAssignment = existingAssignments?.find(a => a.department_id !== null) 
+            || existingAssignments?.[0] 
+            || null;
 
           if (existingAssignment) {
             // RACE CONDITION GUARD: If closed_at is very recent (< 10s), skip update
