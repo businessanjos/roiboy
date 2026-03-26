@@ -14,7 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { MessageSquareText, Plus, Search, Copy, Edit2, Trash2, DollarSign, Clock, Users, ShieldQuestion, Heart, HelpCircle, ArrowRight, Target, Handshake, Trophy, Loader2, Package, Sparkles, BookOpen, FileText, Star, StarOff, Phone, MessageCircle, Presentation, CheckCircle2, AlertCircle, Upload, Download, Mic, BarChart3 } from 'lucide-react';
+import { MessageSquareText, Plus, Search, Copy, Edit2, Trash2, DollarSign, Clock, Users, ShieldQuestion, Heart, HelpCircle, ArrowRight, Target, Handshake, Trophy, Loader2, Package, Sparkles, BookOpen, FileText, Star, StarOff, Phone, MessageCircle, Presentation, CheckCircle2, AlertCircle, Upload, Download, Mic, BarChart3, Crown, ThumbsDown, PhoneOff, CalendarClock, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MarkdownRenderer from '@/components/sales/MarkdownRenderer';
 import CommissionCalculator from '@/components/sales/CommissionCalculator';
