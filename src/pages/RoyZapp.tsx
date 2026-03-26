@@ -2183,32 +2183,6 @@ export default function RoyZapp() {
           onOpenTagConversationDialog={crud.openConversationTagDialog}
           onDeleteConversation={convActions.deleteConversation}
           onDismissConversation={convActions.dismissByAssignmentId}
-            
-            try {
-              const { error } = await supabase
-                .from("zapp_conversation_assignments")
-                .update({ 
-                  status: "closed", 
-                  closed_at: new Date().toISOString() 
-                })
-                .eq("id", assignmentId);
-              
-              if (error) throw error;
-              
-              toast.success("Grupo dispensado!");
-              
-              // Clear selection if this was the selected conversation
-              if (selectedConversation?.id === assignmentId) {
-                setSelectedConversation(null);
-              }
-              
-              // Remove from local state
-              setAssignments(prev => prev.filter(a => a.id !== assignmentId));
-            } catch (error) {
-              console.error("Error dismissing group:", error);
-              toast.error("Erro ao dispensar grupo");
-            }
-          }}
           onToggleWhatsAppConnection={toggleWhatsAppConnection}
           onRoundRobinChange={(checked) => {
             setRoundRobinEnabled(checked);
