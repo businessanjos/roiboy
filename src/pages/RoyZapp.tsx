@@ -2203,7 +2203,7 @@ export default function RoyZapp() {
             setSelectedConversation(a);
             const zappConvId = a.zapp_conversation?.id;
             if (zappConvId && (a.zapp_conversation?.unread_count || 0) > 0) {
-              markAsRead(zappConvId);
+              convActions.markAsRead(zappConvId);
             }
           }}
           onOpenNewConversationDialog={openNewConversationDialog}
