@@ -575,7 +575,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       return { label: "Sem término", variant: "secondary" as const, icon: Clock, className: "", reason: null };
     }
     
-    const endDate = new Date(contract.end_date);
+    const endDate = parseLocalDate(contract.end_date)!;
     const daysRemaining = differenceInDays(endDate, new Date());
     
     if (isPast(endDate)) {
