@@ -387,13 +387,23 @@ export function useZappConversations(options: UseZappConversationsOptions) {
             }
           }
 
-          // Add message to local state if viewing this conversation
+          // Add message to local state ONLY if viewing the matching conversation
           if (newMsg?.id) {
             const selectedConvId = currentConversationIdRef.current;
-            if (selectedConvId && newMsg.zapp_conversation_id !== selectedConvId) {
+            
+            // Skip if no conversation is selected
+            if (!selectedConvId) {
               maybeThrottle(debouncedFetchAssignments);
               return;
             }
+            
+            // Skip if message belongs to a different conversation
+            if (newMsg.zapp_conversation_id !== selectedConvId) {
+              maybeThrottle(debouncedFetchAssignments);
+              return;
+            }
+
+            console.log(`[ZappRT] Adding realtime msg ${newMsg.id?.substring(0, 8)} to conv ${selectedConvId.substring(0, 8)}, sent_at=${newMsg.sent_at}, direction=${newMsg.direction}`);
 
             const newFormattedMsg: Message = {
               id: newMsg.id,
@@ -427,7 +437,6 @@ export function useZappConversations(options: UseZappConversationsOptions) {
                 (m.external_message_id && newMsg.external_message_id && m.external_message_id === newMsg.external_message_id)
               );
               if (exists) return prev;
-              // Insert in chronological order based on sent_at/created_at
               const updated = [...prev, newFormattedMsg];
               updated.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
               return updated;

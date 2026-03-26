@@ -874,23 +874,15 @@ serve(async (req) => {
                             (nestedContextInfo?.stanzaId as string) ||
                             null;
         
-        // Debug: Log quote-related keys when message looks like a reply but no quote data found
-        if (!quotedMsg && !quotedMsgId) {
-          const quoteKeys = Object.keys(msgAnyQuote).filter(k => 
-            k.toLowerCase().includes('quot') || k.toLowerCase().includes('reply') || 
-            k.toLowerCase().includes('context') || k === 'message'
-          );
-          if (quoteKeys.length > 0) {
-            console.log(`[QUOTE-DEBUG] Message ${messageId} has potential quote keys: ${quoteKeys.join(', ')}`);
-            for (const k of quoteKeys) {
-              const val = msgAnyQuote[k];
-              if (val && typeof val === 'object') {
-                console.log(`[QUOTE-DEBUG] ${k} keys: ${Object.keys(val as Record<string, unknown>).join(', ')}`);
-              }
-            }
+        // Debug: Log quote-related data when it IS a reply
+        if (quotedMsg || quotedMsgId) {
+          console.log(`[QUOTE] Found quote for ${messageId}: id=${quotedMsgId}, hasContent=${!!quotedContent || !!quotedMsg}, sender=${quotedSenderName}`);
+        } else {
+          // Only log when msg.quoted is a truthy object (actual reply data that we failed to parse)
+          const rawQuoted = msgAnyQuote.quoted;
+          if (rawQuoted && typeof rawQuoted === 'object' && rawQuoted !== null) {
+            console.log(`[QUOTE-DEBUG] Message ${messageId} has quoted object but no data extracted. Keys: ${Object.keys(rawQuoted as Record<string, unknown>).join(', ')}`);
           }
-        } else if (quotedMsg || quotedMsgId) {
-          console.log(`[QUOTE] Found quote data for ${messageId}: id=${quotedMsgId}, hasContent=${!!quotedMsg}`);
         }
         
         // Extract quoted content from various formats (UAZAPI sends in different ways)
