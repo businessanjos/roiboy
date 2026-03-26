@@ -363,7 +363,7 @@ export function ThreeCPlusPanel() {
         <div className="p-4 space-y-4">
 
           {/* ===== PRIMARY: Manual Dial (no campaign required) ===== */}
-          {canDialManually && !hasCallActivity && (
+          {showDialSection && (
             <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Discar
