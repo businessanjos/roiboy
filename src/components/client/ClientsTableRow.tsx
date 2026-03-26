@@ -10,7 +10,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 import { CustomField } from "@/components/custom-fields";
 import { FieldValueEditor } from "@/components/custom-fields";
-import { CheckCircle2, AlertCircle, MessageCircle, Wifi, WifiOff, ArrowRight, Trash2, Clock, PauseCircle, XCircle, Ban } from "lucide-react";
+import { CheckCircle2, AlertCircle, MessageCircle, Wifi, WifiOff, ArrowRight, Trash2, Clock, PauseCircle, XCircle, Ban, GraduationCap, Briefcase } from "lucide-react";
+import { getMlsBadgeClasses, getMlsLevelLabel } from "@/lib/mls-utils";
 import { cn } from "@/lib/utils";
 import { 
   getInitials, 
