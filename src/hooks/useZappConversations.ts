@@ -15,10 +15,11 @@ interface UseZappConversationsOptions {
   integrationId?: string;
   departments: Department[];
   onNewInboundMessage?: (data: InboundMessageData) => void;
+  hasGlobalVisibility?: boolean;
 }
 
 export function useZappConversations(options: UseZappConversationsOptions) {
-  const { accountId, sectorId, integrationId, departments, onNewInboundMessage } = options;
+  const { accountId, sectorId, integrationId, departments, onNewInboundMessage, hasGlobalVisibility = false } = options;
 
   const [assignments, setAssignments] = useState<ConversationAssignment[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -274,7 +275,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       console.warn(`[ZappConversations] SECURITY: Filtered out ${assignments.length - filtered.length} assignments that didn't match department`);
     }
 
-    if (integrationId) {
+    if (integrationId && !hasGlobalVisibility) {
       const beforeCount = filtered.length;
       const currentSectorDeptId = sectorDepartment.id;
 
@@ -296,7 +297,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     }
 
     return filtered;
-  }, [assignments, departments, sectorId, integrationId]);
+  }, [assignments, departments, sectorId, integrationId, hasGlobalVisibility]);
 
   const filteredAssignmentsRef = useRef(filteredAssignments);
   filteredAssignmentsRef.current = filteredAssignments;
