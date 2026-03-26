@@ -780,18 +780,8 @@ export default function RoyZapp() {
 
   // Contact picker and quick replies state are now in useZappMessaging hook (messaging.*)
 
-  // Add client/lead from contact state
-  const [addContactDialogOpen, setAddContactDialogOpen] = useState(false);
-  const [addContactPhone, setAddContactPhone] = useState("");
-  const [addContactName, setAddContactName] = useState("");
-  const [savingNewClient, setSavingNewClient] = useState(false);
-  const [savingNewLead, setSavingNewLead] = useState(false);
+  // Contact state is now in contactOps hook
 
-  // New conversation with client state
-  const [newConversationDialogOpen, setNewConversationDialogOpen] = useState(false);
-  const [newConversationSearch, setNewConversationSearch] = useState("");
-  const [newConversationClients, setNewConversationClients] = useState<any[]>([]);
-  const [creatingConversation, setCreatingConversation] = useState(false);
 
   // Playbook dialog state for chat
   const [playbookDialogOpen, setPlaybookDialogOpen] = useState(false);
