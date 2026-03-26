@@ -4,6 +4,7 @@ import { ConversationAssignment } from "@/components/royzapp";
 import { Department } from "@/components/royzapp";
 import { SectorId } from "@/config/sectors";
 import { Message, InboundMessageData } from "@/hooks/useZappData";
+import { withRetry } from "@/lib/retryFetch";
 
 const REALTIME_DEBOUNCE_MS = 5000; // Increased for high-volume (was 3s)
 const MIN_FETCH_INTERVAL_MS = 5000; // Increased for high-volume (was 3s)
