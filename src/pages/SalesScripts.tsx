@@ -20,6 +20,10 @@ import MarkdownRenderer from '@/components/sales/MarkdownRenderer';
 import CommissionCalculator from '@/components/sales/CommissionCalculator';
 import { exportSalesCallToPDF } from '@/lib/exportSalesCallPDF';
 import { exportPlaybookToPDF } from '@/lib/exportPlaybookPDF';
+import { ICPDashboard } from '@/components/sales/calls/ICPDashboard';
+import { CallComparative } from '@/components/sales/calls/CallComparative';
+import { IdealScriptGenerator } from '@/components/sales/calls/IdealScriptGenerator';
+import { CloserRanking } from '@/components/sales/calls/CloserRanking';
 
 const OBJECTION_TYPES = [
   { value: 'price', label: 'Preço', icon: DollarSign, color: 'text-red-500', bgColor: 'bg-red-500/10' },
