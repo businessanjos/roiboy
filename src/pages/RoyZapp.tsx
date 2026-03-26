@@ -2456,10 +2456,9 @@ export default function RoyZapp() {
       );
       
       const matchesSearch = matchesSearchQuery(contact, searchQuery);
-      // Status filter: "triage" means no agent assigned (in queue)
-      // Skip status filter for "closed" and "all" as they're handled above
+      // Status filter: "triage" means no agent assigned (in queue) - also catches orphaned "waiting" with no agent
       const matchesStatus = filterStatus === "all" || filterStatus === "closed" ||
-        (filterStatus === "triage" ? a.agent_id === null : a.status === filterStatus);
+        (filterStatus === "triage" ? isUnassigned : a.status === filterStatus);
       
       // Unread filter
       const matchesUnread = !filterUnread || (contact.unreadCount > 0);
