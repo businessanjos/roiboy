@@ -860,8 +860,23 @@ serve(async (req) => {
         
         const contextInfo = msg.contextInfo || msg.extendedTextMessage?.contextInfo || (msgAnyQuote.contextInfo as Record<string, unknown>) || nestedContextInfo;
         
-        // CRITICAL FIX: UAZAPI uses 'quoted' field for quoted messages
-        const uazapiQuoted = msgAnyQuote.quoted as Record<string, unknown>;
+        // CRITICAL FIX: UAZAPI may send 'quoted' as a JSON string or as an object
+        let uazapiQuoted: Record<string, unknown> | undefined;
+        const rawQuoted = msgAnyQuote.quoted;
+        if (rawQuoted && typeof rawQuoted === "string") {
+          try {
+            const parsed = JSON.parse(rawQuoted);
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              uazapiQuoted = parsed as Record<string, unknown>;
+              console.log(`[QUOTE-PARSE] Parsed quoted from JSON string, keys: ${Object.keys(uazapiQuoted).join(",")}`);
+            }
+          } catch {
+            console.log(`[QUOTE-PARSE] quoted is a non-JSON string (length=${rawQuoted.length}): "${rawQuoted.substring(0, 100)}"`);
+          }
+        } else if (rawQuoted && typeof rawQuoted === "object" && !Array.isArray(rawQuoted)) {
+          uazapiQuoted = rawQuoted as Record<string, unknown>;
+        }
+        
         const quotedMsg = uazapiQuoted || 
                           (msgAnyQuote.quotedMsg as Record<string, unknown>) || 
                           (contextInfo?.quotedMessage as Record<string, unknown>);
