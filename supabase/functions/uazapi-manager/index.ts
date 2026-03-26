@@ -92,6 +92,8 @@ async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
   });
   const responseText = await r.text();
   console.log(`[uazapi-admin] Response: ${r.status} - ${responseText.substring(0, 300)}`);
+  if (r.status === 404) throw new Error(`Admin endpoint not found: ${endpoint}`);
+  if (r.status >= 400) throw new Error(`Admin API error ${r.status}: ${responseText.substring(0, 200)}`);
   let json: any;
   try { json = JSON.parse(responseText); } catch { throw new Error(`Invalid response: ${responseText.substring(0, 100)}`); }
   if (json.error && json.error !== false) throw new Error(typeof json.error === 'string' ? json.error : JSON.stringify(json));
