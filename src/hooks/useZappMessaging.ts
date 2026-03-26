@@ -503,7 +503,11 @@ export function useZappMessaging({
         .from(bucket)
         .upload(fileName, file, { cacheControl: '3600', upsert: false });
       
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("[ZAPP-MEDIA] Storage upload error:", uploadError);
+        throw uploadError;
+      }
+      console.log("[ZAPP-MEDIA] Storage upload OK");
       
       const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(fileName);
       const mediaUrl = urlData.publicUrl;
@@ -527,13 +531,20 @@ export function useZappMessaging({
       
       const { data, error } = await supabase.functions.invoke("uazapi-manager", { body: payload });
       
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error || "Falha ao enviar mídia");
+      if (error) {
+        console.error("[ZAPP-MEDIA] Edge function error:", error);
+        throw error;
+      }
+      if (data?.error) {
+        console.error("[ZAPP-MEDIA] Edge function data error:", data.error);
+        throw new Error(data.error || "Falha ao enviar mídia");
+      }
+      console.log("[ZAPP-MEDIA] Edge function OK, externalId:", externalId);
       
       const externalId = data?.data?.id || data?.data?.messageid || data?.id || data?.messageid || null;
       
       if (selectedConversation.zapp_conversation_id) {
-        const { data: insertedMessage } = await supabase.from("zapp_messages").insert({
+        const { data: insertedMessage, error: insertError } = await supabase.from("zapp_messages").insert({
           account_id: currentUser!.account_id,
           zapp_conversation_id: selectedConversation.zapp_conversation_id,
           direction: "outbound",
@@ -546,6 +557,12 @@ export function useZappMessaging({
           sent_at: now,
           external_message_id: externalId,
         }).select("id").single();
+
+        if (insertError) {
+          console.error("[ZAPP-MEDIA] Insert zapp_messages error:", insertError);
+          throw insertError;
+        }
+        console.log("[ZAPP-MEDIA] Insert zapp_messages OK:", insertedMessage?.id);
         
         if (insertedMessage) {
           setMessages(prev => prev.map(m => 
