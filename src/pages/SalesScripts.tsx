@@ -365,17 +365,38 @@ export default function SalesScripts() {
             <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Mic className="w-5 h-5 text-primary" />Transcrição da Call</CardTitle></CardHeader><CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Vincular a um card do pipeline (opcional)</Label>
-                <Select value={selectedDealId || 'none'} onValueChange={v => setSelectedDealId(v === 'none' ? null : v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um card..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum (sem vínculo)</SelectItem>
-                    {deals.map((d: any) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {d.title}{d.lead?.full_name ? ` — ${d.lead.full_name}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={dealComboOpen} onOpenChange={setDealComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={dealComboOpen} className="w-full justify-between font-normal">
+                      {selectedDealId ? (() => { const d = deals.find((d: any) => d.id === selectedDealId); return d ? `${d.title}${d.lead?.full_name ? ` — ${d.lead.full_name}` : ''}` : 'Selecione um card...'; })() : 'Nenhum (sem vínculo)'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput placeholder="Buscar deal..." value={dealSearch} onValueChange={setDealSearch} />
+                      <CommandList>
+                        <CommandEmpty>Nenhum deal encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem onSelect={() => { setSelectedDealId(null); setDealComboOpen(false); setDealSearch(''); }}>
+                            <Check className={cn("mr-2 h-4 w-4", !selectedDealId ? "opacity-100" : "opacity-0")} />
+                            Nenhum (sem vínculo)
+                          </CommandItem>
+                          {deals.filter((d: any) => {
+                            if (!dealSearch) return true;
+                            const s = dealSearch.toLowerCase();
+                            return d.title?.toLowerCase().includes(s) || d.lead?.full_name?.toLowerCase().includes(s);
+                          }).slice(0, 100).map((d: any) => (
+                            <CommandItem key={d.id} onSelect={() => { setSelectedDealId(d.id); setDealComboOpen(false); setDealSearch(''); }}>
+                              <Check className={cn("mr-2 h-4 w-4", selectedDealId === d.id ? "opacity-100" : "opacity-0")} />
+                              {d.title}{d.lead?.full_name ? ` — ${d.lead.full_name}` : ''}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Call Outcome Selector */}
