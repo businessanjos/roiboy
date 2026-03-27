@@ -294,8 +294,7 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
       .from('deals')
       .select(`id, title, value, status, source, lost_reason, created_at, won_at, lost_at,
         deal_stages!deals_stage_id_fkey(name),
-        users!deals_responsible_user_id_fkey(name),
-        products!deals_product_id_fkey(name)`)
+        users!deals_responsible_user_id_fkey(name)`)
       .eq('account_id', accountId);
 
     if (dealStatusFilter && dealStatusFilter.length > 0) {
@@ -322,7 +321,7 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
         responsible: d.users?.name || '-',
         source: d.source || '-',
         lost_reason: d.lost_reason || '-',
-        product: d.products?.name || '-',
+        product: '-',
       },
     }));
   }
@@ -797,39 +796,86 @@ async function applyDealFieldFilters(
   dealFieldFilters?: VisualConfig['dealFieldFilters']
 ): Promise<any[]> {
   if (!dealFieldFilters || dealFieldFilters.length === 0) return deals;
+  if (deals.length === 0) return [];
 
-  const dealIds = deals.map((d: any) => d.id);
-  if (dealIds.length === 0) return [];
+  let result = deals;
 
-  // Fetch custom field values for the relevant fields
-  const fieldIds = dealFieldFilters.map(f => f.fieldId);
+  for (const filter of dealFieldFilters) {
+    if (!filter.selectedValues || filter.selectedValues.length === 0) continue;
 
-  // Batch fetch in chunks of 50 to avoid URI limits
-  const fieldValueMap = new Map<string, Map<string, string>>(); // dealId -> fieldId -> value
-  const batchSize = 50;
+    const dealIds = result.map((d: any) => d.id);
 
-  for (let i = 0; i < dealIds.length; i += batchSize) {
-    const batchIds = dealIds.slice(i, i + batchSize);
-    const { data: fieldValues } = await supabase
-      .from('deal_field_values')
-      .select('deal_id, field_id, value_text')
-      .in('deal_id', batchIds)
-      .in('field_id', fieldIds);
+    // Get field definition to resolve option labels to values
+    const { data: fieldDef } = await supabase
+      .from('custom_fields')
+      .select('options, field_type')
+      .eq('id', filter.fieldId)
+      .maybeSingle();
 
-    if (fieldValues) {
-      for (const fv of fieldValues) {
-        if (!fieldValueMap.has(fv.deal_id)) fieldValueMap.set(fv.deal_id, new Map());
-        fieldValueMap.get(fv.deal_id)!.set(fv.field_id, fv.value_text || '');
+    const fieldType = fieldDef?.field_type || '';
+    const optionLabelToValue = new Map<string, string>();
+    if (fieldDef?.options && Array.isArray(fieldDef.options)) {
+      for (const opt of fieldDef.options as any[]) {
+        if (opt.label && opt.value) {
+          optionLabelToValue.set(opt.label, opt.value);
+        }
       }
     }
+
+    const isMultiSelect = fieldType === 'multi_select';
+    const isSelectField = optionLabelToValue.size > 0 && !isMultiSelect;
+    const selectColumns = isMultiSelect ? 'deal_id, value_json' : 'deal_id, value_text';
+
+    // Fetch field values in batches
+    let allValues: any[] = [];
+    const batchSize = 500;
+    for (let i = 0; i < dealIds.length; i += batchSize) {
+      const batch = dealIds.slice(i, i + batchSize);
+      const { data } = await supabase
+        .from('deal_field_values')
+        .select(selectColumns)
+        .eq('field_id', filter.fieldId)
+        .in('deal_id', batch);
+      allValues = allValues.concat(data || []);
+    }
+
+    // Find matching deals
+    const matchingDealIds = new Set<string>();
+
+    if (isMultiSelect) {
+      const selectedValueKeys = new Set(
+        filter.selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
+      );
+      for (const row of allValues) {
+        if (row.value_json && Array.isArray(row.value_json)) {
+          for (const val of row.value_json) {
+            if (selectedValueKeys.has(val)) {
+              matchingDealIds.add(row.deal_id);
+              break;
+            }
+          }
+        }
+      }
+    } else if (isSelectField) {
+      const selectedValueKeys = new Set(
+        filter.selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
+      );
+      for (const row of allValues) {
+        if (row.value_text && selectedValueKeys.has(row.value_text)) {
+          matchingDealIds.add(row.deal_id);
+        }
+      }
+    } else {
+      const selectedSet = new Set(filter.selectedValues);
+      for (const row of allValues) {
+        if (row.value_text && selectedSet.has(row.value_text)) {
+          matchingDealIds.add(row.deal_id);
+        }
+      }
+    }
+
+    result = result.filter((d: any) => matchingDealIds.has(d.id));
   }
 
-  // Filter deals by custom field values
-  return deals.filter((deal: any) => {
-    const dealFields = fieldValueMap.get(deal.id);
-    return dealFieldFilters!.every(filter => {
-      const value = dealFields?.get(filter.fieldId) || '';
-      return filter.selectedValues.includes(value);
-    });
-  });
+  return result;
 }
