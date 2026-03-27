@@ -228,26 +228,30 @@ async function fetchDashboardDataWithVisuals(supabase: any, dashboardId: string,
     .order("created_at", { ascending: true });
 
   // Aggregate data for each visual
-  const visualsData: Record<string, { data: AggregatedDataPoint[] }> = {};
+  const visualsData: Record<string, { data: AggregatedDataPoint[]; drilldownData?: DrilldownRecord[] }> = {};
 
   if (visuals && visuals.length > 0) {
-    // Process visuals in parallel (batches of 5 to avoid overwhelming the DB)
     const batchSize = 5;
     for (let i = 0; i < visuals.length; i += batchSize) {
       const batch = visuals.slice(i, i + batchSize);
       const results = await Promise.all(
         batch.map(async (visual: any) => {
           try {
+            const isDataTable = visual.chart_type === 'data_table';
             const data = await fetchVisualData(supabase, accountId, visual);
-            return { id: visual.id, data };
+            let drilldownData: DrilldownRecord[] | undefined;
+            if (isDataTable) {
+              drilldownData = await fetchDrilldownRecords(supabase, accountId, visual.config as VisualConfig);
+            }
+            return { id: visual.id, data, drilldownData };
           } catch (err) {
             console.error(`Error fetching data for visual ${visual.id}:`, err);
-            return { id: visual.id, data: [] };
+            return { id: visual.id, data: [], drilldownData: undefined };
           }
         })
       );
       for (const result of results) {
-        visualsData[result.id] = { data: result.data };
+        visualsData[result.id] = { data: result.data, drilldownData: result.drilldownData };
       }
     }
   }
@@ -263,7 +267,7 @@ async function fetchVisualData(supabase: any, accountId: string, visual: any): P
   const config = visual.config as VisualConfig | null;
   if (!config) return [];
 
-  const { dataSource, measure, dimension } = config;
+  const { dataSource } = config;
 
   switch (dataSource) {
     case 'deals':
@@ -277,6 +281,79 @@ async function fetchVisualData(supabase: any, accountId: string, visual: any): P
     default:
       return [];
   }
+}
+
+// ─── Drilldown Records for Data Tables ───────────────────────────────────────
+
+async function fetchDrilldownRecords(supabase: any, accountId: string, config: VisualConfig): Promise<DrilldownRecord[]> {
+  if (!config) return [];
+  const { dataSource, dealStatusFilter, statusFilter, dealFieldFilters, leadFieldFilters } = config;
+
+  if (dataSource === 'deals') {
+    let query = supabase
+      .from('deals')
+      .select(`id, title, value, status, source, lost_reason, created_at, won_at, lost_at,
+        deal_stages!deals_stage_id_fkey(name),
+        users!deals_responsible_user_id_fkey(name),
+        products!deals_product_id_fkey(name)`)
+      .eq('account_id', accountId);
+
+    if (dealStatusFilter && dealStatusFilter.length > 0) {
+      query = query.in('status', dealStatusFilter);
+    } else if (statusFilter) {
+      query = query.eq('status', statusFilter);
+    }
+
+    const allDeals = await paginateQuery(query);
+
+    // Apply custom field filters
+    const filteredDeals = await applyDealFieldFilters(supabase, allDeals, dealFieldFilters);
+
+    return filteredDeals.map((d: any) => ({
+      id: d.id,
+      name: d.title || 'Sem título',
+      value: d.value || 0,
+      status: d.status,
+      date: d.created_at,
+      extra: {
+        won_at: d.won_at,
+        lost_at: d.lost_at,
+        stage: d.deal_stages?.name || '-',
+        responsible: d.users?.name || '-',
+        source: d.source || '-',
+        lost_reason: d.lost_reason || '-',
+        product: d.products?.name || '-',
+      },
+    }));
+  }
+
+  if (dataSource === 'leads') {
+    let query = supabase
+      .from('leads')
+      .select(`id, name, email, phone, status, source, revenue_range, canal, created_at,
+        users!leads_responsible_user_id_fkey(name)`)
+      .eq('account_id', accountId)
+      .is('converted_to_client_id', null);
+
+    const allLeads = await paginateQuery(query);
+
+    return allLeads.map((l: any) => ({
+      id: l.id,
+      name: l.name || 'Sem nome',
+      value: 0,
+      status: l.status,
+      date: l.created_at,
+      extra: {
+        email: l.email || '-',
+        phone: l.phone || '-',
+        source: l.source || '-',
+        revenue_range: l.revenue_range || '-',
+        responsible: l.users?.name || '-',
+      },
+    }));
+  }
+
+  return [];
 }
 
 // ─── Deals ───────────────────────────────────────────────────────────────────
