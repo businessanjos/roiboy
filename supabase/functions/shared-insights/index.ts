@@ -462,7 +462,6 @@ async function fetchConversionRate(supabase: any, accountId: string, dimension: 
 async function fetchLeadsAggregated(supabase: any, accountId: string, config: VisualConfig): Promise<AggregatedDataPoint[]> {
   const { measure, dimension } = config;
 
-  // Scorecard total (fast path)
   if (dimension.field === '_total') {
     const { count, error } = await supabase
       .from('leads')
@@ -473,9 +472,14 @@ async function fetchLeadsAggregated(supabase: any, accountId: string, config: Vi
     return [{ name: 'Total', value: count || 0 }];
   }
 
+  // Include user join for responsible_name dimension
+  const selectFields = dimension.field === 'responsible_name'
+    ? 'id, status, source, revenue_range, canal, created_at, users!leads_responsible_user_id_fkey(name)'
+    : 'id, status, source, revenue_range, canal, created_at';
+
   const allLeads = await paginateQuery(
     supabase.from('leads')
-      .select('id, status, source, revenue_range, canal, created_at')
+      .select(selectFields)
       .eq('account_id', accountId)
       .is('converted_to_client_id', null)
   );
