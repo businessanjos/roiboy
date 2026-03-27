@@ -112,6 +112,10 @@ export default function SalesScripts() {
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   const [callOutcome, setCallOutcome] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [dealComboOpen, setDealComboOpen] = useState(false);
+  const [dealSearch, setDealSearch] = useState('');
+  const [clientComboOpen, setClientComboOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
   const [outcomeNotes, setOutcomeNotes] = useState('');
   const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string; deal_id?: string | null; deal_name?: string | null; call_outcome?: string | null; client_id?: string | null; client_name?: string | null; outcome_notes?: string | null } | null>(null);
   const [deleteAnalysisDialog, setDeleteAnalysisDialog] = useState<{ id: string; created_at: string } | null>(null);
