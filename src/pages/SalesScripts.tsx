@@ -149,9 +149,17 @@ export default function SalesScripts() {
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-for-analysis', accountId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('clients').select('id, full_name, city, state, company_name').eq('account_id', accountId!).order('full_name').limit(500);
-      if (error) throw error;
-      return data as any[];
+      let all: any[] = [];
+      let from = 0;
+      const batch = 1000;
+      while (true) {
+        const { data, error } = await supabase.from('clients').select('id, full_name, city, state, company_name').eq('account_id', accountId!).order('full_name').range(from, from + batch - 1);
+        if (error) throw error;
+        all = all.concat(data || []);
+        if (!data || data.length < batch) break;
+        from += batch;
+      }
+      return all;
     },
     enabled: !!accountId,
   });
@@ -159,9 +167,17 @@ export default function SalesScripts() {
   const { data: deals = [] } = useQuery({
     queryKey: ['deals-for-analysis', accountId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('deals').select('id, title, lead:leads!deals_lead_id_fkey(full_name)').eq('account_id', accountId!).order('created_at', { ascending: false }).limit(200);
-      if (error) throw error;
-      return data as any[];
+      let all: any[] = [];
+      let from = 0;
+      const batch = 1000;
+      while (true) {
+        const { data, error } = await supabase.from('deals').select('id, title, lead:leads!deals_lead_id_fkey(full_name)').eq('account_id', accountId!).order('created_at', { ascending: false }).range(from, from + batch - 1);
+        if (error) throw error;
+        all = all.concat(data || []);
+        if (!data || data.length < batch) break;
+        from += batch;
+      }
+      return all;
     },
     enabled: !!accountId,
   });
