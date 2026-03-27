@@ -787,3 +787,48 @@ function formatDateGroup(dateString: string, grouping: string): string {
     return 'Data Inválida';
   }
 }
+
+// ─── Custom Field Filters ────────────────────────────────────────────────────
+
+async function applyDealFieldFilters(
+  supabase: any,
+  deals: any[],
+  dealFieldFilters?: VisualConfig['dealFieldFilters']
+): Promise<any[]> {
+  if (!dealFieldFilters || dealFieldFilters.length === 0) return deals;
+
+  const dealIds = deals.map((d: any) => d.id);
+  if (dealIds.length === 0) return [];
+
+  // Fetch custom field values for the relevant fields
+  const fieldIds = dealFieldFilters.map(f => f.fieldId);
+
+  // Batch fetch in chunks of 50 to avoid URI limits
+  const fieldValueMap = new Map<string, Map<string, string>>(); // dealId -> fieldId -> value
+  const batchSize = 50;
+
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batchIds = dealIds.slice(i, i + batchSize);
+    const { data: fieldValues } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, field_id, value_text')
+      .in('deal_id', batchIds)
+      .in('field_id', fieldIds);
+
+    if (fieldValues) {
+      for (const fv of fieldValues) {
+        if (!fieldValueMap.has(fv.deal_id)) fieldValueMap.set(fv.deal_id, new Map());
+        fieldValueMap.get(fv.deal_id)!.set(fv.field_id, fv.value_text || '');
+      }
+    }
+  }
+
+  // Filter deals by custom field values
+  return deals.filter((deal: any) => {
+    const dealFields = fieldValueMap.get(deal.id);
+    return dealFieldFilters!.every(filter => {
+      const value = dealFields?.get(filter.fieldId) || '';
+      return filter.selectedValues.includes(value);
+    });
+  });
+}
