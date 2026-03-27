@@ -5,12 +5,30 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Lock, Mail, Clock, XCircle, BarChart3, CheckCircle } from "lucide-react";
+import { SharedVisualCard } from "@/components/insights/visuals/SharedVisualCard";
 
 type Status = "loading" | "invalid" | "inactive" | "email_prompt" | "pending" | "rejected" | "approved";
 
+interface AggregatedDataPoint {
+  name: string;
+  value: number;
+  count?: number;
+  color?: string;
+}
+
+interface VisualItem {
+  id: string;
+  dashboard_id: string;
+  title: string | null;
+  chart_type: string | null;
+  config: unknown;
+  layout: { x: number; y: number; w: number; h: number; scale?: number } | null;
+}
+
 interface DashboardData {
   dashboard: { id: string; name: string } | null;
-  visuals: any[];
+  visuals: VisualItem[];
+  visualsData: Record<string, { data: AggregatedDataPoint[] }>;
 }
 
 export default function SharedInsights() {
@@ -70,7 +88,11 @@ export default function SharedInsights() {
     }
 
     if (data.status === "approved") {
-      setDashboardData({ dashboard: data.dashboard, visuals: data.visuals });
+      setDashboardData({
+        dashboard: data.dashboard,
+        visuals: data.visuals,
+        visualsData: data.visualsData || {},
+      });
       setStatus("approved");
     } else if (data.status === "rejected") {
       setStatus("rejected");
@@ -99,7 +121,11 @@ export default function SharedInsights() {
     }
 
     if (data.status === "approved") {
-      setDashboardData({ dashboard: data.dashboard, visuals: data.visuals });
+      setDashboardData({
+        dashboard: data.dashboard,
+        visuals: data.visuals,
+        visualsData: data.visualsData || {},
+      });
       setStatus("approved");
     } else if (data.status === "rejected") {
       setStatus("rejected");
@@ -156,7 +182,7 @@ export default function SharedInsights() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground text-center">
-              Informe seu e-mail para solicitar acesso a este painel compartilhado.
+              Informe seu e-mail para acessar este painel. Se já foi aprovado anteriormente, o painel será exibido automaticamente.
             </p>
             <div className="flex gap-2">
               <Input
@@ -216,8 +242,10 @@ export default function SharedInsights() {
     );
   }
 
-  // Approved — show dashboard in read-only mode
+  // Approved — show dashboard with real visuals
   if (status === "approved" && dashboardData) {
+    const { visuals, visualsData } = dashboardData;
+
     return (
       <div className="min-h-screen bg-background">
         <div className="border-b px-6 py-4 flex items-center gap-3">
@@ -229,20 +257,13 @@ export default function SharedInsights() {
           </span>
         </div>
         <div className="p-6">
-          {dashboardData.visuals.length === 0 ? (
+          {visuals.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
               <BarChart3 className="h-12 w-12 mb-4 opacity-30" />
               <p>Este painel ainda não possui visuais.</p>
             </div>
           ) : (
-            <div className="text-center py-20 text-muted-foreground">
-              <p className="text-sm">
-                Painel com {dashboardData.visuals.length} visual(is) carregado(s).
-              </p>
-              <p className="text-xs mt-2">
-                Visualização completa dos gráficos em modo compartilhado em breve.
-              </p>
-            </div>
+            <SharedVisualsGrid visuals={visuals} visualsData={visualsData} />
           )}
         </div>
       </div>
@@ -250,4 +271,61 @@ export default function SharedInsights() {
   }
 
   return null;
+}
+
+// ─── Grid Layout for Shared Visuals ──────────────────────────────────────────
+
+function SharedVisualsGrid({
+  visuals,
+  visualsData,
+}: {
+  visuals: VisualItem[];
+  visualsData: Record<string, { data: AggregatedDataPoint[] }>;
+}) {
+  // Sort visuals by layout position (y then x), fallback to array order
+  const sortedVisuals = [...visuals].sort((a, b) => {
+    const ay = a.layout?.y ?? 999;
+    const by = b.layout?.y ?? 999;
+    if (ay !== by) return ay - by;
+    const ax = a.layout?.x ?? 0;
+    const bx = b.layout?.x ?? 0;
+    return ax - bx;
+  });
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {sortedVisuals.map((visual) => {
+        const vData = visualsData[visual.id];
+        const data = vData?.data || [];
+        const colSpan = getColSpan(visual);
+
+        return (
+          <div
+            key={visual.id}
+            className={colSpan}
+            style={{ minHeight: getMinHeight(visual) }}
+          >
+            <SharedVisualCard
+              visual={visual}
+              data={data}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function getColSpan(visual: VisualItem): string {
+  const w = visual.layout?.w ?? 4;
+  if (w >= 9) return "md:col-span-2 lg:col-span-3";
+  if (w >= 6) return "md:col-span-2 lg:col-span-2";
+  return "";
+}
+
+function getMinHeight(visual: VisualItem): number {
+  const chartType = visual.chart_type;
+  if (chartType === 'number' || chartType === 'scorecard' || chartType === 'indicator') return 160;
+  if (chartType === 'data_table') return 400;
+  return 320;
 }
