@@ -294,8 +294,7 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
       .from('deals')
       .select(`id, title, value, status, source, lost_reason, created_at, won_at, lost_at,
         deal_stages!deals_stage_id_fkey(name),
-        users!deals_responsible_user_id_fkey(name),
-        products!deals_product_id_fkey(name)`)
+        users!deals_responsible_user_id_fkey(name)`)
       .eq('account_id', accountId);
 
     if (dealStatusFilter && dealStatusFilter.length > 0) {
