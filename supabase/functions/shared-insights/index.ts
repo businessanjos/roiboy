@@ -663,6 +663,7 @@ function getGroupName(item: any, dimension: VisualConfig['dimension']): string {
   if (field === 'responsible_name') return item.users?.name || 'Sem Responsável';
   if (field === 'is_active') return item.is_active ? 'Ativo' : 'Inativo';
   if (field === 'canal') return item.canal || 'Não informado';
+  if (field === 'faturamento_atual') return item.revenue_range || 'Não informado';
 
   if (dimension.type === 'date') {
     const dateValue = item[field];
