@@ -20,6 +20,8 @@ interface VisualConfig {
   formatting?: { type: string; decimals: number; displayScale?: string };
   statusFilter?: string;
   dealStatusFilter?: string[];
+  dealFieldFilters?: Array<{ fieldId: string; fieldName: string; selectedValues: string[] }>;
+  leadFieldFilters?: Array<{ fieldId: string; fieldName: string; selectedValues: string[] }>;
   appearance?: { dateDisplayFormat?: string; fillEmptyDates?: boolean; showDataLabels?: boolean; colorPalette?: string; fontScale?: string };
   customFormula?: string;
   hiddenCategories?: string[];
@@ -27,7 +29,16 @@ interface VisualConfig {
   gaugeConfig?: any;
   indicatorConfig?: any;
   stackBy?: string;
-  tableConfig?: { columns?: string[] };
+  tableConfig?: { columns?: string[]; cfLabels?: Record<string, string> };
+}
+
+interface DrilldownRecord {
+  id: string;
+  name: string;
+  value: number;
+  status?: string;
+  date?: string;
+  extra?: Record<string, any>;
 }
 
 Deno.serve(async (req) => {
