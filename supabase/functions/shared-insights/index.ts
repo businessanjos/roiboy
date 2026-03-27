@@ -321,7 +321,7 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
         responsible: d.users?.name || '-',
         source: d.source || '-',
         lost_reason: d.lost_reason || '-',
-        product: d.products?.name || '-',
+        product: '-',
       },
     }));
   }
