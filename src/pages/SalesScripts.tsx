@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -13,8 +13,10 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { toast } from 'sonner';
-import { MessageSquareText, Plus, Search, Copy, Edit2, Trash2, DollarSign, Clock, Users, ShieldQuestion, Heart, HelpCircle, ArrowRight, Target, Handshake, Trophy, Loader2, Package, Sparkles, BookOpen, FileText, Star, StarOff, Phone, MessageCircle, Presentation, CheckCircle2, AlertCircle, Upload, Download, Mic, BarChart3, Crown, ThumbsDown, PhoneOff, CalendarClock, UserCheck, TrendingUp } from 'lucide-react';
+import { MessageSquareText, Plus, Search, Copy, Edit2, Trash2, DollarSign, Clock, Users, ShieldQuestion, Heart, HelpCircle, ArrowRight, Target, Handshake, Trophy, Loader2, Package, Sparkles, BookOpen, FileText, Star, StarOff, Phone, MessageCircle, Presentation, CheckCircle2, AlertCircle, Upload, Download, Mic, BarChart3, Crown, ThumbsDown, PhoneOff, CalendarClock, UserCheck, TrendingUp, ChevronsUpDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MarkdownRenderer from '@/components/sales/MarkdownRenderer';
 import CommissionCalculator from '@/components/sales/CommissionCalculator';
@@ -110,6 +112,10 @@ export default function SalesScripts() {
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   const [callOutcome, setCallOutcome] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [dealComboOpen, setDealComboOpen] = useState(false);
+  const [dealSearch, setDealSearch] = useState('');
+  const [clientComboOpen, setClientComboOpen] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
   const [outcomeNotes, setOutcomeNotes] = useState('');
   const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string; deal_id?: string | null; deal_name?: string | null; call_outcome?: string | null; client_id?: string | null; client_name?: string | null; outcome_notes?: string | null } | null>(null);
   const [deleteAnalysisDialog, setDeleteAnalysisDialog] = useState<{ id: string; created_at: string } | null>(null);
@@ -149,9 +155,17 @@ export default function SalesScripts() {
   const { data: clients = [] } = useQuery({
     queryKey: ['clients-for-analysis', accountId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('clients').select('id, full_name, city, state, company_name').eq('account_id', accountId!).order('full_name').limit(500);
-      if (error) throw error;
-      return data as any[];
+      let all: any[] = [];
+      let from = 0;
+      const batch = 1000;
+      while (true) {
+        const { data, error } = await supabase.from('clients').select('id, full_name, city, state, company_name').eq('account_id', accountId!).order('full_name').range(from, from + batch - 1);
+        if (error) throw error;
+        all = all.concat(data || []);
+        if (!data || data.length < batch) break;
+        from += batch;
+      }
+      return all;
     },
     enabled: !!accountId,
   });
@@ -159,9 +173,17 @@ export default function SalesScripts() {
   const { data: deals = [] } = useQuery({
     queryKey: ['deals-for-analysis', accountId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('deals').select('id, title, lead:leads!deals_lead_id_fkey(full_name)').eq('account_id', accountId!).order('created_at', { ascending: false }).limit(200);
-      if (error) throw error;
-      return data as any[];
+      let all: any[] = [];
+      let from = 0;
+      const batch = 1000;
+      while (true) {
+        const { data, error } = await supabase.from('deals').select('id, title, lead:leads!deals_lead_id_fkey(full_name)').eq('account_id', accountId!).order('created_at', { ascending: false }).range(from, from + batch - 1);
+        if (error) throw error;
+        all = all.concat(data || []);
+        if (!data || data.length < batch) break;
+        from += batch;
+      }
+      return all;
     },
     enabled: !!accountId,
   });
@@ -343,17 +365,38 @@ export default function SalesScripts() {
             <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><Mic className="w-5 h-5 text-primary" />Transcrição da Call</CardTitle></CardHeader><CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Vincular a um card do pipeline (opcional)</Label>
-                <Select value={selectedDealId || 'none'} onValueChange={v => setSelectedDealId(v === 'none' ? null : v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione um card..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum (sem vínculo)</SelectItem>
-                    {deals.map((d: any) => (
-                      <SelectItem key={d.id} value={d.id}>
-                        {d.title}{d.lead?.full_name ? ` — ${d.lead.full_name}` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={dealComboOpen} onOpenChange={setDealComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={dealComboOpen} className="w-full justify-between font-normal">
+                      {selectedDealId ? (() => { const d = deals.find((d: any) => d.id === selectedDealId); return d ? `${d.title}${d.lead?.full_name ? ` — ${d.lead.full_name}` : ''}` : 'Selecione um card...'; })() : 'Nenhum (sem vínculo)'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput placeholder="Buscar deal..." value={dealSearch} onValueChange={setDealSearch} />
+                      <CommandList>
+                        <CommandEmpty>Nenhum deal encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem onSelect={() => { setSelectedDealId(null); setDealComboOpen(false); setDealSearch(''); }}>
+                            <Check className={cn("mr-2 h-4 w-4", !selectedDealId ? "opacity-100" : "opacity-0")} />
+                            Nenhum (sem vínculo)
+                          </CommandItem>
+                          {deals.filter((d: any) => {
+                            if (!dealSearch) return true;
+                            const s = dealSearch.toLowerCase();
+                            return d.title?.toLowerCase().includes(s) || d.lead?.full_name?.toLowerCase().includes(s);
+                          }).slice(0, 100).map((d: any) => (
+                            <CommandItem key={d.id} onSelect={() => { setSelectedDealId(d.id); setDealComboOpen(false); setDealSearch(''); }}>
+                              <Check className={cn("mr-2 h-4 w-4", selectedDealId === d.id ? "opacity-100" : "opacity-0")} />
+                              {d.title}{d.lead?.full_name ? ` — ${d.lead.full_name}` : ''}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Call Outcome Selector */}
@@ -388,17 +431,38 @@ export default function SalesScripts() {
               {/* Client Selector (for ICP profiling) */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><UserCheck className="w-4 h-4 text-primary" />Vincular ao cliente (para perfil ICP)</Label>
-                <Select value={selectedClientId || 'none'} onValueChange={v => setSelectedClientId(v === 'none' ? null : v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {clients.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.full_name}{c.company_name ? ` — ${c.company_name}` : ''}{c.city ? ` (${c.city}/${c.state || ''})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={clientComboOpen} onOpenChange={setClientComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={clientComboOpen} className="w-full justify-between font-normal">
+                      {selectedClientId ? (() => { const c = clients.find((c: any) => c.id === selectedClientId); return c ? `${c.full_name}${c.company_name ? ` — ${c.company_name}` : ''}` : 'Selecione o cliente...'; })() : 'Nenhum'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput placeholder="Buscar cliente..." value={clientSearch} onValueChange={setClientSearch} />
+                      <CommandList>
+                        <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem onSelect={() => { setSelectedClientId(null); setClientComboOpen(false); setClientSearch(''); }}>
+                            <Check className={cn("mr-2 h-4 w-4", !selectedClientId ? "opacity-100" : "opacity-0")} />
+                            Nenhum
+                          </CommandItem>
+                          {clients.filter((c: any) => {
+                            if (!clientSearch) return true;
+                            const s = clientSearch.toLowerCase();
+                            return c.full_name?.toLowerCase().includes(s) || c.company_name?.toLowerCase().includes(s) || c.city?.toLowerCase().includes(s);
+                          }).slice(0, 100).map((c: any) => (
+                            <CommandItem key={c.id} onSelect={() => { setSelectedClientId(c.id); setClientComboOpen(false); setClientSearch(''); }}>
+                              <Check className={cn("mr-2 h-4 w-4", selectedClientId === c.id ? "opacity-100" : "opacity-0")} />
+                              {c.full_name}{c.company_name ? ` — ${c.company_name}` : ''}{c.city ? ` (${c.city}/${c.state || ''})` : ''}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Outcome Notes */}
