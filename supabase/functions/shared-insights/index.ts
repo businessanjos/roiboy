@@ -20,6 +20,8 @@ interface VisualConfig {
   formatting?: { type: string; decimals: number; displayScale?: string };
   statusFilter?: string;
   dealStatusFilter?: string[];
+  dealFieldFilters?: Array<{ fieldId: string; fieldName: string; selectedValues: string[] }>;
+  leadFieldFilters?: Array<{ fieldId: string; fieldName: string; selectedValues: string[] }>;
   appearance?: { dateDisplayFormat?: string; fillEmptyDates?: boolean; showDataLabels?: boolean; colorPalette?: string; fontScale?: string };
   customFormula?: string;
   hiddenCategories?: string[];
@@ -27,7 +29,16 @@ interface VisualConfig {
   gaugeConfig?: any;
   indicatorConfig?: any;
   stackBy?: string;
-  tableConfig?: { columns?: string[] };
+  tableConfig?: { columns?: string[]; cfLabels?: Record<string, string> };
+}
+
+interface DrilldownRecord {
+  id: string;
+  name: string;
+  value: number;
+  status?: string;
+  date?: string;
+  extra?: Record<string, any>;
 }
 
 Deno.serve(async (req) => {
@@ -217,26 +228,30 @@ async function fetchDashboardDataWithVisuals(supabase: any, dashboardId: string,
     .order("created_at", { ascending: true });
 
   // Aggregate data for each visual
-  const visualsData: Record<string, { data: AggregatedDataPoint[] }> = {};
+  const visualsData: Record<string, { data: AggregatedDataPoint[]; drilldownData?: DrilldownRecord[] }> = {};
 
   if (visuals && visuals.length > 0) {
-    // Process visuals in parallel (batches of 5 to avoid overwhelming the DB)
     const batchSize = 5;
     for (let i = 0; i < visuals.length; i += batchSize) {
       const batch = visuals.slice(i, i + batchSize);
       const results = await Promise.all(
         batch.map(async (visual: any) => {
           try {
+            const isDataTable = visual.chart_type === 'data_table';
             const data = await fetchVisualData(supabase, accountId, visual);
-            return { id: visual.id, data };
+            let drilldownData: DrilldownRecord[] | undefined;
+            if (isDataTable) {
+              drilldownData = await fetchDrilldownRecords(supabase, accountId, visual.config as VisualConfig);
+            }
+            return { id: visual.id, data, drilldownData };
           } catch (err) {
             console.error(`Error fetching data for visual ${visual.id}:`, err);
-            return { id: visual.id, data: [] };
+            return { id: visual.id, data: [], drilldownData: undefined };
           }
         })
       );
       for (const result of results) {
-        visualsData[result.id] = { data: result.data };
+        visualsData[result.id] = { data: result.data, drilldownData: result.drilldownData };
       }
     }
   }
@@ -252,7 +267,7 @@ async function fetchVisualData(supabase: any, accountId: string, visual: any): P
   const config = visual.config as VisualConfig | null;
   if (!config) return [];
 
-  const { dataSource, measure, dimension } = config;
+  const { dataSource } = config;
 
   switch (dataSource) {
     case 'deals':
@@ -268,10 +283,83 @@ async function fetchVisualData(supabase: any, accountId: string, visual: any): P
   }
 }
 
+// ─── Drilldown Records for Data Tables ───────────────────────────────────────
+
+async function fetchDrilldownRecords(supabase: any, accountId: string, config: VisualConfig): Promise<DrilldownRecord[]> {
+  if (!config) return [];
+  const { dataSource, dealStatusFilter, statusFilter, dealFieldFilters, leadFieldFilters } = config;
+
+  if (dataSource === 'deals') {
+    let query = supabase
+      .from('deals')
+      .select(`id, title, value, status, source, lost_reason, created_at, won_at, lost_at,
+        deal_stages!deals_stage_id_fkey(name),
+        users!deals_responsible_user_id_fkey(name),
+        products!deals_product_id_fkey(name)`)
+      .eq('account_id', accountId);
+
+    if (dealStatusFilter && dealStatusFilter.length > 0) {
+      query = query.in('status', dealStatusFilter);
+    } else if (statusFilter) {
+      query = query.eq('status', statusFilter);
+    }
+
+    const allDeals = await paginateQuery(query);
+
+    // Apply custom field filters
+    const filteredDeals = await applyDealFieldFilters(supabase, allDeals, dealFieldFilters);
+
+    return filteredDeals.map((d: any) => ({
+      id: d.id,
+      name: d.title || 'Sem título',
+      value: d.value || 0,
+      status: d.status,
+      date: d.created_at,
+      extra: {
+        won_at: d.won_at,
+        lost_at: d.lost_at,
+        stage: d.deal_stages?.name || '-',
+        responsible: d.users?.name || '-',
+        source: d.source || '-',
+        lost_reason: d.lost_reason || '-',
+        product: d.products?.name || '-',
+      },
+    }));
+  }
+
+  if (dataSource === 'leads') {
+    let query = supabase
+      .from('leads')
+      .select(`id, name, email, phone, status, source, revenue_range, canal, created_at,
+        users!leads_responsible_user_id_fkey(name)`)
+      .eq('account_id', accountId)
+      .is('converted_to_client_id', null);
+
+    const allLeads = await paginateQuery(query);
+
+    return allLeads.map((l: any) => ({
+      id: l.id,
+      name: l.name || 'Sem nome',
+      value: 0,
+      status: l.status,
+      date: l.created_at,
+      extra: {
+        email: l.email || '-',
+        phone: l.phone || '-',
+        source: l.source || '-',
+        revenue_range: l.revenue_range || '-',
+        responsible: l.users?.name || '-',
+      },
+    }));
+  }
+
+  return [];
+}
+
 // ─── Deals ───────────────────────────────────────────────────────────────────
 
 async function fetchDealsAggregated(supabase: any, accountId: string, config: VisualConfig, chartType?: string): Promise<AggregatedDataPoint[]> {
-  const { measure, dimension, statusFilter, dealStatusFilter } = config;
+  const { measure, dimension, statusFilter, dealStatusFilter, dealFieldFilters } = config;
 
   // Special: conversion rate
   if (measure.aggregation === 'conversion_rate') {
@@ -285,33 +373,28 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
       users!deals_responsible_user_id_fkey(name)`)
     .eq('account_id', accountId);
 
-  // Apply status filter
   if (dealStatusFilter && dealStatusFilter.length > 0) {
     query = query.in('status', dealStatusFilter);
   } else if (statusFilter) {
     query = query.eq('status', statusFilter);
   }
 
-  // Determine date filter field
-  let dateFilterField = 'created_at';
   const singleStatus = dealStatusFilter?.length === 1 ? dealStatusFilter[0] : null;
   if (statusFilter === 'won' || singleStatus === 'won') {
-    dateFilterField = 'won_at';
     query = query.not('won_at', 'is', null);
   } else if (statusFilter === 'lost' || singleStatus === 'lost') {
-    dateFilterField = 'lost_at';
     query = query.not('lost_at', 'is', null);
   }
 
-  // Paginate
-  const allDeals = await paginateQuery(query);
+  let allDeals = await paginateQuery(query);
 
-  // Scorecard (global total)
+  // Apply custom field filters
+  allDeals = await applyDealFieldFilters(supabase, allDeals, dealFieldFilters);
+
   if (dimension.field === '_total') {
     return aggregateGlobalTotal(allDeals, measure);
   }
 
-  // Funnel by stage_name
   if (chartType === 'funnel' && dimension.field === 'stage_name') {
     const { data: stages } = await supabase
       .from('deal_stages')
@@ -331,7 +414,6 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
       }
       result.sort((a: any, b: any) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
 
-      // Add "Ganhos"
       const wonDeals = allDeals.filter((d: any) => d.status === 'won');
       result.push({ name: 'Ganhos', value: wonDeals.length, color: '#10b981' });
     }
@@ -380,7 +462,6 @@ async function fetchConversionRate(supabase: any, accountId: string, dimension: 
 async function fetchLeadsAggregated(supabase: any, accountId: string, config: VisualConfig): Promise<AggregatedDataPoint[]> {
   const { measure, dimension } = config;
 
-  // Scorecard total (fast path)
   if (dimension.field === '_total') {
     const { count, error } = await supabase
       .from('leads')
@@ -391,9 +472,14 @@ async function fetchLeadsAggregated(supabase: any, accountId: string, config: Vi
     return [{ name: 'Total', value: count || 0 }];
   }
 
+  // Include user join for responsible_name dimension
+  const selectFields = dimension.field === 'responsible_name'
+    ? 'id, status, source, revenue_range, canal, created_at, users!leads_responsible_user_id_fkey(name)'
+    : 'id, status, source, revenue_range, canal, created_at';
+
   const allLeads = await paginateQuery(
     supabase.from('leads')
-      .select('id, status, source, revenue_range, canal, created_at')
+      .select(selectFields)
       .eq('account_id', accountId)
       .is('converted_to_client_id', null)
   );
@@ -577,6 +663,7 @@ function getGroupName(item: any, dimension: VisualConfig['dimension']): string {
   if (field === 'responsible_name') return item.users?.name || 'Sem Responsável';
   if (field === 'is_active') return item.is_active ? 'Ativo' : 'Inativo';
   if (field === 'canal') return item.canal || 'Não informado';
+  if (field === 'faturamento_atual') return item.revenue_range || 'Não informado';
 
   if (dimension.type === 'date') {
     const dateValue = item[field];
@@ -700,4 +787,49 @@ function formatDateGroup(dateString: string, grouping: string): string {
   } catch {
     return 'Data Inválida';
   }
+}
+
+// ─── Custom Field Filters ────────────────────────────────────────────────────
+
+async function applyDealFieldFilters(
+  supabase: any,
+  deals: any[],
+  dealFieldFilters?: VisualConfig['dealFieldFilters']
+): Promise<any[]> {
+  if (!dealFieldFilters || dealFieldFilters.length === 0) return deals;
+
+  const dealIds = deals.map((d: any) => d.id);
+  if (dealIds.length === 0) return [];
+
+  // Fetch custom field values for the relevant fields
+  const fieldIds = dealFieldFilters.map(f => f.fieldId);
+
+  // Batch fetch in chunks of 50 to avoid URI limits
+  const fieldValueMap = new Map<string, Map<string, string>>(); // dealId -> fieldId -> value
+  const batchSize = 50;
+
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batchIds = dealIds.slice(i, i + batchSize);
+    const { data: fieldValues } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, field_id, value_text')
+      .in('deal_id', batchIds)
+      .in('field_id', fieldIds);
+
+    if (fieldValues) {
+      for (const fv of fieldValues) {
+        if (!fieldValueMap.has(fv.deal_id)) fieldValueMap.set(fv.deal_id, new Map());
+        fieldValueMap.get(fv.deal_id)!.set(fv.field_id, fv.value_text || '');
+      }
+    }
+  }
+
+  // Filter deals by custom field values
+  return deals.filter((deal: any) => {
+    const dealFields = fieldValueMap.get(deal.id);
+    return dealFieldFilters!.every(filter => {
+      const value = dealFields?.get(filter.fieldId) || '';
+      return filter.selectedValues.includes(value);
+    });
+  });
 }

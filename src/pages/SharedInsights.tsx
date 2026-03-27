@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Lock, Mail, Clock, XCircle, BarChart3, CheckCircle } from "lucide-react";
 import { SharedVisualCard } from "@/components/insights/visuals/SharedVisualCard";
+import type { DrilldownRecord } from "@/hooks/useVisualDrilldown";
 
 type Status = "loading" | "invalid" | "inactive" | "email_prompt" | "pending" | "rejected" | "approved";
 
@@ -28,7 +29,7 @@ interface VisualItem {
 interface DashboardData {
   dashboard: { id: string; name: string } | null;
   visuals: VisualItem[];
-  visualsData: Record<string, { data: AggregatedDataPoint[] }>;
+  visualsData: Record<string, { data: AggregatedDataPoint[]; drilldownData?: DrilldownRecord[] }>;
 }
 
 export default function SharedInsights() {
@@ -280,52 +281,52 @@ function SharedVisualsGrid({
   visualsData,
 }: {
   visuals: VisualItem[];
-  visualsData: Record<string, { data: AggregatedDataPoint[] }>;
+  visualsData: Record<string, { data: AggregatedDataPoint[]; drilldownData?: DrilldownRecord[] }>;
 }) {
-  // Sort visuals by layout position (y then x), fallback to array order
-  const sortedVisuals = [...visuals].sort((a, b) => {
-    const ay = a.layout?.y ?? 999;
-    const by = b.layout?.y ?? 999;
-    if (ay !== by) return ay - by;
-    const ax = a.layout?.x ?? 0;
-    const bx = b.layout?.x ?? 0;
-    return ax - bx;
-  });
+  const GRID_COLS = 48;
+  const ROW_HEIGHT = 8; // px per grid row unit
+
+  // Compute total grid height from layout
+  const maxY = visuals.reduce((max, v) => {
+    const bottom = (v.layout?.y ?? 0) + (v.layout?.h ?? 10);
+    return Math.max(max, bottom);
+  }, 0);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {sortedVisuals.map((visual) => {
+    <div
+      className="relative w-full"
+      style={{ height: maxY * ROW_HEIGHT }}
+    >
+      {visuals.map((visual) => {
         const vData = visualsData[visual.id];
         const data = vData?.data || [];
-        const colSpan = getColSpan(visual);
+        const drilldownData = vData?.drilldownData || [];
+        const layout = visual.layout;
+        const scale = layout?.scale || GRID_COLS;
+        const x = layout?.x ?? 0;
+        const y = layout?.y ?? 0;
+        const w = layout?.w ?? scale;
+        const h = layout?.h ?? 10;
 
         return (
           <div
             key={visual.id}
-            className={colSpan}
-            style={{ minHeight: getMinHeight(visual) }}
+            className="absolute p-1"
+            style={{
+              left: `${(x / scale) * 100}%`,
+              top: y * ROW_HEIGHT,
+              width: `${(w / scale) * 100}%`,
+              height: h * ROW_HEIGHT,
+            }}
           >
             <SharedVisualCard
               visual={visual}
               data={data}
+              drilldownData={drilldownData}
             />
           </div>
         );
       })}
     </div>
   );
-}
-
-function getColSpan(visual: VisualItem): string {
-  const w = visual.layout?.w ?? 4;
-  if (w >= 9) return "md:col-span-2 lg:col-span-3";
-  if (w >= 6) return "md:col-span-2 lg:col-span-2";
-  return "";
-}
-
-function getMinHeight(visual: VisualItem): number {
-  const chartType = visual.chart_type;
-  if (chartType === 'number' || chartType === 'scorecard' || chartType === 'indicator') return 160;
-  if (chartType === 'data_table') return 400;
-  return 320;
 }
