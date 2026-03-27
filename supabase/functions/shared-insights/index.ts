@@ -359,7 +359,7 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
 // ─── Deals ───────────────────────────────────────────────────────────────────
 
 async function fetchDealsAggregated(supabase: any, accountId: string, config: VisualConfig, chartType?: string): Promise<AggregatedDataPoint[]> {
-  const { measure, dimension, statusFilter, dealStatusFilter } = config;
+  const { measure, dimension, statusFilter, dealStatusFilter, dealFieldFilters } = config;
 
   // Special: conversion rate
   if (measure.aggregation === 'conversion_rate') {
@@ -373,33 +373,28 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
       users!deals_responsible_user_id_fkey(name)`)
     .eq('account_id', accountId);
 
-  // Apply status filter
   if (dealStatusFilter && dealStatusFilter.length > 0) {
     query = query.in('status', dealStatusFilter);
   } else if (statusFilter) {
     query = query.eq('status', statusFilter);
   }
 
-  // Determine date filter field
-  let dateFilterField = 'created_at';
   const singleStatus = dealStatusFilter?.length === 1 ? dealStatusFilter[0] : null;
   if (statusFilter === 'won' || singleStatus === 'won') {
-    dateFilterField = 'won_at';
     query = query.not('won_at', 'is', null);
   } else if (statusFilter === 'lost' || singleStatus === 'lost') {
-    dateFilterField = 'lost_at';
     query = query.not('lost_at', 'is', null);
   }
 
-  // Paginate
-  const allDeals = await paginateQuery(query);
+  let allDeals = await paginateQuery(query);
 
-  // Scorecard (global total)
+  // Apply custom field filters
+  allDeals = await applyDealFieldFilters(supabase, allDeals, dealFieldFilters);
+
   if (dimension.field === '_total') {
     return aggregateGlobalTotal(allDeals, measure);
   }
 
-  // Funnel by stage_name
   if (chartType === 'funnel' && dimension.field === 'stage_name') {
     const { data: stages } = await supabase
       .from('deal_stages')
@@ -419,7 +414,6 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
       }
       result.sort((a: any, b: any) => (orderMap.get(a.name) ?? 999) - (orderMap.get(b.name) ?? 999));
 
-      // Add "Ganhos"
       const wonDeals = allDeals.filter((d: any) => d.status === 'won');
       result.push({ name: 'Ganhos', value: wonDeals.length, color: '#10b981' });
     }
