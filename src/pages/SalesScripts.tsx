@@ -431,17 +431,38 @@ export default function SalesScripts() {
               {/* Client Selector (for ICP profiling) */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><UserCheck className="w-4 h-4 text-primary" />Vincular ao cliente (para perfil ICP)</Label>
-                <Select value={selectedClientId || 'none'} onValueChange={v => setSelectedClientId(v === 'none' ? null : v)}>
-                  <SelectTrigger><SelectValue placeholder="Selecione o cliente..." /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {clients.map((c: any) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.full_name}{c.company_name ? ` — ${c.company_name}` : ''}{c.city ? ` (${c.city}/${c.state || ''})` : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={clientComboOpen} onOpenChange={setClientComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={clientComboOpen} className="w-full justify-between font-normal">
+                      {selectedClientId ? (() => { const c = clients.find((c: any) => c.id === selectedClientId); return c ? `${c.full_name}${c.company_name ? ` — ${c.company_name}` : ''}` : 'Selecione o cliente...'; })() : 'Nenhum'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput placeholder="Buscar cliente..." value={clientSearch} onValueChange={setClientSearch} />
+                      <CommandList>
+                        <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem onSelect={() => { setSelectedClientId(null); setClientComboOpen(false); setClientSearch(''); }}>
+                            <Check className={cn("mr-2 h-4 w-4", !selectedClientId ? "opacity-100" : "opacity-0")} />
+                            Nenhum
+                          </CommandItem>
+                          {clients.filter((c: any) => {
+                            if (!clientSearch) return true;
+                            const s = clientSearch.toLowerCase();
+                            return c.full_name?.toLowerCase().includes(s) || c.company_name?.toLowerCase().includes(s) || c.city?.toLowerCase().includes(s);
+                          }).slice(0, 100).map((c: any) => (
+                            <CommandItem key={c.id} onSelect={() => { setSelectedClientId(c.id); setClientComboOpen(false); setClientSearch(''); }}>
+                              <Check className={cn("mr-2 h-4 w-4", selectedClientId === c.id ? "opacity-100" : "opacity-0")} />
+                              {c.full_name}{c.company_name ? ` — ${c.company_name}` : ''}{c.city ? ` (${c.city}/${c.state || ''})` : ''}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Outcome Notes */}
