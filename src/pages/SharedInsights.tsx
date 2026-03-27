@@ -29,7 +29,7 @@ interface VisualItem {
 interface DashboardData {
   dashboard: { id: string; name: string } | null;
   visuals: VisualItem[];
-  visualsData: Record<string, { data: AggregatedDataPoint[] }>;
+  visualsData: Record<string, { data: AggregatedDataPoint[]; drilldownData?: DrilldownRecord[] }>;
 }
 
 export default function SharedInsights() {
