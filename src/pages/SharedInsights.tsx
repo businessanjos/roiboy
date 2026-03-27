@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Lock, Mail, Clock, XCircle, BarChart3, CheckCircle } from "lucide-react";
 import { SharedVisualCard } from "@/components/insights/visuals/SharedVisualCard";
+import type { DrilldownRecord } from "@/hooks/useVisualDrilldown";
 
 type Status = "loading" | "invalid" | "inactive" | "email_prompt" | "pending" | "rejected" | "approved";
 
