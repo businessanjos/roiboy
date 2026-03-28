@@ -79,6 +79,19 @@ function isPhoneField(field: CustomField): boolean {
   return ["telefone", "celular", "whatsapp", "phone", "tel"].some((kw) => lower.includes(kw));
 }
 
+const FIELD_LABEL_OVERRIDES: Record<string, string> = {
+  "emergência": "Contato de emergência",
+  "emergencia": "Contato de emergência",
+};
+
+function getFieldLabel(field: CustomField): string {
+  const lower = field.name.toLowerCase();
+  for (const [keyword, label] of Object.entries(FIELD_LABEL_OVERRIDES)) {
+    if (lower.includes(keyword)) return label;
+  }
+  return field.name;
+}
+
 function buildSteps(
   customFields: CustomField[],
   requireClientInfo: boolean,
