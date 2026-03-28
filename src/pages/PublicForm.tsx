@@ -55,6 +55,18 @@ interface FieldStep {
 
 const DATE_KEYWORDS = ["data", "date", "nascimento", "aniversário", "aniversario", "birthday", "vencimento"];
 
+const PERSONAL_KEYWORDS = [
+  "nascimento", "telefone", "celular", "whatsapp", "phone", "tel",
+  "endereço", "endereco", "cep", "profissão", "profissao",
+  "instagram", "estado civil", "cônjuge", "conjuge", "casamento",
+  "emergência", "emergencia", "cpf", "rg", "documento",
+];
+
+function isPersonalField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return PERSONAL_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 function isDateField(field: CustomField): boolean {
   if (field.field_type === "date") return true;
   const lower = field.name.toLowerCase();
@@ -74,13 +86,21 @@ function buildSteps(
 ): FieldStep[] {
   const steps: FieldStep[] = [];
 
+  // Separate personal fields from the rest
+  const personalFields = customFields.filter(isPersonalField);
+  const otherFields = customFields.filter((f) => !isPersonalField(f));
+
+  // Step 1: Client info + personal fields merged
   if (requireClientInfo && !hasClientId) {
-    steps.push({ title: "Seus Dados", fields: [], type: "client_info" });
+    steps.push({ title: "Dados Pessoais", fields: personalFields, type: "client_info" });
+  } else if (personalFields.length > 0) {
+    steps.push({ title: "Dados Pessoais", fields: personalFields, type: "fields" });
   }
 
+  // Remaining fields grouped by max 3
   const MAX_PER_STEP = 3;
   let currentBatch: CustomField[] = [];
-  let stepIndex = 1;
+  let stepIndex = 2;
 
   const flushBatch = () => {
     if (currentBatch.length > 0) {
@@ -94,7 +114,7 @@ function buildSteps(
     }
   };
 
-  for (const field of customFields) {
+  for (const field of otherFields) {
     currentBatch.push(field);
     if (currentBatch.length >= MAX_PER_STEP) flushBatch();
   }
