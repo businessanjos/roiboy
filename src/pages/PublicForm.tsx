@@ -822,7 +822,7 @@ export default function PublicForm() {
                           className="space-y-2.5"
                         >
                           <label className="text-sm font-medium block" style={{ color: fieldErrors[field.id] ? dark.error : dark.textSecondary }}>
-                            {field.name}
+                            {getFieldLabel(field)}
                             {field.is_required && <span className="ml-1" style={{ color: dark.accent }}>*</span>}
                           </label>
                           {renderField(field)}
