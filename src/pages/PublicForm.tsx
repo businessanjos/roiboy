@@ -56,7 +56,7 @@ interface FieldStep {
 const DATE_KEYWORDS = ["data", "date", "nascimento", "aniversário", "aniversario", "birthday", "vencimento"];
 
 const PERSONAL_KEYWORDS = [
-  "nascimento", "telefone", "celular", "whatsapp", "phone", "tel",
+  "nascimento",
   "endereço", "endereco", "cep", "profissão", "profissao",
   "instagram", "estado civil", "cônjuge", "conjuge", "casamento",
   "emergência", "emergencia", "cpf", "rg", "documento",
