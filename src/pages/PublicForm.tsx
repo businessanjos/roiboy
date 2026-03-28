@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -10,7 +9,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   CalendarIcon, Loader2, CheckCircle2, AlertCircle, Send, User, Phone,
-  ChevronRight, ChevronLeft,
+  ChevronRight, ChevronLeft, ArrowRight,
 } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { motion, AnimatePresence } from "framer-motion";
@@ -20,6 +19,8 @@ import {
   CARD_WIDTH_OPTIONS,
   BORDER_RADIUS_OPTIONS,
 } from "@/components/forms/FormAppearance.types";
+
+/* ─── Types ─────────────────────────────────────────────────────── */
 
 interface FormData {
   id: string;
@@ -50,7 +51,22 @@ interface FieldStep {
   type: "client_info" | "fields";
 }
 
-// Group fields into logical steps of max N fields
+/* ─── Helpers ───────────────────────────────────────────────────── */
+
+const DATE_KEYWORDS = ["data", "date", "nascimento", "aniversário", "aniversario", "birthday", "vencimento"];
+
+function isDateField(field: CustomField): boolean {
+  if (field.field_type === "date") return true;
+  const lower = field.name.toLowerCase();
+  return DATE_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+function isPhoneField(field: CustomField): boolean {
+  if (field.field_type === "phone") return true;
+  const lower = field.name.toLowerCase();
+  return ["telefone", "celular", "whatsapp", "phone", "tel"].some((kw) => lower.includes(kw));
+}
+
 function buildSteps(
   customFields: CustomField[],
   requireClientInfo: boolean,
@@ -58,22 +74,18 @@ function buildSteps(
 ): FieldStep[] {
   const steps: FieldStep[] = [];
 
-  // Step 1: Client info if needed
   if (requireClientInfo && !hasClientId) {
     steps.push({ title: "Seus Dados", fields: [], type: "client_info" });
   }
 
-  // Group custom fields: try to batch related types together, max 4 per step
-  const MAX_PER_STEP = 4;
+  const MAX_PER_STEP = 3;
   let currentBatch: CustomField[] = [];
   let stepIndex = 1;
 
   const flushBatch = () => {
     if (currentBatch.length > 0) {
       steps.push({
-        title: steps.length === 0 && !requireClientInfo
-          ? "Informações"
-          : `Etapa ${stepIndex}`,
+        title: `Etapa ${stepIndex}`,
         fields: [...currentBatch],
         type: "fields",
       });
@@ -84,14 +96,21 @@ function buildSteps(
 
   for (const field of customFields) {
     currentBatch.push(field);
-    if (currentBatch.length >= MAX_PER_STEP) {
-      flushBatch();
-    }
+    if (currentBatch.length >= MAX_PER_STEP) flushBatch();
   }
   flushBatch();
 
   return steps;
 }
+
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length <= 2) return digits.length > 0 ? `(${digits}` : "";
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+}
+
+/* ─── Component ─────────────────────────────────────────────────── */
 
 export default function PublicForm() {
   const { formId } = useParams();
@@ -111,26 +130,18 @@ export default function PublicForm() {
   const [clientName, setClientName] = useState("");
   const [clientPhone, setClientPhone] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
-
   const [currentStep, setCurrentStep] = useState(0);
 
-  useEffect(() => {
-    fetchFormData();
-  }, [formId, clientId]);
+  useEffect(() => { fetchFormData(); }, [formId, clientId]);
 
   const fetchFormData = async () => {
-    if (!formId) {
-      setError("Formulário não encontrado");
-      setLoading(false);
-      return;
-    }
+    if (!formId) { setError("Formulário não encontrado"); setLoading(false); return; }
     try {
       const { data, error } = await supabase.functions.invoke("get-public-form", {
         body: { formId, clientId },
       });
       if (error) throw error;
       if (data.error) { setError(data.error); setLoading(false); return; }
-
       setFormData(data.form);
       setClientData(data.client);
       setCustomFields(data.customFields || []);
@@ -154,14 +165,11 @@ export default function PublicForm() {
   const totalSteps = steps.length;
   const isLastStep = currentStep === totalSteps - 1;
   const isSingleStep = totalSteps <= 1;
-
   const appearance = { ...DEFAULT_APPEARANCE, ...formData?.appearance };
+  const currentStepData = steps[currentStep];
+  const progress = totalSteps > 0 ? ((currentStep + 1) / totalSteps) * 100 : 100;
 
-  const inputStyle: React.CSSProperties = {
-    backgroundColor: appearance.card_background,
-    color: appearance.text_color,
-    borderColor: `${appearance.text_color}18`,
-  };
+  /* ─── Validation ────────────────────────────────────────────── */
 
   const isFieldEmpty = (field: CustomField, value: any): boolean => {
     if (value === undefined || value === null) return true;
@@ -178,44 +186,28 @@ export default function PublicForm() {
     const step = steps[currentStep];
     if (!step) return true;
     const errors: Record<string, boolean> = {};
-
     if (step.type === "client_info") {
       if (!clientName.trim()) errors.clientName = true;
       if (!clientPhone.trim()) errors.clientPhone = true;
     } else {
       step.fields.forEach((f) => {
-        if (f.is_required && isFieldEmpty(f, responses[f.id])) {
-          errors[f.id] = true;
-        }
+        if (f.is_required && isFieldEmpty(f, responses[f.id])) errors[f.id] = true;
       });
     }
-
     setFieldErrors((prev) => ({ ...prev, ...errors }));
     if (Object.values(errors).some(Boolean)) {
-      toast.error("Preencha os campos obrigatórios para continuar");
+      toast.error("Preencha os campos obrigatórios");
       return false;
     }
     return true;
   };
 
-  const handleNext = () => {
-    if (!validateCurrentStep()) return;
-    if (isLastStep) return;
-    setCurrentStep((s) => s + 1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  const handleBack = () => {
-    if (currentStep > 0) {
-      setCurrentStep((s) => s - 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  };
+  const handleNext = () => { if (validateCurrentStep() && !isLastStep) { setCurrentStep((s) => s + 1); } };
+  const handleBack = () => { if (currentStep > 0) setCurrentStep((s) => s - 1); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateCurrentStep()) return;
-
     setSubmitting(true);
     try {
       const { data, error } = await supabase.functions.invoke("submit-form-response", {
@@ -229,9 +221,7 @@ export default function PublicForm() {
       });
       if (error) throw error;
       if (data.error) { toast.error(data.error); return; }
-
       setSubmitted(true);
-      toast.success("Resposta enviada com sucesso!");
     } catch (err: any) {
       console.error("Error submitting form:", err);
       toast.error("Erro ao enviar resposta");
@@ -242,121 +232,257 @@ export default function PublicForm() {
 
   const updateResponse = (fieldId: string, value: any) => {
     setResponses((prev) => ({ ...prev, [fieldId]: value }));
-    if (fieldErrors[fieldId]) {
-      setFieldErrors((prev) => ({ ...prev, [fieldId]: false }));
-    }
+    if (fieldErrors[fieldId]) setFieldErrors((prev) => ({ ...prev, [fieldId]: false }));
   };
 
-  // ─── Field Renderers ─────────────────────────────────────────────
+  /* ─── Premium Dark Theme Tokens ────────────────────────────── */
+
+  const dark = {
+    bg: "#0a0a0b",
+    surface: "#141416",
+    surfaceHover: "#1a1a1e",
+    border: "rgba(255,255,255,0.06)",
+    borderHover: "rgba(255,255,255,0.12)",
+    borderActive: appearance.primary_color,
+    text: "#f0f0f2",
+    textSecondary: "rgba(240,240,242,0.55)",
+    textTertiary: "rgba(240,240,242,0.3)",
+    accent: appearance.primary_color,
+    accentGlow: `${appearance.primary_color}18`,
+    accentSubtle: `${appearance.primary_color}0C`,
+    error: "#ef4444",
+    errorBg: "rgba(239,68,68,0.08)",
+  };
+
+  /* ─── Field Renderer ───────────────────────────────────────── */
+
   const renderField = (field: CustomField) => {
     const value = responses[field.id];
     const hasError = fieldErrors[field.id];
 
-    const ringStyle = {
-      ...inputStyle,
-      "--tw-ring-color": appearance.primary_color,
-    } as React.CSSProperties;
+    const baseInputClass = cn(
+      "w-full h-12 rounded-lg border bg-transparent px-4 text-[15px] outline-none transition-all duration-200",
+      "placeholder:text-[rgba(240,240,242,0.25)]",
+      "focus:border-transparent focus:ring-2",
+      hasError ? "ring-2 ring-red-500/50 border-red-500/30" : ""
+    );
+
+    const inputStyles: React.CSSProperties = {
+      backgroundColor: dark.surface,
+      color: dark.text,
+      borderColor: hasError ? "rgba(239,68,68,0.3)" : dark.border,
+      // @ts-ignore
+      "--tw-ring-color": dark.accent,
+    };
+
+    // Smart date detection
+    if (isDateField(field)) {
+      return (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "w-full h-12 rounded-lg border flex items-center gap-3 px-4 text-[15px] outline-none transition-all duration-200 group",
+                "hover:border-[rgba(255,255,255,0.12)]",
+                hasError && "ring-2 ring-red-500/50 border-red-500/30"
+              )}
+              style={{
+                backgroundColor: dark.surface,
+                color: dark.text,
+                borderColor: value ? dark.borderActive : dark.border,
+              }}
+            >
+              <div
+                className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-colors"
+                style={{ backgroundColor: value ? dark.accentGlow : "rgba(255,255,255,0.04)" }}
+              >
+                <CalendarIcon className="h-4 w-4" style={{ color: value ? dark.accent : dark.textTertiary }} />
+              </div>
+              <span style={{ color: value ? dark.text : dark.textTertiary }}>
+                {value ? format(new Date(value), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "Selecionar data"}
+              </span>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-auto p-0 border-0 shadow-2xl shadow-black/40"
+            align="start"
+            style={{ backgroundColor: dark.surface }}
+          >
+            <Calendar
+              mode="single"
+              selected={value ? new Date(value) : undefined}
+              onSelect={(date) => updateResponse(field.id, date ? format(date, "yyyy-MM-dd") : null)}
+              locale={ptBR}
+              className="pointer-events-auto p-3"
+              classNames={{
+                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                month: "space-y-4",
+                caption: "flex justify-center pt-1 relative items-center",
+                caption_label: "text-sm font-medium text-[#f0f0f2]",
+                nav: "space-x-1 flex items-center",
+                nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-[#f0f0f2] border border-[rgba(255,255,255,0.08)] rounded-md inline-flex items-center justify-center",
+                nav_button_previous: "absolute left-1",
+                nav_button_next: "absolute right-1",
+                table: "w-full border-collapse space-y-1",
+                head_row: "flex",
+                head_cell: "text-[rgba(240,240,242,0.4)] rounded-md w-9 font-normal text-[0.8rem]",
+                row: "flex w-full mt-2",
+                cell: "h-9 w-9 text-center text-sm p-0 relative text-[#f0f0f2]",
+                day: "h-9 w-9 p-0 font-normal rounded-md hover:bg-[rgba(255,255,255,0.06)] transition-colors inline-flex items-center justify-center",
+                day_range_end: "day-range-end",
+                day_selected: `bg-[${dark.accent}] text-white hover:bg-[${dark.accent}] font-medium`,
+                day_today: "bg-[rgba(255,255,255,0.06)] text-[#f0f0f2] font-medium",
+                day_outside: "text-[rgba(240,240,242,0.2)] opacity-50",
+                day_disabled: "text-[rgba(240,240,242,0.15)]",
+                day_hidden: "invisible",
+              }}
+            />
+          </PopoverContent>
+        </Popover>
+      );
+    }
+
+    // Phone detection
+    if (isPhoneField(field)) {
+      return (
+        <div className="relative">
+          <div
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md flex items-center justify-center"
+            style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
+          >
+            <Phone className="h-4 w-4" style={{ color: dark.textTertiary }} />
+          </div>
+          <input
+            type="tel"
+            value={value || ""}
+            onChange={(e) => updateResponse(field.id, formatPhone(e.target.value))}
+            placeholder="(11) 99999-9999"
+            className={cn(baseInputClass, "pl-14")}
+            style={inputStyles}
+          />
+        </div>
+      );
+    }
 
     switch (field.field_type) {
       case "boolean":
         return (
-          <div className="flex items-center gap-3">
-            {["Sim", "Não"].map((label, i) => {
-              const val = i === 0;
+          <div className="grid grid-cols-2 gap-3">
+            {[{ label: "Sim", val: true }, { label: "Não", val: false }].map(({ label, val }) => {
               const selected = value === val;
               return (
-                <div
+                <button
                   key={label}
+                  type="button"
                   className={cn(
-                    "flex-1 flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl cursor-pointer transition-all duration-300 border text-sm font-medium",
-                    selected ? "shadow-md" : "opacity-60 hover:opacity-100"
+                    "h-12 rounded-lg border text-[15px] font-medium transition-all duration-200",
+                    "hover:border-[rgba(255,255,255,0.12)]",
+                    selected && "ring-1"
                   )}
                   style={{
-                    borderColor: selected ? appearance.primary_color : `${appearance.text_color}15`,
-                    backgroundColor: selected ? `${appearance.primary_color}10` : "transparent",
-                    color: appearance.text_color,
+                    backgroundColor: selected ? dark.accentGlow : dark.surface,
+                    borderColor: selected ? dark.accent : dark.border,
+                    color: selected ? dark.text : dark.textSecondary,
+                    // @ts-ignore
+                    "--tw-ring-color": dark.accent,
                   }}
                   onClick={() => updateResponse(field.id, val)}
                 >
-                  <div
-                    className="w-4 h-4 rounded-full border-2 flex items-center justify-center"
-                    style={{
-                      borderColor: selected ? appearance.primary_color : `${appearance.text_color}30`,
-                      backgroundColor: selected ? appearance.primary_color : "transparent",
-                    }}
-                  >
-                    {selected && <CheckCircle2 className="w-2.5 h-2.5" style={{ color: appearance.card_background }} />}
-                  </div>
                   {label}
-                </div>
+                </button>
               );
             })}
           </div>
         );
 
-      case "select": {
-        const opts = field.options || [];
+      case "select":
+      case "single_choice": {
+        const opts = Array.isArray(field.options) ? field.options : [];
         return (
           <div className="space-y-2">
-            {opts.map((opt: any) => (
-              <div
-                key={opt.value}
-                className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 border"
-                style={{
-                  borderColor: value === opt.value ? appearance.primary_color : `${appearance.text_color}12`,
-                  backgroundColor: value === opt.value ? `${appearance.primary_color}08` : "transparent",
-                }}
-                onClick={() => updateResponse(field.id, opt.value)}
-              >
-                <div
-                  className="w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center"
-                  style={{ borderColor: value === opt.value ? appearance.primary_color : `${appearance.text_color}30` }}
-                >
-                  {value === opt.value && (
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: appearance.primary_color }} />
+            {opts.map((opt: any) => {
+              const optValue = typeof opt === "string" ? opt : opt.value;
+              const optLabel = typeof opt === "string" ? opt : opt.label;
+              const selected = value === optValue;
+              return (
+                <button
+                  key={optValue}
+                  type="button"
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 h-12 rounded-lg border text-left transition-all duration-200",
+                    "hover:border-[rgba(255,255,255,0.12)]"
                   )}
-                </div>
-                <span className={cn("text-sm", value === opt.value ? "font-medium" : "")} style={{ color: appearance.text_color }}>
-                  {opt.label}
-                </span>
-              </div>
-            ))}
+                  style={{
+                    backgroundColor: selected ? dark.accentGlow : dark.surface,
+                    borderColor: selected ? dark.accent : dark.border,
+                  }}
+                  onClick={() => updateResponse(field.id, optValue)}
+                >
+                  <div
+                    className="w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors"
+                    style={{ borderColor: selected ? dark.accent : "rgba(255,255,255,0.15)" }}
+                  >
+                    {selected && (
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="w-2 h-2 rounded-full"
+                        style={{ backgroundColor: dark.accent }}
+                      />
+                    )}
+                  </div>
+                  <span className="text-[15px]" style={{ color: selected ? dark.text : dark.textSecondary }}>
+                    {optLabel}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         );
       }
 
-      case "multi_select": {
-        const opts = field.options || [];
+      case "multi_select":
+      case "multiple_choice": {
+        const opts = Array.isArray(field.options) ? field.options : [];
         const sel = (value as string[]) || [];
         return (
           <div className="space-y-2">
             {opts.map((opt: any) => {
-              const on = sel.includes(opt.value);
+              const optValue = typeof opt === "string" ? opt : opt.value;
+              const optLabel = typeof opt === "string" ? opt : opt.label;
+              const on = sel.includes(optValue);
               return (
-                <div
-                  key={opt.value}
-                  className="flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-300 border"
+                <button
+                  key={optValue}
+                  type="button"
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 h-12 rounded-lg border text-left transition-all duration-200",
+                    "hover:border-[rgba(255,255,255,0.12)]"
+                  )}
                   style={{
-                    borderColor: on ? appearance.primary_color : `${appearance.text_color}12`,
-                    backgroundColor: on ? `${appearance.primary_color}08` : "transparent",
+                    backgroundColor: on ? dark.accentGlow : dark.surface,
+                    borderColor: on ? dark.accent : dark.border,
                   }}
-                  onClick={() => updateResponse(field.id, on ? sel.filter((v) => v !== opt.value) : [...sel, opt.value])}
+                  onClick={() => updateResponse(field.id, on ? sel.filter((v) => v !== optValue) : [...sel, optValue])}
                 >
                   <div
-                    className="w-4 h-4 rounded-md border-2 shrink-0 flex items-center justify-center"
+                    className="w-4 h-4 rounded-[4px] border-2 shrink-0 flex items-center justify-center transition-colors"
                     style={{
-                      borderColor: on ? appearance.primary_color : `${appearance.text_color}30`,
-                      backgroundColor: on ? appearance.primary_color : "transparent",
+                      borderColor: on ? dark.accent : "rgba(255,255,255,0.15)",
+                      backgroundColor: on ? dark.accent : "transparent",
                     }}
                   >
                     {on && (
-                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                        <path d="M1 3.5L3.5 6L9 1" stroke={appearance.card_background} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
+                      <motion.svg initial={{ scale: 0 }} animate={{ scale: 1 }} width="10" height="8" viewBox="0 0 10 8" fill="none">
+                        <path d="M1 3.5L3.5 6L9 1" stroke="#0a0a0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </motion.svg>
                     )}
                   </div>
-                  <span className={cn("text-sm", on ? "font-medium" : "")} style={{ color: appearance.text_color }}>{opt.label}</span>
-                </div>
+                  <span className="text-[15px]" style={{ color: on ? dark.text : dark.textSecondary }}>
+                    {optLabel}
+                  </span>
+                </button>
               );
             })}
           </div>
@@ -368,7 +494,9 @@ export default function PublicForm() {
         return (
           <div className="relative">
             {field.field_type === "currency" && (
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: `${appearance.text_color}50` }}>R$</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: dark.textTertiary }}>
+                R$
+              </span>
             )}
             <input
               type="number"
@@ -376,44 +504,10 @@ export default function PublicForm() {
               onChange={(e) => updateResponse(field.id, e.target.value ? Number(e.target.value) : null)}
               placeholder={field.field_type === "currency" ? "0,00" : "0"}
               step={field.field_type === "currency" ? "0.01" : "1"}
-              className={cn(
-                "w-full h-12 rounded-xl border bg-transparent px-4 text-sm outline-none transition-all duration-300 focus:ring-2 focus:ring-offset-0",
-                field.field_type === "currency" && "pl-10",
-                hasError && "ring-2 ring-red-400"
-              )}
-              style={ringStyle}
+              className={cn(baseInputClass, field.field_type === "currency" && "pl-10")}
+              style={inputStyles}
             />
           </div>
-        );
-
-      case "date":
-        return (
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  "w-full h-12 rounded-xl border flex items-center gap-3 px-4 text-sm outline-none transition-all duration-300 hover:shadow-sm",
-                  hasError && "ring-2 ring-red-400"
-                )}
-                style={{ ...inputStyle, borderColor: value ? appearance.primary_color : `${appearance.text_color}18` }}
-              >
-                <CalendarIcon className="h-4 w-4 shrink-0" style={{ color: value ? appearance.primary_color : `${appearance.text_color}40` }} />
-                <span style={{ color: value ? appearance.text_color : `${appearance.text_color}45` }}>
-                  {value ? format(new Date(value), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "Selecionar data"}
-                </span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={value ? new Date(value) : undefined}
-                onSelect={(date) => updateResponse(field.id, date ? format(date, "yyyy-MM-dd") : null)}
-                locale={ptBR}
-                className="pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
         );
 
       case "long_text":
@@ -422,12 +516,14 @@ export default function PublicForm() {
             value={value || ""}
             onChange={(e) => updateResponse(field.id, e.target.value)}
             placeholder="Digite sua resposta..."
-            rows={3}
+            rows={4}
             className={cn(
-              "w-full rounded-xl border bg-transparent px-4 py-3 text-sm outline-none resize-none transition-all duration-300 focus:ring-2 focus:ring-offset-0",
-              hasError && "ring-2 ring-red-400"
+              "w-full rounded-lg border bg-transparent px-4 py-3 text-[15px] outline-none resize-none transition-all duration-200",
+              "placeholder:text-[rgba(240,240,242,0.25)]",
+              "focus:border-transparent focus:ring-2",
+              hasError && "ring-2 ring-red-500/50 border-red-500/30"
             )}
-            style={ringStyle}
+            style={inputStyles}
           />
         );
 
@@ -439,259 +535,344 @@ export default function PublicForm() {
             value={value || ""}
             onChange={(e) => updateResponse(field.id, e.target.value)}
             placeholder="Digite sua resposta..."
-            className={cn(
-              "w-full h-12 rounded-xl border bg-transparent px-4 text-sm outline-none transition-all duration-300 focus:ring-2 focus:ring-offset-0",
-              hasError && "ring-2 ring-red-400"
-            )}
-            style={ringStyle}
+            className={baseInputClass}
+            style={inputStyles}
           />
         );
     }
   };
 
-  // ─── Screens ─────────────────────────────────────────────────────
+  /* ─── Screens ─────────────────────────────────────────────────── */
 
   if (loading) return <LoadingScreen message="Carregando formulário..." />;
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: "#fafafa" }}>
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.5 }}
-          className="w-full max-w-md bg-white rounded-2xl shadow-2xl shadow-black/5 p-10 text-center">
-          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-5">
-            <AlertCircle className="h-7 w-7 text-red-500" />
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: dark.bg }}>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="w-full max-w-sm rounded-xl border p-10 text-center"
+          style={{ backgroundColor: dark.surface, borderColor: dark.border }}
+        >
+          <div className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5" style={{ backgroundColor: dark.errorBg }}>
+            <AlertCircle className="h-6 w-6" style={{ color: dark.error }} />
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Formulário indisponível</h2>
-          <p className="text-sm text-gray-500">{error}</p>
+          <h2 className="text-lg font-semibold mb-2" style={{ color: dark.text }}>Formulário indisponível</h2>
+          <p className="text-sm" style={{ color: dark.textSecondary }}>{error}</p>
         </motion.div>
       </div>
     );
   }
 
   if (submitted) {
-    const bgStyle = appearance.background_type === "gradient"
-      ? { background: `linear-gradient(135deg, ${appearance.gradient_start} 0%, ${appearance.gradient_end} 100%)` }
-      : { backgroundColor: appearance.background_color };
     return (
-      <div className="min-h-screen flex items-center justify-center p-4" style={bgStyle}>
-        <motion.div initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} transition={{ duration: 0.6 }}
-          className="w-full max-w-md rounded-2xl shadow-2xl p-12 text-center" style={{ backgroundColor: appearance.card_background }}>
-          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.3, type: "spring", stiffness: 200, damping: 15 }}
-            className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6" style={{ backgroundColor: `${appearance.primary_color}12` }}>
-            <CheckCircle2 className="h-9 w-9" style={{ color: appearance.primary_color }} />
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: dark.bg }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-sm rounded-xl border p-10 text-center"
+          style={{ backgroundColor: dark.surface, borderColor: dark.border }}
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200, damping: 15 }}
+            className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+            style={{ backgroundColor: dark.accentGlow }}
+          >
+            <CheckCircle2 className="h-7 w-7" style={{ color: dark.accent }} />
           </motion.div>
-          <h2 className="text-2xl font-semibold mb-3" style={{ color: appearance.text_color }}>Resposta enviada</h2>
-          <p className="text-sm leading-relaxed" style={{ color: `${appearance.text_color}80` }}>
-            Obrigado por preencher o formulário. Suas respostas foram registradas com sucesso.
+          <h2 className="text-xl font-semibold mb-2" style={{ color: dark.text }}>Resposta enviada</h2>
+          <p className="text-sm leading-relaxed" style={{ color: dark.textSecondary }}>
+            Obrigado por preencher o formulário.<br />
+            Suas respostas foram registradas com sucesso.
           </p>
         </motion.div>
       </div>
     );
   }
 
-  // ─── Main Form ───────────────────────────────────────────────────
-
-  const getBackgroundStyle = (): React.CSSProperties => {
-    if (appearance.background_type === "gradient") {
-      return { background: `linear-gradient(135deg, ${appearance.gradient_start} 0%, ${appearance.gradient_end} 100%)`, minHeight: "100vh" };
-    }
-    return { backgroundColor: appearance.background_color, minHeight: "100vh" };
-  };
-
-  const cardWidthClass = CARD_WIDTH_OPTIONS[appearance.card_width || "md"].class;
-  const borderRadiusClass = BORDER_RADIUS_OPTIONS[appearance.border_radius || "lg"].class;
-  const titleAlignmentClass = { left: "text-left", center: "text-center", right: "text-right" }[appearance.title_alignment || "center"];
-  const logoAlignmentClass = { left: "justify-start", center: "justify-center", right: "justify-end" }[appearance.logo_position || "center"];
-
-  const progress = totalSteps > 0 ? ((currentStep + 1) / totalSteps) * 100 : 100;
-  const currentStepData = steps[currentStep];
+  /* ─── Main Form ───────────────────────────────────────────────── */
 
   return (
-    <div style={getBackgroundStyle()} className="py-6 sm:py-10 px-4">
-      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}
-        className={`mx-auto ${cardWidthClass}`}>
-        <div className={cn("shadow-2xl shadow-black/8 overflow-hidden", borderRadiusClass)} style={{ backgroundColor: appearance.card_background }}>
+    <div
+      className="min-h-screen flex flex-col items-center justify-start py-8 sm:py-16 px-4"
+      style={{ backgroundColor: dark.bg }}
+    >
+      {/* Subtle radial gradient glow */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          background: `radial-gradient(ellipse 60% 40% at 50% 0%, ${dark.accentGlow} 0%, transparent 70%)`,
+        }}
+      />
 
-          {/* Progress Bar */}
-          {!isSingleStep && (
-            <div className="h-1.5 w-full" style={{ backgroundColor: `${appearance.text_color}08` }}>
-              <motion.div className="h-full rounded-r-full" style={{ backgroundColor: appearance.primary_color }}
-                initial={{ width: 0 }} animate={{ width: `${progress}%` }} transition={{ duration: 0.4, ease: "easeOut" }} />
-            </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
+        className="w-full max-w-lg relative z-10"
+      >
+        {/* Header */}
+        <div className="text-center mb-8">
+          {appearance.logo_url && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="flex justify-center mb-6"
+            >
+              <img src={appearance.logo_url} alt="Logo" className="h-10 sm:h-12 object-contain" />
+            </motion.div>
           )}
 
-          {/* Header - only on first step */}
-          {currentStep === 0 && (
-            <div className={cn("px-6 sm:px-10 pt-8 sm:pt-10 pb-2", titleAlignmentClass)}>
-              {appearance.logo_url && (
-                <div className={`flex ${logoAlignmentClass} mb-6`}>
-                  <img src={appearance.logo_url} alt="Logo" className="h-12 sm:h-14 object-contain" />
-                </div>
-              )}
-              {appearance.show_title !== false && (
-                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight" style={{ color: appearance.text_color }}>
-                  {formData?.title}
-                </h1>
-              )}
-              {formData?.description && (
-                <p className="mt-3 text-sm sm:text-base leading-relaxed max-w-lg"
-                  style={{
-                    color: `${appearance.text_color}70`,
-                    marginLeft: titleAlignmentClass === "text-center" ? "auto" : undefined,
-                    marginRight: titleAlignmentClass === "text-center" ? "auto" : undefined,
-                  }}>
-                  {formData.description}
-                </p>
-              )}
-            </div>
+          {appearance.show_title !== false && (
+            <motion.h1
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.15 }}
+              className="text-2xl sm:text-3xl font-semibold tracking-[-0.02em] mb-2"
+              style={{ color: dark.text }}
+            >
+              {formData?.title}
+            </motion.h1>
           )}
 
-          {/* Step Indicator */}
-          {!isSingleStep && (
-            <div className="px-6 sm:px-10 pt-5">
-              <div className="flex items-center gap-2">
-                {steps.map((_, i) => (
-                  <div key={i} className="flex-1 h-1.5 rounded-full transition-all duration-300"
-                    style={{
-                      backgroundColor: i <= currentStep ? appearance.primary_color : `${appearance.text_color}12`,
-                    }} />
-                ))}
-              </div>
-              <div className="flex items-center justify-between mt-3">
-                <span className="text-xs font-medium" style={{ color: `${appearance.text_color}60` }}>
-                  Etapa {currentStep + 1} de {totalSteps}
-                </span>
-                {currentStep > 0 && currentStepData && (
-                  <span className="text-xs font-medium" style={{ color: `${appearance.text_color}50` }}>
-                    {currentStepData.title}
-                  </span>
-                )}
-              </div>
-            </div>
+          {formData?.description && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-[15px] leading-relaxed max-w-md mx-auto"
+              style={{ color: dark.textSecondary }}
+            >
+              {formData.description}
+            </motion.p>
           )}
 
-          {/* Client Badge */}
-          {clientData && currentStep === 0 && (
-            <div className="px-6 sm:px-10 pt-4">
-              <div className="inline-flex items-center gap-2.5 px-4 py-2.5 rounded-full text-sm"
-                style={{ backgroundColor: `${appearance.primary_color}0A`, border: `1px solid ${appearance.primary_color}20` }}>
-                <User className="w-3.5 h-3.5" style={{ color: appearance.primary_color }} />
-                <span style={{ color: appearance.text_color }}>{clientData.name}</span>
-              </div>
-            </div>
+          {clientData && (
+            <motion.div
+              initial={{ opacity: 0, y: 5 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.25 }}
+              className="inline-flex items-center gap-2 mt-4 px-3 py-1.5 rounded-full text-xs font-medium"
+              style={{
+                backgroundColor: dark.accentSubtle,
+                border: `1px solid ${dark.accentGlow}`,
+                color: dark.accent,
+              }}
+            >
+              <User className="w-3 h-3" />
+              {clientData.name}
+            </motion.div>
           )}
+        </div>
 
-          {/* Form Body */}
-          <form onSubmit={handleSubmit} className="px-6 sm:px-10 py-8 sm:py-10">
-            <AnimatePresence mode="wait">
+        {/* Progress */}
+        {!isSingleStep && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium tracking-wide uppercase" style={{ color: dark.textTertiary }}>
+                {currentStepData?.type === "client_info" ? "Seus dados" : currentStepData?.title}
+              </span>
+              <span className="text-xs tabular-nums" style={{ color: dark.textTertiary }}>
+                {currentStep + 1}/{totalSteps}
+              </span>
+            </div>
+            <div className="h-[3px] rounded-full w-full" style={{ backgroundColor: "rgba(255,255,255,0.04)" }}>
               <motion.div
-                key={currentStep}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-6"
-              >
-                {/* Client Info Step */}
-                {currentStepData?.type === "client_info" && (
-                  <div className="space-y-5">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium flex items-center gap-1.5"
-                        style={{ color: fieldErrors.clientName ? "#ef4444" : appearance.text_color }}>
-                        <User className="w-3.5 h-3.5" style={{ opacity: 0.5 }} />
-                        Nome <span style={{ color: appearance.primary_color }}>*</span>
-                      </label>
-                      <input value={clientName}
-                        onChange={(e) => { setClientName(e.target.value); if (fieldErrors.clientName) setFieldErrors((p) => ({ ...p, clientName: false })); }}
-                        placeholder="Seu nome completo"
-                        className={cn("w-full h-12 rounded-xl border bg-transparent px-4 text-sm outline-none transition-all focus:ring-2 focus:ring-offset-0", fieldErrors.clientName && "ring-2 ring-red-400")}
-                        style={{ ...inputStyle, "--tw-ring-color": appearance.primary_color } as React.CSSProperties} />
-                      {fieldErrors.clientName && <p className="text-xs text-red-500">Nome é obrigatório</p>}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium flex items-center gap-1.5"
-                        style={{ color: fieldErrors.clientPhone ? "#ef4444" : appearance.text_color }}>
-                        <Phone className="w-3.5 h-3.5" style={{ opacity: 0.5 }} />
-                        Telefone <span style={{ color: appearance.primary_color }}>*</span>
-                      </label>
-                      <input value={clientPhone}
-                        onChange={(e) => {
-                          const raw = e.target.value.replace(/\D/g, "");
-                          let fmt = "";
-                          if (raw.length <= 2) fmt = raw.length > 0 ? `(${raw}` : "";
-                          else if (raw.length <= 7) fmt = `(${raw.slice(0, 2)}) ${raw.slice(2)}`;
-                          else fmt = `(${raw.slice(0, 2)}) ${raw.slice(2, 7)}-${raw.slice(7, 11)}`;
-                          setClientPhone(fmt);
-                          if (fieldErrors.clientPhone) setFieldErrors((p) => ({ ...p, clientPhone: false }));
-                        }}
-                        placeholder="(11) 99999-9999"
-                        className={cn("w-full h-12 rounded-xl border bg-transparent px-4 text-sm outline-none transition-all focus:ring-2 focus:ring-offset-0", fieldErrors.clientPhone && "ring-2 ring-red-400")}
-                        style={{ ...inputStyle, "--tw-ring-color": appearance.primary_color } as React.CSSProperties} />
-                      {fieldErrors.clientPhone && <p className="text-xs text-red-500">Telefone é obrigatório</p>}
-                    </div>
-                  </div>
-                )}
+                className="h-full rounded-full"
+                style={{ backgroundColor: dark.accent }}
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+              />
+            </div>
+          </div>
+        )}
 
-                {/* Field Steps */}
-                {currentStepData?.type === "fields" && currentStepData.fields.map((field, index) => (
-                  <motion.div key={field.id}
-                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05, duration: 0.3 }}
-                    className="space-y-2.5">
-                    <label className="text-sm font-medium block"
-                      style={{ color: fieldErrors[field.id] ? "#ef4444" : appearance.text_color }}>
-                      {field.name}
-                      {field.is_required && <span className="ml-1" style={{ color: appearance.primary_color }}>*</span>}
-                    </label>
-                    {renderField(field)}
-                    <AnimatePresence>
-                      {fieldErrors[field.id] && (
-                        <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-                          className="text-xs text-red-500">
-                          Este campo é obrigatório
-                        </motion.p>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                ))}
-              </motion.div>
-            </AnimatePresence>
+        {/* Card */}
+        <div
+          className="rounded-xl border overflow-hidden"
+          style={{ backgroundColor: dark.surface, borderColor: dark.border }}
+        >
+          <form onSubmit={handleSubmit}>
+            <div className="p-6 sm:p-8">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentStep}
+                  initial={{ opacity: 0, x: 16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{ duration: 0.25, ease: "easeOut" }}
+                  className="space-y-6"
+                >
+                  {/* Client Info Step */}
+                  {currentStepData?.type === "client_info" && (
+                    <>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-1.5" style={{ color: fieldErrors.clientName ? dark.error : dark.textSecondary }}>
+                          Nome completo
+                          <span style={{ color: dark.accent }}>*</span>
+                        </label>
+                        <div className="relative">
+                          <div
+                            className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md flex items-center justify-center"
+                            style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
+                          >
+                            <User className="h-4 w-4" style={{ color: dark.textTertiary }} />
+                          </div>
+                          <input
+                            value={clientName}
+                            onChange={(e) => { setClientName(e.target.value); if (fieldErrors.clientName) setFieldErrors((p) => ({ ...p, clientName: false })); }}
+                            placeholder="Seu nome"
+                            className={cn(
+                              "w-full h-12 rounded-lg border bg-transparent pl-14 pr-4 text-[15px] outline-none transition-all duration-200",
+                              "placeholder:text-[rgba(240,240,242,0.25)] focus:ring-2",
+                              fieldErrors.clientName && "ring-2 ring-red-500/50 border-red-500/30"
+                            )}
+                            style={{
+                              backgroundColor: dark.surface,
+                              color: dark.text,
+                              borderColor: dark.border,
+                              // @ts-ignore
+                              "--tw-ring-color": dark.accent,
+                            }}
+                          />
+                        </div>
+                        {fieldErrors.clientName && <p className="text-xs" style={{ color: dark.error }}>Campo obrigatório</p>}
+                      </div>
 
-            {/* Navigation */}
-            <div className={cn("flex items-center gap-3 pt-8", currentStep > 0 ? "justify-between" : "justify-end")}>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium flex items-center gap-1.5" style={{ color: fieldErrors.clientPhone ? dark.error : dark.textSecondary }}>
+                          Telefone
+                          <span style={{ color: dark.accent }}>*</span>
+                        </label>
+                        <div className="relative">
+                          <div
+                            className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-md flex items-center justify-center"
+                            style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
+                          >
+                            <Phone className="h-4 w-4" style={{ color: dark.textTertiary }} />
+                          </div>
+                          <input
+                            value={clientPhone}
+                            onChange={(e) => { setClientPhone(formatPhone(e.target.value)); if (fieldErrors.clientPhone) setFieldErrors((p) => ({ ...p, clientPhone: false })); }}
+                            placeholder="(11) 99999-9999"
+                            className={cn(
+                              "w-full h-12 rounded-lg border bg-transparent pl-14 pr-4 text-[15px] outline-none transition-all duration-200",
+                              "placeholder:text-[rgba(240,240,242,0.25)] focus:ring-2",
+                              fieldErrors.clientPhone && "ring-2 ring-red-500/50 border-red-500/30"
+                            )}
+                            style={{
+                              backgroundColor: dark.surface,
+                              color: dark.text,
+                              borderColor: dark.border,
+                              // @ts-ignore
+                              "--tw-ring-color": dark.accent,
+                            }}
+                          />
+                        </div>
+                        {fieldErrors.clientPhone && <p className="text-xs" style={{ color: dark.error }}>Campo obrigatório</p>}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Field Steps */}
+                  {currentStepData?.type === "fields" && currentStepData.fields.map((field, index) => (
+                    <motion.div
+                      key={field.id}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.06, duration: 0.3 }}
+                      className="space-y-2.5"
+                    >
+                      <label className="text-sm font-medium block" style={{ color: fieldErrors[field.id] ? dark.error : dark.textSecondary }}>
+                        {field.name}
+                        {field.is_required && <span className="ml-1" style={{ color: dark.accent }}>*</span>}
+                      </label>
+                      {renderField(field)}
+                      <AnimatePresence>
+                        {fieldErrors[field.id] && (
+                          <motion.p
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="text-xs"
+                            style={{ color: dark.error }}
+                          >
+                            Campo obrigatório
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* Actions */}
+            <div
+              className="px-6 sm:px-8 py-5 flex items-center gap-3 border-t"
+              style={{
+                borderColor: dark.border,
+                backgroundColor: "rgba(255,255,255,0.01)",
+              }}
+            >
               {currentStep > 0 && (
-                <button type="button" onClick={handleBack}
-                  className="h-12 px-6 rounded-xl text-sm font-medium flex items-center gap-2 transition-all duration-300 border hover:shadow-sm"
-                  style={{ borderColor: `${appearance.text_color}15`, color: appearance.text_color }}>
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="h-11 px-5 rounded-lg text-sm font-medium flex items-center gap-2 transition-all duration-200 border hover:bg-[rgba(255,255,255,0.03)]"
+                  style={{ borderColor: dark.border, color: dark.textSecondary }}
+                >
                   <ChevronLeft className="h-4 w-4" />
                   Voltar
                 </button>
               )}
 
+              <div className="flex-1" />
+
               {isLastStep || isSingleStep ? (
-                <button type="submit" disabled={submitting}
-                  className="h-12 px-8 rounded-xl text-sm font-semibold flex items-center justify-center gap-2.5 transition-all duration-300 hover:shadow-lg active:scale-[0.98] disabled:opacity-60 flex-1 max-w-xs"
-                  style={{ backgroundColor: appearance.primary_color, color: appearance.card_background }}>
-                  {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4" />Enviar Respostas</>}
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="h-11 px-7 rounded-lg text-sm font-semibold flex items-center gap-2.5 transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+                  style={{ backgroundColor: dark.accent, color: dark.bg }}
+                >
+                  {submitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      Enviar
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
                 </button>
               ) : (
-                <button type="button" onClick={handleNext}
-                  className="h-12 px-8 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-lg active:scale-[0.98]"
-                  style={{ backgroundColor: appearance.primary_color, color: appearance.card_background }}>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="h-11 px-7 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
+                  style={{ backgroundColor: dark.accent, color: dark.bg }}
+                >
                   Continuar
                   <ChevronRight className="h-4 w-4" />
                 </button>
               )}
             </div>
           </form>
-
-          {/* Footer */}
-          {appearance.show_footer !== false && appearance.footer_text && (
-            <div className="text-center pb-6 text-xs tracking-wide" style={{ color: `${appearance.text_color}35` }}>
-              {appearance.footer_text}
-            </div>
-          )}
         </div>
+
+        {/* Footer */}
+        {appearance.show_footer !== false && appearance.footer_text && (
+          <div className="text-center mt-8 text-xs tracking-wide" style={{ color: dark.textTertiary }}>
+            {appearance.footer_text}
+          </div>
+        )}
       </motion.div>
     </div>
   );
