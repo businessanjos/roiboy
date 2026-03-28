@@ -55,6 +55,18 @@ interface FieldStep {
 
 const DATE_KEYWORDS = ["data", "date", "nascimento", "aniversário", "aniversario", "birthday", "vencimento"];
 
+const PERSONAL_KEYWORDS = [
+  "nascimento", "telefone", "celular", "whatsapp", "phone", "tel",
+  "endereço", "endereco", "cep", "profissão", "profissao",
+  "instagram", "estado civil", "cônjuge", "conjuge", "casamento",
+  "emergência", "emergencia", "cpf", "rg", "documento",
+];
+
+function isPersonalField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return PERSONAL_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
 function isDateField(field: CustomField): boolean {
   if (field.field_type === "date") return true;
   const lower = field.name.toLowerCase();
@@ -74,13 +86,21 @@ function buildSteps(
 ): FieldStep[] {
   const steps: FieldStep[] = [];
 
+  // Separate personal fields from the rest
+  const personalFields = customFields.filter(isPersonalField);
+  const otherFields = customFields.filter((f) => !isPersonalField(f));
+
+  // Step 1: Client info + personal fields merged
   if (requireClientInfo && !hasClientId) {
-    steps.push({ title: "Seus Dados", fields: [], type: "client_info" });
+    steps.push({ title: "Dados Pessoais", fields: personalFields, type: "client_info" });
+  } else if (personalFields.length > 0) {
+    steps.push({ title: "Dados Pessoais", fields: personalFields, type: "fields" });
   }
 
+  // Remaining fields grouped by max 3
   const MAX_PER_STEP = 3;
   let currentBatch: CustomField[] = [];
-  let stepIndex = 1;
+  let stepIndex = 2;
 
   const flushBatch = () => {
     if (currentBatch.length > 0) {
@@ -94,7 +114,7 @@ function buildSteps(
     }
   };
 
-  for (const field of customFields) {
+  for (const field of otherFields) {
     currentBatch.push(field);
     if (currentBatch.length >= MAX_PER_STEP) flushBatch();
   }
@@ -778,6 +798,36 @@ export default function PublicForm() {
                         </div>
                         {fieldErrors.clientPhone && <p className="text-xs" style={{ color: dark.error }}>Campo obrigatório</p>}
                       </div>
+
+                      {/* Personal custom fields merged into this step */}
+                      {currentStepData.fields.map((field, index) => (
+                        <motion.div
+                          key={field.id}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: (index + 2) * 0.06, duration: 0.3 }}
+                          className="space-y-2.5"
+                        >
+                          <label className="text-sm font-medium block" style={{ color: fieldErrors[field.id] ? dark.error : dark.textSecondary }}>
+                            {field.name}
+                            {field.is_required && <span className="ml-1" style={{ color: dark.accent }}>*</span>}
+                          </label>
+                          {renderField(field)}
+                          <AnimatePresence>
+                            {fieldErrors[field.id] && (
+                              <motion.p
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="text-xs"
+                                style={{ color: dark.error }}
+                              >
+                                Campo obrigatório
+                              </motion.p>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      ))}
                     </>
                   )}
 
