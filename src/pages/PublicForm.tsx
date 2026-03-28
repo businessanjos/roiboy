@@ -798,6 +798,36 @@ export default function PublicForm() {
                         </div>
                         {fieldErrors.clientPhone && <p className="text-xs" style={{ color: dark.error }}>Campo obrigatório</p>}
                       </div>
+
+                      {/* Personal custom fields merged into this step */}
+                      {currentStepData.fields.map((field, index) => (
+                        <motion.div
+                          key={field.id}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: (index + 2) * 0.06, duration: 0.3 }}
+                          className="space-y-2.5"
+                        >
+                          <label className="text-sm font-medium block" style={{ color: fieldErrors[field.id] ? dark.error : dark.textSecondary }}>
+                            {field.name}
+                            {field.is_required && <span className="ml-1" style={{ color: dark.accent }}>*</span>}
+                          </label>
+                          {renderField(field)}
+                          <AnimatePresence>
+                            {fieldErrors[field.id] && (
+                              <motion.p
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="text-xs"
+                                style={{ color: dark.error }}
+                              >
+                                Campo obrigatório
+                              </motion.p>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      ))}
                     </>
                   )}
 
