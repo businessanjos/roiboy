@@ -560,7 +560,7 @@ export default function PublicForm() {
                         value={child.nascimento ? (() => { const [y, m, d] = child.nascimento.split("-").map(Number); return new Date(y, m - 1, d); })() : undefined}
                         onChange={(date) => updateChild(index, "nascimento", format(date, "yyyy-MM-dd"))}
                         maxYear={new Date().getFullYear()}
-                        minYear={1990}
+                        minYear={1950}
                       />
                     </PopoverContent>
                   </Popover>
