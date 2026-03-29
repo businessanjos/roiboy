@@ -284,49 +284,83 @@ function SharedVisualsGrid({
   visualsData: Record<string, { data: AggregatedDataPoint[]; drilldownData?: DrilldownRecord[] }>;
 }) {
   const GRID_COLS = 48;
-  const ROW_HEIGHT = 8; // px per grid row unit
+  const ROW_HEIGHT = 14; // px per grid row unit (increased from 8 for better spacing)
 
-  // Compute total grid height from layout
+  // Sort visuals by y then x for proper flow order on mobile
+  const sortedVisuals = [...visuals].sort((a, b) => {
+    const ay = a.layout?.y ?? 0;
+    const by = b.layout?.y ?? 0;
+    if (ay !== by) return ay - by;
+    return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
+  });
+
+  // Compute total grid height from layout (desktop only)
   const maxY = visuals.reduce((max, v) => {
     const bottom = (v.layout?.y ?? 0) + (v.layout?.h ?? 10);
     return Math.max(max, bottom);
   }, 0);
 
   return (
-    <div
-      className="relative w-full"
-      style={{ height: maxY * ROW_HEIGHT }}
-    >
-      {visuals.map((visual) => {
-        const vData = visualsData[visual.id];
-        const data = vData?.data || [];
-        const drilldownData = vData?.drilldownData || [];
-        const layout = visual.layout;
-        const scale = layout?.scale || GRID_COLS;
-        const x = layout?.x ?? 0;
-        const y = layout?.y ?? 0;
-        const w = layout?.w ?? scale;
-        const h = layout?.h ?? 10;
+    <>
+      {/* Desktop: absolute positioned grid */}
+      <div
+        className="relative w-full hidden md:block"
+        style={{ height: maxY * ROW_HEIGHT }}
+      >
+        {visuals.map((visual) => {
+          const vData = visualsData[visual.id];
+          const data = vData?.data || [];
+          const drilldownData = vData?.drilldownData || [];
+          const layout = visual.layout;
+          const scale = layout?.scale || GRID_COLS;
+          const x = layout?.x ?? 0;
+          const y = layout?.y ?? 0;
+          const w = layout?.w ?? scale;
+          const h = layout?.h ?? 10;
 
-        return (
-          <div
-            key={visual.id}
-            className="absolute p-1"
-            style={{
-              left: `${(x / scale) * 100}%`,
-              top: y * ROW_HEIGHT,
-              width: `${(w / scale) * 100}%`,
-              height: h * ROW_HEIGHT,
-            }}
-          >
-            <SharedVisualCard
-              visual={visual}
-              data={data}
-              drilldownData={drilldownData}
-            />
-          </div>
-        );
-      })}
-    </div>
+          return (
+            <div
+              key={visual.id}
+              className="absolute p-1"
+              style={{
+                left: `${(x / scale) * 100}%`,
+                top: y * ROW_HEIGHT,
+                width: `${(w / scale) * 100}%`,
+                height: h * ROW_HEIGHT,
+              }}
+            >
+              <SharedVisualCard
+                visual={visual}
+                data={data}
+                drilldownData={drilldownData}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Mobile: stacked flow layout */}
+      <div className="flex flex-col gap-4 md:hidden">
+        {sortedVisuals.map((visual) => {
+          const vData = visualsData[visual.id];
+          const data = vData?.data || [];
+          const drilldownData = vData?.drilldownData || [];
+          const chartType = visual.chart_type || "bar";
+          // Give each card a sensible min-height based on type
+          const isCompact = ["number", "scorecard", "gauge"].includes(chartType);
+          const minH = isCompact ? 120 : 280;
+
+          return (
+            <div key={visual.id} style={{ minHeight: minH }}>
+              <SharedVisualCard
+                visual={visual}
+                data={data}
+                drilldownData={drilldownData}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
