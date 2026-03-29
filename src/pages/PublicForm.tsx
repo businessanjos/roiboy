@@ -94,6 +94,10 @@ function isSpouseField(field: CustomField): boolean {
   return ["cônjuge", "conjuge"].some((kw) => lower.includes(kw));
 }
 
+function isVirtualSpouseField(field: CustomField): boolean {
+  return field.id.includes("__nome") || field.id.includes("__profissao");
+}
+
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
   const lower = field.name.toLowerCase();
@@ -113,6 +117,29 @@ function getFieldLabel(field: CustomField): string {
   return field.name;
 }
 
+function splitSpouseFields(fields: CustomField[]): CustomField[] {
+  const result: CustomField[] = [];
+  for (const field of fields) {
+    if (isSpouseField(field)) {
+      result.push({
+        ...field,
+        id: `${field.id}__nome`,
+        name: "Nome do Cônjuge",
+        is_required: field.is_required,
+      });
+      result.push({
+        ...field,
+        id: `${field.id}__profissao`,
+        name: "Profissão do Cônjuge",
+        is_required: false,
+      });
+    } else {
+      result.push(field);
+    }
+  }
+  return result;
+}
+
 function buildSteps(
   customFields: CustomField[],
   requireClientInfo: boolean,
@@ -121,8 +148,8 @@ function buildSteps(
   const steps: FieldStep[] = [];
 
   // Separate personal fields from the rest
-  const personalFields = customFields.filter(isPersonalField);
-  const otherFields = customFields.filter((f) => !isPersonalField(f));
+  const personalFields = splitSpouseFields(customFields.filter(isPersonalField));
+  const otherFields = splitSpouseFields(customFields.filter((f) => !isPersonalField(f)));
 
   // Step 1: Client info + personal fields merged
   if (requireClientInfo && !hasClientId) {
@@ -272,13 +299,31 @@ export default function PublicForm() {
     if (!validateCurrentStep()) return;
     setSubmitting(true);
     try {
+      // Merge split spouse fields back into original field
+      const mergedResponses = { ...responses };
+      const spouseOriginalIds = new Set<string>();
+      for (const key of Object.keys(mergedResponses)) {
+        if (key.includes("__nome") || key.includes("__profissao")) {
+          const originalId = key.replace(/__nome$/, "").replace(/__profissao$/, "");
+          spouseOriginalIds.add(originalId);
+        }
+      }
+      for (const originalId of spouseOriginalIds) {
+        const nome = mergedResponses[`${originalId}__nome`] || "";
+        const profissao = mergedResponses[`${originalId}__profissao`] || "";
+        const parts = [nome, profissao].filter(Boolean);
+        mergedResponses[originalId] = parts.join(" — ");
+        delete mergedResponses[`${originalId}__nome`];
+        delete mergedResponses[`${originalId}__profissao`];
+      }
+
       const { data, error } = await supabase.functions.invoke("submit-form-response", {
         body: {
           formId,
           clientId: clientData?.id || null,
           clientName: clientName.trim() || null,
           clientPhone: clientPhone.trim() || null,
-          responses,
+          responses: mergedResponses,
         },
       });
       if (error) throw error;
@@ -881,7 +926,7 @@ export default function PublicForm() {
                       </div>
 
                       {/* Personal custom fields merged into this step */}
-                      {currentStepData.fields.filter(f => !isSpouseField(f) || isSpouseFieldVisible).map((field, index) => (
+                      {currentStepData.fields.filter(f => !isVirtualSpouseField(f) || isSpouseFieldVisible).map((field, index) => (
                         <motion.div
                           key={field.id}
                           initial={{ opacity: 0, y: 8 }}
@@ -913,7 +958,7 @@ export default function PublicForm() {
                   )}
 
                   {/* Field Steps */}
-                  {currentStepData?.type === "fields" && currentStepData.fields.filter(f => !isSpouseField(f) || isSpouseFieldVisible).map((field, index) => (
+                  {currentStepData?.type === "fields" && currentStepData.fields.filter(f => !isVirtualSpouseField(f) || isSpouseFieldVisible).map((field, index) => (
                     <motion.div
                       key={field.id}
                       initial={{ opacity: 0, y: 8 }}
