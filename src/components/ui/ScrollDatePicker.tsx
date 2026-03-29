@@ -168,8 +168,8 @@ export function ScrollDatePicker({ value, onChange, minYear = 1930, maxYear }: S
   };
 
   return (
-    <div className="flex flex-col gap-3 p-4" style={{ backgroundColor: "rgb(24,24,27)" }}>
-      <div className="flex gap-1" style={{ height: VISIBLE_ITEMS * ITEM_HEIGHT }}>
+    <div className="flex flex-col gap-3 p-4 w-full min-w-[320px]" style={{ backgroundColor: "rgb(24,24,27)" }}>
+      <div className="flex gap-2" style={{ height: VISIBLE_ITEMS * ITEM_HEIGHT }}>
         <ScrollColumn
           items={days}
           selectedIndex={dayIndex}
