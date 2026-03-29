@@ -60,6 +60,7 @@ const PERSONAL_KEYWORDS = [
   "endereço", "endereco", "cep", "profissão", "profissao",
   "instagram", "estado civil", "cônjuge", "conjuge", "casamento",
   "emergência", "emergencia", "cpf", "rg", "documento",
+  "filho", "filhos",
 ];
 
 function isPersonalField(field: CustomField): boolean {
