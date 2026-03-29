@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   CalendarIcon, Loader2, CheckCircle2, AlertCircle, Send, User, Phone,
-  ChevronRight, ChevronLeft, ArrowRight,
+  ChevronRight, ChevronLeft, ArrowRight, Plus, X, Baby,
 } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { motion, AnimatePresence } from "framer-motion";
@@ -60,6 +60,7 @@ const PERSONAL_KEYWORDS = [
   "endereço", "endereco", "cep", "profissão", "profissao",
   "instagram", "estado civil", "cônjuge", "conjuge", "casamento",
   "emergência", "emergencia", "cpf", "rg", "documento",
+  "filho", "filhos",
 ];
 
 function isPersonalField(field: CustomField): boolean {
@@ -149,6 +150,11 @@ function isSpouseField(field: CustomField): boolean {
 
 function isVirtualSpouseField(field: CustomField): boolean {
   return field.id.includes("__nome") || field.id.includes("__profissao");
+}
+
+function isChildrenField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return ["filho", "filhos", "children"].some((kw) => lower.includes(kw));
 }
 
 function isPhoneField(field: CustomField): boolean {
@@ -376,6 +382,23 @@ export default function PublicForm() {
         delete mergedResponses[`${originalId}__profissao`];
       }
 
+      // Serialize children fields to readable string
+      for (const [key, val] of Object.entries(mergedResponses)) {
+        if (Array.isArray(val) && val.length > 0 && val[0]?.nome !== undefined) {
+          mergedResponses[key] = val
+            .filter((c: any) => c.nome)
+            .map((c: any, i: number) => {
+              const parts = [c.nome];
+              if (c.nascimento) {
+                const [y, m, d] = c.nascimento.split("-").map(Number);
+                parts.push(format(new Date(y, m - 1, d), "dd/MM/yyyy"));
+              }
+              return `${i + 1}. ${parts.join(" — ")}`;
+            })
+            .join("; ");
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("submit-form-response", {
         body: {
           formId,
@@ -496,6 +519,127 @@ export default function PublicForm() {
             />
           </PopoverContent>
         </Popover>
+      );
+    }
+
+    // Children dynamic field
+    if (isChildrenField(field)) {
+      const children: { nome: string; nascimento: string }[] = Array.isArray(value) ? value : [];
+
+      const addChild = () => {
+        updateResponse(field.id, [...children, { nome: "", nascimento: "" }]);
+      };
+
+      const removeChild = (index: number) => {
+        updateResponse(field.id, children.filter((_, i) => i !== index));
+      };
+
+      const updateChild = (index: number, key: "nome" | "nascimento", val: string) => {
+        const updated = children.map((c, i) => (i === index ? { ...c, [key]: val } : c));
+        updateResponse(field.id, updated);
+      };
+
+      return (
+        <div className="space-y-3">
+          <AnimatePresence mode="popLayout">
+            {children.map((child, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95, height: 0, marginBottom: 0 }}
+                transition={{ duration: 0.25 }}
+                className="rounded-xl border p-4 space-y-3"
+                style={{ backgroundColor: dark.surface, borderColor: dark.border }}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold tracking-wide uppercase" style={{ color: dark.textTertiary }}>
+                    Filho {index + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeChild(index)}
+                    className="w-7 h-7 rounded-md flex items-center justify-center transition-colors hover:bg-white/10"
+                    style={{ color: dark.textTertiary }}
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={child.nome}
+                    onChange={(e) => updateChild(index, "nome", e.target.value)}
+                    placeholder="Nome do filho(a)"
+                    className={cn(
+                      "w-full h-11 rounded-lg border bg-transparent px-4 text-[15px] outline-none transition-all duration-200",
+                      "placeholder:text-[rgba(240,240,242,0.25)] focus:ring-2"
+                    )}
+                    style={{
+                      backgroundColor: "rgba(255,255,255,0.03)",
+                      color: dark.text,
+                      borderColor: dark.border,
+                      // @ts-ignore
+                      "--tw-ring-color": dark.accent,
+                    }}
+                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className={cn(
+                          "w-full h-11 rounded-lg border flex items-center gap-3 px-4 text-[15px] outline-none transition-all duration-200",
+                          "hover:border-[rgba(255,255,255,0.12)]"
+                        )}
+                        style={{
+                          backgroundColor: "rgba(255,255,255,0.03)",
+                          color: dark.text,
+                          borderColor: child.nascimento ? dark.borderActive : dark.border,
+                        }}
+                      >
+                        <CalendarIcon className="h-4 w-4 shrink-0" style={{ color: child.nascimento ? dark.accent : dark.textTertiary }} />
+                        <span style={{ color: child.nascimento ? dark.text : dark.textTertiary }}>
+                          {child.nascimento
+                            ? (() => {
+                                const [y, m, d] = child.nascimento.split("-").map(Number);
+                                return format(new Date(y, m - 1, d), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+                              })()
+                            : "Data de nascimento"}
+                        </span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="w-auto p-0 border-0 shadow-2xl shadow-black/40 pointer-events-auto"
+                      align="start"
+                      style={{ backgroundColor: "rgb(24,24,27)" }}
+                    >
+                      <ScrollDatePicker
+                        value={child.nascimento ? (() => { const [y, m, d] = child.nascimento.split("-").map(Number); return new Date(y, m - 1, d); })() : undefined}
+                        onChange={(date) => updateChild(index, "nascimento", format(date, "yyyy-MM-dd"))}
+                        maxYear={new Date().getFullYear()}
+                        minYear={1990}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          <button
+            type="button"
+            onClick={addChild}
+            className="w-full h-12 rounded-lg border-2 border-dashed flex items-center justify-center gap-2 text-[14px] font-medium transition-all duration-200 hover:border-opacity-60"
+            style={{
+              borderColor: `${dark.accent}40`,
+              color: dark.accent,
+              backgroundColor: dark.accentSubtle,
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            Adicionar Filho
+          </button>
+        </div>
       );
     }
 
