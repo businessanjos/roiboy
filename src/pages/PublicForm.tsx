@@ -663,6 +663,188 @@ export default function PublicForm() {
       );
     }
 
+    // Address with CEP auto-fill
+    if (isAddressField(field)) {
+      const addr = (typeof value === "object" && value !== null) ? value : { cep: "", rua: "", bairro: "", cidade: "", estado: "", numero: "", complemento: "" };
+      const [cepLoading, setCepLoading] = useState(false);
+      const [cepError, setCepError] = useState("");
+
+      const updateAddr = (key: string, val: string) => {
+        const updated = { ...addr, [key]: val };
+        updateResponse(field.id, updated);
+      };
+
+      const formatCep = (raw: string) => {
+        const digits = raw.replace(/\D/g, "").slice(0, 8);
+        if (digits.length <= 5) return digits;
+        return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+      };
+
+      const fetchCep = async (cep: string) => {
+        const digits = cep.replace(/\D/g, "");
+        if (digits.length !== 8) return;
+        setCepLoading(true);
+        setCepError("");
+        try {
+          const res = await fetch(`https://viacep.com.br/ws/${digits}/json/`);
+          const data = await res.json();
+          if (data.erro) {
+            setCepError("CEP não encontrado");
+            return;
+          }
+          const updated = {
+            ...addr,
+            cep: formatCep(digits),
+            rua: data.logradouro || "",
+            bairro: data.bairro || "",
+            cidade: data.localidade || "",
+            estado: data.uf || "",
+          };
+          updateResponse(field.id, updated);
+        } catch {
+          setCepError("Erro ao buscar CEP");
+        } finally {
+          setCepLoading(false);
+        }
+      };
+
+      const addrInputClass = cn(
+        "w-full h-11 rounded-lg border bg-transparent px-4 text-[15px] outline-none transition-all duration-200",
+        "placeholder:text-[rgba(240,240,242,0.25)] focus:ring-2"
+      );
+      const addrInputStyle: React.CSSProperties = {
+        backgroundColor: "rgba(255,255,255,0.03)",
+        color: dark.text,
+        borderColor: dark.border,
+        // @ts-ignore
+        "--tw-ring-color": dark.accent,
+      };
+
+      return (
+        <div className="space-y-3">
+          {/* CEP */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium" style={{ color: dark.textTertiary }}>CEP</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={addr.cep || ""}
+                onChange={(e) => {
+                  const formatted = formatCep(e.target.value);
+                  updateAddr("cep", formatted);
+                  const digits = formatted.replace(/\D/g, "");
+                  if (digits.length === 8) fetchCep(digits);
+                }}
+                placeholder="00000-000"
+                className={cn(addrInputClass, "pr-10")}
+                style={addrInputStyle}
+                inputMode="numeric"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                {cepLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" style={{ color: dark.accent }} />
+                ) : (
+                  <MapPin className="h-4 w-4" style={{ color: dark.textTertiary }} />
+                )}
+              </div>
+            </div>
+            <AnimatePresence>
+              {cepError && (
+                <motion.p
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="text-xs"
+                  style={{ color: dark.error }}
+                >
+                  {cepError}
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Rua */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium" style={{ color: dark.textTertiary }}>Rua</label>
+            <input
+              type="text"
+              value={addr.rua || ""}
+              onChange={(e) => updateAddr("rua", e.target.value)}
+              placeholder="Logradouro"
+              className={addrInputClass}
+              style={addrInputStyle}
+            />
+          </div>
+
+          {/* Número + Complemento */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium" style={{ color: dark.textTertiary }}>Número</label>
+              <input
+                type="text"
+                value={addr.numero || ""}
+                onChange={(e) => updateAddr("numero", e.target.value)}
+                placeholder="Nº"
+                className={addrInputClass}
+                style={addrInputStyle}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium" style={{ color: dark.textTertiary }}>Complemento</label>
+              <input
+                type="text"
+                value={addr.complemento || ""}
+                onChange={(e) => updateAddr("complemento", e.target.value)}
+                placeholder="Apto, bloco..."
+                className={addrInputClass}
+                style={addrInputStyle}
+              />
+            </div>
+          </div>
+
+          {/* Bairro */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium" style={{ color: dark.textTertiary }}>Bairro</label>
+            <input
+              type="text"
+              value={addr.bairro || ""}
+              onChange={(e) => updateAddr("bairro", e.target.value)}
+              placeholder="Bairro"
+              className={addrInputClass}
+              style={addrInputStyle}
+            />
+          </div>
+
+          {/* Cidade + Estado */}
+          <div className="grid grid-cols-[1fr,80px] gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium" style={{ color: dark.textTertiary }}>Cidade</label>
+              <input
+                type="text"
+                value={addr.cidade || ""}
+                onChange={(e) => updateAddr("cidade", e.target.value)}
+                placeholder="Cidade"
+                className={addrInputClass}
+                style={addrInputStyle}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium" style={{ color: dark.textTertiary }}>UF</label>
+              <input
+                type="text"
+                value={addr.estado || ""}
+                onChange={(e) => updateAddr("estado", e.target.value.toUpperCase().slice(0, 2))}
+                placeholder="UF"
+                className={addrInputClass}
+                style={addrInputStyle}
+                maxLength={2}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Phone detection
     if (isPhoneField(field)) {
       return (
