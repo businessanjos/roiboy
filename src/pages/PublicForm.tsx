@@ -464,8 +464,8 @@ export default function PublicForm() {
       "--tw-ring-color": dark.accent,
     };
 
-    // Smart date detection
-    if (isDateField(field)) {
+    // Children dynamic field (must be checked BEFORE date detection)
+    if (isChildrenField(field)) {
       const parsedDate = (() => {
         if (!value) return undefined;
         if (value instanceof Date) return value;
