@@ -295,13 +295,31 @@ export default function PublicForm() {
     if (!validateCurrentStep()) return;
     setSubmitting(true);
     try {
+      // Merge split spouse fields back into original field
+      const mergedResponses = { ...responses };
+      const spouseOriginalIds = new Set<string>();
+      for (const key of Object.keys(mergedResponses)) {
+        if (key.includes("__nome") || key.includes("__profissao")) {
+          const originalId = key.replace(/__nome$/, "").replace(/__profissao$/, "");
+          spouseOriginalIds.add(originalId);
+        }
+      }
+      for (const originalId of spouseOriginalIds) {
+        const nome = mergedResponses[`${originalId}__nome`] || "";
+        const profissao = mergedResponses[`${originalId}__profissao`] || "";
+        const parts = [nome, profissao].filter(Boolean);
+        mergedResponses[originalId] = parts.join(" — ");
+        delete mergedResponses[`${originalId}__nome`];
+        delete mergedResponses[`${originalId}__profissao`];
+      }
+
       const { data, error } = await supabase.functions.invoke("submit-form-response", {
         body: {
           formId,
           clientId: clientData?.id || null,
           clientName: clientName.trim() || null,
           clientPhone: clientPhone.trim() || null,
-          responses,
+          responses: mergedResponses,
         },
       });
       if (error) throw error;
