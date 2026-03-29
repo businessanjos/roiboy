@@ -668,8 +668,6 @@ export default function PublicForm() {
     // Address with CEP auto-fill
     if (isAddressField(field)) {
       const addr = (typeof value === "object" && value !== null) ? value : { cep: "", rua: "", bairro: "", cidade: "", estado: "", numero: "", complemento: "" };
-      const [cepLoading, setCepLoading] = useState(false);
-      const [cepError, setCepError] = useState("");
 
       const updateAddr = (key: string, val: string) => {
         const updated = { ...addr, [key]: val };
