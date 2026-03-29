@@ -73,6 +73,20 @@ function isDateField(field: CustomField): boolean {
   return DATE_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+function isCivilStatusField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return ["estado civil"].some((kw) => lower.includes(kw));
+}
+
+const CIVIL_STATUS_OPTIONS = [
+  "Solteiro(a)",
+  "Casado(a)",
+  "União Estável",
+  "Divorciado(a)",
+  "Separado(a)",
+  "Viúvo(a)",
+];
+
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
   const lower = field.name.toLowerCase();
@@ -363,6 +377,51 @@ export default function PublicForm() {
             />
           </PopoverContent>
         </Popover>
+      );
+    }
+
+    // Civil status detection
+    if (isCivilStatusField(field)) {
+      return (
+        <div className="space-y-2">
+          {CIVIL_STATUS_OPTIONS.map((opt) => {
+            const selected = value === opt;
+            return (
+              <button
+                key={opt}
+                type="button"
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 h-12 rounded-lg border text-left transition-all duration-200",
+                  "hover:border-[rgba(255,255,255,0.12)]"
+                )}
+                style={{
+                  backgroundColor: selected ? dark.accentGlow : dark.surface,
+                  borderColor: selected ? dark.accent : dark.border,
+                }}
+                onClick={() => updateResponse(field.id, opt)}
+              >
+                <div
+                  className="w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors"
+                  style={{
+                    borderColor: selected ? dark.accent : "rgba(255,255,255,0.15)",
+                  }}
+                >
+                  {selected && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="w-2 h-2 rounded-full"
+                      style={{ backgroundColor: dark.accent }}
+                    />
+                  )}
+                </div>
+                <span className="text-[15px]" style={{ color: selected ? dark.text : dark.textSecondary }}>
+                  {opt}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       );
     }
 
