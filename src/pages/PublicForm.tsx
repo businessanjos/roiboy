@@ -94,6 +94,10 @@ function isSpouseField(field: CustomField): boolean {
   return ["cônjuge", "conjuge"].some((kw) => lower.includes(kw));
 }
 
+function isVirtualSpouseField(field: CustomField): boolean {
+  return field.id.includes("__nome") || field.id.includes("__profissao");
+}
+
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
   const lower = field.name.toLowerCase();
