@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   CalendarIcon, Loader2, CheckCircle2, AlertCircle, Send, User, Phone,
-  ChevronRight, ChevronLeft, ArrowRight, Plus, X, Baby,
+  ChevronRight, ChevronLeft, ArrowRight, Plus, X, Baby, MapPin, Search,
 } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { motion, AnimatePresence } from "framer-motion";
