@@ -172,6 +172,8 @@ const FIELD_LABEL_OVERRIDES: Record<string, string> = {
   "emergência": "Contato de emergência",
   "emergencia": "Contato de emergência",
   "filho": "Tem filhos?",
+  "endereço": "Endereço",
+  "endereco": "Endereço",
 };
 
 function getFieldLabel(field: CustomField): string {
