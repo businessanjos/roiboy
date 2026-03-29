@@ -87,6 +87,13 @@ const CIVIL_STATUS_OPTIONS = [
   "Viúva (o)",
 ];
 
+const CIVIL_STATUS_WITH_SPOUSE = ["Casada (o)", "União Estável"];
+
+function isSpouseField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return ["cônjuge", "conjuge"].some((kw) => lower.includes(kw));
+}
+
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
   const lower = field.name.toLowerCase();
@@ -208,6 +215,14 @@ export default function PublicForm() {
     () => buildSteps(customFields, formData?.require_client_info || false, !!clientId),
     [customFields, formData?.require_client_info, clientId]
   );
+
+
+  const isSpouseFieldVisible = useMemo(() => {
+    const civilStatusField = customFields.find(isCivilStatusField);
+    if (!civilStatusField) return true;
+    const civilValue = responses[civilStatusField.id];
+    return CIVIL_STATUS_WITH_SPOUSE.includes(civilValue);
+  }, [customFields, responses]);
 
   const totalSteps = steps.length;
   const isLastStep = currentStep === totalSteps - 1;
@@ -866,7 +881,7 @@ export default function PublicForm() {
                       </div>
 
                       {/* Personal custom fields merged into this step */}
-                      {currentStepData.fields.map((field, index) => (
+                      {currentStepData.fields.filter(f => !isSpouseField(f) || isSpouseFieldVisible).map((field, index) => (
                         <motion.div
                           key={field.id}
                           initial={{ opacity: 0, y: 8 }}
@@ -898,7 +913,7 @@ export default function PublicForm() {
                   )}
 
                   {/* Field Steps */}
-                  {currentStepData?.type === "fields" && currentStepData.fields.map((field, index) => (
+                  {currentStepData?.type === "fields" && currentStepData.fields.filter(f => !isSpouseField(f) || isSpouseFieldVisible).map((field, index) => (
                     <motion.div
                       key={field.id}
                       initial={{ opacity: 0, y: 8 }}
