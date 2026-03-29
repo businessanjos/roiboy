@@ -87,6 +87,13 @@ const CIVIL_STATUS_OPTIONS = [
   "Viúva (o)",
 ];
 
+const CIVIL_STATUS_WITH_SPOUSE = ["Casada (o)", "União Estável"];
+
+function isSpouseField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return ["cônjuge", "conjuge"].some((kw) => lower.includes(kw));
+}
+
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
   const lower = field.name.toLowerCase();
