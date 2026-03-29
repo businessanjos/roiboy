@@ -73,6 +73,20 @@ function isDateField(field: CustomField): boolean {
   return DATE_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
+function isCivilStatusField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return ["estado civil"].some((kw) => lower.includes(kw));
+}
+
+const CIVIL_STATUS_OPTIONS = [
+  "Solteiro(a)",
+  "Casado(a)",
+  "União Estável",
+  "Divorciado(a)",
+  "Separado(a)",
+  "Viúvo(a)",
+];
+
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
   const lower = field.name.toLowerCase();
