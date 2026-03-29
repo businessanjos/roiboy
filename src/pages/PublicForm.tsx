@@ -913,7 +913,7 @@ export default function PublicForm() {
                   )}
 
                   {/* Field Steps */}
-                  {currentStepData?.type === "fields" && currentStepData.fields.map((field, index) => (
+                  {currentStepData?.type === "fields" && currentStepData.fields.filter(f => !isSpouseField(f) || isSpouseFieldVisible).map((field, index) => (
                     <motion.div
                       key={field.id}
                       initial={{ opacity: 0, y: 8 }}
