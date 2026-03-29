@@ -409,6 +409,21 @@ export default function PublicForm() {
         }
       }
 
+      // Serialize address fields to readable string
+      for (const [key, val] of Object.entries(mergedResponses)) {
+        if (typeof val === "object" && val !== null && "cep" in val && "rua" in val) {
+          const a = val as any;
+          const parts = [
+            a.rua && a.numero ? `${a.rua}, ${a.numero}` : a.rua,
+            a.complemento,
+            a.bairro,
+            a.cidade && a.estado ? `${a.cidade} - ${a.estado}` : a.cidade,
+            a.cep,
+          ].filter(Boolean);
+          mergedResponses[key] = parts.join(", ");
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("submit-form-response", {
         body: {
           formId,
