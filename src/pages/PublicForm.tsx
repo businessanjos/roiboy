@@ -91,7 +91,7 @@ const CIVIL_STATUS_WITH_SPOUSE = ["Casada (o)", "União Estável"];
 
 function isSpouseField(field: CustomField): boolean {
   const lower = field.name.toLowerCase();
-  return ["cônjuge", "conjuge"].some((kw) => lower.includes(kw));
+  return ["cônjuge", "conjuge", "aniversário de casamento", "aniversario de casamento"].some((kw) => lower.includes(kw));
 }
 
 function isVirtualSpouseField(field: CustomField): boolean {
