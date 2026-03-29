@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Calendar } from "@/components/ui/calendar";
+import { ScrollDatePicker } from "@/components/ui/ScrollDatePicker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
