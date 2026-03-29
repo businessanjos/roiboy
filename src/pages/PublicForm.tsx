@@ -464,65 +464,7 @@ export default function PublicForm() {
       "--tw-ring-color": dark.accent,
     };
 
-    // Smart date detection
-    if (isDateField(field)) {
-      const parsedDate = (() => {
-        if (!value) return undefined;
-        if (value instanceof Date) return value;
-
-        if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-          const [year, month, day] = value.split("-").map(Number);
-          return new Date(year, month - 1, day);
-        }
-
-        const date = new Date(value);
-        return Number.isNaN(date.getTime()) ? undefined : date;
-      })();
-
-      return (
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                "w-full h-12 rounded-lg border flex items-center gap-3 px-4 text-[15px] outline-none transition-all duration-200 group",
-                "hover:border-[rgba(255,255,255,0.12)]",
-                hasError && "ring-2 ring-red-500/50 border-red-500/30"
-              )}
-              style={{
-                backgroundColor: dark.surface,
-                color: dark.text,
-                borderColor: value ? dark.borderActive : dark.border,
-              }}
-            >
-              <div
-                className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-colors"
-                style={{ backgroundColor: value ? dark.accentGlow : "rgba(255,255,255,0.04)" }}
-              >
-                <CalendarIcon className="h-4 w-4" style={{ color: value ? dark.accent : dark.textTertiary }} />
-              </div>
-              <span style={{ color: value ? dark.text : dark.textTertiary }}>
-                {parsedDate ? format(parsedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "Selecionar data"}
-              </span>
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-auto p-0 border-0 shadow-2xl shadow-black/40 pointer-events-auto"
-            align="start"
-            style={{ backgroundColor: "rgb(24,24,27)" }}
-          >
-            <ScrollDatePicker
-              value={parsedDate}
-              onChange={(date) => updateResponse(field.id, format(date, "yyyy-MM-dd"))}
-              maxYear={new Date().getFullYear()}
-              minYear={1930}
-            />
-          </PopoverContent>
-        </Popover>
-      );
-    }
-
-    // Children dynamic field
+    // Children dynamic field (must be checked BEFORE date detection)
     if (isChildrenField(field)) {
       const children: { nome: string; nascimento: string }[] = Array.isArray(value) ? value : [];
 
@@ -640,6 +582,64 @@ export default function PublicForm() {
             Adicionar Filho
           </button>
         </div>
+      );
+    }
+
+    // Smart date detection
+    if (isDateField(field)) {
+      const parsedDate = (() => {
+        if (!value) return undefined;
+        if (value instanceof Date) return value;
+
+        if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+          const [year, month, day] = value.split("-").map(Number);
+          return new Date(year, month - 1, day);
+        }
+
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? undefined : date;
+      })();
+
+      return (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "w-full h-12 rounded-lg border flex items-center gap-3 px-4 text-[15px] outline-none transition-all duration-200 group",
+                "hover:border-[rgba(255,255,255,0.12)]",
+                hasError && "ring-2 ring-red-500/50 border-red-500/30"
+              )}
+              style={{
+                backgroundColor: dark.surface,
+                color: dark.text,
+                borderColor: value ? dark.borderActive : dark.border,
+              }}
+            >
+              <div
+                className="w-8 h-8 rounded-md flex items-center justify-center shrink-0 transition-colors"
+                style={{ backgroundColor: value ? dark.accentGlow : "rgba(255,255,255,0.04)" }}
+              >
+                <CalendarIcon className="h-4 w-4" style={{ color: value ? dark.accent : dark.textTertiary }} />
+              </div>
+              <span style={{ color: value ? dark.text : dark.textTertiary }}>
+                {parsedDate ? format(parsedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "Selecionar data"}
+              </span>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-auto p-0 border-0 shadow-2xl shadow-black/40 pointer-events-auto"
+            align="start"
+            style={{ backgroundColor: "rgb(24,24,27)" }}
+          >
+            <ScrollDatePicker
+              value={parsedDate}
+              onChange={(date) => updateResponse(field.id, format(date, "yyyy-MM-dd"))}
+              maxYear={new Date().getFullYear()}
+              minYear={1930}
+            />
+          </PopoverContent>
+        </Popover>
       );
     }
 
