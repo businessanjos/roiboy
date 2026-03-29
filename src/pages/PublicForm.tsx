@@ -310,6 +310,19 @@ export default function PublicForm() {
 
     // Smart date detection
     if (isDateField(field)) {
+      const parsedDate = (() => {
+        if (!value) return undefined;
+        if (value instanceof Date) return value;
+
+        if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+          const [year, month, day] = value.split("-").map(Number);
+          return new Date(year, month - 1, day);
+        }
+
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? undefined : date;
+      })();
+
       return (
         <Popover>
           <PopoverTrigger asChild>
@@ -333,7 +346,7 @@ export default function PublicForm() {
                 <CalendarIcon className="h-4 w-4" style={{ color: value ? dark.accent : dark.textTertiary }} />
               </div>
               <span style={{ color: value ? dark.text : dark.textTertiary }}>
-                {value ? format(new Date(value), "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "Selecionar data"}
+                {parsedDate ? format(parsedDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR }) : "Selecionar data"}
               </span>
             </button>
           </PopoverTrigger>
@@ -343,7 +356,7 @@ export default function PublicForm() {
             style={{ backgroundColor: "rgb(24,24,27)" }}
           >
             <ScrollDatePicker
-              value={value ? new Date(value) : undefined}
+              value={parsedDate}
               onChange={(date) => updateResponse(field.id, format(date, "yyyy-MM-dd"))}
               maxYear={new Date().getFullYear()}
               minYear={1930}
