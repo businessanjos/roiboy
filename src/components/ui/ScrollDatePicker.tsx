@@ -34,11 +34,15 @@ function ScrollColumn({
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollTimeout = useRef<ReturnType<typeof setTimeout>>();
   const isUserScrolling = useRef(false);
+  const isProgrammaticScroll = useRef(false);
 
   const scrollToIndex = useCallback((index: number, smooth = true) => {
     if (!containerRef.current) return;
+    isProgrammaticScroll.current = true;
     const top = index * ITEM_HEIGHT;
     containerRef.current.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
+    // Clear flag after scroll settles
+    setTimeout(() => { isProgrammaticScroll.current = false; }, smooth ? 300 : 50);
   }, []);
 
   useEffect(() => {
@@ -48,6 +52,7 @@ function ScrollColumn({
   }, [selectedIndex, scrollToIndex]);
 
   const handleScroll = () => {
+    if (isProgrammaticScroll.current) return;
     isUserScrolling.current = true;
     if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
     scrollTimeout.current = setTimeout(() => {
@@ -60,7 +65,7 @@ function ScrollColumn({
         onSelect(clampedIndex);
       }
       isUserScrolling.current = false;
-    }, 80);
+    }, 120);
   };
 
   const paddingTop = CENTER_INDEX * ITEM_HEIGHT;
