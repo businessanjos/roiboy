@@ -170,10 +170,16 @@ function getFieldLabel(field: CustomField): string {
   return field.name;
 }
 
+function isSpouseNameProfessionField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return (["cônjuge", "conjuge"].some((kw) => lower.includes(kw)) &&
+    !lower.includes("aniversário") && !lower.includes("aniversario") && !lower.includes("casamento"));
+}
+
 function splitSpouseFields(fields: CustomField[]): CustomField[] {
   const result: CustomField[] = [];
   for (const field of fields) {
-    if (isSpouseField(field)) {
+    if (isSpouseNameProfessionField(field)) {
       result.push({
         ...field,
         id: `${field.id}__nome`,
