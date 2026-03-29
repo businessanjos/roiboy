@@ -860,6 +860,36 @@ export default function PublicForm() {
       );
     }
 
+    // Instagram detection
+    if (field.name.toLowerCase().includes("instagram")) {
+      const INSTAGRAM_PREFIX = "https://instagram.com/";
+      const rawVal = (value as string) || "";
+      const username = rawVal.startsWith(INSTAGRAM_PREFIX)
+        ? rawVal.slice(INSTAGRAM_PREFIX.length)
+        : rawVal.replace(/^@/, "");
+      return (
+        <div className="relative flex items-center">
+          <span
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-sm select-none pointer-events-none whitespace-nowrap"
+            style={{ color: dark.textTertiary }}
+          >
+            {INSTAGRAM_PREFIX}
+          </span>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => {
+              const cleaned = e.target.value.replace(/^@/, "").replace(/\s/g, "");
+              updateResponse(field.id, cleaned ? INSTAGRAM_PREFIX + cleaned : "");
+            }}
+            placeholder="seuusuario"
+            className={baseInputClass}
+            style={{ ...inputStyles, paddingLeft: "210px" }}
+          />
+        </div>
+      );
+    }
+
     // Phone detection
     if (isPhoneField(field)) {
       return (
