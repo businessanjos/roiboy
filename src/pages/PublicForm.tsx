@@ -151,6 +151,11 @@ function isVirtualSpouseField(field: CustomField): boolean {
   return field.id.includes("__nome") || field.id.includes("__profissao");
 }
 
+function isChildrenField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return ["filho", "filhos", "children"].some((kw) => lower.includes(kw));
+}
+
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
   const lower = field.name.toLowerCase();
