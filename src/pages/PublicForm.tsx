@@ -382,6 +382,23 @@ export default function PublicForm() {
         delete mergedResponses[`${originalId}__profissao`];
       }
 
+      // Serialize children fields to readable string
+      for (const [key, val] of Object.entries(mergedResponses)) {
+        if (Array.isArray(val) && val.length > 0 && val[0]?.nome !== undefined) {
+          mergedResponses[key] = val
+            .filter((c: any) => c.nome)
+            .map((c: any, i: number) => {
+              const parts = [c.nome];
+              if (c.nascimento) {
+                const [y, m, d] = c.nascimento.split("-").map(Number);
+                parts.push(format(new Date(y, m - 1, d), "dd/MM/yyyy"));
+              }
+              return `${i + 1}. ${parts.join(" — ")}`;
+            })
+            .join("; ");
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("submit-form-response", {
         body: {
           formId,
