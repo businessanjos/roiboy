@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Calendar } from "@/components/ui/calendar";
+import { ScrollDatePicker } from "@/components/ui/ScrollDatePicker";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -338,38 +338,15 @@ export default function PublicForm() {
             </button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-auto p-0 border-0 shadow-2xl shadow-black/40"
+            className="w-auto p-0 border-0 shadow-2xl shadow-black/40 pointer-events-auto"
             align="start"
-            style={{ backgroundColor: dark.surface }}
+            style={{ backgroundColor: "rgb(24,24,27)" }}
           >
-            <Calendar
-              mode="single"
-              selected={value ? new Date(value) : undefined}
-              onSelect={(date) => updateResponse(field.id, date ? format(date, "yyyy-MM-dd") : null)}
-              locale={ptBR}
-              className="pointer-events-auto p-3"
-              classNames={{
-                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                month: "space-y-4",
-                caption: "flex justify-center pt-1 relative items-center",
-                caption_label: "text-sm font-medium text-[#f0f0f2]",
-                nav: "space-x-1 flex items-center",
-                nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 text-[#f0f0f2] border border-[rgba(255,255,255,0.08)] rounded-md inline-flex items-center justify-center",
-                nav_button_previous: "absolute left-1",
-                nav_button_next: "absolute right-1",
-                table: "w-full border-collapse space-y-1",
-                head_row: "flex",
-                head_cell: "text-[rgba(240,240,242,0.4)] rounded-md w-9 font-normal text-[0.8rem]",
-                row: "flex w-full mt-2",
-                cell: "h-9 w-9 text-center text-sm p-0 relative text-[#f0f0f2]",
-                day: "h-9 w-9 p-0 font-normal rounded-md hover:bg-[rgba(255,255,255,0.06)] transition-colors inline-flex items-center justify-center",
-                day_range_end: "day-range-end",
-                day_selected: `bg-[${dark.accent}] text-white hover:bg-[${dark.accent}] font-medium`,
-                day_today: "bg-[rgba(255,255,255,0.06)] text-[#f0f0f2] font-medium",
-                day_outside: "text-[rgba(240,240,242,0.2)] opacity-50",
-                day_disabled: "text-[rgba(240,240,242,0.15)]",
-                day_hidden: "invisible",
-              }}
+            <ScrollDatePicker
+              value={value ? new Date(value) : undefined}
+              onChange={(date) => updateResponse(field.id, format(date, "yyyy-MM-dd"))}
+              maxYear={new Date().getFullYear()}
+              minYear={1930}
             />
           </PopoverContent>
         </Popover>
