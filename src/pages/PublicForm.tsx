@@ -113,6 +113,29 @@ function getFieldLabel(field: CustomField): string {
   return field.name;
 }
 
+function splitSpouseFields(fields: CustomField[]): CustomField[] {
+  const result: CustomField[] = [];
+  for (const field of fields) {
+    if (isSpouseField(field)) {
+      result.push({
+        ...field,
+        id: `${field.id}__nome`,
+        name: "Nome do Cônjuge",
+        is_required: field.is_required,
+      });
+      result.push({
+        ...field,
+        id: `${field.id}__profissao`,
+        name: "Profissão do Cônjuge",
+        is_required: false,
+      });
+    } else {
+      result.push(field);
+    }
+  }
+  return result;
+}
+
 function buildSteps(
   customFields: CustomField[],
   requireClientInfo: boolean,
@@ -121,8 +144,8 @@ function buildSteps(
   const steps: FieldStep[] = [];
 
   // Separate personal fields from the rest
-  const personalFields = customFields.filter(isPersonalField);
-  const otherFields = customFields.filter((f) => !isPersonalField(f));
+  const personalFields = splitSpouseFields(customFields.filter(isPersonalField));
+  const otherFields = splitSpouseFields(customFields.filter((f) => !isPersonalField(f)));
 
   // Step 1: Client info + personal fields merged
   if (requireClientInfo && !hasClientId) {
