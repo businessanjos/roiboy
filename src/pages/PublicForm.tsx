@@ -1103,7 +1103,7 @@ export default function PublicForm() {
                         >
                           <label className="text-sm font-medium block" style={{ color: fieldErrors[field.id] ? dark.error : dark.textSecondary }}>
                             {getFieldLabel(field)}
-                            {field.is_required && <span className="ml-1" style={{ color: dark.accent }}>*</span>}
+                            {field.is_required && !isChildrenField(field) && <span className="ml-1" style={{ color: dark.accent }}>*</span>}
                           </label>
                           {renderField(field)}
                           <AnimatePresence>
@@ -1135,7 +1135,7 @@ export default function PublicForm() {
                     >
                       <label className="text-sm font-medium block" style={{ color: fieldErrors[field.id] ? dark.error : dark.textSecondary }}>
                         {getFieldLabel(field)}
-                        {field.is_required && <span className="ml-1" style={{ color: dark.accent }}>*</span>}
+                        {field.is_required && !isChildrenField(field) && <span className="ml-1" style={{ color: dark.accent }}>*</span>}
                       </label>
                       {renderField(field)}
                       <AnimatePresence>
