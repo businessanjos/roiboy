@@ -157,6 +157,11 @@ function isChildrenField(field: CustomField): boolean {
   return ["filho", "filhos", "children"].some((kw) => lower.includes(kw));
 }
 
+function isAddressField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return ["endereço", "endereco", "cep"].some((kw) => lower.includes(kw));
+}
+
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
   const lower = field.name.toLowerCase();
