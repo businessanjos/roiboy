@@ -443,49 +443,12 @@ export default function PublicForm() {
     // Civil status detection
     if (isCivilStatusField(field)) {
       return (
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                "w-full h-12 rounded-lg border flex items-center justify-between px-4 text-[15px] outline-none transition-all duration-200",
-                "hover:border-[rgba(255,255,255,0.12)]",
-                hasError && "ring-2 ring-red-500/50 border-red-500/30"
-              )}
-              style={{
-                backgroundColor: dark.surface,
-                color: dark.text,
-                borderColor: value ? dark.borderActive : dark.border,
-              }}
-            >
-              <span style={{ color: value ? dark.text : dark.textTertiary }}>
-                {value || "Selecionar estado civil"}
-              </span>
-              <ChevronRight className="h-4 w-4 rotate-90" style={{ color: dark.textTertiary }} />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-[var(--radix-popover-trigger-width)] p-1 border shadow-2xl shadow-black/40 pointer-events-auto"
-            align="start"
-            style={{ backgroundColor: dark.surface, borderColor: dark.border }}
-          >
-            {CIVIL_STATUS_OPTIONS.map((opt) => (
-              <button
-                key={opt}
-                type="button"
-                className="w-full text-left px-3 py-2.5 rounded-md text-[15px] transition-colors hover:bg-white/5"
-                style={{ color: value === opt ? dark.accent : dark.text }}
-                onClick={() => {
-                  updateResponse(field.id, opt);
-                  // Close popover by blurring
-                  (document.activeElement as HTMLElement)?.blur();
-                }}
-              >
-                {opt}
-              </button>
-            ))}
-          </PopoverContent>
-        </Popover>
+        <CivilStatusDropdown
+          value={value}
+          hasError={hasError}
+          dark={dark}
+          onSelect={(opt) => updateResponse(field.id, opt)}
+        />
       );
     }
 
