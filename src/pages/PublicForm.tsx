@@ -285,6 +285,8 @@ export default function PublicForm() {
   const [clientPhone, setClientPhone] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
   const [currentStep, setCurrentStep] = useState(0);
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState("");
 
   useEffect(() => { fetchFormData(); }, [formId, clientId]);
 
