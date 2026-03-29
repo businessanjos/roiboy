@@ -79,12 +79,12 @@ function isCivilStatusField(field: CustomField): boolean {
 }
 
 const CIVIL_STATUS_OPTIONS = [
-  "Solteira(o)",
-  "Casada(o)",
+  "Solteira (o)",
+  "Casada (o)",
   "União Estável",
-  "Divorciada(o)",
-  "Separada(o)",
-  "Viúva(o)",
+  "Divorciada (o)",
+  "Separada (o)",
+  "Viúva (o)",
 ];
 
 function isPhoneField(field: CustomField): boolean {
