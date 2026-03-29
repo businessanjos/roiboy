@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, forwardRef } from "react";
 
 interface ScrollDatePickerProps {
   value?: Date;
@@ -20,29 +20,45 @@ function getDaysInMonth(month: number, year: number) {
   return new Date(year, month + 1, 0).getDate();
 }
 
-function ScrollColumn({
-  items,
-  selectedIndex,
-  onSelect,
-  renderItem,
-}: {
+interface ScrollColumnProps {
   items: number[];
   selectedIndex: number;
   onSelect: (index: number) => void;
   renderItem: (value: number, isSelected: boolean) => string;
-}) {
+}
+
+const ScrollColumn = forwardRef<HTMLDivElement, ScrollColumnProps>(function ScrollColumn({
+  items,
+  selectedIndex,
+  onSelect,
+  renderItem,
+}, forwardedRef) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const programmaticScrollTimeout = useRef<ReturnType<typeof setTimeout>>();
   const isUserScrolling = useRef(false);
   const isProgrammaticScroll = useRef(false);
+
+  const setContainerRef = useCallback((node: HTMLDivElement | null) => {
+    containerRef.current = node;
+    if (typeof forwardedRef === "function") {
+      forwardedRef(node);
+    } else if (forwardedRef) {
+      forwardedRef.current = node;
+    }
+  }, [forwardedRef]);
 
   const scrollToIndex = useCallback((index: number, smooth = true) => {
     if (!containerRef.current) return;
     isProgrammaticScroll.current = true;
+    if (programmaticScrollTimeout.current) clearTimeout(programmaticScrollTimeout.current);
+
     const top = index * ITEM_HEIGHT;
     containerRef.current.scrollTo({ top, behavior: smooth ? "smooth" : "auto" });
-    // Clear flag after scroll settles
-    setTimeout(() => { isProgrammaticScroll.current = false; }, smooth ? 300 : 50);
+
+    programmaticScrollTimeout.current = setTimeout(() => {
+      isProgrammaticScroll.current = false;
+    }, smooth ? 300 : 50);
   }, []);
 
   useEffect(() => {
@@ -51,19 +67,29 @@ function ScrollColumn({
     }
   }, [selectedIndex, scrollToIndex]);
 
+  useEffect(() => {
+    return () => {
+      if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+      if (programmaticScrollTimeout.current) clearTimeout(programmaticScrollTimeout.current);
+    };
+  }, []);
+
   const handleScroll = () => {
     if (isProgrammaticScroll.current) return;
     isUserScrolling.current = true;
     if (scrollTimeout.current) clearTimeout(scrollTimeout.current);
+
     scrollTimeout.current = setTimeout(() => {
       if (!containerRef.current) return;
       const scrollTop = containerRef.current.scrollTop;
       const index = Math.round(scrollTop / ITEM_HEIGHT);
       const clampedIndex = Math.max(0, Math.min(items.length - 1, index));
+
       scrollToIndex(clampedIndex, true);
       if (clampedIndex !== selectedIndex) {
         onSelect(clampedIndex);
       }
+
       isUserScrolling.current = false;
     }, 120);
   };
@@ -73,7 +99,6 @@ function ScrollColumn({
 
   return (
     <div className="relative flex-1" style={{ height: VISIBLE_ITEMS * ITEM_HEIGHT }}>
-      {/* Selection highlight */}
       <div
         className="absolute left-1 right-1 rounded-lg pointer-events-none z-10"
         style={{
@@ -83,7 +108,6 @@ function ScrollColumn({
           border: "1px solid rgba(255,255,255,0.12)",
         }}
       />
-      {/* Fade top */}
       <div
         className="absolute top-0 left-0 right-0 z-20 pointer-events-none"
         style={{
@@ -91,7 +115,6 @@ function ScrollColumn({
           background: "linear-gradient(to bottom, rgba(24,24,27,1) 0%, rgba(24,24,27,0) 100%)",
         }}
       />
-      {/* Fade bottom */}
       <div
         className="absolute bottom-0 left-0 right-0 z-20 pointer-events-none"
         style={{
@@ -100,7 +123,7 @@ function ScrollColumn({
         }}
       />
       <div
-        ref={containerRef}
+        ref={setContainerRef}
         onScroll={handleScroll}
         className="h-full overflow-y-auto scrollbar-none"
         style={{
@@ -137,7 +160,9 @@ function ScrollColumn({
       </div>
     </div>
   );
-}
+});
+
+ScrollColumn.displayName = "ScrollColumn";
 
 export function ScrollDatePicker({ value, onChange, minYear = 1930, maxYear }: ScrollDatePickerProps) {
   const currentYear = new Date().getFullYear();
