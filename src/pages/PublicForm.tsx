@@ -383,45 +383,49 @@ export default function PublicForm() {
     // Civil status detection
     if (isCivilStatusField(field)) {
       return (
-        <div className="space-y-2">
-          {CIVIL_STATUS_OPTIONS.map((opt) => {
-            const selected = value === opt;
-            return (
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                "w-full h-12 rounded-lg border flex items-center justify-between px-4 text-[15px] outline-none transition-all duration-200",
+                "hover:border-[rgba(255,255,255,0.12)]",
+                hasError && "ring-2 ring-red-500/50 border-red-500/30"
+              )}
+              style={{
+                backgroundColor: dark.surface,
+                color: dark.text,
+                borderColor: value ? dark.borderActive : dark.border,
+              }}
+            >
+              <span style={{ color: value ? dark.text : dark.textTertiary }}>
+                {value || "Selecionar estado civil"}
+              </span>
+              <ChevronRight className="h-4 w-4 rotate-90" style={{ color: dark.textTertiary }} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-[var(--radix-popover-trigger-width)] p-1 border shadow-2xl shadow-black/40 pointer-events-auto"
+            align="start"
+            style={{ backgroundColor: dark.surface, borderColor: dark.border }}
+          >
+            {CIVIL_STATUS_OPTIONS.map((opt) => (
               <button
                 key={opt}
                 type="button"
-                className={cn(
-                  "w-full flex items-center gap-3 px-4 h-12 rounded-lg border text-left transition-all duration-200",
-                  "hover:border-[rgba(255,255,255,0.12)]"
-                )}
-                style={{
-                  backgroundColor: selected ? dark.accentGlow : dark.surface,
-                  borderColor: selected ? dark.accent : dark.border,
+                className="w-full text-left px-3 py-2.5 rounded-md text-[15px] transition-colors hover:bg-white/5"
+                style={{ color: value === opt ? dark.accent : dark.text }}
+                onClick={() => {
+                  updateResponse(field.id, opt);
+                  // Close popover by blurring
+                  (document.activeElement as HTMLElement)?.blur();
                 }}
-                onClick={() => updateResponse(field.id, opt)}
               >
-                <div
-                  className="w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors"
-                  style={{
-                    borderColor: selected ? dark.accent : "rgba(255,255,255,0.15)",
-                  }}
-                >
-                  {selected && (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: dark.accent }}
-                    />
-                  )}
-                </div>
-                <span className="text-[15px]" style={{ color: selected ? dark.text : dark.textSecondary }}>
-                  {opt}
-                </span>
+                {opt}
               </button>
-            );
-          })}
-        </div>
+            ))}
+          </PopoverContent>
+        </Popover>
       );
     }
 
