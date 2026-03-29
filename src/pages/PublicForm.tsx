@@ -216,6 +216,14 @@ export default function PublicForm() {
     [customFields, formData?.require_client_info, clientId]
   );
 
+
+  const isSpouseFieldVisible = useMemo(() => {
+    const civilStatusField = customFields.find(isCivilStatusField);
+    if (!civilStatusField) return true;
+    const civilValue = responses[civilStatusField.id];
+    return CIVIL_STATUS_WITH_SPOUSE.includes(civilValue);
+  }, [customFields, responses]);
+
   const totalSteps = steps.length;
   const isLastStep = currentStep === totalSteps - 1;
   const isSingleStep = totalSteps <= 1;
