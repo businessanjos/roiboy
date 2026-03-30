@@ -1445,6 +1445,30 @@ function isProfessionalYearsField(field: CustomField): boolean {
       );
     }
 
+    if (isProfessionalYearsField(field)) {
+      return (
+        <div className="relative">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            max={60}
+            value={value ?? ""}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/\D/g, "");
+              if (raw === "") { updateResponse(field.id, ""); return; }
+              const num = Math.min(Math.max(Number(raw), 1), 60);
+              updateResponse(field.id, String(num));
+            }}
+            placeholder="Ex: 10"
+            className={baseInputClass}
+            style={{ ...inputStyles, paddingRight: "60px" }}
+          />
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: dark.textTertiary }}>anos</span>
+        </div>
+      );
+    }
+
     switch (field.field_type) {
       case "boolean":
         return (
