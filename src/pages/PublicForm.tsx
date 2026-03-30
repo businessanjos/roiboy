@@ -534,7 +534,12 @@ function isProfessionalYearsField(field: CustomField): boolean {
 
 function isYesNoTextField(field: CustomField): boolean {
   const normalized = normalizeFieldName(field.name);
-  return normalized.includes("vende cursos tecnicos");
+  return normalized.includes("vende cursos tecnicos") || normalized.includes("metodo proprio");
+}
+
+function isMetodoProprio(field: CustomField): boolean {
+  const normalized = normalizeFieldName(field.name);
+  return normalized.includes("metodo proprio");
 }
 
   const isSpouseFieldVisible = useMemo(() => {
