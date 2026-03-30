@@ -447,8 +447,8 @@ function buildSteps(
       continue;
     }
 
-    // Keep trademark virtual fields grouped with their parent
-    if (isVirtualTrademarkField(field)) {
+    // Keep trademark and graduation virtual fields grouped with their parent
+    if (isVirtualTrademarkField(field) || isVirtualGraduationField(field)) {
       // Add to current batch without triggering flush
       currentBatch.push(field);
       continue;
