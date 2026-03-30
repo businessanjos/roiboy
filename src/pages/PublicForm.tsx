@@ -578,6 +578,7 @@ export default function PublicForm() {
     } else {
       step.fields.forEach((f) => {
         if (!isTrademarkSubFieldVisible(f)) return;
+        if (!isGraduationSpecVisible(f)) return;
         if (f.is_required && isFieldEmpty(f, responses[f.id])) errors[f.id] = true;
       });
     }
