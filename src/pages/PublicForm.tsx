@@ -545,6 +545,7 @@ export default function PublicForm() {
       if (!clientPhone.trim()) errors.clientPhone = true;
     } else {
       step.fields.forEach((f) => {
+        if (!isTrademarkSubFieldVisible(f)) return;
         if (f.is_required && isFieldEmpty(f, responses[f.id])) errors[f.id] = true;
       });
     }
