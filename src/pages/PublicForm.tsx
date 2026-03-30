@@ -172,11 +172,23 @@ function isSocialMediaStatusField(field: CustomField): boolean {
   return lower.includes("instagram") && lower.includes("redes sociais");
 }
 
+function isEmployeeField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return (lower.includes("colaborador") || lower.includes("funcionário") || lower.includes("equipe")) && (lower.includes("função") || lower.includes("funções") || lower.includes("categoria"));
+}
+
 const SOCIAL_MEDIA_OPTIONS = [
   "Tenho apenas um perfil pessoal/profissional, me apresento com meu nome, mantenho uma rotina de postagens e comunico os benefícios do que ofereço.",
   "Tenho dois perfis, sendo um profissional e outro pessoal.",
   "Não utilizo ou utilizo raramente, ou não vejo benefício.",
 ];
+
+const HIRING_REGIME_OPTIONS = ["CLT", "PJ", "RPA"];
+
+interface EmployeeEntry {
+  cargo: string;
+  regime: string;
+}
 
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
@@ -989,8 +1001,136 @@ export default function PublicForm() {
         </div>
       );
     }
+    // Employee/team field — Yes/No with dynamic rows
+    if (isEmployeeField(field)) {
+      let employees: EmployeeEntry[] = [];
+      let hasEmployees = false;
+      try {
+        const parsed = JSON.parse((value as string) || "null");
+        if (parsed && typeof parsed === "object" && "hasEmployees" in parsed) {
+          hasEmployees = parsed.hasEmployees;
+          employees = parsed.employees || [];
+        }
+      } catch { /* ignore */ }
 
-    // Percentage field (e.g. "Margem de lucro atual")
+      const updateEmployeeData = (has: boolean, emps: EmployeeEntry[]) => {
+        updateResponse(field.id, JSON.stringify({ hasEmployees: has, employees: emps }));
+      };
+
+      const addEmployee = () => {
+        updateEmployeeData(true, [...employees, { cargo: "", regime: "" }]);
+      };
+
+      const removeEmployee = (idx: number) => {
+        const updated = employees.filter((_, i) => i !== idx);
+        updateEmployeeData(true, updated);
+      };
+
+      const updateEmployee = (idx: number, key: keyof EmployeeEntry, val: string) => {
+        const updated = [...employees];
+        updated[idx] = { ...updated[idx], [key]: val };
+        updateEmployeeData(true, updated);
+      };
+
+      return (
+        <div className="space-y-4">
+          {/* Yes / No toggle */}
+          <div className="flex gap-3">
+            {[
+              { label: "Sim", val: true },
+              { label: "Não", val: false },
+            ].map(({ label, val }) => {
+              const selected = value !== undefined && value !== "" && hasEmployees === val;
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  className={cn(
+                    "flex-1 h-12 rounded-xl border text-sm font-medium transition-all duration-200",
+                    selected
+                      ? "border-white/40 bg-white/10"
+                      : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]"
+                  )}
+                  style={{ color: dark.text }}
+                  onClick={() => {
+                    if (val) {
+                      const emps = employees.length > 0 ? employees : [{ cargo: "", regime: "" }];
+                      updateEmployeeData(true, emps);
+                    } else {
+                      updateEmployeeData(false, []);
+                    }
+                  }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Employee rows (only when "Sim") */}
+          {hasEmployees && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="space-y-3"
+            >
+              {employees.map((emp, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    placeholder="Cargo / Função"
+                    value={emp.cargo}
+                    onChange={(e) => updateEmployee(idx, "cargo", e.target.value)}
+                    className={cn(baseInputClass, "flex-1")}
+                    style={inputStyles}
+                  />
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    {HIRING_REGIME_OPTIONS.map((regime) => (
+                      <button
+                        key={regime}
+                        type="button"
+                        className={cn(
+                          "h-11 px-3 rounded-lg border text-xs font-medium transition-all duration-200",
+                          emp.regime === regime
+                            ? "border-white/40 bg-white/10"
+                            : "border-white/10 bg-white/[0.03] hover:border-white/20"
+                        )}
+                        style={{ color: dark.text }}
+                        onClick={() => updateEmployee(idx, "regime", regime)}
+                      >
+                        {regime}
+                      </button>
+                    ))}
+                  </div>
+                  {employees.length > 1 && (
+                    <button
+                      type="button"
+                      className="flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10"
+                      style={{ color: dark.textTertiary }}
+                      onClick={() => removeEmployee(idx)}
+                    >
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                className="flex items-center gap-2 text-sm font-medium transition-colors hover:opacity-80"
+                style={{ color: dark.accent }}
+                onClick={addEmployee}
+              >
+                <Plus size={16} />
+                Adicionar colaborador
+              </button>
+            </motion.div>
+          )}
+        </div>
+      );
+    }
+
+
     if (isPercentageField(field)) {
       return (
         <div className="relative">
