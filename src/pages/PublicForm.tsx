@@ -770,20 +770,18 @@ export default function PublicForm() {
           })
         : [];
 
-      const [highlightIdx, setHighlightIdx] = React.useState(-1);
-
       const handleKeyDown = (e: React.KeyboardEvent) => {
         if (filtered.length === 0) return;
         if (e.key === "ArrowDown") {
           e.preventDefault();
-          setHighlightIdx(prev => (prev + 1) % filtered.length);
+          setGradHighlightIdx(prev => (prev + 1) % filtered.length);
         } else if (e.key === "ArrowUp") {
           e.preventDefault();
-          setHighlightIdx(prev => (prev <= 0 ? filtered.length - 1 : prev - 1));
-        } else if (e.key === "Enter" && highlightIdx >= 0 && highlightIdx < filtered.length) {
+          setGradHighlightIdx(prev => (prev <= 0 ? filtered.length - 1 : prev - 1));
+        } else if (e.key === "Enter" && gradHighlightIdx >= 0 && gradHighlightIdx < filtered.length) {
           e.preventDefault();
-          updateResponse(field.id, filtered[highlightIdx]);
-          setHighlightIdx(-1);
+          updateResponse(field.id, filtered[gradHighlightIdx]);
+          setGradHighlightIdx(-1);
         }
       };
 
@@ -792,7 +790,7 @@ export default function PublicForm() {
           <input
             type="text"
             value={typed}
-            onChange={(e) => { updateResponse(field.id, e.target.value); setHighlightIdx(-1); }}
+            onChange={(e) => { updateResponse(field.id, e.target.value); setGradHighlightIdx(-1); }}
             onKeyDown={handleKeyDown}
             placeholder="Ex: Medicina, Odontologia..."
             className={baseInputClass}
