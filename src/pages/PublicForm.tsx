@@ -603,11 +603,11 @@ function isProdutosServicosField(field: CustomField): boolean {
         if (!isTrademarkSubFieldVisible(f)) return;
         if (!isGraduationSpecVisible(f)) return;
         if (f.is_required) {
-          // CNPJ+Regime field: validate sub-fields instead
-          if (isCnpjRegimeField(f)) {
-            const cnpjDigits = ((responses[`${f.id}__cnpj`] as string) ?? "").replace(/\D/g, "");
-            const regime = responses[`${f.id}__regime`] as string | undefined;
-            if (cnpjDigits.length !== 14 || !regime) errors[f.id] = true;
+          // Produtos/Serviços field: validate sub-fields
+          if (isProdutosServicosField(f)) {
+            const produtos = ((responses[`${f.id}__produtos`] as string) ?? "").trim();
+            const principal = ((responses[`${f.id}__principal`] as string) ?? "").trim();
+            if (!produtos || !principal) errors[f.id] = true;
           // Método próprio: validate sub-field when "Sim"
           } else if (isMetodoProprio(f)) {
             if (!responses[f.id]) {
