@@ -542,6 +542,28 @@ function isMetodoProprio(field: CustomField): boolean {
   return normalized.includes("metodo proprio");
 }
 
+function isCnpjRegimeField(field: CustomField): boolean {
+  const normalized = normalizeFieldName(field.name);
+  return normalized.includes("formalizada") && normalized.includes("cnpj");
+}
+
+function formatCnpj(digits: string): string {
+  const d = digits.replace(/\D/g, "").slice(0, 14);
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+}
+
+const REGIME_OPTIONS = [
+  "Simples Nacional",
+  "Lucro Presumido",
+  "Lucro Real",
+  "MEI",
+  "Não sei informar",
+];
+
   const isSpouseFieldVisible = useMemo(() => {
     const civilStatusField = customFields.find(isCivilStatusField);
     if (!civilStatusField) return true;
