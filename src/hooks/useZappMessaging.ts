@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Message } from "@/hooks/useZappData";
 import { ConversationAssignment, getContactInfo } from "@/components/royzapp/types";
+import { invokeWhatsAppManager } from "@/lib/whatsappRouting";
 
 interface UseZappMessagingProps {
   selectedConversation: ConversationAssignment | null;
