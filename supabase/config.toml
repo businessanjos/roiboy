@@ -211,3 +211,9 @@ verify_jwt = false
 
 [functions.team-insights]
 verify_jwt = false
+
+[functions.meta-webhook]
+verify_jwt = false
+
+[functions.meta-manager]
+verify_jwt = false

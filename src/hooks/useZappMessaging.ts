@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Message } from "@/hooks/useZappData";
 import { ConversationAssignment, getContactInfo } from "@/components/royzapp/types";
+import { invokeWhatsAppManager } from "@/lib/whatsappRouting";
 
 interface UseZappMessagingProps {
   selectedConversation: ConversationAssignment | null;
@@ -281,9 +282,7 @@ export function useZappMessaging({
           }
         }
         
-        const { data: sendResult, error } = await supabase.functions.invoke("uazapi-manager", {
-          body: payload,
-        });
+        const { data: sendResult, error } = await invokeWhatsAppManager(effectiveIntegrationId, payload);
         
         if (error) {
           console.error("[ZAPP-SEND] Edge function error:", JSON.stringify(error));
@@ -407,9 +406,7 @@ export function useZappMessaging({
               }
             }
             
-            const { error: retryError } = await supabase.functions.invoke("uazapi-manager", {
-              body: retryPayload,
-            });
+            const { error: retryError } = await invokeWhatsAppManager(effectiveIntegrationId, retryPayload);
             
             if (retryError) {
               console.error("[ZAPP-SEND] Retry edge function error:", JSON.stringify(retryError));
@@ -554,7 +551,7 @@ export function useZappMessaging({
         payload.phone = phone;
       }
       
-      const { data, error } = await supabase.functions.invoke("uazapi-manager", { body: payload });
+      const { data, error } = await invokeWhatsAppManager(effectiveIntegrationId, payload);
       
       if (error) {
         console.error("[ZAPP-MEDIA] Edge function error:", error);
@@ -810,7 +807,7 @@ export function useZappMessaging({
           payload.phone = phone;
         }
         
-        const { data, error } = await supabase.functions.invoke("uazapi-manager", { body: payload });
+        const { data, error } = await invokeWhatsAppManager(effectiveIntegrationId, payload);
         
         if (error) {
           if (insertedMessageId) {
@@ -875,13 +872,12 @@ export function useZappMessaging({
       let whatsappDeleted = false;
       
       if (message.external_message_id) {
-        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
-          body: {
+        const intId = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
+        const { data, error } = await invokeWhatsAppManager(intId, {
             action: "delete_message",
             message_id: message.external_message_id,
             phone: getContactInfo(selectedConversation).phone,
             sector_id: selectedSectorId || "",
-          },
         });
         
         if (!error && data?.data?.deleted) {
@@ -923,14 +919,13 @@ export function useZappMessaging({
       let whatsappEdited = false;
       
       if (message.external_message_id) {
-        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
-          body: {
+        const intId2 = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
+        const { data, error } = await invokeWhatsAppManager(intId2, {
             action: "edit_message",
             message_id: message.external_message_id,
             new_content: newContent.trim(),
             phone: getContactInfo(selectedConversation).phone,
             sector_id: selectedSectorId || "",
-          },
         });
         
         if (!error && data?.data?.edited) whatsappEdited = true;
@@ -1014,7 +1009,7 @@ export function useZappMessaging({
         payload.phone = phone;
       }
       
-      const { data: contactSendResult, error } = await supabase.functions.invoke("uazapi-manager", { body: payload });
+      const { data: contactSendResult, error } = await invokeWhatsAppManager(effectiveIntegrationId, payload);
       if (error) {
         console.error("[ZAPP-CONTACT] Edge function error:", JSON.stringify(error));
         throw error;

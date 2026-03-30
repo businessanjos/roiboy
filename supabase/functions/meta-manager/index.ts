@@ -1,0 +1,288 @@
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+const META_API_URL = "https://graph.facebook.com/v21.0";
+
+async function metaApi(endpoint: string, method: string, token: string, body?: unknown) {
+  const url = `${META_API_URL}${endpoint}`;
+  console.log(`[meta-manager] ${method} ${url}`);
+  
+  const headers: Record<string, string> = {
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+
+  const response = await fetch(url, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const responseText = await response.text();
+  console.log(`[meta-manager] Response: ${response.status} - ${responseText.substring(0, 300)}`);
+
+  let json: any;
+  try {
+    json = JSON.parse(responseText);
+  } catch {
+    throw new Error(`Invalid Meta API response: ${responseText.substring(0, 200)}`);
+  }
+
+  if (json.error) {
+    throw new Error(`Meta API error: ${json.error.message || JSON.stringify(json.error)}`);
+  }
+
+  return json;
+}
+
+// Upload media to Meta and get media ID
+async function uploadMediaToMeta(phoneNumberId: string, token: string, mediaUrl: string, mimeType: string): Promise<string> {
+  // First download the media from the URL
+  const mediaResponse = await fetch(mediaUrl);
+  if (!mediaResponse.ok) throw new Error(`Failed to download media: ${mediaResponse.status}`);
+  const mediaBlob = await mediaResponse.blob();
+
+  const formData = new FormData();
+  formData.append("file", mediaBlob, "media");
+  formData.append("messaging_product", "whatsapp");
+  formData.append("type", mimeType);
+
+  const url = `${META_API_URL}/${phoneNumberId}/media`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${token}` },
+    body: formData,
+  });
+
+  const result = await response.json();
+  if (result.error) throw new Error(`Media upload error: ${result.error.message}`);
+  return result.id;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Auth
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return new Response(JSON.stringify({ error: "Auth required" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    const tokenJwt = authHeader.replace("Bearer ", "");
+    const { data: authData, error: authError } = await supabase.auth.getUser(tokenJwt);
+    if (authError || !authData?.user) return new Response(JSON.stringify({ error: "Invalid token" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    const { data: userData } = await supabase.from("users").select("id, name, account_id").eq("auth_user_id", authData.user.id).single();
+    if (!userData) return new Response(JSON.stringify({ error: "User not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+    const payload = await req.json();
+    const { action, sector_id, phone, message, group_id, integration_id, media_url, media_type, caption, file_name } = payload;
+    const accountId = userData.account_id;
+
+    console.log(`[meta-manager] Action: ${action}, integration_id: ${integration_id}, sector_id: ${sector_id}`);
+
+    // Find integration
+    let intData: any = null;
+    if (integration_id) {
+      const { data } = await supabase.from("integrations").select("id, config, status")
+        .eq("id", integration_id).eq("account_id", accountId)
+        .single();
+      intData = data;
+    } else if (sector_id) {
+      const { data } = await supabase.from("integrations").select("id, config, status")
+        .eq("account_id", accountId).eq("type", "whatsapp")
+        .eq("sector_id", sector_id)
+        .filter("config->>provider", "eq", "meta_official")
+        .limit(1);
+      intData = data?.[0] || null;
+    }
+
+    if (!intData || intData.config?.provider !== "meta_official") {
+      return new Response(JSON.stringify({ error: "Meta WhatsApp integration not found" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    const metaToken = intData.config?.meta_token || Deno.env.get("META_WHATSAPP_TOKEN");
+    const phoneNumberId = intData.config?.phone_number_id || Deno.env.get("META_WHATSAPP_PHONE_NUMBER_ID");
+
+    if (!metaToken || !phoneNumberId) {
+      return new Response(JSON.stringify({ error: "Meta API credentials not configured" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    let result: any = { success: true };
+
+    // ============================================
+    // STATUS CHECK
+    // ============================================
+    if (action === "status") {
+      try {
+        // Check if we can reach the Meta API with this token
+        const phoneInfo = await metaApi(`/${phoneNumberId}`, "GET", metaToken);
+        result = {
+          state: "connected",
+          connected: true,
+          owner: phoneInfo.display_phone_number || phoneInfo.verified_name || phoneNumberId,
+          provider: "meta_official",
+          phone_number: phoneInfo.display_phone_number,
+          verified_name: phoneInfo.verified_name,
+          quality_rating: phoneInfo.quality_rating,
+        };
+
+        // Update integration status
+        if (intData.id) {
+          await supabase.from("integrations").update({ status: "connected" }).eq("id", intData.id);
+        }
+      } catch (err) {
+        console.error("[meta-manager] Status check failed:", err);
+        result = { state: "disconnected", connected: false, error: (err as Error).message };
+
+        if (intData.id) {
+          await supabase.from("integrations").update({ status: "disconnected" }).eq("id", intData.id);
+        }
+      }
+
+    // ============================================
+    // SEND TEXT
+    // ============================================
+    } else if (action === "send_text") {
+      const cleanPhone = phone?.replace(/\D/g, "");
+      if (!cleanPhone || cleanPhone.length < 10) {
+        return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const messageBody: any = {
+        messaging_product: "whatsapp",
+        to: cleanPhone,
+        type: "text",
+        text: { body: message },
+      };
+
+      // Reply context
+      if (payload.quoted_message_id) {
+        messageBody.context = { message_id: payload.quoted_message_id };
+      }
+
+      result = await metaApi(`/${phoneNumberId}/messages`, "POST", metaToken, messageBody);
+
+    // ============================================
+    // SEND MEDIA
+    // ============================================
+    } else if (action === "send_media") {
+      const cleanPhone = phone?.replace(/\D/g, "");
+      if (!cleanPhone || cleanPhone.length < 10) {
+        return new Response(JSON.stringify({ error: "Número de telefone inválido" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const mType = media_type || "image";
+      let metaMediaType = mType;
+      if (mType === "ptt") metaMediaType = "audio";
+
+      const messageBody: any = {
+        messaging_product: "whatsapp",
+        to: cleanPhone,
+        type: metaMediaType,
+      };
+
+      // For media, Meta accepts either a media ID or a link
+      const mediaContent: any = { link: media_url };
+      if (caption) mediaContent.caption = caption;
+      if (file_name) mediaContent.filename = file_name;
+
+      messageBody[metaMediaType] = mediaContent;
+
+      if (payload.quoted_message_id) {
+        messageBody.context = { message_id: payload.quoted_message_id };
+      }
+
+      result = await metaApi(`/${phoneNumberId}/messages`, "POST", metaToken, messageBody);
+
+    // ============================================
+    // SEND TO GROUP (Meta doesn't support groups natively the same way)
+    // For Meta Cloud API, groups are handled differently - messages go to individual numbers
+    // ============================================
+    } else if (action === "send_to_group") {
+      return new Response(JSON.stringify({ error: "Meta Cloud API does not support sending to WhatsApp groups directly. Use UAZAPI for group messaging." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
+    // ============================================
+    // DELETE MESSAGE
+    // ============================================
+    } else if (action === "delete_message") {
+      // Meta doesn't support deleting messages via API
+      return new Response(JSON.stringify({ error: "Meta Cloud API does not support message deletion" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+
+    // ============================================
+    // DOWNLOAD MEDIA (get media URL from Meta media ID)
+    // ============================================
+    } else if (action === "download_media") {
+      const mediaId = payload.media_id;
+      if (!mediaId) {
+        return new Response(JSON.stringify({ error: "media_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Get media URL from Meta
+      const mediaInfo = await metaApi(`/${mediaId}`, "GET", metaToken);
+      
+      // Download the actual media file
+      const mediaResponse = await fetch(mediaInfo.url, {
+        headers: { "Authorization": `Bearer ${metaToken}` },
+      });
+
+      if (!mediaResponse.ok) {
+        throw new Error(`Failed to download media: ${mediaResponse.status}`);
+      }
+
+      // Upload to Supabase storage
+      const blob = await mediaResponse.blob();
+      const extension = (mediaInfo.mime_type || "application/octet-stream").split("/")[1] || "bin";
+      const storagePath = `zapp-media/${accountId}/${mediaId}.${extension}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from("zapp-media")
+        .upload(storagePath, blob, { contentType: mediaInfo.mime_type, upsert: true });
+
+      if (uploadErr) {
+        console.error("[meta-manager] Storage upload error:", uploadErr.message);
+        throw new Error(`Storage upload failed: ${uploadErr.message}`);
+      }
+
+      const { data: publicUrl } = supabase.storage.from("zapp-media").getPublicUrl(storagePath);
+
+      result = { url: publicUrl.publicUrl, mime_type: mediaInfo.mime_type };
+
+    } else {
+      return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Normalize response to match uazapi-manager format
+    const normalizedResult: any = { ...result };
+    if (result.messages && result.messages[0]) {
+      normalizedResult.id = result.messages[0].id;
+      normalizedResult.messageid = result.messages[0].id;
+    }
+
+    return new Response(JSON.stringify({ data: normalizedResult }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
+  } catch (err) {
+    console.error("[meta-manager] Error:", err);
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
