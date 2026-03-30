@@ -543,10 +543,7 @@ function isMetodoProprio(field: CustomField): boolean {
   return normalized.includes("metodo proprio");
 }
 
-function isProdutosServicosField(field: CustomField): boolean {
-  const normalized = normalizeFieldName(field.name);
-  return normalized.includes("formalizada") && (normalized.includes("cnpj") || normalized.includes("produto") || normalized.includes("servico"));
-}
+// isProdutosServicosField removed – "formalizada" field renders as normal text
 
   const isSpouseFieldVisible = useMemo(() => {
     const civilStatusField = customFields.find(isCivilStatusField);
