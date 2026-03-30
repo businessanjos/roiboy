@@ -202,11 +202,11 @@ export function SharedVisualCard({ visual, data, stackedData, stackedSeriesKeys,
 
   return (
     <CardErrorBoundary title={title}>
-      <Card className="flex flex-col h-full">
-        <CardHeader className="pb-2 flex-shrink-0">
-          <CardTitle className="text-base truncate">{title}</CardTitle>
+      <Card className="flex flex-col h-full overflow-hidden">
+        <CardHeader className="pb-1 pt-3 px-3 flex-shrink-0">
+          <CardTitle className="text-sm font-semibold truncate">{title}</CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 min-h-0 overflow-auto">
+        <CardContent className="flex-1 min-h-0 overflow-auto px-3 pb-3 pt-0">
           <ConfigurableChart
             type={chartType}
             data={processedData}
