@@ -495,6 +495,7 @@ export default function PublicForm() {
   const [currentStep, setCurrentStep] = useState(0);
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState("");
+  const [gradHighlightIdx, setGradHighlightIdx] = useState(-1);
 
   useEffect(() => { fetchFormData(); }, [formId, clientId]);
 
