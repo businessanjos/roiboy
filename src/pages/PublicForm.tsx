@@ -231,7 +231,7 @@ function buildSteps(
     steps.push({ title: "Dados Pessoais", fields: personalFields, type: "fields" });
   }
 
-  // Remaining fields grouped by max 3
+  // Remaining fields grouped intelligently
   const MAX_PER_STEP = 3;
   let currentBatch: CustomField[] = [];
   let stepIndex = 2;
@@ -249,6 +249,17 @@ function buildSteps(
   };
 
   for (const field of otherFields) {
+    // Address and children fields expand into many sub-fields, give them their own step
+    if (isAddressField(field) || isChildrenField(field)) {
+      flushBatch(); // flush any pending fields first
+      steps.push({
+        title: `Etapa ${stepIndex}`,
+        fields: [field],
+        type: "fields",
+      });
+      stepIndex++;
+      continue;
+    }
     currentBatch.push(field);
     if (currentBatch.length >= MAX_PER_STEP) flushBatch();
   }
