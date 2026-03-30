@@ -135,8 +135,19 @@ export const sectors: Sector[] = [
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
-
-
+  {
+    id: "everia",
+    name: "Ever IA",
+    description: "Inteligência artificial para atendimento automatizado",
+    icon: Bot,
+    color: "text-violet-600",
+    bgColor: "bg-violet-500/10",
+    defaultRoute: "/ever-ia",
+    navItems: [
+      { to: "/ever-ia", icon: Bot, label: "Ever IA", permission: PERMISSIONS.SETTINGS_VIEW },
+      { to: "/notifications", icon: Bell, label: "Notificações" },
+    ],
+  },
   {
     id: "vendas",
     name: "Vendas",
