@@ -7,9 +7,10 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, MessageSquare, type LucideIcon } from "lucide-react";
+import { Plus, Globe, Loader2, MessageSquare, type LucideIcon } from "lucide-react";
 import { SectorInstanceCard, SectorInstance } from "./SectorInstanceCard";
 import { AddInstanceDialog } from "./AddInstanceDialog";
+import { AddMetaInstanceDialog } from "./AddMetaInstanceDialog";
 import { EditInstanceDialog } from "./EditInstanceDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
