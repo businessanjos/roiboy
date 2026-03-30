@@ -1481,6 +1481,7 @@ function isMetodoProprio(field: CustomField): boolean {
 
     if (isYesNoTextField(field)) {
       return (
+        <>
         <div className="grid grid-cols-2 gap-3">
           {[{ label: "Sim", val: "Sim" }, { label: "Não", val: "Não" }].map(({ label, val }) => {
             const selected = value === val;
@@ -1522,7 +1523,7 @@ function isMetodoProprio(field: CustomField): boolean {
             />
           </div>
         )}
-      </>
+        </>
       );
     }
 
