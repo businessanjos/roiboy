@@ -134,15 +134,26 @@ export function SectorInstancesAccordion({
                   ))}
 
                   {isAdmin && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-2"
-                      onClick={() => setShowAddDialog(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Instância
-                    </Button>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setShowAddDialog(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        UAZAPI
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setShowMetaDialog(true)}
+                      >
+                        <Globe className="h-4 w-4 mr-2" />
+                        Meta API
+                      </Button>
+                    </div>
                   )}
                 </>
               )}
