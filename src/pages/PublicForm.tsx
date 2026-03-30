@@ -532,6 +532,11 @@ function isProfessionalYearsField(field: CustomField): boolean {
   return normalized.includes("quanto tempo") && normalized.includes("area profissional");
 }
 
+function isYesNoTextField(field: CustomField): boolean {
+  const normalized = normalizeFieldName(field.name);
+  return normalized.includes("vende cursos tecnicos");
+}
+
   const isSpouseFieldVisible = useMemo(() => {
     const civilStatusField = customFields.find(isCivilStatusField);
     if (!civilStatusField) return true;
