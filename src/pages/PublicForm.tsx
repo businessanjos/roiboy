@@ -711,23 +711,19 @@ function isProdutosServicosField(field: CustomField): boolean {
         delete mergedResponses[`${originalId}__metodo_nome`];
       }
 
-      // Merge CNPJ + regime tributário
-      const cnpjIds = new Set<string>();
+      // Merge Produtos/Serviços
+      const produtosIds = new Set<string>();
       for (const key of Object.keys(mergedResponses)) {
-        if (key.includes("__cnpj")) {
-          cnpjIds.add(key.replace(/__cnpj$/, ""));
+        if (key.includes("__produtos")) {
+          produtosIds.add(key.replace(/__produtos$/, ""));
         }
       }
-      for (const originalId of cnpjIds) {
-        const cnpjDigits = (mergedResponses[`${originalId}__cnpj`] || "").toString().replace(/\D/g, "");
-        const regime = mergedResponses[`${originalId}__regime`] || "";
-        if (cnpjDigits.length === 14) {
-          mergedResponses[originalId] = `CNPJ: ${formatCnpj(cnpjDigits)} — Regime: ${regime}`;
-        } else {
-          mergedResponses[originalId] = "Não possui CNPJ";
-        }
-        delete mergedResponses[`${originalId}__cnpj`];
-        delete mergedResponses[`${originalId}__regime`];
+      for (const originalId of produtosIds) {
+        const produtos = (mergedResponses[`${originalId}__produtos`] || "").toString().trim();
+        const principal = (mergedResponses[`${originalId}__principal`] || "").toString().trim();
+        mergedResponses[originalId] = `Produtos/Serviços: ${produtos} — Principal: ${principal}`;
+        delete mergedResponses[`${originalId}__produtos`];
+        delete mergedResponses[`${originalId}__principal`];
       }
 
       for (const [key, val] of Object.entries(mergedResponses)) {
