@@ -257,7 +257,7 @@ export default function SharedInsights() {
             Somente leitura
           </span>
         </div>
-        <div className="p-6">
+        <div className="p-4 text-[14px]">
           {visuals.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
               <BarChart3 className="h-12 w-12 mb-4 opacity-30" />
