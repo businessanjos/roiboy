@@ -347,6 +347,7 @@ function SharedVisualsGrid({
           </div>
         );
       })}
-    </div>
+      </div>
+    </>
   );
 }
