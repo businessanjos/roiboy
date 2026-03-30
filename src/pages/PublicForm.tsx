@@ -582,7 +582,29 @@ export default function PublicForm() {
         delete mergedResponses[`${originalId}__profissao`];
       }
 
-      // Serialize children fields to readable string
+      // Merge split trademark fields back into original field
+      const trademarkOriginalIds = new Set<string>();
+      for (const key of Object.keys(mergedResponses)) {
+        if (key.includes("__marca_")) {
+          const originalId = key.replace(/__marca_(possui|nome|como)$/, "");
+          trademarkOriginalIds.add(originalId);
+        }
+      }
+      for (const originalId of trademarkOriginalIds) {
+        const possui = mergedResponses[`${originalId}__marca_possui`];
+        if (possui === true || possui === "Sim") {
+          const nome = mergedResponses[`${originalId}__marca_nome`] || "";
+          const como = mergedResponses[`${originalId}__marca_como`] || "";
+          const parts = ["Sim", nome && `Nome: ${nome}`, como && `Definição: ${como}`].filter(Boolean);
+          mergedResponses[originalId] = parts.join(" — ");
+        } else {
+          mergedResponses[originalId] = "Não";
+        }
+        delete mergedResponses[`${originalId}__marca_possui`];
+        delete mergedResponses[`${originalId}__marca_nome`];
+        delete mergedResponses[`${originalId}__marca_como`];
+      }
+
       for (const [key, val] of Object.entries(mergedResponses)) {
         if (Array.isArray(val) && val.length > 0 && val[0]?.nome !== undefined) {
           mergedResponses[key] = val
