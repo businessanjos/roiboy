@@ -48,13 +48,13 @@ export function EverAgentsTab() {
         .select("*")
         .order("created_at", { ascending: false }),
       supabase
-        .from("sectors")
+        .from("zapp_departments")
         .select("id, name")
         .eq("account_id", accountId!),
     ]);
 
     if (agentsRes.data) setAgents(agentsRes.data as unknown as SectorAgent[]);
-    if (sectorsRes.data) setSectors(sectorsRes.data);
+    if (sectorsRes.data) setSectors(sectorsRes.data as unknown as { id: string; name: string }[]);
     setLoading(false);
   }
 
