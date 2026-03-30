@@ -1507,6 +1507,22 @@ function isMetodoProprio(field: CustomField): boolean {
             );
           })}
         </div>
+        {isMetodoProprio(field) && value === "Sim" && (
+          <div className="space-y-2 mt-4">
+            <label className="block text-[15px] font-medium" style={{ color: dark.text }}>
+              Qual o nome do método? <span style={{ color: "#ef4444" }}>*</span>
+            </label>
+            <input
+              type="text"
+              value={responses[`${field.id}__metodo_nome`] ?? ""}
+              onChange={(e) => updateResponse(`${field.id}__metodo_nome`, e.target.value)}
+              placeholder="Nome do método..."
+              className={baseInputClass}
+              style={inputStyles}
+            />
+          </div>
+        )}
+      </>
       );
     }
 
