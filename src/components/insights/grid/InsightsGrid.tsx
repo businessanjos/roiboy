@@ -29,6 +29,8 @@ interface InsightsGridProps {
 
 const ROW_HEIGHT = 20;
 const COLS = 48;
+const MARGIN: [number, number] = [12, 12];
+const CONTAINER_PADDING: [number, number] = [4, 4];
 
 function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
   const existingLayout = visual.layout;
