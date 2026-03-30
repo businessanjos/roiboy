@@ -106,8 +106,14 @@ function SectorPattern({ sectorId }: { sectorId: string }) {
         <polygon points="40,8 50,30 74,30 55,46 62,70 40,56 18,70 25,46 6,30 30,30" stroke="currentColor" strokeWidth="2" fill="none" />
       </svg>
     ),
-
-
+    everia: (
+      <svg className="absolute right-3 bottom-3 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity duration-500" width="80" height="80" viewBox="0 0 80 80">
+        <circle cx="40" cy="32" r="16" stroke="currentColor" strokeWidth="2" fill="none" />
+        <path d="M20 58 Q30 48 40 48 Q50 48 60 58" stroke="currentColor" strokeWidth="2" fill="none" />
+        <circle cx="34" cy="30" r="2" fill="currentColor" />
+        <circle cx="46" cy="30" r="2" fill="currentColor" />
+      </svg>
+    ),
   };
   return <>{patterns[sectorId] || null}</>;
 }
