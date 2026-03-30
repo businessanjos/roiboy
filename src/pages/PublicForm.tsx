@@ -280,6 +280,15 @@ function isSpouseNameProfessionField(field: CustomField): boolean {
     !lower.includes("aniversário") && !lower.includes("aniversario") && !lower.includes("casamento"));
 }
 
+function isTrademarkField(field: CustomField): boolean {
+  const normalized = normalizeFieldName(field.name);
+  return normalized.includes("marca registrada");
+}
+
+function isVirtualTrademarkField(field: CustomField): boolean {
+  return field.id.includes("__marca_");
+}
+
 function splitSpouseFields(fields: CustomField[]): CustomField[] {
   const result: CustomField[] = [];
   for (const field of fields) {
@@ -294,6 +303,28 @@ function splitSpouseFields(fields: CustomField[]): CustomField[] {
         ...field,
         id: `${field.id}__profissao`,
         name: "Profissão do Cônjuge",
+        is_required: false,
+      });
+    } else if (isTrademarkField(field)) {
+      result.push({
+        ...field,
+        id: `${field.id}__marca_possui`,
+        name: "Possui marca registrada?",
+        field_type: "boolean",
+        is_required: field.is_required,
+      });
+      result.push({
+        ...field,
+        id: `${field.id}__marca_nome`,
+        name: "Qual é o nome da marca?",
+        field_type: "text",
+        is_required: false,
+      });
+      result.push({
+        ...field,
+        id: `${field.id}__marca_como`,
+        name: "Como esse nome foi definido?",
+        field_type: "text",
         is_required: false,
       });
     } else {
