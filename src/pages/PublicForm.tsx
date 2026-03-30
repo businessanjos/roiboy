@@ -1474,6 +1474,37 @@ function isYesNoTextField(field: CustomField): boolean {
       );
     }
 
+    if (isYesNoTextField(field)) {
+      return (
+        <div className="grid grid-cols-2 gap-3">
+          {[{ label: "Sim", val: "Sim" }, { label: "Não", val: "Não" }].map(({ label, val }) => {
+            const selected = value === val;
+            return (
+              <button
+                key={label}
+                type="button"
+                className={cn(
+                  "h-12 rounded-lg border text-[15px] font-medium transition-all duration-200",
+                  "hover:border-[rgba(255,255,255,0.12)]",
+                  selected && "ring-1"
+                )}
+                style={{
+                  backgroundColor: selected ? dark.accentGlow : dark.surface,
+                  borderColor: selected ? dark.accent : dark.border,
+                  color: selected ? dark.text : dark.textSecondary,
+                  // @ts-ignore
+                  "--tw-ring-color": dark.accent,
+                }}
+                onClick={() => updateResponse(field.id, val)}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
     switch (field.field_type) {
       case "boolean":
         return (
