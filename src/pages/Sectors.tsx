@@ -62,8 +62,14 @@ const SECTOR_IDENTITY: Record<string, {
     patternClass: "sector-pattern-zapp",
     overrideIcon: Zap,
   },
-
-
+  everia: {
+    accent: "border-l-violet-500",
+    hoverBorder: "hover:border-violet-500/30",
+    hoverIconBg: "group-hover:bg-violet-500/10",
+    hoverIconColor: "group-hover:text-violet-600",
+    patternClass: "sector-pattern-everia",
+    overrideIcon: Bot,
+  },
 };
 
 function SectorPattern({ sectorId }: { sectorId: string }) {
