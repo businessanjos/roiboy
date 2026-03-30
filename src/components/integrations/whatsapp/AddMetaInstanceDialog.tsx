@@ -104,14 +104,13 @@ export function AddMetaInstanceDialog({
       // Create the integration record
       const { error: insertError } = await supabase.from("integrations").insert({
         account_id: userData.account_id,
-        type: "whatsapp",
+        type: "whatsapp" as const,
         sector_id: sectorId,
-        status: "pending",
+        status: "disconnected" as const,
         display_name: displayName || `Meta API - ${sectorName}`,
         config: {
           provider: "meta_official",
           phone_number_id: phoneNumberId.trim(),
-          // Token comes from env var META_WHATSAPP_TOKEN
         },
       });
 
