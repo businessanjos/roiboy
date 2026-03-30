@@ -236,7 +236,6 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       const pendingMediaMsgs = msgs.filter(
         (m) => (m.media_download_status === "pending" || !m.media_download_status)
           && m.media_type
-          && m.media_type !== "sticker"
           && !m.media_url
       );
 
