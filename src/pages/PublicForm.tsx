@@ -712,7 +712,25 @@ const REGIME_OPTIONS = [
         delete mergedResponses[`${originalId}__metodo_nome`];
       }
 
-      for (const [key, val] of Object.entries(mergedResponses)) {
+      // Merge CNPJ + regime tributário
+      const cnpjIds = new Set<string>();
+      for (const key of Object.keys(mergedResponses)) {
+        if (key.includes("__cnpj")) {
+          cnpjIds.add(key.replace(/__cnpj$/, ""));
+        }
+      }
+      for (const originalId of cnpjIds) {
+        const cnpjDigits = (mergedResponses[`${originalId}__cnpj`] || "").toString().replace(/\D/g, "");
+        const regime = mergedResponses[`${originalId}__regime`] || "";
+        if (cnpjDigits.length === 14) {
+          mergedResponses[originalId] = `CNPJ: ${formatCnpj(cnpjDigits)} — Regime: ${regime}`;
+        } else {
+          mergedResponses[originalId] = "Não possui CNPJ";
+        }
+        delete mergedResponses[`${originalId}__cnpj`];
+        delete mergedResponses[`${originalId}__regime`];
+      }
+
         if (Array.isArray(val) && val.length > 0 && val[0]?.nome !== undefined) {
           mergedResponses[key] = val
             .filter((c: any) => c.nome)
