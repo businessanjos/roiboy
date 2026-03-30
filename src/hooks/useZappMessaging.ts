@@ -282,9 +282,7 @@ export function useZappMessaging({
           }
         }
         
-        const { data: sendResult, error } = await supabase.functions.invoke("uazapi-manager", {
-          body: payload,
-        });
+        const { data: sendResult, error } = await invokeWhatsAppManager(effectiveIntegrationId, payload);
         
         if (error) {
           console.error("[ZAPP-SEND] Edge function error:", JSON.stringify(error));
