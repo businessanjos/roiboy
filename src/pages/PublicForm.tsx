@@ -600,9 +600,7 @@ function isMetodoProprio(field: CustomField): boolean {
         if (!isTrademarkSubFieldVisible(f)) return;
         if (!isGraduationSpecVisible(f)) return;
         if (f.is_required) {
-          if (false) { // placeholder removed
-          // Método próprio: validate sub-field when "Sim"
-          } else if (isMetodoProprio(f)) {
+          if (isMetodoProprio(f)) {
             if (!responses[f.id]) {
               errors[f.id] = true;
             } else if (responses[f.id] === "Sim" && !((responses[`${f.id}__metodo_nome`] as string) ?? "").trim()) {
