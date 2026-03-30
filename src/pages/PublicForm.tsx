@@ -162,7 +162,11 @@ function isAddressField(field: CustomField): boolean {
   return ["endereço", "endereco", "cep"].some((kw) => lower.includes(kw));
 }
 
-function isPhoneField(field: CustomField): boolean {
+function isPercentageField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return ["margem", "percentual", "porcentagem", "%"].some((kw) => lower.includes(kw));
+}
+
   if (field.field_type === "phone") return true;
   const lower = field.name.toLowerCase();
   return ["telefone", "celular", "whatsapp", "phone", "tel"].some((kw) => lower.includes(kw));
