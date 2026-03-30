@@ -336,6 +336,15 @@ function splitSpouseFields(fields: CustomField[]): CustomField[] {
         field_type: "text",
         is_required: false,
       });
+    } else if (isGraduationField(field)) {
+      result.push(field);
+      result.push({
+        ...field,
+        id: `${field.id}__grad_especializacao`,
+        name: "Qual sua especialização na Medicina?",
+        field_type: "text",
+        is_required: false,
+      });
     } else {
       result.push(field);
     }
