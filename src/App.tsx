@@ -72,6 +72,7 @@ const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
 
 const RoyZapp = lazyRetry(() => import("./pages/RoyZapp"));
+const EverIA = lazyRetry(() => import("./pages/EverIA"));
 
 const BillingPortal = lazyRetry(() => import("./pages/BillingPortal"));
 const Sectors = lazyRetry(() => import("./pages/Sectors"));
