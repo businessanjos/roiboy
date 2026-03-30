@@ -921,13 +921,11 @@ export function useZappMessaging({
       if (message.external_message_id) {
         const intId2 = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
         const { data, error } = await invokeWhatsAppManager(intId2, {
-          body: {
             action: "edit_message",
             message_id: message.external_message_id,
             new_content: newContent.trim(),
             phone: getContactInfo(selectedConversation).phone,
             sector_id: selectedSectorId || "",
-          },
         });
         
         if (!error && data?.data?.edited) whatsappEdited = true;
