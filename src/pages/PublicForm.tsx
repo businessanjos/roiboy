@@ -280,6 +280,15 @@ function isSpouseNameProfessionField(field: CustomField): boolean {
     !lower.includes("aniversário") && !lower.includes("aniversario") && !lower.includes("casamento"));
 }
 
+function isTrademarkField(field: CustomField): boolean {
+  const normalized = normalizeFieldName(field.name);
+  return normalized.includes("marca registrada");
+}
+
+function isVirtualTrademarkField(field: CustomField): boolean {
+  return field.id.includes("__marca_");
+}
+
 function splitSpouseFields(fields: CustomField[]): CustomField[] {
   const result: CustomField[] = [];
   for (const field of fields) {
@@ -294,6 +303,28 @@ function splitSpouseFields(fields: CustomField[]): CustomField[] {
         ...field,
         id: `${field.id}__profissao`,
         name: "Profissão do Cônjuge",
+        is_required: false,
+      });
+    } else if (isTrademarkField(field)) {
+      result.push({
+        ...field,
+        id: `${field.id}__marca_possui`,
+        name: "Possui marca registrada?",
+        field_type: "boolean",
+        is_required: field.is_required,
+      });
+      result.push({
+        ...field,
+        id: `${field.id}__marca_nome`,
+        name: "Qual é o nome da marca?",
+        field_type: "text",
+        is_required: false,
+      });
+      result.push({
+        ...field,
+        id: `${field.id}__marca_como`,
+        name: "Como esse nome foi definido?",
+        field_type: "text",
         is_required: false,
       });
     } else {
@@ -476,6 +507,15 @@ export default function PublicForm() {
     return CIVIL_STATUS_WITH_SPOUSE.includes(civilValue);
   }, [customFields, responses]);
 
+  const isTrademarkSubFieldVisible = (field: CustomField): boolean => {
+    if (!isVirtualTrademarkField(field)) return true;
+    if (field.id.endsWith("__marca_possui")) return true;
+    // Find the parent possui field
+    const parentId = field.id.replace(/__marca_(nome|como)$/, "__marca_possui");
+    const possuiValue = responses[parentId];
+    return possuiValue === true || possuiValue === "Sim";
+  };
+
   const totalSteps = steps.length;
   const isLastStep = currentStep === totalSteps - 1;
   const isSingleStep = totalSteps <= 1;
@@ -505,6 +545,7 @@ export default function PublicForm() {
       if (!clientPhone.trim()) errors.clientPhone = true;
     } else {
       step.fields.forEach((f) => {
+        if (!isTrademarkSubFieldVisible(f)) return;
         if (f.is_required && isFieldEmpty(f, responses[f.id])) errors[f.id] = true;
       });
     }
@@ -542,7 +583,29 @@ export default function PublicForm() {
         delete mergedResponses[`${originalId}__profissao`];
       }
 
-      // Serialize children fields to readable string
+      // Merge split trademark fields back into original field
+      const trademarkOriginalIds = new Set<string>();
+      for (const key of Object.keys(mergedResponses)) {
+        if (key.includes("__marca_")) {
+          const originalId = key.replace(/__marca_(possui|nome|como)$/, "");
+          trademarkOriginalIds.add(originalId);
+        }
+      }
+      for (const originalId of trademarkOriginalIds) {
+        const possui = mergedResponses[`${originalId}__marca_possui`];
+        if (possui === true || possui === "Sim") {
+          const nome = mergedResponses[`${originalId}__marca_nome`] || "";
+          const como = mergedResponses[`${originalId}__marca_como`] || "";
+          const parts = ["Sim", nome && `Nome: ${nome}`, como && `Definição: ${como}`].filter(Boolean);
+          mergedResponses[originalId] = parts.join(" — ");
+        } else {
+          mergedResponses[originalId] = "Não";
+        }
+        delete mergedResponses[`${originalId}__marca_possui`];
+        delete mergedResponses[`${originalId}__marca_nome`];
+        delete mergedResponses[`${originalId}__marca_como`];
+      }
+
       for (const [key, val] of Object.entries(mergedResponses)) {
         if (Array.isArray(val) && val.length > 0 && val[0]?.nome !== undefined) {
           mergedResponses[key] = val
@@ -1667,7 +1730,7 @@ export default function PublicForm() {
                       </div>
 
                       {/* Personal custom fields merged into this step */}
-                      {currentStepData.fields.filter(f => !isVirtualSpouseField(f) || isSpouseFieldVisible).map((field, index) => (
+                      {currentStepData.fields.filter(f => (!isVirtualSpouseField(f) || isSpouseFieldVisible) && isTrademarkSubFieldVisible(f)).map((field, index) => (
                         <motion.div
                           key={field.id}
                           initial={{ opacity: 0, y: 8 }}
@@ -1699,7 +1762,7 @@ export default function PublicForm() {
                   )}
 
                   {/* Field Steps */}
-                  {currentStepData?.type === "fields" && currentStepData.fields.filter(f => !isVirtualSpouseField(f) || isSpouseFieldVisible).map((field, index) => (
+                  {currentStepData?.type === "fields" && currentStepData.fields.filter(f => (!isVirtualSpouseField(f) || isSpouseFieldVisible) && isTrademarkSubFieldVisible(f)).map((field, index) => (
                     <motion.div
                       key={field.id}
                       initial={{ opacity: 0, y: 8 }}
