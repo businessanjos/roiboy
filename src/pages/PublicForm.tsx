@@ -159,14 +159,35 @@ function isVirtualSpouseField(field: CustomField): boolean {
   return field.id.includes("__nome") || field.id.includes("__profissao");
 }
 
+type ComplexFieldKind = "address" | "children" | "employee" | null;
+
+function getComplexFieldKind(field: CustomField): ComplexFieldKind {
+  const normalized = normalizeFieldName(field.name);
+
+  if (
+    /(colaborador|colaboradores|funcionario|funcionarios|equipe)/.test(normalized) &&
+    /(funcao|funcoes|categoria|categorias)/.test(normalized)
+  ) {
+    return "employee";
+  }
+
+  if (/(^|[^a-z])(filho|filhos|children)([^a-z]|$)/.test(normalized)) {
+    return "children";
+  }
+
+  if (/(^|[^a-z])(endereco|cep)([^a-z]|$)/.test(normalized)) {
+    return "address";
+  }
+
+  return null;
+}
+
 function isChildrenField(field: CustomField): boolean {
-  const lower = field.name.toLowerCase();
-  return ["filho", "filhos", "children"].some((kw) => lower.includes(kw));
+  return getComplexFieldKind(field) === "children";
 }
 
 function isAddressField(field: CustomField): boolean {
-  const normalized = normalizeFieldName(field.name);
-  return /(^|[^a-z])(endereco|cep)([^a-z]|$)/.test(normalized);
+  return getComplexFieldKind(field) === "address";
 }
 
 function isPercentageField(field: CustomField): boolean {
@@ -180,8 +201,7 @@ function isSocialMediaStatusField(field: CustomField): boolean {
 }
 
 function isEmployeeField(field: CustomField): boolean {
-  const lower = field.name.toLowerCase();
-  return (lower.includes("colaborador") || lower.includes("funcionário") || lower.includes("equipe")) && (lower.includes("função") || lower.includes("funções") || lower.includes("categoria"));
+  return getComplexFieldKind(field) === "employee";
 }
 
 const SOCIAL_MEDIA_OPTIONS = [
@@ -248,71 +268,110 @@ function splitSpouseFields(fields: CustomField[]): CustomField[] {
   return result;
 }
 
+function dedupeFieldsById(fields: CustomField[]): CustomField[] {
+  const seen = new Set<string>();
+  return fields.filter((field) => {
+    if (seen.has(field.id)) return false;
+    seen.add(field.id);
+    return true;
+  });
+}
+
+function getComplexFieldTitle(field: CustomField): string {
+  switch (getComplexFieldKind(field)) {
+    case "address":
+      return "Endereço";
+    case "children":
+      return "Filhos";
+    case "employee":
+      return "Equipe";
+    default:
+      return "Etapa";
+  }
+}
+
 function buildSteps(
   customFields: CustomField[],
   requireClientInfo: boolean,
   hasClientId: boolean
 ): FieldStep[] {
   const steps: FieldStep[] = [];
+  const assignedFieldIds = new Set<string>();
 
-  // Separate personal fields from the rest
-  const allPersonalFields = splitSpouseFields(customFields.filter(isPersonalField));
-  const personalFieldIds = new Set(allPersonalFields.map(f => f.id));
-  const otherFields = splitSpouseFields(customFields.filter((f) => !personalFieldIds.has(f.id) && !isPersonalField(f)));
+  const claimFields = (fields: CustomField[]) => {
+    const available = fields.filter((field) => !assignedFieldIds.has(field.id));
+    available.forEach((field) => assignedFieldIds.add(field.id));
+    return available;
+  };
 
-  // Split personal fields: basic ones vs complex ones (address, children, employees)
-  const basicPersonalFields = allPersonalFields.filter(f => !isAddressField(f) && !isChildrenField(f) && !isEmployeeField(f));
-  const complexPersonalFields = allPersonalFields.filter(f => isAddressField(f) || isChildrenField(f) || isEmployeeField(f));
+  const uniqueFields = dedupeFieldsById(splitSpouseFields(customFields));
+  const personalFields = uniqueFields.filter((field) => isPersonalField(field) || isEmployeeField(field));
+  const personalFieldIds = new Set(personalFields.map((field) => field.id));
+  const basicPersonalFields = personalFields.filter((field) => !getComplexFieldKind(field));
+  const complexPersonalFields = personalFields.filter((field) => !!getComplexFieldKind(field));
+  const otherFields = uniqueFields.filter((field) => !personalFieldIds.has(field.id));
 
-  // Step 1: Client info + basic personal fields only
   if (requireClientInfo && !hasClientId) {
-    steps.push({ title: "Dados Pessoais", fields: basicPersonalFields, type: "client_info" });
-  } else if (basicPersonalFields.length > 0) {
-    steps.push({ title: "Dados Pessoais", fields: basicPersonalFields, type: "fields" });
+    steps.push({
+      title: "Dados Pessoais",
+      fields: claimFields(basicPersonalFields),
+      type: "client_info",
+    });
+  } else {
+    const fields = claimFields(basicPersonalFields);
+    if (fields.length > 0) {
+      steps.push({ title: "Dados Pessoais", fields, type: "fields" });
+    }
   }
 
-  // Complex personal fields get their own steps
   let stepIndex = 2;
   for (const field of complexPersonalFields) {
+    const fields = claimFields([field]);
+    if (fields.length === 0) continue;
+
     steps.push({
-      title: isAddressField(field) ? "Endereço" : isChildrenField(field) ? "Filhos" : isEmployeeField(field) ? "Equipe" : `Etapa ${stepIndex}`,
-      fields: [field],
+      title: getComplexFieldTitle(field),
+      fields,
       type: "fields",
     });
     stepIndex++;
   }
 
-  // Remaining fields grouped intelligently
   const MAX_PER_STEP = 3;
   let currentBatch: CustomField[] = [];
 
   const flushBatch = () => {
-    if (currentBatch.length > 0) {
+    const fields = claimFields(currentBatch);
+    if (fields.length > 0) {
       steps.push({
         title: `Etapa ${stepIndex}`,
-        fields: [...currentBatch],
+        fields,
         type: "fields",
       });
       stepIndex++;
-      currentBatch = [];
     }
+    currentBatch = [];
   };
 
   for (const field of otherFields) {
-    // Address, children and employee fields expand into many sub-fields, give them their own step
-    if (isAddressField(field) || isChildrenField(field) || isEmployeeField(field)) {
+    if (getComplexFieldKind(field)) {
       flushBatch();
+      const fields = claimFields([field]);
+      if (fields.length === 0) continue;
+
       steps.push({
-        title: isAddressField(field) ? "Endereço" : isChildrenField(field) ? "Filhos" : "Equipe",
-        fields: [field],
+        title: getComplexFieldTitle(field),
+        fields,
         type: "fields",
       });
       stepIndex++;
       continue;
     }
+
     currentBatch.push(field);
     if (currentBatch.length >= MAX_PER_STEP) flushBatch();
   }
+
   flushBatch();
 
   return steps;
