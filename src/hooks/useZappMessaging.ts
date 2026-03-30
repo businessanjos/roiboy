@@ -920,7 +920,8 @@ export function useZappMessaging({
       let whatsappEdited = false;
       
       if (message.external_message_id) {
-        const { data, error } = await invokeWhatsAppManager(effectiveIntegrationId, {
+        const intId2 = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
+        const { data, error } = await invokeWhatsAppManager(intId2, {
           body: {
             action: "edit_message",
             message_id: message.external_message_id,
