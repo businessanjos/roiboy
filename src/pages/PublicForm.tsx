@@ -689,6 +689,7 @@ function isMetodoProprio(field: CustomField): boolean {
         delete mergedResponses[`${originalId}__metodo_nome`];
       }
 
+      for (const [key, val] of Object.entries(mergedResponses)) {
         if (Array.isArray(val) && val.length > 0 && val[0]?.nome !== undefined) {
           mergedResponses[key] = val
             .filter((c: any) => c.nome)
