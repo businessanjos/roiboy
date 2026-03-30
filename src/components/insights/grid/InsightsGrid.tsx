@@ -175,7 +175,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         compactor={freePositionCompactor}
       >
         {visuals.map((visual) => (
-          <div key={visual.id} className="h-full">
+          <div key={visual.id} className="h-full overflow-hidden rounded-lg">
             <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
           </div>
         ))}
