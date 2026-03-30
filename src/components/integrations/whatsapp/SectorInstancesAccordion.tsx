@@ -7,9 +7,10 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Loader2, MessageSquare, type LucideIcon } from "lucide-react";
+import { Plus, Globe, Loader2, MessageSquare, type LucideIcon } from "lucide-react";
 import { SectorInstanceCard, SectorInstance } from "./SectorInstanceCard";
 import { AddInstanceDialog } from "./AddInstanceDialog";
+import { AddMetaInstanceDialog } from "./AddMetaInstanceDialog";
 import { EditInstanceDialog } from "./EditInstanceDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -36,6 +37,7 @@ export function SectorInstancesAccordion({
   onRefresh,
 }: SectorInstancesAccordionProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showMetaDialog, setShowMetaDialog] = useState(false);
   const [editingInstance, setEditingInstance] = useState<SectorInstance | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
@@ -98,17 +100,25 @@ export function SectorInstancesAccordion({
                 <div className="text-center py-6 text-muted-foreground">
                   <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">Nenhuma instância neste setor</p>
-                  {isAdmin && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-3"
-                      onClick={() => setShowAddDialog(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Instância
-                    </Button>
-                  )}
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddDialog(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Instância UAZAPI
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowMetaDialog(true)}
+                        className="border-primary/30 text-primary hover:bg-primary/5"
+                      >
+                        <Globe className="h-4 w-4 mr-2" />
+                        Meta Cloud API
+                      </Button>
+                    </div>
                 </div>
               ) : (
                 <>
@@ -124,15 +134,26 @@ export function SectorInstancesAccordion({
                   ))}
 
                   {isAdmin && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full mt-2"
-                      onClick={() => setShowAddDialog(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Instância
-                    </Button>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setShowAddDialog(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        UAZAPI
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => setShowMetaDialog(true)}
+                      >
+                        <Globe className="h-4 w-4 mr-2" />
+                        Meta API
+                      </Button>
+                    </div>
                   )}
                 </>
               )}
@@ -156,6 +177,15 @@ export function SectorInstancesAccordion({
         open={!!editingInstance}
         onOpenChange={(open) => !open && setEditingInstance(null)}
         instance={editingInstance}
+        onSuccess={onRefresh}
+      />
+
+      {/* Add Meta instance dialog */}
+      <AddMetaInstanceDialog
+        open={showMetaDialog}
+        onOpenChange={setShowMetaDialog}
+        sectorId={sector.id}
+        sectorName={sector.name}
         onSuccess={onRefresh}
       />
     </>
