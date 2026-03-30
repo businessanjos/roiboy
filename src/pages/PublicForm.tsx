@@ -527,6 +527,10 @@ export default function PublicForm() {
     [customFields, formData?.require_client_info, clientId]
   );
 
+function isProfessionalYearsField(field: CustomField): boolean {
+  const normalized = normalizeFieldName(field.name);
+  return normalized.includes("quanto tempo") && normalized.includes("area profissional");
+}
 
   const isSpouseFieldVisible = useMemo(() => {
     const civilStatusField = customFields.find(isCivilStatusField);
