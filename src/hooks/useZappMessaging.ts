@@ -1011,7 +1011,7 @@ export function useZappMessaging({
         payload.phone = phone;
       }
       
-      const { data: contactSendResult, error } = await supabase.functions.invoke("uazapi-manager", { body: payload });
+      const { data: contactSendResult, error } = await invokeWhatsAppManager(effectiveIntegrationId, payload);
       if (error) {
         console.error("[ZAPP-CONTACT] Edge function error:", JSON.stringify(error));
         throw error;
