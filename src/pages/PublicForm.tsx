@@ -901,8 +901,8 @@ export default function PublicForm() {
       );
     }
 
-    // Instagram detection
-    if (field.name.toLowerCase().includes("instagram")) {
+    // Instagram detection (skip if it's the social media status question)
+    if (field.name.toLowerCase().includes("instagram") && !isSocialMediaStatusField(field)) {
       const INSTAGRAM_PREFIX = "https://instagram.com/";
       const rawVal = (value as string) || "";
       const username = rawVal.startsWith(INSTAGRAM_PREFIX)
