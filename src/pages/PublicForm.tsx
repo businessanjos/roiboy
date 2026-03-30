@@ -953,6 +953,43 @@ export default function PublicForm() {
       );
     }
 
+    // Social media status field — forced multiple choice
+    if (isSocialMediaStatusField(field)) {
+      return (
+        <div className="space-y-3">
+          {SOCIAL_MEDIA_OPTIONS.map((option, idx) => {
+            const selected = value === option;
+            return (
+              <button
+                key={idx}
+                type="button"
+                className={cn(
+                  "w-full text-left p-4 rounded-xl border transition-all duration-200 text-sm leading-relaxed",
+                  selected
+                    ? "border-white/40 bg-white/10"
+                    : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]"
+                )}
+                style={{ color: dark.textPrimary }}
+                onClick={() => updateResponse(field.id, selected ? "" : option)}
+              >
+                <span className="flex items-start gap-3">
+                  <span
+                    className={cn(
+                      "mt-0.5 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                      selected ? "border-white bg-white" : "border-white/30"
+                    )}
+                  >
+                    {selected && <span className="w-2 h-2 rounded-full bg-[#0a0a0b]" />}
+                  </span>
+                  {option}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+
     // Percentage field (e.g. "Margem de lucro atual")
     if (isPercentageField(field)) {
       return (
