@@ -429,6 +429,13 @@ function buildSteps(
       continue;
     }
 
+    // Keep trademark virtual fields grouped with their parent
+    if (isVirtualTrademarkField(field)) {
+      // Add to current batch without triggering flush
+      currentBatch.push(field);
+      continue;
+    }
+
     currentBatch.push(field);
     if (currentBatch.length >= MAX_PER_STEP) flushBatch();
   }
