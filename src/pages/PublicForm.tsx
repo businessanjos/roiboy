@@ -257,7 +257,8 @@ function buildSteps(
 
   // Separate personal fields from the rest
   const allPersonalFields = splitSpouseFields(customFields.filter(isPersonalField));
-  const otherFields = splitSpouseFields(customFields.filter((f) => !isPersonalField(f)));
+  const personalFieldIds = new Set(allPersonalFields.map(f => f.id));
+  const otherFields = splitSpouseFields(customFields.filter((f) => !personalFieldIds.has(f.id) && !isPersonalField(f)));
 
   // Split personal fields: basic ones vs complex ones (address, children, employees)
   const basicPersonalFields = allPersonalFields.filter(f => !isAddressField(f) && !isChildrenField(f) && !isEmployeeField(f));
