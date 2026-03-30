@@ -1560,47 +1560,7 @@ function isMetodoProprio(field: CustomField): boolean {
       );
     }
 
-    if (isProdutosServicosField(field)) {
-      const produtosValue = (responses[`${field.id}__produtos`] as string) ?? "";
-      const principalValue = (responses[`${field.id}__principal`] as string) ?? "";
-      return (
-        <>
-          {/* Produtos/Serviços */}
-          <div className="space-y-2">
-            <label className="block text-[15px] font-medium" style={{ color: dark.text }}>
-              Quais são os principais produtos e/ou serviços prestados?{" "}
-              <span className="text-[13px] font-normal" style={{ color: dark.textSecondary }}>
-                (Informe: produto, valor, quantidade de sessões e duração de cada sessão.)
-              </span>{" "}
-              <span style={{ color: "#ef4444" }}>*</span>
-            </label>
-            <textarea
-              value={produtosValue}
-              onChange={(e) => updateResponse(`${field.id}__produtos`, e.target.value)}
-              placeholder="Ex: Limpeza de pele — R$ 150 — 1 sessão — 60 min"
-              rows={4}
-              className={baseInputClass}
-              style={{ ...inputStyles, minHeight: 100, resize: "vertical" }}
-            />
-          </div>
-
-          {/* Principal produto */}
-          <div className="space-y-2 mt-4">
-            <label className="block text-[15px] font-medium" style={{ color: dark.text }}>
-              Qual o principal produto/serviço que você mais vende atualmente? <span style={{ color: "#ef4444" }}>*</span>
-            </label>
-            <input
-              type="text"
-              value={principalValue}
-              onChange={(e) => updateResponse(`${field.id}__principal`, e.target.value)}
-              placeholder="Ex: Harmonização facial"
-              className={baseInputClass}
-              style={inputStyles}
-            />
-          </div>
-        </>
-      );
-    }
+    // "formalizada" field now renders as normal text field via switch below
 
     switch (field.field_type) {
       case "boolean":
