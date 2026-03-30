@@ -813,9 +813,9 @@ export default function PublicForm() {
                     className="w-full text-left px-4 py-3 text-[15px] transition-colors hover:bg-white/5"
                     style={{
                       color: dark.text,
-                      backgroundColor: idx === highlightIdx ? "rgba(255,255,255,0.08)" : "transparent",
+                      backgroundColor: idx === gradHighlightIdx ? "rgba(255,255,255,0.08)" : "transparent",
                     }}
-                    onClick={() => { updateResponse(field.id, suggestion); setHighlightIdx(-1); }}
+                    onClick={() => { updateResponse(field.id, suggestion); setGradHighlightIdx(-1); }}
                   >
                     <span style={{ color: dark.accent }}>{suggestion.slice(0, typed.length)}</span>
                     {suggestion.slice(typed.length)}
