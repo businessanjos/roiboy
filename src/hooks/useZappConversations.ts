@@ -485,12 +485,16 @@ export function useZappConversations(options: UseZappConversationsOptions) {
           const newData = payload.new as any;
           if (newData?.account_id && newData.account_id !== accountId) return;
 
-          if (newData?.media_download_status && newData?.media_url) {
+          if (newData?.media_download_status) {
             setMessages(prev => {
               if (!prev.some(msg => msg.id === newData.id)) return prev;
               return prev.map(msg =>
                 msg.id === newData.id
-                  ? { ...msg, media_url: newData.media_url, media_download_status: newData.media_download_status }
+                  ? { 
+                      ...msg, 
+                      media_url: newData.media_url || msg.media_url, 
+                      media_download_status: newData.media_download_status 
+                    }
                   : msg
               );
             });
