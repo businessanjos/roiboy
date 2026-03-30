@@ -174,9 +174,9 @@ export function SharedVisualCard({ visual, data, stackedData, stackedSeriesKeys,
   if (chartType === 'data_table') {
     return (
       <CardErrorBoundary title={title}>
-        <Card className="h-full flex flex-col">
-          <CardHeader className="pb-2 flex-shrink-0">
-            <CardTitle className="text-base truncate">{title}</CardTitle>
+        <Card className="h-full flex flex-col overflow-hidden">
+          <CardHeader className="pb-1 pt-3 px-3 flex-shrink-0">
+            <CardTitle className="text-sm font-semibold truncate">{title}</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 min-h-0 overflow-auto p-0 px-2 pb-2">
             <SharedDataTable config={config} records={drilldownData || []} />
@@ -188,13 +188,13 @@ export function SharedVisualCard({ visual, data, stackedData, stackedSeriesKeys,
 
   if (data.length === 0 && !hasStackedData && chartType !== 'number' && chartType !== 'scorecard') {
     return (
-      <Card className="h-full flex flex-col">
-        <CardHeader className="pb-2 flex-shrink-0">
-          <CardTitle className="text-base truncate">{title}</CardTitle>
+      <Card className="h-full flex flex-col overflow-hidden">
+        <CardHeader className="pb-1 pt-3 px-3 flex-shrink-0">
+          <CardTitle className="text-sm font-semibold truncate">{title}</CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-          <BarChart3 className="h-10 w-10 mb-2 opacity-40" />
-          <p className="text-sm">Sem dados disponíveis</p>
+          <BarChart3 className="h-8 w-8 mb-2 opacity-40" />
+          <p className="text-xs">Sem dados disponíveis</p>
         </CardContent>
       </Card>
     );
