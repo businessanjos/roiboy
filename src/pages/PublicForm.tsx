@@ -167,6 +167,7 @@ function isPercentageField(field: CustomField): boolean {
   return ["margem", "percentual", "porcentagem", "%"].some((kw) => lower.includes(kw));
 }
 
+function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
   const lower = field.name.toLowerCase();
   return ["telefone", "celular", "whatsapp", "phone", "tel"].some((kw) => lower.includes(kw));
