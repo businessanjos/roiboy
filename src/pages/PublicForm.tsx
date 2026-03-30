@@ -264,6 +264,7 @@ const FIELD_LABEL_OVERRIDES: Record<string, string> = {
   "filho": "Tem filhos?",
   "endereço": "Endereço",
   "endereco": "Endereço",
+  "formalizada": "CNPJ e Regime Tributário",
 };
 
 function getFieldLabel(field: CustomField): string {
