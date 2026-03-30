@@ -673,7 +673,22 @@ function isMetodoProprio(field: CustomField): boolean {
         delete mergedResponses[`${originalId}__grad_especializacao`];
       }
 
-      for (const [key, val] of Object.entries(mergedResponses)) {
+      // Merge método próprio sub-field
+      const metodoIds = new Set<string>();
+      for (const key of Object.keys(mergedResponses)) {
+        if (key.includes("__metodo_nome")) {
+          metodoIds.add(key.replace(/__metodo_nome$/, ""));
+        }
+      }
+      for (const originalId of metodoIds) {
+        const mainVal = mergedResponses[originalId];
+        const nomeMetodo = mergedResponses[`${originalId}__metodo_nome`] || "";
+        if (mainVal === "Sim" && nomeMetodo) {
+          mergedResponses[originalId] = `Sim — Método: ${nomeMetodo}`;
+        }
+        delete mergedResponses[`${originalId}__metodo_nome`];
+      }
+
         if (Array.isArray(val) && val.length > 0 && val[0]?.nome !== undefined) {
           mergedResponses[key] = val
             .filter((c: any) => c.nome)
