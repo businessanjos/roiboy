@@ -297,8 +297,7 @@ function getColSpan12(visual: VisualItem): number {
   if (ratio > 0.6)  return 8;        // ~2/3
   if (ratio >= 0.45) return 6;       // half
   if (ratio >= 0.3)  return 4;       // ~1/3
-  if (ratio >= 0.2)  return 3;       // ~1/4
-  return 3;
+  return 3;                           // ~1/4
 }
 
 function SharedVisualsGrid({
