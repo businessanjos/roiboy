@@ -179,6 +179,15 @@ export function SectorInstancesAccordion({
         instance={editingInstance}
         onSuccess={onRefresh}
       />
+
+      {/* Add Meta instance dialog */}
+      <AddMetaInstanceDialog
+        open={showMetaDialog}
+        onOpenChange={setShowMetaDialog}
+        sectorId={sector.id}
+        sectorName={sector.name}
+        onSuccess={onRefresh}
+      />
     </>
   );
 }
