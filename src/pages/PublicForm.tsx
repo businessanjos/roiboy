@@ -167,6 +167,17 @@ function isPercentageField(field: CustomField): boolean {
   return ["margem", "percentual", "porcentagem", "%"].some((kw) => lower.includes(kw));
 }
 
+function isSocialMediaStatusField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return lower.includes("instagram") && lower.includes("redes sociais");
+}
+
+const SOCIAL_MEDIA_OPTIONS = [
+  "Tenho apenas um perfil pessoal/profissional, me apresento com meu nome, mantenho uma rotina de postagens e comunico os benefícios do que ofereço.",
+  "Tenho dois perfis, sendo um profissional e outro pessoal.",
+  "Não utilizo ou utilizo raramente, ou não vejo benefício.",
+];
+
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
   const lower = field.name.toLowerCase();
@@ -938,6 +949,43 @@ export default function PublicForm() {
             className={cn(baseInputClass, "pl-14")}
             style={inputStyles}
           />
+        </div>
+      );
+    }
+
+    // Social media status field — forced multiple choice
+    if (isSocialMediaStatusField(field)) {
+      return (
+        <div className="space-y-3">
+          {SOCIAL_MEDIA_OPTIONS.map((option, idx) => {
+            const selected = value === option;
+            return (
+              <button
+                key={idx}
+                type="button"
+                className={cn(
+                  "w-full text-left p-4 rounded-xl border transition-all duration-200 text-sm leading-relaxed",
+                  selected
+                    ? "border-white/40 bg-white/10"
+                    : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]"
+                )}
+                style={{ color: dark.text }}
+                onClick={() => updateResponse(field.id, selected ? "" : option)}
+              >
+                <span className="flex items-start gap-3">
+                  <span
+                    className={cn(
+                      "mt-0.5 flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all",
+                      selected ? "border-white bg-white" : "border-white/30"
+                    )}
+                  >
+                    {selected && <span className="w-2 h-2 rounded-full bg-[#0a0a0b]" />}
+                  </span>
+                  {option}
+                </span>
+              </button>
+            );
+          })}
         </div>
       );
     }
