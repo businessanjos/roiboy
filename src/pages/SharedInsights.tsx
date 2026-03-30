@@ -277,20 +277,28 @@ export default function SharedInsights() {
 // ─── Grid Layout for Shared Visuals ──────────────────────────────────────────
 
 function getMinHeight(chartType: string): number {
-  if (["number", "scorecard"].includes(chartType)) return 120;
-  if (chartType === "gauge") return 180;
-  if (chartType === "data_table") return 280;
-  return 260;
+  if (["number", "scorecard"].includes(chartType)) return 100;
+  if (chartType === "gauge") return 160;
+  if (chartType === "funnel") return 360;
+  if (chartType === "data_table") return 300;
+  return 240;
 }
 
-/** Derive a responsive column span from the original layout width */
-function getColSpan(visual: VisualItem): number {
+/**
+ * Map the original 48-col layout width to a 12-col CSS grid span.
+ * This gives us finer control than a 4-col grid.
+ */
+function getColSpan12(visual: VisualItem): number {
   const w = visual.layout?.w ?? 24;
   const scale = visual.layout?.scale || 48;
   const ratio = w / scale;
-  if (ratio > 0.7) return 4;
-  if (ratio > 0.45) return 2;
-  return 1;
+  // Map ratio to 12-col grid
+  if (ratio > 0.85) return 12;       // full width
+  if (ratio > 0.6)  return 8;        // ~2/3
+  if (ratio >= 0.45) return 6;       // half
+  if (ratio >= 0.3)  return 4;       // ~1/3
+  if (ratio >= 0.2)  return 3;       // ~1/4
+  return 3;
 }
 
 function SharedVisualsGrid({
@@ -309,14 +317,17 @@ function SharedVisualsGrid({
 
   return (
     <div
-      className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+      className="grid gap-3"
+      style={{
+        gridTemplateColumns: "repeat(12, 1fr)",
+      }}
     >
       {sortedVisuals.map((visual) => {
         const vData = visualsData[visual.id];
         const data = vData?.data || [];
         const drilldownData = vData?.drilldownData || [];
         const chartType = visual.chart_type || "bar";
-        const colSpan = getColSpan(visual);
+        const colSpan = getColSpan12(visual);
 
         return (
           <div
