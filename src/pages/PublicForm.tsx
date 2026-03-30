@@ -63,6 +63,26 @@ const PERSONAL_KEYWORDS = [
   "filho", "filhos",
 ];
 
+const PERSONAL_FIELD_PATTERNS = [
+  /nascimento/,
+  /profissao/,
+  /instagram/,
+  /estado civil/,
+  /conjuge/,
+  /casamento/,
+  /emergencia/,
+  /documento/,
+  /(^|[^a-z])(endereco|cep|cpf|rg|filho|filhos)([^a-z]|$)/,
+];
+
+const PHONE_FIELD_PATTERNS = [
+  /telefone/,
+  /celular/,
+  /whatsapp/,
+  /phone/,
+  /(^|[^a-z])tel([^a-z]|$)/,
+];
+
 function normalizeFieldName(name: string): string {
   return name
     .toLowerCase()
@@ -71,8 +91,8 @@ function normalizeFieldName(name: string): string {
 }
 
 function isPersonalField(field: CustomField): boolean {
-  const lower = field.name.toLowerCase();
-  return PERSONAL_KEYWORDS.some((kw) => lower.includes(kw));
+  const normalized = normalizeFieldName(field.name);
+  return PERSONAL_FIELD_PATTERNS.some((pattern) => pattern.test(normalized));
 }
 
 function isDateField(field: CustomField): boolean {
@@ -219,8 +239,23 @@ interface EmployeeEntry {
 
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
-  const lower = field.name.toLowerCase();
-  return ["telefone", "celular", "whatsapp", "phone", "tel"].some((kw) => lower.includes(kw));
+  const normalized = normalizeFieldName(field.name);
+  return PHONE_FIELD_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+function isPrimaryClientPhoneField(field: CustomField): boolean {
+  const normalized = normalizeFieldName(field.name);
+
+  if (!isPhoneField(field) || normalized.includes("emergencia")) {
+    return false;
+  }
+
+  return [
+    "numero do seu telefone",
+    "seu telefone",
+    "telefone principal",
+    "telefone com codigo do pais",
+  ].some((keyword) => normalized.includes(keyword));
 }
 
 const FIELD_LABEL_OVERRIDES: Record<string, string> = {
@@ -304,12 +339,12 @@ function buildSteps(
     return available;
   };
 
-  const uniqueFields = dedupeFieldsById(splitSpouseFields(customFields));
-  const personalFields = uniqueFields.filter((field) => isPersonalField(field) || isEmployeeField(field));
-  const personalFieldIds = new Set(personalFields.map((field) => field.id));
-  const basicPersonalFields = personalFields.filter((field) => !getComplexFieldKind(field));
-  const complexPersonalFields = personalFields.filter((field) => !!getComplexFieldKind(field));
-  const otherFields = uniqueFields.filter((field) => !personalFieldIds.has(field.id));
+  const uniqueFields = dedupeFieldsById(splitSpouseFields(customFields)).filter(
+    (field) => !(requireClientInfo && !hasClientId && isPrimaryClientPhoneField(field))
+  );
+  const basicPersonalFields = uniqueFields.filter(
+    (field) => isPersonalField(field) && !getComplexFieldKind(field)
+  );
 
   if (requireClientInfo && !hasClientId) {
     steps.push({
@@ -324,18 +359,8 @@ function buildSteps(
     }
   }
 
-  let stepIndex = 2;
-  for (const field of complexPersonalFields) {
-    const fields = claimFields([field]);
-    if (fields.length === 0) continue;
-
-    steps.push({
-      title: getComplexFieldTitle(field),
-      fields,
-      type: "fields",
-    });
-    stepIndex++;
-  }
+  let stepIndex = steps.length + 1;
+  const createdComplexKinds = new Set<Exclude<ComplexFieldKind, null>>();
 
   const MAX_PER_STEP = 3;
   let currentBatch: CustomField[] = [];
@@ -353,8 +378,12 @@ function buildSteps(
     currentBatch = [];
   };
 
-  for (const field of otherFields) {
-    if (getComplexFieldKind(field)) {
+  for (const field of uniqueFields) {
+    if (assignedFieldIds.has(field.id)) continue;
+
+    const complexKind = getComplexFieldKind(field);
+
+    if (complexKind && !createdComplexKinds.has(complexKind)) {
       flushBatch();
       const fields = claimFields([field]);
       if (fields.length === 0) continue;
@@ -364,6 +393,7 @@ function buildSteps(
         fields,
         type: "fields",
       });
+      createdComplexKinds.add(complexKind);
       stepIndex++;
       continue;
     }
