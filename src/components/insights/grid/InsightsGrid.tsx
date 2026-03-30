@@ -29,6 +29,8 @@ interface InsightsGridProps {
 
 const ROW_HEIGHT = 20;
 const COLS = 48;
+const MARGIN: [number, number] = [12, 12];
+const CONTAINER_PADDING: [number, number] = [4, 4];
 
 function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
   const existingLayout = visual.layout;
@@ -61,12 +63,12 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
 
   return {
     i: visual.id,
-    x: (index % 2) * 26,
-    y: Math.floor(index / 2) * 27,
+    x: (index % 2) * 24,
+    y: Math.floor(index / 2) * 20,
     w: 24,
-    h: 25,
+    h: 18,
     minW: 8,
-    minH: 10,
+    minH: 8,
   };
 }
 
@@ -160,8 +162,8 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         gridConfig={{
           cols: COLS,
           rowHeight: ROW_HEIGHT,
-          margin: [0, 0] as [number, number],
-          containerPadding: [0, 0] as [number, number],
+          margin: MARGIN,
+          containerPadding: CONTAINER_PADDING,
         }}
         dragConfig={{
           enabled: !readOnly,
@@ -173,7 +175,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         compactor={freePositionCompactor}
       >
         {visuals.map((visual) => (
-          <div key={visual.id} className="h-full">
+          <div key={visual.id} className="h-full overflow-hidden rounded-lg">
             <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
           </div>
         ))}
