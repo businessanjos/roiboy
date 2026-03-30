@@ -534,7 +534,12 @@ function isProfessionalYearsField(field: CustomField): boolean {
 
 function isYesNoTextField(field: CustomField): boolean {
   const normalized = normalizeFieldName(field.name);
-  return normalized.includes("vende cursos tecnicos");
+  return normalized.includes("vende cursos tecnicos") || normalized.includes("metodo proprio");
+}
+
+function isMetodoProprio(field: CustomField): boolean {
+  const normalized = normalizeFieldName(field.name);
+  return normalized.includes("metodo proprio");
 }
 
   const isSpouseFieldVisible = useMemo(() => {
@@ -666,6 +671,22 @@ function isYesNoTextField(field: CustomField): boolean {
           mergedResponses[originalId] = `${gradValue} — Especialização: ${espec}`;
         }
         delete mergedResponses[`${originalId}__grad_especializacao`];
+      }
+
+      // Merge método próprio sub-field
+      const metodoIds = new Set<string>();
+      for (const key of Object.keys(mergedResponses)) {
+        if (key.includes("__metodo_nome")) {
+          metodoIds.add(key.replace(/__metodo_nome$/, ""));
+        }
+      }
+      for (const originalId of metodoIds) {
+        const mainVal = mergedResponses[originalId];
+        const nomeMetodo = mergedResponses[`${originalId}__metodo_nome`] || "";
+        if (mainVal === "Sim" && nomeMetodo) {
+          mergedResponses[originalId] = `Sim — Método: ${nomeMetodo}`;
+        }
+        delete mergedResponses[`${originalId}__metodo_nome`];
       }
 
       for (const [key, val] of Object.entries(mergedResponses)) {
@@ -1476,6 +1497,7 @@ function isYesNoTextField(field: CustomField): boolean {
 
     if (isYesNoTextField(field)) {
       return (
+        <>
         <div className="grid grid-cols-2 gap-3">
           {[{ label: "Sim", val: "Sim" }, { label: "Não", val: "Não" }].map(({ label, val }) => {
             const selected = value === val;
@@ -1502,6 +1524,22 @@ function isYesNoTextField(field: CustomField): boolean {
             );
           })}
         </div>
+        {isMetodoProprio(field) && value === "Sim" && (
+          <div className="space-y-2 mt-4">
+            <label className="block text-[15px] font-medium" style={{ color: dark.text }}>
+              Qual o nome do método? <span style={{ color: "#ef4444" }}>*</span>
+            </label>
+            <input
+              type="text"
+              value={responses[`${field.id}__metodo_nome`] ?? ""}
+              onChange={(e) => updateResponse(`${field.id}__metodo_nome`, e.target.value)}
+              placeholder="Nome do método..."
+              className={baseInputClass}
+              style={inputStyles}
+            />
+          </div>
+        )}
+        </>
       );
     }
 
