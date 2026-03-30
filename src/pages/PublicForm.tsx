@@ -1780,7 +1780,7 @@ export default function PublicForm() {
                       </div>
 
                       {/* Personal custom fields merged into this step */}
-                      {currentStepData.fields.filter(f => (!isVirtualSpouseField(f) || isSpouseFieldVisible) && isTrademarkSubFieldVisible(f)).map((field, index) => (
+                      {currentStepData.fields.filter(f => (!isVirtualSpouseField(f) || isSpouseFieldVisible) && isTrademarkSubFieldVisible(f) && isGraduationSpecVisible(f)).map((field, index) => (
                         <motion.div
                           key={field.id}
                           initial={{ opacity: 0, y: 8 }}
