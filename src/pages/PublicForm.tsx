@@ -291,11 +291,11 @@ function buildSteps(
   };
 
   for (const field of otherFields) {
-    // Address and children fields expand into many sub-fields, give them their own step
-    if (isAddressField(field) || isChildrenField(field)) {
+    // Address, children and employee fields expand into many sub-fields, give them their own step
+    if (isAddressField(field) || isChildrenField(field) || isEmployeeField(field)) {
       flushBatch();
       steps.push({
-        title: isAddressField(field) ? "Endereço" : "Filhos",
+        title: isAddressField(field) ? "Endereço" : isChildrenField(field) ? "Filhos" : "Equipe",
         fields: [field],
         type: "fields",
       });
