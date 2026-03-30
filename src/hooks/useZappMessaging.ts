@@ -920,7 +920,7 @@ export function useZappMessaging({
       let whatsappEdited = false;
       
       if (message.external_message_id) {
-        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        const { data, error } = await invokeWhatsAppManager(effectiveIntegrationId, {
           body: {
             action: "edit_message",
             message_id: message.external_message_id,
