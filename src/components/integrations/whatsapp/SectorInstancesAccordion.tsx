@@ -113,7 +113,7 @@ export function SectorInstancesAccordion({
                         variant="outline"
                         size="sm"
                         onClick={() => setShowMetaDialog(true)}
-                        className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                        className="border-primary/30 text-primary hover:bg-primary/5"
                       >
                         <Globe className="h-4 w-4 mr-2" />
                         Meta Cloud API
