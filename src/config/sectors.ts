@@ -32,12 +32,13 @@ import {
   Landmark,
   Percent,
   DollarSign,
+  Bot,
   
   type LucideIcon,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
 
-export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "configuracoes";
+export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "configuracoes";
 
 export interface NavItem {
   to: string;
