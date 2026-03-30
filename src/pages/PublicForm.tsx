@@ -942,7 +942,31 @@ export default function PublicForm() {
       );
     }
 
-    switch (field.field_type) {
+    // Percentage field (e.g. "Margem de lucro atual")
+    if (isPercentageField(field)) {
+      return (
+        <div className="relative">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={99}
+            value={value ?? ""}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/\D/g, "");
+              if (raw === "") { updateResponse(field.id, ""); return; }
+              const num = Math.min(Number(raw), 99);
+              updateResponse(field.id, String(num));
+            }}
+            placeholder="Ex: 30"
+            className={baseInputClass}
+            style={inputStyles}
+          />
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: dark.textTertiary }}>%</span>
+        </div>
+      );
+    }
+
       case "boolean":
         return (
           <div className="grid grid-cols-2 gap-3">
