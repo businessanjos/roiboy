@@ -172,11 +172,23 @@ function isSocialMediaStatusField(field: CustomField): boolean {
   return lower.includes("instagram") && lower.includes("redes sociais");
 }
 
+function isEmployeeField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return (lower.includes("colaborador") || lower.includes("funcionário") || lower.includes("equipe")) && (lower.includes("função") || lower.includes("funções") || lower.includes("categoria"));
+}
+
 const SOCIAL_MEDIA_OPTIONS = [
   "Tenho apenas um perfil pessoal/profissional, me apresento com meu nome, mantenho uma rotina de postagens e comunico os benefícios do que ofereço.",
   "Tenho dois perfis, sendo um profissional e outro pessoal.",
   "Não utilizo ou utilizo raramente, ou não vejo benefício.",
 ];
+
+const HIRING_REGIME_OPTIONS = ["CLT", "PJ", "RPA"];
+
+interface EmployeeEntry {
+  cargo: string;
+  regime: string;
+}
 
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
