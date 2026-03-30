@@ -267,7 +267,7 @@ function buildSteps(
   let stepIndex = 2;
   for (const field of complexPersonalFields) {
     steps.push({
-      title: isAddressField(field) ? "Endereço" : isChildrenField(field) ? "Filhos" : `Etapa ${stepIndex}`,
+      title: isAddressField(field) ? "Endereço" : isChildrenField(field) ? "Filhos" : isEmployeeField(field) ? "Equipe" : `Etapa ${stepIndex}`,
       fields: [field],
       type: "fields",
     });
