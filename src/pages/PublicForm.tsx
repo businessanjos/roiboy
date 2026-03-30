@@ -704,20 +704,7 @@ function isMetodoProprio(field: CustomField): boolean {
         delete mergedResponses[`${originalId}__metodo_nome`];
       }
 
-      // Merge Produtos/Serviços
-      const produtosIds = new Set<string>();
-      for (const key of Object.keys(mergedResponses)) {
-        if (key.includes("__produtos")) {
-          produtosIds.add(key.replace(/__produtos$/, ""));
-        }
-      }
-      for (const originalId of produtosIds) {
-        const produtos = (mergedResponses[`${originalId}__produtos`] || "").toString().trim();
-        const principal = (mergedResponses[`${originalId}__principal`] || "").toString().trim();
-        mergedResponses[originalId] = `Produtos/Serviços: ${produtos} — Principal: ${principal}`;
-        delete mergedResponses[`${originalId}__produtos`];
-        delete mergedResponses[`${originalId}__principal`];
-      }
+      // (Produtos/Serviços merge removed – field is normal text now)
 
       for (const [key, val] of Object.entries(mergedResponses)) {
         if (Array.isArray(val) && val.length > 0 && val[0]?.nome !== undefined) {
