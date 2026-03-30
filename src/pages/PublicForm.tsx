@@ -507,6 +507,15 @@ export default function PublicForm() {
     return CIVIL_STATUS_WITH_SPOUSE.includes(civilValue);
   }, [customFields, responses]);
 
+  const isTrademarkSubFieldVisible = (field: CustomField): boolean => {
+    if (!isVirtualTrademarkField(field)) return true;
+    if (field.id.endsWith("__marca_possui")) return true;
+    // Find the parent possui field
+    const parentId = field.id.replace(/__marca_(nome|como)$/, "__marca_possui");
+    const possuiValue = responses[parentId];
+    return possuiValue === true || possuiValue === "Sim";
+  };
+
   const totalSteps = steps.length;
   const isLastStep = currentStep === totalSteps - 1;
   const isSingleStep = totalSteps <= 1;
