@@ -769,12 +769,30 @@ export default function PublicForm() {
           })
         : [];
 
+      const [highlightIdx, setHighlightIdx] = React.useState(-1);
+
+      const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (filtered.length === 0) return;
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setHighlightIdx(prev => (prev + 1) % filtered.length);
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setHighlightIdx(prev => (prev <= 0 ? filtered.length - 1 : prev - 1));
+        } else if (e.key === "Enter" && highlightIdx >= 0 && highlightIdx < filtered.length) {
+          e.preventDefault();
+          updateResponse(field.id, filtered[highlightIdx]);
+          setHighlightIdx(-1);
+        }
+      };
+
       return (
         <div className="relative">
           <input
             type="text"
             value={typed}
-            onChange={(e) => updateResponse(field.id, e.target.value)}
+            onChange={(e) => { updateResponse(field.id, e.target.value); setHighlightIdx(-1); }}
+            onKeyDown={handleKeyDown}
             placeholder="Ex: Medicina, Odontologia..."
             className={baseInputClass}
             style={inputStyles}
@@ -789,13 +807,16 @@ export default function PublicForm() {
                 className="absolute z-20 left-0 right-0 mt-1 rounded-lg border overflow-hidden shadow-2xl shadow-black/40"
                 style={{ backgroundColor: dark.surface, borderColor: dark.border }}
               >
-                {filtered.map((suggestion) => (
+                {filtered.map((suggestion, idx) => (
                   <button
                     key={suggestion}
                     type="button"
                     className="w-full text-left px-4 py-3 text-[15px] transition-colors hover:bg-white/5"
-                    style={{ color: dark.text }}
-                    onClick={() => updateResponse(field.id, suggestion)}
+                    style={{
+                      color: dark.text,
+                      backgroundColor: idx === highlightIdx ? "rgba(255,255,255,0.08)" : "transparent",
+                    }}
+                    onClick={() => { updateResponse(field.id, suggestion); setHighlightIdx(-1); }}
                   >
                     <span style={{ color: dark.accent }}>{suggestion.slice(0, typed.length)}</span>
                     {suggestion.slice(typed.length)}
