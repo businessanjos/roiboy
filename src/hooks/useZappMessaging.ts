@@ -406,9 +406,7 @@ export function useZappMessaging({
               }
             }
             
-            const { error: retryError } = await supabase.functions.invoke("uazapi-manager", {
-              body: retryPayload,
-            });
+            const { error: retryError } = await invokeWhatsAppManager(effectiveIntegrationId, retryPayload);
             
             if (retryError) {
               console.error("[ZAPP-SEND] Retry edge function error:", JSON.stringify(retryError));
