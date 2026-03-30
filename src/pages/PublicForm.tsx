@@ -167,6 +167,17 @@ function isPercentageField(field: CustomField): boolean {
   return ["margem", "percentual", "porcentagem", "%"].some((kw) => lower.includes(kw));
 }
 
+function isSocialMediaStatusField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return lower.includes("instagram") && lower.includes("redes sociais");
+}
+
+const SOCIAL_MEDIA_OPTIONS = [
+  "Tenho apenas um perfil pessoal/profissional, me apresento com meu nome, mantenho uma rotina de postagens e comunico os benefícios do que ofereço.",
+  "Tenho dois perfis, sendo um profissional e outro pessoal.",
+  "Não utilizo ou utilizo raramente, ou não vejo benefício.",
+];
+
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
   const lower = field.name.toLowerCase();
