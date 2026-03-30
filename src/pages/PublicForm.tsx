@@ -1566,6 +1566,86 @@ const REGIME_OPTIONS = [
       );
     }
 
+    if (isCnpjRegimeField(field)) {
+      const cnpjValue = (responses[`${field.id}__cnpj`] as string) ?? "";
+      const cnpjDigits = cnpjValue.replace(/\D/g, "");
+      const cnpjValid = cnpjDigits.length === 14;
+      const regimeValue = responses[`${field.id}__regime`] as string | undefined;
+      return (
+        <>
+          {/* CNPJ */}
+          <div className="space-y-2">
+            <label className="block text-[15px] font-medium" style={{ color: dark.text }}>
+              Qual seu CNPJ? <span style={{ color: "#ef4444" }}>*</span>
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={formatCnpj(cnpjValue)}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "").slice(0, 14);
+                updateResponse(`${field.id}__cnpj`, digits);
+              }}
+              placeholder="00.000.000/0000-00"
+              className={baseInputClass}
+              style={inputStyles}
+            />
+            {cnpjValue.length > 0 && !cnpjValid && (
+              <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
+                CNPJ deve ter 14 dígitos
+              </p>
+            )}
+          </div>
+
+          {/* Regime Tributário */}
+          {cnpjValid && (
+            <div className="space-y-2 mt-4">
+              <label className="block text-[15px] font-medium" style={{ color: dark.text }}>
+                Qual é o regime tributário? <span style={{ color: "#ef4444" }}>*</span>
+              </label>
+              <div className="space-y-2">
+                {REGIME_OPTIONS.map((opt) => {
+                  const selected = regimeValue === opt;
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      className={cn(
+                        "w-full flex items-center gap-3 px-4 h-12 rounded-lg border text-left transition-all duration-200",
+                        "hover:border-[rgba(255,255,255,0.12)]"
+                      )}
+                      style={{
+                        backgroundColor: selected ? dark.accentGlow : dark.surface,
+                        borderColor: selected ? dark.accent : dark.border,
+                      }}
+                      onClick={() => updateResponse(`${field.id}__regime`, opt)}
+                    >
+                      <div
+                        className="w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors"
+                        style={{ borderColor: selected ? dark.accent : "rgba(255,255,255,0.15)" }}
+                      >
+                        {selected && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: dark.accent }}
+                          />
+                        )}
+                      </div>
+                      <span className="text-[15px]" style={{ color: selected ? dark.text : dark.textSecondary }}>
+                        {opt}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      );
+    }
+
     switch (field.field_type) {
       case "boolean":
         return (
