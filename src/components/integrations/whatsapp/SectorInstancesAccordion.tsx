@@ -100,17 +100,25 @@ export function SectorInstancesAccordion({
                 <div className="text-center py-6 text-muted-foreground">
                   <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">Nenhuma instância neste setor</p>
-                  {isAdmin && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-3"
-                      onClick={() => setShowAddDialog(true)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Instância
-                    </Button>
-                  )}
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAddDialog(true)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Instância UAZAPI
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowMetaDialog(true)}
+                        className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                      >
+                        <Globe className="h-4 w-4 mr-2" />
+                        Meta Cloud API
+                      </Button>
+                    </div>
                 </div>
               ) : (
                 <>
