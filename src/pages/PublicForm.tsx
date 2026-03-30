@@ -754,6 +754,52 @@ export default function PublicForm() {
       "--tw-ring-color": dark.accent,
     };
 
+    // Graduation field with autocomplete suggestions
+    if (isGraduationField(field) && !isVirtualGraduationField(field)) {
+      const typed = (value || "").toString();
+      const filtered = typed.length > 0
+        ? GRADUATION_SUGGESTIONS.filter(s => s.toLowerCase().startsWith(typed.toLowerCase()) && s.toLowerCase() !== typed.toLowerCase())
+        : [];
+
+      return (
+        <div className="relative">
+          <input
+            type="text"
+            value={typed}
+            onChange={(e) => updateResponse(field.id, e.target.value)}
+            placeholder="Ex: Medicina, Odontologia..."
+            className={baseInputClass}
+            style={inputStyles}
+          />
+          <AnimatePresence>
+            {filtered.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.15 }}
+                className="absolute z-20 left-0 right-0 mt-1 rounded-lg border overflow-hidden shadow-2xl shadow-black/40"
+                style={{ backgroundColor: dark.surface, borderColor: dark.border }}
+              >
+                {filtered.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    className="w-full text-left px-4 py-3 text-[15px] transition-colors hover:bg-white/5"
+                    style={{ color: dark.text }}
+                    onClick={() => updateResponse(field.id, suggestion)}
+                  >
+                    <span style={{ color: dark.accent }}>{suggestion.slice(0, typed.length)}</span>
+                    {suggestion.slice(typed.length)}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      );
+    }
+
     // Children dynamic field (must be checked BEFORE date detection)
     if (isChildrenField(field)) {
       const children: { nome: string; nascimento: string }[] = Array.isArray(value) ? value : [];
