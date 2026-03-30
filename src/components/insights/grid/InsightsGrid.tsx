@@ -63,12 +63,12 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
 
   return {
     i: visual.id,
-    x: (index % 2) * 26,
-    y: Math.floor(index / 2) * 27,
+    x: (index % 2) * 24,
+    y: Math.floor(index / 2) * 20,
     w: 24,
-    h: 25,
+    h: 18,
     minW: 8,
-    minH: 10,
+    minH: 8,
   };
 }
 
