@@ -969,7 +969,7 @@ export default function PublicForm() {
                     ? "border-white/40 bg-white/10"
                     : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]"
                 )}
-                style={{ color: dark.textPrimary }}
+                style={{ color: dark.text }}
                 onClick={() => updateResponse(field.id, selected ? "" : option)}
               >
                 <span className="flex items-start gap-3">
