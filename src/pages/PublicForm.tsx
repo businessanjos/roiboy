@@ -221,20 +221,34 @@ function buildSteps(
   const steps: FieldStep[] = [];
 
   // Separate personal fields from the rest
-  const personalFields = splitSpouseFields(customFields.filter(isPersonalField));
+  const allPersonalFields = splitSpouseFields(customFields.filter(isPersonalField));
   const otherFields = splitSpouseFields(customFields.filter((f) => !isPersonalField(f)));
 
-  // Step 1: Client info + personal fields merged
+  // Split personal fields: basic ones vs complex ones (address, children)
+  const basicPersonalFields = allPersonalFields.filter(f => !isAddressField(f) && !isChildrenField(f));
+  const complexPersonalFields = allPersonalFields.filter(f => isAddressField(f) || isChildrenField(f));
+
+  // Step 1: Client info + basic personal fields only
   if (requireClientInfo && !hasClientId) {
-    steps.push({ title: "Dados Pessoais", fields: personalFields, type: "client_info" });
-  } else if (personalFields.length > 0) {
-    steps.push({ title: "Dados Pessoais", fields: personalFields, type: "fields" });
+    steps.push({ title: "Dados Pessoais", fields: basicPersonalFields, type: "client_info" });
+  } else if (basicPersonalFields.length > 0) {
+    steps.push({ title: "Dados Pessoais", fields: basicPersonalFields, type: "fields" });
+  }
+
+  // Complex personal fields get their own steps
+  let stepIndex = 2;
+  for (const field of complexPersonalFields) {
+    steps.push({
+      title: isAddressField(field) ? "Endereço" : isChildrenField(field) ? "Filhos" : `Etapa ${stepIndex}`,
+      fields: [field],
+      type: "fields",
+    });
+    stepIndex++;
   }
 
   // Remaining fields grouped intelligently
   const MAX_PER_STEP = 3;
   let currentBatch: CustomField[] = [];
-  let stepIndex = 2;
 
   const flushBatch = () => {
     if (currentBatch.length > 0) {
@@ -251,9 +265,9 @@ function buildSteps(
   for (const field of otherFields) {
     // Address and children fields expand into many sub-fields, give them their own step
     if (isAddressField(field) || isChildrenField(field)) {
-      flushBatch(); // flush any pending fields first
+      flushBatch();
       steps.push({
-        title: `Etapa ${stepIndex}`,
+        title: isAddressField(field) ? "Endereço" : "Filhos",
         fields: [field],
         type: "fields",
       });
