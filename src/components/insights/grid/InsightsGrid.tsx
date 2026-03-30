@@ -162,8 +162,8 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         gridConfig={{
           cols: COLS,
           rowHeight: ROW_HEIGHT,
-          margin: [0, 0] as [number, number],
-          containerPadding: [0, 0] as [number, number],
+          margin: MARGIN,
+          containerPadding: CONTAINER_PADDING,
         }}
         dragConfig={{
           enabled: !readOnly,
