@@ -872,8 +872,8 @@ export function useZappMessaging({
       let whatsappDeleted = false;
       
       if (message.external_message_id) {
-        const { data, error } = await invokeWhatsAppManager(effectiveIntegrationId, {
-          body: {
+        const intId = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
+        const { data, error } = await invokeWhatsAppManager(intId, {
             action: "delete_message",
             message_id: message.external_message_id,
             phone: getContactInfo(selectedConversation).phone,
