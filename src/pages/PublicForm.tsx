@@ -264,6 +264,7 @@ const FIELD_LABEL_OVERRIDES: Record<string, string> = {
   "filho": "Tem filhos?",
   "endereço": "Endereço",
   "endereco": "Endereço",
+  "formalizada": "CNPJ e Regime Tributário",
 };
 
 function getFieldLabel(field: CustomField): string {
@@ -542,6 +543,28 @@ function isMetodoProprio(field: CustomField): boolean {
   return normalized.includes("metodo proprio");
 }
 
+function isCnpjRegimeField(field: CustomField): boolean {
+  const normalized = normalizeFieldName(field.name);
+  return normalized.includes("formalizada") && normalized.includes("cnpj");
+}
+
+function formatCnpj(digits: string): string {
+  const d = digits.replace(/\D/g, "").slice(0, 14);
+  if (d.length <= 2) return d;
+  if (d.length <= 5) return `${d.slice(0, 2)}.${d.slice(2)}`;
+  if (d.length <= 8) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5)}`;
+  if (d.length <= 12) return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8)}`;
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+}
+
+const REGIME_OPTIONS = [
+  "Simples Nacional",
+  "Lucro Presumido",
+  "Lucro Real",
+  "MEI",
+  "Não sei informar",
+];
+
   const isSpouseFieldVisible = useMemo(() => {
     const civilStatusField = customFields.find(isCivilStatusField);
     if (!civilStatusField) return true;
@@ -687,6 +710,25 @@ function isMetodoProprio(field: CustomField): boolean {
           mergedResponses[originalId] = `Sim — Método: ${nomeMetodo}`;
         }
         delete mergedResponses[`${originalId}__metodo_nome`];
+      }
+
+      // Merge CNPJ + regime tributário
+      const cnpjIds = new Set<string>();
+      for (const key of Object.keys(mergedResponses)) {
+        if (key.includes("__cnpj")) {
+          cnpjIds.add(key.replace(/__cnpj$/, ""));
+        }
+      }
+      for (const originalId of cnpjIds) {
+        const cnpjDigits = (mergedResponses[`${originalId}__cnpj`] || "").toString().replace(/\D/g, "");
+        const regime = mergedResponses[`${originalId}__regime`] || "";
+        if (cnpjDigits.length === 14) {
+          mergedResponses[originalId] = `CNPJ: ${formatCnpj(cnpjDigits)} — Regime: ${regime}`;
+        } else {
+          mergedResponses[originalId] = "Não possui CNPJ";
+        }
+        delete mergedResponses[`${originalId}__cnpj`];
+        delete mergedResponses[`${originalId}__regime`];
       }
 
       for (const [key, val] of Object.entries(mergedResponses)) {
@@ -1539,6 +1581,86 @@ function isMetodoProprio(field: CustomField): boolean {
             />
           </div>
         )}
+        </>
+      );
+    }
+
+    if (isCnpjRegimeField(field)) {
+      const cnpjValue = (responses[`${field.id}__cnpj`] as string) ?? "";
+      const cnpjDigits = cnpjValue.replace(/\D/g, "");
+      const cnpjValid = cnpjDigits.length === 14;
+      const regimeValue = responses[`${field.id}__regime`] as string | undefined;
+      return (
+        <>
+          {/* CNPJ */}
+          <div className="space-y-2">
+            <label className="block text-[15px] font-medium" style={{ color: dark.text }}>
+              Qual seu CNPJ? <span style={{ color: "#ef4444" }}>*</span>
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={formatCnpj(cnpjValue)}
+              onChange={(e) => {
+                const digits = e.target.value.replace(/\D/g, "").slice(0, 14);
+                updateResponse(`${field.id}__cnpj`, digits);
+              }}
+              placeholder="00.000.000/0000-00"
+              className={baseInputClass}
+              style={inputStyles}
+            />
+            {cnpjValue.length > 0 && !cnpjValid && (
+              <p className="text-xs mt-1" style={{ color: "#ef4444" }}>
+                CNPJ deve ter 14 dígitos
+              </p>
+            )}
+          </div>
+
+          {/* Regime Tributário */}
+          {cnpjValid && (
+            <div className="space-y-2 mt-4">
+              <label className="block text-[15px] font-medium" style={{ color: dark.text }}>
+                Qual é o regime tributário? <span style={{ color: "#ef4444" }}>*</span>
+              </label>
+              <div className="space-y-2">
+                {REGIME_OPTIONS.map((opt) => {
+                  const selected = regimeValue === opt;
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      className={cn(
+                        "w-full flex items-center gap-3 px-4 h-12 rounded-lg border text-left transition-all duration-200",
+                        "hover:border-[rgba(255,255,255,0.12)]"
+                      )}
+                      style={{
+                        backgroundColor: selected ? dark.accentGlow : dark.surface,
+                        borderColor: selected ? dark.accent : dark.border,
+                      }}
+                      onClick={() => updateResponse(`${field.id}__regime`, opt)}
+                    >
+                      <div
+                        className="w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center transition-colors"
+                        style={{ borderColor: selected ? dark.accent : "rgba(255,255,255,0.15)" }}
+                      >
+                        {selected && (
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            className="w-2 h-2 rounded-full"
+                            style={{ backgroundColor: dark.accent }}
+                          />
+                        )}
+                      </div>
+                      <span className="text-[15px]" style={{ color: selected ? dark.text : dark.textSecondary }}>
+                        {opt}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </>
       );
     }
