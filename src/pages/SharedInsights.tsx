@@ -276,6 +276,23 @@ export default function SharedInsights() {
 
 // ─── Grid Layout for Shared Visuals ──────────────────────────────────────────
 
+function getMinHeight(chartType: string): number {
+  if (["number", "scorecard"].includes(chartType)) return 140;
+  if (chartType === "gauge") return 200;
+  if (chartType === "data_table") return 320;
+  return 300;
+}
+
+/** Derive a responsive column span hint from the original 48-col layout width */
+function getColSpan(visual: VisualItem): number {
+  const w = visual.layout?.w ?? 24;
+  const scale = visual.layout?.scale || 48;
+  const ratio = w / scale;
+  // Full width (>70%) → span 2, otherwise span 1
+  if (ratio > 0.7) return 2;
+  return 1;
+}
+
 function SharedVisualsGrid({
   visuals,
   visualsData,
@@ -283,10 +300,7 @@ function SharedVisualsGrid({
   visuals: VisualItem[];
   visualsData: Record<string, { data: AggregatedDataPoint[]; drilldownData?: DrilldownRecord[] }>;
 }) {
-  const GRID_COLS = 48;
-  const ROW_HEIGHT = 14; // px per grid row unit (increased from 8 for better spacing)
-
-  // Sort visuals by y then x for proper flow order on mobile
+  // Sort visuals by y then x for logical flow order
   const sortedVisuals = [...visuals].sort((a, b) => {
     const ay = a.layout?.y ?? 0;
     const by = b.layout?.y ?? 0;
@@ -294,73 +308,36 @@ function SharedVisualsGrid({
     return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
   });
 
-  // Compute total grid height from layout (desktop only)
-  const maxY = visuals.reduce((max, v) => {
-    const bottom = (v.layout?.y ?? 0) + (v.layout?.h ?? 10);
-    return Math.max(max, bottom);
-  }, 0);
-
   return (
-    <>
-      {/* Desktop: absolute positioned grid */}
-      <div
-        className="relative w-full hidden md:block"
-        style={{ height: maxY * ROW_HEIGHT }}
-      >
-        {visuals.map((visual) => {
-          const vData = visualsData[visual.id];
-          const data = vData?.data || [];
-          const drilldownData = vData?.drilldownData || [];
-          const layout = visual.layout;
-          const scale = layout?.scale || GRID_COLS;
-          const x = layout?.x ?? 0;
-          const y = layout?.y ?? 0;
-          const w = layout?.w ?? scale;
-          const h = layout?.h ?? 10;
+    <div
+      className="grid gap-4"
+      style={{
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 380px), 1fr))",
+      }}
+    >
+      {sortedVisuals.map((visual) => {
+        const vData = visualsData[visual.id];
+        const data = vData?.data || [];
+        const drilldownData = vData?.drilldownData || [];
+        const chartType = visual.chart_type || "bar";
+        const colSpan = getColSpan(visual);
 
-          return (
-            <div
-              key={visual.id}
-              className="absolute p-1"
-              style={{
-                left: `${(x / scale) * 100}%`,
-                top: y * ROW_HEIGHT,
-                width: `${(w / scale) * 100}%`,
-                height: h * ROW_HEIGHT,
-              }}
-            >
-              <SharedVisualCard
-                visual={visual}
-                data={data}
-                drilldownData={drilldownData}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Mobile: stacked flow layout */}
-      <div className="flex flex-col gap-4 md:hidden">
-        {sortedVisuals.map((visual) => {
-          const vData = visualsData[visual.id];
-          const data = vData?.data || [];
-          const drilldownData = vData?.drilldownData || [];
-          const chartType = visual.chart_type || "bar";
-          // Give each card a sensible min-height based on type
-          const isCompact = ["number", "scorecard", "gauge"].includes(chartType);
-          const minH = isCompact ? 120 : 280;
-
-          return (
-            <div key={visual.id} style={{ minHeight: minH }}>
-              <SharedVisualCard
-                visual={visual}
-                data={data}
-                drilldownData={drilldownData}
-              />
-            </div>
-          );
-        })}
-      </div>
-    </>
+        return (
+          <div
+            key={visual.id}
+            style={{
+              minHeight: getMinHeight(chartType),
+              gridColumn: colSpan > 1 ? "1 / -1" : undefined,
+            }}
+          >
+            <SharedVisualCard
+              visual={visual}
+              data={data}
+              drilldownData={drilldownData}
+            />
+          </div>
+        );
+      })}
+    </div>
   );
 }
