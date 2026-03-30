@@ -63,6 +63,13 @@ const PERSONAL_KEYWORDS = [
   "filho", "filhos",
 ];
 
+function normalizeFieldName(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
 function isPersonalField(field: CustomField): boolean {
   const lower = field.name.toLowerCase();
   return PERSONAL_KEYWORDS.some((kw) => lower.includes(kw));
@@ -158,8 +165,8 @@ function isChildrenField(field: CustomField): boolean {
 }
 
 function isAddressField(field: CustomField): boolean {
-  const lower = field.name.toLowerCase();
-  return ["endereço", "endereco", "cep"].some((kw) => lower.includes(kw));
+  const normalized = normalizeFieldName(field.name);
+  return /(^|[^a-z])(endereco|cep)([^a-z]|$)/.test(normalized);
 }
 
 function isPercentageField(field: CustomField): boolean {
