@@ -289,6 +289,15 @@ function isVirtualTrademarkField(field: CustomField): boolean {
   return field.id.includes("__marca_");
 }
 
+function isGraduationField(field: CustomField): boolean {
+  const normalized = normalizeFieldName(field.name);
+  return normalized.includes("graduacao") || normalized.includes("formacao de graduacao");
+}
+
+function isVirtualGraduationField(field: CustomField): boolean {
+  return field.id.includes("__grad_especializacao");
+}
+
 function splitSpouseFields(fields: CustomField[]): CustomField[] {
   const result: CustomField[] = [];
   for (const field of fields) {
@@ -324,6 +333,15 @@ function splitSpouseFields(fields: CustomField[]): CustomField[] {
         ...field,
         id: `${field.id}__marca_como`,
         name: "Como esse nome foi definido?",
+        field_type: "text",
+        is_required: false,
+      });
+    } else if (isGraduationField(field)) {
+      result.push(field);
+      result.push({
+        ...field,
+        id: `${field.id}__grad_especializacao`,
+        name: "Qual sua especialização na Medicina?",
         field_type: "text",
         is_required: false,
       });
@@ -429,8 +447,8 @@ function buildSteps(
       continue;
     }
 
-    // Keep trademark virtual fields grouped with their parent
-    if (isVirtualTrademarkField(field)) {
+    // Keep trademark and graduation virtual fields grouped with their parent
+    if (isVirtualTrademarkField(field) || isVirtualGraduationField(field)) {
       // Add to current batch without triggering flush
       currentBatch.push(field);
       continue;
@@ -523,6 +541,13 @@ export default function PublicForm() {
     return possuiValue === true || possuiValue === "Sim";
   };
 
+  const isGraduationSpecVisible = (field: CustomField): boolean => {
+    if (!isVirtualGraduationField(field)) return true;
+    const parentId = field.id.replace(/__grad_especializacao$/, "");
+    const gradValue = (responses[parentId] || "").toString().toLowerCase().trim();
+    return gradValue === "medicina";
+  };
+
   const totalSteps = steps.length;
   const isLastStep = currentStep === totalSteps - 1;
   const isSingleStep = totalSteps <= 1;
@@ -553,6 +578,7 @@ export default function PublicForm() {
     } else {
       step.fields.forEach((f) => {
         if (!isTrademarkSubFieldVisible(f)) return;
+        if (!isGraduationSpecVisible(f)) return;
         if (f.is_required && isFieldEmpty(f, responses[f.id])) errors[f.id] = true;
       });
     }
@@ -611,6 +637,23 @@ export default function PublicForm() {
         delete mergedResponses[`${originalId}__marca_possui`];
         delete mergedResponses[`${originalId}__marca_nome`];
         delete mergedResponses[`${originalId}__marca_como`];
+      }
+
+      // Merge graduation specialization fields back
+      const gradOriginalIds = new Set<string>();
+      for (const key of Object.keys(mergedResponses)) {
+        if (key.includes("__grad_especializacao")) {
+          const originalId = key.replace(/__grad_especializacao$/, "");
+          gradOriginalIds.add(originalId);
+        }
+      }
+      for (const originalId of gradOriginalIds) {
+        const espec = mergedResponses[`${originalId}__grad_especializacao`] || "";
+        const gradValue = (mergedResponses[originalId] || "").toString();
+        if (gradValue.toLowerCase().trim() === "medicina" && espec) {
+          mergedResponses[originalId] = `${gradValue} — Especialização: ${espec}`;
+        }
+        delete mergedResponses[`${originalId}__grad_especializacao`];
       }
 
       for (const [key, val] of Object.entries(mergedResponses)) {
@@ -1737,7 +1780,7 @@ export default function PublicForm() {
                       </div>
 
                       {/* Personal custom fields merged into this step */}
-                      {currentStepData.fields.filter(f => (!isVirtualSpouseField(f) || isSpouseFieldVisible) && isTrademarkSubFieldVisible(f)).map((field, index) => (
+                      {currentStepData.fields.filter(f => (!isVirtualSpouseField(f) || isSpouseFieldVisible) && isTrademarkSubFieldVisible(f) && isGraduationSpecVisible(f)).map((field, index) => (
                         <motion.div
                           key={field.id}
                           initial={{ opacity: 0, y: 8 }}
@@ -1769,7 +1812,7 @@ export default function PublicForm() {
                   )}
 
                   {/* Field Steps */}
-                  {currentStepData?.type === "fields" && currentStepData.fields.filter(f => (!isVirtualSpouseField(f) || isSpouseFieldVisible) && isTrademarkSubFieldVisible(f)).map((field, index) => (
+                  {currentStepData?.type === "fields" && currentStepData.fields.filter(f => (!isVirtualSpouseField(f) || isSpouseFieldVisible) && isTrademarkSubFieldVisible(f) && isGraduationSpecVisible(f)).map((field, index) => (
                     <motion.div
                       key={field.id}
                       initial={{ opacity: 0, y: 8 }}
