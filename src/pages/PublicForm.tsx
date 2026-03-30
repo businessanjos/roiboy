@@ -541,6 +541,13 @@ export default function PublicForm() {
     return possuiValue === true || possuiValue === "Sim";
   };
 
+  const isGraduationSpecVisible = (field: CustomField): boolean => {
+    if (!isVirtualGraduationField(field)) return true;
+    const parentId = field.id.replace(/__grad_especializacao$/, "");
+    const gradValue = (responses[parentId] || "").toString().toLowerCase().trim();
+    return gradValue === "medicina";
+  };
+
   const totalSteps = steps.length;
   const isLastStep = currentStep === totalSteps - 1;
   const isSingleStep = totalSteps <= 1;
