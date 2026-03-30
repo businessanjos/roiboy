@@ -878,7 +878,6 @@ export function useZappMessaging({
             message_id: message.external_message_id,
             phone: getContactInfo(selectedConversation).phone,
             sector_id: selectedSectorId || "",
-          },
         });
         
         if (!error && data?.data?.deleted) {
