@@ -532,6 +532,11 @@ function isProfessionalYearsField(field: CustomField): boolean {
   return normalized.includes("quanto tempo") && normalized.includes("area profissional");
 }
 
+function isYesNoTextField(field: CustomField): boolean {
+  const normalized = normalizeFieldName(field.name);
+  return normalized.includes("vende cursos tecnicos");
+}
+
   const isSpouseFieldVisible = useMemo(() => {
     const civilStatusField = customFields.find(isCivilStatusField);
     if (!civilStatusField) return true;
@@ -1465,6 +1470,37 @@ function isProfessionalYearsField(field: CustomField): boolean {
             style={{ ...inputStyles, paddingRight: "60px" }}
           />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: dark.textTertiary }}>anos</span>
+        </div>
+      );
+    }
+
+    if (isYesNoTextField(field)) {
+      return (
+        <div className="grid grid-cols-2 gap-3">
+          {[{ label: "Sim", val: "Sim" }, { label: "Não", val: "Não" }].map(({ label, val }) => {
+            const selected = value === val;
+            return (
+              <button
+                key={label}
+                type="button"
+                className={cn(
+                  "h-12 rounded-lg border text-[15px] font-medium transition-all duration-200",
+                  "hover:border-[rgba(255,255,255,0.12)]",
+                  selected && "ring-1"
+                )}
+                style={{
+                  backgroundColor: selected ? dark.accentGlow : dark.surface,
+                  borderColor: selected ? dark.accent : dark.border,
+                  color: selected ? dark.text : dark.textSecondary,
+                  // @ts-ignore
+                  "--tw-ring-color": dark.accent,
+                }}
+                onClick={() => updateResponse(field.id, val)}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
       );
     }
