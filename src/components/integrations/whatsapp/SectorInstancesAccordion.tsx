@@ -37,6 +37,7 @@ export function SectorInstancesAccordion({
   onRefresh,
 }: SectorInstancesAccordionProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showMetaDialog, setShowMetaDialog] = useState(false);
   const [editingInstance, setEditingInstance] = useState<SectorInstance | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
