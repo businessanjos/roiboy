@@ -264,7 +264,7 @@ const FIELD_LABEL_OVERRIDES: Record<string, string> = {
   "filho": "Tem filhos?",
   "endereço": "Endereço",
   "endereco": "Endereço",
-  "formalizada": "Produtos e Serviços",
+  "formalizada": "Formalização",
 };
 
 function getFieldLabel(field: CustomField): string {
@@ -543,10 +543,7 @@ function isMetodoProprio(field: CustomField): boolean {
   return normalized.includes("metodo proprio");
 }
 
-function isProdutosServicosField(field: CustomField): boolean {
-  const normalized = normalizeFieldName(field.name);
-  return normalized.includes("formalizada") && (normalized.includes("cnpj") || normalized.includes("produto") || normalized.includes("servico"));
-}
+// isProdutosServicosField removed – "formalizada" field renders as normal text
 
   const isSpouseFieldVisible = useMemo(() => {
     const civilStatusField = customFields.find(isCivilStatusField);
@@ -603,13 +600,7 @@ function isProdutosServicosField(field: CustomField): boolean {
         if (!isTrademarkSubFieldVisible(f)) return;
         if (!isGraduationSpecVisible(f)) return;
         if (f.is_required) {
-          // Produtos/Serviços field: validate sub-fields
-          if (isProdutosServicosField(f)) {
-            const produtos = ((responses[`${f.id}__produtos`] as string) ?? "").trim();
-            const principal = ((responses[`${f.id}__principal`] as string) ?? "").trim();
-            if (!produtos || !principal) errors[f.id] = true;
-          // Método próprio: validate sub-field when "Sim"
-          } else if (isMetodoProprio(f)) {
+          if (isMetodoProprio(f)) {
             if (!responses[f.id]) {
               errors[f.id] = true;
             } else if (responses[f.id] === "Sim" && !((responses[`${f.id}__metodo_nome`] as string) ?? "").trim()) {
@@ -711,20 +702,7 @@ function isProdutosServicosField(field: CustomField): boolean {
         delete mergedResponses[`${originalId}__metodo_nome`];
       }
 
-      // Merge Produtos/Serviços
-      const produtosIds = new Set<string>();
-      for (const key of Object.keys(mergedResponses)) {
-        if (key.includes("__produtos")) {
-          produtosIds.add(key.replace(/__produtos$/, ""));
-        }
-      }
-      for (const originalId of produtosIds) {
-        const produtos = (mergedResponses[`${originalId}__produtos`] || "").toString().trim();
-        const principal = (mergedResponses[`${originalId}__principal`] || "").toString().trim();
-        mergedResponses[originalId] = `Produtos/Serviços: ${produtos} — Principal: ${principal}`;
-        delete mergedResponses[`${originalId}__produtos`];
-        delete mergedResponses[`${originalId}__principal`];
-      }
+      // (Produtos/Serviços merge removed – field is normal text now)
 
       for (const [key, val] of Object.entries(mergedResponses)) {
         if (Array.isArray(val) && val.length > 0 && val[0]?.nome !== undefined) {
@@ -1580,47 +1558,7 @@ function isProdutosServicosField(field: CustomField): boolean {
       );
     }
 
-    if (isProdutosServicosField(field)) {
-      const produtosValue = (responses[`${field.id}__produtos`] as string) ?? "";
-      const principalValue = (responses[`${field.id}__principal`] as string) ?? "";
-      return (
-        <>
-          {/* Produtos/Serviços */}
-          <div className="space-y-2">
-            <label className="block text-[15px] font-medium" style={{ color: dark.text }}>
-              Quais são os principais produtos e/ou serviços prestados?{" "}
-              <span className="text-[13px] font-normal" style={{ color: dark.textSecondary }}>
-                (Informe: produto, valor, quantidade de sessões e duração de cada sessão.)
-              </span>{" "}
-              <span style={{ color: "#ef4444" }}>*</span>
-            </label>
-            <textarea
-              value={produtosValue}
-              onChange={(e) => updateResponse(`${field.id}__produtos`, e.target.value)}
-              placeholder="Ex: Limpeza de pele — R$ 150 — 1 sessão — 60 min"
-              rows={4}
-              className={baseInputClass}
-              style={{ ...inputStyles, minHeight: 100, resize: "vertical" }}
-            />
-          </div>
-
-          {/* Principal produto */}
-          <div className="space-y-2 mt-4">
-            <label className="block text-[15px] font-medium" style={{ color: dark.text }}>
-              Qual o principal produto/serviço que você mais vende atualmente? <span style={{ color: "#ef4444" }}>*</span>
-            </label>
-            <input
-              type="text"
-              value={principalValue}
-              onChange={(e) => updateResponse(`${field.id}__principal`, e.target.value)}
-              placeholder="Ex: Harmonização facial"
-              className={baseInputClass}
-              style={inputStyles}
-            />
-          </div>
-        </>
-      );
-    }
+    // "formalizada" field now renders as normal text field via switch below
 
     switch (field.field_type) {
       case "boolean":
