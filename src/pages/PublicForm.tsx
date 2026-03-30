@@ -162,6 +162,11 @@ function isAddressField(field: CustomField): boolean {
   return ["endereço", "endereco", "cep"].some((kw) => lower.includes(kw));
 }
 
+function isPercentageField(field: CustomField): boolean {
+  const lower = field.name.toLowerCase();
+  return ["margem", "percentual", "porcentagem", "%"].some((kw) => lower.includes(kw));
+}
+
 function isPhoneField(field: CustomField): boolean {
   if (field.field_type === "phone") return true;
   const lower = field.name.toLowerCase();
@@ -933,6 +938,31 @@ export default function PublicForm() {
             className={cn(baseInputClass, "pl-14")}
             style={inputStyles}
           />
+        </div>
+      );
+    }
+
+    // Percentage field (e.g. "Margem de lucro atual")
+    if (isPercentageField(field)) {
+      return (
+        <div className="relative">
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={99}
+            value={value ?? ""}
+            onChange={(e) => {
+              const raw = e.target.value.replace(/\D/g, "");
+              if (raw === "") { updateResponse(field.id, ""); return; }
+              const num = Math.min(Number(raw), 99);
+              updateResponse(field.id, String(num));
+            }}
+            placeholder="Ex: 30"
+            className={baseInputClass}
+            style={inputStyles}
+          />
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-medium" style={{ color: dark.textTertiary }}>%</span>
         </div>
       );
     }
