@@ -639,6 +639,23 @@ export default function PublicForm() {
         delete mergedResponses[`${originalId}__marca_como`];
       }
 
+      // Merge graduation specialization fields back
+      const gradOriginalIds = new Set<string>();
+      for (const key of Object.keys(mergedResponses)) {
+        if (key.includes("__grad_especializacao")) {
+          const originalId = key.replace(/__grad_especializacao$/, "");
+          gradOriginalIds.add(originalId);
+        }
+      }
+      for (const originalId of gradOriginalIds) {
+        const espec = mergedResponses[`${originalId}__grad_especializacao`] || "";
+        const gradValue = (mergedResponses[originalId] || "").toString();
+        if (gradValue.toLowerCase().trim() === "medicina" && espec) {
+          mergedResponses[originalId] = `${gradValue} — Especialização: ${espec}`;
+        }
+        delete mergedResponses[`${originalId}__grad_especializacao`];
+      }
+
       for (const [key, val] of Object.entries(mergedResponses)) {
         if (Array.isArray(val) && val.length > 0 && val[0]?.nome !== undefined) {
           mergedResponses[key] = val
