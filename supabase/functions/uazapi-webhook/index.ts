@@ -1556,7 +1556,10 @@ serve(async (req) => {
             }
 
             // Layer 3: Content-based dedup (same content, different external_message_id, within 2 min)
-            if (!skipInsert && !isEditedMessage) {
+            // IMPORTANT: Skip for media messages (image, video, sticker) since their content is often
+            // empty/null, which would cause multiple distinct media messages to be falsely deduplicated.
+            const isMediaMessage = mediaType && ["image", "video", "sticker"].includes(mediaType);
+            if (!skipInsert && !isEditedMessage && !isMediaMessage) {
               const contentMatch = msgs.find(m =>
                 m.content === content && m.external_message_id && m.external_message_id !== messageId
               );
@@ -1568,7 +1571,6 @@ serve(async (req) => {
 
             // Layer 4: UI echo dedup (frontend-inserted msg with null external_message_id)
             if (!skipInsert) {
-              const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
               let recentDupe: typeof msgs[0] | null = null;
 
               if (mediaType === "audio") {
@@ -1577,7 +1579,12 @@ serve(async (req) => {
                 ) || null;
               } else if (mediaType === "document") {
                 recentDupe = msgs.find(m => 
-                  m.message_type === "document" && !m.external_message_id
+                  m.message_type === "document" && !m.external_message_id && m.media_filename === mediaFilename
+                ) || null;
+              } else if (isMediaMessage) {
+                // For image/video/sticker: match by media_url to avoid false matches on empty content
+                recentDupe = msgs.find(m => 
+                  m.message_type === mediaType && !m.external_message_id && permanentMediaUrl && m.media_url === permanentMediaUrl
                 ) || null;
               } else {
                 recentDupe = msgs.find(m => 
