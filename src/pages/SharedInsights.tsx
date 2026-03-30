@@ -316,12 +316,13 @@ function SharedVisualsGrid({
   });
 
   return (
-    <div
-      className="grid gap-3"
-      style={{
-        gridTemplateColumns: "repeat(12, 1fr)",
-      }}
-    >
+    <>
+      <style>{`
+        .shared-grid { display: grid; gap: 12px; grid-template-columns: repeat(12, 1fr); }
+        @media (max-width: 1024px) { .shared-grid { grid-template-columns: repeat(6, 1fr); } }
+        @media (max-width: 640px)  { .shared-grid { grid-template-columns: 1fr; } .shared-grid > * { grid-column: span 1 !important; } }
+      `}</style>
+      <div className="shared-grid">
       {sortedVisuals.map((visual) => {
         const vData = visualsData[visual.id];
         const data = vData?.data || [];
