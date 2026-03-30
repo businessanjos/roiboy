@@ -1812,7 +1812,7 @@ export default function PublicForm() {
                   )}
 
                   {/* Field Steps */}
-                  {currentStepData?.type === "fields" && currentStepData.fields.filter(f => (!isVirtualSpouseField(f) || isSpouseFieldVisible) && isTrademarkSubFieldVisible(f)).map((field, index) => (
+                  {currentStepData?.type === "fields" && currentStepData.fields.filter(f => (!isVirtualSpouseField(f) || isSpouseFieldVisible) && isTrademarkSubFieldVisible(f) && isGraduationSpecVisible(f)).map((field, index) => (
                     <motion.div
                       key={field.id}
                       initial={{ opacity: 0, y: 8 }}
