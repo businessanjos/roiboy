@@ -252,9 +252,9 @@ function buildSteps(
   const allPersonalFields = splitSpouseFields(customFields.filter(isPersonalField));
   const otherFields = splitSpouseFields(customFields.filter((f) => !isPersonalField(f)));
 
-  // Split personal fields: basic ones vs complex ones (address, children)
-  const basicPersonalFields = allPersonalFields.filter(f => !isAddressField(f) && !isChildrenField(f));
-  const complexPersonalFields = allPersonalFields.filter(f => isAddressField(f) || isChildrenField(f));
+  // Split personal fields: basic ones vs complex ones (address, children, employees)
+  const basicPersonalFields = allPersonalFields.filter(f => !isAddressField(f) && !isChildrenField(f) && !isEmployeeField(f));
+  const complexPersonalFields = allPersonalFields.filter(f => isAddressField(f) || isChildrenField(f) || isEmployeeField(f));
 
   // Step 1: Client info + basic personal fields only
   if (requireClientInfo && !hasClientId) {
