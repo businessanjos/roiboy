@@ -967,6 +967,7 @@ export default function PublicForm() {
       );
     }
 
+    switch (field.field_type) {
       case "boolean":
         return (
           <div className="grid grid-cols-2 gap-3">
