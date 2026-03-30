@@ -289,6 +289,15 @@ function isVirtualTrademarkField(field: CustomField): boolean {
   return field.id.includes("__marca_");
 }
 
+function isGraduationField(field: CustomField): boolean {
+  const normalized = normalizeFieldName(field.name);
+  return normalized.includes("graduacao") || normalized.includes("formacao de graduacao");
+}
+
+function isVirtualGraduationField(field: CustomField): boolean {
+  return field.id.includes("__grad_especializacao");
+}
+
 function splitSpouseFields(fields: CustomField[]): CustomField[] {
   const result: CustomField[] = [];
   for (const field of fields) {
