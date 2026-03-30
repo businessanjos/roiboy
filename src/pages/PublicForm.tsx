@@ -289,6 +289,8 @@ function isVirtualTrademarkField(field: CustomField): boolean {
   return field.id.includes("__marca_");
 }
 
+const GRADUATION_SUGGESTIONS = ["Biomedicina", "Medicina", "Fisioterapia", "Odontologia"];
+
 function isGraduationField(field: CustomField): boolean {
   const normalized = normalizeFieldName(field.name);
   return normalized.includes("graduacao") || normalized.includes("formacao de graduacao");
