@@ -600,11 +600,7 @@ function isMetodoProprio(field: CustomField): boolean {
         if (!isTrademarkSubFieldVisible(f)) return;
         if (!isGraduationSpecVisible(f)) return;
         if (f.is_required) {
-          // Produtos/Serviços field: validate sub-fields
-          if (isProdutosServicosField(f)) {
-            const produtos = ((responses[`${f.id}__produtos`] as string) ?? "").trim();
-            const principal = ((responses[`${f.id}__principal`] as string) ?? "").trim();
-            if (!produtos || !principal) errors[f.id] = true;
+          if (false) { // placeholder removed
           // Método próprio: validate sub-field when "Sim"
           } else if (isMetodoProprio(f)) {
             if (!responses[f.id]) {
