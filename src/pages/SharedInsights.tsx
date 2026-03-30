@@ -277,19 +277,19 @@ export default function SharedInsights() {
 // ─── Grid Layout for Shared Visuals ──────────────────────────────────────────
 
 function getMinHeight(chartType: string): number {
-  if (["number", "scorecard"].includes(chartType)) return 140;
-  if (chartType === "gauge") return 200;
-  if (chartType === "data_table") return 320;
-  return 300;
+  if (["number", "scorecard"].includes(chartType)) return 120;
+  if (chartType === "gauge") return 180;
+  if (chartType === "data_table") return 280;
+  return 260;
 }
 
-/** Derive a responsive column span hint from the original 48-col layout width */
+/** Derive a responsive column span from the original layout width */
 function getColSpan(visual: VisualItem): number {
   const w = visual.layout?.w ?? 24;
   const scale = visual.layout?.scale || 48;
   const ratio = w / scale;
-  // Full width (>70%) → span 2, otherwise span 1
-  if (ratio > 0.7) return 2;
+  if (ratio > 0.7) return 4;
+  if (ratio > 0.45) return 2;
   return 1;
 }
 
@@ -300,7 +300,6 @@ function SharedVisualsGrid({
   visuals: VisualItem[];
   visualsData: Record<string, { data: AggregatedDataPoint[]; drilldownData?: DrilldownRecord[] }>;
 }) {
-  // Sort visuals by y then x for logical flow order
   const sortedVisuals = [...visuals].sort((a, b) => {
     const ay = a.layout?.y ?? 0;
     const by = b.layout?.y ?? 0;
@@ -310,9 +309,9 @@ function SharedVisualsGrid({
 
   return (
     <div
-      className="grid gap-4"
+      className="grid gap-3"
       style={{
-        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 380px), 1fr))",
+        gridTemplateColumns: "repeat(4, 1fr)",
       }}
     >
       {sortedVisuals.map((visual) => {
@@ -325,9 +324,10 @@ function SharedVisualsGrid({
         return (
           <div
             key={visual.id}
+            className="min-w-0"
             style={{
               minHeight: getMinHeight(chartType),
-              gridColumn: colSpan > 1 ? "1 / -1" : undefined,
+              gridColumn: `span ${colSpan}`,
             }}
           >
             <SharedVisualCard
