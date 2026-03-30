@@ -757,8 +757,16 @@ export default function PublicForm() {
     // Graduation field with autocomplete suggestions
     if (isGraduationField(field) && !isVirtualGraduationField(field)) {
       const typed = (value || "").toString();
+      const typedLower = typed.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const GRADUATION_ALIASES: Record<string, string[]> = {
+        "Medicina": ["medicina", "medico", "medica"],
+      };
       const filtered = typed.length > 0
-        ? GRADUATION_SUGGESTIONS.filter(s => s.toLowerCase().startsWith(typed.toLowerCase()) && s.toLowerCase() !== typed.toLowerCase())
+        ? GRADUATION_SUGGESTIONS.filter(s => {
+            if (s.toLowerCase() === typedLower) return false;
+            const aliases = GRADUATION_ALIASES[s] || [];
+            return s.toLowerCase().startsWith(typedLower) || aliases.some(a => a.startsWith(typedLower));
+          })
         : [];
 
       return (
