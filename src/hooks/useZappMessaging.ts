@@ -807,7 +807,7 @@ export function useZappMessaging({
           payload.phone = phone;
         }
         
-        const { data, error } = await supabase.functions.invoke("uazapi-manager", { body: payload });
+        const { data, error } = await invokeWhatsAppManager(effectiveIntegrationId, payload);
         
         if (error) {
           if (insertedMessageId) {
