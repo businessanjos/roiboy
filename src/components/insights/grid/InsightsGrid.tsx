@@ -32,25 +32,62 @@ const ROW_HEIGHT = 20;
 const COLS = 48;
 const MARGIN: [number, number] = [12, 12];
 const CONTAINER_PADDING: [number, number] = [4, 4];
+const COMPACT_LAYOUT_BREAKPOINT = 1100;
 
 // Minimum heights per chart type for mobile stacked view
 function getMobileMinHeight(visual: InsightsVisual): string {
-  const chartType = visual.chart_type || 'bar';
+  const chartType = visual.chart_type || "bar";
   switch (chartType) {
-    case 'scorecard':
-    case 'kpi':
-      return 'min-h-[120px]';
-    case 'table':
-    case 'ranking':
-      return 'min-h-[280px]';
-    case 'map':
-      return 'min-h-[300px]';
-    case 'pie':
-    case 'donut':
-      return 'min-h-[280px]';
+    case "scorecard":
+    case "kpi":
+      return "min-h-[120px]";
+    case "table":
+    case "ranking":
+      return "min-h-[280px]";
+    case "map":
+      return "min-h-[300px]";
+    case "pie":
+    case "donut":
+      return "min-h-[280px]";
     default:
-      return 'min-h-[260px]';
+      return "min-h-[260px]";
   }
+}
+
+function getResponsiveDesktopMinHeight(visual: InsightsVisual): number {
+  const chartType = visual.chart_type || "bar";
+
+  if (["number", "scorecard", "kpi"].includes(chartType)) return 160;
+  if (["table", "ranking", "data_table"].includes(chartType)) return 300;
+  if (chartType === "map") return 320;
+  if (chartType === "gauge") return 180;
+  if (chartType === "funnel") return 360;
+
+  return 260;
+}
+
+function getResponsiveColSpan12(visual: InsightsVisual): number {
+  const w = visual.layout?.w ?? 24;
+  const scale = visual.layout?.scale || 48;
+  const ratio = w / scale;
+
+  if (ratio > 0.85) return 12;
+  if (ratio > 0.6) return 8;
+  if (ratio >= 0.45) return 6;
+  if (ratio >= 0.3) return 4;
+  return 3;
+}
+
+function sortVisualsByLayout(visuals: InsightsVisual[]) {
+  return [...visuals].sort((a, b) => {
+    const ay = a.layout?.y ?? 0;
+    const by = b.layout?.y ?? 0;
+    if (ay !== by) return ay - by;
+
+    const ax = a.layout?.x ?? 0;
+    const bx = b.layout?.x ?? 0;
+    return ax - bx;
+  });
 }
 
 function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
@@ -99,17 +136,7 @@ function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
 }) {
-  // Sort visuals by their saved layout y position so order matches desktop
-  const sorted = useMemo(() => {
-    return [...visuals].sort((a, b) => {
-      const ay = a.layout?.y ?? 0;
-      const by = b.layout?.y ?? 0;
-      if (ay !== by) return ay - by;
-      const ax = a.layout?.x ?? 0;
-      const bx = b.layout?.x ?? 0;
-      return ax - bx;
-    });
-  }, [visuals]);
+  const sorted = useMemo(() => sortVisualsByLayout(visuals), [visuals]);
 
   return (
     <div className="space-y-3">
@@ -122,10 +149,44 @@ function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
   );
 }
 
+function StaticResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
+  visuals: InsightsVisual[];
+  onUpdateVisual?: (id: string, updates: any) => Promise<void>;
+  onRemoveVisual?: (id: string) => Promise<void>;
+}) {
+  const sorted = useMemo(() => sortVisualsByLayout(visuals), [visuals]);
+
+  return (
+    <>
+      <style>{`
+        .insights-static-grid {
+          display: grid;
+          gap: 12px;
+          grid-template-columns: repeat(12, minmax(0, 1fr));
+        }
+      `}</style>
+      <div className="insights-static-grid">
+        {sorted.map((visual) => (
+          <div
+            key={visual.id}
+            className="min-w-0 h-full overflow-hidden rounded-lg"
+            style={{
+              minHeight: getResponsiveDesktopMinHeight(visual),
+              gridColumn: `span ${getResponsiveColSpan12(visual)}`,
+            }}
+          >
+            <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual }: InsightsGridProps) {
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(1200);
+  const [width, setWidth] = useState<number | null>(null);
 
   // Local layout state — only syncs from props when visuals are added/removed
   const [localLayout, setLocalLayout] = useState<LayoutItem[]>(() =>
@@ -151,27 +212,34 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
   }, [visuals]);
 
   // Update container width on mount and any size change — debounced to avoid
-  // rapid re-renders during sidebar open/close transitions
+  // rapid re-renders during sidebar open/close transitions.
   useEffect(() => {
     if (!containerRef.current || isMobile) return;
+
     let rafId: number | null = null;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
+    const scheduleWidthUpdate = (nextWidth: number) => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (rafId) cancelAnimationFrame(rafId);
+
+      debounceTimer = setTimeout(() => {
+        rafId = requestAnimationFrame(() => {
+          setWidth((prev) => (prev === nextWidth ? prev : nextWidth));
+        });
+      }, 50);
+    };
+
+    scheduleWidthUpdate(containerRef.current.getBoundingClientRect().width);
+
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const newWidth = entry.contentRect.width;
-        // Cancel any pending updates
-        if (debounceTimer) clearTimeout(debounceTimer);
-        if (rafId) cancelAnimationFrame(rafId);
-        // Debounce: wait for resize to settle (sidebar transition = 300ms)
-        debounceTimer = setTimeout(() => {
-          rafId = requestAnimationFrame(() => {
-            setWidth(newWidth);
-          });
-        }, 50);
+        scheduleWidthUpdate(entry.contentRect.width);
       }
     });
+
     ro.observe(containerRef.current);
+
     return () => {
       ro.disconnect();
       if (debounceTimer) clearTimeout(debounceTimer);
@@ -224,12 +292,27 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
     );
   }
 
+  const containerWidth = width ?? 1200;
+  const useStaticResponsiveGrid = containerWidth < COMPACT_LAYOUT_BREAKPOINT;
+
+  if (useStaticResponsiveGrid) {
+    return (
+      <div ref={containerRef} className="insights-grid pointer-events-auto">
+        <StaticResponsiveInsightsGrid
+          visuals={visuals}
+          onUpdateVisual={onUpdateVisual}
+          onRemoveVisual={onRemoveVisual}
+        />
+      </div>
+    );
+  }
+
   return (
     <div ref={containerRef} className="insights-grid pointer-events-auto">
       <GridLayout
         className="layout"
         layout={localLayout}
-        width={width}
+        width={containerWidth}
         onLayoutChange={handleContinuousLayoutChange}
         onDragStop={handlePersist}
         onResizeStop={handlePersist}
