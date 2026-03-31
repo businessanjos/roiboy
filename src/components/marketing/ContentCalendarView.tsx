@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Instagram, Music2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Instagram, Music2, Youtube } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   format,
