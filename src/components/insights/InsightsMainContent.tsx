@@ -10,6 +10,8 @@ import { AddVisualModal } from "./AddVisualModal";
 import { ShareDashboardModal } from "./ShareDashboardModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
+import { MobileDashboardSheet } from "./MobileDashboardSheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { ZoomControls } from "@/components/ui/zoom-controls";
 
@@ -28,6 +30,7 @@ export function InsightsMainContent() {
   } = useInsightsDashboards();
 
   const { currentUser } = useCurrentUser();
+  const isMobile = useIsMobile();
 
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
@@ -114,13 +117,13 @@ export function InsightsMainContent() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex-1 p-8">
-        <div className="space-y-6">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-12 w-full" />
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-48" />
-            <Skeleton className="h-48" />
+      <div className="flex-1 p-4 md:p-8">
+        <div className="space-y-4 md:space-y-6">
+          <Skeleton className="h-8 w-48 md:w-64" />
+          <Skeleton className="h-10 w-full" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Skeleton className="h-40 md:h-48" />
+            <Skeleton className="h-40 md:h-48" />
           </div>
         </div>
       </div>
@@ -239,28 +242,36 @@ export function InsightsMainContent() {
           dashboardName={activeDashboard.name}
         />
       )}
-      <div className="p-4 md:p-6 space-y-6">
+      <div className="p-3 md:p-6 space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {isMobile ? (
+              <MobileDashboardSheet />
+            ) : (
+              <>
+                <BarChart3 className="h-5 w-5 text-primary shrink-0" />
+                <h1 className="text-2xl font-bold truncate">{activeDashboard.name}</h1>
+              </>
+            )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
             {canShare && (
-              <Button variant="outline" size="sm" onClick={() => setIsShareOpen(true)}>
-                <Share2 className="h-4 w-4 mr-2" />
-                Compartilhar
+              <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3" onClick={() => setIsShareOpen(true)}>
+                <Share2 className="h-4 w-4" />
+                <span className="hidden md:inline ml-2">Compartilhar</span>
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
-              <Monitor className="h-4 w-4 mr-2" />
-              Modo Foco
-            </Button>
+            {!isMobile && (
+              <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
+                <Monitor className="h-4 w-4 mr-2" />
+                Modo Foco
+              </Button>
+            )}
             {hasVisuals && (
-              <Button onClick={() => setIsBuilderOpen(true)} disabled={isLoadingVisuals}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Visual
+              <Button size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3" onClick={() => setIsBuilderOpen(true)} disabled={isLoadingVisuals}>
+                <Plus className="h-4 w-4" />
+                <span className="hidden md:inline ml-2">Adicionar Visual</span>
               </Button>
             )}
           </div>
@@ -271,9 +282,9 @@ export function InsightsMainContent() {
 
         {/* Grid or Empty State */}
         {isLoadingVisuals ? (
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-48" />
-            <Skeleton className="h-48" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Skeleton className="h-40 md:h-48" />
+            <Skeleton className="h-40 md:h-48" />
           </div>
         ) : hasVisuals ? (
           !isFocusMode && (

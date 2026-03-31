@@ -92,7 +92,7 @@ export function InsightsFilterBar() {
     filters.userId !== "all" || filters.productId !== "all";
 
   return (
-    <div className="flex flex-wrap items-center gap-2 p-4 bg-card border rounded-lg">
+    <div className="flex items-center gap-2 p-3 md:p-4 bg-card border rounded-lg overflow-x-auto scrollbar-hide">
       {/* Date Preset Dropdown */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
