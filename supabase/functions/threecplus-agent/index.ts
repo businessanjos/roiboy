@@ -960,16 +960,39 @@ Deno.serve(async (req) => {
         console.log("[threecplus-agent] place_call ensureAgentReadyForDial failed, attempting manual_call/enter anyway:", readyResult.error);
       }
 
-      const enterRes = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${effectiveApiToken}`, {
-        method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
-      });
-      const enterText = await enterRes.text();
-      console.log("[threecplus-agent] place_call manual_call_enter:", enterRes.status, enterText);
+      // Try manual_call/enter with retries - agent may need time to become idle
+      let enterRes: Response | null = null;
+      let enterText = "";
+      let manualModeAlreadyActive = false;
+      let agentNotIdle = false;
+      const maxEnterAttempts = 4;
 
-      const manualModeAlreadyActive = isManualModeAlreadyActive(enterRes.status, enterText);
-      const agentNotIdle = isAgentNotIdle(enterRes.status, enterText);
+      for (let attempt = 1; attempt <= maxEnterAttempts; attempt++) {
+        enterRes = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${effectiveApiToken}`, {
+          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        });
+        enterText = await enterRes.text();
+        console.log(`[threecplus-agent] place_call manual_call_enter attempt ${attempt}/${maxEnterAttempts}:`, enterRes.status, enterText);
 
-      if (enterRes.ok || enterRes.status === 204 || manualModeAlreadyActive) {
+        manualModeAlreadyActive = isManualModeAlreadyActive(enterRes.status, enterText);
+        agentNotIdle = isAgentNotIdle(enterRes.status, enterText);
+
+        if (enterRes.ok || enterRes.status === 204 || manualModeAlreadyActive) {
+          break;
+        }
+
+        if (agentNotIdle && attempt < maxEnterAttempts) {
+          console.log(`[threecplus-agent] place_call agent not idle, waiting 3s before retry ${attempt + 1}...`);
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+          // Try cleanup between retries
+          await cleanupAgentState(apiBase, effectiveApiToken);
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+        } else if (!agentNotIdle) {
+          break; // Different error, don't retry
+        }
+      }
+
+      if (enterRes && (enterRes.ok || enterRes.status === 204 || manualModeAlreadyActive)) {
         if (manualModeAlreadyActive) {
           console.log("[threecplus-agent] place_call proceeding to dial because agent is already in manual dialing state");
         }
