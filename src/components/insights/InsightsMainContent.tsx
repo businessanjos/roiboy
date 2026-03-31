@@ -96,7 +96,7 @@ export function InsightsMainContent() {
     let attempts = 0;
     let lastHeight = 0;
     let stableCount = 0;
-    const maxAttempts = 30; // 30 × 80ms = 2.4s max
+    const maxAttempts = 40; // 40 × 80ms = 3.2s max
 
     zoomTimerRef.current = setInterval(() => {
       attempts++;
@@ -106,7 +106,6 @@ export function InsightsMainContent() {
       if (!overlay || !content || attempts > maxAttempts) {
         if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
         zoomTimerRef.current = null;
-        // Fallback: if we timed out, still try to calculate
         if (overlay && content) {
           setFocusZoom(calculateAutoFitZoom(overlay, content));
         }
@@ -129,6 +128,28 @@ export function InsightsMainContent() {
       }
     }, 80);
   }, []);
+
+  // After zoom is applied, watch for content re-layout and re-adjust
+  useEffect(() => {
+    if (!isFocusMode || focusZoom === 100) return;
+    const content = contentRef.current;
+    const overlay = focusModeRef.current;
+    if (!content || !overlay) return;
+
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+    const ro = new ResizeObserver(() => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        // Only re-adjust if content overflows the overlay
+        if (overlay.scrollHeight > overlay.clientHeight + 2) {
+          const newZoom = calculateAutoFitZoom(overlay, content);
+          if (newZoom < focusZoom) setFocusZoom(newZoom);
+        }
+      }, 200);
+    });
+    ro.observe(content);
+    return () => { ro.disconnect(); if (debounce) clearTimeout(debounce); };
+  }, [isFocusMode, focusZoom]);
 
   // Cleanup timer on unmount
   useEffect(() => {
