@@ -15,6 +15,34 @@ import { useIsMobile } from "@/hooks/use-mobile";
 
 import { ZoomControls } from "@/components/ui/zoom-controls";
 
+/**
+ * Calculates the ideal zoom so that content fits the available viewport height
+ * without requiring scroll. Measures the actual rendered sizes rather than guessing.
+ */
+function calculateAutoFitZoom(
+  overlayEl: HTMLElement,
+  contentEl: HTMLElement,
+): number {
+  // Total viewport the overlay occupies
+  const viewportHeight = overlayEl.clientHeight;
+
+  // contentEl is the only thing that zooms.
+  // Everything else (header, padding, gaps) stays at scale 1.
+  // We find the "chrome" height by subtracting contentEl's contribution.
+  const contentNaturalHeight = contentEl.scrollHeight;
+  const overlayScrollHeight = overlayEl.scrollHeight;
+  const chromeHeight = overlayScrollHeight - contentNaturalHeight;
+
+  // Available height for the zoomed content
+  const availableForContent = viewportHeight - chromeHeight;
+
+  if (contentNaturalHeight <= 0 || availableForContent <= 0) return 100;
+
+  const idealZoom = (availableForContent / contentNaturalHeight) * 100;
+  // Clamp and apply a small safety buffer (98%) to avoid rounding issues
+  return Math.min(Math.max(Math.floor(idealZoom * 0.98), 30), 200);
+}
+
 export function InsightsMainContent() {
   const { 
     activeDashboard, 
@@ -39,6 +67,62 @@ export function InsightsMainContent() {
   const [focusZoom, setFocusZoom] = useState(100);
   const focusModeRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const zoomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Shared zoom calculation that polls until the grid layout stabilises
+  const runAutoFitZoom = useCallback(() => {
+    // Clear any previous polling
+    if (zoomTimerRef.current) {
+      clearInterval(zoomTimerRef.current);
+      zoomTimerRef.current = null;
+    }
+
+    // Reset to 100% so we measure natural (unzoomed) sizes
+    setFocusZoom(100);
+
+    let attempts = 0;
+    let lastHeight = 0;
+    let stableCount = 0;
+    const maxAttempts = 30; // 30 × 80ms = 2.4s max
+
+    zoomTimerRef.current = setInterval(() => {
+      attempts++;
+      const overlay = focusModeRef.current;
+      const content = contentRef.current;
+
+      if (!overlay || !content || attempts > maxAttempts) {
+        if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
+        zoomTimerRef.current = null;
+        // Fallback: if we timed out, still try to calculate
+        if (overlay && content) {
+          setFocusZoom(calculateAutoFitZoom(overlay, content));
+        }
+        return;
+      }
+
+      const h = content.scrollHeight;
+      if (h === lastHeight && h > 0) {
+        stableCount++;
+      } else {
+        stableCount = 0;
+      }
+      lastHeight = h;
+
+      // Stable after 3 consecutive identical reads
+      if (stableCount >= 3) {
+        if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
+        zoomTimerRef.current = null;
+        setFocusZoom(calculateAutoFitZoom(overlay, content));
+      }
+    }, 80);
+  }, []);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
+    };
+  }, []);
 
   // ESC listener
   useEffect(() => {
@@ -49,78 +133,31 @@ export function InsightsMainContent() {
     return () => document.removeEventListener("keydown", handleEsc);
   }, [isFocusMode]);
 
-  // Auto-fit zoom when entering focus mode — wait for grid to fully render
+  // Auto-fit zoom when entering focus mode
   useEffect(() => {
-    if (!isFocusMode || !contentRef.current) return;
-    setFocusZoom(100);
-
-    // The grid renders asynchronously (ResizeObserver, GridLayout internals).
-    // We poll scrollHeight a few times until it stabilises, then compute zoom.
-    let attempts = 0;
-    let lastHeight = 0;
-    let stableCount = 0;
-    const maxAttempts = 20; // 20 × 100ms = 2s max
-
-    const interval = setInterval(() => {
-      attempts++;
-      if (!contentRef.current || attempts > maxAttempts) {
-        clearInterval(interval);
-        return;
-      }
-
-      const contentHeight = contentRef.current.scrollHeight;
-      if (contentHeight === lastHeight && contentHeight > 0) {
-        stableCount++;
-      } else {
-        stableCount = 0;
-      }
-      lastHeight = contentHeight;
-
-      // Consider stable after 3 consecutive identical reads
-      if (stableCount >= 3 || attempts >= maxAttempts) {
-        clearInterval(interval);
-        const headerHeight = 72;
-        const padding = 48;
-        const availableHeight = (isFullscreen ? screen.height : window.innerHeight) - headerHeight - padding;
-        if (contentHeight > 0) {
-          const idealZoom = Math.floor((availableHeight / contentHeight) * 100);
-          setFocusZoom(Math.min(Math.max(idealZoom, 30), 200));
-        }
-      }
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [isFocusMode, isFullscreen]);
+    if (!isFocusMode) return;
+    // Small delay to let the portal mount and grid start rendering
+    const t = setTimeout(runAutoFitZoom, 50);
+    return () => clearTimeout(t);
+  }, [isFocusMode, runAutoFitZoom]);
 
   // Reset zoom when switching dashboards
   useEffect(() => {
     setFocusZoom(100);
   }, [activeDashboardId]);
 
-  // Fullscreen change listener — also recalculate zoom
+  // Fullscreen change listener — recalculate zoom after transition
   useEffect(() => {
     const handler = () => {
-      const fs = !!document.fullscreenElement;
-      setIsFullscreen(fs);
-      // Trigger re-zoom by toggling focus mode effect
-      if (isFocusMode && contentRef.current) {
-        setFocusZoom(100);
-        setTimeout(() => {
-          if (!contentRef.current) return;
-          const headerHeight = 72;
-          const padding = 48;
-          const availableHeight = (fs ? screen.height : window.innerHeight) - headerHeight - padding;
-          const contentHeight = contentRef.current.scrollHeight;
-          if (contentHeight > 0) {
-            const idealZoom = Math.floor((availableHeight / contentHeight) * 100);
-            setFocusZoom(Math.min(Math.max(idealZoom, 30), 200));
-          }
-        }, 300);
+      setIsFullscreen(!!document.fullscreenElement);
+      // Fullscreen transition takes ~300ms; recalculate after it settles
+      if (isFocusMode) {
+        setTimeout(runAutoFitZoom, 350);
       }
     };
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
-  }, [isFocusMode]);
+  }, [isFocusMode, runAutoFitZoom]);
 
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement && focusModeRef.current) {
@@ -226,14 +263,14 @@ export function InsightsMainContent() {
     ? createPortal(
         <div
           ref={focusModeRef}
-          className="fixed inset-0 z-[9999] bg-background overflow-hidden"
+          className="fixed inset-0 z-[9999] bg-background overflow-auto"
         >
-          <div className="p-6 space-y-6">
-            {/* Focus Mode Header */}
-            <div className="flex items-center justify-between">
+          <div className="p-4 flex flex-col" style={{ minHeight: '100%' }}>
+            {/* Focus Mode Header — stays at scale 1 */}
+            <div className="flex items-center justify-between mb-4 shrink-0">
               <div className="flex items-center gap-3">
                 <BarChart3 className="h-6 w-6 text-primary" />
-                <h1 className="text-3xl font-bold">{activeDashboard.name}</h1>
+                <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
               </div>
               <div className="flex items-center gap-3">
                 <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} />
@@ -250,20 +287,27 @@ export function InsightsMainContent() {
               </div>
             </div>
 
-            <div ref={contentRef} style={{ zoom: focusZoom / 100 }}>
-            {/* Filters */}
-            <InsightsFilterBar />
+            {/* Zoomable content area */}
+            <div
+              ref={contentRef}
+              style={{
+                zoom: focusZoom / 100,
+                transformOrigin: 'top left',
+              }}
+            >
+              {/* Filters */}
+              <InsightsFilterBar />
 
-            {/* Visuals preserving saved layout (read-only) */}
-            {hasVisuals && (
-            <InsightsGrid 
-                visuals={visuals} 
-                onLayoutChange={() => {}} 
-                readOnly
-                onUpdateVisual={updateVisual}
-                onRemoveVisual={removeVisual}
-              />
-            )}
+              {/* Visuals preserving saved layout (read-only) */}
+              {hasVisuals && (
+                <InsightsGrid 
+                  visuals={visuals} 
+                  onLayoutChange={() => {}} 
+                  readOnly
+                  onUpdateVisual={updateVisual}
+                  onRemoveVisual={removeVisual}
+                />
+              )}
             </div>
           </div>
         </div>,
