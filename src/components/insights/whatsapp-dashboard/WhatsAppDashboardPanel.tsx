@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Clock, Filter, Zap, Monitor, Maximize2, Minimize2, X, Plus, EyeOff, RotateCcw } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -27,6 +27,17 @@ interface WhatsAppDashboardPanelProps {
   isLoadingVisuals?: boolean;
 }
 
+function calculateAutoFitZoom(overlayEl: HTMLElement, contentEl: HTMLElement): number {
+  const viewportHeight = overlayEl.clientHeight;
+  const contentNaturalHeight = contentEl.scrollHeight;
+  const overlayScrollHeight = overlayEl.scrollHeight;
+  const chromeHeight = overlayScrollHeight - contentNaturalHeight;
+  const availableForContent = viewportHeight - chromeHeight;
+  if (contentNaturalHeight <= 0 || availableForContent <= 0) return 100;
+  const idealZoom = (availableForContent / contentNaturalHeight) * 100;
+  return Math.min(Math.max(Math.floor(idealZoom * 0.98), 30), 200);
+}
+
 export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChange, isLoadingVisuals }: WhatsAppDashboardPanelProps) {
   const isMobile = useIsMobile();
   const { data, isLoading } = useWhatsAppDashboardData();
@@ -37,6 +48,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
   const [focusZoom, setFocusZoom] = useState(100);
   const focusModeRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const zoomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hasCustomVisuals = visuals.length > 0;
   const hasHiddenSections = hiddenSections.size > 0;
@@ -64,6 +76,49 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
     </Button>
   );
 
+  // Shared zoom calculation that polls until layout stabilises
+  const runAutoFitZoom = useCallback(() => {
+    if (zoomTimerRef.current) {
+      clearInterval(zoomTimerRef.current);
+      zoomTimerRef.current = null;
+    }
+    setFocusZoom(100);
+
+    let attempts = 0;
+    let lastHeight = 0;
+    let stableCount = 0;
+    const maxAttempts = 30;
+
+    zoomTimerRef.current = setInterval(() => {
+      attempts++;
+      const overlay = focusModeRef.current;
+      const content = contentRef.current;
+
+      if (!overlay || !content || attempts > maxAttempts) {
+        if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
+        zoomTimerRef.current = null;
+        if (overlay && content) setFocusZoom(calculateAutoFitZoom(overlay, content));
+        return;
+      }
+
+      const h = content.scrollHeight;
+      if (h === lastHeight && h > 0) stableCount++;
+      else stableCount = 0;
+      lastHeight = h;
+
+      if (stableCount >= 3) {
+        if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
+        zoomTimerRef.current = null;
+        setFocusZoom(calculateAutoFitZoom(overlay, content));
+      }
+    }, 80);
+  }, []);
+
+  // Cleanup
+  useEffect(() => {
+    return () => { if (zoomTimerRef.current) clearInterval(zoomTimerRef.current); };
+  }, []);
+
   // ESC listener
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -75,29 +130,20 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
 
   // Auto-fit zoom when entering focus mode
   useEffect(() => {
-    if (!isFocusMode || !contentRef.current) return;
-    setFocusZoom(100);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!contentRef.current) return;
-        const headerHeight = 72;
-        const padding = 48;
-        const availableHeight = window.innerHeight - headerHeight - padding;
-        const contentHeight = contentRef.current.scrollHeight;
-        if (contentHeight > 0) {
-          const idealZoom = Math.floor((availableHeight / contentHeight) * 100);
-          setFocusZoom(Math.min(Math.max(idealZoom, 50), 200));
-        }
-      });
-    });
-  }, [isFocusMode]);
+    if (!isFocusMode) return;
+    const t = setTimeout(runAutoFitZoom, 50);
+    return () => clearTimeout(t);
+  }, [isFocusMode, runAutoFitZoom]);
 
-  // Fullscreen change listener
+  // Fullscreen change listener — recalculate zoom
   useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    const handler = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+      if (isFocusMode) setTimeout(runAutoFitZoom, 350);
+    };
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
-  }, []);
+  }, [isFocusMode, runAutoFitZoom]);
 
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement && focusModeRef.current) {
@@ -106,7 +152,6 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
       await document.exitFullscreen();
     }
   };
-
   const sectionVisible = (id: SectionId) => !hiddenSections.has(id);
 
   const dashboardContent = (
