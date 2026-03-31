@@ -150,16 +150,33 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
     }
   }, [visuals]);
 
-  // Update container width on mount and any size change
+  // Update container width on mount and any size change — debounced to avoid
+  // rapid re-renders during sidebar open/close transitions
   useEffect(() => {
     if (!containerRef.current || isMobile) return;
+    let rafId: number | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        setWidth(entry.contentRect.width);
+        const newWidth = entry.contentRect.width;
+        // Cancel any pending updates
+        if (debounceTimer) clearTimeout(debounceTimer);
+        if (rafId) cancelAnimationFrame(rafId);
+        // Debounce: wait for resize to settle (sidebar transition = 300ms)
+        debounceTimer = setTimeout(() => {
+          rafId = requestAnimationFrame(() => {
+            setWidth(newWidth);
+          });
+        }, 50);
       }
     });
     ro.observe(containerRef.current);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, [isMobile]);
 
   const handleContinuousLayoutChange = useCallback(
@@ -243,7 +260,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
           transition: none;
         }
         .insights-grid .react-grid-item:not(.react-draggable-dragging):not(.resizing) {
-          transition: transform 200ms ease, width 200ms ease, height 200ms ease;
+          transition: transform 300ms ease, width 300ms ease, height 300ms ease;
         }
         .insights-grid .react-grid-item.resizing {
           z-index: 1;
