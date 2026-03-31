@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Clock, Filter, Zap, Monitor, Maximize2, Minimize2, X, Plus, EyeOff, RotateCcw } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { MobileDashboardSheet } from "../MobileDashboardSheet";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useWhatsAppDashboardData } from "@/hooks/useWhatsAppDashboardData";
