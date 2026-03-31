@@ -579,12 +579,21 @@ function isMetodoProprio(field: CustomField): boolean {
 
   const isFieldEmpty = (field: CustomField, value: any): boolean => {
     if (value === undefined || value === null) return true;
+    if (typeof value === "string" && !value.trim()) return true;
     switch (field.field_type) {
       case "boolean": return value !== true && value !== false;
       case "multi_select":
       case "multiple_choice":
+      case "user":
+      case "multi_instagram":
         // Some multi_select fields have custom single-choice rendering that stores a string
         if (Array.isArray(value)) return value.length === 0;
+        if (typeof value === "string") return !value.trim();
+        return true;
+      case "location":
+        // Location can be array or object
+        if (Array.isArray(value)) return value.length === 0;
+        if (typeof value === "object") return Object.keys(value).length === 0;
         if (typeof value === "string") return !value.trim();
         return true;
       case "number":
@@ -594,7 +603,10 @@ function isMetodoProprio(field: CustomField): boolean {
         if (typeof value === "string") return !value.trim();
         if (Array.isArray(value)) return value.length === 0;
         return !value;
-      default: return !value || (typeof value === "string" && !value.trim());
+      default:
+        if (Array.isArray(value)) return value.length === 0;
+        if (typeof value === "object") return Object.keys(value).length === 0;
+        return !value;
     }
   };
 

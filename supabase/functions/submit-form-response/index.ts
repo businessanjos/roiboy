@@ -43,8 +43,10 @@ function sanitizeResponses(responses: Record<string, unknown>): Record<string, u
       sanitized[sanitizedKey] = value.map(v => 
         typeof v === 'string' ? sanitizeString(v) : v
       ).slice(0, 100);
+    } else if (value !== null && typeof value === 'object') {
+      // Preserve object values (e.g. address, employee data, location)
+      sanitized[sanitizedKey] = value;
     }
-    // Skip other types for security
   }
   return sanitized;
 }
@@ -356,7 +358,15 @@ Deno.serve(async (req) => {
                 row.value_date = value;
                 break;
               case "multi_select":
-                row.value_json = value;
+              case "user":
+              case "multi_instagram":
+              case "location":
+                // Handle both array values and string values (from custom renderers)
+                if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+                  row.value_json = value;
+                } else if (typeof value === 'string' && value.trim()) {
+                  row.value_text = value;
+                }
                 break;
               default:
                 row.value_text = String(value);
