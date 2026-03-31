@@ -297,7 +297,7 @@ export function InsightsMainContent() {
     ? createPortal(
         <div
           ref={focusModeRef}
-          className="fixed inset-0 z-[9999] bg-background overflow-auto"
+          className="fixed inset-0 z-[9999] bg-background overflow-hidden"
         >
           <div className="p-4 flex flex-col" style={{ minHeight: '100%' }}>
             {/* Focus Mode Header — stays at scale 1 */}

@@ -102,7 +102,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
     let attempts = 0;
     let lastHeight = 0;
     let stableCount = 0;
-    const maxAttempts = 30;
+    const maxAttempts = 40;
 
     zoomTimerRef.current = setInterval(() => {
       attempts++;
@@ -128,6 +128,27 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
       }
     }, 80);
   }, []);
+
+  // After zoom is applied, watch for content re-layout and re-adjust
+  useEffect(() => {
+    if (!isFocusMode || focusZoom === 100) return;
+    const content = contentRef.current;
+    const overlay = focusModeRef.current;
+    if (!content || !overlay) return;
+
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+    const ro = new ResizeObserver(() => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        if (overlay.scrollHeight > overlay.clientHeight + 2) {
+          const newZoom = calculateAutoFitZoom(overlay, content);
+          if (newZoom < focusZoom) setFocusZoom(newZoom);
+        }
+      }, 200);
+    });
+    ro.observe(content);
+    return () => { ro.disconnect(); if (debounce) clearTimeout(debounce); };
+  }, [isFocusMode, focusZoom]);
 
   // Cleanup
   useEffect(() => {
