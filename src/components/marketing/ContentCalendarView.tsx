@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Instagram, Music2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Instagram, Music2, Youtube } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   format,
@@ -43,6 +43,17 @@ function InstagramIcon({ className }: { className?: string }) {
       }}
     >
       <Instagram className="h-3.5 w-3.5 text-white" />
+    </div>
+  );
+}
+
+// Custom YouTube icon
+function YouTubeIcon({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn("rounded flex items-center justify-center bg-[#FF0000]", className)}
+    >
+      <Youtube className="h-3.5 w-3.5 text-white" />
     </div>
   );
 }
@@ -184,6 +195,7 @@ export function ContentCalendarView({
 
                 const hasInstagram = dayContent?.instagram && dayContent.instagram.count > 0;
                 const hasTikTok = dayContent?.tiktok && dayContent.tiktok.count > 0;
+                const hasYouTube = dayContent?.youtube && dayContent.youtube.count > 0;
 
                 return (
                   <div
@@ -248,6 +260,25 @@ export function ContentCalendarView({
                           </TooltipTrigger>
                           <TooltipContent>
                             {dayContent.tiktok.count} post{dayContent.tiktok.count > 1 ? "s" : ""} no TikTok
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+
+                      {hasYouTube && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={(e) =>
+                                handlePlatformClick(e, dayContent.youtube.posts, "youtube" as any, day)
+                              }
+                              className="relative p-1 rounded hover:bg-muted/50 transition-colors"
+                            >
+                              <YouTubeIcon className="w-6 h-6" />
+                              <CountBadge count={dayContent.youtube.count} />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {dayContent.youtube.count} vídeo{dayContent.youtube.count > 1 ? "s" : ""} no YouTube
                           </TooltipContent>
                         </Tooltip>
                       )}
