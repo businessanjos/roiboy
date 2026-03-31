@@ -608,14 +608,13 @@ export function useThreeCPlus() {
 
     // Campaign is optional - backend auto-selects one if not provided
 
-    if (currentStatus !== "idle" && currentStatus !== "manual_mode") {
-      toast.error("Agente ainda não está pronto", {
-        description: currentStatus === "connecting"
-          ? "Aguarde a 3C Plus confirmar o status Ocioso para discar."
-          : "O agente precisa estar ocioso para iniciar uma nova chamada.",
+    if (currentStatus === "connecting") {
+      toast.error("Aguarde a conexão", {
+        description: "Aguarde a 3C Plus confirmar a conexão antes de discar.",
       });
       return false;
     }
+    // For other statuses (not idle/manual_mode), let the backend handle via ensureAgentReadyForDial
 
     setLoading(true);
     try {
