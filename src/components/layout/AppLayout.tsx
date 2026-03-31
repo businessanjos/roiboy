@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Outlet, Navigate } from "react-router-dom";
-import { Sidebar } from "./Sidebar";
+import { Sidebar, MobileHeader } from "./Sidebar";
 import { GlobalHeader } from "./GlobalHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
