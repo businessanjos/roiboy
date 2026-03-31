@@ -606,12 +606,7 @@ export function useThreeCPlus() {
       return false;
     }
 
-    if (!selectedCampaign) {
-      toast.error("Entre em uma campanha primeiro", {
-        description: "A 3C Plus só libera chamadas quando o agente já está logado na campanha.",
-      });
-      return false;
-    }
+    // Campaign is optional - backend auto-selects one if not provided
 
     if (currentStatus !== "idle" && currentStatus !== "manual_mode") {
       toast.error("Agente ainda não está pronto", {
