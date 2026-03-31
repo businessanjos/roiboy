@@ -28,6 +28,7 @@ interface WhatsAppDashboardPanelProps {
 }
 
 export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChange, isLoadingVisuals }: WhatsAppDashboardPanelProps) {
+  const isMobile = useIsMobile();
   const { data, isLoading } = useWhatsAppDashboardData();
 
   const [hiddenSections, setHiddenSections] = useState<Set<SectionId>>(new Set());
