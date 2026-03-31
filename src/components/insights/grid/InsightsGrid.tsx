@@ -32,7 +32,7 @@ const ROW_HEIGHT = 20;
 const COLS = 48;
 const MARGIN: [number, number] = [12, 12];
 const CONTAINER_PADDING: [number, number] = [4, 4];
-const COMPACT_LAYOUT_BREAKPOINT = 1100;
+const COMPACT_LAYOUT_BREAKPOINT = 1500;
 
 // Minimum heights per chart type for mobile stacked view
 function getMobileMinHeight(visual: InsightsVisual): string {
@@ -66,10 +66,18 @@ function getResponsiveDesktopMinHeight(visual: InsightsVisual): number {
   return 260;
 }
 
-function getResponsiveColSpan12(visual: InsightsVisual): number {
+function getResponsiveColSpan12(visual: InsightsVisual, containerWidth: number): number {
+  const chartType = visual.chart_type || "bar";
   const w = visual.layout?.w ?? 24;
   const scale = visual.layout?.scale || 48;
   const ratio = w / scale;
+
+  // Scorecards: keep compact so they wrap naturally
+  if (["number", "scorecard", "kpi"].includes(chartType)) {
+    // If container is tight, use smaller spans to allow wrapping
+    if (containerWidth < 1200) return 4; // 3 per row
+    return Math.min(Math.round(ratio * 12), 4); // max 4 cols = 3 per row
+  }
 
   if (ratio > 0.85) return 12;
   if (ratio > 0.6) return 8;
@@ -149,10 +157,11 @@ function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
   );
 }
 
-function StaticResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
+function StaticResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth }: {
   visuals: InsightsVisual[];
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
+  containerWidth: number;
 }) {
   const sorted = useMemo(() => sortVisualsByLayout(visuals), [visuals]);
 
@@ -163,11 +172,6 @@ function StaticResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual 
           display: grid;
           gap: 12px;
           grid-template-columns: repeat(12, minmax(0, 1fr));
-        }
-        @media (max-width: 1280px) {
-          .insights-static-grid {
-            grid-template-columns: repeat(8, minmax(0, 1fr));
-          }
         }
         @media (max-width: 980px) {
           .insights-static-grid {
@@ -185,7 +189,7 @@ function StaticResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual 
             className="min-w-0 h-full overflow-hidden rounded-lg"
             style={{
               minHeight: getResponsiveDesktopMinHeight(visual),
-              gridColumn: `span ${getResponsiveColSpan12(visual)}`,
+              gridColumn: `span ${getResponsiveColSpan12(visual, containerWidth)}`,
             }}
           >
             <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
@@ -315,6 +319,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
           visuals={visuals}
           onUpdateVisual={onUpdateVisual}
           onRemoveVisual={onRemoveVisual}
+          containerWidth={containerWidth}
         />
       </div>
     );
