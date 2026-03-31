@@ -32,87 +32,191 @@ const ROW_HEIGHT = 20;
 const COLS = 48;
 const MARGIN: [number, number] = [12, 12];
 const CONTAINER_PADDING: [number, number] = [4, 4];
-const COMPACT_LAYOUT_BREAKPOINT = 1500;
 
-// Minimum heights per chart type for mobile stacked view
+// ── Helpers ──────────────────────────────────────────────────
+
 function getMobileMinHeight(visual: InsightsVisual): string {
-  const chartType = visual.chart_type || "bar";
-  switch (chartType) {
-    case "scorecard":
-    case "kpi":
-      return "min-h-[120px]";
-    case "table":
-    case "ranking":
-      return "min-h-[280px]";
-    case "map":
-      return "min-h-[300px]";
-    case "pie":
-    case "donut":
-      return "min-h-[280px]";
-    default:
-      return "min-h-[260px]";
-  }
+  const ct = visual.chart_type || "bar";
+  if (["scorecard", "kpi", "number"].includes(ct)) return "min-h-[120px]";
+  if (["table", "ranking"].includes(ct)) return "min-h-[280px]";
+  if (ct === "map") return "min-h-[300px]";
+  if (["pie", "donut"].includes(ct)) return "min-h-[280px]";
+  return "min-h-[260px]";
 }
 
-function getResponsiveDesktopMinHeight(visual: InsightsVisual): number {
-  const chartType = visual.chart_type || "bar";
-
-  if (["number", "scorecard", "kpi"].includes(chartType)) return 160;
-  if (["table", "ranking", "data_table"].includes(chartType)) return 300;
-  if (chartType === "map") return 320;
-  if (chartType === "gauge") return 180;
-  if (chartType === "funnel") return 360;
-
-  return 260;
+function getMinHeight(visual: InsightsVisual): number {
+  const ct = visual.chart_type || "bar";
+  if (["number", "scorecard", "kpi"].includes(ct)) return 160;
+  if (["table", "ranking", "data_table"].includes(ct)) return 300;
+  if (ct === "map") return 400;
+  if (ct === "gauge") return 180;
+  if (ct === "funnel") return 360;
+  return 280;
 }
 
-function getResponsiveColSpan12(visual: InsightsVisual, containerWidth: number): number {
-  const chartType = visual.chart_type || "bar";
-  const w = visual.layout?.w ?? 24;
-  const scale = visual.layout?.scale || 48;
-  const ratio = w / scale;
-
-  const isScorecard = ["number", "scorecard", "kpi"].includes(chartType);
-  const isLargeVisual = ["map", "table", "ranking", "data_table", "funnel"].includes(chartType);
-
-  // Scorecards: adapt columns based on available width
-  if (isScorecard) {
-    if (containerWidth < 900) return 6;  // 2 per row
-    if (containerWidth < 1200) return 4; // 3 per row
-    return 3; // 4 per row on wide screens
-  }
-
-  // Large visuals: never smaller than half width
-  if (isLargeVisual) {
-    if (containerWidth < 900) return 12; // full width
-    if (ratio > 0.6) return 8;
-    return 6; // minimum half
-  }
-
-  // Charts: minimum half width to stay readable
-  if (containerWidth < 900) return 12;
-  if (ratio > 0.85) return 12;
-  if (ratio > 0.45) return 6;
-  return 4;
+function isScorecard(visual: InsightsVisual) {
+  return ["number", "scorecard", "kpi"].includes(visual.chart_type || "bar");
 }
 
-function sortVisualsByLayout(visuals: InsightsVisual[]) {
-  return [...visuals].sort((a, b) => {
+// ── Row-grouping: groups visuals by their y-position proximity ──
+
+interface VisualRow {
+  visuals: InsightsVisual[];
+  isAllScorecards: boolean;
+}
+
+function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
+  if (visuals.length === 0) return [];
+
+  const sorted = [...visuals].sort((a, b) => {
     const ay = a.layout?.y ?? 0;
     const by = b.layout?.y ?? 0;
     if (ay !== by) return ay - by;
-
-    const ax = a.layout?.x ?? 0;
-    const bx = b.layout?.x ?? 0;
-    return ax - bx;
+    return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
   });
+
+  const rows: VisualRow[] = [];
+  let currentRow: InsightsVisual[] = [sorted[0]];
+  let currentY = sorted[0].layout?.y ?? 0;
+
+  for (let i = 1; i < sorted.length; i++) {
+    const vy = sorted[i].layout?.y ?? 0;
+    // If within 5 units of y, treat as same row
+    if (Math.abs(vy - currentY) <= 5) {
+      currentRow.push(sorted[i]);
+    } else {
+      rows.push({
+        visuals: currentRow,
+        isAllScorecards: currentRow.every(isScorecard),
+      });
+      currentRow = [sorted[i]];
+      currentY = vy;
+    }
+  }
+
+  rows.push({
+    visuals: currentRow,
+    isAllScorecards: currentRow.every(isScorecard),
+  });
+
+  return rows;
 }
+
+// ── Responsive static grid ──
+
+function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth }: {
+  visuals: InsightsVisual[];
+  onUpdateVisual?: (id: string, updates: any) => Promise<void>;
+  onRemoveVisual?: (id: string) => Promise<void>;
+  containerWidth: number;
+}) {
+  const rows = useMemo(() => groupVisualsIntoRows(visuals), [visuals]);
+
+  return (
+    <div className="flex flex-col gap-3">
+      {rows.map((row, rowIdx) => (
+        <ResponsiveRow
+          key={rowIdx}
+          row={row}
+          containerWidth={containerWidth}
+          onUpdateVisual={onUpdateVisual}
+          onRemoveVisual={onRemoveVisual}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual }: {
+  row: VisualRow;
+  containerWidth: number;
+  onUpdateVisual?: (id: string, updates: any) => Promise<void>;
+  onRemoveVisual?: (id: string) => Promise<void>;
+}) {
+  const { visuals, isAllScorecards } = row;
+
+  // Calculate flex basis for each visual based on its w proportion
+  const totalW = visuals.reduce((sum, v) => sum + (v.layout?.w ?? 24), 0);
+  const scale = visuals[0]?.layout?.scale || 48;
+
+  // Determine if this row should wrap
+  // For scorecards: wrap if too many to fit comfortably
+  // For charts: wrap if container is narrow
+  const shouldWrap = isAllScorecards
+    ? visuals.length > (containerWidth < 1000 ? 3 : containerWidth < 1300 ? 4 : 5)
+    : totalW > scale * 0.95; // Row items exceed grid width
+
+  // Min width per item to trigger wrapping
+  const minItemWidth = isAllScorecards
+    ? Math.max(180, containerWidth < 1000 ? containerWidth / 3 - 16 : 200)
+    : 300;
+
+  return (
+    <div
+      className="flex gap-3"
+      style={{ flexWrap: "wrap" }}
+    >
+      {visuals.map((visual) => {
+        const w = visual.layout?.w ?? 24;
+        const flexBasis = `${(w / totalW) * 100}%`;
+        const minH = getMinHeight(visual);
+
+        return (
+          <div
+            key={visual.id}
+            className="overflow-hidden rounded-lg"
+            style={{
+              flex: `1 1 ${flexBasis}`,
+              minWidth: minItemWidth,
+              minHeight: minH,
+              maxWidth: "100%",
+            }}
+          >
+            <ConfigurableVisualCard
+              visual={visual}
+              onUpdateVisual={onUpdateVisual}
+              onRemoveVisual={onRemoveVisual}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Mobile: stacked ──
+
+function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
+  visuals: InsightsVisual[];
+  onUpdateVisual?: (id: string, updates: any) => Promise<void>;
+  onRemoveVisual?: (id: string) => Promise<void>;
+}) {
+  const sorted = useMemo(() => {
+    return [...visuals].sort((a, b) => {
+      const ay = a.layout?.y ?? 0;
+      const by = b.layout?.y ?? 0;
+      if (ay !== by) return ay - by;
+      return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
+    });
+  }, [visuals]);
+
+  return (
+    <div className="space-y-3">
+      {sorted.map((visual) => (
+        <div key={visual.id} className={`w-full rounded-lg overflow-hidden ${getMobileMinHeight(visual)}`}>
+          <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Layout item conversion ──
 
 function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
   const existingLayout = visual.layout;
 
   if (existingLayout) {
-    // Explicit scale marker means it was saved in 48-col grid — use as-is
     if (existingLayout.scale === 48) {
       return {
         i: visual.id,
@@ -124,8 +228,6 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
         minH: 10,
       };
     }
-
-    // Legacy: no scale marker — apply 12→48 migration
     return {
       i: visual.id,
       x: existingLayout.x * 4,
@@ -148,82 +250,19 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
   };
 }
 
-// Mobile: simple stacked list — no grid, no drag, full width
-function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
-  visuals: InsightsVisual[];
-  onUpdateVisual?: (id: string, updates: any) => Promise<void>;
-  onRemoveVisual?: (id: string) => Promise<void>;
-}) {
-  const sorted = useMemo(() => sortVisualsByLayout(visuals), [visuals]);
-
-  return (
-    <div className="space-y-3">
-      {sorted.map((visual) => (
-        <div key={visual.id} className={`w-full rounded-lg overflow-hidden ${getMobileMinHeight(visual)}`}>
-          <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function StaticResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth }: {
-  visuals: InsightsVisual[];
-  onUpdateVisual?: (id: string, updates: any) => Promise<void>;
-  onRemoveVisual?: (id: string) => Promise<void>;
-  containerWidth: number;
-}) {
-  const sorted = useMemo(() => sortVisualsByLayout(visuals), [visuals]);
-
-  return (
-    <>
-      <style>{`
-        .insights-static-grid {
-          display: grid;
-          gap: 12px;
-          grid-template-columns: repeat(12, minmax(0, 1fr));
-        }
-        @media (max-width: 980px) {
-          .insights-static-grid {
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-          }
-          .insights-static-grid > * {
-            grid-column: span 4 !important;
-          }
-        }
-      `}</style>
-      <div className="insights-static-grid">
-        {sorted.map((visual) => (
-          <div
-            key={visual.id}
-            className="min-w-0 h-full overflow-hidden rounded-lg"
-            style={{
-              minHeight: getResponsiveDesktopMinHeight(visual),
-              gridColumn: `span ${getResponsiveColSpan12(visual, containerWidth)}`,
-            }}
-          >
-            <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
-          </div>
-        ))}
-      </div>
-    </>
-  );
-}
+// ── Main component ──
 
 export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual }: InsightsGridProps) {
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState<number | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
-  // Local layout state — only syncs from props when visuals are added/removed
   const [localLayout, setLocalLayout] = useState<LayoutItem[]>(() =>
     visuals.map((v, i) => visualToLayoutItem(v, i))
   );
 
-  // Track visual IDs to detect additions/removals (not layout changes)
   const prevVisualIdsRef = useRef<string>(visuals.map(v => v.id).sort().join(","));
-
-  // Guard: skip the automatic onLayoutChange fired on mount
   const isMountedRef = useRef(false);
 
   useEffect(() => {
@@ -238,8 +277,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
     }
   }, [visuals]);
 
-  // Update container width on mount and any size change — debounced to avoid
-  // rapid re-renders during sidebar open/close transitions.
+  // ResizeObserver with debounce
   useEffect(() => {
     if (!containerRef.current || isMobile) return;
 
@@ -300,15 +338,17 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         layout: { i: item.i, x: item.x, y: item.y, w: item.w, h: item.h, scale: 48 },
       }));
       onLayoutChange(layoutUpdates);
+      // Exit editing mode after drag/resize
+      setTimeout(() => setIsEditing(false), 100);
     },
     [onLayoutChange]
   );
 
-  if (visuals.length === 0) {
-    return null;
-  }
+  const handleDragStart = useCallback(() => setIsEditing(true), []);
+  const handleResizeStart = useCallback(() => setIsEditing(true), []);
 
-  // Mobile: stacked single-column layout
+  if (visuals.length === 0) return null;
+
   if (isMobile) {
     return (
       <MobileInsightsGrid
@@ -320,66 +360,67 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
   }
 
   const containerWidth = width ?? 1200;
-  const useStaticResponsiveGrid = containerWidth < COMPACT_LAYOUT_BREAKPOINT;
 
-  if (useStaticResponsiveGrid) {
-    return (
-      <div ref={containerRef} className="insights-grid pointer-events-auto">
-        <StaticResponsiveInsightsGrid
+  // Always show responsive CSS grid, with an invisible react-grid-layout
+  // overlay that activates only during drag/resize
+  return (
+    <div ref={containerRef} className="insights-grid pointer-events-auto relative">
+      {/* Responsive CSS grid — always visible when not dragging */}
+      {!isEditing && (
+        <ResponsiveInsightsGrid
           visuals={visuals}
           onUpdateVisual={onUpdateVisual}
           onRemoveVisual={onRemoveVisual}
           containerWidth={containerWidth}
         />
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <div ref={containerRef} className="insights-grid pointer-events-auto">
-      <GridLayout
-        className="layout"
-        layout={localLayout}
-        width={containerWidth}
-        onLayoutChange={handleContinuousLayoutChange}
-        onDragStop={handlePersist}
-        onResizeStop={handlePersist}
-        gridConfig={{
-          cols: COLS,
-          rowHeight: ROW_HEIGHT,
-          margin: MARGIN,
-          containerPadding: CONTAINER_PADDING,
-        }}
-        dragConfig={{
-          enabled: !readOnly,
-          handle: ".widget-drag-handle",
-        }}
-        resizeConfig={{
-          enabled: !readOnly,
-        }}
-        compactor={freePositionCompactor}
+      {/* React-grid-layout — hidden but interactive for drag handles,
+          becomes visible during active drag/resize */}
+      <div className={isEditing ? "block" : "absolute inset-0 opacity-0 pointer-events-none"}
+        style={!isEditing ? { height: 0, overflow: "hidden" } : undefined}
       >
-        {visuals.map((visual) => (
-          <div key={visual.id} className="h-full overflow-hidden rounded-lg">
-            <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
-          </div>
-        ))}
-      </GridLayout>
+        <GridLayout
+          className="layout"
+          layout={localLayout}
+          width={containerWidth}
+          onLayoutChange={handleContinuousLayoutChange}
+          onDragStart={handleDragStart}
+          onResizeStart={handleResizeStart}
+          onDragStop={handlePersist}
+          onResizeStop={handlePersist}
+          gridConfig={{
+            cols: COLS,
+            rowHeight: ROW_HEIGHT,
+            margin: MARGIN,
+            containerPadding: CONTAINER_PADDING,
+          }}
+          dragConfig={{
+            enabled: !readOnly,
+            handle: ".widget-drag-handle",
+          }}
+          resizeConfig={{
+            enabled: !readOnly,
+          }}
+          compactor={freePositionCompactor}
+        >
+          {visuals.map((visual) => (
+            <div key={visual.id} className="h-full overflow-hidden rounded-lg">
+              <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
+            </div>
+          ))}
+        </GridLayout>
+      </div>
 
       <style>{`
         .insights-grid .react-grid-item {
           transition: none;
         }
-        .insights-grid .react-grid-item:not(.react-draggable-dragging):not(.resizing) {
-          transition: transform 300ms ease, width 300ms ease, height 300ms ease;
-        }
         .insights-grid .react-grid-item.resizing {
           z-index: 1;
           will-change: width, height;
-          transition: none;
         }
         .insights-grid .react-grid-item.react-draggable-dragging {
-          transition: none;
           z-index: 100;
           will-change: transform;
         }
