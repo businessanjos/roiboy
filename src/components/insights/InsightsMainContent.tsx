@@ -97,12 +97,30 @@ export function InsightsMainContent() {
     setFocusZoom(100);
   }, [activeDashboardId]);
 
-  // Fullscreen change listener
+  // Fullscreen change listener — also recalculate zoom
   useEffect(() => {
-    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    const handler = () => {
+      const fs = !!document.fullscreenElement;
+      setIsFullscreen(fs);
+      // Trigger re-zoom by toggling focus mode effect
+      if (isFocusMode && contentRef.current) {
+        setFocusZoom(100);
+        setTimeout(() => {
+          if (!contentRef.current) return;
+          const headerHeight = 72;
+          const padding = 48;
+          const availableHeight = (fs ? screen.height : window.innerHeight) - headerHeight - padding;
+          const contentHeight = contentRef.current.scrollHeight;
+          if (contentHeight > 0) {
+            const idealZoom = Math.floor((availableHeight / contentHeight) * 100);
+            setFocusZoom(Math.min(Math.max(idealZoom, 30), 200));
+          }
+        }, 300);
+      }
+    };
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
-  }, []);
+  }, [isFocusMode]);
 
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement && focusModeRef.current) {
