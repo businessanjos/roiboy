@@ -242,28 +242,36 @@ export function InsightsMainContent() {
           dashboardName={activeDashboard.name}
         />
       )}
-      <div className="p-4 md:p-6 space-y-6">
+      <div className="p-3 md:p-6 space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {isMobile ? (
+              <MobileDashboardSheet />
+            ) : (
+              <>
+                <BarChart3 className="h-5 w-5 text-primary shrink-0" />
+                <h1 className="text-2xl font-bold truncate">{activeDashboard.name}</h1>
+              </>
+            )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
             {canShare && (
-              <Button variant="outline" size="sm" onClick={() => setIsShareOpen(true)}>
-                <Share2 className="h-4 w-4 mr-2" />
-                Compartilhar
+              <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3" onClick={() => setIsShareOpen(true)}>
+                <Share2 className="h-4 w-4" />
+                <span className="hidden md:inline ml-2">Compartilhar</span>
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
-              <Monitor className="h-4 w-4 mr-2" />
-              Modo Foco
-            </Button>
+            {!isMobile && (
+              <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
+                <Monitor className="h-4 w-4 mr-2" />
+                Modo Foco
+              </Button>
+            )}
             {hasVisuals && (
-              <Button onClick={() => setIsBuilderOpen(true)} disabled={isLoadingVisuals}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Visual
+              <Button size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3" onClick={() => setIsBuilderOpen(true)} disabled={isLoadingVisuals}>
+                <Plus className="h-4 w-4" />
+                <span className="hidden md:inline ml-2">Adicionar Visual</span>
               </Button>
             )}
           </div>
