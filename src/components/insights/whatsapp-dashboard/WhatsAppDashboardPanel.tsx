@@ -216,27 +216,35 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
   return (
     <>
       {focusModeOverlay}
-      <div className="p-4 md:p-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Dashboard Operacional - WhatsApp</h1>
-            <p className="text-sm text-muted-foreground">Métricas de agendamento e eficiência operacional</p>
+      <div className="p-3 md:p-6 space-y-4 md:space-y-6">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            {isMobile ? (
+              <MobileDashboardSheet />
+            ) : (
+              <>
+                <h1 className="text-2xl font-bold">Dashboard Operacional - WhatsApp</h1>
+                <p className="text-sm text-muted-foreground">Métricas de agendamento e eficiência operacional</p>
+              </>
+            )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
             {hasHiddenSections && (
-              <Button variant="ghost" size="sm" onClick={restoreAllSections}>
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Restaurar seções
+              <Button variant="ghost" size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3" onClick={restoreAllSections}>
+                <RotateCcw className="h-4 w-4" />
+                <span className="hidden md:inline ml-2">Restaurar seções</span>
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
-              <Monitor className="h-4 w-4 mr-2" />
-              Modo Foco
-            </Button>
+            {!isMobile && (
+              <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
+                <Monitor className="h-4 w-4 mr-2" />
+                Modo Foco
+              </Button>
+            )}
             {onAddVisual && (
-              <Button size="sm" onClick={onAddVisual} disabled={isLoadingVisuals}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Visual
+              <Button size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3" onClick={onAddVisual} disabled={isLoadingVisuals}>
+                <Plus className="h-4 w-4" />
+                <span className="hidden md:inline ml-2">Adicionar Visual</span>
               </Button>
             )}
           </div>
