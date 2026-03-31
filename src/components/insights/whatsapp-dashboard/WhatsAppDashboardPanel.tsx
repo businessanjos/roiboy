@@ -232,10 +232,10 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
   const focusModeOverlay = isFocusMode
     ? createPortal(
         <div ref={focusModeRef} className="fixed inset-0 z-[9999] bg-background overflow-auto">
-          <div className="p-6 space-y-6">
-            <div className="flex items-center justify-between">
+          <div className="p-4 flex flex-col" style={{ minHeight: '100%' }}>
+            <div className="flex items-center justify-between mb-4 shrink-0">
               <div>
-                <h1 className="text-3xl font-bold">Dashboard Operacional - WhatsApp</h1>
+                <h1 className="text-2xl font-bold">Dashboard Operacional - WhatsApp</h1>
                 <p className="text-sm text-muted-foreground">Métricas de agendamento e eficiência operacional</p>
               </div>
               <div className="flex items-center gap-3">
@@ -248,7 +248,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
                 </Button>
               </div>
             </div>
-            <div ref={contentRef} style={{ zoom: focusZoom / 100 }}>
+            <div ref={contentRef} style={{ zoom: focusZoom / 100, transformOrigin: 'top left' }}>
               <InsightsFilterBar />
               {dashboardContent}
             </div>
