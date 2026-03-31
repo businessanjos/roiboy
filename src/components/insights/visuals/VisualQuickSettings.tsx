@@ -476,17 +476,22 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
               <Separator />
             </div>
           )}
-          {/* Category filter for non-scorecard, non-call_commercial visuals */}
-          {showCategoryFilter && availableCategories.length > 0 && (
+          {/* Series filter for stacked charts (e.g. Origem da Venda values) */}
+          {showCategoryFilter && isStacked && seriesCategories.length > 0 && (
             <div className="space-y-3">
-              <Label className="text-base font-medium">Categorias Visíveis</Label>
+              <Label className="text-base font-medium">
+                Séries Visíveis {stackedFieldName ? `(${stackedFieldName})` : ''}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Controla quais segmentos aparecem nas barras empilhadas.
+              </p>
               <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {availableCategories.map((category) => {
+                {seriesCategories.map((category) => {
                   const isHidden = hiddenCategories.includes(category);
                   return (
-                    <div key={category} className="flex items-center gap-2">
+                    <div key={`series-${category}`} className="flex items-center gap-2">
                       <Checkbox
-                        id={`cat-${category}`}
+                        id={`series-${category}`}
                         checked={!isHidden}
                         onCheckedChange={(checked) => {
                           if (checked) {
@@ -496,7 +501,40 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
                           }
                         }}
                       />
-                      <label htmlFor={`cat-${category}`} className="text-sm cursor-pointer">
+                      <label htmlFor={`series-${category}`} className="text-sm cursor-pointer">
+                        {category}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+              <Separator />
+            </div>
+          )}
+          {/* Axis category filter for non-stacked charts or x-axis labels */}
+          {showCategoryFilter && axisCategories.length > 0 && !isStacked && (
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Categorias Visíveis</Label>
+              <p className="text-xs text-muted-foreground">
+                Controla quais itens aparecem no eixo do gráfico.
+              </p>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {axisCategories.map((category) => {
+                  const isHidden = hiddenCategories.includes(category);
+                  return (
+                    <div key={`axis-${category}`} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`axis-${category}`}
+                        checked={!isHidden}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setHiddenCategories(prev => prev.filter(c => c !== category));
+                          } else {
+                            setHiddenCategories(prev => [...prev, category]);
+                          }
+                        }}
+                      />
+                      <label htmlFor={`axis-${category}`} className="text-sm cursor-pointer">
                         {category}
                       </label>
                     </div>
