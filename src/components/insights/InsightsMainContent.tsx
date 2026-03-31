@@ -30,6 +30,7 @@ export function InsightsMainContent() {
   } = useInsightsDashboards();
 
   const { currentUser } = useCurrentUser();
+  const isMobile = useIsMobile();
 
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
