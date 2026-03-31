@@ -29,13 +29,28 @@ interface WhatsAppDashboardPanelProps {
 
 function calculateAutoFitZoom(overlayEl: HTMLElement, contentEl: HTMLElement): number {
   const viewportHeight = overlayEl.clientHeight;
-  const contentNaturalHeight = contentEl.scrollHeight;
-  const overlayScrollHeight = overlayEl.scrollHeight;
-  const chromeHeight = overlayScrollHeight - contentNaturalHeight;
-  const availableForContent = viewportHeight - chromeHeight;
-  if (contentNaturalHeight <= 0 || availableForContent <= 0) return 100;
-  const idealZoom = (availableForContent / contentNaturalHeight) * 100;
-  return Math.min(Math.max(Math.floor(idealZoom * 0.98), 30), 200);
+  const viewportWidth = overlayEl.clientWidth;
+
+  const contentRect = contentEl.getBoundingClientRect();
+  const overlayRect = overlayEl.getBoundingClientRect();
+  const chromeHeight = contentRect.top - overlayRect.top;
+
+  const currentZoom = parseFloat(contentEl.style.zoom || '1');
+  const contentNaturalHeight = contentEl.scrollHeight * currentZoom;
+  const contentNaturalWidth = contentEl.scrollWidth * currentZoom;
+
+  const availableHeight = viewportHeight - chromeHeight;
+  const availableWidth = viewportWidth;
+
+  if (contentNaturalHeight <= 0 || availableHeight <= 0) return 100;
+
+  const zoomByHeight = (availableHeight / contentNaturalHeight) * 100;
+  const zoomByWidth = contentNaturalWidth > 0
+    ? (availableWidth / contentNaturalWidth) * 100
+    : 200;
+
+  const idealZoom = Math.min(zoomByHeight, zoomByWidth);
+  return Math.min(Math.max(Math.floor(idealZoom * 0.95), 25), 200);
 }
 
 export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChange, isLoadingVisuals }: WhatsAppDashboardPanelProps) {
