@@ -282,9 +282,9 @@ export function InsightsMainContent() {
 
         {/* Grid or Empty State */}
         {isLoadingVisuals ? (
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-48" />
-            <Skeleton className="h-48" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Skeleton className="h-40 md:h-48" />
+            <Skeleton className="h-40 md:h-48" />
           </div>
         ) : hasVisuals ? (
           !isFocusMode && (
