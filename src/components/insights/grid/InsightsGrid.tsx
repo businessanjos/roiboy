@@ -164,6 +164,19 @@ function StaticResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual 
           gap: 12px;
           grid-template-columns: repeat(12, minmax(0, 1fr));
         }
+        @media (max-width: 1280px) {
+          .insights-static-grid {
+            grid-template-columns: repeat(8, minmax(0, 1fr));
+          }
+        }
+        @media (max-width: 980px) {
+          .insights-static-grid {
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+          }
+          .insights-static-grid > * {
+            grid-column: span 4 !important;
+          }
+        }
       `}</style>
       <div className="insights-static-grid">
         {sorted.map((visual) => (
