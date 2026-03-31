@@ -103,24 +103,41 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
     enabled: open && !!config && showCategoryFilter && isStacked,
   });
 
-  // Extract unique category names from data + stacked series keys
-  const availableCategories = useMemo(() => {
-    if (!showCategoryFilter) return [];
-    const names = new Set<string>();
+  // Extract unique category names from data (x-axis) and series keys separately
+  const { axisCategories, seriesCategories } = useMemo(() => {
+    if (!showCategoryFilter) return { axisCategories: [] as string[], seriesCategories: [] as string[] };
+    const axisNames = new Set<string>();
+    const seriesNames = new Set<string>();
 
     // From regular data (x-axis labels)
     if (visualData) {
-      visualData.forEach(d => names.add(d.name));
+      visualData.forEach(d => axisNames.add(d.name));
     }
 
-    // From stacked data: both x-axis labels AND series keys
+    // From stacked data: separate x-axis from series keys
     if (stackedResult) {
-      stackedResult.data?.forEach(d => names.add(d.name));
-      stackedResult.seriesKeys?.forEach(k => names.add(k));
+      stackedResult.data?.forEach(d => axisNames.add(d.name));
+      stackedResult.seriesKeys?.forEach(k => seriesNames.add(k));
     }
 
-    return [...names].sort((a, b) => a.localeCompare(b));
+    return {
+      axisCategories: [...axisNames].sort((a, b) => a.localeCompare(b)),
+      seriesCategories: [...seriesNames].sort((a, b) => a.localeCompare(b)),
+    };
   }, [visualData, stackedResult, showCategoryFilter]);
+
+  // Combined for backwards compat
+  const availableCategories = useMemo(
+    () => [...new Set([...axisCategories, ...seriesCategories])].sort((a, b) => a.localeCompare(b)),
+    [axisCategories, seriesCategories]
+  );
+
+  // Get the stacked field name for better UX labels
+  const stackedFieldName = useMemo(() => {
+    if (config?.stackByCustomField?.fieldName) return config.stackByCustomField.fieldName;
+    if (config?.stackBy && config.stackBy !== '_custom') return config.stackBy;
+    return null;
+  }, [config?.stackByCustomField, config?.stackBy]);
 
   // Local state for appearance settings
   const [showDataLabels, setShowDataLabels] = useState(
