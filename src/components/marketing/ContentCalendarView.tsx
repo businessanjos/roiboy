@@ -195,6 +195,7 @@ export function ContentCalendarView({
 
                 const hasInstagram = dayContent?.instagram && dayContent.instagram.count > 0;
                 const hasTikTok = dayContent?.tiktok && dayContent.tiktok.count > 0;
+                const hasYouTube = dayContent?.youtube && dayContent.youtube.count > 0;
 
                 return (
                   <div
