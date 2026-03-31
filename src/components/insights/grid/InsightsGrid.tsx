@@ -157,10 +157,11 @@ function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
   );
 }
 
-function StaticResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
+function StaticResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth }: {
   visuals: InsightsVisual[];
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
+  containerWidth: number;
 }) {
   const sorted = useMemo(() => sortVisualsByLayout(visuals), [visuals]);
 
@@ -171,11 +172,6 @@ function StaticResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual 
           display: grid;
           gap: 12px;
           grid-template-columns: repeat(12, minmax(0, 1fr));
-        }
-        @media (max-width: 1280px) {
-          .insights-static-grid {
-            grid-template-columns: repeat(8, minmax(0, 1fr));
-          }
         }
         @media (max-width: 980px) {
           .insights-static-grid {
@@ -193,7 +189,7 @@ function StaticResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual 
             className="min-w-0 h-full overflow-hidden rounded-lg"
             style={{
               minHeight: getResponsiveDesktopMinHeight(visual),
-              gridColumn: `span ${getResponsiveColSpan12(visual)}`,
+              gridColumn: `span ${getResponsiveColSpan12(visual, containerWidth)}`,
             }}
           >
             <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
