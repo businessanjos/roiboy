@@ -88,19 +88,39 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
   const isMetaScorecard = isScorecard && !!config?.gaugeConfig?.monthlyGoals;
   const showMonthlyGoals = isGaugeRevenue || isMetaScorecard;
   const showCategoryFilter = !isScorecard && !isCallCommercial && !isGauge && !isDataTable;
+  const isStacked = (visual.chart_type === 'bar_stacked' && !!config?.stackBy) || !!config?.stackByCustomField;
 
   // Fetch visual data to extract unique categories
   const { data: visualData } = useVisualData({
     config,
     chartType: (visual.chart_type || undefined) as any,
-    enabled: open && !!config && showCategoryFilter,
+    enabled: open && !!config && showCategoryFilter && !isStacked,
   });
 
-  // Extract unique category names from data
+  // Fetch stacked data to extract series keys as categories
+  const { data: stackedResult } = useStackedVisualData({
+    config,
+    enabled: open && !!config && showCategoryFilter && isStacked,
+  });
+
+  // Extract unique category names from data + stacked series keys
   const availableCategories = useMemo(() => {
-    if (!visualData || !showCategoryFilter) return [];
-    return [...new Set(visualData.map(d => d.name))].sort((a, b) => a.localeCompare(b));
-  }, [visualData, showCategoryFilter]);
+    if (!showCategoryFilter) return [];
+    const names = new Set<string>();
+
+    // From regular data (x-axis labels)
+    if (visualData) {
+      visualData.forEach(d => names.add(d.name));
+    }
+
+    // From stacked data: both x-axis labels AND series keys
+    if (stackedResult) {
+      stackedResult.data?.forEach(d => names.add(d.name));
+      stackedResult.seriesKeys?.forEach(k => names.add(k));
+    }
+
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [visualData, stackedResult, showCategoryFilter]);
 
   // Local state for appearance settings
   const [showDataLabels, setShowDataLabels] = useState(
