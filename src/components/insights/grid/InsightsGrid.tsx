@@ -3,6 +3,7 @@ import GridLayout from "react-grid-layout";
 import { getCompactor } from "react-grid-layout/core";
 import { InsightsVisual } from "@/hooks/useInsightsDashboards";
 import { ConfigurableVisualCard } from "../visuals/ConfigurableVisualCard";
+import { useIsMobile } from "@/hooks/use-mobile";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
@@ -31,6 +32,26 @@ const ROW_HEIGHT = 20;
 const COLS = 48;
 const MARGIN: [number, number] = [12, 12];
 const CONTAINER_PADDING: [number, number] = [4, 4];
+
+// Minimum heights per chart type for mobile stacked view
+function getMobileMinHeight(visual: InsightsVisual): string {
+  const chartType = visual.chart_type || 'bar';
+  switch (chartType) {
+    case 'scorecard':
+    case 'kpi':
+      return 'min-h-[120px]';
+    case 'table':
+    case 'ranking':
+      return 'min-h-[280px]';
+    case 'map':
+      return 'min-h-[300px]';
+    case 'pie':
+    case 'donut':
+      return 'min-h-[280px]';
+    default:
+      return 'min-h-[260px]';
+  }
+}
 
 function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
   const existingLayout = visual.layout;
@@ -72,7 +93,37 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
   };
 }
 
+// Mobile: simple stacked list — no grid, no drag, full width
+function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
+  visuals: InsightsVisual[];
+  onUpdateVisual?: (id: string, updates: any) => Promise<void>;
+  onRemoveVisual?: (id: string) => Promise<void>;
+}) {
+  // Sort visuals by their saved layout y position so order matches desktop
+  const sorted = useMemo(() => {
+    return [...visuals].sort((a, b) => {
+      const ay = a.layout?.y ?? 0;
+      const by = b.layout?.y ?? 0;
+      if (ay !== by) return ay - by;
+      const ax = a.layout?.x ?? 0;
+      const bx = b.layout?.x ?? 0;
+      return ax - bx;
+    });
+  }, [visuals]);
+
+  return (
+    <div className="space-y-3">
+      {sorted.map((visual) => (
+        <div key={visual.id} className={`w-full rounded-lg overflow-hidden ${getMobileMinHeight(visual)}`}>
+          <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual }: InsightsGridProps) {
+  const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(1200);
 
@@ -90,20 +141,18 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
   useEffect(() => {
     const currentIds = visuals.map(v => v.id).sort().join(",");
     if (currentIds !== prevVisualIdsRef.current) {
-      // Visuals were added or removed — rebuild layout, keeping local positions for existing items
       prevVisualIdsRef.current = currentIds;
-      isMountedRef.current = false; // Reset mount guard for new visual set
+      isMountedRef.current = false;
       setLocalLayout(prev => {
         const existingMap = new Map(prev.map(item => [item.i, item]));
         return visuals.map((v, i) => existingMap.get(v.id) || visualToLayoutItem(v, i));
       });
     }
-    // Intentionally NOT syncing when only layout data changes from props
   }, [visuals]);
 
-  // Update container width on mount and any size change (resize, zoom, fullscreen)
+  // Update container width on mount and any size change
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || isMobile) return;
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         setWidth(entry.contentRect.width);
@@ -111,10 +160,8 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
     });
     ro.observe(containerRef.current);
     return () => ro.disconnect();
-  }, []);
+  }, [isMobile]);
 
-  // Keep local layout in sync continuously during drag/resize (prevents snap-back)
-  // Skip the first call which is the automatic mount event from react-grid-layout
   const handleContinuousLayoutChange = useCallback(
     (newLayout: LayoutItem[]) => {
       if (!isMountedRef.current) {
@@ -134,7 +181,6 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
     []
   );
 
-  // Persist to DB only on drag/resize stop
   const handlePersist = useCallback(
     (newLayout: LayoutItem[]) => {
       const layoutUpdates = newLayout.map((item) => ({
@@ -148,6 +194,17 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
 
   if (visuals.length === 0) {
     return null;
+  }
+
+  // Mobile: stacked single-column layout
+  if (isMobile) {
+    return (
+      <MobileInsightsGrid
+        visuals={visuals}
+        onUpdateVisual={onUpdateVisual}
+        onRemoveVisual={onRemoveVisual}
+      />
+    );
   }
 
   return (
