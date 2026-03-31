@@ -49,25 +49,48 @@ export function InsightsMainContent() {
     return () => document.removeEventListener("keydown", handleEsc);
   }, [isFocusMode]);
 
-  // Auto-fit zoom when entering focus mode
+  // Auto-fit zoom when entering focus mode — wait for grid to fully render
   useEffect(() => {
     if (!isFocusMode || !contentRef.current) return;
-    // Reset to 100% first to measure natural height
     setFocusZoom(100);
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!contentRef.current) return;
+
+    // The grid renders asynchronously (ResizeObserver, GridLayout internals).
+    // We poll scrollHeight a few times until it stabilises, then compute zoom.
+    let attempts = 0;
+    let lastHeight = 0;
+    let stableCount = 0;
+    const maxAttempts = 20; // 20 × 100ms = 2s max
+
+    const interval = setInterval(() => {
+      attempts++;
+      if (!contentRef.current || attempts > maxAttempts) {
+        clearInterval(interval);
+        return;
+      }
+
+      const contentHeight = contentRef.current.scrollHeight;
+      if (contentHeight === lastHeight && contentHeight > 0) {
+        stableCount++;
+      } else {
+        stableCount = 0;
+      }
+      lastHeight = contentHeight;
+
+      // Consider stable after 3 consecutive identical reads
+      if (stableCount >= 3 || attempts >= maxAttempts) {
+        clearInterval(interval);
         const headerHeight = 72;
         const padding = 48;
-        const availableHeight = window.innerHeight - headerHeight - padding;
-        const contentHeight = contentRef.current.scrollHeight;
+        const availableHeight = (isFullscreen ? screen.height : window.innerHeight) - headerHeight - padding;
         if (contentHeight > 0) {
           const idealZoom = Math.floor((availableHeight / contentHeight) * 100);
-          setFocusZoom(Math.min(Math.max(idealZoom, 50), 200));
+          setFocusZoom(Math.min(Math.max(idealZoom, 30), 200));
         }
-      });
-    });
-  }, [isFocusMode]);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [isFocusMode, isFullscreen]);
 
   // Reset zoom when switching dashboards
   useEffect(() => {
