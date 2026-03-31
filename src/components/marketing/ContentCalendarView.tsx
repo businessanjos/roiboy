@@ -47,6 +47,17 @@ function InstagramIcon({ className }: { className?: string }) {
   );
 }
 
+// Custom YouTube icon
+function YouTubeIcon({ className }: { className?: string }) {
+  return (
+    <div
+      className={cn("rounded flex items-center justify-center bg-[#FF0000]", className)}
+    >
+      <Youtube className="h-3.5 w-3.5 text-white" />
+    </div>
+  );
+}
+
 // Custom TikTok icon with brand colors
 function TikTokIcon({ className }: { className?: string }) {
   return (
