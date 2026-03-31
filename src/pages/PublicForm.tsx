@@ -581,9 +581,19 @@ function isMetodoProprio(field: CustomField): boolean {
     if (value === undefined || value === null) return true;
     switch (field.field_type) {
       case "boolean": return value !== true && value !== false;
-      case "multi_select": return !Array.isArray(value) || value.length === 0;
+      case "multi_select":
+      case "multiple_choice":
+        // Some multi_select fields have custom single-choice rendering that stores a string
+        if (Array.isArray(value)) return value.length === 0;
+        if (typeof value === "string") return !value.trim();
+        return true;
       case "number":
       case "currency": return value === "" || isNaN(value);
+      case "select":
+      case "single_choice":
+        if (typeof value === "string") return !value.trim();
+        if (Array.isArray(value)) return value.length === 0;
+        return !value;
       default: return !value || (typeof value === "string" && !value.trim());
     }
   };
