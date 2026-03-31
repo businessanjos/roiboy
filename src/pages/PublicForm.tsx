@@ -574,6 +574,12 @@ function isMetodoProprio(field: CustomField): boolean {
   const appearance = { ...DEFAULT_APPEARANCE, ...formData?.appearance };
   const currentStepData = steps[currentStep];
   const progress = totalSteps > 0 ? ((currentStep + 1) / totalSteps) * 100 : 100;
+  const visibleCurrentFields = currentStepData?.fields.filter((field) => {
+    if (isVirtualSpouseField(field) && !isSpouseFieldVisible) return false;
+    if (!isTrademarkSubFieldVisible(field)) return false;
+    if (!isGraduationSpecVisible(field)) return false;
+    return true;
+  }) ?? [];
 
   /* ─── Validation ────────────────────────────────────────────── */
 
@@ -610,30 +616,39 @@ function isMetodoProprio(field: CustomField): boolean {
     }
   };
 
+  const validateField = (field: CustomField, errors: Record<string, boolean>) => {
+    if (!field.is_required) return;
+
+    if (isMetodoProprio(field)) {
+      if (!responses[field.id]) {
+        errors[field.id] = true;
+        return;
+      }
+
+      if (responses[field.id] === "Sim" && !((responses[`${field.id}__metodo_nome`] as string) ?? "").trim()) {
+        errors[field.id] = true;
+      }
+
+      return;
+    }
+
+    if (isFieldEmpty(field, responses[field.id])) {
+      errors[field.id] = true;
+    }
+  };
+
   const validateCurrentStep = (): boolean => {
     const step = steps[currentStep];
     if (!step) return true;
     const errors: Record<string, boolean> = {};
+
     if (step.type === "client_info") {
       if (!clientName.trim()) errors.clientName = true;
       if (!clientPhone.trim()) errors.clientPhone = true;
-    } else {
-      step.fields.forEach((f) => {
-        if (!isTrademarkSubFieldVisible(f)) return;
-        if (!isGraduationSpecVisible(f)) return;
-        if (f.is_required) {
-          if (isMetodoProprio(f)) {
-            if (!responses[f.id]) {
-              errors[f.id] = true;
-            } else if (responses[f.id] === "Sim" && !((responses[`${f.id}__metodo_nome`] as string) ?? "").trim()) {
-              errors[f.id] = true;
-            }
-          } else if (isFieldEmpty(f, responses[f.id])) {
-            errors[f.id] = true;
-          }
-        }
-      });
     }
+
+    visibleCurrentFields.forEach((field) => validateField(field, errors));
+
     setFieldErrors((prev) => ({ ...prev, ...errors }));
     if (Object.values(errors).some(Boolean)) {
       toast.error("Preencha os campos obrigatórios");
@@ -1997,7 +2012,7 @@ function isMetodoProprio(field: CustomField): boolean {
                       </div>
 
                       {/* Personal custom fields merged into this step */}
-                      {currentStepData.fields.filter(f => (!isVirtualSpouseField(f) || isSpouseFieldVisible) && isTrademarkSubFieldVisible(f) && isGraduationSpecVisible(f)).map((field, index) => (
+                      {visibleCurrentFields.map((field, index) => (
                         <motion.div
                           key={field.id}
                           initial={{ opacity: 0, y: 8 }}
@@ -2029,7 +2044,7 @@ function isMetodoProprio(field: CustomField): boolean {
                   )}
 
                   {/* Field Steps */}
-                  {currentStepData?.type === "fields" && currentStepData.fields.filter(f => (!isVirtualSpouseField(f) || isSpouseFieldVisible) && isTrademarkSubFieldVisible(f) && isGraduationSpecVisible(f)).map((field, index) => (
+                  {currentStepData?.type === "fields" && visibleCurrentFields.map((field, index) => (
                     <motion.div
                       key={field.id}
                       initial={{ opacity: 0, y: 8 }}
