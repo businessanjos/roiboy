@@ -260,7 +260,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
           transition: none;
         }
         .insights-grid .react-grid-item:not(.react-draggable-dragging):not(.resizing) {
-          transition: transform 200ms ease, width 200ms ease, height 200ms ease;
+          transition: transform 300ms ease, width 300ms ease, height 300ms ease;
         }
         .insights-grid .react-grid-item.resizing {
           z-index: 1;
