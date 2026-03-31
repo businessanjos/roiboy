@@ -52,6 +52,7 @@ import {
 import { useInsightsDashboardsSafe } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useVisualData } from "@/hooks/useVisualData";
+import { useStackedVisualData } from "@/hooks/useStackedVisualData";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
