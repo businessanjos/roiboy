@@ -11659,6 +11659,176 @@ export type Database = {
           },
         ]
       }
+      youtube_channels: {
+        Row: {
+          account_id: string
+          bio: string | null
+          channel_id: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          is_active: boolean | null
+          last_synced_at: string | null
+          profile_picture_url: string | null
+          subscribers_count: number | null
+          subscribers_previous_count: number | null
+          total_views: number | null
+          updated_at: string
+          username: string
+          videos_count: number | null
+        }
+        Insert: {
+          account_id: string
+          bio?: string | null
+          channel_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          profile_picture_url?: string | null
+          subscribers_count?: number | null
+          subscribers_previous_count?: number | null
+          total_views?: number | null
+          updated_at?: string
+          username: string
+          videos_count?: number | null
+        }
+        Update: {
+          account_id?: string
+          bio?: string | null
+          channel_id?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_synced_at?: string | null
+          profile_picture_url?: string | null
+          subscribers_count?: number | null
+          subscribers_previous_count?: number | null
+          total_views?: number | null
+          updated_at?: string
+          username?: string
+          videos_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "youtube_channels_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      youtube_videos: {
+        Row: {
+          account_id: string
+          ai_objective: string | null
+          avg_watch_time: number | null
+          caption: string | null
+          category: string | null
+          channel_id: string
+          comments: number | null
+          completion_rate: number | null
+          created_at: string
+          dislikes: number | null
+          duration_seconds: number | null
+          engagement_rate: number | null
+          followers_gained: number | null
+          hashtags: string[] | null
+          id: string
+          is_viral: boolean | null
+          likes: number | null
+          notes: string | null
+          posted_at: string | null
+          saves: number | null
+          shares: number | null
+          thumbnail_url: string | null
+          title: string | null
+          updated_at: string
+          video_type: string | null
+          video_url: string | null
+          views: number | null
+          youtube_id: string | null
+        }
+        Insert: {
+          account_id: string
+          ai_objective?: string | null
+          avg_watch_time?: number | null
+          caption?: string | null
+          category?: string | null
+          channel_id: string
+          comments?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          dislikes?: number | null
+          duration_seconds?: number | null
+          engagement_rate?: number | null
+          followers_gained?: number | null
+          hashtags?: string[] | null
+          id?: string
+          is_viral?: boolean | null
+          likes?: number | null
+          notes?: string | null
+          posted_at?: string | null
+          saves?: number | null
+          shares?: number | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+          video_type?: string | null
+          video_url?: string | null
+          views?: number | null
+          youtube_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          ai_objective?: string | null
+          avg_watch_time?: number | null
+          caption?: string | null
+          category?: string | null
+          channel_id?: string
+          comments?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          dislikes?: number | null
+          duration_seconds?: number | null
+          engagement_rate?: number | null
+          followers_gained?: number | null
+          hashtags?: string[] | null
+          id?: string
+          is_viral?: boolean | null
+          likes?: number | null
+          notes?: string | null
+          posted_at?: string | null
+          saves?: number | null
+          shares?: number | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+          video_type?: string | null
+          video_url?: string | null
+          views?: number | null
+          youtube_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "youtube_videos_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "youtube_videos_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "youtube_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zapp_agents: {
         Row: {
           account_id: string
