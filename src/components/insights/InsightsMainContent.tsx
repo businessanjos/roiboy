@@ -17,30 +17,43 @@ import { ZoomControls } from "@/components/ui/zoom-controls";
 
 /**
  * Calculates the ideal zoom so that content fits the available viewport height
- * without requiring scroll. Measures the actual rendered sizes rather than guessing.
+ * without requiring scroll.
+ *
+ * We measure the header (chrome) directly via its bounding rect so we don't
+ * rely on scrollHeight arithmetic that breaks when zoom is partially applied.
  */
 function calculateAutoFitZoom(
   overlayEl: HTMLElement,
   contentEl: HTMLElement,
 ): number {
-  // Total viewport the overlay occupies
   const viewportHeight = overlayEl.clientHeight;
+  const viewportWidth = overlayEl.clientWidth;
 
-  // contentEl is the only thing that zooms.
-  // Everything else (header, padding, gaps) stays at scale 1.
-  // We find the "chrome" height by subtracting contentEl's contribution.
-  const contentNaturalHeight = contentEl.scrollHeight;
-  const overlayScrollHeight = overlayEl.scrollHeight;
-  const chromeHeight = overlayScrollHeight - contentNaturalHeight;
+  // Measure chrome (everything except the zoomable content).
+  // The content div is the only child that scales; everything before it is chrome.
+  const contentRect = contentEl.getBoundingClientRect();
+  const overlayRect = overlayEl.getBoundingClientRect();
+  const chromeHeight = contentRect.top - overlayRect.top;
 
-  // Available height for the zoomed content
-  const availableForContent = viewportHeight - chromeHeight;
+  // Measure the content at its *natural* size.  When zoom is applied the
+  // scrollHeight already reflects the zoomed value, so we undo it.
+  const currentZoom = parseFloat(contentEl.style.zoom || '1');
+  const contentNaturalHeight = contentEl.scrollHeight * currentZoom;
+  const contentNaturalWidth = contentEl.scrollWidth * currentZoom;
 
-  if (contentNaturalHeight <= 0 || availableForContent <= 0) return 100;
+  const availableHeight = viewportHeight - chromeHeight;
+  const availableWidth = viewportWidth;
 
-  const idealZoom = (availableForContent / contentNaturalHeight) * 100;
-  // Clamp and apply a small safety buffer (98%) to avoid rounding issues
-  return Math.min(Math.max(Math.floor(idealZoom * 0.98), 30), 200);
+  if (contentNaturalHeight <= 0 || availableHeight <= 0) return 100;
+
+  const zoomByHeight = (availableHeight / contentNaturalHeight) * 100;
+  const zoomByWidth = contentNaturalWidth > 0
+    ? (availableWidth / contentNaturalWidth) * 100
+    : 200;
+
+  // Use the smaller axis so nothing overflows, then apply a 5% safety margin.
+  const idealZoom = Math.min(zoomByHeight, zoomByWidth);
+  return Math.min(Math.max(Math.floor(idealZoom * 0.95), 25), 200);
 }
 
 export function InsightsMainContent() {
@@ -83,7 +96,7 @@ export function InsightsMainContent() {
     let attempts = 0;
     let lastHeight = 0;
     let stableCount = 0;
-    const maxAttempts = 30; // 30 × 80ms = 2.4s max
+    const maxAttempts = 40; // 40 × 80ms = 3.2s max
 
     zoomTimerRef.current = setInterval(() => {
       attempts++;
@@ -93,7 +106,6 @@ export function InsightsMainContent() {
       if (!overlay || !content || attempts > maxAttempts) {
         if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
         zoomTimerRef.current = null;
-        // Fallback: if we timed out, still try to calculate
         if (overlay && content) {
           setFocusZoom(calculateAutoFitZoom(overlay, content));
         }
@@ -116,6 +128,28 @@ export function InsightsMainContent() {
       }
     }, 80);
   }, []);
+
+  // After zoom is applied, watch for content re-layout and re-adjust
+  useEffect(() => {
+    if (!isFocusMode || focusZoom === 100) return;
+    const content = contentRef.current;
+    const overlay = focusModeRef.current;
+    if (!content || !overlay) return;
+
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+    const ro = new ResizeObserver(() => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        // Only re-adjust if content overflows the overlay
+        if (overlay.scrollHeight > overlay.clientHeight + 2) {
+          const newZoom = calculateAutoFitZoom(overlay, content);
+          if (newZoom < focusZoom) setFocusZoom(newZoom);
+        }
+      }, 200);
+    });
+    ro.observe(content);
+    return () => { ro.disconnect(); if (debounce) clearTimeout(debounce); };
+  }, [isFocusMode, focusZoom]);
 
   // Cleanup timer on unmount
   useEffect(() => {
@@ -263,7 +297,7 @@ export function InsightsMainContent() {
     ? createPortal(
         <div
           ref={focusModeRef}
-          className="fixed inset-0 z-[9999] bg-background overflow-auto"
+          className="fixed inset-0 z-[9999] bg-background overflow-hidden"
         >
           <div className="p-4 flex flex-col" style={{ minHeight: '100%' }}>
             {/* Focus Mode Header — stays at scale 1 */}

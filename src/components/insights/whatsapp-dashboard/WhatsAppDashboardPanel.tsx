@@ -29,13 +29,28 @@ interface WhatsAppDashboardPanelProps {
 
 function calculateAutoFitZoom(overlayEl: HTMLElement, contentEl: HTMLElement): number {
   const viewportHeight = overlayEl.clientHeight;
-  const contentNaturalHeight = contentEl.scrollHeight;
-  const overlayScrollHeight = overlayEl.scrollHeight;
-  const chromeHeight = overlayScrollHeight - contentNaturalHeight;
-  const availableForContent = viewportHeight - chromeHeight;
-  if (contentNaturalHeight <= 0 || availableForContent <= 0) return 100;
-  const idealZoom = (availableForContent / contentNaturalHeight) * 100;
-  return Math.min(Math.max(Math.floor(idealZoom * 0.98), 30), 200);
+  const viewportWidth = overlayEl.clientWidth;
+
+  const contentRect = contentEl.getBoundingClientRect();
+  const overlayRect = overlayEl.getBoundingClientRect();
+  const chromeHeight = contentRect.top - overlayRect.top;
+
+  const currentZoom = parseFloat(contentEl.style.zoom || '1');
+  const contentNaturalHeight = contentEl.scrollHeight * currentZoom;
+  const contentNaturalWidth = contentEl.scrollWidth * currentZoom;
+
+  const availableHeight = viewportHeight - chromeHeight;
+  const availableWidth = viewportWidth;
+
+  if (contentNaturalHeight <= 0 || availableHeight <= 0) return 100;
+
+  const zoomByHeight = (availableHeight / contentNaturalHeight) * 100;
+  const zoomByWidth = contentNaturalWidth > 0
+    ? (availableWidth / contentNaturalWidth) * 100
+    : 200;
+
+  const idealZoom = Math.min(zoomByHeight, zoomByWidth);
+  return Math.min(Math.max(Math.floor(idealZoom * 0.95), 25), 200);
 }
 
 export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChange, isLoadingVisuals }: WhatsAppDashboardPanelProps) {
@@ -87,7 +102,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
     let attempts = 0;
     let lastHeight = 0;
     let stableCount = 0;
-    const maxAttempts = 30;
+    const maxAttempts = 40;
 
     zoomTimerRef.current = setInterval(() => {
       attempts++;
@@ -113,6 +128,27 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
       }
     }, 80);
   }, []);
+
+  // After zoom is applied, watch for content re-layout and re-adjust
+  useEffect(() => {
+    if (!isFocusMode || focusZoom === 100) return;
+    const content = contentRef.current;
+    const overlay = focusModeRef.current;
+    if (!content || !overlay) return;
+
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+    const ro = new ResizeObserver(() => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        if (overlay.scrollHeight > overlay.clientHeight + 2) {
+          const newZoom = calculateAutoFitZoom(overlay, content);
+          if (newZoom < focusZoom) setFocusZoom(newZoom);
+        }
+      }, 200);
+    });
+    ro.observe(content);
+    return () => { ro.disconnect(); if (debounce) clearTimeout(debounce); };
+  }, [isFocusMode, focusZoom]);
 
   // Cleanup
   useEffect(() => {
@@ -231,7 +267,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
   // Focus mode overlay
   const focusModeOverlay = isFocusMode
     ? createPortal(
-        <div ref={focusModeRef} className="fixed inset-0 z-[9999] bg-background overflow-auto">
+        <div ref={focusModeRef} className="fixed inset-0 z-[9999] bg-background overflow-hidden">
           <div className="p-4 flex flex-col" style={{ minHeight: '100%' }}>
             <div className="flex items-center justify-between mb-4 shrink-0">
               <div>
