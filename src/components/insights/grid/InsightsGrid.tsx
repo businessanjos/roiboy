@@ -66,10 +66,18 @@ function getResponsiveDesktopMinHeight(visual: InsightsVisual): number {
   return 260;
 }
 
-function getResponsiveColSpan12(visual: InsightsVisual): number {
+function getResponsiveColSpan12(visual: InsightsVisual, containerWidth: number): number {
+  const chartType = visual.chart_type || "bar";
   const w = visual.layout?.w ?? 24;
   const scale = visual.layout?.scale || 48;
   const ratio = w / scale;
+
+  // Scorecards: keep compact so they wrap naturally
+  if (["number", "scorecard", "kpi"].includes(chartType)) {
+    // If container is tight, use smaller spans to allow wrapping
+    if (containerWidth < 1200) return 4; // 3 per row
+    return Math.min(Math.round(ratio * 12), 4); // max 4 cols = 3 per row
+  }
 
   if (ratio > 0.85) return 12;
   if (ratio > 0.6) return 8;
