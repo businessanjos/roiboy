@@ -32,7 +32,7 @@ const ROW_HEIGHT = 20;
 const COLS = 48;
 const MARGIN: [number, number] = [12, 12];
 const CONTAINER_PADDING: [number, number] = [4, 4];
-const COMPACT_LAYOUT_BREAKPOINT = 1100;
+const COMPACT_LAYOUT_BREAKPOINT = 1500;
 
 // Minimum heights per chart type for mobile stacked view
 function getMobileMinHeight(visual: InsightsVisual): string {
