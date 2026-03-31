@@ -117,13 +117,13 @@ export function InsightsMainContent() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex-1 p-8">
-        <div className="space-y-6">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-12 w-full" />
-          <div className="grid grid-cols-2 gap-4">
-            <Skeleton className="h-48" />
-            <Skeleton className="h-48" />
+      <div className="flex-1 p-4 md:p-8">
+        <div className="space-y-4 md:space-y-6">
+          <Skeleton className="h-8 w-48 md:w-64" />
+          <Skeleton className="h-10 w-full" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Skeleton className="h-40 md:h-48" />
+            <Skeleton className="h-40 md:h-48" />
           </div>
         </div>
       </div>
