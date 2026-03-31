@@ -103,24 +103,41 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
     enabled: open && !!config && showCategoryFilter && isStacked,
   });
 
-  // Extract unique category names from data + stacked series keys
-  const availableCategories = useMemo(() => {
-    if (!showCategoryFilter) return [];
-    const names = new Set<string>();
+  // Extract unique category names from data (x-axis) and series keys separately
+  const { axisCategories, seriesCategories } = useMemo(() => {
+    if (!showCategoryFilter) return { axisCategories: [] as string[], seriesCategories: [] as string[] };
+    const axisNames = new Set<string>();
+    const seriesNames = new Set<string>();
 
     // From regular data (x-axis labels)
     if (visualData) {
-      visualData.forEach(d => names.add(d.name));
+      visualData.forEach(d => axisNames.add(d.name));
     }
 
-    // From stacked data: both x-axis labels AND series keys
+    // From stacked data: separate x-axis from series keys
     if (stackedResult) {
-      stackedResult.data?.forEach(d => names.add(d.name));
-      stackedResult.seriesKeys?.forEach(k => names.add(k));
+      stackedResult.data?.forEach(d => axisNames.add(d.name));
+      stackedResult.seriesKeys?.forEach(k => seriesNames.add(k));
     }
 
-    return [...names].sort((a, b) => a.localeCompare(b));
+    return {
+      axisCategories: [...axisNames].sort((a, b) => a.localeCompare(b)),
+      seriesCategories: [...seriesNames].sort((a, b) => a.localeCompare(b)),
+    };
   }, [visualData, stackedResult, showCategoryFilter]);
+
+  // Combined for backwards compat
+  const availableCategories = useMemo(
+    () => [...new Set([...axisCategories, ...seriesCategories])].sort((a, b) => a.localeCompare(b)),
+    [axisCategories, seriesCategories]
+  );
+
+  // Get the stacked field name for better UX labels
+  const stackedFieldName = useMemo(() => {
+    if (config?.stackByCustomField?.fieldName) return config.stackByCustomField.fieldName;
+    if (config?.stackBy && config.stackBy !== '_custom') return config.stackBy;
+    return null;
+  }, [config?.stackByCustomField, config?.stackBy]);
 
   // Local state for appearance settings
   const [showDataLabels, setShowDataLabels] = useState(
@@ -459,17 +476,22 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
               <Separator />
             </div>
           )}
-          {/* Category filter for non-scorecard, non-call_commercial visuals */}
-          {showCategoryFilter && availableCategories.length > 0 && (
+          {/* Series filter for stacked charts (e.g. Origem da Venda values) */}
+          {showCategoryFilter && isStacked && seriesCategories.length > 0 && (
             <div className="space-y-3">
-              <Label className="text-base font-medium">Categorias Visíveis</Label>
+              <Label className="text-base font-medium">
+                Séries Visíveis {stackedFieldName ? `(${stackedFieldName})` : ''}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Controla quais segmentos aparecem nas barras empilhadas.
+              </p>
               <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {availableCategories.map((category) => {
+                {seriesCategories.map((category) => {
                   const isHidden = hiddenCategories.includes(category);
                   return (
-                    <div key={category} className="flex items-center gap-2">
+                    <div key={`series-${category}`} className="flex items-center gap-2">
                       <Checkbox
-                        id={`cat-${category}`}
+                        id={`series-${category}`}
                         checked={!isHidden}
                         onCheckedChange={(checked) => {
                           if (checked) {
@@ -479,7 +501,40 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
                           }
                         }}
                       />
-                      <label htmlFor={`cat-${category}`} className="text-sm cursor-pointer">
+                      <label htmlFor={`series-${category}`} className="text-sm cursor-pointer">
+                        {category}
+                      </label>
+                    </div>
+                  );
+                })}
+              </div>
+              <Separator />
+            </div>
+          )}
+          {/* Axis category filter for non-stacked charts or x-axis labels */}
+          {showCategoryFilter && axisCategories.length > 0 && !isStacked && (
+            <div className="space-y-3">
+              <Label className="text-base font-medium">Categorias Visíveis</Label>
+              <p className="text-xs text-muted-foreground">
+                Controla quais itens aparecem no eixo do gráfico.
+              </p>
+              <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                {axisCategories.map((category) => {
+                  const isHidden = hiddenCategories.includes(category);
+                  return (
+                    <div key={`axis-${category}`} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`axis-${category}`}
+                        checked={!isHidden}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setHiddenCategories(prev => prev.filter(c => c !== category));
+                          } else {
+                            setHiddenCategories(prev => [...prev, category]);
+                          }
+                        }}
+                      />
+                      <label htmlFor={`axis-${category}`} className="text-sm cursor-pointer">
                         {category}
                       </label>
                     </div>
