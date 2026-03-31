@@ -191,7 +191,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
             <CardTitle className="text-base flex items-center justify-between gap-2">
               <div className="flex items-center gap-2 min-w-0">
                 <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />
-                <span className="truncate">{visual.title || "Visual"}</span>
+                <span className="truncate" title={visual.title || "Visual"}>{visual.title || "Visual"}</span>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">
                 {chartType === 'ranking' && (
