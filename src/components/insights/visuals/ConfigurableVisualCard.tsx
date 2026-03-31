@@ -84,7 +84,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
   const effectiveLoading = isBubbleMap ? mapLoading : (isStacked ? stackedLoading : isLoading);
   const effectiveError = isBubbleMap ? mapError : (isStacked ? stackedError : error);
 
-  // Filter stacked data by hidden categories (applies to both x-axis names AND series keys)
+  // Filter stacked data by hidden categories (applies ONLY to series keys for stacked charts)
   const processedStackedData = useMemo(() => {
     if (!stackedResult?.data) return undefined;
     if (!config?.hiddenCategories?.length) return stackedResult;
@@ -94,16 +94,14 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
     // Filter series keys (stacked groups like "origem da venda" values)
     const filteredSeriesKeys = stackedResult.seriesKeys.filter(k => !hidden.has(k));
 
-    // Filter data points by name (x-axis) AND remove hidden series values
-    const filteredData = stackedResult.data
-      .filter((item) => !hidden.has(item.name))
-      .map((item) => {
-        const cleaned: typeof item = { name: item.name };
-        for (const key of filteredSeriesKeys) {
-          cleaned[key] = item[key];
-        }
-        return cleaned;
-      });
+    // Remove hidden series values from each data point (keep all x-axis entries)
+    const filteredData = stackedResult.data.map((item) => {
+      const cleaned: typeof item = { name: item.name };
+      for (const key of filteredSeriesKeys) {
+        cleaned[key] = item[key];
+      }
+      return cleaned;
+    });
 
     return {
       data: filteredData,
