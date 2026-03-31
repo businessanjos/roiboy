@@ -621,7 +621,7 @@ export function useThreeCPlus() {
     try {
       const normalizedPhone = phone.replace(/\D/g, "");
       const payload: Record<string, string> = { phone: normalizedPhone };
-      if (selectedCampaign?.id) payload.campaign_id = selectedCampaign.id;
+      if (selectedCampaign?.id) payload.campaign_id = String(selectedCampaign.id);
       const dialData = await invokeAgent("place_call", payload);
 
       console.log("[useThreeCPlus] place_call result", dialData);
