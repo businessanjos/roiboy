@@ -10,6 +10,8 @@ import { AddVisualModal } from "./AddVisualModal";
 import { ShareDashboardModal } from "./ShareDashboardModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
+import { MobileDashboardSheet } from "./MobileDashboardSheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 import { ZoomControls } from "@/components/ui/zoom-controls";
 
