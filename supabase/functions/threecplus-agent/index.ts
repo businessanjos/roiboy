@@ -484,7 +484,7 @@ async function ensureAgentReadyForDial(
     runtime = { ...runtime, logged_campaign: true };
   }
 
-  const readyResult = await waitForAgentReady(apiBase, apiToken, 8000);
+  const readyResult = await waitForAgentReady(apiBase, apiToken, 15000);
   if (readyResult.success) {
     return { success: true, runtime: readyResult.runtime, method: "campaign_login" };
   }
@@ -955,16 +955,9 @@ Deno.serve(async (req) => {
 
       const readyResult = await ensureAgentReadyForDial(apiBase, effectiveApiToken, campaign_id);
       if (!readyResult.success) {
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: readyResult.error,
-            code: "AGENT_NOT_READY",
-            extension_resolved: Boolean(extension),
-            runtime: readyResult.runtime,
-          }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        // Even if ensureAgentReadyForDial failed, attempt manual_call/enter as a last resort
+        // The 3C Plus API may still accept the call if the agent session exists
+        console.log("[threecplus-agent] place_call ensureAgentReadyForDial failed, attempting manual_call/enter anyway:", readyResult.error);
       }
 
       const enterRes = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${effectiveApiToken}`, {
