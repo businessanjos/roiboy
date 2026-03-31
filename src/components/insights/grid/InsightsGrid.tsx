@@ -319,6 +319,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
           visuals={visuals}
           onUpdateVisual={onUpdateVisual}
           onRemoveVisual={onRemoveVisual}
+          containerWidth={containerWidth}
         />
       </div>
     );
