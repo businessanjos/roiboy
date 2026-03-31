@@ -354,30 +354,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
                {dealStage.stageName}
              </Badge>
            )}
-           {/* Conversation Tags */}
-          {assignment.conversation_tags && assignment.conversation_tags.length > 0 && (
-            <>
-              {assignment.conversation_tags.slice(0, 3).map((ct) => 
-                ct.tag && (
-                  <span
-                    key={ct.tag_id}
-                    className="inline-flex items-center px-1.5 py-0 rounded text-[10px] font-medium h-4"
-                    style={{ 
-                      backgroundColor: `${ct.tag.color}20`, 
-                      color: ct.tag.color 
-                    }}
-                  >
-                    {ct.tag.name}
-                  </span>
-                )
-              )}
-              {assignment.conversation_tags.length > 3 && (
-                <span className="text-[10px] text-zapp-text-muted">
-                  +{assignment.conversation_tags.length - 3}
-                </span>
-              )}
-            </>
-          )}
+           {/* Products from CRM */}
           {/* Products */}
           {products && products.length > 0 && (
             <>
