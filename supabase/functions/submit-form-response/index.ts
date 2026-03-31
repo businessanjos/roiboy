@@ -43,8 +43,10 @@ function sanitizeResponses(responses: Record<string, unknown>): Record<string, u
       sanitized[sanitizedKey] = value.map(v => 
         typeof v === 'string' ? sanitizeString(v) : v
       ).slice(0, 100);
+    } else if (value !== null && typeof value === 'object') {
+      // Preserve object values (e.g. address, employee data, location)
+      sanitized[sanitizedKey] = value;
     }
-    // Skip other types for security
   }
   return sanitized;
 }
