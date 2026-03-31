@@ -7,3 +7,5 @@ export * from './MarketingEventSheet';
 export { TikTokTab } from './TikTokTab';
 export { TikTokDashboard } from './TikTokDashboard';
 export { TikTokProfileAvatarUpload } from './TikTokProfileAvatarUpload';
+export { YouTubeTab } from './YouTubeTab';
+export { YouTubeDashboard } from './YouTubeDashboard';
