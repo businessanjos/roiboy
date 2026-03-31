@@ -484,7 +484,7 @@ async function ensureAgentReadyForDial(
     runtime = { ...runtime, logged_campaign: true };
   }
 
-  const readyResult = await waitForAgentReady(apiBase, apiToken, 8000);
+  const readyResult = await waitForAgentReady(apiBase, apiToken, 15000);
   if (readyResult.success) {
     return { success: true, runtime: readyResult.runtime, method: "campaign_login" };
   }
