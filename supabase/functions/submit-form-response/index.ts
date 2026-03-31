@@ -358,7 +358,15 @@ Deno.serve(async (req) => {
                 row.value_date = value;
                 break;
               case "multi_select":
-                row.value_json = value;
+              case "user":
+              case "multi_instagram":
+              case "location":
+                // Handle both array values and string values (from custom renderers)
+                if (Array.isArray(value) || (typeof value === 'object' && value !== null)) {
+                  row.value_json = value;
+                } else if (typeof value === 'string' && value.trim()) {
+                  row.value_text = value;
+                }
                 break;
               default:
                 row.value_text = String(value);
