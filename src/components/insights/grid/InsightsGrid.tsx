@@ -72,18 +72,28 @@ function getResponsiveColSpan12(visual: InsightsVisual, containerWidth: number):
   const scale = visual.layout?.scale || 48;
   const ratio = w / scale;
 
-  // Scorecards: keep compact so they wrap naturally
-  if (["number", "scorecard", "kpi"].includes(chartType)) {
-    // If container is tight, use smaller spans to allow wrapping
+  const isScorecard = ["number", "scorecard", "kpi"].includes(chartType);
+  const isLargeVisual = ["map", "table", "ranking", "data_table", "funnel"].includes(chartType);
+
+  // Scorecards: adapt columns based on available width
+  if (isScorecard) {
+    if (containerWidth < 900) return 6;  // 2 per row
     if (containerWidth < 1200) return 4; // 3 per row
-    return Math.min(Math.round(ratio * 12), 4); // max 4 cols = 3 per row
+    return 3; // 4 per row on wide screens
   }
 
+  // Large visuals: never smaller than half width
+  if (isLargeVisual) {
+    if (containerWidth < 900) return 12; // full width
+    if (ratio > 0.6) return 8;
+    return 6; // minimum half
+  }
+
+  // Charts: minimum half width to stay readable
+  if (containerWidth < 900) return 12;
   if (ratio > 0.85) return 12;
-  if (ratio > 0.6) return 8;
-  if (ratio >= 0.45) return 6;
-  if (ratio >= 0.3) return 4;
-  return 3;
+  if (ratio > 0.45) return 6;
+  return 4;
 }
 
 function sortVisualsByLayout(visuals: InsightsVisual[]) {
