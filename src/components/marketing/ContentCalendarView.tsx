@@ -263,6 +263,25 @@ export function ContentCalendarView({
                           </TooltipContent>
                         </Tooltip>
                       )}
+
+                      {hasYouTube && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              onClick={(e) =>
+                                handlePlatformClick(e, dayContent.youtube.posts, "youtube" as any, day)
+                              }
+                              className="relative p-1 rounded hover:bg-muted/50 transition-colors"
+                            >
+                              <YouTubeIcon className="w-6 h-6" />
+                              <CountBadge count={dayContent.youtube.count} />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {dayContent.youtube.count} vídeo{dayContent.youtube.count > 1 ? "s" : ""} no YouTube
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
                   </div>
                 );
