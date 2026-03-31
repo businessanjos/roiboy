@@ -508,19 +508,33 @@ export async function enrichDealsWithCanal(accountId: string, deals: any[]): Pro
     allValues = allValues.concat(data || []);
   }
 
-  // 3. Map deal_id -> label
-  const canalMap = new Map<string, string>();
+  // 3. Map deal_id -> labels array (handles multi-select comma-separated values)
+  const canalMap = new Map<string, string[]>();
   for (const row of allValues) {
     if (row.value_text) {
-      const label = optionLabels.get(row.value_text) || row.value_text;
-      canalMap.set(row.deal_id, label);
+      // Split comma-separated values and resolve each to its label
+      const parts = row.value_text.split(',').map((v: string) => v.trim()).filter(Boolean);
+      const labels = parts.map((part: string) => optionLabels.get(part) || part);
+      const existing = canalMap.get(row.deal_id) || [];
+      canalMap.set(row.deal_id, [...existing, ...labels]);
     }
   }
 
-  return deals.map(deal => ({
-    ...deal,
-    canal: canalMap.get(deal.id) || 'Não informado',
-  }));
+  // Expand deals: one copy per canal value for proper segmentation
+  const expanded: any[] = [];
+  for (const deal of deals) {
+    const canals = canalMap.get(deal.id);
+    if (canals && canals.length > 0) {
+      // Deduplicate canal values for the same deal
+      const unique = [...new Set(canals)];
+      for (const canal of unique) {
+        expanded.push({ ...deal, canal });
+      }
+    } else {
+      expanded.push({ ...deal, canal: 'Não informado' });
+    }
+  }
+  return expanded;
 }
 
 export async function enrichDealsWithProduct(accountId: string, deals: any[]): Promise<any[]> {
