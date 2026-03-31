@@ -226,7 +226,7 @@ export function InsightsMainContent() {
     ? createPortal(
         <div
           ref={focusModeRef}
-          className="fixed inset-0 z-[9999] bg-background overflow-auto"
+          className="fixed inset-0 z-[9999] bg-background overflow-hidden"
         >
           <div className="p-6 space-y-6">
             {/* Focus Mode Header */}
