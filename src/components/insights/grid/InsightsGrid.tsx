@@ -49,9 +49,17 @@ function getMinHeight(visual: InsightsVisual): number {
   if (["number", "scorecard", "kpi"].includes(ct)) return 120;
   if (["table", "ranking", "data_table"].includes(ct)) return 300;
   if (ct === "map") return 400;
-  if (ct === "gauge") return 180;
+  if (ct === "gauge") return 200;
   if (ct === "funnel") return 360;
   return 280;
+}
+
+function isGauge(visual: InsightsVisual) {
+  return visual.chart_type === "gauge";
+}
+
+function isCompactCard(visual: InsightsVisual) {
+  return isScorecard(visual) || isGauge(visual);
 }
 
 function isScorecard(visual: InsightsVisual) {
