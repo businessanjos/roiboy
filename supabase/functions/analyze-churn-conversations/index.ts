@@ -121,39 +121,29 @@ serve(async (req) => {
       followupsByClient[f.client_id].push(f);
     });
 
-    // 4. Build summary for AI analysis (limit tokens)
-    const clientSummaries = filteredContracts.slice(0, 50).map((contract: any) => {
+    // 4. Build summary for AI analysis (limit to 20 clients, 10 msgs each to avoid payload overflow)
+    const clientSummaries = filteredContracts.slice(0, 20).map((contract: any) => {
       const clientId = contract.client_id;
       const clientName = contract.client?.full_name || "Desconhecido";
-      const msgs = (messagesByClient[clientId] || []).slice(0, 20);
-      const fups = (followupsByClient[clientId] || []).slice(0, 5);
+      const msgs = (messagesByClient[clientId] || []).slice(0, 10);
+      const fups = (followupsByClient[clientId] || []).slice(0, 3);
 
       const messagesSummary = msgs
         .map(
-          (m: any) =>
-            `[${m.direction === "outgoing" ? "EQUIPE" : "CLIENTE"}] ${m.content || m.transcription || "(mídia)"}`
+          (m: any) => {
+            const text = (m.content || m.transcription || "").slice(0, 150);
+            return `[${m.direction === "outgoing" ? "EQUIPE" : "CLIENTE"}] ${text || "(mídia)"}`;
+          }
         )
         .join("\n");
 
       const followupSummary = fups
-        .map((f: any) => `[${f.type}] ${f.title || ""}: ${f.content || ""}`.slice(0, 200))
+        .map((f: any) => `[${f.type}] ${(f.title || "")}: ${(f.content || "").slice(0, 100)}`)
         .join("\n");
 
-      return `
-=== CLIENTE: ${clientName} ===
-Produto: ${contract.product?.name || "N/A"}
-Valor: R$ ${contract.value}
-Início: ${contract.start_date}
-Cancelamento: ${contract.cancelled_at || contract.status_changed_at || "N/A"}
-Motivo registrado: ${contract.cancellation_reason || "Não informado"}
-Justificativa: ${contract.cancellation_justification || "Não informada"}
-
-ÚLTIMAS MENSAGENS WHATSAPP:
-${messagesSummary || "(sem mensagens)"}
-
-ANOTAÇÕES/TIMELINE:
-${followupSummary || "(sem anotações)"}
-`;
+      return `=== ${clientName} | ${contract.product?.name || "N/A"} | R$${contract.value} | Motivo: ${contract.cancellation_reason || "N/I"} ===
+Msgs: ${messagesSummary || "(sem msgs)"}
+Notes: ${followupSummary || "(sem notas)"}`;
     });
 
     const totalCancelled = filteredContracts.length;
