@@ -441,7 +441,11 @@ export function ChurnInsightsRenderer({ insights, meta }: ChurnInsightsRendererP
           <div className="flex flex-col items-center p-3 rounded-xl bg-destructive/8 border border-destructive/20">
             <DollarSign className="h-4 w-4 text-destructive mb-1" />
             <span className="text-xl font-black text-destructive">
-              {meta.totalValue ? `R$ ${(meta.totalValue / 1000).toFixed(0)}k` : meta.clientsWithMessages}
+              {meta.totalValue
+                ? meta.totalValue >= 1_000_000
+                  ? `R$ ${(meta.totalValue / 1_000_000).toFixed(1)}M`
+                  : `R$ ${(meta.totalValue / 1000).toFixed(0)}k`
+                : meta.clientsWithMessages}
             </span>
             <span className="text-[10px] text-muted-foreground font-medium">
               {meta.totalValue ? "Valor perdido" : "Com conversas"}
