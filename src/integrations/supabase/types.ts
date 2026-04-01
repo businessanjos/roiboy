@@ -1353,6 +1353,10 @@ export type Database = {
           cancellation_reason: string | null
           cancelled_at: string | null
           client_id: string
+          clinica_ryka_error: string | null
+          clinica_ryka_external_id: string | null
+          clinica_ryka_status: string | null
+          clinica_ryka_synced_at: string | null
           contract_type: string
           created_at: string
           currency: string
@@ -1386,6 +1390,10 @@ export type Database = {
           cancellation_reason?: string | null
           cancelled_at?: string | null
           client_id: string
+          clinica_ryka_error?: string | null
+          clinica_ryka_external_id?: string | null
+          clinica_ryka_status?: string | null
+          clinica_ryka_synced_at?: string | null
           contract_type?: string
           created_at?: string
           currency?: string
@@ -1419,6 +1427,10 @@ export type Database = {
           cancellation_reason?: string | null
           cancelled_at?: string | null
           client_id?: string
+          clinica_ryka_error?: string | null
+          clinica_ryka_external_id?: string | null
+          clinica_ryka_status?: string | null
+          clinica_ryka_synced_at?: string | null
           contract_type?: string
           created_at?: string
           currency?: string
