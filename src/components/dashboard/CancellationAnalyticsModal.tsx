@@ -74,7 +74,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
   const [programChurn, setProgramChurn] = useState<{ total: number; cancelled: number; rate: number } | null>(null);
   const [aiInsights, setAiInsights] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiMeta, setAiMeta] = useState<{ contractsAnalyzed: number; clientsWithMessages: number; totalMessages: number; totalValue?: number } | null>(null);
+  const [aiMeta, setAiMeta] = useState<{ contractsAnalyzed: number; clientsWithMessages: number; totalMessages: number; totalValue?: number; periodStart?: string | null; periodEnd?: string | null } | null>(null);
   const [savedReports, setSavedReports] = useState<any[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
