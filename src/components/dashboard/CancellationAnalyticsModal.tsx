@@ -611,14 +611,16 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
                         </Button>
                       )}
                       {aiInsights && !aiLoading && (
-                        <Button size="sm" variant="outline" onClick={saveReport} disabled={savingReport} className="gap-1">
-                          {savingReport ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                          Salvar
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => exportChurnToPDF(aiInsights!, aiMeta)} className="gap-1">
-                          <FileDown className="h-3.5 w-3.5" />
-                          PDF
-                        </Button>
+                        <>
+                          <Button size="sm" variant="outline" onClick={saveReport} disabled={savingReport} className="gap-1">
+                            {savingReport ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                            Salvar
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => exportChurnToPDF(aiInsights!, aiMeta)} className="gap-1">
+                            <FileDown className="h-3.5 w-3.5" />
+                            PDF
+                          </Button>
+                        </>
                       )}
                       <Button size="sm" onClick={runAiAnalysis} disabled={aiLoading} className="gap-2">
                         {aiLoading ? (
