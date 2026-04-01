@@ -123,6 +123,25 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
+  const formatReason = (reason: string): string => {
+    const map: Record<string, string> = {
+      "financeiro": "Financeiro",
+      "problemas_pessoais": "Problemas Pessoais",
+      "operacional_financeiro": "Operacional / Financeiro",
+      "mudanca_momento": "Mudança de Momento",
+      "falta_tempo": "Falta de Tempo",
+      "insatisfacao": "Insatisfação",
+      "nao_informado": "Não Informado",
+      "falta_resultado": "Falta de Resultado",
+      "falta_dedicacao": "Falta de Dedicação",
+      "migracao_produto": "Migração de Produto",
+      "cliente_nao_retorna": "Cliente Não Retorna",
+      "inadimplencia": "Inadimplência",
+      "outro": "Outro",
+    };
+    return map[reason.toLowerCase()] || reason.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  };
+
   const analytics = useMemo(() => {
     const totalCount = data.length;
     const totalValue = data.reduce((sum, d) => sum + (d.value || 0), 0);
@@ -146,7 +165,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
     // Reasons
     const reasonCounts: Record<string, number> = {};
     data.forEach(d => {
-      const reason = d.cancellation_reason || "Não informado";
+      const reason = formatReason(d.cancellation_reason || "Não informado");
       reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
     });
     const reasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]);
