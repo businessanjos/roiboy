@@ -75,12 +75,7 @@ export function InsightsMainContent() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [focusZoom, setFocusZoom] = useState(100);
-  const [focusContentDimensions, setFocusContentDimensions] = useState({ width: 0, height: 0 });
   const focusModeRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const zoomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isManualZoomRef = useRef(false);
 
   const updateFocusScrollDimensions = useCallback(() => {
     const content = contentRef.current;
