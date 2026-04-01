@@ -603,31 +603,62 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
                       <Brain className="h-4 w-4 text-primary" />
                       Análise Inteligente de Churn (IA)
                     </CardTitle>
-                    <Button
-                      size="sm"
-                      onClick={runAiAnalysis}
-                      disabled={aiLoading}
-                      className="gap-2"
-                    >
-                      {aiLoading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Analisando...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4" />
-                          {aiInsights ? "Reanalisar" : "Analisar Conversas"}
-                        </>
+                    <div className="flex items-center gap-2">
+                      {savedReports.length > 0 && (
+                        <Button size="sm" variant="outline" onClick={() => setShowHistory(!showHistory)} className="gap-1">
+                          <History className="h-3.5 w-3.5" />
+                          Histórico ({savedReports.length})
+                        </Button>
                       )}
-                    </Button>
+                      {aiInsights && !aiLoading && (
+                        <Button size="sm" variant="outline" onClick={saveReport} disabled={savingReport} className="gap-1">
+                          {savingReport ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                          Salvar
+                        </Button>
+                      )}
+                      <Button size="sm" onClick={runAiAnalysis} disabled={aiLoading} className="gap-2">
+                        {aiLoading ? (
+                          <><Loader2 className="h-4 w-4 animate-spin" /> Analisando...</>
+                        ) : (
+                          <><Sparkles className="h-4 w-4" /> {aiInsights ? "Reanalisar" : "Analisar Conversas"}</>
+                        )}
+                      </Button>
+                    </div>
                   </div>
-                  {!aiInsights && !aiLoading && (
+                  {!aiInsights && !aiLoading && !showHistory && (
                     <p className="text-xs text-muted-foreground mt-1">
                       A IA irá analisar o histórico de conversas e timeline dos clientes cancelados para identificar padrões e gerar insights acionáveis.
                     </p>
                   )}
                 </CardHeader>
+
+                {showHistory && (
+                  <CardContent>
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Análises salvas:</p>
+                      {savedReports.map((report) => (
+                        <button
+                          key={report.id}
+                          onClick={() => loadReport(report)}
+                          className="w-full text-left p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium">
+                              {format(parseISO(report.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            </span>
+                            <Badge variant="secondary" className="text-xs">
+                              {report.contracts_analyzed} contratos
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                            {report.insights.replace(/[#*_]/g, "").substring(0, 120)}...
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </CardContent>
+                )}
+
                 {aiLoading && (
                   <CardContent>
                     <div className="flex flex-col items-center justify-center py-8 gap-3">
@@ -637,7 +668,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
                     </div>
                   </CardContent>
                 )}
-                {aiInsights && !aiLoading && (
+                {aiInsights && !aiLoading && !showHistory && (
                   <CardContent>
                     {aiMeta && (
                       <div className="flex gap-4 mb-4 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
@@ -646,13 +677,19 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
                         <span>👤 {aiMeta.clientsWithMessages} clientes com conversas</span>
                       </div>
                     )}
-                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                    <div className="text-sm leading-relaxed space-y-1">
                       {aiInsights.split("\n").map((line, i) => {
-                        if (line.startsWith("##") || line.startsWith("**")) {
-                          return <p key={i} className="font-semibold mt-3 mb-1">{line.replace(/[#*]/g, "").trim()}</p>;
+                        const cleaned = line
+                          .replace(/^#{1,4}\s*/, "")
+                          .replace(/\*\*\*(.*?)\*\*\*/g, "$1")
+                          .replace(/\*\*(.*?)\*\*/g, "$1")
+                          .replace(/\*(.*?)\*/g, "$1")
+                          .replace(/^[-•]\s*/, "• ");
+                        if (line.match(/^#{1,4}\s/) || line.match(/^\*\*[^*]+\*\*$/)) {
+                          return <p key={i} className="font-semibold text-foreground mt-4 mb-1">{cleaned.trim()}</p>;
                         }
-                        if (line.trim() === "") return <br key={i} />;
-                        return <p key={i} className="text-sm leading-relaxed my-0.5">{line}</p>;
+                        if (line.trim() === "" || line.trim() === "---") return <div key={i} className="h-2" />;
+                        return <p key={i} className="text-muted-foreground my-0.5">{cleaned}</p>;
                       })}
                     </div>
                   </CardContent>
