@@ -9,7 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, XCircle, Users, Package, MapPin, Calendar, DollarSign, Clock, AlertTriangle } from "lucide-react";
+import { Loader2, XCircle, Users, Package, MapPin, Calendar, DollarSign, Clock, AlertTriangle, TrendingDown, BarChart3 } from "lucide-react";
 import { format, parseISO, differenceInMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -67,6 +67,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
   const [data, setData] = useState<CancellationData[]>([]);
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState("6");
+  const [programChurn, setProgramChurn] = useState<{ total: number; cancelled: number; rate: number } | null>(null);
 
   useEffect(() => {
     if (open) fetchData();
@@ -97,6 +98,17 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
 
       const { data: contracts, error } = await query;
       if (error) throw error;
+
+      // Fetch program-wide churn (all contracts, not filtered by consultant)
+      const { count: totalContracts } = await supabase
+        .from("client_contracts")
+        .select("id", { count: "exact", head: true })
+        .is("parent_contract_id", null);
+
+      const cancelledCount = (contracts || []).length;
+      const total = totalContracts || 0;
+      const rate = total > 0 ? Math.round((cancelledCount / total) * 1000) / 10 : 0;
+      setProgramChurn({ total, cancelled: cancelledCount, rate });
 
       // Fetch responsible user for each contract's client
       const clientIds = [...new Set((contracts || []).map(c => c.client_id))];
@@ -312,6 +324,42 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Churn do Programa */}
+              {programChurn && (
+                <Card className="border-destructive/30 bg-gradient-to-r from-destructive/5 to-transparent">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4 text-destructive" />
+                      Churn do Programa (base geral)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-6">
+                      <div className="text-center">
+                        <p className="text-3xl font-bold text-destructive">{programChurn.rate}%</p>
+                        <p className="text-xs text-muted-foreground">Taxa de Churn</p>
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Contratos cancelados</span>
+                          <span className="font-semibold text-destructive">{programChurn.cancelled}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Total de contratos na base</span>
+                          <span className="font-semibold">{programChurn.total}</span>
+                        </div>
+                        <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-destructive/70"
+                            style={{ width: `${Math.min(programChurn.rate, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Top Consultant */}
