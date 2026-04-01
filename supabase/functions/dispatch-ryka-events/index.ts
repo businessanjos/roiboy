@@ -113,13 +113,10 @@ Deno.serve(async (req) => {
         contract_type: contract.contract_type,
         contract_status: contract.status,
         contract_value: contract.value,
-        contract_currency: contract.currency,
-          start_date: contract.start_date,
-          end_date: contract.end_date,
-          payment_method: contract.payment_method,
-          notes: contract.notes,
-        },
-        client: clientData,
+        contract_start_date: contract.start_date,
+        contract_end_date: contract.end_date,
+        contract_payment_method: contract.payment_method,
+        contract_notes: contract.notes,
       };
 
       // For updates, include changed fields
