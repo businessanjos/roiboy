@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Clock,
   BarChart3,
+  Calendar,
   Target,
   Shield,
   Trophy,
