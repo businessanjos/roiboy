@@ -668,29 +668,8 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
                   </CardContent>
                 )}
                 {aiInsights && !aiLoading && !showHistory && (
-                  <CardContent>
-                    {aiMeta && (
-                      <div className="flex gap-4 mb-4 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
-                        <span>📊 {aiMeta.contractsAnalyzed} contratos analisados</span>
-                        <span>💬 {aiMeta.totalMessages} mensagens processadas</span>
-                        <span>👤 {aiMeta.clientsWithMessages} clientes com conversas</span>
-                      </div>
-                    )}
-                    <div className="text-sm leading-relaxed space-y-1">
-                      {aiInsights.split("\n").map((line, i) => {
-                        const cleaned = line
-                          .replace(/^#{1,4}\s*/, "")
-                          .replace(/\*\*\*(.*?)\*\*\*/g, "$1")
-                          .replace(/\*\*(.*?)\*\*/g, "$1")
-                          .replace(/\*(.*?)\*/g, "$1")
-                          .replace(/^[-•]\s*/, "• ");
-                        if (line.match(/^#{1,4}\s/) || line.match(/^\*\*[^*]+\*\*$/)) {
-                          return <p key={i} className="font-semibold text-foreground mt-4 mb-1">{cleaned.trim()}</p>;
-                        }
-                        if (line.trim() === "" || line.trim() === "---") return <div key={i} className="h-2" />;
-                        return <p key={i} className="text-muted-foreground my-0.5">{cleaned}</p>;
-                      })}
-                    </div>
+                  <CardContent className="pt-0">
+                    <ChurnInsightsRenderer insights={aiInsights} meta={aiMeta} />
                   </CardContent>
                 )}
               </Card>
