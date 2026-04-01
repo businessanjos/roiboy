@@ -70,6 +70,10 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState("6");
   const [programChurn, setProgramChurn] = useState<{ total: number; cancelled: number; rate: number } | null>(null);
+  const [aiInsights, setAiInsights] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiMeta, setAiMeta] = useState<{ contractsAnalyzed: number; clientsWithMessages: number; totalMessages: number } | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (open) fetchData();
