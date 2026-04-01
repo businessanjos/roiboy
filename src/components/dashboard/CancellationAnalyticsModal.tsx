@@ -182,13 +182,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
         .maybeSingle();
 
       if (!userProfile?.account_id) {
-        // Fallback: try to get account_id from user_roles or another source
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("id")
-          .eq("user_id", userId)
-          .maybeSingle();
-        console.error("Profile not found for user:", userId, "roleData:", roleData);
+        console.error("Profile not found for user:", userId);
         throw new Error("Conta não encontrada. Verifique seu perfil.");
       }
 
