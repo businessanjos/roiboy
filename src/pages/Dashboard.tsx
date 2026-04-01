@@ -61,6 +61,7 @@ import { ZoomControls } from "@/components/ui/zoom-controls";
 import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
+import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/components/dashboard/CancellationAnalyticsModal";
 
 
 
