@@ -67,6 +67,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
   const [data, setData] = useState<CancellationData[]>([]);
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState("6");
+  const [programChurn, setProgramChurn] = useState<{ total: number; cancelled: number; rate: number } | null>(null);
 
   useEffect(() => {
     if (open) fetchData();
@@ -97,6 +98,17 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
 
       const { data: contracts, error } = await query;
       if (error) throw error;
+
+      // Fetch program-wide churn (all contracts, not filtered by consultant)
+      const { count: totalContracts } = await supabase
+        .from("client_contracts")
+        .select("id", { count: "exact", head: true })
+        .is("parent_contract_id", null);
+
+      const cancelledCount = (contracts || []).length;
+      const total = totalContracts || 0;
+      const rate = total > 0 ? Math.round((cancelledCount / total) * 1000) / 10 : 0;
+      setProgramChurn({ total, cancelled: cancelledCount, rate });
 
       // Fetch responsible user for each contract's client
       const clientIds = [...new Set((contracts || []).map(c => c.client_id))];
