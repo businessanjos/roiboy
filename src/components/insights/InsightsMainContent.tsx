@@ -400,8 +400,8 @@ export function InsightsMainContent() {
           </div>
         </div>
 
-        {/* Filters */}
-        <InsightsFilterBar />
+        {/* Filters - hidden in focus mode */}
+        {!isFocusMode && <InsightsFilterBar />}
 
         {/* Grid or Empty State */}
         {isLoadingVisuals ? (
