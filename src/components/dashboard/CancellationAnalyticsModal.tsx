@@ -172,12 +172,25 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
     setSavingReport(true);
     try {
       const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) throw new Error("Usuário não autenticado");
+
       const { data: userProfile } = await supabase
         .from("users")
         .select("account_id")
-        .eq("id", userData.user?.id || "")
-        .single();
-      if (!userProfile) throw new Error("Perfil não encontrado");
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (!userProfile?.account_id) {
+        // Fallback: try to get account_id from user_roles or another source
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+        console.error("Profile not found for user:", userId, "roleData:", roleData);
+        throw new Error("Conta não encontrada. Verifique seu perfil.");
+      }
 
       const { error } = await supabase.from("churn_analysis_reports").insert({
         account_id: userProfile.account_id,
@@ -186,7 +199,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
         clients_with_messages: aiMeta.clientsWithMessages,
         total_messages: aiMeta.totalMessages,
         total_value: aiMeta.totalValue || 0,
-        created_by: userData.user?.id,
+        created_by: userId,
       });
       if (error) throw error;
       toast({ title: "Análise salva com sucesso!" });
