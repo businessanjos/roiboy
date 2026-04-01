@@ -86,15 +86,11 @@ export function InsightsMainContent() {
     const content = contentRef.current;
     if (!content) return;
 
-    const scale = focusZoom / 100;
-    const naturalWidth = content.scrollWidth;
-    const naturalHeight = content.scrollHeight;
-
     setFocusContentDimensions({
-      width: Math.ceil(naturalWidth * scale),
-      height: Math.ceil(naturalHeight * scale),
+      width: Math.ceil(content.scrollWidth),
+      height: Math.ceil(content.scrollHeight),
     });
-  }, [focusZoom]);
+  }, []);
 
   // Shared zoom calculation that polls until the grid layout stabilises
   const runAutoFitZoom = useCallback(() => {
