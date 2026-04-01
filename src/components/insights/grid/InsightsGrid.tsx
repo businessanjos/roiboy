@@ -109,16 +109,42 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
     isAllCompact: currentRow.every(isCompactCard),
   });
 
-  // Merge consecutive compact-only rows (scorecards or gauges) into a single row
-  const rows: VisualRow[] = [];
+  // Separate compact rows (scorecards/gauges) from regular rows
+  const compactRows: VisualRow[] = [];
+  const regularRows: VisualRow[] = [];
+
   for (const row of rawRows) {
-    const prev = rows[rows.length - 1];
-    if (prev && prev.isAllScorecards && row.isAllScorecards) {
-      prev.visuals.push(...row.visuals);
+    if (row.isAllCompact) {
+      compactRows.push(row);
     } else {
-      rows.push(row);
+      regularRows.push(row);
     }
   }
+
+  // Merge all compact visuals: scorecards in one row, gauges in another
+  const rows: VisualRow[] = [];
+
+  const allScorecards = compactRows.flatMap(r => r.visuals.filter(isScorecard));
+  const allGauges = compactRows.flatMap(r => r.visuals.filter(isGauge));
+
+  if (allScorecards.length > 0) {
+    rows.push({
+      visuals: allScorecards,
+      isAllScorecards: true,
+      isAllCompact: true,
+    });
+  }
+
+  if (allGauges.length > 0) {
+    rows.push({
+      visuals: allGauges,
+      isAllScorecards: false,
+      isAllCompact: true,
+    });
+  }
+
+  // Then add regular rows in their original order
+  rows.push(...regularRows);
 
   return rows;
 }
