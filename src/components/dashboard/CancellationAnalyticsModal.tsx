@@ -15,6 +15,7 @@ import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 // Only these users can access this modal
 const AUTHORIZED_USER_IDS = [
@@ -77,6 +78,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
   const [showHistory, setShowHistory] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useCurrentUser();
 
   useEffect(() => {
     if (open) { fetchData(); loadSavedReports(); }
@@ -171,22 +173,18 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
     if (!aiInsights || !aiMeta) return;
     setSavingReport(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const { data: userProfile } = await supabase
-        .from("users")
-        .select("account_id")
-        .eq("id", userData.user?.id || "")
-        .single();
-      if (!userProfile) throw new Error("Perfil não encontrado");
+      if (!currentUser?.account_id || !currentUser?.id) {
+        throw new Error("Usuário não autenticado");
+      }
 
       const { error } = await supabase.from("churn_analysis_reports").insert({
-        account_id: userProfile.account_id,
+        account_id: currentUser.account_id,
         insights: aiInsights,
         contracts_analyzed: aiMeta.contractsAnalyzed,
         clients_with_messages: aiMeta.clientsWithMessages,
         total_messages: aiMeta.totalMessages,
         total_value: aiMeta.totalValue || 0,
-        created_by: userData.user?.id,
+        created_by: currentUser.id,
       });
       if (error) throw error;
       toast({ title: "Análise salva com sucesso!" });
