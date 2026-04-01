@@ -29,17 +29,15 @@ function calculateAutoFitZoom(
   const viewportHeight = overlayEl.clientHeight;
   const viewportWidth = overlayEl.clientWidth;
 
-  // Measure chrome (everything except the zoomable content).
-  // The content div is the only child that scales; everything before it is chrome.
+  // Measure chrome (header) height via bounding rects
   const contentRect = contentEl.getBoundingClientRect();
   const overlayRect = overlayEl.getBoundingClientRect();
   const chromeHeight = contentRect.top - overlayRect.top;
 
-  // Measure the content at its *natural* size.  When zoom is applied the
-  // scrollHeight already reflects the zoomed value, so we undo it.
-  const currentZoom = parseFloat(contentEl.style.zoom || '1');
-  const contentNaturalHeight = contentEl.scrollHeight * currentZoom;
-  const contentNaturalWidth = contentEl.scrollWidth * currentZoom;
+  // CSS zoom: scrollHeight/scrollWidth on the zoomed element return the
+  // *natural* (unscaled) dimensions in all browsers.  No compensation needed.
+  const contentNaturalHeight = contentEl.scrollHeight;
+  const contentNaturalWidth = contentEl.scrollWidth;
 
   const availableHeight = viewportHeight - chromeHeight;
   const availableWidth = viewportWidth;
@@ -137,19 +135,24 @@ export function InsightsMainContent() {
     if (!content || !overlay) return;
 
     let debounce: ReturnType<typeof setTimeout> | null = null;
+    let adjustCount = 0;
     const ro = new ResizeObserver(() => {
       if (debounce) clearTimeout(debounce);
+      // Limit re-adjustments to prevent infinite loops
+      if (adjustCount >= 3) return;
       debounce = setTimeout(() => {
-        // Only re-adjust if content overflows the overlay
-        if (overlay.scrollHeight > overlay.clientHeight + 2) {
-          const newZoom = calculateAutoFitZoom(overlay, content);
-          if (newZoom < focusZoom) setFocusZoom(newZoom);
+        // Check overflow using getBoundingClientRect for accuracy with zoom
+        const contentBottom = content.getBoundingClientRect().bottom;
+        const overlayBottom = overlay.getBoundingClientRect().bottom;
+        if (contentBottom > overlayBottom + 2) {
+          adjustCount++;
+          runAutoFitZoom();
         }
-      }, 200);
+      }, 300);
     });
     ro.observe(content);
     return () => { ro.disconnect(); if (debounce) clearTimeout(debounce); };
-  }, [isFocusMode, focusZoom]);
+  }, [isFocusMode, focusZoom, runAutoFitZoom]);
 
   // Cleanup timer on unmount
   useEffect(() => {

@@ -35,9 +35,9 @@ function calculateAutoFitZoom(overlayEl: HTMLElement, contentEl: HTMLElement): n
   const overlayRect = overlayEl.getBoundingClientRect();
   const chromeHeight = contentRect.top - overlayRect.top;
 
-  const currentZoom = parseFloat(contentEl.style.zoom || '1');
-  const contentNaturalHeight = contentEl.scrollHeight * currentZoom;
-  const contentNaturalWidth = contentEl.scrollWidth * currentZoom;
+  // CSS zoom: scrollHeight/scrollWidth return natural (unscaled) dimensions
+  const contentNaturalHeight = contentEl.scrollHeight;
+  const contentNaturalWidth = contentEl.scrollWidth;
 
   const availableHeight = viewportHeight - chromeHeight;
   const availableWidth = viewportWidth;
@@ -137,18 +137,22 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
     if (!content || !overlay) return;
 
     let debounce: ReturnType<typeof setTimeout> | null = null;
+    let adjustCount = 0;
     const ro = new ResizeObserver(() => {
       if (debounce) clearTimeout(debounce);
+      if (adjustCount >= 3) return;
       debounce = setTimeout(() => {
-        if (overlay.scrollHeight > overlay.clientHeight + 2) {
-          const newZoom = calculateAutoFitZoom(overlay, content);
-          if (newZoom < focusZoom) setFocusZoom(newZoom);
+        const contentBottom = content.getBoundingClientRect().bottom;
+        const overlayBottom = overlay.getBoundingClientRect().bottom;
+        if (contentBottom > overlayBottom + 2) {
+          adjustCount++;
+          runAutoFitZoom();
         }
-      }, 200);
+      }, 300);
     });
     ro.observe(content);
     return () => { ro.disconnect(); if (debounce) clearTimeout(debounce); };
-  }, [isFocusMode, focusZoom]);
+  }, [isFocusMode, focusZoom, runAutoFitZoom]);
 
   // Cleanup
   useEffect(() => {
