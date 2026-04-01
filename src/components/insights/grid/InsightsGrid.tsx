@@ -154,26 +154,24 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual }: 
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
 }) {
-  const { visuals, isAllScorecards } = row;
+  const { visuals, isAllScorecards, isAllCompact } = row;
 
   // Calculate flex basis for each visual based on its w proportion
   const totalW = visuals.reduce((sum, v) => sum + (v.layout?.w ?? 24), 0);
-  const scale = visuals[0]?.layout?.scale || 48;
 
-  // For scorecard rows: don't set minWidth so all fit in one line
-  const gapPx = 12;
+  // Compact rows (scorecards or gauges): no wrap, distribute evenly
+  const shouldNotWrap = isAllScorecards || isAllCompact;
 
   return (
     <div
       className="flex gap-3"
-      style={{ flexWrap: isAllScorecards ? "nowrap" : "wrap" }}
+      style={{ flexWrap: shouldNotWrap ? "nowrap" : "wrap" }}
     >
       {visuals.map((visual) => {
         const w = visual.layout?.w ?? 24;
         const minH = getMinHeight(visual);
 
-        // For scorecards: distribute evenly accounting for gaps
-        const flexStyle = isAllScorecards
+        const flexStyle = shouldNotWrap
           ? {
               flex: `1 1 0`,
               minWidth: 0,
