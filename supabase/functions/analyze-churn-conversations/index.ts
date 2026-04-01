@@ -188,26 +188,36 @@ ${clientSummaries.join("\n---\n")}
 
 Analise esses dados e forneça insights profundos sobre os padrões de churn.`;
 
-    const aiResponse = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          stream: false,
-        }),
-      }
-    );
+    const payload = JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+    });
 
-    if (!aiResponse.ok) {
+    console.log(`[analyze-churn] Sending to AI gateway. Payload size: ${payload.length} bytes, clients: ${clientSummaries.length}`);
+
+    // Retry logic for transient gateway errors
+    let aiData: any = null;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const aiResponse = await fetch(
+        "https://ai.gateway.lovable.dev/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: payload,
+        }
+      );
+
+      if (aiResponse.ok) {
+        aiData = await aiResponse.json();
+        break;
+      }
+
       if (aiResponse.status === 429) {
         return new Response(
           JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns minutos." }),
@@ -220,13 +230,18 @@ Analise esses dados e forneça insights profundos sobre os padrões de churn.`;
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
       const errText = await aiResponse.text();
-      console.error("AI gateway error:", aiResponse.status, errText);
-      throw new Error(`AI gateway error: ${aiResponse.status}`);
+      console.error(`[analyze-churn] AI gateway attempt ${attempt}/3 failed: ${aiResponse.status}`, errText.slice(0, 200));
+
+      if (attempt < 3) {
+        await new Promise((r) => setTimeout(r, 2000 * attempt));
+      } else {
+        throw new Error(`AI gateway error after 3 attempts: ${aiResponse.status}`);
+      }
     }
 
-    const aiData = await aiResponse.json();
-    const insights = aiData.choices?.[0]?.message?.content || "Não foi possível gerar insights.";
+    const insights = aiData?.choices?.[0]?.message?.content || "Não foi possível gerar insights.";
 
     return new Response(
       JSON.stringify({
