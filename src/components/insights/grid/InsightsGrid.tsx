@@ -46,7 +46,7 @@ function getMobileMinHeight(visual: InsightsVisual): string {
 
 function getMinHeight(visual: InsightsVisual): number {
   const ct = visual.chart_type || "bar";
-  if (["number", "scorecard", "kpi"].includes(ct)) return 160;
+  if (["number", "scorecard", "kpi"].includes(ct)) return 120;
   if (["table", "ranking", "data_table"].includes(ct)) return 300;
   if (ct === "map") return 400;
   if (ct === "gauge") return 180;
@@ -75,7 +75,7 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
     return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
   });
 
-  const rows: VisualRow[] = [];
+  const rawRows: VisualRow[] = [];
   let currentRow: InsightsVisual[] = [sorted[0]];
   let currentY = sorted[0].layout?.y ?? 0;
 
@@ -85,7 +85,7 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
     if (Math.abs(vy - currentY) <= 5) {
       currentRow.push(sorted[i]);
     } else {
-      rows.push({
+      rawRows.push({
         visuals: currentRow,
         isAllScorecards: currentRow.every(isScorecard),
       });
@@ -94,10 +94,21 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
     }
   }
 
-  rows.push({
+  rawRows.push({
     visuals: currentRow,
     isAllScorecards: currentRow.every(isScorecard),
   });
+
+  // Merge consecutive scorecard-only rows into a single row
+  const rows: VisualRow[] = [];
+  for (const row of rawRows) {
+    const prev = rows[rows.length - 1];
+    if (prev && prev.isAllScorecards && row.isAllScorecards) {
+      prev.visuals.push(...row.visuals);
+    } else {
+      rows.push(row);
+    }
+  }
 
   return rows;
 }
@@ -139,38 +150,37 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual }: 
   const totalW = visuals.reduce((sum, v) => sum + (v.layout?.w ?? 24), 0);
   const scale = visuals[0]?.layout?.scale || 48;
 
-  // Determine if this row should wrap
-  // For scorecards: wrap if too many to fit comfortably
-  // For charts: wrap if container is narrow
-  const shouldWrap = isAllScorecards
-    ? visuals.length > (containerWidth < 1000 ? 3 : containerWidth < 1300 ? 4 : 5)
-    : totalW > scale * 0.95; // Row items exceed grid width
-
-  // Min width per item to trigger wrapping
-  const minItemWidth = isAllScorecards
-    ? Math.max(180, containerWidth < 1000 ? containerWidth / 3 - 16 : 200)
-    : 300;
+  // For scorecard rows: don't set minWidth so all fit in one line
+  const gapPx = 12;
 
   return (
     <div
       className="flex gap-3"
-      style={{ flexWrap: "wrap" }}
+      style={{ flexWrap: isAllScorecards ? "nowrap" : "wrap" }}
     >
       {visuals.map((visual) => {
         const w = visual.layout?.w ?? 24;
-        const flexBasis = `${(w / totalW) * 100}%`;
         const minH = getMinHeight(visual);
+
+        // For scorecards: distribute evenly accounting for gaps
+        const flexStyle = isAllScorecards
+          ? {
+              flex: `1 1 0`,
+              minWidth: 0,
+              minHeight: minH,
+            }
+          : {
+              flex: `1 1 ${(w / totalW) * 100}%`,
+              minWidth: 300,
+              minHeight: minH,
+              maxWidth: "100%" as const,
+            };
 
         return (
           <div
             key={visual.id}
             className="overflow-hidden rounded-lg"
-            style={{
-              flex: `1 1 ${flexBasis}`,
-              minWidth: minItemWidth,
-              minHeight: minH,
-              maxWidth: "100%",
-            }}
+            style={flexStyle}
           >
             <ConfigurableVisualCard
               visual={visual}

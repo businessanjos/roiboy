@@ -61,6 +61,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
 
   // Days elapsed gauge doesn't need data from the database
   const isGaugeDaysElapsed = chartType === 'gauge' && config?.gaugeConfig?.subType === 'days_elapsed';
+  const isScorecard = ['number', 'scorecard', 'kpi'].includes(chartType);
   const isStacked = (chartType === 'bar_stacked' && !!config?.stackBy) || !!config?.stackByCustomField;
   const effectiveChartType = isStacked && (chartType === 'bar' || chartType === 'bar_horizontal') ? 'bar_stacked' : chartType;
   const isBubbleMap = chartType === 'bubble_map';
@@ -200,10 +201,10 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
     <VisualErrorBoundary title={visual.title || "Visual"}>
       <>
         <Card className="flex flex-col h-full">
-          <CardHeader className="pb-2 flex-shrink-0">
-            <CardTitle className="text-base flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />
+          <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2")}>
+            <CardTitle className={cn("text-base flex items-center justify-between gap-1", isScorecard && "text-sm")}>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />
                 <span className="truncate" title={visual.title || "Visual"}>{visual.title || "Visual"}</span>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0">

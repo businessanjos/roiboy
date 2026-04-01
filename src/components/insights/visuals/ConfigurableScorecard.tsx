@@ -43,17 +43,19 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
 
   // Calculate responsive font size based on value length and font scale
   const baseFontSize = formattedValue.length > 15 
-    ? 24 
+    ? 16 
     : formattedValue.length > 10 
-      ? 30 
-      : 36;
+      ? 20 
+      : formattedValue.length > 6
+        ? 24
+        : 28;
   const scaledFontSize = Math.round(baseFontSize * m);
-  const subtitleSize = Math.round(14 * m);
-  const suffixSize = Math.round(18 * m);
+  const subtitleSize = Math.round(11 * m);
+  const suffixSize = Math.round(14 * m);
 
   return (
-    <div className="flex flex-col items-center justify-center h-full py-4 px-2 overflow-hidden">
-      <p className="font-bold text-foreground mb-2 text-center break-words w-full" style={{ fontSize: `${scaledFontSize}px` }}>
+    <div className="flex flex-col items-center justify-center h-full py-1 px-1 overflow-hidden">
+      <p className="font-bold text-foreground mb-1 text-center break-words w-full" style={{ fontSize: `${scaledFontSize}px`, lineHeight: 1.1 }}>
         {formattedValue}
         {isSalesCycle && <span className="font-normal text-muted-foreground ml-1" style={{ fontSize: `${suffixSize}px` }}>dias</span>}
       </p>
