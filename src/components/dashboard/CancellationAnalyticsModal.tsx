@@ -173,29 +173,18 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
     if (!aiInsights || !aiMeta) return;
     setSavingReport(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const userId = userData.user?.id;
-      if (!userId) throw new Error("Usuário não autenticado");
-
-      const { data: userProfile } = await supabase
-        .from("users")
-        .select("account_id")
-        .eq("id", userId)
-        .maybeSingle();
-
-      if (!userProfile?.account_id) {
-        console.error("Profile not found for user:", userId);
-        throw new Error("Conta não encontrada. Verifique seu perfil.");
+      if (!currentUser?.account_id || !currentUser?.id) {
+        throw new Error("Usuário não autenticado");
       }
 
       const { error } = await supabase.from("churn_analysis_reports").insert({
-        account_id: userProfile.account_id,
+        account_id: currentUser.account_id,
         insights: aiInsights,
         contracts_analyzed: aiMeta.contractsAnalyzed,
         clients_with_messages: aiMeta.clientsWithMessages,
         total_messages: aiMeta.totalMessages,
         total_value: aiMeta.totalValue || 0,
-        created_by: userId,
+        created_by: currentUser.id,
       });
       if (error) throw error;
       toast({ title: "Análise salva com sucesso!" });
