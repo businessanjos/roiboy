@@ -152,7 +152,27 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
     }
   };
 
-  const formatCurrency = (v: number) =>
+
+  const runAiAnalysis = async () => {
+    setAiLoading(true);
+    setAiInsights(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-churn-conversations");
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "Erro na análise", description: data.error, variant: "destructive" });
+        return;
+      }
+      setAiInsights(data.insights);
+      setAiMeta(data.meta);
+    } catch (err: any) {
+      console.error("AI analysis error:", err);
+      toast({ title: "Erro ao analisar", description: err.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
   const formatReason = (reason: string): string => {
