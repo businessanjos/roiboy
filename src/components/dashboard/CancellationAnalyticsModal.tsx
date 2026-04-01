@@ -79,7 +79,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (open) fetchData();
+    if (open) { fetchData(); loadSavedReports(); }
   }, [open, period]);
 
   const fetchData = async () => {
