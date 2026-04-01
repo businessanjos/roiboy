@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
           clinica_ryka_status,
           client_id,
           clients!client_contracts_client_id_fkey (
-            id, full_name, emails, phone_e164, cnpj, cpf,
+            id, full_name, company_name, emails, phone_e164, cnpj, cpf,
             birth_date, gender, city, state, zip_code
           )
         `)
@@ -77,6 +77,7 @@ Deno.serve(async (req) => {
         client: c.clients ? {
           id: c.clients.id,
           name: c.clients.full_name,
+          company_name: c.clients.company_name,
           email: Array.isArray(c.clients.emails) ? c.clients.emails[0] : c.clients.emails,
           phone: c.clients.phone_e164,
           document: c.clients.cnpj || c.clients.cpf,
@@ -104,7 +105,7 @@ Deno.serve(async (req) => {
           clinica_ryka_status, clinica_ryka_synced_at, clinica_ryka_external_id,
           product_id,
           clients!client_contracts_client_id_fkey (
-            id, full_name, emails, phone_e164, cnpj, cpf,
+            id, full_name, company_name, emails, phone_e164, cnpj, cpf,
             birth_date, gender, city, state, zip_code,
             additional_phones, profession, instagram
           )
@@ -137,6 +138,7 @@ Deno.serve(async (req) => {
         client: client ? {
           id: client.id,
           name: client.full_name,
+          company_name: client.company_name,
           email: Array.isArray(client.emails) ? client.emails[0] : client.emails,
           emails: client.emails,
           phone: client.phone_e164,
@@ -235,7 +237,7 @@ Deno.serve(async (req) => {
       // Fetch client
       const { data: client, error: clientErr } = await supabase
         .from("clients")
-        .select("id, full_name, emails, phone_e164, cnpj, cpf, birth_date, gender, city, state, zip_code, profession, instagram")
+        .select("id, full_name, company_name, emails, phone_e164, cnpj, cpf, birth_date, gender, city, state, zip_code, profession, instagram")
         .eq("id", client_id)
         .maybeSingle();
 
@@ -267,6 +269,7 @@ Deno.serve(async (req) => {
         contract_end_date: contract.end_date,
         client_id: client.id,
         client_name: client.full_name,
+        client_company_name: client.company_name,
         client_email: clientEmail,
         client_phone: client.phone_e164,
         client_document: client.cnpj || client.cpf,
