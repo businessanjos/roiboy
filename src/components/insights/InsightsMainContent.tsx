@@ -79,9 +79,11 @@ export function InsightsMainContent() {
   const focusModeRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const zoomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isManualZoomRef = useRef(false);
 
   // Shared zoom calculation that polls until the grid layout stabilises
   const runAutoFitZoom = useCallback(() => {
+    isManualZoomRef.current = false;
     // Clear any previous polling
     if (zoomTimerRef.current) {
       clearInterval(zoomTimerRef.current);
@@ -138,10 +140,11 @@ export function InsightsMainContent() {
     let adjustCount = 0;
     const ro = new ResizeObserver(() => {
       if (debounce) clearTimeout(debounce);
-      // Limit re-adjustments to prevent infinite loops
+      // Skip auto-adjust if user manually changed zoom
+      if (isManualZoomRef.current) return;
       if (adjustCount >= 3) return;
       debounce = setTimeout(() => {
-        // Check overflow using getBoundingClientRect for accuracy with zoom
+        if (isManualZoomRef.current) return;
         const contentBottom = content.getBoundingClientRect().bottom;
         const overlayBottom = overlay.getBoundingClientRect().bottom;
         if (contentBottom > overlayBottom + 2) {
@@ -310,7 +313,7 @@ export function InsightsMainContent() {
                 <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
               </div>
               <div className="flex items-center gap-3">
-                <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} />
+                <ZoomControls zoom={focusZoom} onZoomChange={(v) => { isManualZoomRef.current = true; setFocusZoom(v); }} />
                 <Button variant="outline" size="icon" onClick={toggleFullscreen}>
                   {isFullscreen ? (
                     <Minimize2 className="h-4 w-4" />
