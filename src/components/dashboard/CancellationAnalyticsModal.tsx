@@ -105,16 +105,18 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
       const { data: contracts, error } = await query;
       if (error) throw error;
 
-      // Fetch program-wide churn (all contracts, not filtered by consultant)
-      const { count: totalContracts } = await supabase
+      // Fetch program-wide churn: active contracts vs cancelled contracts
+      const { count: activeCount } = await supabase
         .from("client_contracts")
         .select("id", { count: "exact", head: true })
+        .eq("status", "active")
         .is("parent_contract_id", null);
 
       const cancelledCount = (contracts || []).length;
-      const total = totalContracts || 0;
-      const rate = total > 0 ? Math.round((cancelledCount / total) * 1000) / 10 : 0;
-      setProgramChurn({ total, cancelled: cancelledCount, rate });
+      const active = activeCount || 0;
+      const base = active + cancelledCount;
+      const rate = base > 0 ? Math.round((cancelledCount / base) * 1000) / 10 : 0;
+      setProgramChurn({ total: base, cancelled: cancelledCount, rate });
 
       // Fetch responsible user for each contract's client
       const clientIds = [...new Set((contracts || []).map(c => c.client_id))];
