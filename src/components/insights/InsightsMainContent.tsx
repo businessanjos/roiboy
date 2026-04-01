@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { BarChart3, Plus, Monitor, Maximize2, Minimize2, X, Share2 } from "lucide-react";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
@@ -12,47 +12,6 @@ import { InsightsGrid } from "./grid/InsightsGrid";
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
 import { MobileDashboardSheet } from "./MobileDashboardSheet";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-import { ZoomControls } from "@/components/ui/zoom-controls";
-
-/**
- * Calculates the ideal zoom so that content fits the available viewport height
- * without requiring scroll.
- *
- * We measure the header (chrome) directly via its bounding rect so we don't
- * rely on scrollHeight arithmetic that breaks when zoom is partially applied.
- */
-function calculateAutoFitZoom(
-  overlayEl: HTMLElement,
-  contentEl: HTMLElement,
-): number {
-  const viewportHeight = overlayEl.clientHeight;
-  const viewportWidth = overlayEl.clientWidth;
-
-  // Measure chrome (header) height via bounding rects
-  const contentRect = contentEl.getBoundingClientRect();
-  const overlayRect = overlayEl.getBoundingClientRect();
-  const chromeHeight = contentRect.top - overlayRect.top;
-
-  // CSS zoom: scrollHeight/scrollWidth on the zoomed element return the
-  // *natural* (unscaled) dimensions in all browsers.  No compensation needed.
-  const contentNaturalHeight = contentEl.scrollHeight;
-  const contentNaturalWidth = contentEl.scrollWidth;
-
-  const availableHeight = viewportHeight - chromeHeight;
-  const availableWidth = viewportWidth;
-
-  if (contentNaturalHeight <= 0 || availableHeight <= 0) return 100;
-
-  const zoomByHeight = (availableHeight / contentNaturalHeight) * 100;
-  const zoomByWidth = contentNaturalWidth > 0
-    ? (availableWidth / contentNaturalWidth) * 100
-    : 200;
-
-  // Use the smaller axis so nothing overflows, then apply a 5% safety margin.
-  const idealZoom = Math.min(zoomByHeight, zoomByWidth);
-  return Math.min(Math.max(Math.floor(idealZoom * 0.95), 25), 200);
-}
 
 export function InsightsMainContent() {
   const { 
@@ -75,170 +34,37 @@ export function InsightsMainContent() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const focusModeRef = useRef<HTMLDivElement>(null);
-
-  const updateFocusScrollDimensions = useCallback(() => {
-    const content = contentRef.current;
-    if (!content) return;
-
-    setFocusContentDimensions({
-      width: Math.ceil(content.scrollWidth),
-      height: Math.ceil(content.scrollHeight),
-    });
-  }, []);
-
-  // Shared zoom calculation that polls until the grid layout stabilises
-  const runAutoFitZoom = useCallback(() => {
-    isManualZoomRef.current = false;
-    // Clear any previous polling
-    if (zoomTimerRef.current) {
-      clearInterval(zoomTimerRef.current);
-      zoomTimerRef.current = null;
-    }
-
-    // Reset to 100% so we measure natural (unzoomed) sizes
-    setFocusZoom(100);
-
-    let attempts = 0;
-    let lastHeight = 0;
-    let stableCount = 0;
-    const maxAttempts = 40; // 40 × 80ms = 3.2s max
-
-    zoomTimerRef.current = setInterval(() => {
-      attempts++;
-      const overlay = focusModeRef.current;
-      const content = contentRef.current;
-
-      if (!overlay || !content || attempts > maxAttempts) {
-        if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
-        zoomTimerRef.current = null;
-        if (overlay && content) {
-          setFocusZoom(calculateAutoFitZoom(overlay, content));
-        }
-        return;
-      }
-
-      const h = content.scrollHeight;
-      if (h === lastHeight && h > 0) {
-        stableCount++;
-      } else {
-        stableCount = 0;
-      }
-      lastHeight = h;
-
-      // Stable after 3 consecutive identical reads
-      if (stableCount >= 3) {
-        if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
-        zoomTimerRef.current = null;
-        setFocusZoom(calculateAutoFitZoom(overlay, content));
-      }
-    }, 80);
-  }, []);
-
-  // Keep the scrollable area in sync with the visual size created by CSS zoom
-  useEffect(() => {
-    if (!isFocusMode) {
-      setFocusContentDimensions({ width: 0, height: 0 });
-      return;
-    }
-
-    const content = contentRef.current;
-    if (!content) return;
-
-    let frame = 0;
-    const syncDimensions = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        updateFocusScrollDimensions();
-      });
-    };
-
-    syncDimensions();
-
-    const resizeObserver = new ResizeObserver(syncDimensions);
-    resizeObserver.observe(content);
-    window.addEventListener("resize", syncDimensions);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", syncDimensions);
-      cancelAnimationFrame(frame);
-    };
-  }, [isFocusMode, activeDashboardId, updateFocusScrollDimensions]);
-
-  // After zoom is applied, watch for content re-layout and re-adjust
-  useEffect(() => {
-    if (!isFocusMode || focusZoom === 100) return;
-    const content = contentRef.current;
-    const overlay = focusModeRef.current;
-    if (!content || !overlay) return;
-
-    let debounce: ReturnType<typeof setTimeout> | null = null;
-    let adjustCount = 0;
-    const ro = new ResizeObserver(() => {
-      if (debounce) clearTimeout(debounce);
-      // Skip auto-adjust if user manually changed zoom
-      if (isManualZoomRef.current) return;
-      if (adjustCount >= 3) return;
-      debounce = setTimeout(() => {
-        if (isManualZoomRef.current) return;
-        const contentBottom = content.getBoundingClientRect().bottom;
-        const overlayBottom = overlay.getBoundingClientRect().bottom;
-        if (contentBottom > overlayBottom + 2) {
-          adjustCount++;
-          runAutoFitZoom();
-        }
-      }, 300);
-    });
-    ro.observe(content);
-    return () => { ro.disconnect(); if (debounce) clearTimeout(debounce); };
-  }, [isFocusMode, focusZoom, runAutoFitZoom]);
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
-    };
-  }, []);
+  const focusModeRef = useState<HTMLDivElement | null>(null);
 
   // ESC listener
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isFocusMode) { setIsFocusMode(false); setFocusZoom(100); }
+      if (e.key === "Escape" && isFocusMode) {
+        setIsFocusMode(false);
+        if (document.fullscreenElement) document.exitFullscreen();
+      }
     };
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
   }, [isFocusMode]);
 
-  // Auto-fit zoom when entering focus mode
+  // Fullscreen change listener
   useEffect(() => {
-    if (!isFocusMode) return;
-    // Small delay to let the portal mount and grid start rendering
-    const t = setTimeout(runAutoFitZoom, 50);
-    return () => clearTimeout(t);
-  }, [isFocusMode, runAutoFitZoom]);
-
-  // Reset zoom when switching dashboards
-  useEffect(() => {
-    setFocusZoom(100);
-  }, [activeDashboardId]);
-
-  // Fullscreen change listener — recalculate zoom after transition
-  useEffect(() => {
-    const handler = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-      // Fullscreen transition takes ~300ms; recalculate after it settles
-      if (isFocusMode) {
-        setTimeout(runAutoFitZoom, 350);
-      }
-    };
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
-  }, [isFocusMode, runAutoFitZoom]);
+  }, []);
+
+  // Auto-enter fullscreen when focus mode opens
+  useEffect(() => {
+    if (isFocusMode && focusModeRef[0]) {
+      focusModeRef[0].requestFullscreen?.().catch(() => {});
+    }
+  }, [isFocusMode, focusModeRef]);
 
   const toggleFullscreen = async () => {
-    if (!document.fullscreenElement && focusModeRef.current) {
-      await focusModeRef.current.requestFullscreen();
+    if (!document.fullscreenElement && focusModeRef[0]) {
+      await focusModeRef[0].requestFullscreen();
     } else if (document.exitFullscreen) {
       await document.exitFullscreen();
     }
@@ -253,13 +79,11 @@ export function InsightsMainContent() {
     [updateVisual]
   );
 
-  // Check if this is a WhatsApp/Conversas dashboard
   const isWhatsAppDashboard = useMemo(() => {
     const name = activeDashboard?.name?.toLowerCase() || '';
     return name.includes('conversas') || name.includes('whatsapp');
   }, [activeDashboard?.name]);
 
-  // Check if user can share (Admin or Gestor)
   const canShare = useMemo(() => {
     if (!currentUser) return false;
     const role = currentUser.role;
@@ -285,7 +109,6 @@ export function InsightsMainContent() {
     );
   }
 
-  // If no panels exist, show create panel state
   if (dashboards.length === 0 && !activeDashboardId) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
@@ -309,7 +132,6 @@ export function InsightsMainContent() {
     );
   }
 
-  // If no active panel selected
   if (!activeDashboardId || !activeDashboard) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
@@ -320,7 +142,6 @@ export function InsightsMainContent() {
     );
   }
 
-  // If it's a WhatsApp dashboard, show the special panel (with coexisting custom visuals)
   if (isWhatsAppDashboard && !isLoadingVisuals) {
     return (
       <div className="flex-1 overflow-auto">
@@ -335,70 +156,47 @@ export function InsightsMainContent() {
     );
   }
 
-  // Focus mode overlay
+  // Focus mode overlay — simple fullscreen, responsive, no zoom tricks
   const focusModeOverlay = isFocusMode
     ? createPortal(
         <div
-          ref={focusModeRef}
-          className="fixed inset-0 z-[9999] bg-background"
+          ref={(el) => { focusModeRef[1](el); }}
+          className="fixed inset-0 z-[9999] bg-background flex flex-col"
         >
-          <div className="flex h-full flex-col p-4">
-            {/* Focus Mode Header — stays at scale 1 */}
-            <div className="flex items-center justify-between mb-4 shrink-0">
-              <div className="flex items-center gap-3">
-                <BarChart3 className="h-6 w-6 text-primary" />
-                <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
-              </div>
-              <div className="flex items-center gap-3">
-                <ZoomControls zoom={focusZoom} onZoomChange={(v) => { isManualZoomRef.current = true; setFocusZoom(v); }} />
-                <Button variant="outline" size="icon" onClick={toggleFullscreen}>
-                  {isFullscreen ? (
-                    <Minimize2 className="h-4 w-4" />
-                  ) : (
-                    <Maximize2 className="h-4 w-4" />
-                  )}
-                </Button>
-                <Button variant="outline" size="icon" onClick={() => { setIsFocusMode(false); setFocusZoom(100); }}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="h-6 w-6 text-primary" />
+              <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
             </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={toggleFullscreen}>
+                {isFullscreen ? (
+                  <Minimize2 className="h-4 w-4" />
+                ) : (
+                  <Maximize2 className="h-4 w-4" />
+                )}
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => {
+                setIsFocusMode(false);
+                if (document.fullscreenElement) document.exitFullscreen();
+              }}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
 
-            <div className="min-h-0 flex-1 overflow-auto">
-              <div
-                className="relative"
-                style={{
-                  width: focusContentDimensions.width > 0
-                    ? `${Math.ceil(focusContentDimensions.width * Math.max(focusZoom / 100, 1))}px`
-                    : "100%",
-                  height: focusContentDimensions.height > 0
-                    ? `${Math.ceil(focusContentDimensions.height * (focusZoom / 100))}px`
-                    : undefined,
-                }}
-              >
-                {/* Zoomable content area */}
-                <div
-                  ref={contentRef}
-                  className="absolute left-0 top-0"
-                  style={{
-                    width: focusContentDimensions.width > 0 ? `${focusContentDimensions.width}px` : "100%",
-                    transform: `scale(${focusZoom / 100})`,
-                    transformOrigin: 'top left',
-                  }}
-                >
-                  {/* Visuals preserving saved layout (read-only) */}
-                  {hasVisuals && (
-                    <InsightsGrid 
-                      visuals={visuals} 
-                      onLayoutChange={() => {}} 
-                      readOnly
-                      onUpdateVisual={updateVisual}
-                      onRemoveVisual={removeVisual}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
+          {/* Scrollable content at native size */}
+          <div className="flex-1 overflow-auto p-6">
+            {hasVisuals && (
+              <InsightsGrid 
+                visuals={visuals} 
+                onLayoutChange={() => {}} 
+                readOnly
+                onUpdateVisual={updateVisual}
+                onRemoveVisual={removeVisual}
+              />
+            )}
           </div>
         </div>,
         document.body
@@ -452,8 +250,8 @@ export function InsightsMainContent() {
           </div>
         </div>
 
-        {/* Filters - hidden in focus mode */}
-        {!isFocusMode && <InsightsFilterBar />}
+        {/* Filters */}
+        <InsightsFilterBar />
 
         {/* Grid or Empty State */}
         {isLoadingVisuals ? (
@@ -462,14 +260,12 @@ export function InsightsMainContent() {
             <Skeleton className="h-40 md:h-48" />
           </div>
         ) : hasVisuals ? (
-          !isFocusMode && (
-            <InsightsGrid 
-              visuals={visuals} 
-              onLayoutChange={handleLayoutChange}
-              onUpdateVisual={updateVisual}
-              onRemoveVisual={removeVisual}
-            />
-          )
+          <InsightsGrid 
+            visuals={visuals} 
+            onLayoutChange={handleLayoutChange}
+            onUpdateVisual={updateVisual}
+            onRemoveVisual={removeVisual}
+          />
         ) : (
           <div className="flex flex-col items-center justify-center py-16 px-4">
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
