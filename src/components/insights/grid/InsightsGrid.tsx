@@ -150,16 +150,10 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual }: 
   const totalW = visuals.reduce((sum, v) => sum + (v.layout?.w ?? 24), 0);
   const scale = visuals[0]?.layout?.scale || 48;
 
-  // Determine if this row should wrap
-  // For scorecards: wrap if too many to fit comfortably
-  // For charts: wrap if container is narrow
-  const shouldWrap = isAllScorecards
-    ? visuals.length > (containerWidth < 1000 ? 3 : containerWidth < 1300 ? 4 : 5)
-    : totalW > scale * 0.95; // Row items exceed grid width
-
-  // Min width per item to trigger wrapping
+  // Determine min width per scorecard based on count — allow all to fit in one row
+  const scorecardCount = visuals.length;
   const minItemWidth = isAllScorecards
-    ? Math.max(180, containerWidth < 1000 ? containerWidth / 3 - 16 : 200)
+    ? Math.max(140, Math.floor((containerWidth - (scorecardCount - 1) * 12) / scorecardCount) - 4)
     : 300;
 
   return (
