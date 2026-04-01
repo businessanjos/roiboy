@@ -49,9 +49,17 @@ function getMinHeight(visual: InsightsVisual): number {
   if (["number", "scorecard", "kpi"].includes(ct)) return 120;
   if (["table", "ranking", "data_table"].includes(ct)) return 300;
   if (ct === "map") return 400;
-  if (ct === "gauge") return 180;
+  if (ct === "gauge") return 200;
   if (ct === "funnel") return 360;
   return 280;
+}
+
+function isGauge(visual: InsightsVisual) {
+  return visual.chart_type === "gauge";
+}
+
+function isCompactCard(visual: InsightsVisual) {
+  return isScorecard(visual) || isGauge(visual);
 }
 
 function isScorecard(visual: InsightsVisual) {
@@ -63,6 +71,7 @@ function isScorecard(visual: InsightsVisual) {
 interface VisualRow {
   visuals: InsightsVisual[];
   isAllScorecards: boolean;
+  isAllCompact: boolean;
 }
 
 function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
@@ -81,13 +90,13 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
 
   for (let i = 1; i < sorted.length; i++) {
     const vy = sorted[i].layout?.y ?? 0;
-    // If within 5 units of y, treat as same row
     if (Math.abs(vy - currentY) <= 5) {
       currentRow.push(sorted[i]);
     } else {
       rawRows.push({
         visuals: currentRow,
         isAllScorecards: currentRow.every(isScorecard),
+        isAllCompact: currentRow.every(isCompactCard),
       });
       currentRow = [sorted[i]];
       currentY = vy;
@@ -97,9 +106,10 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
   rawRows.push({
     visuals: currentRow,
     isAllScorecards: currentRow.every(isScorecard),
+    isAllCompact: currentRow.every(isCompactCard),
   });
 
-  // Merge consecutive scorecard-only rows into a single row
+  // Merge consecutive compact-only rows (scorecards or gauges) into a single row
   const rows: VisualRow[] = [];
   for (const row of rawRows) {
     const prev = rows[rows.length - 1];
@@ -144,26 +154,24 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual }: 
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
 }) {
-  const { visuals, isAllScorecards } = row;
+  const { visuals, isAllScorecards, isAllCompact } = row;
 
   // Calculate flex basis for each visual based on its w proportion
   const totalW = visuals.reduce((sum, v) => sum + (v.layout?.w ?? 24), 0);
-  const scale = visuals[0]?.layout?.scale || 48;
 
-  // For scorecard rows: don't set minWidth so all fit in one line
-  const gapPx = 12;
+  // Compact rows (scorecards or gauges): no wrap, distribute evenly
+  const shouldNotWrap = isAllScorecards || isAllCompact;
 
   return (
     <div
       className="flex gap-3"
-      style={{ flexWrap: isAllScorecards ? "nowrap" : "wrap" }}
+      style={{ flexWrap: shouldNotWrap ? "nowrap" : "wrap" }}
     >
       {visuals.map((visual) => {
         const w = visual.layout?.w ?? 24;
         const minH = getMinHeight(visual);
 
-        // For scorecards: distribute evenly accounting for gaps
-        const flexStyle = isAllScorecards
+        const flexStyle = shouldNotWrap
           ? {
               flex: `1 1 0`,
               minWidth: 0,
