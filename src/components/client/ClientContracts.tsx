@@ -260,6 +260,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   };
 
 
+  const resetForm = () => {
     setFormData({
       start_date: "",
       end_date: "",
