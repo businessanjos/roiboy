@@ -77,6 +77,7 @@ Deno.serve(async (req) => {
         client: c.clients ? {
           id: c.clients.id,
           name: c.clients.full_name,
+          company_name: c.clients.company_name,
           email: Array.isArray(c.clients.emails) ? c.clients.emails[0] : c.clients.emails,
           phone: c.clients.phone_e164,
           document: c.clients.cnpj || c.clients.cpf,
