@@ -395,7 +395,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    Ranking: quem menos preenche o motivo
+                    Ranking: quem <span className="text-destructive font-bold">menos</span> preenche o motivo
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
