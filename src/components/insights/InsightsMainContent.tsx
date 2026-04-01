@@ -312,7 +312,7 @@ export function InsightsMainContent() {
                 <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
               </div>
               <div className="flex items-center gap-3">
-                <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} />
+                <ZoomControls zoom={focusZoom} onZoomChange={(v) => { isManualZoomRef.current = true; setFocusZoom(v); }} />
                 <Button variant="outline" size="icon" onClick={toggleFullscreen}>
                   {isFullscreen ? (
                     <Minimize2 className="h-4 w-4" />
