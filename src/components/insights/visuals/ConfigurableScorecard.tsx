@@ -43,13 +43,15 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
 
   // Calculate responsive font size based on value length and font scale
   const baseFontSize = formattedValue.length > 15 
-    ? 24 
+    ? 20 
     : formattedValue.length > 10 
-      ? 30 
-      : 36;
+      ? 24 
+      : formattedValue.length > 6
+        ? 28
+        : 32;
   const scaledFontSize = Math.round(baseFontSize * m);
-  const subtitleSize = Math.round(14 * m);
-  const suffixSize = Math.round(18 * m);
+  const subtitleSize = Math.round(12 * m);
+  const suffixSize = Math.round(16 * m);
 
   return (
     <div className="flex flex-col items-center justify-center h-full py-2 px-2 overflow-hidden">
