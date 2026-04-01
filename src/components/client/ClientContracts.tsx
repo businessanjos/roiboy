@@ -64,7 +64,9 @@ import {
   PauseCircle,
   Ban,
   MoreHorizontal,
-  PenTool
+  PenTool,
+  Send,
+  ExternalLink,
 } from "lucide-react";
 import {
   DropdownMenu,
