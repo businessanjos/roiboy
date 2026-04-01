@@ -327,10 +327,6 @@ export function InsightsMainContent() {
               </div>
             </div>
 
-            {/* Filters — outside zoom to keep Radix portals aligned */}
-            <div className="shrink-0 mb-4">
-              <InsightsFilterBar />
-            </div>
 
             {/* Zoomable content area */}
             <div
