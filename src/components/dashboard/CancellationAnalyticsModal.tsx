@@ -9,10 +9,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, XCircle, Users, Package, MapPin, Calendar, DollarSign, Clock, AlertTriangle, TrendingDown, BarChart3 } from "lucide-react";
+import { Loader2, XCircle, Users, Package, MapPin, Calendar, DollarSign, Clock, AlertTriangle, TrendingDown, BarChart3, Brain, Sparkles } from "lucide-react";
 import { format, parseISO, differenceInMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 // Only these users can access this modal
 const AUTHORIZED_USER_IDS = [
@@ -68,6 +70,10 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
   const [loading, setLoading] = useState(false);
   const [period, setPeriod] = useState("6");
   const [programChurn, setProgramChurn] = useState<{ total: number; cancelled: number; rate: number } | null>(null);
+  const [aiInsights, setAiInsights] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiMeta, setAiMeta] = useState<{ contractsAnalyzed: number; clientsWithMessages: number; totalMessages: number } | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (open) fetchData();
@@ -143,6 +149,27 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
       console.error("Error fetching cancellation analytics:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+
+  const runAiAnalysis = async () => {
+    setAiLoading(true);
+    setAiInsights(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-churn-conversations");
+      if (error) throw error;
+      if (data?.error) {
+        toast({ title: "Erro na análise", description: data.error, variant: "destructive" });
+        return;
+      }
+      setAiInsights(data.insights);
+      setAiMeta(data.meta);
+    } catch (err: any) {
+      console.error("AI analysis error:", err);
+      toast({ title: "Erro ao analisar", description: err.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setAiLoading(false);
     }
   };
 
@@ -511,6 +538,71 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
                   ))}
                 </CardContent>
               </Card>
+
+              {/* AI Analysis Section */}
+              <Card className="border-primary/30 bg-gradient-to-r from-primary/5 to-transparent">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Brain className="h-4 w-4 text-primary" />
+                      Análise Inteligente de Churn (IA)
+                    </CardTitle>
+                    <Button
+                      size="sm"
+                      onClick={runAiAnalysis}
+                      disabled={aiLoading}
+                      className="gap-2"
+                    >
+                      {aiLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Analisando...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4" />
+                          {aiInsights ? "Reanalisar" : "Analisar Conversas"}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  {!aiInsights && !aiLoading && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      A IA irá analisar o histórico de conversas e timeline dos clientes cancelados para identificar padrões e gerar insights acionáveis.
+                    </p>
+                  )}
+                </CardHeader>
+                {aiLoading && (
+                  <CardContent>
+                    <div className="flex flex-col items-center justify-center py-8 gap-3">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <p className="text-sm text-muted-foreground">Analisando conversas e timelines dos clientes cancelados...</p>
+                      <p className="text-xs text-muted-foreground">Isso pode levar até 1 minuto</p>
+                    </div>
+                  </CardContent>
+                )}
+                {aiInsights && !aiLoading && (
+                  <CardContent>
+                    {aiMeta && (
+                      <div className="flex gap-4 mb-4 text-xs text-muted-foreground bg-muted/50 rounded-lg p-3">
+                        <span>📊 {aiMeta.contractsAnalyzed} contratos analisados</span>
+                        <span>💬 {aiMeta.totalMessages} mensagens processadas</span>
+                        <span>👤 {aiMeta.clientsWithMessages} clientes com conversas</span>
+                      </div>
+                    )}
+                    <div className="prose prose-sm max-w-none dark:prose-invert">
+                      {aiInsights.split("\n").map((line, i) => {
+                        if (line.startsWith("##") || line.startsWith("**")) {
+                          return <p key={i} className="font-semibold mt-3 mb-1">{line.replace(/[#*]/g, "").trim()}</p>;
+                        }
+                        if (line.trim() === "") return <br key={i} />;
+                        return <p key={i} className="text-sm leading-relaxed my-0.5">{line}</p>;
+                      })}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+
             </div>
           )}
         </ScrollArea>
