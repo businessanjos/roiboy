@@ -6,6 +6,7 @@ import {
   MessageSquare,
   Clock,
   BarChart3,
+  Calendar,
   Target,
   Shield,
   Trophy,
@@ -18,6 +19,11 @@ import {
   Mail,
 } from "lucide-react";
 
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
 interface ChurnInsightsRendererProps {
   insights: string;
   meta?: {
@@ -25,6 +31,8 @@ interface ChurnInsightsRendererProps {
     clientsWithMessages: number;
     totalMessages: number;
     totalValue?: number;
+    periodStart?: string | null;
+    periodEnd?: string | null;
   } | null;
 }
 
@@ -425,6 +433,17 @@ export function ChurnInsightsRenderer({ insights, meta }: ChurnInsightsRendererP
 
   return (
     <div className="space-y-3">
+      {/* Period banner */}
+      {meta?.periodStart && meta?.periodEnd && (
+        <div className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground">
+          <Calendar className="h-3.5 w-3.5" />
+          <span>
+            Período: <span className="font-semibold text-foreground">{formatDate(meta.periodStart)}</span>
+            {" — "}
+            <span className="font-semibold text-foreground">{formatDate(meta.periodEnd)}</span>
+          </span>
+        </div>
+      )}
       {/* Hero meta stats */}
       {meta && (
         <div className="grid grid-cols-3 gap-2">
