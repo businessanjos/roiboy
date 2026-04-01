@@ -158,6 +158,57 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
   };
 
 
+  const loadSavedReports = async () => {
+    const { data: reports } = await supabase
+      .from("churn_analysis_reports")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(10);
+    if (reports) setSavedReports(reports);
+  };
+
+  const saveReport = async () => {
+    if (!aiInsights || !aiMeta) return;
+    setSavingReport(true);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { data: userProfile } = await supabase
+        .from("users")
+        .select("account_id")
+        .eq("id", userData.user?.id || "")
+        .single();
+      if (!userProfile) throw new Error("Perfil não encontrado");
+
+      const { error } = await supabase.from("churn_analysis_reports").insert({
+        account_id: userProfile.account_id,
+        insights: aiInsights,
+        contracts_analyzed: aiMeta.contractsAnalyzed,
+        clients_with_messages: aiMeta.clientsWithMessages,
+        total_messages: aiMeta.totalMessages,
+        total_value: aiMeta.totalValue || 0,
+        created_by: userData.user?.id,
+      });
+      if (error) throw error;
+      toast({ title: "Análise salva com sucesso!" });
+      loadSavedReports();
+    } catch (err: any) {
+      toast({ title: "Erro ao salvar", description: err.message, variant: "destructive" });
+    } finally {
+      setSavingReport(false);
+    }
+  };
+
+  const loadReport = (report: any) => {
+    setAiInsights(report.insights);
+    setAiMeta({
+      contractsAnalyzed: report.contracts_analyzed,
+      clientsWithMessages: report.clients_with_messages,
+      totalMessages: report.total_messages,
+      totalValue: report.total_value,
+    });
+    setShowHistory(false);
+  };
+
   const runAiAnalysis = async () => {
     setAiLoading(true);
     setAiInsights(null);
