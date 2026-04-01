@@ -307,6 +307,16 @@ Analise esses dados e forneça insights profundos sobre os padrões de churn. CI
 
     const insights = aiData?.choices?.[0]?.message?.content || "Não foi possível gerar insights.";
 
+    // Calculate period range from cancelled_at dates
+    const cancelDates = filteredContracts
+      .map((c: any) => c.cancelled_at)
+      .filter(Boolean)
+      .map((d: string) => new Date(d).getTime())
+      .sort((a: number, b: number) => a - b);
+
+    const periodStart = cancelDates.length > 0 ? new Date(cancelDates[0]).toISOString() : null;
+    const periodEnd = cancelDates.length > 0 ? new Date(cancelDates[cancelDates.length - 1]).toISOString() : null;
+
     return new Response(
       JSON.stringify({
         insights,
@@ -315,6 +325,8 @@ Analise esses dados e forneça insights profundos sobre os padrões de churn. CI
           clientsWithMessages: Object.keys(messagesByClient).length,
           totalMessages: allMessages.length,
           totalValue,
+          periodStart,
+          periodEnd,
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
