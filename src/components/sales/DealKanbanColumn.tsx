@@ -179,15 +179,6 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
         </SortableContext>
       </div>
 
-      {/* Column Footer with Total */}
-      {deals.length > 0 && (
-        <div className="mt-2 px-1 py-1.5 border-t border-border/30">
-          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-            <span>Total</span>
-            <span className="font-semibold text-foreground">{formatCurrency(totalValue)}</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
