@@ -83,6 +83,7 @@ export function InsightsMainContent() {
 
   // Shared zoom calculation that polls until the grid layout stabilises
   const runAutoFitZoom = useCallback(() => {
+    isManualZoomRef.current = false;
     // Clear any previous polling
     if (zoomTimerRef.current) {
       clearInterval(zoomTimerRef.current);
