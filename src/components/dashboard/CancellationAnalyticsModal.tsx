@@ -9,7 +9,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, XCircle, Users, Package, MapPin, Calendar, DollarSign, Clock, AlertTriangle, TrendingDown, BarChart3, Brain, Sparkles, Save, History } from "lucide-react";
+import { Loader2, XCircle, Users, Package, MapPin, Calendar, DollarSign, Clock, AlertTriangle, TrendingDown, BarChart3, Brain, Sparkles, Save, History, FileDown } from "lucide-react";
+import { exportChurnToPDF } from "@/lib/exportChurnPDF";
 import { ChurnInsightsRenderer } from "./ChurnInsightsRenderer";
 import { format, parseISO, differenceInMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -610,10 +611,16 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
                         </Button>
                       )}
                       {aiInsights && !aiLoading && (
-                        <Button size="sm" variant="outline" onClick={saveReport} disabled={savingReport} className="gap-1">
-                          {savingReport ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                          Salvar
-                        </Button>
+                        <>
+                          <Button size="sm" variant="outline" onClick={saveReport} disabled={savingReport} className="gap-1">
+                            {savingReport ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                            Salvar
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={() => exportChurnToPDF(aiInsights!, aiMeta)} className="gap-1">
+                            <FileDown className="h-3.5 w-3.5" />
+                            PDF
+                          </Button>
+                        </>
                       )}
                       <Button size="sm" onClick={runAiAnalysis} disabled={aiLoading} className="gap-2">
                         {aiLoading ? (
