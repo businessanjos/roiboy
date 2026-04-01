@@ -57,10 +57,10 @@ export function InsightsMainContent() {
 
   // Auto-enter fullscreen when focus mode opens
   useEffect(() => {
-    if (isFocusMode && focusModeRef[0]) {
-      focusModeRef[0].requestFullscreen?.().catch(() => {});
+    if (isFocusMode && focusModeRef.current) {
+      focusModeRef.current.requestFullscreen?.().catch(() => {});
     }
-  }, [isFocusMode, focusModeRef]);
+  }, [isFocusMode]);
 
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement && focusModeRef[0]) {
