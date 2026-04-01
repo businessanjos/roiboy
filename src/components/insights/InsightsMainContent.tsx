@@ -160,7 +160,7 @@ export function InsightsMainContent() {
   const focusModeOverlay = isFocusMode
     ? createPortal(
         <div
-          ref={(el) => { focusModeRef[1](el); }}
+          ref={focusModeRef}
           className="fixed inset-0 z-[9999] bg-background flex flex-col"
         >
           {/* Header */}
