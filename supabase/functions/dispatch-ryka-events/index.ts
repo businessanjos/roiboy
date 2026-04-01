@@ -55,25 +55,23 @@ Deno.serve(async (req) => {
       const client = record;
       payload = {
         ...payload,
-        client: {
-          id: client.id,
-          name: client.full_name,
-          company_name: client.company_name,
-          email: Array.isArray(client.emails) ? client.emails[0] : client.emails,
-          emails: client.emails,
-          phone: client.phone_e164,
-          additional_phones: client.additional_phones,
-          document: client.cnpj || client.cpf,
-          cnpj: client.cnpj,
-          cpf: client.cpf,
-          birth_date: client.birth_date,
-          gender: client.gender,
-          city: client.city,
-          state: client.state,
-          zip_code: client.zip_code,
-          profession: client.profession,
-          instagram: client.instagram,
-        },
+        roy_client_id: client.id,
+        name: client.full_name,
+        company_name: client.company_name,
+        email: Array.isArray(client.emails) ? client.emails[0] : client.emails,
+        emails: client.emails,
+        phone: client.phone_e164,
+        additional_phones: client.additional_phones,
+        document: client.cnpj || client.cpf,
+        cnpj: client.cnpj,
+        cpf: client.cpf,
+        birth_date: client.birth_date,
+        gender: client.gender,
+        city: client.city,
+        state: client.state,
+        zip_code: client.zip_code,
+        profession: client.profession,
+        instagram: client.instagram,
       };
 
       // For updates, include changed fields
@@ -93,7 +91,6 @@ Deno.serve(async (req) => {
       const contract = record;
 
       // Fetch client data for the contract
-      let clientData = null;
       if (contract.client_id) {
         const { data: client } = await supabase
           .from("clients")
@@ -101,31 +98,25 @@ Deno.serve(async (req) => {
           .eq("id", contract.client_id)
           .maybeSingle();
         if (client) {
-          clientData = {
-            id: client.id,
-            name: client.full_name,
-            company_name: client.company_name,
-            email: Array.isArray(client.emails) ? client.emails[0] : client.emails,
-            phone: client.phone_e164,
-            document: client.cnpj || client.cpf,
-          };
+          payload.roy_client_id = client.id;
+          payload.client_name = client.full_name;
+          payload.client_company_name = client.company_name;
+          payload.client_email = Array.isArray(client.emails) ? client.emails[0] : client.emails;
+          payload.client_phone = client.phone_e164;
+          payload.client_document = client.cnpj || client.cpf;
         }
       }
 
       payload = {
         ...payload,
-        contract: {
-          id: contract.id,
-          contract_type: contract.contract_type,
-          status: contract.status,
-          value: contract.value,
-          currency: contract.currency,
-          start_date: contract.start_date,
-          end_date: contract.end_date,
-          payment_method: contract.payment_method,
-          notes: contract.notes,
-        },
-        client: clientData,
+        contract_id: contract.id,
+        contract_type: contract.contract_type,
+        contract_status: contract.status,
+        contract_value: contract.value,
+        contract_start_date: contract.start_date,
+        contract_end_date: contract.end_date,
+        contract_payment_method: contract.payment_method,
+        contract_notes: contract.notes,
       };
 
       // For updates, include changed fields
