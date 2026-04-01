@@ -226,7 +226,40 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
     }
   };
 
-  const resetForm = () => {
+  const CLINICA_RYKA_ELIGIBLE_TYPES = ["rykas mentoring", "eternum club"];
+
+  const isClinicaRykaEligible = (contractType: string) =>
+    CLINICA_RYKA_ELIGIBLE_TYPES.includes(contractType?.toLowerCase());
+
+  const handleSyncClinicaRyka = async (contract: Contract) => {
+    setSyncingClinicaRyka(contract.id);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("sync-clinica-ryka", {
+        body: { contract_id: contract.id, client_id: contract.client_id },
+      });
+
+      if (fnError) throw fnError;
+
+      if (data?.already_synced) {
+        toast.info("Este contrato já foi sincronizado com o NEW CLINICA RYKA.");
+      } else if (data?.success) {
+        toast.success("Acesso criado com sucesso no NEW CLINICA RYKA!");
+      } else {
+        throw new Error(data?.error || "Erro desconhecido");
+      }
+
+      await fetchContracts();
+    } catch (err: any) {
+      console.error("Sync Clinica Ryka error:", err);
+      const msg = err?.message || err?.context?.json?.error || "Erro ao sincronizar";
+      toast.error(msg);
+      await fetchContracts();
+    } finally {
+      setSyncingClinicaRyka(null);
+    }
+  };
+
+
     setFormData({
       start_date: "",
       end_date: "",
