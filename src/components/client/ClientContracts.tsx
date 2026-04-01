@@ -95,6 +95,10 @@ interface Contract {
   product_id?: string | null;
   created_at: string;
   updated_at: string;
+  clinica_ryka_status?: string | null;
+  clinica_ryka_synced_at?: string | null;
+  clinica_ryka_error?: string | null;
+  clinica_ryka_external_id?: string | null;
 }
 
 type ContractStatusAction = 'cancelled' | 'ended' | 'paused' | 'active';
