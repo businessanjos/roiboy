@@ -334,7 +334,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
           </div>
         </div>
 
-        <InsightsFilterBar />
+        {!isFocusMode && <InsightsFilterBar />}
 
         {dashboardContent}
       </div>
