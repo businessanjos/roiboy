@@ -139,10 +139,11 @@ export function InsightsMainContent() {
     let adjustCount = 0;
     const ro = new ResizeObserver(() => {
       if (debounce) clearTimeout(debounce);
-      // Limit re-adjustments to prevent infinite loops
+      // Skip auto-adjust if user manually changed zoom
+      if (isManualZoomRef.current) return;
       if (adjustCount >= 3) return;
       debounce = setTimeout(() => {
-        // Check overflow using getBoundingClientRect for accuracy with zoom
+        if (isManualZoomRef.current) return;
         const contentBottom = content.getBoundingClientRect().bottom;
         const overlayBottom = overlay.getBoundingClientRect().bottom;
         if (contentBottom > overlayBottom + 2) {
