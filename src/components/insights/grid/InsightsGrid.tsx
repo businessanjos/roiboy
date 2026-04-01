@@ -90,13 +90,13 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
 
   for (let i = 1; i < sorted.length; i++) {
     const vy = sorted[i].layout?.y ?? 0;
-    // If within 5 units of y, treat as same row
     if (Math.abs(vy - currentY) <= 5) {
       currentRow.push(sorted[i]);
     } else {
       rawRows.push({
         visuals: currentRow,
         isAllScorecards: currentRow.every(isScorecard),
+        isAllCompact: currentRow.every(isCompactCard),
       });
       currentRow = [sorted[i]];
       currentY = vy;
@@ -106,9 +106,10 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
   rawRows.push({
     visuals: currentRow,
     isAllScorecards: currentRow.every(isScorecard),
+    isAllCompact: currentRow.every(isCompactCard),
   });
 
-  // Merge consecutive scorecard-only rows into a single row
+  // Merge consecutive compact-only rows (scorecards or gauges) into a single row
   const rows: VisualRow[] = [];
   for (const row of rawRows) {
     const prev = rows[rows.length - 1];
