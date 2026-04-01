@@ -61,6 +61,7 @@ import { ZoomControls } from "@/components/ui/zoom-controls";
 import { ChurnReportSection } from "@/components/dashboard/ChurnReportSection";
 import { AIUsageStats } from "@/components/dashboard/AIUsageStats";
 import { GroupEngagementReport } from "@/components/dashboard/GroupEngagementReport";
+import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/components/dashboard/CancellationAnalyticsModal";
 
 
 
@@ -151,6 +152,8 @@ export default function Dashboard() {
   });
   
   const [searchQuery, setSearchQuery] = useState("");
+  const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
+  const showCancellationAnalytics = canAccessCancellationAnalytics(currentUser?.id);
   
   const [gestaoProductFilter, setGestaoProductFilter] = useState<string>("all");
   const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("6");
@@ -772,7 +775,10 @@ export default function Dashboard() {
 
             {/* Cancelamentos */}
             {gestaoViewMode === "operacoes" && (
-            <Card className="shadow-card border-l-4 border-l-danger">
+            <Card 
+              className={`shadow-card border-l-4 border-l-danger ${showCancellationAnalytics ? 'cursor-pointer hover:shadow-lg transition-shadow' : ''}`}
+              onClick={showCancellationAnalytics ? () => setCancellationModalOpen(true) : undefined}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -1277,6 +1283,13 @@ export default function Dashboard() {
           </div>
         </div>,
         document.body
+      )}
+
+      {showCancellationAnalytics && (
+        <CancellationAnalyticsModal 
+          open={cancellationModalOpen} 
+          onOpenChange={setCancellationModalOpen} 
+        />
       )}
     </div>
   );
