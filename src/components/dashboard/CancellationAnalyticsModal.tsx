@@ -78,6 +78,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
   const [showHistory, setShowHistory] = useState(false);
   const [savingReport, setSavingReport] = useState(false);
   const { toast } = useToast();
+  const { currentUser } = useCurrentUser();
 
   useEffect(() => {
     if (open) { fetchData(); loadSavedReports(); }
