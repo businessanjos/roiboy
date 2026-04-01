@@ -64,7 +64,9 @@ import {
   PauseCircle,
   Ban,
   MoreHorizontal,
-  PenTool
+  PenTool,
+  Send,
+  ExternalLink,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -95,6 +97,10 @@ interface Contract {
   product_id?: string | null;
   created_at: string;
   updated_at: string;
+  clinica_ryka_status?: string | null;
+  clinica_ryka_synced_at?: string | null;
+  clinica_ryka_error?: string | null;
+  clinica_ryka_external_id?: string | null;
 }
 
 type ContractStatusAction = 'cancelled' | 'ended' | 'paused' | 'active';
@@ -157,6 +163,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [syncingClinicaRyka, setSyncingClinicaRyka] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Products state
@@ -218,6 +225,40 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       setLoading(false);
     }
   };
+
+  const CLINICA_RYKA_ELIGIBLE_TYPES = ["rykas mentoring", "eternum club"];
+
+  const isClinicaRykaEligible = (contractType: string) =>
+    CLINICA_RYKA_ELIGIBLE_TYPES.includes(contractType?.toLowerCase());
+
+  const handleSyncClinicaRyka = async (contract: Contract) => {
+    setSyncingClinicaRyka(contract.id);
+    try {
+      const { data, error: fnError } = await supabase.functions.invoke("sync-clinica-ryka", {
+        body: { contract_id: contract.id, client_id: contract.client_id },
+      });
+
+      if (fnError) throw fnError;
+
+      if (data?.already_synced) {
+        toast.info("Este contrato já foi sincronizado com o NEW CLINICA RYKA.");
+      } else if (data?.success) {
+        toast.success("Acesso criado com sucesso no NEW CLINICA RYKA!");
+      } else {
+        throw new Error(data?.error || "Erro desconhecido");
+      }
+
+      await fetchContracts();
+    } catch (err: any) {
+      console.error("Sync Clinica Ryka error:", err);
+      const msg = err?.message || err?.context?.json?.error || "Erro ao sincronizar";
+      toast.error(msg);
+      await fetchContracts();
+    } finally {
+      setSyncingClinicaRyka(null);
+    }
+  };
+
 
   const resetForm = () => {
     setFormData({
@@ -1044,6 +1085,37 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
+                        {/* Sync Clinica Ryka button */}
+                        {contract.status === 'active' && isClinicaRykaEligible(contract.contract_type) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 ${
+                              contract.clinica_ryka_status === 'success' 
+                                ? 'text-green-600' 
+                                : contract.clinica_ryka_status === 'error' 
+                                  ? 'text-destructive' 
+                                  : ''
+                            }`}
+                            title={
+                              contract.clinica_ryka_status === 'success'
+                                ? `Sincronizado em ${contract.clinica_ryka_synced_at ? format(new Date(contract.clinica_ryka_synced_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : ''}`
+                                : contract.clinica_ryka_status === 'error'
+                                  ? `Erro: ${contract.clinica_ryka_error || 'Falha no envio'}`
+                                  : 'Enviar para NEW CLINICA RYKA'
+                            }
+                            onClick={() => handleSyncClinicaRyka(contract)}
+                            disabled={syncingClinicaRyka === contract.id}
+                          >
+                            {syncingClinicaRyka === contract.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : contract.clinica_ryka_status === 'success' ? (
+                              <ExternalLink className="h-4 w-4" />
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                         {contract.status === 'active' && (
                           <Button
                             variant="ghost"
