@@ -165,12 +165,6 @@ export async function exportChurnToPDF(insights: string, meta?: ChurnPDFMeta | n
       pdf.setFillColor(currentColor[0], currentColor[1], currentColor[2]);
       pdf.roundedRect(M, y - 3.5, 2, 9, 1, 1, "F");
 
-      // Section background
-      pdf.setFillColor(currentColor[0], currentColor[1], currentColor[2]);
-      pdf.setGState(new (pdf as any).GState({ opacity: 0.04 }));
-      pdf.roundedRect(M + 4, y - 4.5, CW - 4, 11, 1.5, 1.5, "F");
-      pdf.setGState(new (pdf as any).GState({ opacity: 1 }));
-
       // Title
       pdf.setFontSize(11);
       pdf.setFont("helvetica", "bold");
