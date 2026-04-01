@@ -42,6 +42,7 @@ export function InsightsFilterBar() {
   } = useInsightsFilters();
 
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const [dateRange, setDateRangeLocal] = useState<{
     from: Date | undefined;
     to: Date | undefined;
@@ -93,53 +94,63 @@ export function InsightsFilterBar() {
 
   return (
     <div className="flex items-center gap-2 p-3 md:p-4 bg-card border rounded-lg overflow-x-auto scrollbar-hide">
-      {/* Date Preset Dropdown */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-2">
-            <CalendarDays className="h-4 w-4" />
-            {getDateRangeLabel()}
-            <ChevronDown className="h-3 w-3 opacity-50" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          {PRESETS.map((preset) => (
-            <DropdownMenuItem
-              key={preset.value}
-              onClick={() => setPreset(preset.value)}
-              className={cn(
-                filters.preset === preset.value && "bg-accent"
-              )}
-            >
-              {preset.label}
-            </DropdownMenuItem>
-          ))}
-          <DropdownMenuSeparator />
-          <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-            <PopoverTrigger asChild>
+      {/* Date Filter: Presets via Dropdown, Custom via separate Popover */}
+      {!datePickerOpen ? (
+        <DropdownMenu open={dateDropdownOpen} onOpenChange={setDateDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <CalendarDays className="h-4 w-4" />
+              {getDateRangeLabel()}
+              <ChevronDown className="h-3 w-3 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {PRESETS.map((preset) => (
               <DropdownMenuItem
-                onSelect={(e) => {
-                  e.preventDefault();
-                  setDatePickerOpen(true);
-                }}
+                key={preset.value}
+                onClick={() => setPreset(preset.value)}
+                className={cn(
+                  filters.preset === preset.value && "bg-accent"
+                )}
               >
-                Personalizado...
+                {preset.label}
               </DropdownMenuItem>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                initialFocus
-                mode="range"
-                defaultMonth={dateRange.from}
-                selected={dateRange}
-                onSelect={handleDateSelect}
-                numberOfMonths={2}
-                locale={ptBR}
-              />
-            </PopoverContent>
-          </Popover>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={(e) => {
+                e.preventDefault();
+                setDateDropdownOpen(false);
+                setTimeout(() => setDatePickerOpen(true), 100);
+              }}
+            >
+              Personalizado...
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <CalendarDays className="h-4 w-4" />
+              {getDateRangeLabel()}
+              <ChevronDown className="h-3 w-3 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              initialFocus
+              mode="range"
+              defaultMonth={dateRange.from}
+              selected={dateRange}
+              onSelect={handleDateSelect}
+              numberOfMonths={2}
+              locale={ptBR}
+              className="pointer-events-auto"
+            />
+          </PopoverContent>
+        </Popover>
+      )}
 
       {/* Date Range Display */}
       {filters.preset !== "custom" && (
