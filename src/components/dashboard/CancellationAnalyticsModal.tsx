@@ -24,9 +24,9 @@ const AUTHORIZED_USER_IDS = [
 
 // Only these consultants should appear in the report
 const CONSULTANT_IDS = [
-  "4e4c3327-8a72-42e5-b81c-a6a42b7a15b0", // Dayara Grecco
-  "f7a1b2c3-placeholder",                   // Andréia Barros
-  "f7a1b2c4-placeholder",                   // Michele Santos
+  "01391bfa-5120-4d43-aedd-93e024c78094", // Dayara Grecco
+  "e0017d78-21d4-413a-befc-5197df7ad666", // Andréia Barros
+  "3f3b5466-4479-48f8-bfe4-d9c4281ddab8", // Michele Santos
   "81da2302-4770-4fd1-9200-c2a8cb3325f3", // Ana Sant Anna
 ];
 
