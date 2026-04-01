@@ -79,6 +79,7 @@ export function InsightsMainContent() {
   const focusModeRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const zoomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isManualZoomRef = useRef(false);
 
   // Shared zoom calculation that polls until the grid layout stabilises
   const runAutoFitZoom = useCallback(() => {
