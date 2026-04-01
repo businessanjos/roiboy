@@ -375,7 +375,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
                           <span className="font-semibold text-destructive">{programChurn.cancelled}</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground">Total de contratos na base</span>
+                          <span className="text-muted-foreground">Contratos ativos + cancelados</span>
                           <span className="font-semibold">{programChurn.total}</span>
                         </div>
                         <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
