@@ -46,7 +46,7 @@ function getMobileMinHeight(visual: InsightsVisual): string {
 
 function getMinHeight(visual: InsightsVisual): number {
   const ct = visual.chart_type || "bar";
-  if (["number", "scorecard", "kpi"].includes(ct)) return 160;
+  if (["number", "scorecard", "kpi"].includes(ct)) return 120;
   if (["table", "ranking", "data_table"].includes(ct)) return 300;
   if (ct === "map") return 400;
   if (ct === "gauge") return 180;
