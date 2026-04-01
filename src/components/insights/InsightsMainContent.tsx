@@ -63,8 +63,8 @@ export function InsightsMainContent() {
   }, [isFocusMode]);
 
   const toggleFullscreen = async () => {
-    if (!document.fullscreenElement && focusModeRef[0]) {
-      await focusModeRef[0].requestFullscreen();
+    if (!document.fullscreenElement && focusModeRef.current) {
+      await focusModeRef.current.requestFullscreen();
     } else if (document.exitFullscreen) {
       await document.exitFullscreen();
     }
