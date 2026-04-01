@@ -269,6 +269,7 @@ Deno.serve(async (req) => {
         contract_end_date: contract.end_date,
         client_id: client.id,
         client_name: client.full_name,
+        client_company_name: client.company_name,
         client_email: clientEmail,
         client_phone: client.phone_e164,
         client_document: client.cnpj || client.cpf,
