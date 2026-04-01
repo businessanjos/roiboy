@@ -150,32 +150,37 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual }: 
   const totalW = visuals.reduce((sum, v) => sum + (v.layout?.w ?? 24), 0);
   const scale = visuals[0]?.layout?.scale || 48;
 
-  // Determine min width per scorecard based on count — allow all to fit in one row
-  const scorecardCount = visuals.length;
-  const minItemWidth = isAllScorecards
-    ? Math.max(140, Math.floor((containerWidth - (scorecardCount - 1) * 12) / scorecardCount) - 4)
-    : 300;
+  // For scorecard rows: don't set minWidth so all fit in one line
+  const gapPx = 12;
 
   return (
     <div
       className="flex gap-3"
-      style={{ flexWrap: "wrap" }}
+      style={{ flexWrap: isAllScorecards ? "nowrap" : "wrap" }}
     >
       {visuals.map((visual) => {
         const w = visual.layout?.w ?? 24;
-        const flexBasis = `${(w / totalW) * 100}%`;
         const minH = getMinHeight(visual);
+
+        // For scorecards: distribute evenly accounting for gaps
+        const flexStyle = isAllScorecards
+          ? {
+              flex: `1 1 0`,
+              minWidth: 0,
+              minHeight: minH,
+            }
+          : {
+              flex: `1 1 ${(w / totalW) * 100}%`,
+              minWidth: 300,
+              minHeight: minH,
+              maxWidth: "100%" as const,
+            };
 
         return (
           <div
             key={visual.id}
             className="overflow-hidden rounded-lg"
-            style={{
-              flex: `1 1 ${flexBasis}`,
-              minWidth: minItemWidth,
-              minHeight: minH,
-              maxWidth: "100%",
-            }}
+            style={flexStyle}
           >
             <ConfigurableVisualCard
               visual={visual}
