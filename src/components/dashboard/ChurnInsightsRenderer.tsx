@@ -25,6 +25,8 @@ interface ChurnInsightsRendererProps {
     clientsWithMessages: number;
     totalMessages: number;
     totalValue?: number;
+    periodStart?: string | null;
+    periodEnd?: string | null;
   } | null;
 }
 
