@@ -1036,7 +1036,7 @@ export default function Dashboard() {
       {/* Focus Mode Overlay */}
       {isFocusMode && createPortal(
         <div ref={focusModeRef} className="fixed inset-0 z-[9999] bg-background overflow-auto">
-          <div className="min-h-full flex flex-col justify-center px-8 py-6 mx-auto max-w-[95vw]">
+          <div className="px-8 py-6 mx-auto max-w-[95vw]">
             {/* Header */}
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-3xl font-bold">Dashboard Operacional</h2>
