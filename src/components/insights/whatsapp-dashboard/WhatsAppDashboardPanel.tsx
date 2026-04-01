@@ -35,9 +35,9 @@ function calculateAutoFitZoom(overlayEl: HTMLElement, contentEl: HTMLElement): n
   const overlayRect = overlayEl.getBoundingClientRect();
   const chromeHeight = contentRect.top - overlayRect.top;
 
-  const currentZoom = parseFloat(contentEl.style.zoom || '1');
-  const contentNaturalHeight = contentEl.scrollHeight * currentZoom;
-  const contentNaturalWidth = contentEl.scrollWidth * currentZoom;
+  // CSS zoom: scrollHeight/scrollWidth return natural (unscaled) dimensions
+  const contentNaturalHeight = contentEl.scrollHeight;
+  const contentNaturalWidth = contentEl.scrollWidth;
 
   const availableHeight = viewportHeight - chromeHeight;
   const availableWidth = viewportWidth;
