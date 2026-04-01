@@ -1284,6 +1284,13 @@ export default function Dashboard() {
         </div>,
         document.body
       )}
+
+      {showCancellationAnalytics && (
+        <CancellationAnalyticsModal 
+          open={cancellationModalOpen} 
+          onOpenChange={setCancellationModalOpen} 
+        />
+      )}
     </div>
   );
 }
