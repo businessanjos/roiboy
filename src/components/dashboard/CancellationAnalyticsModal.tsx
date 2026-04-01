@@ -361,7 +361,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
                 </Card>
               )}
 
-
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Top Consultant */}
                 <Card>
                   <CardHeader className="pb-3">
