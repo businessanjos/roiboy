@@ -71,6 +71,7 @@ function isScorecard(visual: InsightsVisual) {
 interface VisualRow {
   visuals: InsightsVisual[];
   isAllScorecards: boolean;
+  isAllCompact: boolean;
 }
 
 function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
