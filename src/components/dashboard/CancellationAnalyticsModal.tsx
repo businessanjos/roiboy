@@ -15,6 +15,7 @@ import { ptBR } from "date-fns/locale";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 // Only these users can access this modal
 const AUTHORIZED_USER_IDS = [
