@@ -173,6 +173,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
     }
   };
 
+  const formatCurrency = (v: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
   const formatReason = (reason: string): string => {
