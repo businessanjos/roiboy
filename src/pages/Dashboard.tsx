@@ -152,6 +152,8 @@ export default function Dashboard() {
   });
   
   const [searchQuery, setSearchQuery] = useState("");
+  const [cancellationModalOpen, setCancellationModalOpen] = useState(false);
+  const showCancellationAnalytics = canAccessCancellationAnalytics(currentUser?.id);
   
   const [gestaoProductFilter, setGestaoProductFilter] = useState<string>("all");
   const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("6");
