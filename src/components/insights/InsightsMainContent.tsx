@@ -371,17 +371,23 @@ export function InsightsMainContent() {
 
             <div className="min-h-0 flex-1 overflow-auto">
               <div
+                className="relative"
                 style={{
-                  width: focusContentDimensions.width > 0 ? `${focusContentDimensions.width}px` : "100%",
-                  minHeight: focusContentDimensions.height > 0 ? `${focusContentDimensions.height}px` : undefined,
+                  width: focusContentDimensions.width > 0
+                    ? `${Math.ceil(focusContentDimensions.width * Math.max(focusZoom / 100, 1))}px`
+                    : "100%",
+                  height: focusContentDimensions.height > 0
+                    ? `${Math.ceil(focusContentDimensions.height * (focusZoom / 100))}px`
+                    : undefined,
                 }}
               >
                 {/* Zoomable content area */}
                 <div
                   ref={contentRef}
+                  className="absolute left-0 top-0"
                   style={{
-                    zoom: focusZoom / 100,
-                    width: `${100 / (focusZoom / 100)}%`,
+                    width: focusContentDimensions.width > 0 ? `${focusContentDimensions.width}px` : "100%",
+                    transform: `scale(${focusZoom / 100})`,
                     transformOrigin: 'top left',
                   }}
                 >
