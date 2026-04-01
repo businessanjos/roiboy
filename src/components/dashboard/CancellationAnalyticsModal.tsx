@@ -325,7 +325,43 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
                 </Card>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Churn do Programa */}
+              {programChurn && (
+                <Card className="border-destructive/30 bg-gradient-to-r from-destructive/5 to-transparent">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <TrendingDown className="h-4 w-4 text-destructive" />
+                      Churn do Programa (base geral)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-6">
+                      <div className="text-center">
+                        <p className="text-3xl font-bold text-destructive">{programChurn.rate}%</p>
+                        <p className="text-xs text-muted-foreground">Taxa de Churn</p>
+                      </div>
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Contratos cancelados</span>
+                          <span className="font-semibold text-destructive">{programChurn.cancelled}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Total de contratos na base</span>
+                          <span className="font-semibold">{programChurn.total}</span>
+                        </div>
+                        <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-destructive/70"
+                            style={{ width: `${Math.min(programChurn.rate, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+
                 {/* Top Consultant */}
                 <Card>
                   <CardHeader className="pb-3">
