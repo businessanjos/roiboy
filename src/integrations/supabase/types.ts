@@ -1302,6 +1302,50 @@ export type Database = {
           },
         ]
       }
+      churn_analysis_reports: {
+        Row: {
+          account_id: string
+          clients_with_messages: number | null
+          contracts_analyzed: number | null
+          created_at: string
+          created_by: string | null
+          id: string
+          insights: string
+          total_messages: number | null
+          total_value: number | null
+        }
+        Insert: {
+          account_id: string
+          clients_with_messages?: number | null
+          contracts_analyzed?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          insights: string
+          total_messages?: number | null
+          total_value?: number | null
+        }
+        Update: {
+          account_id?: string
+          clients_with_messages?: number | null
+          contracts_analyzed?: number | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          insights?: string
+          total_messages?: number | null
+          total_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "churn_analysis_reports_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_contracts: {
         Row: {
           account_id: string
