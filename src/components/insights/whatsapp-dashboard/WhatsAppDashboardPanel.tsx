@@ -289,7 +289,6 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
               </div>
             </div>
             <div ref={contentRef} style={{ zoom: focusZoom / 100, transformOrigin: 'top left' }}>
-              <InsightsFilterBar />
               {dashboardContent}
             </div>
           </div>
