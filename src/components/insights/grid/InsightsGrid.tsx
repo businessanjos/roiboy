@@ -75,7 +75,7 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
     return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
   });
 
-  const rows: VisualRow[] = [];
+  const rawRows: VisualRow[] = [];
   let currentRow: InsightsVisual[] = [sorted[0]];
   let currentY = sorted[0].layout?.y ?? 0;
 
@@ -85,7 +85,7 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
     if (Math.abs(vy - currentY) <= 5) {
       currentRow.push(sorted[i]);
     } else {
-      rows.push({
+      rawRows.push({
         visuals: currentRow,
         isAllScorecards: currentRow.every(isScorecard),
       });
@@ -94,10 +94,21 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
     }
   }
 
-  rows.push({
+  rawRows.push({
     visuals: currentRow,
     isAllScorecards: currentRow.every(isScorecard),
   });
+
+  // Merge consecutive scorecard-only rows into a single row
+  const rows: VisualRow[] = [];
+  for (const row of rawRows) {
+    const prev = rows[rows.length - 1];
+    if (prev && prev.isAllScorecards && row.isAllScorecards) {
+      prev.visuals.push(...row.visuals);
+    } else {
+      rows.push(row);
+    }
+  }
 
   return rows;
 }
