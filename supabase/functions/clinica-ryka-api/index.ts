@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
           clinica_ryka_status,
           client_id,
           clients!client_contracts_client_id_fkey (
-            id, full_name, emails, phone_e164, cnpj, cpf,
+            id, full_name, company_name, emails, phone_e164, cnpj, cpf,
             birth_date, gender, city, state, zip_code
           )
         `)
