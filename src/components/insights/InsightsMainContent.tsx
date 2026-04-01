@@ -76,10 +76,25 @@ export function InsightsMainContent() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusZoom, setFocusZoom] = useState(100);
+  const [focusContentDimensions, setFocusContentDimensions] = useState({ width: 0, height: 0 });
   const focusModeRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const zoomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isManualZoomRef = useRef(false);
+
+  const updateFocusScrollDimensions = useCallback(() => {
+    const content = contentRef.current;
+    if (!content) return;
+
+    const scale = focusZoom / 100;
+    const naturalWidth = content.scrollWidth;
+    const naturalHeight = content.scrollHeight;
+
+    setFocusContentDimensions({
+      width: Math.ceil(naturalWidth * scale),
+      height: Math.ceil(naturalHeight * scale),
+    });
+  }, [focusZoom]);
 
   // Shared zoom calculation that polls until the grid layout stabilises
   const runAutoFitZoom = useCallback(() => {
@@ -128,6 +143,37 @@ export function InsightsMainContent() {
       }
     }, 80);
   }, []);
+
+  // Keep the scrollable area in sync with the visual size created by CSS zoom
+  useEffect(() => {
+    if (!isFocusMode) {
+      setFocusContentDimensions({ width: 0, height: 0 });
+      return;
+    }
+
+    const content = contentRef.current;
+    if (!content) return;
+
+    let frame = 0;
+    const syncDimensions = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        updateFocusScrollDimensions();
+      });
+    };
+
+    syncDimensions();
+
+    const resizeObserver = new ResizeObserver(syncDimensions);
+    resizeObserver.observe(content);
+    window.addEventListener("resize", syncDimensions);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", syncDimensions);
+      cancelAnimationFrame(frame);
+    };
+  }, [isFocusMode, activeDashboardId, updateFocusScrollDimensions]);
 
   // After zoom is applied, watch for content re-layout and re-adjust
   useEffect(() => {
@@ -303,9 +349,9 @@ export function InsightsMainContent() {
     ? createPortal(
         <div
           ref={focusModeRef}
-          className="fixed inset-0 z-[9999] bg-background overflow-hidden"
+          className="fixed inset-0 z-[9999] bg-background"
         >
-          <div className="p-4 flex flex-col" style={{ minHeight: '100%' }}>
+          <div className="flex h-full flex-col p-4">
             {/* Focus Mode Header — stays at scale 1 */}
             <div className="flex items-center justify-between mb-4 shrink-0">
               <div className="flex items-center gap-3">
@@ -327,25 +373,34 @@ export function InsightsMainContent() {
               </div>
             </div>
 
-
-            {/* Zoomable content area */}
-            <div
-              ref={contentRef}
-              style={{
-                zoom: focusZoom / 100,
-                transformOrigin: 'top left',
-              }}
-            >
-              {/* Visuals preserving saved layout (read-only) */}
-              {hasVisuals && (
-                <InsightsGrid 
-                  visuals={visuals} 
-                  onLayoutChange={() => {}} 
-                  readOnly
-                  onUpdateVisual={updateVisual}
-                  onRemoveVisual={removeVisual}
-                />
-              )}
+            <div className="min-h-0 flex-1 overflow-auto">
+              <div
+                style={{
+                  width: focusContentDimensions.width > 0 ? `${focusContentDimensions.width}px` : "100%",
+                  minHeight: focusContentDimensions.height > 0 ? `${focusContentDimensions.height}px` : undefined,
+                }}
+              >
+                {/* Zoomable content area */}
+                <div
+                  ref={contentRef}
+                  style={{
+                    zoom: focusZoom / 100,
+                    width: `${100 / (focusZoom / 100)}%`,
+                    transformOrigin: 'top left',
+                  }}
+                >
+                  {/* Visuals preserving saved layout (read-only) */}
+                  {hasVisuals && (
+                    <InsightsGrid 
+                      visuals={visuals} 
+                      onLayoutChange={() => {}} 
+                      readOnly
+                      onUpdateVisual={updateVisual}
+                      onRemoveVisual={removeVisual}
+                    />
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>,
