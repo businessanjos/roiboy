@@ -390,7 +390,35 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
                 </Card>
               </div>
 
-              {/* Tenure Distribution */}
+              {/* Missing Reason Ranking */}
+              <Card className="border-amber-500/20">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    Ranking: quem menos preenche o motivo
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {analytics.missingReasonRanking.map((item) => (
+                      <div key={item.name} className="flex items-center gap-3">
+                        <span className="text-sm font-medium w-36 truncate">{item.name}</span>
+                        <div className="flex-1 h-3 bg-muted/50 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-amber-500/70"
+                            style={{ width: `${item.pct}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-bold text-amber-600 w-12 text-right">{item.pct}%</span>
+                        <span className="text-xs text-muted-foreground w-20 text-right">
+                          {item.missing}/{item.total} sem motivo
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
