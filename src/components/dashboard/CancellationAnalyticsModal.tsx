@@ -173,7 +173,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
     if (!aiInsights || !aiMeta) return;
     setSavingReport(true);
     try {
-      if (!currentUser?.account_id || !currentUser?.id) {
+      if (!currentUser?.account_id || !currentUser?.auth_user_id) {
         throw new Error("Usuário não autenticado");
       }
 
@@ -184,7 +184,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
         clients_with_messages: aiMeta.clientsWithMessages,
         total_messages: aiMeta.totalMessages,
         total_value: aiMeta.totalValue || 0,
-        created_by: currentUser.id,
+        created_by: currentUser.auth_user_id,
       });
       if (error) throw error;
       toast({ title: "Análise salva com sucesso!" });
