@@ -165,7 +165,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
     // Reasons
     const reasonCounts: Record<string, number> = {};
     data.forEach(d => {
-      const reason = d.cancellation_reason || "Não informado";
+      const reason = formatReason(d.cancellation_reason || "Não informado");
       reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
     });
     const reasons = Object.entries(reasonCounts).sort((a, b) => b[1] - a[1]);
