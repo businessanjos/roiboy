@@ -1,0 +1,315 @@
+import { useMemo } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Search,
+  AlertTriangle,
+  MessageSquare,
+  Clock,
+  BarChart3,
+  Target,
+  TrendingUp,
+  Flame,
+  Shield,
+  Zap,
+} from "lucide-react";
+
+interface ChurnInsightsRendererProps {
+  insights: string;
+  meta?: {
+    contractsAnalyzed: number;
+    clientsWithMessages: number;
+    totalMessages: number;
+    totalValue?: number;
+  } | null;
+}
+
+interface Section {
+  emoji: string;
+  title: string;
+  icon: React.ElementType;
+  content: string[];
+  variant: "default" | "danger" | "warning" | "info" | "success" | "accent";
+}
+
+const SECTION_CONFIG: Record<string, { icon: React.ElementType; variant: Section["variant"] }> = {
+  "PADRÕES IDENTIFICADOS": { icon: Search, variant: "danger" },
+  "SINAIS DE ALERTA": { icon: AlertTriangle, variant: "warning" },
+  "ANÁLISE DE SENTIMENTO": { icon: MessageSquare, variant: "info" },
+  "TIMING CRÍTICO": { icon: Clock, variant: "accent" },
+  "ANÁLISE POR MOTIVO": { icon: BarChart3, variant: "default" },
+  "RECOMENDAÇÕES": { icon: Target, variant: "success" },
+  "SCORE DE PREVENIBILIDADE": { icon: Shield, variant: "danger" },
+};
+
+function matchSection(title: string): { icon: React.ElementType; variant: Section["variant"] } | null {
+  const upper = title.toUpperCase();
+  for (const [key, config] of Object.entries(SECTION_CONFIG)) {
+    if (upper.includes(key)) return config;
+  }
+  return null;
+}
+
+const VARIANT_STYLES: Record<Section["variant"], { border: string; bg: string; iconBg: string; iconColor: string; titleColor: string; badge: string }> = {
+  danger: {
+    border: "border-destructive/30",
+    bg: "bg-destructive/5",
+    iconBg: "bg-destructive/10",
+    iconColor: "text-destructive",
+    titleColor: "text-destructive",
+    badge: "bg-destructive/10 text-destructive border-destructive/20",
+  },
+  warning: {
+    border: "border-amber-500/30",
+    bg: "bg-amber-500/5",
+    iconBg: "bg-amber-500/10",
+    iconColor: "text-amber-600 dark:text-amber-400",
+    titleColor: "text-amber-700 dark:text-amber-400",
+    badge: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+  },
+  info: {
+    border: "border-blue-500/30",
+    bg: "bg-blue-500/5",
+    iconBg: "bg-blue-500/10",
+    iconColor: "text-blue-600 dark:text-blue-400",
+    titleColor: "text-blue-700 dark:text-blue-400",
+    badge: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+  },
+  success: {
+    border: "border-emerald-500/30",
+    bg: "bg-emerald-500/5",
+    iconBg: "bg-emerald-500/10",
+    iconColor: "text-emerald-600 dark:text-emerald-400",
+    titleColor: "text-emerald-700 dark:text-emerald-400",
+    badge: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20",
+  },
+  accent: {
+    border: "border-purple-500/30",
+    bg: "bg-purple-500/5",
+    iconBg: "bg-purple-500/10",
+    iconColor: "text-purple-600 dark:text-purple-400",
+    titleColor: "text-purple-700 dark:text-purple-400",
+    badge: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20",
+  },
+  default: {
+    border: "border-border",
+    bg: "bg-muted/30",
+    iconBg: "bg-muted",
+    iconColor: "text-foreground",
+    titleColor: "text-foreground",
+    badge: "bg-muted text-foreground border-border",
+  },
+};
+
+function cleanLine(line: string): string {
+  return line
+    .replace(/^#{1,4}\s*/, "")
+    .replace(/\*\*\*(.*?)\*\*\*/g, "$1")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .trim();
+}
+
+function parseSections(text: string): Section[] {
+  const lines = text.split("\n");
+  const sections: Section[] = [];
+  let current: Section | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed === "---") {
+      if (current && current.content.length > 0) {
+        current.content.push("");
+      }
+      continue;
+    }
+
+    // Detect section headers: lines starting with emoji or ## or **TITLE**
+    const isHeader = trimmed.match(/^#{1,4}\s/) || trimmed.match(/^\*\*[^*]+\*\*$/) || trimmed.match(/^[🔍⚠️💬🕐📊🎯📈🛡️]/u);
+
+    if (isHeader) {
+      const cleaned = cleanLine(trimmed);
+      const config = matchSection(cleaned);
+      if (config) {
+        // Extract emoji if present
+        const emojiMatch = cleaned.match(/^([🔍⚠️💬🕐📊🎯📈🛡️])\s*/u);
+        const emoji = emojiMatch ? emojiMatch[1] : "";
+        const title = cleaned.replace(/^[🔍⚠️💬🕐📊🎯📈🛡️]\s*/u, "").trim();
+
+        current = { emoji, title, icon: config.icon, content: [], variant: config.variant };
+        sections.push(current);
+        continue;
+      }
+    }
+
+    if (current) {
+      const cleaned = cleanLine(trimmed);
+      if (cleaned) current.content.push(cleaned);
+    }
+  }
+
+  // Clean trailing empty lines
+  sections.forEach((s) => {
+    while (s.content.length > 0 && s.content[s.content.length - 1] === "") {
+      s.content.pop();
+    }
+  });
+
+  return sections;
+}
+
+function extractPreventabilityScore(content: string[]): number | null {
+  for (const line of content) {
+    const match = line.match(/(\d{1,3})\s*%/);
+    if (match) return parseInt(match[1], 10);
+  }
+  return null;
+}
+
+function ContentLine({ text, variant }: { text: string; variant: Section["variant"] }) {
+  if (text === "") return <div className="h-1.5" />;
+
+  const isBullet = text.startsWith("•") || text.startsWith("-") || text.match(/^\d+[\.\)]/);
+  const bulletText = text.replace(/^[•\-]\s*/, "").replace(/^\d+[\.\)]\s*/, "");
+
+  // Highlight numbers/percentages
+  const highlighted = (isBullet ? bulletText : text).replace(
+    /(\d+[,.]?\d*\s*%|\bR\$\s*[\d.,]+|\d+\s*(?:dias|meses|semanas|clientes|contratos))/gi,
+    "⟨$1⟩"
+  );
+
+  const parts = highlighted.split(/⟨|⟩/);
+
+  if (isBullet) {
+    return (
+      <div className="flex items-start gap-2 py-0.5">
+        <Zap className="h-3 w-3 mt-1 shrink-0 text-muted-foreground/60" />
+        <span className="text-sm text-foreground/80 leading-relaxed">
+          {parts.map((part, j) =>
+            j % 2 === 1 ? (
+              <span key={j} className="font-semibold text-foreground">{part}</span>
+            ) : (
+              <span key={j}>{part}</span>
+            )
+          )}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <p className="text-sm text-foreground/80 leading-relaxed">
+      {parts.map((part, j) =>
+        j % 2 === 1 ? (
+          <span key={j} className="font-semibold text-foreground">{part}</span>
+        ) : (
+          <span key={j}>{part}</span>
+        )
+      )}
+    </p>
+  );
+}
+
+function ScoreGauge({ score }: { score: number }) {
+  const color = score >= 70 ? "text-destructive" : score >= 40 ? "text-amber-500" : "text-emerald-500";
+  const bgColor = score >= 70 ? "bg-destructive" : score >= 40 ? "bg-amber-500" : "bg-emerald-500";
+  const label = score >= 70 ? "Alto potencial de prevenção" : score >= 40 ? "Moderado" : "Baixo";
+
+  return (
+    <div className="flex flex-col items-center gap-3 py-4">
+      <div className="relative w-28 h-28">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="8" className="text-muted/30" />
+          <circle
+            cx="50" cy="50" r="42" fill="none" stroke="currentColor" strokeWidth="8"
+            className={color}
+            strokeDasharray={`${(score / 100) * 264} 264`}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className={`text-2xl font-bold ${color}`}>{score}%</span>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <div className={`w-2 h-2 rounded-full ${bgColor}`} />
+        <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      </div>
+    </div>
+  );
+}
+
+function SectionCard({ section }: { section: Section }) {
+  const styles = VARIANT_STYLES[section.variant];
+  const Icon = section.icon;
+  const isScoreSection = section.title.toUpperCase().includes("SCORE") || section.title.toUpperCase().includes("PREVENIBILIDADE");
+  const score = isScoreSection ? extractPreventabilityScore(section.content) : null;
+
+  return (
+    <Card className={`${styles.border} ${styles.bg} overflow-hidden`}>
+      <CardContent className="p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <div className={`p-2 rounded-lg ${styles.iconBg}`}>
+            <Icon className={`h-4 w-4 ${styles.iconColor}`} />
+          </div>
+          <h3 className={`font-semibold text-sm ${styles.titleColor}`}>
+            {section.emoji && <span className="mr-1">{section.emoji}</span>}
+            {section.title}
+          </h3>
+        </div>
+
+        {score !== null && <ScoreGauge score={score} />}
+
+        <div className="space-y-0.5">
+          {section.content.map((line, i) => (
+            <ContentLine key={i} text={line} variant={section.variant} />
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export function ChurnInsightsRenderer({ insights, meta }: ChurnInsightsRendererProps) {
+  const sections = useMemo(() => parseSections(insights), [insights]);
+
+  return (
+    <div className="space-y-4">
+      {/* Meta stats */}
+      {meta && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50 border">
+            <span className="text-lg font-bold text-foreground">{meta.contractsAnalyzed}</span>
+            <span className="text-xs text-muted-foreground">Contratos analisados</span>
+          </div>
+          <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50 border">
+            <span className="text-lg font-bold text-foreground">{meta.totalMessages}</span>
+            <span className="text-xs text-muted-foreground">Mensagens processadas</span>
+          </div>
+          <div className="flex flex-col items-center p-3 rounded-lg bg-muted/50 border">
+            <span className="text-lg font-bold text-foreground">
+              {meta.totalValue ? `R$ ${(meta.totalValue / 1000).toFixed(0)}k` : meta.clientsWithMessages}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              {meta.totalValue ? "Valor perdido" : "Clientes com conversas"}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Sections grid - score and recommendations side by side, rest full width */}
+      {sections.length > 0 ? (
+        <div className="space-y-3">
+          {sections.map((section, i) => (
+            <SectionCard key={i} section={section} />
+          ))}
+        </div>
+      ) : (
+        /* Fallback: raw text if no sections detected */
+        <div className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
+          {cleanLine(insights)}
+        </div>
+      )}
+    </div>
+  );
+}
