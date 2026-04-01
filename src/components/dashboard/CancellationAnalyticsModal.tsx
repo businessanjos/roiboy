@@ -349,7 +349,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+      <DialogContent className="max-w-6xl max-h-[92vh] p-0">
         <DialogHeader className="px-6 pt-6 pb-2">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
