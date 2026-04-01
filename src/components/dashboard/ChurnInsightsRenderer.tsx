@@ -19,6 +19,11 @@ import {
   Mail,
 } from "lucide-react";
 
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
 interface ChurnInsightsRendererProps {
   insights: string;
   meta?: {
