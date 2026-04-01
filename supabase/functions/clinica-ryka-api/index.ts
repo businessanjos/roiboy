@@ -138,6 +138,7 @@ Deno.serve(async (req) => {
         client: client ? {
           id: client.id,
           name: client.full_name,
+          company_name: client.company_name,
           email: Array.isArray(client.emails) ? client.emails[0] : client.emails,
           emails: client.emails,
           phone: client.phone_e164,
