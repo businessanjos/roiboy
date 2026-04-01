@@ -100,7 +100,7 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
 
       // Fetch responsible user for each contract's client
       const clientIds = [...new Set((contracts || []).map(c => c.client_id))];
-      let responsibleMap: Record<string, string> = {};
+      let responsibleMap: Record<string, { name: string; id: string }> = {};
       
       if (clientIds.length > 0) {
         const { data: clients } = await supabase
@@ -109,15 +109,21 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
           .in("id", clientIds);
         
         clients?.forEach((c: any) => {
-          if (c.responsible?.name) {
-            responsibleMap[c.id] = c.responsible.name;
+          if (c.responsible?.name && c.responsible_user_id) {
+            responsibleMap[c.id] = { name: c.responsible.name, id: c.responsible_user_id };
           }
         });
       }
 
-      const enriched = (contracts || []).map(c => ({
+      // Filter to only include contracts from the 4 consultants
+      const filtered = (contracts || []).filter(c => {
+        const resp = responsibleMap[c.client_id];
+        return resp && CONSULTANT_IDS.includes(resp.id);
+      });
+
+      const enriched = filtered.map(c => ({
         ...c,
-        responsible_user: responsibleMap[c.client_id] ? { name: responsibleMap[c.client_id] } : null,
+        responsible_user: responsibleMap[c.client_id] ? { name: responsibleMap[c.client_id].name } : null,
       }));
 
       setData(enriched as CancellationData[]);
