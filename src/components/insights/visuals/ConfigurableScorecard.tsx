@@ -52,8 +52,8 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
   const suffixSize = Math.round(18 * m);
 
   return (
-    <div className="flex flex-col items-center justify-center h-full py-4 px-2 overflow-hidden">
-      <p className="font-bold text-foreground mb-2 text-center break-words w-full" style={{ fontSize: `${scaledFontSize}px` }}>
+    <div className="flex flex-col items-center justify-center h-full py-2 px-2 overflow-hidden">
+      <p className="font-bold text-foreground mb-1 text-center break-words w-full" style={{ fontSize: `${scaledFontSize}px`, lineHeight: 1.1 }}>
         {formattedValue}
         {isSalesCycle && <span className="font-normal text-muted-foreground ml-1" style={{ fontSize: `${suffixSize}px` }}>dias</span>}
       </p>
