@@ -1085,6 +1085,37 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
+                        {/* Sync Clinica Ryka button */}
+                        {contract.status === 'active' && isClinicaRykaEligible(contract.contract_type) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 ${
+                              contract.clinica_ryka_status === 'success' 
+                                ? 'text-green-600' 
+                                : contract.clinica_ryka_status === 'error' 
+                                  ? 'text-destructive' 
+                                  : ''
+                            }`}
+                            title={
+                              contract.clinica_ryka_status === 'success'
+                                ? `Sincronizado em ${contract.clinica_ryka_synced_at ? format(new Date(contract.clinica_ryka_synced_at), "dd/MM/yyyy HH:mm", { locale: ptBR }) : ''}`
+                                : contract.clinica_ryka_status === 'error'
+                                  ? `Erro: ${contract.clinica_ryka_error || 'Falha no envio'}`
+                                  : 'Enviar para NEW CLINICA RYKA'
+                            }
+                            onClick={() => handleSyncClinicaRyka(contract)}
+                            disabled={syncingClinicaRyka === contract.id}
+                          >
+                            {syncingClinicaRyka === contract.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : contract.clinica_ryka_status === 'success' ? (
+                              <ExternalLink className="h-4 w-4" />
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
+                          </Button>
+                        )}
                         {contract.status === 'active' && (
                           <Button
                             variant="ghost"
