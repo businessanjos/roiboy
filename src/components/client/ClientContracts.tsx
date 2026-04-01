@@ -163,6 +163,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [syncingClinicaRyka, setSyncingClinicaRyka] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Products state
