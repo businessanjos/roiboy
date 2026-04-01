@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, serviceKey);
 
   try {
-    // Map slugs to product name patterns for matching
+    // Map slugs to product name patterns
     const productNamePatterns = productSlugs.map((slug) => {
       if (slug === "eternum") return "%eternum%";
       if (slug === "rykas-mentoring" || slug === "rykas") return "%ryka%";
@@ -53,10 +53,11 @@ Deno.serve(async (req) => {
     });
 
     // Get products matching the slugs
-    let productQuery = supabase.from("products").select("id, name");
-    // Build OR filter for product names
     const orConditions = productNamePatterns.map((p) => `name.ilike.${p}`).join(",");
-    const { data: products, error: prodError } = await productQuery.or(orConditions);
+    const { data: products, error: prodError } = await supabase
+      .from("products")
+      .select("id, name")
+      .or(orConditions);
 
     if (prodError) throw prodError;
     if (!products || products.length === 0) {
@@ -66,13 +67,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    const productIds = products.map((p) => p.id);
-    const productMap = new Map(products.map((p) => [p.id, p.name]));
+    const productIds = products.map((p: any) => p.id);
+    const productMap = new Map(products.map((p: any) => [p.id, p.name]));
 
     // Get active contracts for these products
     const { data: contracts, error: contractError } = await supabase
       .from("client_contracts")
-      .select("id, client_id, product_id, status, value, start_date, end_date, payment_method")
+      .select("id, client_id, product_id, status, value, start_date, end_date, payment_method, notes")
       .in("product_id", productIds)
       .eq("status", "active");
 
@@ -84,16 +85,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    const clientIds = [...new Set(contracts.map((c) => c.client_id))];
+    const clientIds = [...new Set(contracts.map((c: any) => c.client_id))];
 
-    // Fetch clients in batches of 50 to avoid URI limits
+    // Fetch clients in batches of 50
     const allClients: any[] = [];
     for (let i = 0; i < clientIds.length; i += 50) {
       const batch = clientIds.slice(i, i + 50);
       const { data: batchClients, error: clientError } = await supabase
         .from("clients")
         .select(
-          "id, full_name, email, phone_e164, cnpj, cpf, company_name, contact_name, address, city, state, zip_code, instagram"
+          "id, account_id, full_name, emails, phone_e164, cnpj, cpf, company_name, neighborhood, street, street_number, complement, city, state, zip_code, instagram, instagrams, notes, business_segment, business_niche, companies"
         )
         .in("id", batch);
 
@@ -101,10 +102,10 @@ Deno.serve(async (req) => {
       if (batchClients) allClients.push(...batchClients);
     }
 
-    const clientMap = new Map(allClients.map((c) => [c.id, c]));
+    const clientMap = new Map(allClients.map((c: any) => [c.id, c]));
 
     // Build response
-    const result = contracts.map((contract) => {
+    const result = contracts.map((contract: any) => {
       const client = clientMap.get(contract.client_id);
       if (!client) return null;
 
@@ -115,26 +116,50 @@ Deno.serve(async (req) => {
         ? "rykas-mentoring"
         : productName.toLowerCase();
 
+      // Extract first email from emails array
+      const emailsArr = Array.isArray(client.emails) ? client.emails : [];
+      const primaryEmail = emailsArr.length > 0 ? emailsArr[0] : null;
+
+      // Build full address
+      const addressParts = [
+        client.street,
+        client.street_number,
+        client.complement,
+      ].filter(Boolean);
+      const fullAddress = addressParts.length > 0 ? addressParts.join(", ") : null;
+
+      // Extract first instagram
+      const instagramValue = client.instagram ||
+        (Array.isArray(client.instagrams) && client.instagrams.length > 0
+          ? client.instagrams[0]
+          : null);
+
       return {
         roy_client_id: client.id,
+        roy_company_id: client.account_id,
         name: client.company_name || client.full_name,
-        email: client.email || null,
+        email: primaryEmail,
         phone: client.phone_e164 || null,
         cnpj: client.cnpj || null,
         cpf: client.cpf || null,
-        responsible_name: client.contact_name || client.full_name,
-        address: client.address || null,
+        responsible_name: client.full_name,
+        responsible_role: null,
+        address: fullAddress,
+        neighborhood: client.neighborhood || null,
         city: client.city || null,
         state: client.state || null,
         zip_code: client.zip_code || null,
-        instagram: client.instagram || null,
+        instagram: instagramValue,
+        website: null,
+        current_system: null,
         product: productSlug,
         contract_id: contract.id,
-        contract_status: contract.status,
+        contract_status: contract.status || "active",
         contract_amount: contract.value || 0,
         contract_plan: productSlug,
         start_date: contract.start_date,
         end_date: contract.end_date,
+        notes: contract.notes || client.notes || null,
       };
     }).filter(Boolean);
 
