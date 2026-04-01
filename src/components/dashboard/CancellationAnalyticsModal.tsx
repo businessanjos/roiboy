@@ -230,7 +230,26 @@ export function CancellationAnalyticsModal({ open, onOpenChange }: Props) {
       else tenureBuckets["25+ meses"]++;
     });
 
-    return { totalCount, totalValue, topConsultant, topProduct, reasons, states, months, avgTenure, tenureBuckets };
+    // Missing reason ranking by consultant
+    const missingReasonByConsultant: Record<string, { total: number; missing: number }> = {};
+    data.forEach(d => {
+      const name = d.responsible_user?.name || "Sem responsável";
+      if (!missingReasonByConsultant[name]) missingReasonByConsultant[name] = { total: 0, missing: 0 };
+      missingReasonByConsultant[name].total++;
+      if (!d.cancellation_reason || d.cancellation_reason.trim() === "") {
+        missingReasonByConsultant[name].missing++;
+      }
+    });
+    const missingReasonRanking = Object.entries(missingReasonByConsultant)
+      .map(([name, { total, missing }]) => ({
+        name,
+        total,
+        missing,
+        pct: total > 0 ? Math.round((missing / total) * 100) : 0,
+      }))
+      .sort((a, b) => b.pct - a.pct || b.missing - a.missing);
+
+    return { totalCount, totalValue, topConsultant, topProduct, reasons, states, months, avgTenure, tenureBuckets, missingReasonRanking };
   }, [data]);
 
   return (
