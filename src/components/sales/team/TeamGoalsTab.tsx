@@ -286,6 +286,7 @@ export function TeamGoalsTab() {
     const upserts = Object.values(goals).map((g) => ({
       account_id: currentUser.account_id, user_id: g.user_id,
       year_month: g.year_month, goal_type: g.goal_type, goal_value: g.goal_value,
+      super_goal_value: g.super_goal_value ?? 0,
       cargo: cargoMap[g.user_id] || "Vendedor", updated_at: new Date().toISOString(),
     }));
 
