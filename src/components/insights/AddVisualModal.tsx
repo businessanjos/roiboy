@@ -593,7 +593,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Adicionar Visual
@@ -603,7 +603,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           </DialogTitle>
         </DialogHeader>
 
-        <div className="py-4">
+        <div className="py-4 overflow-y-auto flex-1">
           {/* Step 1: Choose Format */}
           {step === 1 && (
             <div className="space-y-4">
