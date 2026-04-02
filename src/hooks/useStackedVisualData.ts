@@ -133,7 +133,20 @@ interface UseStackedVisualDataParams {
 
 export function useStackedVisualData({ config, enabled = true }: UseStackedVisualDataParams) {
   const { currentUser } = useCurrentUser();
-  const { filters } = useInsightsFilters();
+  const { filters: globalFilters } = useInsightsFilters();
+
+  // Auto-scope daily grouping to current month
+  const filters = (() => {
+    if (config?.dimension?.dateGrouping === 'day') {
+      const now = new Date();
+      return {
+        ...globalFilters,
+        startDate: startOfMonth(now).toISOString(),
+        endDate: endOfDay(now).toISOString(),
+      };
+    }
+    return globalFilters;
+  })();
 
   return useQuery({
     queryKey: ['stacked-visual-data', config, filters, currentUser?.account_id],
