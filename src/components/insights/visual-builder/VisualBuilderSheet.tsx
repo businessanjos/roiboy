@@ -127,6 +127,8 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
       setIndicatorMinLabel('');
       setIndicatorMaxLabel('');
       setCompanyGoalLoaded(false);
+      setCompanyMonthlyGoals({});
+      setGoalPeriod('monthly');
       // Reset appearance
       setShowDataLabels(DEFAULT_APPEARANCE.showDataLabels);
       setDateDisplayFormat(DEFAULT_APPEARANCE.dateDisplayFormat);
