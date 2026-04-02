@@ -238,6 +238,8 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       setGaugeSubType('days_elapsed');
       setGaugeGoal("");
       setMonthlyGoals({});
+      setCompanyMonthlyGoals({});
+      setGoalPeriod('monthly');
       setDateGrouping('month');
       setIndicatorMin("");
       setIndicatorMax("");
