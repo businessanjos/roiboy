@@ -257,11 +257,23 @@ export function TeamGoalsTab() {
     return goals[`${userId}_${month}_${goalType}`]?.goal_value ?? defaultVal;
   };
 
+  const getSuperGoalValue = (userId: string, month: string, goalType: string) => {
+    return goals[`${userId}_${month}_${goalType}`]?.super_goal_value ?? 0;
+  };
+
   const setGoalValue = (userId: string, month: string, goalType: string, value: number) => {
     const key = `${userId}_${month}_${goalType}`;
     setGoals((prev) => ({
       ...prev,
-      [key]: { user_id: userId, year_month: month, goal_type: goalType, goal_value: value },
+      [key]: { ...prev[key], user_id: userId, year_month: month, goal_type: goalType, goal_value: value, super_goal_value: prev[key]?.super_goal_value ?? 0 },
+    }));
+  };
+
+  const setSuperGoalValue = (userId: string, month: string, goalType: string, value: number) => {
+    const key = `${userId}_${month}_${goalType}`;
+    setGoals((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], user_id: userId, year_month: month, goal_type: goalType, super_goal_value: value, goal_value: prev[key]?.goal_value ?? 0 },
     }));
   };
 
