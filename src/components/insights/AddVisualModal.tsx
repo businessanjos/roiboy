@@ -262,7 +262,12 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
     } else if (chartType === 'call_commercial') {
       setTitle("Calls Comerciais");
     } else if (chartType === 'gauge') {
-      setTitle(gaugeSubType === 'days_elapsed' ? 'Dias Corridos do Mês' : 'Faturamento x Meta');
+      if (gaugeSubType === 'days_elapsed') {
+        setTitle('Dias Corridos do Mês');
+      } else {
+        const periodLabels = { monthly: 'Mensal', quarterly: 'Trimestral', annual: 'Anual' };
+        setTitle(`Faturamento x Meta ${periodLabels[goalPeriod]}`);
+      }
     } else if (chartType === 'indicator') {
       setTitle(indicatorMetric ? `Indicador - ${METRIC_LABELS[indicatorMetric]}` : 'Indicador');
     } else if (chartType === 'funnel') {
