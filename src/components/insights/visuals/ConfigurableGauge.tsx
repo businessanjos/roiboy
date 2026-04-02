@@ -191,14 +191,25 @@ function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperP
     );
   }
 
+  const periodBadgeLabels: Record<string, string> = {
+    monthly: 'Mensal',
+    quarterly: 'Trimestral',
+    annual: 'Anual',
+  };
+
   return (
-    <ConfigurableGauge
-      value={totalRevenue}
-      max={goal}
-      label="Faturamento x Meta"
-      sublabel={`${formatCurrency(totalRevenue)} de ${formatCurrency(goal)} — ${periodLabel}`}
-      formatValue={formatCurrency}
-      fontScale={fontScale}
-    />
+    <div className="relative h-full w-full">
+      <span className="absolute top-1 right-1 z-10 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-muted text-muted-foreground border border-border">
+        {periodBadgeLabels[goalPeriod] || 'Mensal'}
+      </span>
+      <ConfigurableGauge
+        value={totalRevenue}
+        max={goal}
+        label="Faturamento x Meta"
+        sublabel={`${formatCurrency(totalRevenue)} de ${formatCurrency(goal)} — ${periodLabel}`}
+        formatValue={formatCurrency}
+        fontScale={fontScale}
+      />
+    </div>
   );
 }
