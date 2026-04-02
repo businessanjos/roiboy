@@ -34,7 +34,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SALES_TEAM_NAMES = ["everton", "jonathan", "vanessa", "darlan", "george"];
+const SALES_TEAM_NAMES = ["everton", "jonathan", "vanessa", "darlan", "george", "maikol"];
 
 interface MetricConfig {
   id?: string;
