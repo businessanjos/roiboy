@@ -107,6 +107,7 @@ interface GoalEntry {
   year_month: string;
   goal_type: string;
   goal_value: number;
+  super_goal_value: number;
 }
 
 const MONTH_NAMES_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
@@ -202,6 +203,7 @@ export function TeamGoalsTab() {
         const gt = (g as any).goal_type || "revenue";
         map[`${g.user_id}_${g.year_month}_${gt}`] = {
           user_id: g.user_id, year_month: g.year_month, goal_type: gt, goal_value: g.goal_value,
+          super_goal_value: (g as any).super_goal_value ?? 0,
         };
       }
       setGoals(map);
@@ -255,11 +257,23 @@ export function TeamGoalsTab() {
     return goals[`${userId}_${month}_${goalType}`]?.goal_value ?? defaultVal;
   };
 
+  const getSuperGoalValue = (userId: string, month: string, goalType: string) => {
+    return goals[`${userId}_${month}_${goalType}`]?.super_goal_value ?? 0;
+  };
+
   const setGoalValue = (userId: string, month: string, goalType: string, value: number) => {
     const key = `${userId}_${month}_${goalType}`;
     setGoals((prev) => ({
       ...prev,
-      [key]: { user_id: userId, year_month: month, goal_type: goalType, goal_value: value },
+      [key]: { ...prev[key], user_id: userId, year_month: month, goal_type: goalType, goal_value: value, super_goal_value: prev[key]?.super_goal_value ?? 0 },
+    }));
+  };
+
+  const setSuperGoalValue = (userId: string, month: string, goalType: string, value: number) => {
+    const key = `${userId}_${month}_${goalType}`;
+    setGoals((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], user_id: userId, year_month: month, goal_type: goalType, super_goal_value: value, goal_value: prev[key]?.goal_value ?? 0 },
     }));
   };
 
@@ -272,6 +286,7 @@ export function TeamGoalsTab() {
     const upserts = Object.values(goals).map((g) => ({
       account_id: currentUser.account_id, user_id: g.user_id,
       year_month: g.year_month, goal_type: g.goal_type, goal_value: g.goal_value,
+      super_goal_value: g.super_goal_value ?? 0,
       cargo: cargoMap[g.user_id] || "Vendedor", updated_at: new Date().toISOString(),
     }));
 
@@ -560,6 +575,7 @@ export function TeamGoalsTab() {
                   <div className="grid gap-3">
                     {activeMetrics.map((metric, idx) => {
                       const value = getGoalValue(activeMember.id, currentYearMonth, metric.metric_key, metric.default_value);
+                      const superValue = getSuperGoalValue(activeMember.id, currentYearMonth, metric.metric_key);
                       const yearTotal = getYearTotal(activeMember.id, metric.metric_key, metric.default_value);
 
                       return (
@@ -614,9 +630,10 @@ export function TeamGoalsTab() {
                                     </div>
                                   </div>
 
-                                  {/* Month value input */}
-                                  <div className="flex items-center gap-3 mb-3">
-                                    <div className="flex-1">
+                                  {/* Month value inputs: Meta + Super Meta */}
+                                  <div className="grid grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                      <Label className="text-[10px] text-muted-foreground font-medium mb-1 block">Meta</Label>
                                       <div className="relative">
                                         {metric.is_currency && (
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">R$</span>
@@ -630,8 +647,22 @@ export function TeamGoalsTab() {
                                         />
                                       </div>
                                     </div>
-                                    <div className="text-xs text-muted-foreground whitespace-nowrap">
-                                      {metric.metric_unit}
+                                    <div>
+                                      <Label className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mb-1 block flex items-center gap-1">
+                                        <TrendingUp className="h-3 w-3" /> Super Meta
+                                      </Label>
+                                      <div className="relative">
+                                        {metric.is_currency && (
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">R$</span>
+                                        )}
+                                        <Input
+                                          type="number"
+                                          value={superValue || ""}
+                                          onChange={(e) => setSuperGoalValue(activeMember.id, currentYearMonth, metric.metric_key, e.target.value === "" ? 0 : Number(e.target.value))}
+                                          className={`h-11 text-lg font-semibold ${metric.is_currency ? "pl-9" : "pl-3"} bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40 focus-visible:ring-amber-400/30`}
+                                          placeholder="0"
+                                        />
+                                      </div>
                                     </div>
                                   </div>
 
