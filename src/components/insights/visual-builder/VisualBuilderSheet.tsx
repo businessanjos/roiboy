@@ -61,6 +61,8 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   const [gaugeSubType, setGaugeSubType] = useState<GaugeSubType>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState<string>('');
   const [companyGoalLoaded, setCompanyGoalLoaded] = useState(false);
+  const [companyMonthlyGoals, setCompanyMonthlyGoals] = useState<Record<string, number>>({});
+  const [goalPeriod, setGoalPeriod] = useState<'monthly' | 'quarterly' | 'annual'>('monthly');
   const [tableColumns, setTableColumns] = useState<string[]>([]);
   
   // Indicator state
