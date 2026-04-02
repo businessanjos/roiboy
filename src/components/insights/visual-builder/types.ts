@@ -57,6 +57,7 @@ export interface VisualConfig {
   gaugeConfig?: {
     subType: GaugeSubType;
     monthlyGoals?: Record<string, number>; // "YYYY-MM" -> value in R$
+    goalPeriod?: 'monthly' | 'quarterly' | 'annual';
   };
   // Indicator configuration
   indicatorConfig?: {
