@@ -77,74 +77,64 @@ interface VisualRow {
 function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
   if (visuals.length === 0) return [];
 
-  const sorted = [...visuals].sort((a, b) => {
-    const ay = a.layout?.y ?? 0;
-    const by = b.layout?.y ?? 0;
-    if (ay !== by) return ay - by;
-    return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
-  });
+  // Extract all scorecards and gauges first, regardless of position
+  const allScorecards = visuals.filter(isScorecard);
+  const allGauges = visuals.filter(isGauge);
+  const regularVisuals = visuals.filter(v => !isScorecard(v) && !isGauge(v));
 
-  const rawRows: VisualRow[] = [];
-  let currentRow: InsightsVisual[] = [sorted[0]];
-  let currentY = sorted[0].layout?.y ?? 0;
-
-  for (let i = 1; i < sorted.length; i++) {
-    const vy = sorted[i].layout?.y ?? 0;
-    if (Math.abs(vy - currentY) <= 5) {
-      currentRow.push(sorted[i]);
-    } else {
-      rawRows.push({
-        visuals: currentRow,
-        isAllScorecards: currentRow.every(isScorecard),
-        isAllCompact: currentRow.every(isCompactCard),
-      });
-      currentRow = [sorted[i]];
-      currentY = vy;
-    }
-  }
-
-  rawRows.push({
-    visuals: currentRow,
-    isAllScorecards: currentRow.every(isScorecard),
-    isAllCompact: currentRow.every(isCompactCard),
-  });
-
-  // Separate compact rows (scorecards/gauges) from regular rows
-  const compactRows: VisualRow[] = [];
-  const regularRows: VisualRow[] = [];
-
-  for (const row of rawRows) {
-    if (row.isAllCompact) {
-      compactRows.push(row);
-    } else {
-      regularRows.push(row);
-    }
-  }
-
-  // Merge all compact visuals: scorecards in one row, gauges in another
   const rows: VisualRow[] = [];
 
-  const allScorecards = compactRows.flatMap(r => r.visuals.filter(isScorecard));
-  const allGauges = compactRows.flatMap(r => r.visuals.filter(isGauge));
-
+  // Scorecards row at top
   if (allScorecards.length > 0) {
     rows.push({
-      visuals: allScorecards,
+      visuals: allScorecards.sort((a, b) => (a.layout?.x ?? 0) - (b.layout?.x ?? 0)),
       isAllScorecards: true,
       isAllCompact: true,
     });
   }
 
+  // Gauges row right below scorecards
   if (allGauges.length > 0) {
     rows.push({
-      visuals: allGauges,
+      visuals: allGauges.sort((a, b) => (a.layout?.x ?? 0) - (b.layout?.x ?? 0)),
       isAllScorecards: false,
       isAllCompact: true,
     });
   }
 
-  // Then add regular rows in their original order
-  rows.push(...regularRows);
+  // Group remaining visuals by y-proximity
+  if (regularVisuals.length > 0) {
+    const sorted = [...regularVisuals].sort((a, b) => {
+      const ay = a.layout?.y ?? 0;
+      const by = b.layout?.y ?? 0;
+      if (ay !== by) return ay - by;
+      return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
+    });
+
+    let currentRow: InsightsVisual[] = [sorted[0]];
+    let currentY = sorted[0].layout?.y ?? 0;
+
+    for (let i = 1; i < sorted.length; i++) {
+      const vy = sorted[i].layout?.y ?? 0;
+      if (Math.abs(vy - currentY) <= 5) {
+        currentRow.push(sorted[i]);
+      } else {
+        rows.push({
+          visuals: currentRow,
+          isAllScorecards: false,
+          isAllCompact: false,
+        });
+        currentRow = [sorted[i]];
+        currentY = vy;
+      }
+    }
+
+    rows.push({
+      visuals: currentRow,
+      isAllScorecards: false,
+      isAllCompact: false,
+    });
+  }
 
   return rows;
 }
