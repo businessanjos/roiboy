@@ -1,6 +1,9 @@
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { VisualConfig, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 import { useCompanyGoals } from "@/hooks/useCompanyGoals";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface ConfigurableGaugeProps {
   value: number;
@@ -136,9 +139,49 @@ function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperP
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth(); // 0-indexed
+  const { currentUser } = useCurrentUser();
 
   const { goal: companyGoal } = useCompanyGoals(currentYear);
   const monthlyGoals = companyGoal?.monthly_goals as Record<string, number> | undefined;
+
+  // Compute date range for the selected period
+  const { periodStart, periodEnd } = useMemo(() => {
+    if (goalPeriod === 'monthly') {
+      const start = new Date(currentYear, currentMonth, 1);
+      const end = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
+      return { periodStart: start, periodEnd: end };
+    }
+    if (goalPeriod === 'quarterly') {
+      const quarterStart = Math.floor(currentMonth / 3) * 3;
+      const start = new Date(currentYear, quarterStart, 1);
+      const end = new Date(currentYear, quarterStart + 3, 0, 23, 59, 59);
+      return { periodStart: start, periodEnd: end };
+    }
+    // annual
+    const start = new Date(currentYear, 0, 1);
+    const end = new Date(currentYear, 11, 31, 23, 59, 59);
+    return { periodStart: start, periodEnd: end };
+  }, [goalPeriod, currentYear, currentMonth]);
+
+  // Fetch won deals revenue for the exact period
+  const { data: periodRevenue } = useQuery({
+    queryKey: ['gauge-revenue', currentUser?.account_id, goalPeriod, periodStart.toISOString(), periodEnd.toISOString()],
+    queryFn: async () => {
+      if (!currentUser?.account_id) return 0;
+      const { data: deals, error } = await supabase
+        .from('deals')
+        .select('value')
+        .eq('account_id', currentUser.account_id)
+        .eq('status', 'won')
+        .gte('won_at', periodStart.toISOString())
+        .lte('won_at', periodEnd.toISOString());
+      if (error) throw error;
+      return (deals || []).reduce((sum, d) => sum + (d.value || 0), 0);
+    },
+    enabled: !!currentUser?.account_id,
+  });
+
+  const totalRevenue = periodRevenue ?? 0;
 
   // Compute goal for the selected period
   const goal = useMemo(() => {
@@ -167,10 +210,6 @@ function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperP
     }
     return sum;
   }, [monthlyGoals, goalPeriod, currentMonth]);
-
-  const totalRevenue = useMemo(() => {
-    return (data || []).reduce((sum, d) => sum + d.value, 0);
-  }, [data]);
 
   const formatCurrency = (v: number) => {
     if (v >= 1_000_000) return `R$ ${(v / 1_000_000).toFixed(1)}M`;
