@@ -119,6 +119,14 @@ const formatCurrency = (value: number) =>
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("pt-BR").format(value);
 
+const formatInputDisplay = (value: number) =>
+  value ? value.toLocaleString("pt-BR") : "";
+
+const parseInputNumber = (str: string): number => {
+  const digits = str.replace(/\D/g, "");
+  return Number(digits) || 0;
+};
+
 export function TeamGoalsTab() {
   const { currentUser } = useCurrentUser();
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -639,9 +647,9 @@ export function TeamGoalsTab() {
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">R$</span>
                                         )}
                                         <Input
-                                          type="number"
-                                          value={value || ""}
-                                          onChange={(e) => setGoalValue(activeMember.id, currentYearMonth, metric.metric_key, e.target.value === "" ? 0 : Number(e.target.value))}
+                                          type="text"
+                                          value={formatInputDisplay(value)}
+                                          onChange={(e) => setGoalValue(activeMember.id, currentYearMonth, metric.metric_key, parseInputNumber(e.target.value))}
                                           className={`h-11 text-lg font-semibold ${metric.is_currency ? "pl-9" : "pl-3"} bg-muted/40 border-0 focus-visible:ring-primary/30`}
                                           placeholder="0"
                                         />
@@ -656,9 +664,9 @@ export function TeamGoalsTab() {
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">R$</span>
                                         )}
                                         <Input
-                                          type="number"
-                                          value={superValue || ""}
-                                          onChange={(e) => setSuperGoalValue(activeMember.id, currentYearMonth, metric.metric_key, e.target.value === "" ? 0 : Number(e.target.value))}
+                                          type="text"
+                                          value={formatInputDisplay(superValue)}
+                                          onChange={(e) => setSuperGoalValue(activeMember.id, currentYearMonth, metric.metric_key, parseInputNumber(e.target.value))}
                                           className={`h-11 text-lg font-semibold ${metric.is_currency ? "pl-9" : "pl-3"} bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40 focus-visible:ring-amber-400/30`}
                                           placeholder="0"
                                         />
@@ -899,10 +907,10 @@ export function TeamGoalsTab() {
                               return (
                                 <td key={i} className="py-2 px-1">
                                   <Input
-                                    type="number"
-                                    value={val || ""}
-                                    onChange={(e) => setGoalValue(member.id, ym, mainMetric.metric_key, e.target.value === "" ? 0 : Number(e.target.value))}
-                                    className="h-7 text-[10px] text-center px-1 bg-muted/30 border-0 w-16"
+                                    type="text"
+                                    value={formatInputDisplay(val)}
+                                    onChange={(e) => setGoalValue(member.id, ym, mainMetric.metric_key, parseInputNumber(e.target.value))}
+                                    className="h-7 text-[10px] text-center px-1 bg-muted/30 border-0 w-20"
                                   />
                                 </td>
                               );
