@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { VisualConfig, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
-import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek, endOfDay } from "date-fns";
+import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek, endOfDay, getDaysInMonth } from "date-fns";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithCanal, enrichDealsWithProduct } from "@/hooks/useVisualData";
@@ -388,11 +388,13 @@ async function fetchStackedDealsData(
     case 'week':
       eachWeekOfInterval({ start: rangeStart, end: rangeEnd }, { weekStartsOn: 1 }).forEach(d => allPeriods.push({ key: getPeriodKey(d), label: getPeriodLabel(d) }));
       break;
-    default:
-      for (let d = 1; d <= 31; d++) {
+    default: {
+      const daysInMonth = getDaysInMonth(new Date());
+      for (let d = 1; d <= daysInMonth; d++) {
         const key = String(d).padStart(2, '0');
         allPeriods.push({ key, label: key });
       }
+    }
   }
 
   const periodMap = new Map<string, Map<string, number>>();
@@ -547,7 +549,8 @@ async function fetchStackedLeadsData(
     const allPeriods: { key: string; label: string }[] = [];
 
     if (dateGrouping === 'day') {
-      for (let d = 1; d <= 31; d++) {
+      const daysInMonth = getDaysInMonth(new Date());
+      for (let d = 1; d <= daysInMonth; d++) {
         const key = String(d).padStart(2, '0');
         allPeriods.push({ key, label: key });
       }

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { VisualConfig, DateGrouping, DateDisplayFormat, FieldFilter, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
-import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval, eachDayOfInterval, eachYearOfInterval, startOfMonth, startOfYear, startOfDay, endOfDay } from "date-fns";
+import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval, eachDayOfInterval, eachYearOfInterval, startOfMonth, startOfYear, startOfDay, endOfDay, getDaysInMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { filterByLeadField, filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealField, filterByDealFields } from "@/hooks/useDealFieldFilter";
@@ -1449,8 +1449,9 @@ function fillMissingDates(
   // Generate all date keys in the range
   switch (grouping) {
     case 'day': {
-      // Fixed 01-31 range: aggregate same day across months
-      for (let d = 1; d <= 31; d++) {
+      // Use actual number of days in current month
+      const daysInMonth = getDaysInMonth(new Date());
+      for (let d = 1; d <= daysInMonth; d++) {
         allDates.push(String(d).padStart(2, '0'));
       }
       // Aggregate data points with same day label (sum values across months)
