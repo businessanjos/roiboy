@@ -95,6 +95,7 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
           formatting={formatting}
           appearance={config}
           orientation={visualConfig?.chartOrientation || 'horizontal'}
+          seriesColors={visualConfig?.seriesColors}
         />
       );
     case 'line':
