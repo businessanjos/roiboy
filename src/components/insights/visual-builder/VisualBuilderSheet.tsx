@@ -60,6 +60,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   const [isCreating, setIsCreating] = useState(false);
   const [gaugeSubType, setGaugeSubType] = useState<GaugeSubType>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState<string>('');
+  const [companyGoalLoaded, setCompanyGoalLoaded] = useState(false);
   const [tableColumns, setTableColumns] = useState<string[]>([]);
   
   // Indicator state
