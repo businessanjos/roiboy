@@ -22,6 +22,7 @@ interface StackedHorizontalBarChartProps {
   };
   appearance: AppearanceConfig;
   orientation?: 'horizontal' | 'vertical';
+  seriesColors?: Record<string, string>;
 }
 
 function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professional'): string[] {
@@ -95,10 +96,12 @@ export function StackedHorizontalBarChart({
   formatting,
   appearance,
   orientation = 'horizontal',
+  seriesColors,
 }: StackedHorizontalBarChartProps) {
   const safeFormatting = formatting || { type: 'number' as FormatType, decimals: 0 };
   const safeAppearance = appearance || DEFAULT_APPEARANCE;
   const colors = getChartColors(safeAppearance.colorPalette);
+  const getSeriesColor = (key: string, index: number) => seriesColors?.[key] || colors[index % colors.length];
   const m = FONT_SCALE_MULTIPLIERS[safeAppearance.fontScale || 'normal'];
 
   if (!data || data.length === 0 || seriesKeys.length === 0) {
@@ -143,7 +146,7 @@ export function StackedHorizontalBarChart({
               key={key}
               dataKey={key}
               stackId="stack"
-              fill={colors[index % colors.length]}
+              fill={getSeriesColor(key, index)}
               radius={index === seriesKeys.length - 1 ? [4, 4, 0, 0] : undefined}
             >
               {safeAppearance.showDataLabels && (
@@ -199,7 +202,7 @@ export function StackedHorizontalBarChart({
             key={key}
             dataKey={key}
             stackId="stack"
-            fill={colors[index % colors.length]}
+            fill={getSeriesColor(key, index)}
             radius={index === seriesKeys.length - 1 ? [0, 4, 4, 0] : undefined}
           >
             {safeAppearance.showDataLabels && (

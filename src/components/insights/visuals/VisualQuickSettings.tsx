@@ -48,6 +48,7 @@ import {
   DEFAULT_APPEARANCE,
   DISPLAY_SCALE_OPTIONS,
   DEFAULT_DISPLAY_SCALE,
+  COLOR_PALETTES,
 } from "../visual-builder/types";
 import { useInsightsDashboardsSafe } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -170,6 +171,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
   const [accountUsers, setAccountUsers] = useState<{ name: string }[]>([]);
   const [title, setTitle] = useState(visual.title || "");
   const [tableColumns, setTableColumns] = useState<string[]>(config?.tableConfig?.columns ?? []);
+  const [seriesColors, setSeriesColors] = useState<Record<string, string>>(config?.seriesColors ?? {});
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
@@ -214,6 +216,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
       setDealFilters(config ? getDealFilters(config) : []);
       setDealStatusFilter(config?.dealStatusFilter ?? []);
       setTableColumns(config?.tableConfig?.columns ?? []);
+      setSeriesColors(config?.seriesColors ?? {});
       setStackByCustomField(config?.stackByCustomField || null);
       
       // Initialize monthly goals
@@ -317,6 +320,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
         dealFieldFilters: dealFilters.filter(f => f.fieldId && f.selectedValues.length > 0),
         dealStatusFilter: dealStatusFilter.length > 0 ? dealStatusFilter : undefined,
         stackByCustomField: stackByCustomField || undefined,
+        seriesColors: Object.keys(seriesColors).length > 0 ? seriesColors : undefined,
         // When custom field segmentation is active, set stackBy to '_custom' to trigger stacked mode
         stackBy: stackByCustomField ? '_custom' : config.stackBy,
         ...(isDataTable && tableColumns.length > 0 && {
@@ -485,9 +489,16 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
               <p className="text-xs text-muted-foreground">
                 Controla quais segmentos aparecem nas barras empilhadas.
               </p>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {seriesCategories.map((category) => {
+              <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                {seriesCategories.map((category, idx) => {
                   const isHidden = hiddenCategories.includes(category);
+                  const defaultColor = (COLOR_PALETTES[colorPalette] || COLOR_PALETTES.professional)[idx % (COLOR_PALETTES[colorPalette] || COLOR_PALETTES.professional).length];
+                  const extendedDefaults = [
+                    ...(COLOR_PALETTES[colorPalette] || COLOR_PALETTES.professional),
+                    '#f97316', '#06b6d4', '#8b5cf6', '#ec4899', '#84cc16',
+                    '#14b8a6', '#f43f5e', '#a855f7', '#eab308', '#6366f1',
+                  ];
+                  const currentColor = seriesColors[category] || extendedDefaults[idx % extendedDefaults.length];
                   return (
                     <div key={`series-${category}`} className="flex items-center gap-2">
                       <Checkbox
@@ -501,7 +512,16 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
                           }
                         }}
                       />
-                      <label htmlFor={`series-${category}`} className="text-sm cursor-pointer">
+                      <input
+                        type="color"
+                        value={currentColor}
+                        onChange={(e) => {
+                          setSeriesColors(prev => ({ ...prev, [category]: e.target.value }));
+                        }}
+                        className="w-6 h-6 rounded border border-border cursor-pointer p-0 bg-transparent"
+                        title={`Cor de ${category}`}
+                      />
+                      <label htmlFor={`series-${category}`} className="text-sm cursor-pointer flex-1">
                         {category}
                       </label>
                     </div>
