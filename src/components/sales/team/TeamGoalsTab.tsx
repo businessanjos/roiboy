@@ -107,6 +107,7 @@ interface GoalEntry {
   year_month: string;
   goal_type: string;
   goal_value: number;
+  super_goal_value: number;
 }
 
 const MONTH_NAMES_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
