@@ -575,6 +575,7 @@ export function TeamGoalsTab() {
                   <div className="grid gap-3">
                     {activeMetrics.map((metric, idx) => {
                       const value = getGoalValue(activeMember.id, currentYearMonth, metric.metric_key, metric.default_value);
+                      const superValue = getSuperGoalValue(activeMember.id, currentYearMonth, metric.metric_key);
                       const yearTotal = getYearTotal(activeMember.id, metric.metric_key, metric.default_value);
 
                       return (
