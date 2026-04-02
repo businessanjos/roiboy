@@ -907,10 +907,10 @@ export function TeamGoalsTab() {
                               return (
                                 <td key={i} className="py-2 px-1">
                                   <Input
-                                    type="number"
-                                    value={val || ""}
-                                    onChange={(e) => setGoalValue(member.id, ym, mainMetric.metric_key, e.target.value === "" ? 0 : Number(e.target.value))}
-                                    className="h-7 text-[10px] text-center px-1 bg-muted/30 border-0 w-16"
+                                    type="text"
+                                    value={formatInputDisplay(val)}
+                                    onChange={(e) => setGoalValue(member.id, ym, mainMetric.metric_key, parseInputNumber(e.target.value))}
+                                    className="h-7 text-[10px] text-center px-1 bg-muted/30 border-0 w-20"
                                   />
                                 </td>
                               );
