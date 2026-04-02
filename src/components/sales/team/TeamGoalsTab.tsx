@@ -665,7 +665,6 @@ export function TeamGoalsTab() {
                                       </div>
                                     </div>
                                   </div>
-                                  </div>
 
                                   {/* Mini year overview - with full month names */}
                                   <div className="grid grid-cols-12 gap-[2px]">
