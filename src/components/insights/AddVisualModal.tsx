@@ -160,6 +160,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   const [isCreating, setIsCreating] = useState(false);
   const [gaugeSubType, setGaugeSubType] = useState<'days_elapsed' | 'revenue_vs_goal'>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState("");
+  const [companyGoalLoaded, setCompanyGoalLoaded] = useState(false);
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
   const [dateGrouping, setDateGrouping] = useState<'day' | 'week' | 'month' | 'year'>('month');
   const [indicatorMin, setIndicatorMin] = useState("");
@@ -193,6 +194,35 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   // Scorecards, rankings, call_commercial, gauge, indicator, bubble_map, funnel and data_table have only 2 steps
   const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge' || chartType === 'indicator' || chartType === 'bubble_map' || chartType === 'funnel' || chartType === 'data_table') ? 2 : 3;
 
+  // Auto-fetch company goal for current month when selecting revenue gauge
+  useEffect(() => {
+    if (open && gaugeSubType === 'revenue_vs_goal' && !companyGoalLoaded && currentUser?.account_id) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const monthIndex = now.getMonth();
+      const MONTH_LABELS = [
+        "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+      ];
+      supabase
+        .from("company_goals")
+        .select("monthly_goals")
+        .eq("year", year)
+        .eq("goal_type", "revenue")
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.monthly_goals) {
+            const goals = data.monthly_goals as Record<string, number>;
+            const monthGoal = goals[MONTH_LABELS[monthIndex]];
+            if (monthGoal && !gaugeGoal) {
+              setGaugeGoal(String(monthGoal));
+            }
+          }
+          setCompanyGoalLoaded(true);
+        });
+    }
+  }, [open, gaugeSubType, companyGoalLoaded, currentUser?.account_id]);
+
   // Reset form when modal closes
   useEffect(() => {
     if (!open) {
@@ -213,6 +243,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       setFunnelProcess(null);
       setTableDataSource('deals');
       setTableColumns(getDefaultColumns('deals'));
+      setCompanyGoalLoaded(false);
     }
   }, [open]);
 

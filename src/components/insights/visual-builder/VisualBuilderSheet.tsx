@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   Sheet,
   SheetContent,
@@ -43,6 +45,7 @@ interface VisualBuilderSheetProps {
 
 export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetProps) {
   const { activeDashboardId, addVisual } = useInsightsDashboards();
+  const { currentUser } = useCurrentUser();
   
   // Form state
   const [dataSource, setDataSource] = useState<DataSource | null>(null);
@@ -57,6 +60,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   const [isCreating, setIsCreating] = useState(false);
   const [gaugeSubType, setGaugeSubType] = useState<GaugeSubType>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState<string>('');
+  const [companyGoalLoaded, setCompanyGoalLoaded] = useState(false);
   const [tableColumns, setTableColumns] = useState<string[]>([]);
   
   // Indicator state
@@ -70,6 +74,35 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   const [dateDisplayFormat, setDateDisplayFormat] = useState<DateDisplayFormat>(DEFAULT_APPEARANCE.dateDisplayFormat);
   const [colorPalette, setColorPalette] = useState<ColorPalette>(DEFAULT_APPEARANCE.colorPalette);
   const [fillEmptyDates, setFillEmptyDates] = useState(DEFAULT_APPEARANCE.fillEmptyDates);
+
+  // Auto-fetch company goal for current month when selecting revenue gauge
+  useEffect(() => {
+    if (open && gaugeSubType === 'revenue_vs_goal' && !companyGoalLoaded && currentUser?.account_id) {
+      const now = new Date();
+      const year = now.getFullYear();
+      const monthIndex = now.getMonth();
+      const MONTH_LABELS = [
+        "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+      ];
+      supabase
+        .from("company_goals")
+        .select("monthly_goals")
+        .eq("year", year)
+        .eq("goal_type", "revenue")
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data?.monthly_goals) {
+            const goals = data.monthly_goals as Record<string, number>;
+            const monthGoal = goals[MONTH_LABELS[monthIndex]];
+            if (monthGoal && !gaugeGoal) {
+              setGaugeGoal(String(monthGoal));
+            }
+          }
+          setCompanyGoalLoaded(true);
+        });
+    }
+  }, [open, gaugeSubType, companyGoalLoaded, currentUser?.account_id]);
 
   // Reset form when sheet closes
   useEffect(() => {
@@ -90,6 +123,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
       setIndicatorMax('100');
       setIndicatorMinLabel('');
       setIndicatorMaxLabel('');
+      setCompanyGoalLoaded(false);
       // Reset appearance
       setShowDataLabels(DEFAULT_APPEARANCE.showDataLabels);
       setDateDisplayFormat(DEFAULT_APPEARANCE.dateDisplayFormat);
