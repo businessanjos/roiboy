@@ -119,6 +119,14 @@ const formatCurrency = (value: number) =>
 const formatNumber = (value: number) =>
   new Intl.NumberFormat("pt-BR").format(value);
 
+const formatInputDisplay = (value: number) =>
+  value ? value.toLocaleString("pt-BR") : "";
+
+const parseInputNumber = (str: string): number => {
+  const digits = str.replace(/\D/g, "");
+  return Number(digits) || 0;
+};
+
 export function TeamGoalsTab() {
   const { currentUser } = useCurrentUser();
   const [members, setMembers] = useState<TeamMember[]>([]);
