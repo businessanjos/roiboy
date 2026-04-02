@@ -203,6 +203,7 @@ export function TeamGoalsTab() {
         const gt = (g as any).goal_type || "revenue";
         map[`${g.user_id}_${g.year_month}_${gt}`] = {
           user_id: g.user_id, year_month: g.year_month, goal_type: gt, goal_value: g.goal_value,
+          super_goal_value: (g as any).super_goal_value ?? 0,
         };
       }
       setGoals(map);
