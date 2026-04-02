@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { CompanyGoalCard } from "./CompanyGoalCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -413,6 +414,8 @@ export function TeamGoalsTab() {
 
   return (
     <div className="space-y-5">
+      {/* Company Goal Card */}
+      <CompanyGoalCard />
       {/* Top bar: mode toggle + year + save */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

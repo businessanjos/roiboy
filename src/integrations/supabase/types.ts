@@ -3134,6 +3134,50 @@ export type Database = {
           },
         ]
       }
+      company_goals: {
+        Row: {
+          account_id: string
+          annual_goal: number
+          created_at: string
+          goal_type: string
+          id: string
+          monthly_goals: Json
+          notes: string | null
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          account_id: string
+          annual_goal?: number
+          created_at?: string
+          goal_type?: string
+          id?: string
+          monthly_goals?: Json
+          notes?: string | null
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          account_id?: string
+          annual_goal?: number
+          created_at?: string
+          goal_type?: string
+          id?: string
+          monthly_goals?: Json
+          notes?: string | null
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_goals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       composition_presets: {
         Row: {
           account_id: string
