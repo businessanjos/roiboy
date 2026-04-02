@@ -48,6 +48,7 @@ import {
   DEFAULT_APPEARANCE,
   DISPLAY_SCALE_OPTIONS,
   DEFAULT_DISPLAY_SCALE,
+  COLOR_PALETTES,
 } from "../visual-builder/types";
 import { useInsightsDashboardsSafe } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
