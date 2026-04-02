@@ -31,7 +31,7 @@ const AREAS = ["Comercial", "Operações", "CX", "CS", "Financeiro", "Marketing"
 const CARGOS = ["Vendedor", "Closer", "SDR", "BDR", "Assistente", "Analista", "Coordenador", "Gerente"];
 
 // Nomes dos liderados do Jonathan no comercial
-const SALES_TEAM_NAMES = ["everton", "jonathan", "vanessa", "darlan", "george"];
+const SALES_TEAM_NAMES = ["everton", "jonathan", "vanessa", "darlan", "george", "maikol"];
 
 interface TeamMember {
   id: string;

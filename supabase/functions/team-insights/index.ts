@@ -94,7 +94,7 @@ serve(async (req) => {
     const firstDayLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split("T")[0];
     const lastDayLastMonth = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split("T")[0];
 
-    const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george"];
+    const SALES_TEAM_NAMES = ["jonathan", "vanessa", "darlan", "george", "maikol"];
 
     // Fetch team users
     const { data: allUsers } = await supabase

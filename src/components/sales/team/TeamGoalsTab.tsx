@@ -34,7 +34,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SALES_TEAM_NAMES = ["everton", "jonathan", "vanessa", "darlan", "george"];
+const SALES_TEAM_NAMES = ["everton", "jonathan", "vanessa", "darlan", "george", "maikol"];
 
 interface MetricConfig {
   id?: string;
@@ -169,7 +169,7 @@ export function TeamGoalsTab() {
 
     const [usersRes, careersRes, goalsRes, metricsRes] = await Promise.all([
       supabase.from("users").select("id, name, email, avatar_url")
-        .eq("account_id", currentUser.account_id).neq("id", currentUser.id).order("name"),
+        .eq("account_id", currentUser.account_id).order("name"),
       supabase.from("sales_team_careers").select("user_id, cargo")
         .eq("account_id", currentUser.account_id),
       supabase.from("sales_monthly_goals").select("*")
