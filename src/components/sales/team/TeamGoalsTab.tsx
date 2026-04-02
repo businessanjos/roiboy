@@ -647,9 +647,9 @@ export function TeamGoalsTab() {
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">R$</span>
                                         )}
                                         <Input
-                                          type="number"
-                                          value={value || ""}
-                                          onChange={(e) => setGoalValue(activeMember.id, currentYearMonth, metric.metric_key, e.target.value === "" ? 0 : Number(e.target.value))}
+                                          type="text"
+                                          value={formatInputDisplay(value)}
+                                          onChange={(e) => setGoalValue(activeMember.id, currentYearMonth, metric.metric_key, parseInputNumber(e.target.value))}
                                           className={`h-11 text-lg font-semibold ${metric.is_currency ? "pl-9" : "pl-3"} bg-muted/40 border-0 focus-visible:ring-primary/30`}
                                           placeholder="0"
                                         />
