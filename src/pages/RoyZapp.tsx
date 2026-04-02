@@ -62,7 +62,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ClientZappSheet } from "@/components/client/ClientZappSheet";
-import { PlaybookDialog } from "@/components/sales/PlaybookDialog";
+import { PlaybookDialog, MultiSendPayload } from "@/components/sales/PlaybookDialog";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
 
