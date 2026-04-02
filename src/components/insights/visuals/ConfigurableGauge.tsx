@@ -1,6 +1,9 @@
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { VisualConfig, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 import { useCompanyGoals } from "@/hooks/useCompanyGoals";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface ConfigurableGaugeProps {
   value: number;
