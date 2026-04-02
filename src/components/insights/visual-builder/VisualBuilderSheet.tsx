@@ -359,17 +359,37 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
                 {gaugeSubType === 'revenue_vs_goal' && (
                   <>
                     <Separator />
-                    <div className="space-y-2">
-                      <Label className="text-base font-medium">Meta do Mês Atual (R$)</Label>
-                      <Input
-                        type="number"
-                        value={gaugeGoal}
-                        onChange={(e) => setGaugeGoal(e.target.value)}
-                        placeholder="Ex: 100000"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Você pode editar metas de outros meses nos ajustes do visual após criá-lo.
-                      </p>
+                    <div className="space-y-3">
+                      <Label className="text-base font-medium">Período de comparação</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {([
+                          { value: 'monthly' as const, label: 'Mensal' },
+                          { value: 'quarterly' as const, label: 'Trimestral' },
+                          { value: 'annual' as const, label: 'Anual' },
+                        ] as const).map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setGoalPeriod(opt.value)}
+                            className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                              goalPeriod === opt.value
+                                ? 'border-primary bg-primary/5 text-primary font-medium'
+                                : 'border-border hover:border-primary/50 text-muted-foreground'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                      {Object.keys(companyMonthlyGoals).length > 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          ✓ Meta da empresa carregada automaticamente
+                        </p>
+                      ) : companyGoalLoaded ? (
+                        <p className="text-xs text-destructive">
+                          Nenhuma meta cadastrada. Configure em Comercial → Meta da Empresa.
+                        </p>
+                      ) : null}
                     </div>
                   </>
                 )}
