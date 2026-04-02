@@ -22,6 +22,7 @@ interface StackedHorizontalBarChartProps {
   };
   appearance: AppearanceConfig;
   orientation?: 'horizontal' | 'vertical';
+  seriesColors?: Record<string, string>;
 }
 
 function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professional'): string[] {
