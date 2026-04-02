@@ -826,7 +826,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { value: 'days_elapsed' as const, label: 'Dias Corridos', description: 'Dias passados vs total do mês' },
-                  { value: 'revenue_vs_goal' as const, label: 'Faturamento x Meta', description: 'Receita atual vs meta mensal' },
+                  { value: 'revenue_vs_goal' as const, label: 'Faturamento x Meta', description: 'Receita atual vs meta da empresa' },
                 ].map((opt) => (
                   <button
                     key={opt.value}
