@@ -849,18 +849,39 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
               </div>
 
               {gaugeSubType === 'revenue_vs_goal' && (
-                <div className="space-y-2 pt-2 border-t">
-                  <Label htmlFor="gauge-goal">Meta do Mês Atual (R$)</Label>
-                  <Input
-                    id="gauge-goal"
-                    type="number"
-                    value={gaugeGoal}
-                    onChange={(e) => setGaugeGoal(e.target.value)}
-                    placeholder="Ex: 100000"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Você pode editar metas de outros meses nos ajustes do visual após criá-lo.
-                  </p>
+                <div className="space-y-3 pt-2 border-t">
+                  <Label className="text-base font-medium">Período de comparação</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { value: 'monthly' as const, label: 'Mensal', description: '% do mês atual' },
+                      { value: 'quarterly' as const, label: 'Trimestral', description: '% do trimestre' },
+                      { value: 'annual' as const, label: 'Anual', description: '% do ano' },
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setGoalPeriod(opt.value)}
+                        className={cn(
+                          "flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all text-center",
+                          goalPeriod === opt.value
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50 hover:bg-muted/50"
+                        )}
+                      >
+                        <span className="font-medium text-sm">{opt.label}</span>
+                        <span className="text-xs text-muted-foreground leading-tight">{opt.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {Object.keys(companyMonthlyGoals).length > 0 ? (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Check className="h-3 w-3 text-green-600" />
+                      Meta da empresa carregada automaticamente
+                    </p>
+                  ) : companyGoalLoaded ? (
+                    <p className="text-xs text-destructive">
+                      Nenhuma meta cadastrada. Configure em Comercial → Meta da Empresa.
+                    </p>
+                  ) : null}
                 </div>
               )}
 
