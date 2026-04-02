@@ -9610,6 +9610,7 @@ export type Database = {
           goal_value: number
           id: string
           notes: string | null
+          super_goal_value: number | null
           updated_at: string
           user_id: string
           year_month: string
@@ -9622,6 +9623,7 @@ export type Database = {
           goal_value?: number
           id?: string
           notes?: string | null
+          super_goal_value?: number | null
           updated_at?: string
           user_id: string
           year_month: string
@@ -9634,6 +9636,7 @@ export type Database = {
           goal_value?: number
           id?: string
           notes?: string | null
+          super_goal_value?: number | null
           updated_at?: string
           user_id?: string
           year_month?: string

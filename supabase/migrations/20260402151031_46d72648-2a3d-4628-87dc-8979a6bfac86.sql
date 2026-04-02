@@ -1,0 +1,1 @@
+ALTER TABLE public.sales_monthly_goals ADD COLUMN super_goal_value numeric DEFAULT 0;
