@@ -402,8 +402,32 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       setIsCreating(true);
       try {
         const now = new Date();
-        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const isRevenue = gaugeSubType === 'revenue_vs_goal';
+        
+        // Build monthlyGoals based on selected period from company goals
+        let goalsToSave: Record<string, number> = {};
+        if (isRevenue && Object.keys(companyMonthlyGoals).length > 0) {
+          const year = now.getFullYear();
+          const month = now.getMonth(); // 0-indexed
+          
+          if (goalPeriod === 'monthly') {
+            const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+            if (companyMonthlyGoals[key]) goalsToSave[key] = companyMonthlyGoals[key];
+          } else if (goalPeriod === 'quarterly') {
+            const quarterStart = Math.floor(month / 3) * 3;
+            for (let i = quarterStart; i < quarterStart + 3; i++) {
+              const key = `${year}-${String(i + 1).padStart(2, '0')}`;
+              if (companyMonthlyGoals[key]) goalsToSave[key] = companyMonthlyGoals[key];
+            }
+          } else {
+            // annual - all months
+            goalsToSave = { ...companyMonthlyGoals };
+          }
+        } else if (isRevenue && gaugeGoal) {
+          const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          goalsToSave = { [monthKey]: Number(gaugeGoal) };
+        }
+
         const config: VisualConfig = {
           dataSource: 'deals',
           measure: { field: isRevenue ? 'value' : '', aggregation: isRevenue ? 'sum' : 'count' },
@@ -413,7 +437,8 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           ...(isRevenue && { statusFilter: 'won' as const }),
           gaugeConfig: {
             subType: gaugeSubType,
-            ...(isRevenue && gaugeGoal ? { monthlyGoals: { [monthKey]: Number(gaugeGoal) } } : {}),
+            goalPeriod: isRevenue ? goalPeriod : undefined,
+            ...(isRevenue && Object.keys(goalsToSave).length > 0 ? { monthlyGoals: goalsToSave } : {}),
           },
         };
         await addVisual({
