@@ -215,6 +215,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
       setDealFilters(config ? getDealFilters(config) : []);
       setDealStatusFilter(config?.dealStatusFilter ?? []);
       setTableColumns(config?.tableConfig?.columns ?? []);
+      setSeriesColors(config?.seriesColors ?? {});
       setStackByCustomField(config?.stackByCustomField || null);
       
       // Initialize monthly goals
