@@ -196,12 +196,11 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   // Scorecards, rankings, call_commercial, gauge, indicator, bubble_map, funnel and data_table have only 2 steps
   const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge' || chartType === 'indicator' || chartType === 'bubble_map' || chartType === 'funnel' || chartType === 'data_table') ? 2 : 3;
 
-  // Auto-fetch company goal for current month when selecting revenue gauge
+  // Auto-fetch ALL company goals when selecting revenue gauge
   useEffect(() => {
     if (open && gaugeSubType === 'revenue_vs_goal' && !companyGoalLoaded && currentUser?.account_id) {
       const now = new Date();
       const year = now.getFullYear();
-      const monthIndex = now.getMonth();
       const MONTH_LABELS = [
         "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
@@ -215,10 +214,13 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
         .then(({ data }) => {
           if (data?.monthly_goals) {
             const goals = data.monthly_goals as Record<string, number>;
-            const monthGoal = goals[MONTH_LABELS[monthIndex]];
-            if (monthGoal && !gaugeGoal) {
-              setGaugeGoal(String(monthGoal));
-            }
+            // Convert month labels to YYYY-MM keys
+            const mapped: Record<string, number> = {};
+            MONTH_LABELS.forEach((label, i) => {
+              const key = `${year}-${String(i + 1).padStart(2, '0')}`;
+              if (goals[label]) mapped[key] = goals[label];
+            });
+            setCompanyMonthlyGoals(mapped);
           }
           setCompanyGoalLoaded(true);
         });
