@@ -161,6 +161,8 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   const [gaugeSubType, setGaugeSubType] = useState<'days_elapsed' | 'revenue_vs_goal'>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState("");
   const [companyGoalLoaded, setCompanyGoalLoaded] = useState(false);
+  const [companyMonthlyGoals, setCompanyMonthlyGoals] = useState<Record<string, number>>({});
+  const [goalPeriod, setGoalPeriod] = useState<'monthly' | 'quarterly' | 'annual'>('monthly');
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
   const [dateGrouping, setDateGrouping] = useState<'day' | 'week' | 'month' | 'year'>('month');
   const [indicatorMin, setIndicatorMin] = useState("");
@@ -194,12 +196,11 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   // Scorecards, rankings, call_commercial, gauge, indicator, bubble_map, funnel and data_table have only 2 steps
   const totalSteps = (chartType === 'scorecard' || chartType === 'ranking' || chartType === 'call_commercial' || chartType === 'gauge' || chartType === 'indicator' || chartType === 'bubble_map' || chartType === 'funnel' || chartType === 'data_table') ? 2 : 3;
 
-  // Auto-fetch company goal for current month when selecting revenue gauge
+  // Auto-fetch ALL company goals when selecting revenue gauge
   useEffect(() => {
     if (open && gaugeSubType === 'revenue_vs_goal' && !companyGoalLoaded && currentUser?.account_id) {
       const now = new Date();
       const year = now.getFullYear();
-      const monthIndex = now.getMonth();
       const MONTH_LABELS = [
         "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
@@ -213,10 +214,13 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
         .then(({ data }) => {
           if (data?.monthly_goals) {
             const goals = data.monthly_goals as Record<string, number>;
-            const monthGoal = goals[MONTH_LABELS[monthIndex]];
-            if (monthGoal && !gaugeGoal) {
-              setGaugeGoal(String(monthGoal));
-            }
+            // Convert month labels to YYYY-MM keys
+            const mapped: Record<string, number> = {};
+            MONTH_LABELS.forEach((label, i) => {
+              const key = `${year}-${String(i + 1).padStart(2, '0')}`;
+              if (goals[label]) mapped[key] = goals[label];
+            });
+            setCompanyMonthlyGoals(mapped);
           }
           setCompanyGoalLoaded(true);
         });
@@ -234,6 +238,8 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       setGaugeSubType('days_elapsed');
       setGaugeGoal("");
       setMonthlyGoals({});
+      setCompanyMonthlyGoals({});
+      setGoalPeriod('monthly');
       setDateGrouping('month');
       setIndicatorMin("");
       setIndicatorMax("");
@@ -256,7 +262,12 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
     } else if (chartType === 'call_commercial') {
       setTitle("Calls Comerciais");
     } else if (chartType === 'gauge') {
-      setTitle(gaugeSubType === 'days_elapsed' ? 'Dias Corridos do Mês' : 'Faturamento x Meta');
+      if (gaugeSubType === 'days_elapsed') {
+        setTitle('Dias Corridos do Mês');
+      } else {
+        const periodLabels = { monthly: 'Mensal', quarterly: 'Trimestral', annual: 'Anual' };
+        setTitle(`Faturamento x Meta ${periodLabels[goalPeriod]}`);
+      }
     } else if (chartType === 'indicator') {
       setTitle(indicatorMetric ? `Indicador - ${METRIC_LABELS[indicatorMetric]}` : 'Indicador');
     } else if (chartType === 'funnel') {
@@ -273,7 +284,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       const generatedTitle = `${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}${seasonalitySuffix}`;
       setTitle(generatedTitle);
     }
-  }, [chartType, metric, groupBy, gaugeSubType, dateGrouping, indicatorMetric, funnelProcess, tableDataSource]);
+  }, [chartType, metric, groupBy, gaugeSubType, goalPeriod, dateGrouping, indicatorMetric, funnelProcess, tableDataSource]);
 
   const canProceedStep1 = chartType !== null;
   const canProceedStep2 = metric !== null;
@@ -391,8 +402,32 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       setIsCreating(true);
       try {
         const now = new Date();
-        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         const isRevenue = gaugeSubType === 'revenue_vs_goal';
+        
+        // Build monthlyGoals based on selected period from company goals
+        let goalsToSave: Record<string, number> = {};
+        if (isRevenue && Object.keys(companyMonthlyGoals).length > 0) {
+          const year = now.getFullYear();
+          const month = now.getMonth(); // 0-indexed
+          
+          if (goalPeriod === 'monthly') {
+            const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+            if (companyMonthlyGoals[key]) goalsToSave[key] = companyMonthlyGoals[key];
+          } else if (goalPeriod === 'quarterly') {
+            const quarterStart = Math.floor(month / 3) * 3;
+            for (let i = quarterStart; i < quarterStart + 3; i++) {
+              const key = `${year}-${String(i + 1).padStart(2, '0')}`;
+              if (companyMonthlyGoals[key]) goalsToSave[key] = companyMonthlyGoals[key];
+            }
+          } else {
+            // annual - all months
+            goalsToSave = { ...companyMonthlyGoals };
+          }
+        } else if (isRevenue && gaugeGoal) {
+          const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          goalsToSave = { [monthKey]: Number(gaugeGoal) };
+        }
+
         const config: VisualConfig = {
           dataSource: 'deals',
           measure: { field: isRevenue ? 'value' : '', aggregation: isRevenue ? 'sum' : 'count' },
@@ -402,7 +437,8 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           ...(isRevenue && { statusFilter: 'won' as const }),
           gaugeConfig: {
             subType: gaugeSubType,
-            ...(isRevenue && gaugeGoal ? { monthlyGoals: { [monthKey]: Number(gaugeGoal) } } : {}),
+            goalPeriod: isRevenue ? goalPeriod : undefined,
+            ...(isRevenue && Object.keys(goalsToSave).length > 0 ? { monthlyGoals: goalsToSave } : {}),
           },
         };
         await addVisual({
@@ -790,7 +826,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { value: 'days_elapsed' as const, label: 'Dias Corridos', description: 'Dias passados vs total do mês' },
-                  { value: 'revenue_vs_goal' as const, label: 'Faturamento x Meta', description: 'Receita atual vs meta mensal' },
+                  { value: 'revenue_vs_goal' as const, label: 'Faturamento x Meta', description: 'Receita atual vs meta da empresa' },
                 ].map((opt) => (
                   <button
                     key={opt.value}
@@ -813,18 +849,39 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
               </div>
 
               {gaugeSubType === 'revenue_vs_goal' && (
-                <div className="space-y-2 pt-2 border-t">
-                  <Label htmlFor="gauge-goal">Meta do Mês Atual (R$)</Label>
-                  <Input
-                    id="gauge-goal"
-                    type="number"
-                    value={gaugeGoal}
-                    onChange={(e) => setGaugeGoal(e.target.value)}
-                    placeholder="Ex: 100000"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Você pode editar metas de outros meses nos ajustes do visual após criá-lo.
-                  </p>
+                <div className="space-y-3 pt-2 border-t">
+                  <Label className="text-base font-medium">Período de comparação</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {([
+                      { value: 'monthly' as const, label: 'Mensal', description: '% do mês atual' },
+                      { value: 'quarterly' as const, label: 'Trimestral', description: '% do trimestre' },
+                      { value: 'annual' as const, label: 'Anual', description: '% do ano' },
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => setGoalPeriod(opt.value)}
+                        className={cn(
+                          "flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all text-center",
+                          goalPeriod === opt.value
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50 hover:bg-muted/50"
+                        )}
+                      >
+                        <span className="font-medium text-sm">{opt.label}</span>
+                        <span className="text-xs text-muted-foreground leading-tight">{opt.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {Object.keys(companyMonthlyGoals).length > 0 ? (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Check className="h-3 w-3 text-green-600" />
+                      Meta da empresa carregada automaticamente
+                    </p>
+                  ) : companyGoalLoaded ? (
+                    <p className="text-xs text-destructive">
+                      Nenhuma meta cadastrada. Configure em Comercial → Meta da Empresa.
+                    </p>
+                  ) : null}
                 </div>
               )}
 

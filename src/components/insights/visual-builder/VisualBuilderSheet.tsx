@@ -61,6 +61,8 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   const [gaugeSubType, setGaugeSubType] = useState<GaugeSubType>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState<string>('');
   const [companyGoalLoaded, setCompanyGoalLoaded] = useState(false);
+  const [companyMonthlyGoals, setCompanyMonthlyGoals] = useState<Record<string, number>>({});
+  const [goalPeriod, setGoalPeriod] = useState<'monthly' | 'quarterly' | 'annual'>('monthly');
   const [tableColumns, setTableColumns] = useState<string[]>([]);
   
   // Indicator state
@@ -75,12 +77,11 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   const [colorPalette, setColorPalette] = useState<ColorPalette>(DEFAULT_APPEARANCE.colorPalette);
   const [fillEmptyDates, setFillEmptyDates] = useState(DEFAULT_APPEARANCE.fillEmptyDates);
 
-  // Auto-fetch company goal for current month when selecting revenue gauge
+  // Auto-fetch ALL company goals when selecting revenue gauge
   useEffect(() => {
     if (open && gaugeSubType === 'revenue_vs_goal' && !companyGoalLoaded && currentUser?.account_id) {
       const now = new Date();
       const year = now.getFullYear();
-      const monthIndex = now.getMonth();
       const MONTH_LABELS = [
         "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
@@ -94,10 +95,12 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
         .then(({ data }) => {
           if (data?.monthly_goals) {
             const goals = data.monthly_goals as Record<string, number>;
-            const monthGoal = goals[MONTH_LABELS[monthIndex]];
-            if (monthGoal && !gaugeGoal) {
-              setGaugeGoal(String(monthGoal));
-            }
+            const mapped: Record<string, number> = {};
+            MONTH_LABELS.forEach((label, i) => {
+              const key = `${year}-${String(i + 1).padStart(2, '0')}`;
+              if (goals[label]) mapped[key] = goals[label];
+            });
+            setCompanyMonthlyGoals(mapped);
           }
           setCompanyGoalLoaded(true);
         });
@@ -124,6 +127,8 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
       setIndicatorMinLabel('');
       setIndicatorMaxLabel('');
       setCompanyGoalLoaded(false);
+      setCompanyMonthlyGoals({});
+      setGoalPeriod('monthly');
       // Reset appearance
       setShowDataLabels(DEFAULT_APPEARANCE.showDataLabels);
       setDateDisplayFormat(DEFAULT_APPEARANCE.dateDisplayFormat);
@@ -211,16 +216,39 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
 
       if (isGauge) {
         const now = new Date();
-        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const isGaugeRevenueLocal = gaugeSubType === 'revenue_vs_goal';
+        
+        let goalsToSave: Record<string, number> = {};
+        if (isGaugeRevenueLocal && Object.keys(companyMonthlyGoals).length > 0) {
+          const year = now.getFullYear();
+          const month = now.getMonth();
+          if (goalPeriod === 'monthly') {
+            const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+            if (companyMonthlyGoals[key]) goalsToSave[key] = companyMonthlyGoals[key];
+          } else if (goalPeriod === 'quarterly') {
+            const quarterStart = Math.floor(month / 3) * 3;
+            for (let i = quarterStart; i < quarterStart + 3; i++) {
+              const key = `${year}-${String(i + 1).padStart(2, '0')}`;
+              if (companyMonthlyGoals[key]) goalsToSave[key] = companyMonthlyGoals[key];
+            }
+          } else {
+            goalsToSave = { ...companyMonthlyGoals };
+          }
+        } else if (isGaugeRevenueLocal && gaugeGoal) {
+          const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          goalsToSave = { [monthKey]: Number(gaugeGoal) };
+        }
+
         config = {
-          dataSource: isGaugeRevenue ? 'deals' : 'deals',
-          measure: { field: isGaugeRevenue ? 'value' : '', aggregation: isGaugeRevenue ? 'sum' : 'count' },
+          dataSource: 'deals',
+          measure: { field: isGaugeRevenueLocal ? 'value' : '', aggregation: isGaugeRevenueLocal ? 'sum' : 'count' },
           dimension: { field: 'created_at', type: 'date', dateGrouping: 'month' },
-          formatting: { type: isGaugeRevenue ? 'currency' : 'decimal', decimals: 2 },
-          ...(isGaugeRevenue && { statusFilter: 'won' as const }),
+          formatting: { type: isGaugeRevenueLocal ? 'currency' : 'decimal', decimals: 2 },
+          ...(isGaugeRevenueLocal && { statusFilter: 'won' as const }),
           gaugeConfig: {
             subType: gaugeSubType,
-            ...(isGaugeRevenue && gaugeGoal ? { monthlyGoals: { [monthKey]: Number(gaugeGoal) } } : {}),
+            goalPeriod: isGaugeRevenueLocal ? goalPeriod : undefined,
+            ...(isGaugeRevenueLocal && Object.keys(goalsToSave).length > 0 ? { monthlyGoals: goalsToSave } : {}),
           },
           appearance: { showDataLabels: false, dateDisplayFormat: 'monthYear', colorPalette: 'professional', fillEmptyDates: false },
         };
@@ -331,17 +359,37 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
                 {gaugeSubType === 'revenue_vs_goal' && (
                   <>
                     <Separator />
-                    <div className="space-y-2">
-                      <Label className="text-base font-medium">Meta do Mês Atual (R$)</Label>
-                      <Input
-                        type="number"
-                        value={gaugeGoal}
-                        onChange={(e) => setGaugeGoal(e.target.value)}
-                        placeholder="Ex: 100000"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Você pode editar metas de outros meses nos ajustes do visual após criá-lo.
-                      </p>
+                    <div className="space-y-3">
+                      <Label className="text-base font-medium">Período de comparação</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {([
+                          { value: 'monthly' as const, label: 'Mensal' },
+                          { value: 'quarterly' as const, label: 'Trimestral' },
+                          { value: 'annual' as const, label: 'Anual' },
+                        ] as const).map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setGoalPeriod(opt.value)}
+                            className={`p-3 rounded-lg border-2 text-sm transition-all ${
+                              goalPeriod === opt.value
+                                ? 'border-primary bg-primary/5 text-primary font-medium'
+                                : 'border-border hover:border-primary/50 text-muted-foreground'
+                            }`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                      {Object.keys(companyMonthlyGoals).length > 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          ✓ Meta da empresa carregada automaticamente
+                        </p>
+                      ) : companyGoalLoaded ? (
+                        <p className="text-xs text-destructive">
+                          Nenhuma meta cadastrada. Configure em Comercial → Meta da Empresa.
+                        </p>
+                      ) : null}
                     </div>
                   </>
                 )}
