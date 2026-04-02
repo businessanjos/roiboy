@@ -218,7 +218,9 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
             const mapped: Record<string, number> = {};
             MONTH_LABELS.forEach((label, i) => {
               const key = `${year}-${String(i + 1).padStart(2, '0')}`;
-              if (goals[label]) mapped[key] = goals[label];
+              const numKey = String(i + 1).padStart(2, '0');
+              const val = goals[label] ?? goals[numKey];
+              if (val) mapped[key] = val;
             });
             setCompanyMonthlyGoals(mapped);
           }
