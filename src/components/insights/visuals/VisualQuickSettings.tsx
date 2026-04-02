@@ -319,6 +319,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
         dealFieldFilters: dealFilters.filter(f => f.fieldId && f.selectedValues.length > 0),
         dealStatusFilter: dealStatusFilter.length > 0 ? dealStatusFilter : undefined,
         stackByCustomField: stackByCustomField || undefined,
+        seriesColors: Object.keys(seriesColors).length > 0 ? seriesColors : undefined,
         // When custom field segmentation is active, set stackBy to '_custom' to trigger stacked mode
         stackBy: stackByCustomField ? '_custom' : config.stackBy,
         ...(isDataTable && tableColumns.length > 0 && {
