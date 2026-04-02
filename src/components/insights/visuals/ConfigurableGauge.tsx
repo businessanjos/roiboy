@@ -85,12 +85,14 @@ export function ConfigurableGauge({ value, min = 0, max, label, sublabel, format
         <circle cx={cx} cy={cy} r={8} fill="hsl(var(--foreground))" opacity={0.9} />
         <circle cx={cx} cy={cy} r={4} fill="hsl(var(--background))" />
 
-        {/* Value text */}
-        <text x={cx} y={cy + 30} textAnchor="middle" className="font-bold fill-foreground" fontSize={Math.round(20 * fontScale)}>
-          {displayValue}
-        </text>
-        <text x={cx} y={cy + 50} textAnchor="middle" className="fill-muted-foreground" fontSize={Math.round(14 * fontScale)}>
+        {/* Percentage in center */}
+        <text x={cx} y={cy - 30} textAnchor="middle" className="font-bold fill-foreground" fontSize={Math.round(28 * fontScale)}>
           {displayPercent}
+        </text>
+
+        {/* Value text below needle */}
+        <text x={cx} y={cy + 35} textAnchor="middle" className="font-semibold fill-foreground" fontSize={Math.round(18 * fontScale)}>
+          {displayValue}
         </text>
       </svg>
       <p className="font-medium text-foreground mt-1" style={{ fontSize: `${Math.round(14 * fontScale)}px` }}>{label}</p>
