@@ -135,10 +135,31 @@ function DaysElapsedGauge({ fontScale = 1 }: { fontScale?: number }) {
 function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperProps & { fontScale?: number }) {
   const { filters } = useInsightsFilters();
   const goals = visualConfig?.gaugeConfig?.monthlyGoals;
+  const goalPeriod = visualConfig?.gaugeConfig?.goalPeriod || 'monthly';
+
+  // Compute the date range based on goalPeriod (ignoring global filters for the goal calc)
+  const periodRange = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    
+    if (goalPeriod === 'quarterly') {
+      const quarterStart = Math.floor(month / 3) * 3;
+      const start = new Date(year, quarterStart, 1);
+      const end = new Date(year, quarterStart + 3, 0);
+      return { start, end };
+    } else if (goalPeriod === 'annual') {
+      const start = new Date(year, 0, 1);
+      const end = new Date(year, 11, 31);
+      return { start, end };
+    }
+    // monthly - use global filters
+    return { start: filters.startDate, end: filters.endDate };
+  }, [goalPeriod, filters.startDate, filters.endDate]);
 
   const goal = useMemo(() => {
-    return sumGoalsInRange(goals, filters.startDate, filters.endDate);
-  }, [goals, filters.startDate, filters.endDate]);
+    return sumGoalsInRange(goals, periodRange.start, periodRange.end);
+  }, [goals, periodRange.start, periodRange.end]);
 
   // Sum all values from data (revenue from won deals)
   const totalRevenue = useMemo(() => {
@@ -153,14 +174,15 @@ function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperP
 
   // Build period label
   const periodLabel = useMemo(() => {
-    const keys = getMonthKeysInRange(filters.startDate, filters.endDate);
+    const periodLabels = { monthly: 'mês', quarterly: 'trimestre', annual: 'ano' };
+    const keys = getMonthKeysInRange(periodRange.start, periodRange.end);
     if (keys.length === 1) {
       const [y, m] = keys[0].split('-');
       const d = new Date(Number(y), Number(m) - 1, 1);
       return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
     }
-    return `${keys.length} meses`;
-  }, [filters.startDate, filters.endDate]);
+    return `${keys.length} meses — ${periodLabels[goalPeriod]}`;
+  }, [periodRange.start, periodRange.end, goalPeriod]);
 
   if (goal <= 0) {
     return (
