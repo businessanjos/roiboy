@@ -137,21 +137,19 @@ function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperP
   const goals = visualConfig?.gaugeConfig?.monthlyGoals;
   const goalPeriod = visualConfig?.gaugeConfig?.goalPeriod || 'monthly';
 
-  // Compute the date range based on goalPeriod (ignoring global filters for the goal calc)
+  // Compute the date range based on goalPeriod
   const periodRange = useMemo(() => {
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
     
+    const fmt = (d: Date) => d.toISOString().split('T')[0];
+    
     if (goalPeriod === 'quarterly') {
       const quarterStart = Math.floor(month / 3) * 3;
-      const start = new Date(year, quarterStart, 1);
-      const end = new Date(year, quarterStart + 3, 0);
-      return { start, end };
+      return { start: fmt(new Date(year, quarterStart, 1)), end: fmt(new Date(year, quarterStart + 3, 0)) };
     } else if (goalPeriod === 'annual') {
-      const start = new Date(year, 0, 1);
-      const end = new Date(year, 11, 31);
-      return { start, end };
+      return { start: fmt(new Date(year, 0, 1)), end: fmt(new Date(year, 11, 31)) };
     }
     // monthly - use global filters
     return { start: filters.startDate, end: filters.endDate };
