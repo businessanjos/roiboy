@@ -160,6 +160,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   const [isCreating, setIsCreating] = useState(false);
   const [gaugeSubType, setGaugeSubType] = useState<'days_elapsed' | 'revenue_vs_goal'>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState("");
+  const [companyGoalLoaded, setCompanyGoalLoaded] = useState(false);
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
   const [dateGrouping, setDateGrouping] = useState<'day' | 'week' | 'month' | 'year'>('month');
   const [indicatorMin, setIndicatorMin] = useState("");
