@@ -488,9 +488,16 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
               <p className="text-xs text-muted-foreground">
                 Controla quais segmentos aparecem nas barras empilhadas.
               </p>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {seriesCategories.map((category) => {
+              <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                {seriesCategories.map((category, idx) => {
                   const isHidden = hiddenCategories.includes(category);
+                  const defaultColor = (COLOR_PALETTES[colorPalette] || COLOR_PALETTES.professional)[idx % (COLOR_PALETTES[colorPalette] || COLOR_PALETTES.professional).length];
+                  const extendedDefaults = [
+                    ...(COLOR_PALETTES[colorPalette] || COLOR_PALETTES.professional),
+                    '#f97316', '#06b6d4', '#8b5cf6', '#ec4899', '#84cc16',
+                    '#14b8a6', '#f43f5e', '#a855f7', '#eab308', '#6366f1',
+                  ];
+                  const currentColor = seriesColors[category] || extendedDefaults[idx % extendedDefaults.length];
                   return (
                     <div key={`series-${category}`} className="flex items-center gap-2">
                       <Checkbox
@@ -504,7 +511,16 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
                           }
                         }}
                       />
-                      <label htmlFor={`series-${category}`} className="text-sm cursor-pointer">
+                      <input
+                        type="color"
+                        value={currentColor}
+                        onChange={(e) => {
+                          setSeriesColors(prev => ({ ...prev, [category]: e.target.value }));
+                        }}
+                        className="w-6 h-6 rounded border border-border cursor-pointer p-0 bg-transparent"
+                        title={`Cor de ${category}`}
+                      />
+                      <label htmlFor={`series-${category}`} className="text-sm cursor-pointer flex-1">
                         {category}
                       </label>
                     </div>
