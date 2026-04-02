@@ -30,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Plus,
   Search,
@@ -54,15 +55,26 @@ import {
   Loader2,
   Link2,
   LayoutTemplate,
+  ListOrdered,
+  Clock,
+  X,
+  GripVertical,
 } from 'lucide-react';
 import { usePlaybook, PlaybookItem, PlaybookContentType, PlaybookFolder } from '@/hooks/usePlaybook';
 import { PlaybookItemForm } from './PlaybookItemForm';
 import { cn } from '@/lib/utils';
 
+export interface MultiSendPayload {
+  items: PlaybookItem[];
+  processedTexts: (string | undefined)[];
+  delaySeconds: number;
+}
+
 interface PlaybookDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onUseItem?: (item: PlaybookItem, processedText?: string) => void;
+  onMultiSend?: (payload: MultiSendPayload) => void;
   variables?: Record<string, string>;
   sectorId?: string | null;
 }
@@ -107,6 +119,7 @@ export function PlaybookDialog({
   open,
   onOpenChange,
   onUseItem,
+  onMultiSend,
   variables = {},
   sectorId,
 }: PlaybookDialogProps) {
@@ -136,6 +149,44 @@ export function PlaybookDialog({
   const [itemToDelete, setItemToDelete] = useState<PlaybookItem | null>(null);
   const [folderToDelete, setFolderToDelete] = useState<PlaybookFolder | null>(null);
   const [selectedItem, setSelectedItem] = useState<PlaybookItem | null>(null);
+
+  // Multi-send state
+  const [multiSendMode, setMultiSendMode] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<PlaybookItem[]>([]);
+  const [delaySeconds, setDelaySeconds] = useState(5);
+
+  const toggleMultiSendMode = useCallback(() => {
+    setMultiSendMode(prev => {
+      if (prev) {
+        setSelectedItems([]);
+      }
+      return !prev;
+    });
+  }, []);
+
+  const toggleItemSelection = useCallback((item: PlaybookItem) => {
+    setSelectedItems(prev => {
+      const exists = prev.find(i => i.id === item.id);
+      if (exists) {
+        return prev.filter(i => i.id !== item.id);
+      }
+      return [...prev, item];
+    });
+  }, []);
+
+  const removeFromSelection = useCallback((itemId: string) => {
+    setSelectedItems(prev => prev.filter(i => i.id !== itemId));
+  }, []);
+
+  const moveItemInSelection = useCallback((index: number, direction: 'up' | 'down') => {
+    setSelectedItems(prev => {
+      const newArr = [...prev];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      if (targetIndex < 0 || targetIndex >= newArr.length) return prev;
+      [newArr[index], newArr[targetIndex]] = [newArr[targetIndex], newArr[index]];
+      return newArr;
+    });
+  }, []);
 
   // Filter items
   const filteredItems = useMemo(() => {
@@ -196,6 +247,25 @@ export function PlaybookDialog({
     onOpenChange(false);
   }, [trackUsage, replaceVariables, variables, onUseItem, onOpenChange]);
 
+  const handleMultiSend = useCallback(async () => {
+    if (selectedItems.length === 0) return;
+    const processedTexts = selectedItems.map(item =>
+      item.text_content ? replaceVariables(item.text_content, variables) : undefined
+    );
+    // Track usage for all items
+    for (const item of selectedItems) {
+      await trackUsage(item.id);
+    }
+    onMultiSend?.({
+      items: selectedItems,
+      processedTexts,
+      delaySeconds,
+    });
+    setMultiSendMode(false);
+    setSelectedItems([]);
+    onOpenChange(false);
+  }, [selectedItems, delaySeconds, replaceVariables, variables, trackUsage, onMultiSend, onOpenChange]);
+
   const handleCopyItem = useCallback(async (item: PlaybookItem) => {
     if (item.text_content) {
       const processedText = replaceVariables(item.text_content, variables);
@@ -232,17 +302,43 @@ export function PlaybookDialog({
   }, [folderToDelete, deleteFolder]);
 
   const renderItem = (item: PlaybookItem) => {
-    const isSelected = selectedItem?.id === item.id;
+    const isSelected = multiSendMode
+      ? selectedItems.some(i => i.id === item.id)
+      : selectedItem?.id === item.id;
+    const selectionIndex = multiSendMode
+      ? selectedItems.findIndex(i => i.id === item.id)
+      : -1;
 
     return (
       <div
         key={item.id}
-        onClick={() => setSelectedItem(isSelected ? null : item)}
+        onClick={() => {
+          if (multiSendMode) {
+            toggleItemSelection(item);
+          } else {
+            setSelectedItem(isSelected ? null : item);
+          }
+        }}
         className={cn(
           "flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors group cursor-pointer",
           isSelected && "ring-2 ring-primary border-primary bg-primary/5"
         )}
       >
+        {multiSendMode && (
+          <div className="flex-shrink-0 flex items-center gap-1">
+            <Checkbox
+              checked={isSelected}
+              onCheckedChange={() => toggleItemSelection(item)}
+              onClick={e => e.stopPropagation()}
+            />
+            {isSelected && (
+              <Badge variant="default" className="h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full">
+                {selectionIndex + 1}
+              </Badge>
+            )}
+          </div>
+        )}
+
         <div className={cn('p-2 rounded-lg', contentTypeColors[item.content_type])}>
           {contentTypeIcons[item.content_type]}
         </div>
@@ -276,68 +372,70 @@ export function PlaybookDialog({
           )}
         </div>
 
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => toggleFavorite(item)}
-              >
-                {item.is_favorite ? (
-                  <StarOff className="h-4 w-4" />
-                ) : (
-                  <Star className="h-4 w-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {item.is_favorite ? 'Remover favorito' : 'Favoritar'}
-            </TooltipContent>
-          </Tooltip>
+        {!multiSendMode && (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => toggleFavorite(item)}
+                >
+                  {item.is_favorite ? (
+                    <StarOff className="h-4 w-4" />
+                  ) : (
+                    <Star className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {item.is_favorite ? 'Remover favorito' : 'Favoritar'}
+              </TooltipContent>
+            </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => handleCopyItem(item)}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Copiar</TooltipContent>
-          </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => handleCopyItem(item)}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copiar</TooltipContent>
+            </Tooltip>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => {
-                setEditingItem(item);
-                setFormOpen(true);
-              }}>
-                <Edit2 className="h-4 w-4 mr-2" />
-                Editar
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => {
-                  setItemToDelete(item);
-                  setDeleteConfirmOpen(true);
-                }}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Excluir
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => {
+                  setEditingItem(item);
+                  setFormOpen(true);
+                }}>
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => {
+                    setItemToDelete(item);
+                    setDeleteConfirmOpen(true);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
       </div>
     );
   };
@@ -372,42 +470,44 @@ export function PlaybookDialog({
             </Badge>
           </div>
 
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={e => e.stopPropagation()}
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={e => {
-                  e.stopPropagation();
-                  setEditingFolder(folder);
-                  setNewFolderName(folder.name);
-                  setShowNewFolderInput(true);
-                }}>
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  Renomear
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={e => {
+          {!multiSendMode && (
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={e => {
                     e.stopPropagation();
-                    setFolderToDelete(folder);
-                    setDeleteConfirmOpen(true);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                    setEditingFolder(folder);
+                    setNewFolderName(folder.name);
+                    setShowNewFolderInput(true);
+                  }}>
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Renomear
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={e => {
+                      e.stopPropagation();
+                      setFolderToDelete(folder);
+                      setDeleteConfirmOpen(true);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Excluir
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
         </div>
 
         {isExpanded && folderItems.length > 0 && (
@@ -421,20 +521,43 @@ export function PlaybookDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={(v) => {
+        if (!v) {
+          setMultiSendMode(false);
+          setSelectedItems([]);
+        }
+        onOpenChange(v);
+      }}>
         <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col overflow-hidden p-0">
           {/* ===== HEADER (Fixed) ===== */}
           <div className="flex-none p-6 pb-4 space-y-4 border-b">
             <DialogHeader>
               <DialogTitle className="flex items-center justify-between pr-10">
                 <span>Playbook</span>
-                <Button onClick={() => {
-                  setEditingItem(null);
-                  setFormOpen(true);
-                }}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Item
-                </Button>
+                <div className="flex items-center gap-2">
+                  {onMultiSend && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={multiSendMode ? "default" : "outline"}
+                          size="sm"
+                          onClick={toggleMultiSendMode}
+                        >
+                          <ListOrdered className="h-4 w-4 mr-2" />
+                          Envio Múltiplo
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Selecione vários itens para enviar em sequência com delay</TooltipContent>
+                    </Tooltip>
+                  )}
+                  <Button onClick={() => {
+                    setEditingItem(null);
+                    setFormOpen(true);
+                  }}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Item
+                  </Button>
+                </div>
               </DialogTitle>
             </DialogHeader>
 
@@ -471,14 +594,16 @@ export function PlaybookDialog({
 
               <div className="flex-1" />
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowNewFolderInput(true)}
-              >
-                <Folder className="h-4 w-4 mr-2" />
-                Nova Pasta
-              </Button>
+              {!multiSendMode && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowNewFolderInput(true)}
+                >
+                  <Folder className="h-4 w-4 mr-2" />
+                  Nova Pasta
+                </Button>
+              )}
             </div>
 
             {/* New folder input */}
@@ -609,7 +734,84 @@ export function PlaybookDialog({
           </div>
 
           {/* ===== FOOTER (Fixed) ===== */}
-          {onUseItem && (
+          {multiSendMode ? (
+            <div className="flex-none border-t bg-muted/30">
+              {/* Selected items queue */}
+              {selectedItems.length > 0 && (
+                <div className="p-4 pb-2 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <ListOrdered className="h-4 w-4" />
+                    <span>Fila de envio ({selectedItems.length} itens)</span>
+                  </div>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {selectedItems.map((item, index) => (
+                      <div key={item.id} className="flex items-center gap-2 p-1.5 rounded bg-card border text-sm">
+                        <Badge variant="outline" className="h-5 w-5 p-0 flex items-center justify-center text-[10px] rounded-full flex-shrink-0">
+                          {index + 1}
+                        </Badge>
+                        <div className={cn('flex-shrink-0', contentTypeColors[item.content_type].split(' ')[1])}>
+                          {contentTypeIcons[item.content_type]}
+                        </div>
+                        <span className="truncate flex-1">{item.name}</span>
+                        <div className="flex items-center gap-0.5 flex-shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            disabled={index === 0}
+                            onClick={() => moveItemInSelection(index, 'up')}
+                          >
+                            <ChevronDown className="h-3 w-3 rotate-180" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5"
+                            disabled={index === selectedItems.length - 1}
+                            onClick={() => moveItemInSelection(index, 'down')}
+                          >
+                            <ChevronDown className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 text-destructive"
+                            onClick={() => removeFromSelection(item.id)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div className="p-4 pt-2 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Delay entre envios:</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={300}
+                    value={delaySeconds}
+                    onChange={e => setDelaySeconds(Math.max(1, Math.min(300, parseInt(e.target.value) || 1)))}
+                    className="w-20 h-8 text-center"
+                  />
+                  <span className="text-sm text-muted-foreground">segundos</span>
+                </div>
+                <Button
+                  onClick={handleMultiSend}
+                  disabled={selectedItems.length < 2}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                  size="lg"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Enviar {selectedItems.length} itens
+                </Button>
+              </div>
+            </div>
+          ) : onUseItem && (
             <div className="flex-none p-4 border-t bg-muted/30 flex justify-end">
               <Button
                 onClick={() => selectedItem && handleUseItem(selectedItem)}
