@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { VisualConfig, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
-import { useInsightsFilters } from "@/hooks/useInsightsFilters";
-import { sumGoalsInRange, getMonthKeysInRange } from "@/lib/monthRange";
+import { useCompanyGoals } from "@/hooks/useCompanyGoals";
 
 interface ConfigurableGaugeProps {
   value: number;
