@@ -62,7 +62,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ClientZappSheet } from "@/components/client/ClientZappSheet";
-import { PlaybookDialog } from "@/components/sales/PlaybookDialog";
+import { PlaybookDialog, MultiSendPayload } from "@/components/sales/PlaybookDialog";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
 
@@ -506,6 +506,76 @@ export default function RoyZapp() {
 
   // Playbook dialog state for chat
   const [playbookDialogOpen, setPlaybookDialogOpen] = useState(false);
+  const [multiSendInProgress, setMultiSendInProgress] = useState(false);
+
+  // Helper to send a single playbook item
+  const sendSinglePlaybookItem = useCallback(async (item: PlaybookItem, processedText?: string) => {
+    if (item.content_type === 'text' && processedText) {
+      messaging.setMessageInput(processedText);
+      // Wait a tick for state to update, then trigger send
+      await new Promise(resolve => setTimeout(resolve, 100));
+      await messaging.sendMessage();
+    } else if (item.content_type === 'image' && item.media_url) {
+      const response = await fetch(item.media_url);
+      if (!response.ok) throw new Error('Failed to fetch image');
+      const blob = await response.blob();
+      const fileName = item.name || 'playbook-image.jpg';
+      const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+      await messaging.sendMediaMessage(file, 'image', item.media_caption || undefined);
+    } else if (item.content_type === 'audio' && item.media_url) {
+      const response = await fetch(item.media_url);
+      if (!response.ok) throw new Error('Failed to fetch audio');
+      const blob = await response.blob();
+      await messaging.sendMediaMessage(new File([blob], 'audio.webm', { type: blob.type || 'audio/webm' }), 'document');
+    } else if ((item.content_type === 'video' || item.content_type === 'document') && item.media_url) {
+      const response = await fetch(item.media_url);
+      if (!response.ok) throw new Error(`Failed to fetch ${item.content_type}`);
+      const blob = await response.blob();
+      const fileName = item.media_filename || item.name || `playbook-file`;
+      const mimeType = blob.type || (item.content_type === 'video' ? 'video/mp4' : 'application/octet-stream');
+      const file = new File([blob], fileName, { type: mimeType });
+      await messaging.sendMediaMessage(file, item.content_type === 'video' ? 'video' : 'document', item.media_caption || undefined);
+    } else if (item.media_url) {
+      navigator.clipboard.writeText(item.media_url);
+    }
+  }, [messaging]);
+
+  // Multi-send handler
+  const handleMultiSend = useCallback(async (payload: MultiSendPayload) => {
+    const { items: sendItems, processedTexts, delaySeconds } = payload;
+    setMultiSendInProgress(true);
+    const toastId = toast.loading(`Enviando 1/${sendItems.length} itens...`);
+    
+    try {
+      for (let i = 0; i < sendItems.length; i++) {
+        const item = sendItems[i];
+        const processedText = processedTexts[i];
+        
+        toast.loading(`Enviando ${i + 1}/${sendItems.length}: ${item.name}`, { id: toastId });
+        
+        try {
+          await sendSinglePlaybookItem(item, processedText);
+        } catch (error) {
+          console.error(`Error sending playbook item ${item.name}:`, error);
+          toast.error(`Erro ao enviar: ${item.name}`);
+        }
+        
+        // Wait delay between items (except after the last one)
+        if (i < sendItems.length - 1) {
+          for (let s = delaySeconds; s > 0; s--) {
+            toast.loading(`Enviado ${i + 1}/${sendItems.length}. Próximo em ${s}s...`, { id: toastId });
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+      }
+      
+      toast.success(`${sendItems.length} itens enviados com sucesso!`, { id: toastId });
+    } catch (error) {
+      toast.error('Erro no envio múltiplo', { id: toastId });
+    } finally {
+      setMultiSendInProgress(false);
+    }
+  }, [sendSinglePlaybookItem]);
   
   // Close ticket dialog state
   const [closeTicketDialogOpen, setCloseTicketDialogOpen] = useState(false);
@@ -1330,7 +1400,7 @@ export default function RoyZapp() {
         onOpenChange={setPlaybookDialogOpen}
         sectorId={selectedSectorId}
         onUseItem={async (item, processedText) => {
-          // Insert text content into message input
+          // For single send: text goes to input, media sends directly
           if (item.content_type === 'text' && processedText) {
             messaging.setMessageInput(processedText);
             messaging.messageInputRef.current?.focus();
@@ -1349,38 +1419,16 @@ export default function RoyZapp() {
               console.error('Error loading playbook image:', error);
               toast.error("Erro ao carregar imagem do playbook");
             }
-          } else if (item.content_type === 'audio' && item.media_url) {
+          } else {
             try {
-              toast.info("Enviando áudio...");
-              const response = await fetch(item.media_url);
-              if (!response.ok) throw new Error('Failed to fetch audio');
-              const blob = await response.blob();
-              await messaging.sendMediaMessage(new File([blob], 'audio.webm', { type: blob.type || 'audio/webm' }), 'document');
+              await sendSinglePlaybookItem(item, processedText);
             } catch (error) {
-              console.error('Error sending playbook audio:', error);
-              toast.error("Erro ao enviar áudio do playbook");
+              console.error('Error sending playbook item:', error);
+              toast.error("Erro ao enviar item do playbook");
             }
-          } else if ((item.content_type === 'video' || item.content_type === 'document') && item.media_url) {
-            try {
-              const mediaTypeLabel = item.content_type === 'video' ? 'vídeo' : 'documento';
-              toast.info(`Enviando ${mediaTypeLabel}...`);
-              const response = await fetch(item.media_url);
-              if (!response.ok) throw new Error(`Failed to fetch ${item.content_type}`);
-              const blob = await response.blob();
-              const fileName = item.media_filename || item.name || `playbook-file`;
-              const mimeType = blob.type || (item.content_type === 'video' ? 'video/mp4' : 'application/octet-stream');
-              const file = new File([blob], fileName, { type: mimeType });
-              await messaging.sendMediaMessage(file, item.content_type === 'video' ? 'video' : 'document', item.media_caption || undefined);
-            } catch (error) {
-              console.error(`Error sending playbook ${item.content_type}:`, error);
-              toast.error(`Erro ao enviar ${item.content_type === 'video' ? 'vídeo' : 'documento'} do playbook`);
-            }
-          } else if (item.media_url) {
-            // For other media types (sticker, link, template), copy the URL to clipboard
-            navigator.clipboard.writeText(item.media_url);
-            toast.success("Link copiado para a área de transferência!");
           }
         }}
+        onMultiSend={handleMultiSend}
         variables={extractPlaybookVariables({
           conversation: selectedConversation,
           currentUser: currentUser,
