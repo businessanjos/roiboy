@@ -84,7 +84,7 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
       };
 
       // Fetch all team users and filter to sales team only
-      const SALES_TEAM_NAMES = ["everton", "jonathan", "darlan", "george", "vanessa"];
+      const SALES_TEAM_NAMES = ["everton", "jonathan", "darlan", "george", "vanessa", "maikol"];
       const { data: allUsers } = await supabase
         .from("users")
         .select("id, name, email, avatar_url")

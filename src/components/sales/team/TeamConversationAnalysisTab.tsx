@@ -12,7 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 
-const SALES_TEAM_NAMES = ["everton", "jonathan", "vanessa", "darlan", "george"];
+const SALES_TEAM_NAMES = ["everton", "jonathan", "vanessa", "darlan", "george", "maikol"];
 
 interface TeamMember {
   id: string;
