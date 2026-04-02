@@ -45,6 +45,7 @@ interface VisualBuilderSheetProps {
 
 export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetProps) {
   const { activeDashboardId, addVisual } = useInsightsDashboards();
+  const { currentUser } = useCurrentUser();
   
   // Form state
   const [dataSource, setDataSource] = useState<DataSource | null>(null);
