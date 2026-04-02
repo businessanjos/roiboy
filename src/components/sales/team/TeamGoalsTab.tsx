@@ -630,9 +630,10 @@ export function TeamGoalsTab() {
                                     </div>
                                   </div>
 
-                                  {/* Month value input */}
-                                  <div className="flex items-center gap-3 mb-3">
-                                    <div className="flex-1">
+                                  {/* Month value inputs: Meta + Super Meta */}
+                                  <div className="grid grid-cols-2 gap-3 mb-3">
+                                    <div>
+                                      <Label className="text-[10px] text-muted-foreground font-medium mb-1 block">Meta</Label>
                                       <div className="relative">
                                         {metric.is_currency && (
                                           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">R$</span>
@@ -646,9 +647,24 @@ export function TeamGoalsTab() {
                                         />
                                       </div>
                                     </div>
-                                    <div className="text-xs text-muted-foreground whitespace-nowrap">
-                                      {metric.metric_unit}
+                                    <div>
+                                      <Label className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mb-1 block flex items-center gap-1">
+                                        <TrendingUp className="h-3 w-3" /> Super Meta
+                                      </Label>
+                                      <div className="relative">
+                                        {metric.is_currency && (
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-medium">R$</span>
+                                        )}
+                                        <Input
+                                          type="number"
+                                          value={superValue || ""}
+                                          onChange={(e) => setSuperGoalValue(activeMember.id, currentYearMonth, metric.metric_key, e.target.value === "" ? 0 : Number(e.target.value))}
+                                          className={`h-11 text-lg font-semibold ${metric.is_currency ? "pl-9" : "pl-3"} bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40 focus-visible:ring-amber-400/30`}
+                                          placeholder="0"
+                                        />
+                                      </div>
                                     </div>
+                                  </div>
                                   </div>
 
                                   {/* Mini year overview - with full month names */}
