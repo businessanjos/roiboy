@@ -284,7 +284,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       const generatedTitle = `${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}${seasonalitySuffix}`;
       setTitle(generatedTitle);
     }
-  }, [chartType, metric, groupBy, gaugeSubType, dateGrouping, indicatorMetric, funnelProcess, tableDataSource]);
+  }, [chartType, metric, groupBy, gaugeSubType, goalPeriod, dateGrouping, indicatorMetric, funnelProcess, tableDataSource]);
 
   const canProceedStep1 = chartType !== null;
   const canProceedStep2 = metric !== null;
