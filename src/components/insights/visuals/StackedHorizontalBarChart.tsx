@@ -96,10 +96,12 @@ export function StackedHorizontalBarChart({
   formatting,
   appearance,
   orientation = 'horizontal',
+  seriesColors,
 }: StackedHorizontalBarChartProps) {
   const safeFormatting = formatting || { type: 'number' as FormatType, decimals: 0 };
   const safeAppearance = appearance || DEFAULT_APPEARANCE;
   const colors = getChartColors(safeAppearance.colorPalette);
+  const getSeriesColor = (key: string, index: number) => seriesColors?.[key] || colors[index % colors.length];
   const m = FONT_SCALE_MULTIPLIERS[safeAppearance.fontScale || 'normal'];
 
   if (!data || data.length === 0 || seriesKeys.length === 0) {

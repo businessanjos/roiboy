@@ -94,6 +94,8 @@ export interface VisualConfig {
   tableConfig?: {
     columns: string[];
   };
+  // Custom colors per series key (e.g., vendor name -> hex color)
+  seriesColors?: Record<string, string>;
 }
 
 // Individual field filter for multi-filter support
