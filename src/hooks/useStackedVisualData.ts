@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { VisualConfig, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
-import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek } from "date-fns";
+import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek, endOfDay } from "date-fns";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithCanal, enrichDealsWithProduct } from "@/hooks/useVisualData";
@@ -133,7 +133,20 @@ interface UseStackedVisualDataParams {
 
 export function useStackedVisualData({ config, enabled = true }: UseStackedVisualDataParams) {
   const { currentUser } = useCurrentUser();
-  const { filters } = useInsightsFilters();
+  const { filters: globalFilters } = useInsightsFilters();
+
+  // Auto-scope daily grouping to current month
+  const filters = (() => {
+    if (config?.dimension?.dateGrouping === 'day') {
+      const now = new Date();
+      return {
+        ...globalFilters,
+        startDate: startOfMonth(now).toISOString(),
+        endDate: endOfDay(now).toISOString(),
+      };
+    }
+    return globalFilters;
+  })();
 
   return useQuery({
     queryKey: ['stacked-visual-data', config, filters, currentUser?.account_id],

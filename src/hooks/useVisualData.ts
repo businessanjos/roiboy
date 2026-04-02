@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { VisualConfig, DateGrouping, DateDisplayFormat, FieldFilter, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
-import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval, eachDayOfInterval, eachYearOfInterval, startOfMonth, startOfYear, startOfDay } from "date-fns";
+import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval, eachDayOfInterval, eachYearOfInterval, startOfMonth, startOfYear, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { filterByLeadField, filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealField, filterByDealFields } from "@/hooks/useDealFieldFilter";
@@ -24,7 +24,20 @@ interface UseVisualDataParams {
 
 export function useVisualData({ config, chartType, enabled = true }: UseVisualDataParams) {
   const { currentUser } = useCurrentUser();
-  const { filters } = useInsightsFilters();
+  const { filters: globalFilters } = useInsightsFilters();
+
+  // Auto-scope daily grouping to current month
+  const filters = (() => {
+    if (config?.dimension?.dateGrouping === 'day') {
+      const now = new Date();
+      return {
+        ...globalFilters,
+        startDate: startOfMonth(now).toISOString(),
+        endDate: endOfDay(now).toISOString(),
+      };
+    }
+    return globalFilters;
+  })();
 
   return useQuery({
     queryKey: ['visual-data', config, chartType, filters, currentUser?.account_id],
