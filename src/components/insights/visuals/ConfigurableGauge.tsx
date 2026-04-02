@@ -15,13 +15,15 @@ interface ConfigurableGaugeProps {
   fontScale?: number;
 }
 
-// Color bands for the gauge arc
+// Color bands for the gauge arc (red → orange → yellow → green)
 const GAUGE_BANDS = [
-  { start: 0, end: 0.25, color: '#22c55e' },    // green
-  { start: 0.25, end: 0.5, color: '#eab308' },   // yellow
-  { start: 0.5, end: 0.75, color: '#f97316' },   // orange
-  { start: 0.75, end: 1, color: '#ef4444' },      // red
+  { start: 0, end: 0.25, color: '#ef4444' },      // red
+  { start: 0.25, end: 0.5, color: '#f97316' },     // orange
+  { start: 0.5, end: 0.75, color: '#eab308' },     // yellow
+  { start: 0.75, end: 1, color: '#22c55e' },       // green
 ];
+
+const BLUE_OVER_100 = '#3b82f6';
 
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
   const rad = (angleDeg * Math.PI) / 180;
