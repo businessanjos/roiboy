@@ -170,6 +170,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
   const [accountUsers, setAccountUsers] = useState<{ name: string }[]>([]);
   const [title, setTitle] = useState(visual.title || "");
   const [tableColumns, setTableColumns] = useState<string[]>(config?.tableConfig?.columns ?? []);
+  const [seriesColors, setSeriesColors] = useState<Record<string, string>>(config?.seriesColors ?? {});
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
