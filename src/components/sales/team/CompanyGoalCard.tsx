@@ -23,8 +23,14 @@ function formatCurrency(val: number) {
   return val.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 });
 }
 
-function parseCurrency(str: string): number {
-  return Number(str.replace(/[^\d,.-]/g, "").replace(",", ".")) || 0;
+function formatNumber(val: number) {
+  return val.toLocaleString("pt-BR");
+}
+
+function parseInputNumber(str: string): number {
+  // Remove everything except digits
+  const digits = str.replace(/\D/g, "");
+  return Number(digits) || 0;
 }
 
 export function CompanyGoalCard() {
