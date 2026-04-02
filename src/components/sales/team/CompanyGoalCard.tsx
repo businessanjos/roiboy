@@ -183,7 +183,7 @@ export function CompanyGoalCard() {
                 <Input
                   type="text"
                   value={monthlyGoals[m] ? monthlyGoals[m].toLocaleString("pt-BR") : ""}
-                  onChange={(e) => handleMonthChange(m, parseCurrency(e.target.value))}
+                  onChange={(e) => handleMonthChange(m, parseInputNumber(e.target.value))}
                   placeholder="0"
                   className="h-8 text-xs text-center"
                 />
