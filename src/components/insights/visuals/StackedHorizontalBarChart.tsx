@@ -146,7 +146,7 @@ export function StackedHorizontalBarChart({
               key={key}
               dataKey={key}
               stackId="stack"
-              fill={colors[index % colors.length]}
+              fill={getSeriesColor(key, index)}
               radius={index === seriesKeys.length - 1 ? [4, 4, 0, 0] : undefined}
             >
               {safeAppearance.showDataLabels && (
