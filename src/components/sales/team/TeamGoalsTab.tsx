@@ -34,7 +34,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
-const SALES_TEAM_NAMES = ["everton", "jonathan", "vanessa", "darlan", "george", "maikol"];
+const SALES_TEAM_NAMES = ["everton", "jonathan", "maikol", "darlan", "vanessa", "george"];
 
 interface MetricConfig {
   id?: string;
@@ -187,6 +187,12 @@ export function TeamGoalsTab() {
       const filtered = (usersRes.data as any[])
         .filter((u) => SALES_TEAM_NAMES.some((name) => u.name.toLowerCase().includes(name)))
         .map((u) => ({ ...u, cargo: cargoMap[u.id] || "Vendedor" })) as TeamMember[];
+      // Sort by SALES_TEAM_NAMES order
+      filtered.sort((a, b) => {
+        const idxA = SALES_TEAM_NAMES.findIndex((n) => a.name.toLowerCase().includes(n));
+        const idxB = SALES_TEAM_NAMES.findIndex((n) => b.name.toLowerCase().includes(n));
+        return idxA - idxB;
+      });
       setMembers(filtered);
     }
 
