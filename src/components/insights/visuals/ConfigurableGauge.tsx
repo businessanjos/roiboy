@@ -90,7 +90,7 @@ export function ConfigurableGauge({ value, min = 0, max, label, sublabel, format
         <circle cx={cx} cy={cy} r={4} fill="hsl(var(--background))" />
 
         {/* Percentage in center */}
-        <text x={cx} y={cy - 30} textAnchor="middle" className="font-bold fill-foreground" fontSize={Math.round(28 * fontScale)}>
+        <text x={cx} y={cy - 30} textAnchor="middle" className="font-bold" fill={percentColor} fontSize={Math.round(28 * fontScale)}>
           {displayPercent}
         </text>
 
