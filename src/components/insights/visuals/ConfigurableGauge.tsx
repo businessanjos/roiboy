@@ -15,13 +15,15 @@ interface ConfigurableGaugeProps {
   fontScale?: number;
 }
 
-// Color bands for the gauge arc
+// Color bands for the gauge arc (red → orange → yellow → green)
 const GAUGE_BANDS = [
-  { start: 0, end: 0.25, color: '#22c55e' },    // green
-  { start: 0.25, end: 0.5, color: '#eab308' },   // yellow
-  { start: 0.5, end: 0.75, color: '#f97316' },   // orange
-  { start: 0.75, end: 1, color: '#ef4444' },      // red
+  { start: 0, end: 0.25, color: '#ef4444' },      // red
+  { start: 0.25, end: 0.5, color: '#f97316' },     // orange
+  { start: 0.5, end: 0.75, color: '#eab308' },     // yellow
+  { start: 0.75, end: 1, color: '#22c55e' },       // green
 ];
+
+const BLUE_OVER_100 = '#3b82f6';
 
 function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
   const rad = (angleDeg * Math.PI) / 180;
@@ -41,10 +43,12 @@ export function ConfigurableGauge({ value, min = 0, max, label, sublabel, format
   const r = 100;
   const strokeWidth = 22;
 
-  const percentage = useMemo(() => {
+  const rawPercentage = useMemo(() => {
     if (max <= min) return 0;
-    return Math.min(Math.max((value - min) / (max - min), 0), 1);
+    return Math.max((value - min) / (max - min), 0);
   }, [value, min, max]);
+
+  const percentage = Math.min(rawPercentage, 1);
 
   // Needle angle: 180° (left) to 0° (right)
   const needleAngle = 180 - percentage * 180;
@@ -54,11 +58,12 @@ export function ConfigurableGauge({ value, min = 0, max, label, sublabel, format
   const needleBase2 = polarToCartesian(cx, cy, 6, needleAngle - 90);
 
   const displayValue = formatValue ? formatValue(value) : String(value);
-  const displayPercent = `${(percentage * 100).toFixed(1)}%`;
+  const displayPercent = `${(rawPercentage * 100).toFixed(1)}%`;
   const percentColor = useMemo(() => {
-    const band = GAUGE_BANDS.find(b => percentage >= b.start && percentage < b.end);
+    if (rawPercentage >= 1) return BLUE_OVER_100;
+    const band = GAUGE_BANDS.find(b => rawPercentage >= b.start && rawPercentage < b.end);
     return band?.color || GAUGE_BANDS[GAUGE_BANDS.length - 1].color;
-  }, [percentage]);
+  }, [rawPercentage]);
 
   return (
     <div className="flex flex-col items-center justify-center h-full w-full">
