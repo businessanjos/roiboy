@@ -1449,9 +1449,9 @@ function fillMissingDates(
   // Generate all date keys in the range
   switch (grouping) {
     case 'day': {
-      // Use actual number of days in current month
-      const daysInMonth = getDaysInMonth(new Date());
-      for (let d = 1; d <= daysInMonth; d++) {
+      // Show only up to today's date in the current month
+      const today = new Date().getDate();
+      for (let d = 1; d <= today; d++) {
         allDates.push(String(d).padStart(2, '0'));
       }
       // Aggregate data points with same day label (sum values across months)

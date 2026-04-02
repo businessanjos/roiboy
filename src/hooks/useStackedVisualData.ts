@@ -389,8 +389,8 @@ async function fetchStackedDealsData(
       eachWeekOfInterval({ start: rangeStart, end: rangeEnd }, { weekStartsOn: 1 }).forEach(d => allPeriods.push({ key: getPeriodKey(d), label: getPeriodLabel(d) }));
       break;
     default: {
-      const daysInMonth = getDaysInMonth(new Date());
-      for (let d = 1; d <= daysInMonth; d++) {
+      const today = new Date().getDate();
+      for (let d = 1; d <= today; d++) {
         const key = String(d).padStart(2, '0');
         allPeriods.push({ key, label: key });
       }
@@ -549,8 +549,8 @@ async function fetchStackedLeadsData(
     const allPeriods: { key: string; label: string }[] = [];
 
     if (dateGrouping === 'day') {
-      const daysInMonth = getDaysInMonth(new Date());
-      for (let d = 1; d <= daysInMonth; d++) {
+      const today = new Date().getDate();
+      for (let d = 1; d <= today; d++) {
         const key = String(d).padStart(2, '0');
         allPeriods.push({ key, label: key });
       }
