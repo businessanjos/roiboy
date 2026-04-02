@@ -128,16 +128,19 @@ export function CompanyGoalCard() {
         <div className="flex items-end gap-3">
           <div className="flex-1 space-y-1.5">
             <Label className="text-xs font-medium">Meta Anual (R$)</Label>
-            <Input
-              type="text"
-              value={annualGoal ? formatCurrency(annualGoal).replace("R$\u00a0", "") : ""}
-              onChange={(e) => {
-                setAnnualGoal(parseCurrency(e.target.value));
-                setIsDirty(true);
-              }}
-              placeholder="0"
-              className="text-lg font-semibold h-10"
-            />
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-lg font-semibold">R$</span>
+              <Input
+                type="text"
+                value={annualGoal ? formatNumber(annualGoal) : ""}
+                onChange={(e) => {
+                  setAnnualGoal(parseInputNumber(e.target.value));
+                  setIsDirty(true);
+                }}
+                placeholder="0"
+                className="text-lg font-semibold h-10 pl-12"
+              />
+            </div>
           </div>
           <Button
             variant="outline"
