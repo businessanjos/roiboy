@@ -55,6 +55,10 @@ export function ConfigurableGauge({ value, min = 0, max, label, sublabel, format
 
   const displayValue = formatValue ? formatValue(value) : String(value);
   const displayPercent = `${(percentage * 100).toFixed(1)}%`;
+  const percentColor = useMemo(() => {
+    const band = GAUGE_BANDS.find(b => percentage >= b.start && percentage < b.end);
+    return band?.color || GAUGE_BANDS[GAUGE_BANDS.length - 1].color;
+  }, [percentage]);
 
   return (
     <div className="flex flex-col items-center justify-center h-full w-full">
@@ -86,7 +90,7 @@ export function ConfigurableGauge({ value, min = 0, max, label, sublabel, format
         <circle cx={cx} cy={cy} r={4} fill="hsl(var(--background))" />
 
         {/* Percentage in center */}
-        <text x={cx} y={cy - 30} textAnchor="middle" className="font-bold fill-foreground" fontSize={Math.round(28 * fontScale)}>
+        <text x={cx} y={cy - 30} textAnchor="middle" className="font-bold" fill={percentColor} fontSize={Math.round(28 * fontScale)}>
           {displayPercent}
         </text>
 
