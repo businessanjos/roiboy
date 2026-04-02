@@ -216,16 +216,39 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
 
       if (isGauge) {
         const now = new Date();
-        const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const isGaugeRevenueLocal = gaugeSubType === 'revenue_vs_goal';
+        
+        let goalsToSave: Record<string, number> = {};
+        if (isGaugeRevenueLocal && Object.keys(companyMonthlyGoals).length > 0) {
+          const year = now.getFullYear();
+          const month = now.getMonth();
+          if (goalPeriod === 'monthly') {
+            const key = `${year}-${String(month + 1).padStart(2, '0')}`;
+            if (companyMonthlyGoals[key]) goalsToSave[key] = companyMonthlyGoals[key];
+          } else if (goalPeriod === 'quarterly') {
+            const quarterStart = Math.floor(month / 3) * 3;
+            for (let i = quarterStart; i < quarterStart + 3; i++) {
+              const key = `${year}-${String(i + 1).padStart(2, '0')}`;
+              if (companyMonthlyGoals[key]) goalsToSave[key] = companyMonthlyGoals[key];
+            }
+          } else {
+            goalsToSave = { ...companyMonthlyGoals };
+          }
+        } else if (isGaugeRevenueLocal && gaugeGoal) {
+          const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          goalsToSave = { [monthKey]: Number(gaugeGoal) };
+        }
+
         config = {
-          dataSource: isGaugeRevenue ? 'deals' : 'deals',
-          measure: { field: isGaugeRevenue ? 'value' : '', aggregation: isGaugeRevenue ? 'sum' : 'count' },
+          dataSource: 'deals',
+          measure: { field: isGaugeRevenueLocal ? 'value' : '', aggregation: isGaugeRevenueLocal ? 'sum' : 'count' },
           dimension: { field: 'created_at', type: 'date', dateGrouping: 'month' },
-          formatting: { type: isGaugeRevenue ? 'currency' : 'decimal', decimals: 2 },
-          ...(isGaugeRevenue && { statusFilter: 'won' as const }),
+          formatting: { type: isGaugeRevenueLocal ? 'currency' : 'decimal', decimals: 2 },
+          ...(isGaugeRevenueLocal && { statusFilter: 'won' as const }),
           gaugeConfig: {
             subType: gaugeSubType,
-            ...(isGaugeRevenue && gaugeGoal ? { monthlyGoals: { [monthKey]: Number(gaugeGoal) } } : {}),
+            goalPeriod: isGaugeRevenueLocal ? goalPeriod : undefined,
+            ...(isGaugeRevenueLocal && Object.keys(goalsToSave).length > 0 ? { monthlyGoals: goalsToSave } : {}),
           },
           appearance: { showDataLabels: false, dateDisplayFormat: 'monthYear', colorPalette: 'professional', fillEmptyDates: false },
         };
