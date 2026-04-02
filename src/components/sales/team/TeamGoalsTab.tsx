@@ -644,7 +644,7 @@ export function TeamGoalsTab() {
                                     const keyLower = metric.metric_key.toLowerCase();
                                     const showSuperMeta =
                                       ((cargoLower === "vendedor" || cargoLower === "closer") && (keyLower === "faturamento" || keyLower === "revenue")) ||
-                                      (cargoLower === "sdr" && (keyLower.includes("reunio") || keyLower.includes("reunião") || keyLower.includes("reunioes") || keyLower.includes("agendad")));
+                                      (cargoLower === "sdr" && (keyLower.includes("meeting") || keyLower.includes("reunio") || keyLower.includes("reunião") || keyLower.includes("reunioes") || keyLower.includes("agendad")));
                                     return (
                                       <div className={`grid ${showSuperMeta ? "grid-cols-2" : "grid-cols-1"} gap-3 mb-3`}>
                                         <div>
