@@ -549,7 +549,8 @@ async function fetchStackedLeadsData(
     const allPeriods: { key: string; label: string }[] = [];
 
     if (dateGrouping === 'day') {
-      for (let d = 1; d <= 31; d++) {
+      const daysInMonth = getDaysInMonth(new Date());
+      for (let d = 1; d <= daysInMonth; d++) {
         const key = String(d).padStart(2, '0');
         allPeriods.push({ key, label: key });
       }
