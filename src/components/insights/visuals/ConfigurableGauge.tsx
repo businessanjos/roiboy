@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 import { VisualConfig, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
-import { useInsightsFilters } from "@/hooks/useInsightsFilters";
-import { sumGoalsInRange, getMonthKeysInRange } from "@/lib/monthRange";
+import { useCompanyGoals } from "@/hooks/useCompanyGoals";
 
 interface ConfigurableGaugeProps {
   value: number;
@@ -133,33 +132,42 @@ function DaysElapsedGauge({ fontScale = 1 }: { fontScale?: number }) {
 }
 
 function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperProps & { fontScale?: number }) {
-  const { filters } = useInsightsFilters();
-  const goals = visualConfig?.gaugeConfig?.monthlyGoals;
   const goalPeriod = visualConfig?.gaugeConfig?.goalPeriod || 'monthly';
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-indexed
 
-  // Compute the date range based on goalPeriod
-  const periodRange = useMemo(() => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    
-    const fmt = (d: Date) => d.toISOString().split('T')[0];
-    
-    if (goalPeriod === 'quarterly') {
-      const quarterStart = Math.floor(month / 3) * 3;
-      return { start: fmt(new Date(year, quarterStart, 1)), end: fmt(new Date(year, quarterStart + 3, 0)) };
-    } else if (goalPeriod === 'annual') {
-      return { start: fmt(new Date(year, 0, 1)), end: fmt(new Date(year, 11, 31)) };
-    }
-    // monthly - use global filters
-    return { start: filters.startDate, end: filters.endDate };
-  }, [goalPeriod, filters.startDate, filters.endDate]);
+  const { goal: companyGoal } = useCompanyGoals(currentYear);
+  const monthlyGoals = companyGoal?.monthly_goals as Record<string, number> | undefined;
 
+  // Compute goal for the selected period
   const goal = useMemo(() => {
-    return sumGoalsInRange(goals, periodRange.start, periodRange.end);
-  }, [goals, periodRange.start, periodRange.end]);
+    if (!monthlyGoals) return 0;
 
-  // Sum all values from data (revenue from won deals)
+    if (goalPeriod === 'monthly') {
+      const key = String(currentMonth + 1).padStart(2, '0');
+      return monthlyGoals[key] || 0;
+    }
+
+    if (goalPeriod === 'quarterly') {
+      const quarterStart = Math.floor(currentMonth / 3) * 3; // 0,3,6,9
+      let sum = 0;
+      for (let i = quarterStart; i < quarterStart + 3; i++) {
+        const key = String(i + 1).padStart(2, '0');
+        sum += monthlyGoals[key] || 0;
+      }
+      return sum;
+    }
+
+    // annual
+    let sum = 0;
+    for (let i = 1; i <= 12; i++) {
+      const key = String(i).padStart(2, '0');
+      sum += monthlyGoals[key] || 0;
+    }
+    return sum;
+  }, [monthlyGoals, goalPeriod, currentMonth]);
+
   const totalRevenue = useMemo(() => {
     return (data || []).reduce((sum, d) => sum + d.value, 0);
   }, [data]);
@@ -170,17 +178,21 @@ function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperP
     return `R$ ${v.toFixed(0)}`;
   };
 
-  // Build period label
   const periodLabel = useMemo(() => {
-    const periodLabels = { monthly: 'mês', quarterly: 'trimestre', annual: 'ano' };
-    const keys = getMonthKeysInRange(periodRange.start, periodRange.end);
-    if (keys.length === 1) {
-      const [y, m] = keys[0].split('-');
-      const d = new Date(Number(y), Number(m) - 1, 1);
-      return d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+    const monthNames = [
+      'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+      'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+    ];
+
+    if (goalPeriod === 'monthly') {
+      return `${monthNames[currentMonth]} de ${currentYear}`;
     }
-    return `${keys.length} meses — ${periodLabels[goalPeriod]}`;
-  }, [periodRange.start, periodRange.end, goalPeriod]);
+    if (goalPeriod === 'quarterly') {
+      const q = Math.floor(currentMonth / 3) + 1;
+      return `${q}º trimestre de ${currentYear}`;
+    }
+    return `ano ${currentYear}`;
+  }, [goalPeriod, currentMonth, currentYear]);
 
   if (goal <= 0) {
     return (
