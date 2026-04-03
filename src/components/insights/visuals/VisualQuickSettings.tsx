@@ -706,6 +706,8 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
             isDimensionDate={isDimensionDate}
             fontScale={fontScale}
             onFontScaleChange={setFontScale}
+            valueColor={valueColor}
+            onValueColorChange={setValueColor}
           />
         </div>
 
