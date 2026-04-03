@@ -1,24 +1,19 @@
 import { InsightsFiltersProvider } from "@/hooks/useInsightsFilters";
 import { InsightsDashboardsProvider } from "@/hooks/useInsightsDashboards";
-import { InsightsSidebar, InsightsSidebarProvider } from "@/components/insights/sidebar";
 import { InsightsMainContent } from "@/components/insights/InsightsMainContent";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { InsightsDashboardTabs } from "@/components/insights/InsightsDashboardTabs";
 
 export default function Insights() {
-  const isMobile = useIsMobile();
-
   return (
     <InsightsFiltersProvider>
       <InsightsDashboardsProvider>
-        <InsightsSidebarProvider>
-          <div className="flex h-[calc(100vh-4rem)]">
-            {/* Sidebar - hidden on mobile */}
-            {!isMobile && <InsightsSidebar />}
+        <div className="flex flex-col h-[calc(100vh-4rem)]">
+          {/* Dashboard tabs - replaces sidebar */}
+          <InsightsDashboardTabs />
 
-            {/* Main Content */}
-            <InsightsMainContent />
-          </div>
-        </InsightsSidebarProvider>
+          {/* Main Content */}
+          <InsightsMainContent />
+        </div>
       </InsightsDashboardsProvider>
     </InsightsFiltersProvider>
   );
