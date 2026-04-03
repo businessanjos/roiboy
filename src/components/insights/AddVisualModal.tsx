@@ -751,7 +751,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                   onValueChange={(value) => setIndicatorMetric(value as Metric)}
                   className="space-y-2"
                 >
-                  {METRICS.filter(m => m.value !== 'meta').map((m) => (
+                  {METRICS.filter(m => m.value !== 'meta' && m.value !== 'sales_leads').map((m) => (
                     <div
                       key={m.value}
                       className={cn(
