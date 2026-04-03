@@ -90,6 +90,7 @@ const METRIC_TO_CONFIG: Record<Metric, {
   leads_count: { dataSource: 'leads', measureField: null, aggregation: 'count', formatType: 'decimal' },
   sales_cycle: { dataSource: 'deals', measureField: null, aggregation: 'sales_cycle', formatType: 'decimal', statusFilter: 'won' },
   tasks_count: { dataSource: 'tasks', measureField: null, aggregation: 'count', formatType: 'decimal' },
+  sales_leads: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal' },
   meta: { dataSource: 'deals', measureField: 'meta', aggregation: 'sum', formatType: 'currency' },
 };
 
