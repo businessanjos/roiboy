@@ -572,6 +572,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       
       if (chartType === 'scorecard') {
         const isMeta = metric === 'meta';
+        const isSalesLeads = metric === 'sales_leads';
         const now = new Date();
         const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         
