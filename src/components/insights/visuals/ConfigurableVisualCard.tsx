@@ -62,6 +62,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
   // Days elapsed gauge doesn't need data from the database
   const isGaugeDaysElapsed = chartType === 'gauge' && config?.gaugeConfig?.subType === 'days_elapsed';
   const isScorecard = ['number', 'scorecard', 'kpi'].includes(chartType);
+  const isSalesLeads = isScorecard && config?.gaugeConfig?.subType === 'sales_leads';
   const isStacked = (chartType === 'bar_stacked' && !!config?.stackBy) || !!config?.stackByCustomField;
   const effectiveChartType = isStacked && (chartType === 'bar' || chartType === 'bar_horizontal') ? 'bar_stacked' : chartType;
   const isBubbleMap = chartType === 'bubble_map';
@@ -70,7 +71,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
   const { data, isLoading, error } = useVisualData({
     config,
     chartType,
-    enabled: !!config && !isGaugeDaysElapsed && !isStacked && !isBubbleMap && !isDataTable,
+    enabled: !!config && !isGaugeDaysElapsed && !isSalesLeads && !isStacked && !isBubbleMap && !isDataTable,
   });
 
   const { data: stackedResult, isLoading: stackedLoading, error: stackedError } = useStackedVisualData({

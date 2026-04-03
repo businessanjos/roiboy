@@ -17,6 +17,7 @@ import { ChartType, FormatType, AppearanceConfig, VisualConfig, COLOR_PALETTES, 
 import { ChartTooltip } from "./ChartTooltip";
 import { ConfigurableScorecard } from "./ConfigurableScorecard";
 import { DaysElapsedScorecard } from "./DaysElapsedScorecard";
+import { SalesLeadsScorecard } from "./SalesLeadsScorecard";
 import { ConfigurableRanking } from "./ConfigurableRanking";
 import { ConfigurableCallCommercial } from "./ConfigurableCallCommercial";
 import { GaugeFromConfig } from "./ConfigurableGauge";
@@ -69,6 +70,9 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
     case 'scorecard':
       if (visualConfig?.gaugeConfig?.subType === 'days_elapsed') {
         return <DaysElapsedScorecard fontScale={visualConfig?.appearance?.fontScale} />;
+      }
+      if (visualConfig?.gaugeConfig?.subType === 'sales_leads') {
+        return <SalesLeadsScorecard fontScale={visualConfig?.appearance?.fontScale} />;
       }
       return <ConfigurableScorecard data={data} formatting={formatting} config={visualConfig} />;
     case 'ranking':

@@ -28,7 +28,7 @@ interface AddVisualModalProps {
 }
 
 type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge" | "indicator" | "bubble_map" | "funnel" | "data_table";
-type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta" | "tasks_count";
+type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta" | "tasks_count" | "sales_leads";
 type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual" | "canal" | "activity_type" | "status_task";
 
 const CHART_TYPES = [
@@ -57,6 +57,7 @@ const METRICS = [
   { value: "leads_count" as const, label: "Total de Leads", description: "Contagem de todos os leads cadastrados" },
   { value: "sales_cycle" as const, label: "Ciclo de Vendas", description: "Média de dias entre primeiro contato e fechamento" },
   { value: "tasks_count" as const, label: "Quantidade de Tarefas", description: "Contagem de tarefas por tipo, vendedor ou status" },
+  { value: "sales_leads" as const, label: "Vendas/Leads", description: "Conversões vs total de leads no período" },
   { value: "meta" as const, label: "Meta", description: "Meta de faturamento configurada manualmente" },
 ];
 
@@ -89,6 +90,7 @@ const METRIC_TO_CONFIG: Record<Metric, {
   leads_count: { dataSource: 'leads', measureField: null, aggregation: 'count', formatType: 'decimal' },
   sales_cycle: { dataSource: 'deals', measureField: null, aggregation: 'sales_cycle', formatType: 'decimal', statusFilter: 'won' },
   tasks_count: { dataSource: 'tasks', measureField: null, aggregation: 'count', formatType: 'decimal' },
+  sales_leads: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal' },
   meta: { dataSource: 'deals', measureField: 'meta', aggregation: 'sum', formatType: 'currency' },
 };
 
@@ -131,6 +133,7 @@ const METRIC_LABELS: Record<Metric, string> = {
   leads_count: "Leads",
   sales_cycle: "Ciclo de Vendas",
   tasks_count: "Tarefas",
+  sales_leads: "Vendas/Leads",
   meta: "Meta",
 };
 
@@ -569,6 +572,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       
       if (chartType === 'scorecard') {
         const isMeta = metric === 'meta';
+        const isSalesLeads = metric === 'sales_leads';
         const now = new Date();
         const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         
@@ -589,7 +593,11 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           },
           appearance: DEFAULT_APPEARANCE,
           statusFilter: metricConfig.statusFilter,
-          ...(isMeta ? (() => {
+          ...(isSalesLeads ? {
+            gaugeConfig: {
+              subType: 'sales_leads' as const,
+            },
+          } : isMeta ? (() => {
             const parsedGoals: Record<string, number> = {};
             Object.entries(monthlyGoals).forEach(([k, v]) => {
               const num = Number(v);
@@ -743,7 +751,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                   onValueChange={(value) => setIndicatorMetric(value as Metric)}
                   className="space-y-2"
                 >
-                  {METRICS.filter(m => m.value !== 'meta').map((m) => (
+                  {METRICS.filter(m => m.value !== 'meta' && m.value !== 'sales_leads').map((m) => (
                     <div
                       key={m.value}
                       className={cn(
