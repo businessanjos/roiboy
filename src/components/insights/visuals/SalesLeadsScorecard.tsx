@@ -73,7 +73,7 @@ export function SalesLeadsScorecard({ fontScale = "normal", valueColor }: SalesL
     <div className="flex flex-col items-center justify-center h-full w-full gap-3 py-2">
       {/* Main ratio */}
       <div className="flex items-baseline justify-center gap-0.5">
-        <span className="font-bold text-primary leading-none" style={{ fontSize: `${valueSize}px` }}>
+        <span className="font-bold leading-none" style={{ fontSize: `${valueSize}px`, color: valueColor || 'hsl(var(--primary))' }}>
           {won}
         </span>
         <span className="font-normal text-muted-foreground leading-none" style={{ fontSize: `${denominatorSize}px` }}>
