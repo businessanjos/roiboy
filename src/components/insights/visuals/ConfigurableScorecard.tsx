@@ -59,7 +59,7 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
         {formattedValue}
         {isSalesCycle && <span className="font-normal text-muted-foreground ml-1" style={{ fontSize: `${suffixSize}px` }}>dias</span>}
       </p>
-      {totalCount > 0 && (
+      {totalCount > 0 && !isMetaScorecard && (
         <p className="text-muted-foreground text-center" style={{ fontSize: `${subtitleSize}px` }}>
           {totalCount.toLocaleString('pt-BR')} {totalCount === 1 ? 'registro' : 'registros'}
         </p>
