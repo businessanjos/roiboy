@@ -136,7 +136,7 @@ export function InsightsMainContent() {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center text-muted-foreground">
-          <p>Selecione um painel na barra lateral</p>
+          <p>Selecione um painel nas abas acima</p>
         </div>
       </div>
     );
