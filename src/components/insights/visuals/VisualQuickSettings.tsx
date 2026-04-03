@@ -378,6 +378,24 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
               placeholder="Digite o título do visual"
             />
           </div>
+
+          {/* Chart Type Selector */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Tipo de Visualização</Label>
+            <Select value={chartType} onValueChange={(v) => setChartType(v as ChartType)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CHART_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <Separator />
           {/* Gauge monthly goals editor */}
           {showMonthlyGoals && (
