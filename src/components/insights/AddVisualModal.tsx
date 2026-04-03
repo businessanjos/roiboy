@@ -593,7 +593,11 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           },
           appearance: DEFAULT_APPEARANCE,
           statusFilter: metricConfig.statusFilter,
-          ...(isMeta ? (() => {
+          ...(isSalesLeads ? {
+            gaugeConfig: {
+              subType: 'sales_leads' as const,
+            },
+          } : isMeta ? (() => {
             const parsedGoals: Record<string, number> = {};
             Object.entries(monthlyGoals).forEach(([k, v]) => {
               const num = Number(v);
