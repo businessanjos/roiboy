@@ -17,6 +17,7 @@ import { ChartType, FormatType, AppearanceConfig, VisualConfig, COLOR_PALETTES, 
 import { ChartTooltip } from "./ChartTooltip";
 import { ConfigurableScorecard } from "./ConfigurableScorecard";
 import { DaysElapsedScorecard } from "./DaysElapsedScorecard";
+import { SalesLeadsScorecard } from "./SalesLeadsScorecard";
 import { ConfigurableRanking } from "./ConfigurableRanking";
 import { ConfigurableCallCommercial } from "./ConfigurableCallCommercial";
 import { GaugeFromConfig } from "./ConfigurableGauge";
