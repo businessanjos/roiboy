@@ -7,6 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
   DateDisplayFormat,
@@ -17,6 +18,16 @@ import {
   COLOR_PALETTE_OPTIONS,
   FONT_SCALE_OPTIONS,
 } from "./types";
+
+const VALUE_COLOR_PRESETS = [
+  { color: '', label: 'Padrão' },
+  { color: '#c8a961', label: 'Dourado' },
+  { color: '#2563eb', label: 'Azul' },
+  { color: '#16a34a', label: 'Verde' },
+  { color: '#dc2626', label: 'Vermelho' },
+  { color: '#8b5cf6', label: 'Roxo' },
+  { color: '#ea580c', label: 'Laranja' },
+];
 
 interface AppearanceSectionProps {
   showDataLabels: boolean;
@@ -30,6 +41,8 @@ interface AppearanceSectionProps {
   isDimensionDate: boolean;
   fontScale?: FontScale;
   onFontScaleChange?: (value: FontScale) => void;
+  valueColor?: string;
+  onValueColorChange?: (value: string) => void;
 }
 
 export function AppearanceSection({
@@ -44,6 +57,8 @@ export function AppearanceSection({
   isDimensionDate,
   fontScale = 'normal',
   onFontScaleChange,
+  valueColor = '',
+  onValueColorChange,
 }: AppearanceSectionProps) {
   return (
     <div className="space-y-4">
@@ -132,6 +147,41 @@ export function AppearanceSection({
               ))}
             </SelectContent>
           </Select>
+        </div>
+      )}
+
+      {/* Value Color */}
+      {onValueColorChange && (
+        <div className="space-y-2">
+          <Label className="text-sm font-normal">Cor do Valor</Label>
+          <div className="flex gap-2 flex-wrap">
+            {VALUE_COLOR_PRESETS.map((preset) => (
+              <button
+                key={preset.color || 'default'}
+                type="button"
+                onClick={() => onValueColorChange(preset.color)}
+                className={cn(
+                  "flex flex-col items-center gap-1 p-1.5 rounded-lg border-2 transition-all",
+                  valueColor === preset.color
+                    ? "border-primary bg-primary/5"
+                    : "border-transparent hover:border-muted-foreground/30"
+                )}
+              >
+                <div
+                  className={cn("w-6 h-6 rounded-full border", !preset.color && "bg-foreground")}
+                  style={preset.color ? { backgroundColor: preset.color } : undefined}
+                />
+                <span className="text-[10px] text-muted-foreground">{preset.label}</span>
+              </button>
+            ))}
+          </div>
+          <Input
+            type="text"
+            placeholder="#hex personalizado"
+            value={valueColor}
+            onChange={(e) => onValueColorChange(e.target.value)}
+            className="h-8 text-sm mt-1"
+          />
         </div>
       )}
 

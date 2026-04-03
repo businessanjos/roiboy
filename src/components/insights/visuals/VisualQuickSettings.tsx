@@ -158,6 +158,9 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
   const [fontScale, setFontScale] = useState<FontScale>(
     config?.appearance?.fontScale ?? DEFAULT_APPEARANCE.fontScale ?? 'normal'
   );
+  const [valueColor, setValueColor] = useState<string>(
+    config?.appearance?.valueColor ?? ''
+  );
   const [displayScale, setDisplayScale] = useState<DisplayScale>(
     config?.formatting?.displayScale ?? DEFAULT_DISPLAY_SCALE
   );
@@ -211,6 +214,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
       setColorPalette(config?.appearance?.colorPalette ?? DEFAULT_APPEARANCE.colorPalette);
       setFillEmptyDates(config?.appearance?.fillEmptyDates ?? DEFAULT_APPEARANCE.fillEmptyDates);
       setFontScale(config?.appearance?.fontScale ?? DEFAULT_APPEARANCE.fontScale ?? 'normal');
+      setValueColor(config?.appearance?.valueColor ?? '');
       setDisplayScale(config?.formatting?.displayScale ?? DEFAULT_DISPLAY_SCALE);
       setDecimals(config?.formatting?.decimals ?? 2);
       setHiddenUsers(config?.hiddenUsers ?? []);
@@ -313,6 +317,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
           colorPalette,
           fillEmptyDates,
           fontScale,
+          ...(valueColor ? { valueColor } : {}),
         },
         hiddenUsers: isCallCommercial ? hiddenUsers : config.hiddenUsers,
         hiddenCategories: showCategoryFilter ? hiddenCategories : config.hiddenCategories,
@@ -701,6 +706,8 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
             isDimensionDate={isDimensionDate}
             fontScale={fontScale}
             onFontScaleChange={setFontScale}
+            valueColor={valueColor}
+            onValueColorChange={setValueColor}
           />
         </div>
 

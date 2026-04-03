@@ -53,9 +53,11 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
   const subtitleSize = Math.round(11 * m);
   const suffixSize = Math.round(14 * m);
 
+  const valueColor = config?.appearance?.valueColor;
+
   return (
     <div className="flex flex-col items-center justify-center h-full py-1 px-1 overflow-hidden">
-      <p className="font-bold text-foreground mb-1 text-center break-words w-full" style={{ fontSize: `${scaledFontSize}px`, lineHeight: 1.1 }}>
+      <p className="font-bold mb-1 text-center break-words w-full" style={{ fontSize: `${scaledFontSize}px`, lineHeight: 1.1, color: valueColor || undefined }}>
         {formattedValue}
         {isSalesCycle && <span className="font-normal text-muted-foreground ml-1" style={{ fontSize: `${suffixSize}px` }}>dias</span>}
       </p>

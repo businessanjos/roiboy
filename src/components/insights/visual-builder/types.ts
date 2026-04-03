@@ -7,7 +7,7 @@ export type GaugeSubType = 'days_elapsed' | 'revenue_vs_goal' | 'sales_leads';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
 export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature';
 export type DisplayScale = 'full' | 'auto' | 'thousands' | 'millions' | 'billions';
-export type FontScale = 'small' | 'normal' | 'large' | 'xlarge';
+export type FontScale = 'small' | 'normal' | 'large' | 'xlarge' | 'xxlarge';
 
 export interface AppearanceConfig {
   showDataLabels: boolean;
@@ -15,6 +15,7 @@ export interface AppearanceConfig {
   colorPalette: ColorPalette;
   fillEmptyDates: boolean;
   fontScale?: FontScale;
+  valueColor?: string;
 }
 
 export interface FieldOption {
@@ -209,6 +210,7 @@ export const FONT_SCALE_MULTIPLIERS: Record<FontScale, number> = {
   normal: 1.0,
   large: 1.3,
   xlarge: 1.6,
+  xxlarge: 2.0,
 };
 
 // Font scale options for UI
@@ -217,6 +219,7 @@ export const FONT_SCALE_OPTIONS: { value: FontScale; label: string }[] = [
   { value: 'normal', label: 'Normal' },
   { value: 'large', label: 'Grande' },
   { value: 'xlarge', label: 'Extra Grande' },
+  { value: 'xxlarge', label: 'Gigante' },
 ];
 
 // Default appearance config

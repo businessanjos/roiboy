@@ -8,9 +8,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface SalesLeadsScorecardProps {
   fontScale?: string;
+  valueColor?: string;
 }
 
-export function SalesLeadsScorecard({ fontScale = "normal" }: SalesLeadsScorecardProps) {
+export function SalesLeadsScorecard({ fontScale = "normal", valueColor }: SalesLeadsScorecardProps) {
   const m = FONT_SCALE_MULTIPLIERS[fontScale as keyof typeof FONT_SCALE_MULTIPLIERS] || 1;
   const { currentUser } = useCurrentUser();
   const { filters } = useInsightsFilters();
@@ -72,7 +73,7 @@ export function SalesLeadsScorecard({ fontScale = "normal" }: SalesLeadsScorecar
     <div className="flex flex-col items-center justify-center h-full w-full gap-3 py-2">
       {/* Main ratio */}
       <div className="flex items-baseline justify-center gap-0.5">
-        <span className="font-bold text-primary leading-none" style={{ fontSize: `${valueSize}px` }}>
+        <span className="font-bold leading-none" style={{ fontSize: `${valueSize}px`, color: valueColor || 'hsl(var(--primary))' }}>
           {won}
         </span>
         <span className="font-normal text-muted-foreground leading-none" style={{ fontSize: `${denominatorSize}px` }}>
