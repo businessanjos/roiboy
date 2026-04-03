@@ -214,6 +214,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
       setColorPalette(config?.appearance?.colorPalette ?? DEFAULT_APPEARANCE.colorPalette);
       setFillEmptyDates(config?.appearance?.fillEmptyDates ?? DEFAULT_APPEARANCE.fillEmptyDates);
       setFontScale(config?.appearance?.fontScale ?? DEFAULT_APPEARANCE.fontScale ?? 'normal');
+      setValueColor(config?.appearance?.valueColor ?? '');
       setDisplayScale(config?.formatting?.displayScale ?? DEFAULT_DISPLAY_SCALE);
       setDecimals(config?.formatting?.decimals ?? 2);
       setHiddenUsers(config?.hiddenUsers ?? []);
