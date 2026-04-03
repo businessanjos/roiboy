@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VisualErrorBoundary } from "./VisualErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings, LineChart, PieChart, ArrowLeftRight, Monitor } from "lucide-react";
+import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings, LineChart, PieChart, ArrowLeftRight, Monitor, Columns } from "lucide-react";
 import { RankingPresentationDialog, PresentationOptions } from "./RankingPresentationDialog";
 import { RankingPresentationView } from "./RankingPresentationView";
 import { useVisualData } from "@/hooks/useVisualData";
@@ -42,6 +42,7 @@ interface InsightsVisual {
   title: string | null;
   chart_type: string | null;
   config: unknown;
+  layout?: { x: number; y: number; w: number; h: number; scale?: number; col_span?: string } | null;
 }
 
 interface ConfigurableVisualCardProps {
@@ -67,6 +68,8 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
   const effectiveChartType = isStacked && (chartType === 'bar' || chartType === 'bar_horizontal') ? 'bar_stacked' : chartType;
   const isBubbleMap = chartType === 'bubble_map';
   const isDataTable = chartType === 'data_table';
+  const isCompactType = isScorecard || chartType === 'gauge';
+  const currentColSpan = (visual as any).layout?.col_span || "1/4";
 
   const { data, isLoading, error } = useVisualData({
     config,
@@ -285,6 +288,47 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
                     <TooltipContent>Ajustes do Visual</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
+                {isCompactType && onUpdateVisual && (
+                  <Popover>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <PopoverTrigger asChild>
+                          <TooltipTrigger asChild>
+                            <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                              <Columns className="h-4 w-4" />
+                            </button>
+                          </TooltipTrigger>
+                        </PopoverTrigger>
+                        <TooltipContent>Largura do card</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <PopoverContent className="w-auto p-2" align="end">
+                      <div className="flex flex-col gap-1">
+                        {([
+                          { value: "1/4", label: "1/4 — Compacto" },
+                          { value: "1/3", label: "1/3 — Médio" },
+                          { value: "1/2", label: "1/2 — Largo" },
+                        ] as const).map(({ value, label }) => (
+                          <button
+                            key={value}
+                            onClick={() => {
+                              const currentLayout = (visual as any).layout || { x: 0, y: 0, w: 24, h: 6 };
+                              onUpdateVisual(visual.id, { layout: { ...currentLayout, col_span: value } });
+                            }}
+                            className={cn(
+                              "px-3 py-2 rounded-md text-sm text-left transition-colors",
+                              currentColSpan === value
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>

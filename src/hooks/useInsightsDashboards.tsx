@@ -21,7 +21,7 @@ export interface InsightsVisual {
   title: string | null;
   chart_type: string | null;
   config: Record<string, any> | null;
-  layout: { x: number; y: number; w: number; h: number; scale?: number } | null;
+  layout: { x: number; y: number; w: number; h: number; scale?: number; col_span?: string } | null;
   created_at: string | null;
 }
 

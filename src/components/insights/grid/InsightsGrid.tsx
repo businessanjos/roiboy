@@ -187,9 +187,15 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual }: 
         const w = visual.layout?.w ?? 24;
         const minH = getMinHeight(visual);
 
+        // Map col_span to flex-grow for compact rows
+        const colSpan = visual.layout?.col_span;
+        const flexGrow = shouldNotWrap
+          ? (colSpan === "1/2" ? 2 : colSpan === "1/3" ? 1.33 : 1)
+          : 1;
+
         const flexStyle = shouldNotWrap
           ? {
-              flex: `1 1 0`,
+              flex: `${flexGrow} 1 0`,
               minWidth: 0,
               minHeight: minH,
             }
