@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VisualErrorBoundary } from "./VisualErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings, LineChart, PieChart, ArrowLeftRight, Monitor } from "lucide-react";
+import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings, LineChart, PieChart, ArrowLeftRight, Monitor, Columns } from "lucide-react";
 import { RankingPresentationDialog, PresentationOptions } from "./RankingPresentationDialog";
 import { RankingPresentationView } from "./RankingPresentationView";
 import { useVisualData } from "@/hooks/useVisualData";
