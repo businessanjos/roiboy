@@ -61,7 +61,12 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
       </p>
       {totalCount > 0 && !isMetaScorecard && (
         <p className="text-muted-foreground text-center" style={{ fontSize: `${subtitleSize}px` }}>
-          {totalCount.toLocaleString('pt-BR')} {totalCount === 1 ? 'registro' : 'registros'}
+          {totalCount.toLocaleString('pt-BR')} {(() => {
+            const src = config?.dataSource as string | undefined;
+            const isDeals = src === 'deals' || src === 'deals_won';
+            if (isDeals) return totalCount === 1 ? 'venda' : 'vendas';
+            return totalCount === 1 ? 'registro' : 'registros';
+          })()}
         </p>
       )}
     </div>
