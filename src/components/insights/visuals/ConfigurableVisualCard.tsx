@@ -61,6 +61,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
 
   // Days elapsed gauge doesn't need data from the database
   const isGaugeDaysElapsed = chartType === 'gauge' && config?.gaugeConfig?.subType === 'days_elapsed';
+  const isSalesLeads = isScorecard && config?.gaugeConfig?.subType === 'sales_leads';
   const isScorecard = ['number', 'scorecard', 'kpi'].includes(chartType);
   const isStacked = (chartType === 'bar_stacked' && !!config?.stackBy) || !!config?.stackByCustomField;
   const effectiveChartType = isStacked && (chartType === 'bar' || chartType === 'bar_horizontal') ? 'bar_stacked' : chartType;

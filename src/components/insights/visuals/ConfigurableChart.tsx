@@ -71,6 +71,9 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
       if (visualConfig?.gaugeConfig?.subType === 'days_elapsed') {
         return <DaysElapsedScorecard fontScale={visualConfig?.appearance?.fontScale} />;
       }
+      if (visualConfig?.gaugeConfig?.subType === 'sales_leads') {
+        return <SalesLeadsScorecard fontScale={visualConfig?.appearance?.fontScale} />;
+      }
       return <ConfigurableScorecard data={data} formatting={formatting} config={visualConfig} />;
     case 'ranking':
       return <ConfigurableRanking data={data} formatting={formatting} appearance={config} />;
