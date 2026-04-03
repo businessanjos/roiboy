@@ -1,0 +1,1 @@
+UPDATE insights_visuals SET chart_type = 'scorecard' WHERE id = 'f93ca073-2535-406e-a0e4-122b97aba166';

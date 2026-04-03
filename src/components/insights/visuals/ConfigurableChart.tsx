@@ -57,7 +57,7 @@ function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professiona
 export function ConfigurableChart({ type, data, formatting, appearance, visualConfig, stackedData, stackedSeriesKeys, onDrilldown }: ConfigurableChartProps) {
   const config = appearance || DEFAULT_APPEARANCE;
   
-  if (type !== 'gauge' && type !== 'indicator' && type !== 'bar_stacked' && type !== 'bubble_map' && type !== 'funnel' && type !== 'data_table' && (!data || data.length === 0)) {
+  if (type !== 'gauge' && type !== 'indicator' && type !== 'bar_stacked' && type !== 'bubble_map' && type !== 'funnel' && type !== 'data_table' && type !== 'scorecard' && type !== 'number' && (!data || data.length === 0)) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
         Sem dados para exibir
