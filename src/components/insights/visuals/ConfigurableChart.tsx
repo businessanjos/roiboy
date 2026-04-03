@@ -16,6 +16,7 @@ import {
 import { ChartType, FormatType, AppearanceConfig, VisualConfig, COLOR_PALETTES, DEFAULT_APPEARANCE, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 import { ChartTooltip } from "./ChartTooltip";
 import { ConfigurableScorecard } from "./ConfigurableScorecard";
+import { DaysElapsedScorecard } from "./DaysElapsedScorecard";
 import { ConfigurableRanking } from "./ConfigurableRanking";
 import { ConfigurableCallCommercial } from "./ConfigurableCallCommercial";
 import { GaugeFromConfig } from "./ConfigurableGauge";
