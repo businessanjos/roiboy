@@ -285,7 +285,47 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
                     </TooltipTrigger>
                     <TooltipContent>Ajustes do Visual</TooltipContent>
                   </Tooltip>
-                </TooltipProvider>
+                {isCompactType && onUpdateVisual && (
+                  <Popover>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <PopoverTrigger asChild>
+                          <TooltipTrigger asChild>
+                            <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                              <Columns className="h-4 w-4" />
+                            </button>
+                          </TooltipTrigger>
+                        </PopoverTrigger>
+                        <TooltipContent>Largura do card</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <PopoverContent className="w-auto p-2" align="end">
+                      <div className="flex flex-col gap-1">
+                        {([
+                          { value: "1/4", label: "1/4 — Compacto" },
+                          { value: "1/3", label: "1/3 — Médio" },
+                          { value: "1/2", label: "1/2 — Largo" },
+                        ] as const).map(({ value, label }) => (
+                          <button
+                            key={value}
+                            onClick={() => {
+                              const currentLayout = (visual as any).layout || { x: 0, y: 0, w: 24, h: 6 };
+                              onUpdateVisual(visual.id, { layout: { ...currentLayout, col_span: value } });
+                            }}
+                            className={cn(
+                              "px-3 py-2 rounded-md text-sm text-left transition-colors",
+                              currentColSpan === value
+                                ? "bg-primary/10 text-primary font-medium"
+                                : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                            )}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
