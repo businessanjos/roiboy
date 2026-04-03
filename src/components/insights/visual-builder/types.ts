@@ -7,7 +7,7 @@ export type GaugeSubType = 'days_elapsed' | 'revenue_vs_goal' | 'sales_leads';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
 export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature';
 export type DisplayScale = 'full' | 'auto' | 'thousands' | 'millions' | 'billions';
-export type FontScale = 'small' | 'normal' | 'large' | 'xlarge';
+export type FontScale = 'small' | 'normal' | 'large' | 'xlarge' | 'xxlarge';
 
 export interface AppearanceConfig {
   showDataLabels: boolean;
@@ -15,6 +15,7 @@ export interface AppearanceConfig {
   colorPalette: ColorPalette;
   fillEmptyDates: boolean;
   fontScale?: FontScale;
+  valueColor?: string;
 }
 
 export interface FieldOption {
