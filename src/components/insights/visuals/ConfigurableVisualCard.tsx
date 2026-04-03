@@ -42,6 +42,7 @@ interface InsightsVisual {
   title: string | null;
   chart_type: string | null;
   config: unknown;
+  layout?: { x: number; y: number; w: number; h: number; scale?: number; col_span?: string } | null;
 }
 
 interface ConfigurableVisualCardProps {
