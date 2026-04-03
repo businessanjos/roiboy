@@ -172,6 +172,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
   );
   const [accountUsers, setAccountUsers] = useState<{ name: string }[]>([]);
   const [title, setTitle] = useState(visual.title || "");
+  const [chartType, setChartType] = useState<ChartType>((visual.chart_type || 'bar') as ChartType);
   const [tableColumns, setTableColumns] = useState<string[]>(config?.tableConfig?.columns ?? []);
   const [seriesColors, setSeriesColors] = useState<Record<string, string>>(config?.seriesColors ?? {});
   const [isSaving, setIsSaving] = useState(false);
