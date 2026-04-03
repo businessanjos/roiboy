@@ -210,6 +210,7 @@ export const FONT_SCALE_MULTIPLIERS: Record<FontScale, number> = {
   normal: 1.0,
   large: 1.3,
   xlarge: 1.6,
+  xxlarge: 2.0,
 };
 
 // Font scale options for UI
@@ -218,6 +219,7 @@ export const FONT_SCALE_OPTIONS: { value: FontScale; label: string }[] = [
   { value: 'normal', label: 'Normal' },
   { value: 'large', label: 'Grande' },
   { value: 'xlarge', label: 'Extra Grande' },
+  { value: 'xxlarge', label: 'Gigante' },
 ];
 
 // Default appearance config
