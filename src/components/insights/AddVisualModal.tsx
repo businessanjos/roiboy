@@ -133,6 +133,7 @@ const METRIC_LABELS: Record<Metric, string> = {
   leads_count: "Leads",
   sales_cycle: "Ciclo de Vendas",
   tasks_count: "Tarefas",
+  sales_leads: "Vendas/Leads",
   meta: "Meta",
 };
 
