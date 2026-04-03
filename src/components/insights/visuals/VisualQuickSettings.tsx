@@ -38,6 +38,7 @@ import { DealFieldFilterSection } from "./DealFieldFilterSection";
 import { getColumnsForDataSource } from "./ConfigurableTable";
 import { 
   VisualConfig, 
+  ChartType,
   DateDisplayFormat, 
   ColorPalette, 
   FontScale,
@@ -49,6 +50,7 @@ import {
   DISPLAY_SCALE_OPTIONS,
   DEFAULT_DISPLAY_SCALE,
   COLOR_PALETTES,
+  CHART_TYPE_OPTIONS,
 } from "../visual-builder/types";
 import { useInsightsDashboardsSafe } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -170,6 +172,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
   );
   const [accountUsers, setAccountUsers] = useState<{ name: string }[]>([]);
   const [title, setTitle] = useState(visual.title || "");
+  const [chartType, setChartType] = useState<ChartType>((visual.chart_type || 'bar') as ChartType);
   const [tableColumns, setTableColumns] = useState<string[]>(config?.tableConfig?.columns ?? []);
   const [seriesColors, setSeriesColors] = useState<Record<string, string>>(config?.seriesColors ?? {});
   const [isSaving, setIsSaving] = useState(false);
@@ -335,7 +338,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
         }),
       };
 
-      await updateVisual(visual.id, { config: newConfig, title: title.trim() || visual.title });
+      await updateVisual(visual.id, { config: newConfig, title: title.trim() || visual.title, chart_type: chartType });
       toast.success("Ajustes salvos!");
       onOpenChange(false);
     } catch (error) {
@@ -375,6 +378,24 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
               placeholder="Digite o título do visual"
             />
           </div>
+
+          {/* Chart Type Selector */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Tipo de Visualização</Label>
+            <Select value={chartType} onValueChange={(v) => setChartType(v as ChartType)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CHART_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <Separator />
           {/* Gauge monthly goals editor */}
           {showMonthlyGoals && (
