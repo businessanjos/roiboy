@@ -317,6 +317,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
           colorPalette,
           fillEmptyDates,
           fontScale,
+          ...(valueColor ? { valueColor } : {}),
         },
         hiddenUsers: isCallCommercial ? hiddenUsers : config.hiddenUsers,
         hiddenCategories: showCategoryFilter ? hiddenCategories : config.hiddenCategories,
