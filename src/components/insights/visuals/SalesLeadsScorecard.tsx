@@ -8,9 +8,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 interface SalesLeadsScorecardProps {
   fontScale?: string;
+  valueColor?: string;
 }
 
-export function SalesLeadsScorecard({ fontScale = "normal" }: SalesLeadsScorecardProps) {
+export function SalesLeadsScorecard({ fontScale = "normal", valueColor }: SalesLeadsScorecardProps) {
   const m = FONT_SCALE_MULTIPLIERS[fontScale as keyof typeof FONT_SCALE_MULTIPLIERS] || 1;
   const { currentUser } = useCurrentUser();
   const { filters } = useInsightsFilters();
