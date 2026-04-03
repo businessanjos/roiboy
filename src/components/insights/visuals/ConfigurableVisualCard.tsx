@@ -68,6 +68,8 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
   const effectiveChartType = isStacked && (chartType === 'bar' || chartType === 'bar_horizontal') ? 'bar_stacked' : chartType;
   const isBubbleMap = chartType === 'bubble_map';
   const isDataTable = chartType === 'data_table';
+  const isCompactType = isScorecard || chartType === 'gauge';
+  const currentColSpan = (visual as any).layout?.col_span || "1/4";
 
   const { data, isLoading, error } = useVisualData({
     config,
