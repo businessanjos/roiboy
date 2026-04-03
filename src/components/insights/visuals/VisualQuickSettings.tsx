@@ -38,6 +38,7 @@ import { DealFieldFilterSection } from "./DealFieldFilterSection";
 import { getColumnsForDataSource } from "./ConfigurableTable";
 import { 
   VisualConfig, 
+  ChartType,
   DateDisplayFormat, 
   ColorPalette, 
   FontScale,
@@ -49,6 +50,7 @@ import {
   DISPLAY_SCALE_OPTIONS,
   DEFAULT_DISPLAY_SCALE,
   COLOR_PALETTES,
+  CHART_TYPE_OPTIONS,
 } from "../visual-builder/types";
 import { useInsightsDashboardsSafe } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
