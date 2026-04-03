@@ -104,10 +104,10 @@ export function InsightsDashboardTabs() {
                 <button
                   onClick={() => navigateToDashboard(d.id)}
                   className={cn(
-                    "px-3 py-1.5 text-sm rounded-md whitespace-nowrap transition-colors",
+                    "px-4 py-1.5 text-sm rounded-md whitespace-nowrap transition-all",
                     isActive
-                      ? "bg-background text-foreground font-medium shadow-sm border"
-                      : "text-muted-foreground hover:text-foreground hover:bg-background/50"
+                      ? "bg-primary text-primary-foreground font-semibold shadow-md"
+                      : "text-muted-foreground hover:text-foreground hover:bg-background/60"
                   )}
                 >
                   {d.name}
