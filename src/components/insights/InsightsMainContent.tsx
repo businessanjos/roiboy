@@ -219,14 +219,8 @@ export function InsightsMainContent() {
         {/* Header */}
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            {isMobile ? (
-              <MobileDashboardSheet />
-            ) : (
-              <>
-                <BarChart3 className="h-5 w-5 text-primary shrink-0" />
-                <h1 className="text-2xl font-bold truncate">{activeDashboard.name}</h1>
-              </>
-            )}
+            <BarChart3 className="h-5 w-5 text-primary shrink-0" />
+            <h1 className="text-xl md:text-2xl font-bold truncate">{activeDashboard.name}</h1>
           </div>
           <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
             {canShare && (
