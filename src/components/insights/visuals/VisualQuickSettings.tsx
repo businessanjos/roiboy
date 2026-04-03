@@ -338,7 +338,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
         }),
       };
 
-      await updateVisual(visual.id, { config: newConfig, title: title.trim() || visual.title });
+      await updateVisual(visual.id, { config: newConfig, title: title.trim() || visual.title, chart_type: chartType });
       toast.success("Ajustes salvos!");
       onOpenChange(false);
     } catch (error) {
