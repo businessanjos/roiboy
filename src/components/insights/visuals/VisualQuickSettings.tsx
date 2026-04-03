@@ -158,6 +158,9 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
   const [fontScale, setFontScale] = useState<FontScale>(
     config?.appearance?.fontScale ?? DEFAULT_APPEARANCE.fontScale ?? 'normal'
   );
+  const [valueColor, setValueColor] = useState<string>(
+    config?.appearance?.valueColor ?? ''
+  );
   const [displayScale, setDisplayScale] = useState<DisplayScale>(
     config?.formatting?.displayScale ?? DEFAULT_DISPLAY_SCALE
   );
