@@ -285,6 +285,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual 
                     </TooltipTrigger>
                     <TooltipContent>Ajustes do Visual</TooltipContent>
                   </Tooltip>
+                </TooltipProvider>
                 {isCompactType && onUpdateVisual && (
                   <Popover>
                     <TooltipProvider>
