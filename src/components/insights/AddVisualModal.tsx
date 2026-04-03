@@ -57,6 +57,7 @@ const METRICS = [
   { value: "leads_count" as const, label: "Total de Leads", description: "Contagem de todos os leads cadastrados" },
   { value: "sales_cycle" as const, label: "Ciclo de Vendas", description: "Média de dias entre primeiro contato e fechamento" },
   { value: "tasks_count" as const, label: "Quantidade de Tarefas", description: "Contagem de tarefas por tipo, vendedor ou status" },
+  { value: "sales_leads" as const, label: "Vendas/Leads", description: "Conversões vs total de leads no período" },
   { value: "meta" as const, label: "Meta", description: "Meta de faturamento configurada manualmente" },
 ];
 
