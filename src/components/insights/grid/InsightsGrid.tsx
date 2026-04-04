@@ -166,11 +166,12 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
   );
 }
 
-function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual }: {
+function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, readOnly }: {
   row: VisualRow;
   containerWidth: number;
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
+  readOnly?: boolean;
 }) {
   const { visuals, isAllScorecards, isAllCompact } = row;
 
