@@ -1,14 +1,35 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Lock, Mail, Clock, XCircle, BarChart3, CheckCircle } from "lucide-react";
+import { Loader2, Lock, Mail, Clock, XCircle, BarChart3, CheckCircle, CalendarDays, ChevronDown, User, Filter, RotateCcw } from "lucide-react";
 import { SharedVisualCard } from "@/components/insights/visuals/SharedVisualCard";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import {
+  startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth,
+  startOfQuarter, endOfQuarter, startOfYear, endOfYear, subMonths, format,
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
 import type { DrilldownRecord } from "@/hooks/useVisualDrilldown";
 
 type Status = "loading" | "invalid" | "inactive" | "email_prompt" | "pending" | "rejected" | "approved";
+
+type DatePreset = "today" | "week" | "month" | "quarter" | "year" | "last_month" | "custom";
 
 interface AggregatedDataPoint {
   name: string;
@@ -26,10 +47,38 @@ interface VisualItem {
   layout: { x: number; y: number; w: number; h: number; scale?: number } | null;
 }
 
+interface FilterOption {
+  id: string;
+  name: string;
+}
+
 interface DashboardData {
   dashboard: { id: string; name: string } | null;
   visuals: VisualItem[];
   visualsData: Record<string, { data: AggregatedDataPoint[]; drilldownData?: DrilldownRecord[] }>;
+  filterOptions?: { users: FilterOption[]; products: FilterOption[] };
+}
+
+const PRESETS: { value: DatePreset; label: string }[] = [
+  { value: "today", label: "Hoje" },
+  { value: "week", label: "Esta Semana" },
+  { value: "month", label: "Este Mês" },
+  { value: "last_month", label: "Mês Passado" },
+  { value: "quarter", label: "Este Trimestre" },
+  { value: "year", label: "Este Ano" },
+];
+
+function getDateRangeFromPreset(preset: DatePreset): { start: Date; end: Date } {
+  const now = new Date();
+  switch (preset) {
+    case "today": return { start: startOfDay(now), end: endOfDay(now) };
+    case "week": return { start: startOfWeek(now, { weekStartsOn: 0 }), end: endOfWeek(now, { weekStartsOn: 0 }) };
+    case "month": return { start: startOfMonth(now), end: endOfMonth(now) };
+    case "last_month": { const lm = subMonths(now, 1); return { start: startOfMonth(lm), end: endOfMonth(lm) }; }
+    case "quarter": return { start: startOfQuarter(now), end: endOfQuarter(now) };
+    case "year": return { start: startOfYear(now), end: endOfYear(now) };
+    default: return { start: startOfYear(now), end: endOfYear(now) };
+  }
 }
 
 export default function SharedInsights() {
@@ -41,12 +90,69 @@ export default function SharedInsights() {
   const [errorMessage, setErrorMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  // Filter state
+  const [preset, setPresetState] = useState<DatePreset>("year");
+  const [customRange, setCustomRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
+  const [userId, setUserId] = useState("all");
+  const [productId, setProductId] = useState("all");
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
+  const [filtersLoading, setFiltersLoading] = useState(false);
+
+  const dateRange = useMemo(() => {
+    if (preset === "custom" && customRange.from && customRange.to) {
+      return { start: startOfDay(customRange.from), end: endOfDay(customRange.to) };
+    }
+    return getDateRangeFromPreset(preset);
+  }, [preset, customRange]);
+
+  const dateLabel = useMemo(() => {
+    if (preset !== "custom") {
+      return PRESETS.find(p => p.value === preset)?.label || "Este Ano";
+    }
+    if (customRange.from && customRange.to) {
+      return `${format(customRange.from, "dd/MM/yy", { locale: ptBR })} - ${format(customRange.to, "dd/MM/yy", { locale: ptBR })}`;
+    }
+    return "Personalizado";
+  }, [preset, customRange]);
+
+  const hasActiveFilters = userId !== "all" || productId !== "all" || preset !== "year";
+
   const callEdgeFunction = useCallback(async (action: string, extraBody: Record<string, any> = {}) => {
     const res = await supabase.functions.invoke("shared-insights", {
       body: { action, token, ...extraBody },
     });
     return res;
   }, [token]);
+
+  // Fetch filtered data
+  const fetchFilteredData = useCallback(async () => {
+    if (status !== "approved" || !email) return;
+    setFiltersLoading(true);
+    try {
+      const { data, error } = await callEdgeFunction("fetch_filtered_data", {
+        email,
+        filters: {
+          startDate: dateRange.start.toISOString(),
+          endDate: dateRange.end.toISOString(),
+          userId,
+          productId,
+        },
+      });
+      if (!error && data?.visualsData) {
+        setDashboardData(prev => prev ? { ...prev, visualsData: data.visualsData } : prev);
+      }
+    } finally {
+      setFiltersLoading(false);
+    }
+  }, [status, email, dateRange, userId, productId, callEdgeFunction]);
+
+  // Re-fetch when filters change (skip initial load)
+  const [initialLoad, setInitialLoad] = useState(true);
+  useEffect(() => {
+    if (initialLoad) return;
+    fetchFilteredData();
+  }, [preset, customRange, userId, productId]);
 
   // Initial validation
   useEffect(() => {
@@ -66,7 +172,6 @@ export default function SharedInsights() {
         return;
       }
 
-      // Token is valid — check if we have a stored email
       const storedEmail = localStorage.getItem("shared_insights_email");
       if (storedEmail) {
         setEmail(storedEmail);
@@ -93,14 +198,15 @@ export default function SharedInsights() {
         dashboard: data.dashboard,
         visuals: data.visuals,
         visualsData: data.visualsData || {},
+        filterOptions: data.filterOptions,
       });
       setStatus("approved");
+      setInitialLoad(false);
     } else if (data.status === "rejected") {
       setStatus("rejected");
     } else if (data.status === "pending") {
       setStatus("pending");
     } else {
-      // no_request — show email prompt
       setStatus("email_prompt");
     }
   };
@@ -126,8 +232,10 @@ export default function SharedInsights() {
         dashboard: data.dashboard,
         visuals: data.visuals,
         visualsData: data.visualsData || {},
+        filterOptions: data.filterOptions,
       });
       setStatus("approved");
+      setInitialLoad(false);
     } else if (data.status === "rejected") {
       setStatus("rejected");
     } else {
@@ -245,7 +353,32 @@ export default function SharedInsights() {
 
   // Approved — show dashboard with real visuals
   if (status === "approved" && dashboardData) {
-    const { visuals, visualsData } = dashboardData;
+    const { visuals, visualsData, filterOptions } = dashboardData;
+    const users = filterOptions?.users || [];
+    const products = filterOptions?.products || [];
+    const selectedUser = users.find(u => u.id === userId);
+    const selectedProduct = products.find(p => p.id === productId);
+
+    const handlePresetSelect = (p: DatePreset) => {
+      setPresetState(p);
+    };
+
+    const handleDateSelect = (range: { from?: Date; to?: Date } | undefined) => {
+      if (range) {
+        setCustomRange({ from: range.from, to: range.to });
+        if (range.from && range.to) {
+          setPresetState("custom");
+          setDatePickerOpen(false);
+        }
+      }
+    };
+
+    const resetFilters = () => {
+      setPresetState("year");
+      setUserId("all");
+      setProductId("all");
+      setCustomRange({ from: undefined, to: undefined });
+    };
 
     return (
       <div className="min-h-screen bg-background">
@@ -257,6 +390,146 @@ export default function SharedInsights() {
             Somente leitura
           </span>
         </div>
+
+        {/* Filter Bar */}
+        <div className="border-b px-4 py-3">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide">
+            {/* Date Filter */}
+            {!datePickerOpen ? (
+              <DropdownMenu open={dateDropdownOpen} onOpenChange={setDateDropdownOpen}>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 shrink-0">
+                    <CalendarDays className="h-4 w-4" />
+                    {dateLabel}
+                    <ChevronDown className="h-3 w-3 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {PRESETS.map((p) => (
+                    <DropdownMenuItem
+                      key={p.value}
+                      onClick={() => handlePresetSelect(p.value)}
+                      className={cn(preset === p.value && "bg-accent")}
+                    >
+                      {p.label}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setDateDropdownOpen(false);
+                      setTimeout(() => setDatePickerOpen(true), 100);
+                    }}
+                  >
+                    Personalizado...
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2 shrink-0">
+                    <CalendarDays className="h-4 w-4" />
+                    {dateLabel}
+                    <ChevronDown className="h-3 w-3 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={customRange.from || new Date()}
+                    selected={customRange}
+                    onSelect={handleDateSelect}
+                    numberOfMonths={2}
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {/* Date range display */}
+            {preset !== "custom" && (
+              <span className="text-sm text-muted-foreground hidden md:inline shrink-0">
+                {format(dateRange.start, "dd/MM/yyyy", { locale: ptBR })} - {format(dateRange.end, "dd/MM/yyyy", { locale: ptBR })}
+              </span>
+            )}
+
+            <div className="h-4 w-px bg-border mx-1 hidden md:block shrink-0" />
+
+            {/* User Filter */}
+            {users.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant={userId !== "all" ? "secondary" : "outline"} size="sm" className="gap-2 shrink-0">
+                    <User className="h-4 w-4" />
+                    {selectedUser?.name || "Todos os Vendedores"}
+                    <ChevronDown className="h-3 w-3 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-h-64 overflow-auto">
+                  <DropdownMenuItem onClick={() => setUserId("all")} className={cn(userId === "all" && "bg-accent")}>
+                    Todos os Vendedores
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {users.map((user) => (
+                    <DropdownMenuItem
+                      key={user.id}
+                      onClick={() => setUserId(user.id)}
+                      className={cn(userId === user.id && "bg-accent")}
+                    >
+                      {user.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {/* Product Filter */}
+            {products.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant={productId !== "all" ? "secondary" : "outline"} size="sm" className="gap-2 shrink-0">
+                    <Filter className="h-4 w-4" />
+                    {selectedProduct?.name || "Todos os Produtos"}
+                    <ChevronDown className="h-3 w-3 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="max-h-64 overflow-auto">
+                  <DropdownMenuItem onClick={() => setProductId("all")} className={cn(productId === "all" && "bg-accent")}>
+                    Todos os Produtos
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {products.map((product) => (
+                    <DropdownMenuItem
+                      key={product.id}
+                      onClick={() => setProductId(product.id)}
+                      className={cn(productId === product.id && "bg-accent")}
+                    >
+                      {product.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+
+            {/* Reset */}
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-2 text-muted-foreground shrink-0">
+                <RotateCcw className="h-4 w-4" />
+                Limpar
+              </Button>
+            )}
+
+            {/* Loading indicator */}
+            {filtersLoading && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+            )}
+          </div>
+        </div>
+
         <div className="p-4 text-[14px]">
           {visuals.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -284,20 +557,15 @@ function getMinHeight(chartType: string): number {
   return 240;
 }
 
-/**
- * Map the original 48-col layout width to a 12-col CSS grid span.
- * This gives us finer control than a 4-col grid.
- */
 function getColSpan12(visual: VisualItem): number {
   const w = visual.layout?.w ?? 24;
   const scale = visual.layout?.scale || 48;
   const ratio = w / scale;
-  // Map ratio to 12-col grid
-  if (ratio > 0.85) return 12;       // full width
-  if (ratio > 0.6)  return 8;        // ~2/3
-  if (ratio >= 0.45) return 6;       // half
-  if (ratio >= 0.3)  return 4;       // ~1/3
-  return 3;                           // ~1/4
+  if (ratio > 0.85) return 12;
+  if (ratio > 0.6) return 8;
+  if (ratio >= 0.45) return 6;
+  if (ratio >= 0.3) return 4;
+  return 3;
 }
 
 function SharedVisualsGrid({
