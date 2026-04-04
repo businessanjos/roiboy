@@ -248,7 +248,7 @@ function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
     <div className="space-y-3">
       {sorted.map((visual) => (
         <div key={visual.id} className={`w-full rounded-lg overflow-hidden ${getMobileMinHeight(visual)}`}>
-          <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
+          <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} readOnly={readOnly} />
         </div>
       ))}
     </div>
