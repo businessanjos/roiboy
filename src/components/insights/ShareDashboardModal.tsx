@@ -169,7 +169,7 @@ export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboard
     }
   };
 
-  const shareUrl = shareToken ? `${window.location.origin}/shared/insights/${shareToken}` : "";
+  const shareUrl = shareToken ? `https://iamroy.app/shared/insights/${shareToken}` : "";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
