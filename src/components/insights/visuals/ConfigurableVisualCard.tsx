@@ -209,9 +209,10 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
           <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2")}>
             <CardTitle className={cn("text-base flex items-center justify-between gap-1", isScorecard && "text-sm")}>
               <div className="flex items-center gap-1.5 min-w-0">
-                <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />
+                {!readOnly && <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />}
                 <span className="truncate" title={visual.title || "Visual"}>{visual.title || "Visual"}</span>
               </div>
+              {!readOnly && (
               <div className="flex items-center gap-1 flex-shrink-0">
                 {chartType === 'ranking' && (
                   <TooltipProvider>
