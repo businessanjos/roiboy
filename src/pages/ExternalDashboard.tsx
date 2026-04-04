@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { InsightsFiltersProvider } from "@/hooks/useInsightsFilters";
+import { InsightsFiltersProvider, useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { InsightsFilterBar } from "@/components/insights/InsightsFilterBar";
 import { InsightsGrid } from "@/components/insights/grid/InsightsGrid";
 import { ZoomControls } from "@/components/ui/zoom-controls";
@@ -13,12 +13,13 @@ import { BarChart3, LogOut, Maximize2, Minimize2 } from "lucide-react";
 import type { InsightsVisual } from "@/hooks/useInsightsDashboards";
 import { useQuery } from "@tanstack/react-query";
 
-export default function ExternalDashboard() {
+function ExternalDashboardContent() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { currentUser, loading: userLoading } = useCurrentUser();
   const navigate = useNavigate();
   const [zoom, setZoom] = useState(100);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const { setAccountIdOverride } = useInsightsFilters();
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -51,13 +52,13 @@ export default function ExternalDashboard() {
 
   const dashboardId = accessRecords?.[0]?.dashboard_id;
 
-  // Fetch dashboard info
+  // Fetch dashboard info (including account_id for data override)
   const { data: dashboard } = useQuery({
     queryKey: ["external-dashboard-info", dashboardId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("insights_dashboards")
-        .select("id, name")
+        .select("id, name, account_id")
         .eq("id", dashboardId!)
         .single();
       if (error) throw error;
@@ -65,6 +66,13 @@ export default function ExternalDashboard() {
     },
     enabled: !!dashboardId,
   });
+
+  // Set account_id override so all visual data hooks query the correct account
+  useEffect(() => {
+    if (dashboard?.account_id) {
+      setAccountIdOverride(dashboard.account_id);
+    }
+  }, [dashboard?.account_id, setAccountIdOverride]);
 
   // Fetch visuals
   const { data: visuals = [], isLoading: visualsLoading } = useQuery({
@@ -114,54 +122,60 @@ export default function ExternalDashboard() {
   }
 
   return (
-    <InsightsFiltersProvider>
-      <div className="flex flex-col h-screen bg-background">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="flex items-center gap-3">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-semibold">{dashboard?.name || "Painel"}</h1>
-            <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-              Somente leitura
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <ZoomControls zoom={zoom} onZoomChange={setZoom} />
-            <Button variant="ghost" size="icon" onClick={toggleFullscreen}>
-              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => signOut()}>
-              <LogOut className="h-4 w-4 mr-1" /> Sair
-            </Button>
-          </div>
+    <div className="flex flex-col h-screen bg-background">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center gap-3">
+          <BarChart3 className="h-5 w-5 text-primary" />
+          <h1 className="text-lg font-semibold">{dashboard?.name || "Painel"}</h1>
+          <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+            Somente leitura
+          </span>
         </div>
-
-        {/* Filters */}
-        <div className="px-4 py-2 border-b">
-          <InsightsFilterBar />
-        </div>
-
-        {/* Grid */}
-        <div className="flex-1 overflow-auto p-4">
-          {visualsLoading ? (
-            <LoadingScreen message="Carregando visualizações..." fullScreen={false} />
-          ) : (
-            <div
-              style={{
-                transform: `scale(${zoom / 100})`,
-                transformOrigin: "top left",
-                width: `${10000 / zoom}%`,
-              }}
-            >
-              <InsightsGrid
-                visuals={visuals}
-                onLayoutChange={() => {}}
-                readOnly={true}
-              />
-            </div>
-          )}
+        <div className="flex items-center gap-2">
+          <ZoomControls zoom={zoom} onZoomChange={setZoom} />
+          <Button variant="ghost" size="icon" onClick={toggleFullscreen}>
+            {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => signOut()}>
+            <LogOut className="h-4 w-4 mr-1" /> Sair
+          </Button>
         </div>
       </div>
+
+      {/* Filters */}
+      <div className="px-4 py-2 border-b">
+        <InsightsFilterBar />
+      </div>
+
+      {/* Grid */}
+      <div className="flex-1 overflow-auto p-4">
+        {visualsLoading ? (
+          <LoadingScreen message="Carregando visualizações..." fullScreen={false} />
+        ) : (
+          <div
+            style={{
+              transform: zoom !== 100 ? `scale(${zoom / 100})` : undefined,
+              transformOrigin: "top left",
+              width: zoom !== 100 ? `${10000 / zoom}%` : undefined,
+            }}
+          >
+            <InsightsGrid
+              visuals={visuals}
+              onLayoutChange={() => {}}
+              readOnly={true}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function ExternalDashboard() {
+  return (
+    <InsightsFiltersProvider>
+      <ExternalDashboardContent />
     </InsightsFiltersProvider>
   );
 }
