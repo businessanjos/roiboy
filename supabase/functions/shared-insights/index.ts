@@ -361,6 +361,16 @@ function applyDateFilter(items: any[], filters?: SharedFilters, dateField = 'cre
   return result;
 }
 
+function getDealsDateField(config: VisualConfig): string {
+  const { statusFilter, dealStatusFilter, dimension } = config;
+  const singleDealStatus = dealStatusFilter && dealStatusFilter.length === 1 ? dealStatusFilter[0] : null;
+
+  if (statusFilter === 'won' || singleDealStatus === 'won') return 'won_at';
+  if (statusFilter === 'lost' || singleDealStatus === 'lost') return 'lost_at';
+  if (dimension.type === 'date' && dimension.field && dimension.field !== '_total') return dimension.field;
+  return 'created_at';
+}
+
 function applyUserFilter(items: any[], filters?: SharedFilters, userIdField = 'responsible_user_id'): any[] {
   if (!filters?.userId || filters.userId === 'all') return items;
   return items.filter(item => {
