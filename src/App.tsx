@@ -88,6 +88,7 @@ const MarketingTasks = lazyRetry(() => import("./pages/MarketingTasks"));
 const MarketingInsights = lazyRetry(() => import("./pages/MarketingInsights"));
 const Insights = lazyRetry(() => import("./pages/Insights"));
 const SharedInsights = lazyRetry(() => import("./pages/SharedInsights"));
+const ExternalDashboard = lazyRetry(() => import("./pages/ExternalDashboard"));
 const WhatsAppDiagnostics = lazyRetry(() => import("./pages/admin/WhatsAppDiagnostics"));
 // Financial module with sub-routes (lazy loaded)
 const FinancialLayout = lazyRetry(() => import("@/components/financial/FinancialLayout").then(m => ({ default: m.FinancialLayout })));
@@ -149,6 +150,7 @@ const App = () => (
                           <Route path="/feedback/:eventId" element={<PublicEventFeedback />} />
                           <Route path="/checkin/:code" element={<EventCheckin />} />
                           <Route path="/shared/insights/:token" element={<SharedInsights />} />
+                          <Route path="/external/insights" element={<ExternalDashboard />} />
                           <Route path="/onboarding" element={<Onboarding />} />
                           
                           <Route path="/termos" element={<TermsOfService />} />
