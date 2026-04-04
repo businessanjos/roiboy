@@ -110,38 +110,42 @@ Deno.serve(async (req) => {
       authUserId = newUser.user.id;
     }
 
-    // Wait a moment for the trigger to fire and create the users record
-    await new Promise((r) => setTimeout(r, 1500));
+    // Wait for the trigger to create the users record, then update it
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await new Promise((r) => setTimeout(r, 1000));
 
-    // Update the users record to point to the correct account
-    const { data: appUser } = await adminClient
-      .from("users")
-      .select("id, account_id")
-      .eq("auth_user_id", authUserId)
-      .maybeSingle();
+      const { data: appUser } = await adminClient
+        .from("users")
+        .select("id, account_id")
+        .eq("auth_user_id", authUserId)
+        .maybeSingle();
 
-    if (appUser) {
-      // Update account_id and force role to viewer (external users must never have elevated roles)
-      await adminClient
-        .from("users")
-        .update({
-          account_id: callerUser.account_id,
-          name: name || "Usuário Externo",
-          role: "viewer",
-          is_also_admin: false,
-        })
-        .eq("id", appUser.id);
-    } else {
-      // If trigger didn't fire yet, create the users record manually
-      await adminClient
-        .from("users")
-        .insert({
-          auth_user_id: authUserId,
-          account_id: callerUser.account_id,
-          name: name || "Usuário Externo",
-          role: "viewer",
-          email: email.toLowerCase(),
-        });
+      if (appUser) {
+        // Update account_id and force role to viewer
+        await adminClient
+          .from("users")
+          .update({
+            account_id: callerUser.account_id,
+            name: name || "Usuário Externo",
+            role: "viewer",
+            is_also_admin: false,
+          })
+          .eq("id", appUser.id);
+        break;
+      }
+
+      // On last attempt, create manually
+      if (attempt === 4) {
+        await adminClient
+          .from("users")
+          .insert({
+            auth_user_id: authUserId,
+            account_id: callerUser.account_id,
+            name: name || "Usuário Externo",
+            role: "viewer",
+            email: email.toLowerCase(),
+          });
+      }
     }
 
     // Upsert external_dashboard_access
