@@ -134,7 +134,7 @@ export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboard
 
   const copyLink = async () => {
     if (!shareToken) return;
-    const url = `${window.location.origin}/shared/insights/${shareToken}`;
+    const url = `https://iamroy.app/shared/insights/${shareToken}`;
     try {
       await navigator.clipboard.writeText(url);
     } catch {
