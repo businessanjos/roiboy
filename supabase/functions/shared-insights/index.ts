@@ -574,7 +574,7 @@ async function fetchConversionRate(supabase: any, accountId: string, dimension: 
 // ─── Leads ───────────────────────────────────────────────────────────────────
 
 async function fetchLeadsAggregated(supabase: any, accountId: string, config: VisualConfig, filters?: SharedFilters): Promise<AggregatedDataPoint[]> {
-  const { measure, dimension } = config;
+  const { measure, dimension, leadFieldFilters } = config;
 
   if (dimension.field === '_total') {
     let allLeads = await paginateQuery(
@@ -582,6 +582,12 @@ async function fetchLeadsAggregated(supabase: any, accountId: string, config: Vi
     );
     allLeads = applyDateFilter(allLeads, filters, 'created_at');
     allLeads = applyUserFilter(allLeads, filters);
+
+    // Apply lead field filters if configured
+    if (leadFieldFilters && leadFieldFilters.length > 0) {
+      allLeads = await applyLeadFieldFilters(supabase, allLeads, leadFieldFilters);
+    }
+
     return [{ name: 'Total', value: allLeads.length }];
   }
 
@@ -599,6 +605,28 @@ async function fetchLeadsAggregated(supabase: any, accountId: string, config: Vi
 
   allLeads = applyDateFilter(allLeads, filters, 'created_at');
   allLeads = applyUserFilter(allLeads, filters);
+
+  // Apply lead field filters if configured
+  if (leadFieldFilters && leadFieldFilters.length > 0) {
+    allLeads = await applyLeadFieldFilters(supabase, allLeads, leadFieldFilters);
+  }
+
+  // MQL enrichment
+  if (dimension.field === 'mql') {
+    allLeads = await enrichLeadsWithMql(supabase, accountId, allLeads);
+    return aggregateData(allLeads, { ...measure, aggregation: 'count' }, dimension);
+  }
+
+  // Faturamento enrichment
+  if (dimension.field === 'faturamento_atual') {
+    allLeads = await enrichLeadsWithFaturamento(supabase, accountId, allLeads);
+    return aggregateData(allLeads, { ...measure, aggregation: 'count' }, dimension);
+  }
+
+  // Responsible enrichment (from deals)
+  if (dimension.field === 'responsible_name' && !selectFields.includes('users!')) {
+    allLeads = await enrichLeadsWithOwner(supabase, accountId, allLeads);
+  }
 
   return aggregateData(allLeads, { ...measure, aggregation: 'count' }, dimension);
 }
