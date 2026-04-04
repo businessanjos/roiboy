@@ -150,6 +150,7 @@ const App = () => (
                           <Route path="/feedback/:eventId" element={<PublicEventFeedback />} />
                           <Route path="/checkin/:code" element={<EventCheckin />} />
                           <Route path="/shared/insights/:token" element={<SharedInsights />} />
+                          <Route path="/external/insights" element={<ExternalDashboard />} />
                           <Route path="/onboarding" element={<Onboarding />} />
                           
                           <Route path="/termos" element={<TermsOfService />} />
