@@ -171,7 +171,8 @@ export function InsightsMainContent() {
               <BarChart3 className="h-6 w-6 text-primary" />
               <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} min={50} max={250} step={10} />
               <Button variant="outline" size="icon" onClick={toggleFullscreen}>
                 {isFullscreen ? (
                   <Minimize2 className="h-4 w-4" />
@@ -181,6 +182,7 @@ export function InsightsMainContent() {
               </Button>
               <Button variant="outline" size="icon" onClick={() => {
                 setIsFocusMode(false);
+                setFocusZoom(100);
                 if (document.fullscreenElement) document.exitFullscreen();
               }}>
                 <X className="h-4 w-4" />
