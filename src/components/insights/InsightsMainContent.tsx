@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { BarChart3, Plus, Monitor, Maximize2, Minimize2, X, Share2 } from "lucide-react";
+import { ZoomControls } from "@/components/ui/zoom-controls";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { InsightsFilterBar } from "./InsightsFilterBar";
