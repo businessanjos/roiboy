@@ -13,6 +13,9 @@ import { PlanLimitsProvider } from "@/hooks/usePlanLimits";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { ThreeCPlusPanel } from "@/components/threecplus/ThreeCPlusPanel";
 import { useSector } from "@/contexts/SectorContext";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
