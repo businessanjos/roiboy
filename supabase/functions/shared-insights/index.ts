@@ -379,7 +379,7 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
   if (dataSource === 'deals') {
     let query = supabase
       .from('deals')
-      .select(`id, title, value, status, source, lost_reason, created_at, won_at, lost_at, responsible_user_id, product_id,
+      .select(`id, title, value, status, source, lost_reason, created_at, won_at, lost_at, responsible_user_id,
         deal_stages!deals_stage_id_fkey(name),
         users!deals_responsible_user_id_fkey(name)`)
       .eq('account_id', accountId);
@@ -395,9 +395,6 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
     // Apply filters
     allDeals = applyDateFilter(allDeals, filters, 'created_at');
     allDeals = applyUserFilter(allDeals, filters);
-    if (filters?.productId && filters.productId !== 'all') {
-      allDeals = allDeals.filter((d: any) => d.product_id === filters.productId);
-    }
 
     // Apply custom field filters
     const filteredDeals = await applyDealFieldFilters(supabase, allDeals, dealFieldFilters);
@@ -463,7 +460,7 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
 
   let query = supabase
     .from('deals')
-    .select(`id, value, entry_value, probability, status, source, lost_reason, created_at, won_at, lost_at, responsible_user_id, product_id,
+    .select(`id, value, entry_value, probability, status, source, lost_reason, created_at, won_at, lost_at, responsible_user_id,
       deal_stages!deals_stage_id_fkey(name, color),
       users!deals_responsible_user_id_fkey(name)`)
     .eq('account_id', accountId);
@@ -486,9 +483,6 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
   // Apply shared filters
   allDeals = applyDateFilter(allDeals, filters, 'created_at');
   allDeals = applyUserFilter(allDeals, filters);
-  if (filters?.productId && filters.productId !== 'all') {
-    allDeals = allDeals.filter((d: any) => d.product_id === filters.productId);
-  }
 
   // Apply custom field filters
   allDeals = await applyDealFieldFilters(supabase, allDeals, dealFieldFilters);
@@ -529,13 +523,10 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
 async function fetchConversionRate(supabase: any, accountId: string, dimension: VisualConfig['dimension'], filters?: SharedFilters): Promise<AggregatedDataPoint[]> {
   if (dimension.field === '_total') {
     let allDeals = await paginateQuery(
-      supabase.from('deals').select('id, status, created_at, responsible_user_id, product_id').eq('account_id', accountId)
+      supabase.from('deals').select('id, status, created_at, responsible_user_id').eq('account_id', accountId)
     );
     allDeals = applyDateFilter(allDeals, filters, 'created_at');
     allDeals = applyUserFilter(allDeals, filters);
-    if (filters?.productId && filters.productId !== 'all') {
-      allDeals = allDeals.filter((d: any) => d.product_id === filters.productId);
-    }
     const total = allDeals.length;
     const won = allDeals.filter((d: any) => d.status === 'won').length;
     const rate = total > 0 ? (won / total) * 100 : 0;
@@ -545,14 +536,11 @@ async function fetchConversionRate(supabase: any, accountId: string, dimension: 
   // Grouped conversion rate
   let allDeals = await paginateQuery(
     supabase.from('deals')
-      .select('id, status, source, lost_reason, created_at, won_at, responsible_user_id, product_id, deal_stages!deals_stage_id_fkey(name, color), users!deals_responsible_user_id_fkey(name)')
+      .select('id, status, source, lost_reason, created_at, won_at, responsible_user_id, deal_stages!deals_stage_id_fkey(name, color), users!deals_responsible_user_id_fkey(name)')
       .eq('account_id', accountId)
   );
   allDeals = applyDateFilter(allDeals, filters, 'created_at');
   allDeals = applyUserFilter(allDeals, filters);
-  if (filters?.productId && filters.productId !== 'all') {
-    allDeals = allDeals.filter((d: any) => d.product_id === filters.productId);
-  }
 
   const groups = new Map<string, { total: number; won: number; color?: string }>();
   for (const deal of allDeals) {
