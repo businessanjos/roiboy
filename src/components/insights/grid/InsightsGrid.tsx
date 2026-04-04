@@ -141,11 +141,12 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
 
 // ── Responsive static grid ──
 
-function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth }: {
+function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth, readOnly }: {
   visuals: InsightsVisual[];
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
   containerWidth: number;
+  readOnly?: boolean;
 }) {
   const rows = useMemo(() => groupVisualsIntoRows(visuals), [visuals]);
 
@@ -158,6 +159,7 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
           containerWidth={containerWidth}
           onUpdateVisual={onUpdateVisual}
           onRemoveVisual={onRemoveVisual}
+          readOnly={readOnly}
         />
       ))}
     </div>
