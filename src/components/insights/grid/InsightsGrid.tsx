@@ -230,10 +230,11 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
 
 // ── Mobile: stacked ──
 
-function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
+function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, readOnly }: {
   visuals: InsightsVisual[];
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
+  readOnly?: boolean;
 }) {
   const sorted = useMemo(() => {
     return [...visuals].sort((a, b) => {
