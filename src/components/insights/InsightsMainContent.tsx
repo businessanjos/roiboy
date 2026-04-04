@@ -202,6 +202,7 @@ export function InsightsMainContent() {
                 onRemoveVisual={removeVisual}
               />
             )}
+            </div>
           </div>
         </div>,
         document.body
