@@ -1035,3 +1035,211 @@ async function applyDealFieldFilters(
 
   return result;
 }
+
+// ─── Lead Field Filters ──────────────────────────────────────────────────────
+
+async function applyLeadFieldFilters(
+  supabase: any,
+  leads: any[],
+  leadFieldFilters?: VisualConfig['leadFieldFilters']
+): Promise<any[]> {
+  if (!leadFieldFilters || leadFieldFilters.length === 0) return leads;
+  if (leads.length === 0) return [];
+
+  let result = leads;
+
+  for (const filter of leadFieldFilters) {
+    if (!filter.selectedValues || filter.selectedValues.length === 0) continue;
+
+    const leadIds = result.map((l: any) => l.id);
+
+    const { data: fieldDef } = await supabase
+      .from('custom_fields')
+      .select('options, field_type')
+      .eq('id', filter.fieldId)
+      .maybeSingle();
+
+    const fieldType = fieldDef?.field_type || '';
+    const optionLabelToValue = new Map<string, string>();
+    if (fieldDef?.options && Array.isArray(fieldDef.options)) {
+      for (const opt of fieldDef.options as any[]) {
+        if (opt.label && opt.value) {
+          optionLabelToValue.set(opt.label, opt.value);
+        }
+      }
+    }
+
+    const isMultiSelect = fieldType === 'multi_select';
+    const isSelectField = optionLabelToValue.size > 0 && !isMultiSelect;
+    const selectColumns = isMultiSelect ? 'lead_id, value_json' : 'lead_id, value_text';
+
+    let allValues: any[] = [];
+    const batchSize = 500;
+    for (let i = 0; i < leadIds.length; i += batchSize) {
+      const batch = leadIds.slice(i, i + batchSize);
+      const { data } = await supabase
+        .from('lead_field_values')
+        .select(selectColumns)
+        .eq('field_id', filter.fieldId)
+        .in('lead_id', batch);
+      allValues = allValues.concat(data || []);
+    }
+
+    const matchingLeadIds = new Set<string>();
+
+    if (isMultiSelect) {
+      const selectedValueKeys = new Set(
+        filter.selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
+      );
+      for (const row of allValues) {
+        if (row.value_json && Array.isArray(row.value_json)) {
+          for (const val of row.value_json) {
+            if (selectedValueKeys.has(val)) {
+              matchingLeadIds.add(row.lead_id);
+              break;
+            }
+          }
+        }
+      }
+    } else if (isSelectField) {
+      const selectedValueKeys = new Set(
+        filter.selectedValues.map(label => optionLabelToValue.get(label)).filter(Boolean) as string[]
+      );
+      for (const row of allValues) {
+        if (row.value_text && selectedValueKeys.has(row.value_text)) {
+          matchingLeadIds.add(row.lead_id);
+        }
+      }
+    } else {
+      const selectedSet = new Set(filter.selectedValues);
+      for (const row of allValues) {
+        if (row.value_text && selectedSet.has(row.value_text)) {
+          matchingLeadIds.add(row.lead_id);
+        }
+      }
+    }
+
+    result = result.filter((l: any) => matchingLeadIds.has(l.id));
+  }
+
+  return result;
+}
+
+// ─── Lead Enrichment ─────────────────────────────────────────────────────────
+
+const LEAD_MQL_FIELD_ID = 'e4270e93-e9b9-4d9b-9589-d614ce335bcd';
+
+const LEAD_MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
+  opt_1: { label: 'SIM - Acima de 30k', color: '#22c55e' },
+  opt_2: { label: 'NAO - Abaixo de 30k', color: '#ef4444' },
+};
+
+const LEAD_FATURAMENTO_FIELD_ID = 'e352a1ca-cfbc-435a-95f7-2f53b5cac041';
+
+async function enrichLeadsWithMql(supabase: any, accountId: string, leads: any[]): Promise<any[]> {
+  if (leads.length === 0) return leads;
+
+  const leadIds = leads.map(l => l.id);
+  let allMqlValues: any[] = [];
+  const batchSize = 500;
+
+  for (let i = 0; i < leadIds.length; i += batchSize) {
+    const batch = leadIds.slice(i, i + batchSize);
+    const { data, error } = await supabase
+      .from('lead_field_values')
+      .select('lead_id, value_text')
+      .eq('field_id', LEAD_MQL_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('lead_id', batch);
+
+    if (error) {
+      console.error('Error fetching lead MQL values:', error);
+      continue;
+    }
+    allMqlValues = allMqlValues.concat(data || []);
+  }
+
+  const mqlMap = new Map<string, { label: string; color: string }>();
+  for (const row of allMqlValues) {
+    const mapped = LEAD_MQL_VALUE_MAP[row.value_text || ''];
+    if (mapped) {
+      mqlMap.set(row.lead_id, mapped);
+    }
+  }
+
+  return leads.map(lead => {
+    const mql = mqlMap.get(lead.id);
+    return {
+      ...lead,
+      _mql_label: mql?.label || 'Não informado',
+      _mql_color: mql?.color || undefined,
+    };
+  });
+}
+
+async function enrichLeadsWithFaturamento(supabase: any, accountId: string, leads: any[]): Promise<any[]> {
+  if (leads.length === 0) return leads;
+
+  const leadIds = leads.map(l => l.id);
+  let allValues: any[] = [];
+  const batchSize = 500;
+
+  for (let i = 0; i < leadIds.length; i += batchSize) {
+    const batch = leadIds.slice(i, i + batchSize);
+    const { data, error } = await supabase
+      .from('lead_field_values')
+      .select('lead_id, value_text')
+      .eq('field_id', LEAD_FATURAMENTO_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('lead_id', batch);
+
+    if (error) {
+      console.error('Error fetching lead faturamento values:', error);
+      continue;
+    }
+    allValues = allValues.concat(data || []);
+  }
+
+  const fatMap = new Map<string, string>();
+  for (const row of allValues) {
+    if (row.value_text) {
+      fatMap.set(row.lead_id, row.value_text);
+    }
+  }
+
+  return leads.map(lead => ({
+    ...lead,
+    faturamento_atual: fatMap.get(lead.id) || 'Não informado',
+  }));
+}
+
+async function enrichLeadsWithOwner(supabase: any, accountId: string, leads: any[]): Promise<any[]> {
+  if (leads.length === 0) return leads;
+
+  const leadIds = leads.map(l => l.id);
+  let allDeals: any[] = [];
+  const batchSize = 500;
+
+  for (let i = 0; i < leadIds.length; i += batchSize) {
+    const batch = leadIds.slice(i, i + batchSize);
+    const { data } = await supabase
+      .from('deals')
+      .select('lead_id, responsible_user_id, users!deals_responsible_user_id_fkey(name)')
+      .eq('account_id', accountId)
+      .in('lead_id', batch)
+      .order('created_at', { ascending: false });
+    allDeals = allDeals.concat(data || []);
+  }
+
+  const ownerMap = new Map<string, string>();
+  for (const deal of allDeals) {
+    if (deal.lead_id && deal.users?.name && !ownerMap.has(deal.lead_id)) {
+      ownerMap.set(deal.lead_id, deal.users.name);
+    }
+  }
+
+  return leads.map(lead => ({
+    ...lead,
+    users: ownerMap.has(lead.id) ? { name: ownerMap.get(lead.id) } : lead.users || null,
+  }));
+}
