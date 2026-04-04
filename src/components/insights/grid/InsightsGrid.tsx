@@ -451,7 +451,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         >
           {visuals.map((visual) => (
             <div key={visual.id} className="h-full overflow-hidden rounded-lg">
-              <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
+              <ConfigurableVisualCard visual={visual} onUpdateVisual={readOnly ? undefined : onUpdateVisual} onRemoveVisual={readOnly ? undefined : onRemoveVisual} readOnly={readOnly} />
             </div>
           ))}
         </GridLayout>
