@@ -145,6 +145,10 @@ export function InsightsFiltersProvider({ children }: { children: ReactNode }) {
     setFilters(getDefaultFilters());
   }, []);
 
+  const setAccountIdOverride = useCallback((accountId: string) => {
+    setFilters((prev) => ({ ...prev, accountIdOverride: accountId }));
+  }, []);
+
   const value = useMemo(
     () => ({
       filters,
@@ -156,8 +160,9 @@ export function InsightsFiltersProvider({ children }: { children: ReactNode }) {
       setProductId,
       getDateRangeLabel,
       resetFilters,
+      setAccountIdOverride,
     }),
-    [filters, setPreset, setDateRange, setUserId, setStageId, setProductId, getDateRangeLabel, resetFilters]
+    [filters, setPreset, setDateRange, setUserId, setStageId, setProductId, getDateRangeLabel, resetFilters, setAccountIdOverride]
   );
 
   return (
