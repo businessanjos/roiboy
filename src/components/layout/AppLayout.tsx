@@ -25,8 +25,25 @@ export function AppLayout() {
   const [loadingTimeout, setLoadingTimeout] = useState(false);
   const { currentSector } = useSector();
   const isInVendas = currentSector?.id === "vendas";
+  const { currentUser } = useCurrentUser();
 
-  const isLoading = authLoading || subLoading;
+  // Check if user is external (viewer role with external dashboard access)
+  const { data: externalAccess, isLoading: extLoading } = useQuery({
+    queryKey: ["external-access-check", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("external_dashboard_access")
+        .select("id")
+        .eq("user_id", user!.id)
+        .eq("is_active", true)
+        .limit(1);
+      return data || [];
+    },
+    enabled: !!user?.id,
+    staleTime: Infinity,
+  });
+
+  const isLoading = authLoading || subLoading || extLoading;
 
   // Show retry button after 6s of loading
   useEffect(() => {
@@ -49,27 +66,6 @@ export function AppLayout() {
         )}
       </div>
     );
-  }
-
-  // Check if user is external (viewer role with external dashboard access)
-  const { currentUser } = useCurrentUser();
-  const { data: externalAccess, isLoading: extLoading } = useQuery({
-    queryKey: ["external-access-check", user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("external_dashboard_access")
-        .select("id")
-        .eq("user_id", user!.id)
-        .eq("is_active", true)
-        .limit(1);
-      return data || [];
-    },
-    enabled: !!user?.id,
-    staleTime: Infinity,
-  });
-
-  if (extLoading) {
-    return <LoadingScreen message="Carregando..." />;
   }
 
   if (!user) {
