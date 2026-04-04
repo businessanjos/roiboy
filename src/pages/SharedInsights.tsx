@@ -99,6 +99,7 @@ export default function SharedInsights() {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const [filtersLoading, setFiltersLoading] = useState(false);
+  const [zoom, setZoom] = useState(100);
 
   const dateRange = useMemo(() => {
     if (preset === "custom" && customRange.from && customRange.to) {
