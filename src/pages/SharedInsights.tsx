@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Lock, Mail, Clock, XCircle, BarChart3, CheckCircle, CalendarDays, ChevronDown, User, Filter, RotateCcw } from "lucide-react";
+import { Loader2, Lock, Mail, Clock, XCircle, BarChart3, CheckCircle, CalendarDays, ChevronDown, User, Filter, RotateCcw, ZoomIn } from "lucide-react";
+import { ZoomControls } from "@/components/ui/zoom-controls";
 import { SharedVisualCard } from "@/components/insights/visuals/SharedVisualCard";
 import {
   DropdownMenu,
