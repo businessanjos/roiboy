@@ -41,6 +41,13 @@ interface DrilldownRecord {
   extra?: Record<string, any>;
 }
 
+interface SharedFilters {
+  startDate?: string;
+  endDate?: string;
+  userId?: string;
+  productId?: string;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -52,7 +59,7 @@ Deno.serve(async (req) => {
   );
 
   try {
-    const { action, token, email } = await req.json();
+    const { action, token, email, filters: reqFilters } = await req.json();
 
     if (!token) {
       return new Response(JSON.stringify({ error: "Token obrigatório" }), {
@@ -111,9 +118,9 @@ Deno.serve(async (req) => {
 
       if (existingRequest) {
         if (existingRequest.status === "approved") {
-          // Fetch dashboard data WITH visual aggregated data
           const dashboardData = await fetchDashboardDataWithVisuals(supabaseAdmin, share.dashboard_id, share.account_id);
-          return new Response(JSON.stringify({ status: "approved", ...dashboardData }), {
+          const filterOptions = await fetchFilterOptions(supabaseAdmin, share.account_id);
+          return new Response(JSON.stringify({ status: "approved", ...dashboardData, filterOptions }), {
             status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
@@ -187,13 +194,47 @@ Deno.serve(async (req) => {
 
       if (request.status === "approved") {
         const dashboardData = await fetchDashboardDataWithVisuals(supabaseAdmin, share.dashboard_id, share.account_id);
-        return new Response(JSON.stringify({ status: "approved", ...dashboardData }), {
+        const filterOptions = await fetchFilterOptions(supabaseAdmin, share.account_id);
+        return new Response(JSON.stringify({ status: "approved", ...dashboardData, filterOptions }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       return new Response(JSON.stringify({ status: request.status }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Action: fetch_filtered_data — re-fetch data with filters (requires prior approval)
+    if (action === "fetch_filtered_data") {
+      if (!email) {
+        return new Response(JSON.stringify({ error: "Email obrigatório" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const normalizedEmail = email.trim().toLowerCase();
+
+      const { data: request } = await supabaseAdmin
+        .from("insights_share_access_requests")
+        .select("status")
+        .eq("share_id", share.id)
+        .eq("email", normalizedEmail)
+        .single();
+
+      if (!request || request.status !== "approved") {
+        return new Response(JSON.stringify({ error: "Acesso não autorizado" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const filters: SharedFilters = reqFilters || {};
+      const dashboardData = await fetchDashboardDataWithVisuals(supabaseAdmin, share.dashboard_id, share.account_id, filters);
+      return new Response(JSON.stringify({ status: "approved", ...dashboardData }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -212,9 +253,23 @@ Deno.serve(async (req) => {
   }
 });
 
+// ─── Filter Options ──────────────────────────────────────────────────────────
+
+async function fetchFilterOptions(supabase: any, accountId: string) {
+  const [usersRes, productsRes] = await Promise.all([
+    supabase.from("users").select("id, name").eq("account_id", accountId).order("name"),
+    supabase.from("products").select("id, name").eq("account_id", accountId).eq("is_active", true).order("name"),
+  ]);
+
+  return {
+    users: usersRes.data || [],
+    products: productsRes.data || [],
+  };
+}
+
 // ─── Data Fetching ───────────────────────────────────────────────────────────
 
-async function fetchDashboardDataWithVisuals(supabase: any, dashboardId: string, accountId: string) {
+async function fetchDashboardDataWithVisuals(supabase: any, dashboardId: string, accountId: string, filters?: SharedFilters) {
   const { data: dashboard } = await supabase
     .from("insights_dashboards")
     .select("id, name")
@@ -238,10 +293,10 @@ async function fetchDashboardDataWithVisuals(supabase: any, dashboardId: string,
         batch.map(async (visual: any) => {
           try {
             const isDataTable = visual.chart_type === 'data_table';
-            const data = await fetchVisualData(supabase, accountId, visual);
+            const data = await fetchVisualData(supabase, accountId, visual, filters);
             let drilldownData: DrilldownRecord[] | undefined;
             if (isDataTable) {
-              drilldownData = await fetchDrilldownRecords(supabase, accountId, visual.config as VisualConfig);
+              drilldownData = await fetchDrilldownRecords(supabase, accountId, visual.config as VisualConfig, filters);
             }
             return { id: visual.id, data, drilldownData };
           } catch (err) {
@@ -263,7 +318,7 @@ async function fetchDashboardDataWithVisuals(supabase: any, dashboardId: string,
   };
 }
 
-async function fetchVisualData(supabase: any, accountId: string, visual: any): Promise<AggregatedDataPoint[]> {
+async function fetchVisualData(supabase: any, accountId: string, visual: any, filters?: SharedFilters): Promise<AggregatedDataPoint[]> {
   const config = visual.config as VisualConfig | null;
   if (!config) return [];
 
@@ -271,11 +326,11 @@ async function fetchVisualData(supabase: any, accountId: string, visual: any): P
 
   switch (dataSource) {
     case 'deals':
-      return fetchDealsAggregated(supabase, accountId, config, visual.chart_type);
+      return fetchDealsAggregated(supabase, accountId, config, visual.chart_type, filters);
     case 'leads':
-      return fetchLeadsAggregated(supabase, accountId, config);
+      return fetchLeadsAggregated(supabase, accountId, config, filters);
     case 'tasks':
-      return fetchTasksAggregated(supabase, accountId, config, visual.chart_type);
+      return fetchTasksAggregated(supabase, accountId, config, visual.chart_type, filters);
     case 'products':
       return fetchProductsAggregated(supabase, accountId, config);
     default:
@@ -283,16 +338,48 @@ async function fetchVisualData(supabase: any, accountId: string, visual: any): P
   }
 }
 
+// ─── Date filter helper ──────────────────────────────────────────────────────
+
+function applyDateFilter(items: any[], filters?: SharedFilters, dateField = 'created_at'): any[] {
+  if (!filters) return items;
+  let result = items;
+
+  if (filters.startDate) {
+    const start = new Date(filters.startDate);
+    result = result.filter(item => {
+      const d = item[dateField];
+      return d && new Date(d) >= start;
+    });
+  }
+  if (filters.endDate) {
+    const end = new Date(filters.endDate);
+    result = result.filter(item => {
+      const d = item[dateField];
+      return d && new Date(d) <= end;
+    });
+  }
+  return result;
+}
+
+function applyUserFilter(items: any[], filters?: SharedFilters, userIdField = 'responsible_user_id'): any[] {
+  if (!filters?.userId || filters.userId === 'all') return items;
+  return items.filter(item => {
+    // Try direct field or nested users object
+    return item[userIdField] === filters.userId ||
+      item.assigned_to === filters.userId;
+  });
+}
+
 // ─── Drilldown Records for Data Tables ───────────────────────────────────────
 
-async function fetchDrilldownRecords(supabase: any, accountId: string, config: VisualConfig): Promise<DrilldownRecord[]> {
+async function fetchDrilldownRecords(supabase: any, accountId: string, config: VisualConfig, filters?: SharedFilters): Promise<DrilldownRecord[]> {
   if (!config) return [];
   const { dataSource, dealStatusFilter, statusFilter, dealFieldFilters, leadFieldFilters } = config;
 
   if (dataSource === 'deals') {
     let query = supabase
       .from('deals')
-      .select(`id, title, value, status, source, lost_reason, created_at, won_at, lost_at,
+      .select(`id, title, value, status, source, lost_reason, created_at, won_at, lost_at, responsible_user_id, product_id,
         deal_stages!deals_stage_id_fkey(name),
         users!deals_responsible_user_id_fkey(name)`)
       .eq('account_id', accountId);
@@ -303,7 +390,14 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
       query = query.eq('status', statusFilter);
     }
 
-    const allDeals = await paginateQuery(query);
+    let allDeals = await paginateQuery(query);
+
+    // Apply filters
+    allDeals = applyDateFilter(allDeals, filters, 'created_at');
+    allDeals = applyUserFilter(allDeals, filters);
+    if (filters?.productId && filters.productId !== 'all') {
+      allDeals = allDeals.filter((d: any) => d.product_id === filters.productId);
+    }
 
     // Apply custom field filters
     const filteredDeals = await applyDealFieldFilters(supabase, allDeals, dealFieldFilters);
@@ -329,12 +423,14 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
   if (dataSource === 'leads') {
     let query = supabase
       .from('leads')
-      .select(`id, name, email, phone, status, source, revenue_range, canal, created_at,
+      .select(`id, name, email, phone, status, source, revenue_range, canal, created_at, responsible_user_id,
         users!leads_responsible_user_id_fkey(name)`)
       .eq('account_id', accountId)
       .is('converted_to_client_id', null);
 
-    const allLeads = await paginateQuery(query);
+    let allLeads = await paginateQuery(query);
+    allLeads = applyDateFilter(allLeads, filters, 'created_at');
+    allLeads = applyUserFilter(allLeads, filters);
 
     return allLeads.map((l: any) => ({
       id: l.id,
@@ -357,17 +453,17 @@ async function fetchDrilldownRecords(supabase: any, accountId: string, config: V
 
 // ─── Deals ───────────────────────────────────────────────────────────────────
 
-async function fetchDealsAggregated(supabase: any, accountId: string, config: VisualConfig, chartType?: string): Promise<AggregatedDataPoint[]> {
+async function fetchDealsAggregated(supabase: any, accountId: string, config: VisualConfig, chartType?: string, filters?: SharedFilters): Promise<AggregatedDataPoint[]> {
   const { measure, dimension, statusFilter, dealStatusFilter, dealFieldFilters } = config;
 
   // Special: conversion rate
   if (measure.aggregation === 'conversion_rate') {
-    return fetchConversionRate(supabase, accountId, dimension);
+    return fetchConversionRate(supabase, accountId, dimension, filters);
   }
 
   let query = supabase
     .from('deals')
-    .select(`id, value, entry_value, probability, status, source, lost_reason, created_at, won_at, lost_at,
+    .select(`id, value, entry_value, probability, status, source, lost_reason, created_at, won_at, lost_at, responsible_user_id, product_id,
       deal_stages!deals_stage_id_fkey(name, color),
       users!deals_responsible_user_id_fkey(name)`)
     .eq('account_id', accountId);
@@ -386,6 +482,13 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
   }
 
   let allDeals = await paginateQuery(query);
+
+  // Apply shared filters
+  allDeals = applyDateFilter(allDeals, filters, 'created_at');
+  allDeals = applyUserFilter(allDeals, filters);
+  if (filters?.productId && filters.productId !== 'all') {
+    allDeals = allDeals.filter((d: any) => d.product_id === filters.productId);
+  }
 
   // Apply custom field filters
   allDeals = await applyDealFieldFilters(supabase, allDeals, dealFieldFilters);
@@ -423,20 +526,33 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
   return aggregateData(allDeals, measure, dimension);
 }
 
-async function fetchConversionRate(supabase: any, accountId: string, dimension: VisualConfig['dimension']): Promise<AggregatedDataPoint[]> {
+async function fetchConversionRate(supabase: any, accountId: string, dimension: VisualConfig['dimension'], filters?: SharedFilters): Promise<AggregatedDataPoint[]> {
   if (dimension.field === '_total') {
-    const { count: total } = await supabase.from('deals').select('*', { count: 'exact', head: true }).eq('account_id', accountId);
-    const { count: won } = await supabase.from('deals').select('*', { count: 'exact', head: true }).eq('account_id', accountId).eq('status', 'won');
-    const rate = (total || 0) > 0 ? ((won || 0) / (total || 1)) * 100 : 0;
-    return [{ name: 'Total', value: Number(rate.toFixed(1)), count: total || 0 }];
+    let allDeals = await paginateQuery(
+      supabase.from('deals').select('id, status, created_at, responsible_user_id, product_id').eq('account_id', accountId)
+    );
+    allDeals = applyDateFilter(allDeals, filters, 'created_at');
+    allDeals = applyUserFilter(allDeals, filters);
+    if (filters?.productId && filters.productId !== 'all') {
+      allDeals = allDeals.filter((d: any) => d.product_id === filters.productId);
+    }
+    const total = allDeals.length;
+    const won = allDeals.filter((d: any) => d.status === 'won').length;
+    const rate = total > 0 ? (won / total) * 100 : 0;
+    return [{ name: 'Total', value: Number(rate.toFixed(1)), count: total }];
   }
 
   // Grouped conversion rate
-  const allDeals = await paginateQuery(
+  let allDeals = await paginateQuery(
     supabase.from('deals')
-      .select('id, status, source, lost_reason, created_at, won_at, deal_stages!deals_stage_id_fkey(name, color), users!deals_responsible_user_id_fkey(name)')
+      .select('id, status, source, lost_reason, created_at, won_at, responsible_user_id, product_id, deal_stages!deals_stage_id_fkey(name, color), users!deals_responsible_user_id_fkey(name)')
       .eq('account_id', accountId)
   );
+  allDeals = applyDateFilter(allDeals, filters, 'created_at');
+  allDeals = applyUserFilter(allDeals, filters);
+  if (filters?.productId && filters.productId !== 'all') {
+    allDeals = allDeals.filter((d: any) => d.product_id === filters.productId);
+  }
 
   const groups = new Map<string, { total: number; won: number; color?: string }>();
   for (const deal of allDeals) {
@@ -458,30 +574,32 @@ async function fetchConversionRate(supabase: any, accountId: string, dimension: 
 
 // ─── Leads ───────────────────────────────────────────────────────────────────
 
-async function fetchLeadsAggregated(supabase: any, accountId: string, config: VisualConfig): Promise<AggregatedDataPoint[]> {
+async function fetchLeadsAggregated(supabase: any, accountId: string, config: VisualConfig, filters?: SharedFilters): Promise<AggregatedDataPoint[]> {
   const { measure, dimension } = config;
 
   if (dimension.field === '_total') {
-    const { count, error } = await supabase
-      .from('leads')
-      .select('*', { count: 'exact', head: true })
-      .eq('account_id', accountId)
-      .is('converted_to_client_id', null);
-    if (error) return [];
-    return [{ name: 'Total', value: count || 0 }];
+    let allLeads = await paginateQuery(
+      supabase.from('leads').select('id, created_at, responsible_user_id').eq('account_id', accountId).is('converted_to_client_id', null)
+    );
+    allLeads = applyDateFilter(allLeads, filters, 'created_at');
+    allLeads = applyUserFilter(allLeads, filters);
+    return [{ name: 'Total', value: allLeads.length }];
   }
 
   // Include user join for responsible_name dimension
   const selectFields = dimension.field === 'responsible_name'
-    ? 'id, status, source, revenue_range, canal, created_at, users!leads_responsible_user_id_fkey(name)'
-    : 'id, status, source, revenue_range, canal, created_at';
+    ? 'id, status, source, revenue_range, canal, created_at, responsible_user_id, users!leads_responsible_user_id_fkey(name)'
+    : 'id, status, source, revenue_range, canal, created_at, responsible_user_id';
 
-  const allLeads = await paginateQuery(
+  let allLeads = await paginateQuery(
     supabase.from('leads')
       .select(selectFields)
       .eq('account_id', accountId)
       .is('converted_to_client_id', null)
   );
+
+  allLeads = applyDateFilter(allLeads, filters, 'created_at');
+  allLeads = applyUserFilter(allLeads, filters);
 
   return aggregateData(allLeads, { ...measure, aggregation: 'count' }, dimension);
 }
@@ -499,24 +617,29 @@ const TASK_FUNNEL_ORDER = [
   'Follow Up',
 ];
 
-async function fetchTasksAggregated(supabase: any, accountId: string, config: VisualConfig, chartType?: string): Promise<AggregatedDataPoint[]> {
+async function fetchTasksAggregated(supabase: any, accountId: string, config: VisualConfig, chartType?: string, filters?: SharedFilters): Promise<AggregatedDataPoint[]> {
   const { measure, dimension } = config;
 
   // Call commercial chart
   if (chartType === 'call_commercial') {
-    return fetchCallCommercialData(supabase, accountId);
+    return fetchCallCommercialData(supabase, accountId, filters);
   }
 
   // Funnel
   if (chartType === 'funnel') {
-    return fetchTasksFunnelData(supabase, accountId);
+    return fetchTasksFunnelData(supabase, accountId, filters);
   }
 
-  const allTasks = await paginateQuery(
+  let allTasks = await paginateQuery(
     supabase.from('internal_tasks')
       .select('id, title, activity_type_id, completed_at, assigned_to, due_date, created_at, users!internal_tasks_assigned_to_fkey(name), activity_types!internal_tasks_activity_type_id_fkey(name)')
       .eq('account_id', accountId)
   );
+
+  allTasks = applyDateFilter(allTasks, filters, 'created_at');
+  if (filters?.userId && filters.userId !== 'all') {
+    allTasks = allTasks.filter((t: any) => t.assigned_to === filters.userId);
+  }
 
   if (dimension.field === '_total') {
     return [{ name: 'Total', value: allTasks.length, count: allTasks.length }];
@@ -561,13 +684,18 @@ async function fetchTasksAggregated(supabase: any, accountId: string, config: Vi
   return result;
 }
 
-async function fetchTasksFunnelData(supabase: any, accountId: string): Promise<AggregatedDataPoint[]> {
-  const allTasks = await paginateQuery(
+async function fetchTasksFunnelData(supabase: any, accountId: string, filters?: SharedFilters): Promise<AggregatedDataPoint[]> {
+  let allTasks = await paginateQuery(
     supabase.from('internal_tasks')
-      .select('id, activity_type_id, completed_at, activity_types!internal_tasks_activity_type_id_fkey(name)')
+      .select('id, activity_type_id, completed_at, assigned_to, created_at, activity_types!internal_tasks_activity_type_id_fkey(name)')
       .eq('account_id', accountId)
       .not('completed_at', 'is', null)
   );
+
+  allTasks = applyDateFilter(allTasks, filters, 'created_at');
+  if (filters?.userId && filters.userId !== 'all') {
+    allTasks = allTasks.filter((t: any) => t.assigned_to === filters.userId);
+  }
 
   const counts = new Map<string, number>();
   for (const task of allTasks) {
@@ -582,7 +710,7 @@ async function fetchTasksFunnelData(supabase: any, accountId: string): Promise<A
   });
 }
 
-async function fetchCallCommercialData(supabase: any, accountId: string): Promise<AggregatedDataPoint[]> {
+async function fetchCallCommercialData(supabase: any, accountId: string, filters?: SharedFilters): Promise<AggregatedDataPoint[]> {
   const { data: activityTypes } = await supabase
     .from('activity_types')
     .select('id, name')
@@ -595,13 +723,18 @@ async function fetchCallCommercialData(supabase: any, accountId: string): Promis
   const concluidaType = activityTypes.find((at: any) => at.name === 'Call Comercial Concluída');
   const typeIds = [agendadaType?.id, concluidaType?.id].filter(Boolean);
 
-  const allTasks = await paginateQuery(
+  let allTasks = await paginateQuery(
     supabase.from('internal_tasks')
-      .select('id, activity_type_id, completed_at, assigned_to, deal_id, users!internal_tasks_assigned_to_fkey(name)')
+      .select('id, activity_type_id, completed_at, assigned_to, deal_id, created_at, users!internal_tasks_assigned_to_fkey(name)')
       .eq('account_id', accountId)
       .in('activity_type_id', typeIds)
       .not('assigned_to', 'is', null)
   );
+
+  allTasks = applyDateFilter(allTasks, filters, 'created_at');
+  if (filters?.userId && filters.userId !== 'all') {
+    allTasks = allTasks.filter((t: any) => t.assigned_to === filters.userId);
+  }
 
   const userMap = new Map<string, { scheduledDeals: Set<string>; completedDeals: Set<string> }>();
   for (const task of allTasks) {
@@ -769,7 +902,6 @@ function formatDateGroup(dateString: string, grouping: string): string {
       case 'day':
         return String(date.getDate()).padStart(2, '0');
       case 'week': {
-        // ISO week number
         const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
         d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
         const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
@@ -805,7 +937,6 @@ async function applyDealFieldFilters(
 
     const dealIds = result.map((d: any) => d.id);
 
-    // Get field definition to resolve option labels to values
     const { data: fieldDef } = await supabase
       .from('custom_fields')
       .select('options, field_type')
@@ -826,7 +957,6 @@ async function applyDealFieldFilters(
     const isSelectField = optionLabelToValue.size > 0 && !isMultiSelect;
     const selectColumns = isMultiSelect ? 'deal_id, value_json' : 'deal_id, value_text';
 
-    // Fetch field values in batches
     let allValues: any[] = [];
     const batchSize = 500;
     for (let i = 0; i < dealIds.length; i += batchSize) {
@@ -839,7 +969,6 @@ async function applyDealFieldFilters(
       allValues = allValues.concat(data || []);
     }
 
-    // Find matching deals
     const matchingDealIds = new Set<string>();
 
     if (isMultiSelect) {
