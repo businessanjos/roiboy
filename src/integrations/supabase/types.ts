@@ -13478,6 +13478,7 @@ export type Database = {
         | "consultor"
         | "head"
         | "gestor"
+        | "viewer"
       vnps_class: "detractor" | "neutral" | "promoter"
       zapp_agent_role: "admin" | "supervisor" | "agent"
       zapp_assignment_status:
@@ -13796,6 +13797,7 @@ export const Constants = {
         "consultor",
         "head",
         "gestor",
+        "viewer",
       ],
       vnps_class: ["detractor", "neutral", "promoter"],
       zapp_agent_role: ["admin", "supervisor", "agent"],
