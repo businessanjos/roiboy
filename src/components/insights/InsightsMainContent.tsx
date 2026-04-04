@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { BarChart3, Plus, Monitor, Maximize2, Minimize2, X, Share2 } from "lucide-react";
+import { ZoomControls } from "@/components/ui/zoom-controls";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { InsightsFilterBar } from "./InsightsFilterBar";
@@ -34,6 +35,7 @@ export function InsightsMainContent() {
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [focusZoom, setFocusZoom] = useState(100);
   const focusModeRef = useRef<HTMLDivElement>(null);
 
   // ESC listener
@@ -169,7 +171,8 @@ export function InsightsMainContent() {
               <BarChart3 className="h-6 w-6 text-primary" />
               <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} min={50} max={250} step={10} />
               <Button variant="outline" size="icon" onClick={toggleFullscreen}>
                 {isFullscreen ? (
                   <Minimize2 className="h-4 w-4" />
@@ -179,6 +182,7 @@ export function InsightsMainContent() {
               </Button>
               <Button variant="outline" size="icon" onClick={() => {
                 setIsFocusMode(false);
+                setFocusZoom(100);
                 if (document.fullscreenElement) document.exitFullscreen();
               }}>
                 <X className="h-4 w-4" />
@@ -186,8 +190,9 @@ export function InsightsMainContent() {
             </div>
           </div>
 
-          {/* Scrollable content at native size */}
+          {/* Scrollable content with zoom */}
           <div className="flex-1 overflow-auto p-6">
+            <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top left', width: `${10000 / focusZoom}%` }}>
             {hasVisuals && (
               <InsightsGrid 
                 visuals={visuals} 
@@ -197,6 +202,7 @@ export function InsightsMainContent() {
                 onRemoveVisual={removeVisual}
               />
             )}
+            </div>
           </div>
         </div>,
         document.body
