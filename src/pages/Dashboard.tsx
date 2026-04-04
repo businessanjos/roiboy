@@ -195,10 +195,11 @@ export default function Dashboard() {
     }
   };
 
-  // Check onboarding status
+  // Check onboarding status (skip for external/viewer users)
   useEffect(() => {
     const checkOnboarding = async () => {
       if (!currentUser?.account_id) return;
+      if (currentUser?.role === "viewer") return;
       
       const { data } = await supabase
         .from("account_settings")
@@ -212,7 +213,7 @@ export default function Dashboard() {
     };
     
     checkOnboarding();
-  }, [currentUser?.account_id, navigate]);
+  }, [currentUser?.account_id, currentUser?.role, navigate]);
 
 
   // Get client to products mapping
