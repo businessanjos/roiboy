@@ -59,7 +59,7 @@ export function useMapVisualData({ enabled = true }: { enabled?: boolean } = {})
           .from('deal_field_values')
           .select('deal_id, value_json')
           .eq('field_id', CIDADE_FIELD_ID)
-          .eq('account_id', currentUser.account_id)
+          .eq('account_id', accountId)
           .in('deal_id', batch)
           .not('value_json', 'is', null);
 
