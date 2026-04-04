@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Lock, Mail, Clock, XCircle, BarChart3, CheckCircle, CalendarDays, ChevronDown, User, Filter, RotateCcw } from "lucide-react";
+import { Loader2, Lock, Mail, Clock, XCircle, BarChart3, CheckCircle, CalendarDays, ChevronDown, User, Filter, RotateCcw, ZoomIn } from "lucide-react";
+import { ZoomControls } from "@/components/ui/zoom-controls";
 import { SharedVisualCard } from "@/components/insights/visuals/SharedVisualCard";
 import {
   DropdownMenu,
@@ -98,6 +99,7 @@ export default function SharedInsights() {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const [filtersLoading, setFiltersLoading] = useState(false);
+  const [zoom, setZoom] = useState(100);
 
   const dateRange = useMemo(() => {
     if (preset === "custom" && customRange.from && customRange.to) {
@@ -385,9 +387,12 @@ export default function SharedInsights() {
         <div className="border-b px-6 py-4 flex items-center gap-3">
           <BarChart3 className="h-5 w-5 text-primary" />
           <h1 className="text-lg font-semibold">{dashboardData.dashboard?.name || "Painel Compartilhado"}</h1>
-          <span className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
-            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-            Somente leitura
+          <span className="ml-auto flex items-center gap-3">
+            <ZoomControls zoom={zoom} onZoomChange={setZoom} min={50} max={250} step={10} />
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+              Somente leitura
+            </span>
           </span>
         </div>
 
@@ -530,15 +535,21 @@ export default function SharedInsights() {
           </div>
         </div>
 
-        <div className="p-4 text-[14px]">
-          {visuals.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-              <BarChart3 className="h-12 w-12 mb-4 opacity-30" />
-              <p>Este painel ainda não possui visuais.</p>
-            </div>
-          ) : (
-            <SharedVisualsGrid visuals={visuals} visualsData={visualsData} />
-          )}
+        <div className="p-4 text-[14px] overflow-auto">
+          <div style={{
+            transform: `scale(${zoom / 100})`,
+            transformOrigin: 'top left',
+            width: `${10000 / zoom}%`,
+          }}>
+            {visuals.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                <BarChart3 className="h-12 w-12 mb-4 opacity-30" />
+                <p>Este painel ainda não possui visuais.</p>
+              </div>
+            ) : (
+              <SharedVisualsGrid visuals={visuals} visualsData={visualsData} />
+            )}
+          </div>
         </div>
       </div>
     );
