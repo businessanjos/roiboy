@@ -121,15 +121,27 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (appUser) {
-      // Update account_id to match the dashboard owner's account
+      // Update account_id and force role to viewer (external users must never have elevated roles)
       await adminClient
         .from("users")
         .update({
           account_id: callerUser.account_id,
           name: name || "Usuário Externo",
           role: "viewer",
+          is_also_admin: false,
         })
         .eq("id", appUser.id);
+    } else {
+      // If trigger didn't fire yet, create the users record manually
+      await adminClient
+        .from("users")
+        .insert({
+          auth_user_id: authUserId,
+          account_id: callerUser.account_id,
+          name: name || "Usuário Externo",
+          role: "viewer",
+          email: email.toLowerCase(),
+        });
     }
 
     // Upsert external_dashboard_access
