@@ -61,6 +61,20 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
         {formattedValue}
         {isSalesCycle && <span className="font-normal text-muted-foreground ml-1" style={{ fontSize: `${suffixSize}px` }}>dias</span>}
       </p>
+      {isMetaScorecard && (
+        <p className="text-muted-foreground text-center" style={{ fontSize: `${subtitleSize}px` }}>
+          {(() => {
+            const p = filters.preset;
+            if (p === 'year') return 'Ano';
+            if (p === 'month') return 'Mês';
+            if (p === 'last_month') return 'Mês Passado';
+            if (p === 'quarter') return 'Trimestre';
+            if (p === 'week') return 'Semana';
+            if (p === 'today') return 'Dia';
+            return 'Período';
+          })()}
+        </p>
+      )}
       {totalCount > 0 && !isMetaScorecard && (
         <p className="text-muted-foreground text-center" style={{ fontSize: `${subtitleSize}px` }}>
           {totalCount.toLocaleString('pt-BR')} {(() => {
