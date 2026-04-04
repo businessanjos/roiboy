@@ -49,9 +49,10 @@ interface ConfigurableVisualCardProps {
   visual: InsightsVisual;
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
+  readOnly?: boolean;
 }
 
-export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual }: ConfigurableVisualCardProps) {
+export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual, readOnly = false }: ConfigurableVisualCardProps) {
   const config = visual.config as VisualConfig | null;
   const chartType = (visual.chart_type || 'bar') as ChartType;
   const [drilldownOpen, setDrilldownOpen] = useState(false);
