@@ -24,6 +24,7 @@ export interface InsightsFilters {
   stageId: string;
   productId: string;
   preset: DatePreset;
+  accountIdOverride?: string;
 }
 
 interface InsightsFiltersContextType {
