@@ -26,7 +26,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
   const { currentUser } = useCurrentUser();
   const { filters: globalFilters } = useInsightsFilters();
 
-  const accountId = globalFilters.accountIdOverride || currentUser?.account_id;
+  const accountId = globalFilters.accountIdOverride || accountId;
 
   // Auto-scope daily grouping to current month
   const filters = (() => {
@@ -61,21 +61,21 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
       switch (dataSource) {
         case 'deals':
-          result = await fetchDealsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, dealStatusFilter);
+          result = await fetchDealsData(accountId, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, dealStatusFilter);
           break;
         case 'leads':
-          result = await fetchLeadsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat, leadFilters, dealFilters, dealStatusFilter);
+          result = await fetchLeadsData(accountId, measure, dimension, filters, dateDisplayFormat, leadFilters, dealFilters, dealStatusFilter);
           break;
         case 'products':
-          result = await fetchProductsData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
+          result = await fetchProductsData(accountId, measure, dimension, filters, dateDisplayFormat);
           break;
         case 'tasks':
           if (chartType === 'call_commercial') {
-            result = await fetchTasksCallCommercialData(currentUser.account_id, filters);
+            result = await fetchTasksCallCommercialData(accountId, filters);
           } else if (chartType === 'funnel') {
-            result = await fetchTasksFunnelData(currentUser.account_id, filters);
+            result = await fetchTasksFunnelData(accountId, filters);
           } else {
-            result = await fetchTasksData(currentUser.account_id, measure, dimension, filters, dateDisplayFormat);
+            result = await fetchTasksData(accountId, measure, dimension, filters, dateDisplayFormat);
           }
           break;
         default:
@@ -98,7 +98,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
         const { data: stages, error: stagesError } = await supabase
           .from('deal_stages')
           .select('name, display_order, color')
-          .eq('account_id', currentUser.account_id)
+          .eq('account_id', accountId)
           .order('display_order', { ascending: true });
 
         if (stagesError) console.error('Error fetching stages order:', stagesError);
@@ -125,7 +125,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
         // Append "Ganhos" (won deals) using the same filters as regular stages
         const wonResult = await fetchDealsData(
-          currentUser.account_id,
+          accountId,
           { field: 'value', aggregation: 'count' },
           { field: '_total', type: 'text' },
           { ...filters, startDate: filters.startDate, endDate: filters.endDate },
@@ -149,7 +149,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
       return result;
     },
-    enabled: enabled && !!config && !!currentUser?.account_id,
+    enabled: enabled && !!config && !!accountId,
     staleTime: 120000, // OPTIMIZED: 2 minutes (up from 30 seconds)
     refetchOnWindowFocus: false,
   });
