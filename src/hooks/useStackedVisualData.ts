@@ -135,6 +135,8 @@ export function useStackedVisualData({ config, enabled = true }: UseStackedVisua
   const { currentUser } = useCurrentUser();
   const { filters: globalFilters } = useInsightsFilters();
 
+  const accountId = globalFilters.accountIdOverride || currentUser?.account_id;
+
   // Auto-scope daily grouping to current month
   const filters = (() => {
     if (config?.dimension?.dateGrouping === 'day') {
@@ -149,18 +151,18 @@ export function useStackedVisualData({ config, enabled = true }: UseStackedVisua
   })();
 
   return useQuery({
-    queryKey: ['stacked-visual-data', config, filters, currentUser?.account_id],
+    queryKey: ['stacked-visual-data', config, filters, accountId],
     queryFn: async (): Promise<{ data: StackedDataPoint[]; seriesKeys: string[] }> => {
-      if (!config || !currentUser?.account_id || (!config.stackBy && !config.stackByCustomField)) {
+      if (!config || !accountId || (!config.stackBy && !config.stackByCustomField)) {
         return { data: [], seriesKeys: [] };
       }
 
       if (config.dataSource === 'leads') {
-        return fetchStackedLeadsData(currentUser.account_id, config, filters);
+        return fetchStackedLeadsData(accountId, config, filters);
       }
-      return fetchStackedDealsData(currentUser.account_id, config, filters);
+      return fetchStackedDealsData(accountId, config, filters);
     },
-    enabled: enabled && !!config && (!!config.stackBy || !!config.stackByCustomField) && !!currentUser?.account_id,
+    enabled: enabled && !!config && (!!config.stackBy || !!config.stackByCustomField) && !!accountId,
     staleTime: 120000,
     refetchOnWindowFocus: false,
   });

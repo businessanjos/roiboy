@@ -17,16 +17,18 @@ export function useMapVisualData({ enabled = true }: { enabled?: boolean } = {})
   const { currentUser } = useCurrentUser();
   const { filters } = useInsightsFilters();
 
+  const accountId = filters.accountIdOverride || currentUser?.account_id;
+
   return useQuery({
-    queryKey: ['map-visual-data', filters, currentUser?.account_id],
+    queryKey: ['map-visual-data', filters, accountId],
     queryFn: async (): Promise<MapDataPoint[]> => {
-      if (!currentUser?.account_id) return [];
+      if (!accountId) return [];
 
       // 1. Fetch won deals with date filters
       let dealsQuery = supabase
         .from('deals')
         .select('id, value, won_at')
-        .eq('account_id', currentUser.account_id)
+        .eq('account_id', accountId)
         .eq('status', 'won')
         .not('won_at', 'is', null);
 
