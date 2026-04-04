@@ -155,9 +155,10 @@ function ExternalDashboardContent() {
         ) : (
           <div
             style={{
-              transform: zoom !== 100 ? `scale(${zoom / 100})` : undefined,
+              transform: `scale(${zoom / 100})`,
               transformOrigin: "top left",
-              width: zoom !== 100 ? `${10000 / zoom}%` : undefined,
+              width: `${10000 / zoom}%`,
+              minHeight: "100%",
             }}
           >
             <InsightsGrid
