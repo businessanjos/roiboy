@@ -490,8 +490,9 @@ async function fetchDealsAggregated(supabase: any, accountId: string, config: Vi
 
   let allDeals = await paginateQuery(query);
 
-  // Apply shared filters
-  allDeals = applyDateFilter(allDeals, filters, 'created_at');
+  // Apply shared filters using the correct date field (won_at for won, lost_at for lost)
+  const dateField = getDealsDateField(config);
+  allDeals = applyDateFilter(allDeals, filters, dateField);
   allDeals = applyUserFilter(allDeals, filters);
 
   // Apply custom field filters
