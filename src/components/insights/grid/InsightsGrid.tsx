@@ -217,8 +217,9 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
           >
             <ConfigurableVisualCard
               visual={visual}
-              onUpdateVisual={onUpdateVisual}
-              onRemoveVisual={onRemoveVisual}
+              onUpdateVisual={readOnly ? undefined : onUpdateVisual}
+              onRemoveVisual={readOnly ? undefined : onRemoveVisual}
+              readOnly={readOnly}
             />
           </div>
         );
