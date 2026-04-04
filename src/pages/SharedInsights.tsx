@@ -387,9 +387,12 @@ export default function SharedInsights() {
         <div className="border-b px-6 py-4 flex items-center gap-3">
           <BarChart3 className="h-5 w-5 text-primary" />
           <h1 className="text-lg font-semibold">{dashboardData.dashboard?.name || "Painel Compartilhado"}</h1>
-          <span className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground">
-            <CheckCircle className="h-3.5 w-3.5 text-green-500" />
-            Somente leitura
+          <span className="ml-auto flex items-center gap-3">
+            <ZoomControls zoom={zoom} onZoomChange={setZoom} min={50} max={250} step={10} />
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+              Somente leitura
+            </span>
           </span>
         </div>
 
