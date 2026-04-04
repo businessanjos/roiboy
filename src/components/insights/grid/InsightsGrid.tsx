@@ -413,9 +413,10 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
       {!isEditing && (
         <ResponsiveInsightsGrid
           visuals={visuals}
-          onUpdateVisual={onUpdateVisual}
-          onRemoveVisual={onRemoveVisual}
+          onUpdateVisual={readOnly ? undefined : onUpdateVisual}
+          onRemoveVisual={readOnly ? undefined : onRemoveVisual}
           containerWidth={containerWidth}
+          readOnly={readOnly}
         />
       )}
 
