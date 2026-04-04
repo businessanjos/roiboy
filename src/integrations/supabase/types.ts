@@ -5279,6 +5279,54 @@ export type Database = {
           },
         ]
       }
+      external_dashboard_access: {
+        Row: {
+          account_id: string
+          created_at: string
+          dashboard_id: string
+          granted_by: string
+          id: string
+          is_active: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          dashboard_id: string
+          granted_by: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          dashboard_id?: string
+          granted_by?: string
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "external_dashboard_access_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "external_dashboard_access_dashboard_id_fkey"
+            columns: ["dashboard_id"]
+            isOneToOne: false
+            referencedRelation: "insights_dashboards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback_questions: {
         Row: {
           account_id: string
