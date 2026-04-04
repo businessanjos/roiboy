@@ -184,6 +184,7 @@ const fallbackContext: InsightsFiltersContextType = {
   setProductId: () => {},
   getDateRangeLabel: () => "Este Ano",
   resetFilters: () => {},
+  setAccountIdOverride: () => {},
 };
 
 export function useInsightsFilters() {
