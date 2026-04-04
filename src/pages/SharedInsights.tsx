@@ -27,6 +27,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { DrilldownRecord } from "@/hooks/useVisualDrilldown";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Status = "loading" | "invalid" | "inactive" | "email_prompt" | "pending" | "rejected" | "approved";
 
@@ -45,7 +46,7 @@ interface VisualItem {
   title: string | null;
   chart_type: string | null;
   config: unknown;
-  layout: { x: number; y: number; w: number; h: number; scale?: number } | null;
+  layout: { x: number; y: number; w: number; h: number; scale?: number; col_span?: string } | null;
 }
 
 interface FilterOption {
@@ -537,9 +538,8 @@ export default function SharedInsights() {
 
         <div className="p-4 text-[14px] overflow-auto">
           <div style={{
-            transform: `scale(${zoom / 100})`,
+            zoom: zoom / 100,
             transformOrigin: 'top left',
-            width: `${10000 / zoom}%`,
           }}>
             {visuals.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -561,22 +561,86 @@ export default function SharedInsights() {
 // ─── Grid Layout for Shared Visuals ──────────────────────────────────────────
 
 function getMinHeight(chartType: string): number {
-  if (["number", "scorecard"].includes(chartType)) return 100;
-  if (chartType === "gauge") return 160;
+  if (["number", "scorecard", "kpi"].includes(chartType)) return 120;
+  if (["table", "ranking", "data_table"].includes(chartType)) return 300;
+  if (chartType === "map") return 400;
+  if (chartType === "gauge") return 200;
   if (chartType === "funnel") return 360;
-  if (chartType === "data_table") return 300;
-  return 240;
+  return 280;
 }
 
-function getColSpan12(visual: VisualItem): number {
-  const w = visual.layout?.w ?? 24;
-  const scale = visual.layout?.scale || 48;
-  const ratio = w / scale;
-  if (ratio > 0.85) return 12;
-  if (ratio > 0.6) return 8;
-  if (ratio >= 0.45) return 6;
-  if (ratio >= 0.3) return 4;
-  return 3;
+function isGauge(visual: VisualItem) {
+  return visual.chart_type === "gauge";
+}
+
+function isScorecard(visual: VisualItem) {
+  return ["number", "scorecard", "kpi"].includes(visual.chart_type || "bar");
+}
+
+interface SharedVisualRow {
+  visuals: VisualItem[];
+  isAllScorecards: boolean;
+  isAllCompact: boolean;
+}
+
+function groupVisualsIntoRows(visuals: VisualItem[]): SharedVisualRow[] {
+  if (visuals.length === 0) return [];
+
+  const allScorecards = visuals.filter(isScorecard);
+  const allGauges = visuals.filter(isGauge);
+  const regularVisuals = visuals.filter((visual) => !isScorecard(visual) && !isGauge(visual));
+  const rows: SharedVisualRow[] = [];
+
+  if (allScorecards.length > 0) {
+    rows.push({
+      visuals: allScorecards.sort((a, b) => (a.layout?.x ?? 0) - (b.layout?.x ?? 0)),
+      isAllScorecards: true,
+      isAllCompact: true,
+    });
+  }
+
+  if (allGauges.length > 0) {
+    rows.push({
+      visuals: allGauges.sort((a, b) => (a.layout?.x ?? 0) - (b.layout?.x ?? 0)),
+      isAllScorecards: false,
+      isAllCompact: true,
+    });
+  }
+
+  if (regularVisuals.length > 0) {
+    const sorted = [...regularVisuals].sort((a, b) => {
+      const ay = a.layout?.y ?? 0;
+      const by = b.layout?.y ?? 0;
+      if (ay !== by) return ay - by;
+      return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
+    });
+
+    let currentRow: VisualItem[] = [sorted[0]];
+    let currentY = sorted[0].layout?.y ?? 0;
+
+    for (let i = 1; i < sorted.length; i++) {
+      const visualY = sorted[i].layout?.y ?? 0;
+      if (Math.abs(visualY - currentY) <= 5) {
+        currentRow.push(sorted[i]);
+      } else {
+        rows.push({
+          visuals: currentRow,
+          isAllScorecards: false,
+          isAllCompact: false,
+        });
+        currentRow = [sorted[i]];
+        currentY = visualY;
+      }
+    }
+
+    rows.push({
+      visuals: currentRow,
+      isAllScorecards: false,
+      isAllCompact: false,
+    });
+  }
+
+  return rows;
 }
 
 function SharedVisualsGrid({
@@ -586,6 +650,8 @@ function SharedVisualsGrid({
   visuals: VisualItem[];
   visualsData: Record<string, { data: AggregatedDataPoint[]; drilldownData?: DrilldownRecord[] }>;
 }) {
+  const isMobile = useIsMobile();
+
   const sortedVisuals = [...visuals].sort((a, b) => {
     const ay = a.layout?.y ?? 0;
     const by = b.layout?.y ?? 0;
@@ -593,39 +659,92 @@ function SharedVisualsGrid({
     return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
   });
 
+  const rows = groupVisualsIntoRows(visuals);
+
+  if (isMobile) {
+    return (
+      <div className="space-y-3">
+        {sortedVisuals.map((visual) => {
+          const vData = visualsData[visual.id];
+          const data = vData?.data || [];
+          const drilldownData = vData?.drilldownData || [];
+          const chartType = visual.chart_type || "bar";
+
+          return (
+            <div
+              key={visual.id}
+              className="w-full rounded-lg overflow-hidden"
+              style={{ minHeight: getMinHeight(chartType) }}
+            >
+              <SharedVisualCard
+                visual={visual}
+                data={data}
+                drilldownData={drilldownData}
+              />
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
-    <>
-      <style>{`
-        .shared-grid { display: grid; gap: 12px; grid-template-columns: repeat(12, 1fr); }
-        @media (max-width: 1024px) { .shared-grid { grid-template-columns: repeat(6, 1fr); } }
-        @media (max-width: 640px)  { .shared-grid { grid-template-columns: 1fr; } .shared-grid > * { grid-column: span 1 !important; } }
-      `}</style>
-      <div className="shared-grid">
-      {sortedVisuals.map((visual) => {
-        const vData = visualsData[visual.id];
-        const data = vData?.data || [];
-        const drilldownData = vData?.drilldownData || [];
-        const chartType = visual.chart_type || "bar";
-        const colSpan = getColSpan12(visual);
+    <div className="flex flex-col gap-3">
+      {rows.map((row, rowIndex) => {
+        const shouldNotWrap = row.isAllScorecards || row.isAllCompact;
+        const totalWidth = row.visuals.reduce((sum, visual) => sum + (visual.layout?.w ?? 24), 0);
 
         return (
           <div
-            key={visual.id}
-            className="min-w-0"
-            style={{
-              minHeight: getMinHeight(chartType),
-              gridColumn: `span ${colSpan}`,
-            }}
+            key={rowIndex}
+            className="flex gap-3"
+            style={{ flexWrap: shouldNotWrap ? "nowrap" : "wrap" }}
           >
-            <SharedVisualCard
-              visual={visual}
-              data={data}
-              drilldownData={drilldownData}
-            />
+            {row.visuals.map((visual) => {
+              const vData = visualsData[visual.id];
+              const data = vData?.data || [];
+              const drilldownData = vData?.drilldownData || [];
+              const chartType = visual.chart_type || "bar";
+              const visualWidth = visual.layout?.w ?? 24;
+              const visualColSpan = visual.layout?.col_span;
+              const flexGrow = shouldNotWrap
+                ? visualColSpan === "1/2"
+                  ? 2
+                  : visualColSpan === "1/3"
+                    ? 1.33
+                    : 1
+                : 1;
+
+              const flexStyle = shouldNotWrap
+                ? {
+                    flex: `${flexGrow} 1 0`,
+                    minWidth: 0,
+                    minHeight: getMinHeight(chartType),
+                  }
+                : {
+                    flex: `1 1 ${(visualWidth / totalWidth) * 100}%`,
+                    minWidth: 300,
+                    minHeight: getMinHeight(chartType),
+                    maxWidth: "100%" as const,
+                  };
+
+              return (
+                <div
+                  key={visual.id}
+                  className="overflow-hidden rounded-lg"
+                  style={flexStyle}
+                >
+                  <SharedVisualCard
+                    visual={visual}
+                    data={data}
+                    drilldownData={drilldownData}
+                  />
+                </div>
+              );
+            })}
           </div>
         );
       })}
-      </div>
-    </>
+    </div>
   );
 }
