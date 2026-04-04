@@ -114,7 +114,7 @@ export function useMapVisualData({ enabled = true }: { enabled?: boolean } = {})
 
       return result;
     },
-    enabled: enabled && !!currentUser?.account_id,
+    enabled: enabled && !!accountId,
     staleTime: 120000,
     refetchOnWindowFocus: false,
   });

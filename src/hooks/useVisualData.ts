@@ -26,7 +26,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
   const { currentUser } = useCurrentUser();
   const { filters: globalFilters } = useInsightsFilters();
 
-  const accountId = globalFilters.accountIdOverride || accountId;
+  const accountId = globalFilters.accountIdOverride || currentUser?.account_id;
 
   // Auto-scope daily grouping to current month
   const filters = (() => {
