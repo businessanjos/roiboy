@@ -37,6 +37,7 @@ interface InsightsFiltersContextType {
   setProductId: (productId: string) => void;
   getDateRangeLabel: () => string;
   resetFilters: () => void;
+  setAccountIdOverride: (accountId: string) => void;
 }
 
 const InsightsFiltersContext = createContext<InsightsFiltersContextType | null>(null);
