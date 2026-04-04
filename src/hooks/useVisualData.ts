@@ -26,6 +26,8 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
   const { currentUser } = useCurrentUser();
   const { filters: globalFilters } = useInsightsFilters();
 
+  const accountId = globalFilters.accountIdOverride || currentUser?.account_id;
+
   // Auto-scope daily grouping to current month
   const filters = (() => {
     if (config?.dimension?.dateGrouping === 'day') {
@@ -40,9 +42,9 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
   })();
 
   return useQuery({
-    queryKey: ['visual-data', config, chartType, filters, currentUser?.account_id],
+    queryKey: ['visual-data', config, chartType, filters, accountId],
     queryFn: async (): Promise<AggregatedDataPoint[]> => {
-      if (!config || !currentUser?.account_id) return [];
+      if (!config || !accountId) return [];
 
       const { dataSource, measure, dimension, appearance, statusFilter, dealStatusFilter } = config;
       const dateDisplayFormat = appearance?.dateDisplayFormat || 'monthYear';
