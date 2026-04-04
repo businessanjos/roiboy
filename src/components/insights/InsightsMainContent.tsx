@@ -190,8 +190,9 @@ export function InsightsMainContent() {
             </div>
           </div>
 
-          {/* Scrollable content at native size */}
+          {/* Scrollable content with zoom */}
           <div className="flex-1 overflow-auto p-6">
+            <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top left', width: `${10000 / focusZoom}%` }}>
             {hasVisuals && (
               <InsightsGrid 
                 visuals={visuals} 
