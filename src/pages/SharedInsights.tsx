@@ -535,7 +535,12 @@ export default function SharedInsights() {
           </div>
         </div>
 
-        <div className="p-4 text-[14px]">
+        <div className="p-4 text-[14px] overflow-auto">
+          <div style={{
+            transform: `scale(${zoom / 100})`,
+            transformOrigin: 'top left',
+            width: `${10000 / zoom}%`,
+          }}>
           {visuals.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
               <BarChart3 className="h-12 w-12 mb-4 opacity-30" />
