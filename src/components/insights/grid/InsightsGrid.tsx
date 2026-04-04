@@ -141,11 +141,12 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
 
 // ── Responsive static grid ──
 
-function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth }: {
+function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth, readOnly }: {
   visuals: InsightsVisual[];
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
   containerWidth: number;
+  readOnly?: boolean;
 }) {
   const rows = useMemo(() => groupVisualsIntoRows(visuals), [visuals]);
 
@@ -158,17 +159,19 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
           containerWidth={containerWidth}
           onUpdateVisual={onUpdateVisual}
           onRemoveVisual={onRemoveVisual}
+          readOnly={readOnly}
         />
       ))}
     </div>
   );
 }
 
-function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual }: {
+function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, readOnly }: {
   row: VisualRow;
   containerWidth: number;
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
+  readOnly?: boolean;
 }) {
   const { visuals, isAllScorecards, isAllCompact } = row;
 
@@ -214,8 +217,9 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual }: 
           >
             <ConfigurableVisualCard
               visual={visual}
-              onUpdateVisual={onUpdateVisual}
-              onRemoveVisual={onRemoveVisual}
+              onUpdateVisual={readOnly ? undefined : onUpdateVisual}
+              onRemoveVisual={readOnly ? undefined : onRemoveVisual}
+              readOnly={readOnly}
             />
           </div>
         );
@@ -226,10 +230,11 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual }: 
 
 // ── Mobile: stacked ──
 
-function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
+function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, readOnly }: {
   visuals: InsightsVisual[];
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
+  readOnly?: boolean;
 }) {
   const sorted = useMemo(() => {
     return [...visuals].sort((a, b) => {
@@ -244,7 +249,7 @@ function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual }: {
     <div className="space-y-3">
       {sorted.map((visual) => (
         <div key={visual.id} className={`w-full rounded-lg overflow-hidden ${getMobileMinHeight(visual)}`}>
-          <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
+          <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} readOnly={readOnly} />
         </div>
       ))}
     </div>
@@ -393,8 +398,9 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
     return (
       <MobileInsightsGrid
         visuals={visuals}
-        onUpdateVisual={onUpdateVisual}
-        onRemoveVisual={onRemoveVisual}
+        onUpdateVisual={readOnly ? undefined : onUpdateVisual}
+        onRemoveVisual={readOnly ? undefined : onRemoveVisual}
+        readOnly={readOnly}
       />
     );
   }
@@ -409,9 +415,10 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
       {!isEditing && (
         <ResponsiveInsightsGrid
           visuals={visuals}
-          onUpdateVisual={onUpdateVisual}
-          onRemoveVisual={onRemoveVisual}
+          onUpdateVisual={readOnly ? undefined : onUpdateVisual}
+          onRemoveVisual={readOnly ? undefined : onRemoveVisual}
           containerWidth={containerWidth}
+          readOnly={readOnly}
         />
       )}
 
@@ -446,7 +453,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         >
           {visuals.map((visual) => (
             <div key={visual.id} className="h-full overflow-hidden rounded-lg">
-              <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} />
+              <ConfigurableVisualCard visual={visual} onUpdateVisual={readOnly ? undefined : onUpdateVisual} onRemoveVisual={readOnly ? undefined : onRemoveVisual} readOnly={readOnly} />
             </div>
           ))}
         </GridLayout>
