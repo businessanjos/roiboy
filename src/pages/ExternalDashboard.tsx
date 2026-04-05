@@ -78,7 +78,7 @@ function ExternalDashboardContent() {
   }, [dashboard?.account_id, setAccountIdOverride]);
 
   // Fetch visuals
-  const { data: visuals = [], isLoading: visualsLoading } = useQuery({
+  const { data: dashboardVisuals = [], isLoading: isVisualsLoading } = useQuery({
     queryKey: ["external-dashboard-visuals", dashboardId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -98,7 +98,7 @@ function ExternalDashboardContent() {
 
   // Keep scrollable area in sync with visual zoom so content doesn't get clipped
   useEffect(() => {
-    if (!zoomContentRef.current || visualsLoading) return;
+    if (!zoomContentRef.current || isVisualsLoading) return;
 
     const element = zoomContentRef.current;
     let frameId: number | null = null;
@@ -122,7 +122,7 @@ function ExternalDashboardContent() {
       observer.disconnect();
       if (frameId) cancelAnimationFrame(frameId);
     };
-  }, [dashboardId, visuals.length, visualsLoading]);
+  }, [dashboardId, dashboardVisuals.length, isVisualsLoading]);
 
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
@@ -181,7 +181,7 @@ function ExternalDashboardContent() {
 
       {/* Grid */}
       <div className="flex-1 overflow-auto p-4">
-        {visualsLoading ? (
+        {isVisualsLoading ? (
           <LoadingScreen message="Carregando visualizações..." fullScreen={false} />
         ) : (
           <div
@@ -199,7 +199,7 @@ function ExternalDashboardContent() {
               }}
             >
               <InsightsGrid
-                visuals={visuals}
+                visuals={dashboardVisuals}
                 onLayoutChange={() => {}}
                 readOnly={true}
               />
