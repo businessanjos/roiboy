@@ -77,6 +77,25 @@ function ExternalDashboardContent() {
     }
   }, [dashboard?.account_id, setAccountIdOverride]);
 
+  // Fetch visuals
+  const { data: visuals = [], isLoading: visualsLoading } = useQuery({
+    queryKey: ["external-dashboard-visuals", dashboardId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("insights_visuals")
+        .select("*")
+        .eq("dashboard_id", dashboardId!)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data.map((v: any) => ({
+        ...v,
+        config: v.config as Record<string, any> | null,
+        layout: v.layout as { x: number; y: number; w: number; h: number; scale?: number } | null,
+      })) as InsightsVisual[];
+    },
+    enabled: !!dashboardId,
+  });
+
   // Keep scrollable area in sync with visual zoom so content doesn't get clipped
   useEffect(() => {
     if (!zoomContentRef.current || visualsLoading) return;
@@ -104,25 +123,6 @@ function ExternalDashboardContent() {
       if (frameId) cancelAnimationFrame(frameId);
     };
   }, [dashboardId, visuals.length, visualsLoading]);
-
-  // Fetch visuals
-  const { data: visuals = [], isLoading: visualsLoading } = useQuery({
-    queryKey: ["external-dashboard-visuals", dashboardId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("insights_visuals")
-        .select("*")
-        .eq("dashboard_id", dashboardId!)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return data.map((v: any) => ({
-        ...v,
-        config: v.config as Record<string, any> | null,
-        layout: v.layout as { x: number; y: number; w: number; h: number; scale?: number } | null,
-      })) as InsightsVisual[];
-    },
-    enabled: !!dashboardId,
-  });
 
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement) {
