@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, AlertCircle, ArrowLeft, CheckCircle, CreditCard, Phone, ShieldAlert, Lock } from "lucide-react";
+import { Loader2, AlertCircle, ArrowLeft, CheckCircle, CreditCard, Phone, ShieldAlert, Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -40,6 +40,10 @@ export default function Auth() {
   const [view, setView] = useState<"auth" | "forgot" | "reset">("auth");
   const [resetSent, setResetSent] = useState(false);
   const [passwordUpdated, setPasswordUpdated] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // React Hook Form with Zod validation - Login
   const loginForm = useForm<LoginFormData>({
@@ -379,30 +383,54 @@ export default function Auth() {
                 <form onSubmit={handleUpdatePassword} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="new-password">Nova senha</Label>
-                    <Input
-                      id="new-password"
-                      type="password"
-                      placeholder="Crie uma senha forte"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      required
-                      minLength={8}
-                      disabled={isSubmitting}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="new-password"
+                        type={showNewPassword ? "text" : "password"}
+                        placeholder="Crie uma senha forte"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required
+                        minLength={8}
+                        disabled={isSubmitting}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        tabIndex={-1}
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                      </Button>
+                    </div>
                     <PasswordStrength password={newPassword} />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirm-password">Confirmar senha</Label>
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      placeholder="Digite novamente"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                      minLength={6}
-                      disabled={isSubmitting}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="confirm-password"
+                        type={showConfirmPassword ? "text" : "password"}
+                        placeholder="Digite novamente"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        minLength={6}
+                        disabled={isSubmitting}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        tabIndex={-1}
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                      </Button>
+                    </div>
                   </div>
                   <Button type="submit" className="w-full" disabled={isSubmitting}>
                     {isSubmitting ? (
@@ -502,13 +530,25 @@ export default function Auth() {
                             </Button>
                           </div>
                           <FormControl>
-                            <Input
-                              type="password"
-                              placeholder="••••••••"
-                              disabled={isSubmitting}
-                              maxLength={SECURITY_LIMITS.PASSWORD_MAX}
-                              {...field}
-                            />
+                            <div className="relative">
+                              <Input
+                                type={showLoginPassword ? "text" : "password"}
+                                placeholder="••••••••"
+                                disabled={isSubmitting}
+                                maxLength={SECURITY_LIMITS.PASSWORD_MAX}
+                                {...field}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                onClick={() => setShowLoginPassword(!showLoginPassword)}
+                                tabIndex={-1}
+                              >
+                                {showLoginPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                              </Button>
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -599,13 +639,25 @@ export default function Auth() {
                         <FormItem>
                           <FormLabel>Senha</FormLabel>
                           <FormControl>
-                            <Input
-                              type="password"
-                              placeholder="Crie uma senha forte"
-                              disabled={isSubmitting}
-                              maxLength={SECURITY_LIMITS.PASSWORD_MAX}
-                              {...field}
-                            />
+                            <div className="relative">
+                              <Input
+                                type={showSignupPassword ? "text" : "password"}
+                                placeholder="Crie uma senha forte"
+                                disabled={isSubmitting}
+                                maxLength={SECURITY_LIMITS.PASSWORD_MAX}
+                                {...field}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                onClick={() => setShowSignupPassword(!showSignupPassword)}
+                                tabIndex={-1}
+                              >
+                                {showSignupPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                              </Button>
+                            </div>
                           </FormControl>
                           <PasswordStrength password={field.value} />
                           <FormMessage />
