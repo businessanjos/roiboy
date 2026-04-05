@@ -383,16 +383,28 @@ export default function Auth() {
                 <form onSubmit={handleUpdatePassword} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="new-password">Nova senha</Label>
-                    <Input
-                      id="new-password"
-                      type="password"
-                      placeholder="Crie uma senha forte"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      required
-                      minLength={8}
-                      disabled={isSubmitting}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="new-password"
+                        type={showNewPassword ? "text" : "password"}
+                        placeholder="Crie uma senha forte"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        required
+                        minLength={8}
+                        disabled={isSubmitting}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        tabIndex={-1}
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                      </Button>
+                    </div>
                     <PasswordStrength password={newPassword} />
                   </div>
                   <div className="space-y-2">
