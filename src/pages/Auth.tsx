@@ -40,6 +40,10 @@ export default function Auth() {
   const [view, setView] = useState<"auth" | "forgot" | "reset">("auth");
   const [resetSent, setResetSent] = useState(false);
   const [passwordUpdated, setPasswordUpdated] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showSignupPassword, setShowSignupPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // React Hook Form with Zod validation - Login
   const loginForm = useForm<LoginFormData>({
