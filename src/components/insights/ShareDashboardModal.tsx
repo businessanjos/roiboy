@@ -432,7 +432,7 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
 export function ShareDashboardModal({ open, onOpenChange, dashboardId, dashboardName }: ShareDashboardModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Link2 className="h-5 w-5" />
