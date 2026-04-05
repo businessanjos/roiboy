@@ -530,13 +530,25 @@ export default function Auth() {
                             </Button>
                           </div>
                           <FormControl>
-                            <Input
-                              type="password"
-                              placeholder="••••••••"
-                              disabled={isSubmitting}
-                              maxLength={SECURITY_LIMITS.PASSWORD_MAX}
-                              {...field}
-                            />
+                            <div className="relative">
+                              <Input
+                                type={showLoginPassword ? "text" : "password"}
+                                placeholder="••••••••"
+                                disabled={isSubmitting}
+                                maxLength={SECURITY_LIMITS.PASSWORD_MAX}
+                                {...field}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                onClick={() => setShowLoginPassword(!showLoginPassword)}
+                                tabIndex={-1}
+                              >
+                                {showLoginPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                              </Button>
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
