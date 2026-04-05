@@ -639,13 +639,25 @@ export default function Auth() {
                         <FormItem>
                           <FormLabel>Senha</FormLabel>
                           <FormControl>
-                            <Input
-                              type="password"
-                              placeholder="Crie uma senha forte"
-                              disabled={isSubmitting}
-                              maxLength={SECURITY_LIMITS.PASSWORD_MAX}
-                              {...field}
-                            />
+                            <div className="relative">
+                              <Input
+                                type={showSignupPassword ? "text" : "password"}
+                                placeholder="Crie uma senha forte"
+                                disabled={isSubmitting}
+                                maxLength={SECURITY_LIMITS.PASSWORD_MAX}
+                                {...field}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                                onClick={() => setShowSignupPassword(!showSignupPassword)}
+                                tabIndex={-1}
+                              >
+                                {showSignupPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
+                              </Button>
+                            </div>
                           </FormControl>
                           <PasswordStrength password={field.value} />
                           <FormMessage />
