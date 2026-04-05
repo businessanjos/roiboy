@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { AppearanceConfig, COLOR_PALETTES, DEFAULT_APPEARANCE, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 import { formatValueCompact } from "@/lib/formula-evaluator";
 
@@ -17,25 +18,26 @@ interface ConfigurableFunnelProps {
   appearance?: AppearanceConfig;
 }
 
-export function ConfigurableFunnel({ data, formatting, appearance }: ConfigurableFunnelProps) {
+export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelProps>(function ConfigurableFunnel(
+  { data, formatting, appearance },
+  ref
+) {
   const config = appearance || DEFAULT_APPEARANCE;
   const colors = COLOR_PALETTES[config.colorPalette] || COLOR_PALETTES.professional;
   const m = FONT_SCALE_MULTIPLIERS[config.fontScale || 'normal'];
 
   if (!data || data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
+      <div ref={ref} className="flex items-center justify-center h-full text-muted-foreground">
         Sem dados para exibir
       </div>
     );
   }
 
-  // Separate "Ganhos" from regular stages
   const isGanhos = (name: string) => name === 'Ganhos';
-  const regularData = data.filter(d => !isGanhos(d.name));
-  const ganhosItem = data.find(d => isGanhos(d.name));
+  const regularData = data.filter((d) => !isGanhos(d.name));
+  const ganhosItem = data.find((d) => isGanhos(d.name));
 
-  // Build cumulative counts from bottom to top (excluding Ganhos)
   const cumulativeCounts: number[] = new Array(regularData.length);
   for (let i = regularData.length - 1; i >= 0; i--) {
     const below = i < regularData.length - 1 ? cumulativeCounts[i + 1] : (ganhosItem?.value || 0);
@@ -45,7 +47,7 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
   const maxValue = cumulativeCounts[0] || 1;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-1.5 h-full w-full px-4 py-2 overflow-hidden">
+    <div ref={ref} className="flex flex-col items-center justify-center gap-1.5 h-full w-full px-4 py-2 overflow-hidden">
       {regularData.map((item, index) => {
         const cumValue = cumulativeCounts[index];
         const widthPct = Math.max((Math.sqrt(cumValue) / Math.sqrt(maxValue)) * 100, 15);
@@ -113,4 +115,6 @@ export function ConfigurableFunnel({ data, formatting, appearance }: Configurabl
       })()}
     </div>
   );
-}
+});
+
+ConfigurableFunnel.displayName = "ConfigurableFunnel";

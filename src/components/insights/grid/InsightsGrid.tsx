@@ -324,7 +324,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
 
   // ResizeObserver with debounce
   useEffect(() => {
-    if (!containerRef.current || isMobile) return;
+    if (!containerRef.current || isMobile || readOnly) return;
 
     let rafId: number | null = null;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -355,7 +355,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
       if (debounceTimer) clearTimeout(debounceTimer);
       if (rafId) cancelAnimationFrame(rafId);
     };
-  }, [isMobile]);
+  }, [isMobile, readOnly]);
 
   const handleContinuousLayoutChange = useCallback(
     (newLayout: LayoutItem[]) => {
@@ -407,6 +407,20 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
 
   const containerWidth = width ?? 1200;
 
+  if (readOnly) {
+    return (
+      <div ref={containerRef} className="insights-grid pointer-events-auto relative">
+        <ResponsiveInsightsGrid
+          visuals={visuals}
+          onUpdateVisual={undefined}
+          onRemoveVisual={undefined}
+          containerWidth={containerWidth}
+          readOnly
+        />
+      </div>
+    );
+  }
+
   // Always show responsive CSS grid, with an invisible react-grid-layout
   // overlay that activates only during drag/resize
   return (
@@ -415,8 +429,8 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
       {!isEditing && (
         <ResponsiveInsightsGrid
           visuals={visuals}
-          onUpdateVisual={readOnly ? undefined : onUpdateVisual}
-          onRemoveVisual={readOnly ? undefined : onRemoveVisual}
+          onUpdateVisual={onUpdateVisual}
+          onRemoveVisual={onRemoveVisual}
           containerWidth={containerWidth}
           readOnly={readOnly}
         />
