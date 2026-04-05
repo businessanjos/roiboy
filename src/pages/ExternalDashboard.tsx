@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,7 +19,10 @@ function ExternalDashboardContent() {
   const navigate = useNavigate();
   const [zoom, setZoom] = useState(100);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
   const { setAccountIdOverride } = useInsightsFilters();
+  const zoomContentRef = useRef<HTMLDivElement>(null);
+  const zoomScale = zoom / 100;
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -73,6 +76,34 @@ function ExternalDashboardContent() {
       setAccountIdOverride(dashboard.account_id);
     }
   }, [dashboard?.account_id, setAccountIdOverride]);
+
+  // Keep scrollable area in sync with visual zoom so content doesn't get clipped
+  useEffect(() => {
+    if (!zoomContentRef.current || visualsLoading) return;
+
+    const element = zoomContentRef.current;
+    let frameId: number | null = null;
+
+    const updateHeight = () => {
+      const nextHeight = element.scrollHeight;
+      setContentHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+    };
+
+    const scheduleUpdate = () => {
+      if (frameId) cancelAnimationFrame(frameId);
+      frameId = requestAnimationFrame(updateHeight);
+    };
+
+    scheduleUpdate();
+
+    const observer = new ResizeObserver(scheduleUpdate);
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+      if (frameId) cancelAnimationFrame(frameId);
+    };
+  }, [dashboardId, visuals.length, visualsLoading]);
 
   // Fetch visuals
   const { data: visuals = [], isLoading: visualsLoading } = useQuery({
@@ -155,15 +186,24 @@ function ExternalDashboardContent() {
         ) : (
           <div
             style={{
-              zoom: zoom / 100,
-              transformOrigin: "top left",
+              width: `${zoom}%`,
+              minHeight: contentHeight ? `${contentHeight * zoomScale}px` : undefined,
             }}
           >
-            <InsightsGrid
-              visuals={visuals}
-              onLayoutChange={() => {}}
-              readOnly={true}
-            />
+            <div
+              ref={zoomContentRef}
+              style={{
+                zoom: zoomScale,
+                width: `${100 / zoomScale}%`,
+                transformOrigin: "top left",
+              }}
+            >
+              <InsightsGrid
+                visuals={visuals}
+                onLayoutChange={() => {}}
+                readOnly={true}
+              />
+            </div>
           </div>
         )}
       </div>
