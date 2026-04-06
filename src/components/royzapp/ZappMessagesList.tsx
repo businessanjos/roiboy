@@ -12,6 +12,9 @@ interface ZappMessagesListProps {
   onEditMessage?: (messageId: string, newContent: string) => Promise<void>;
   onRetryMessage?: (message: Message) => void;
   onRetryMediaDownload?: (messageId: string) => void;
+  searchQuery?: string;
+  searchMatchIds?: string[];
+  searchFocusId?: string | null;
 }
 
 // Build a fallback mention map from sender_phone data in group messages
@@ -67,6 +70,9 @@ export function ZappMessagesList({
   onEditMessage,
   onRetryMessage,
   onRetryMediaDownload,
+  searchQuery,
+  searchMatchIds,
+  searchFocusId,
 }: ZappMessagesListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -252,6 +258,22 @@ export function ZappMessagesList({
     }
   }, [enrichedMessages]);
 
+  // Scroll to search focus
+  useEffect(() => {
+    if (searchFocusId) {
+      const element = messageRefs.current.get(searchFocusId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightedMessageId(searchFocusId);
+        const timer = setTimeout(() => setHighlightedMessageId(null), 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [searchFocusId]);
+
+  // Build search match set for fast lookup
+  const searchMatchSet = useMemo(() => new Set(searchMatchIds || []), [searchMatchIds]);
+
   return (
     <ScrollArea className="flex-1 px-2 sm:px-4 py-2">
       <div className="space-y-1 w-full min-w-0">
@@ -283,6 +305,7 @@ export function ZappMessagesList({
                   onRetryMediaDownload={onRetryMediaDownload}
                   onScrollToQuoted={handleScrollToQuoted}
                   isHighlighted={highlightedMessageId === message.id}
+                  searchHighlight={searchMatchSet.has(message.id)}
                 />
               </div>
             );

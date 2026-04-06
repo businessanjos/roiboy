@@ -48,6 +48,7 @@ interface ZappMessageBubbleProps {
   onRetryMediaDownload?: (messageId: string) => void;
   onScrollToQuoted?: (quotedMessageId: string) => void;
   isHighlighted?: boolean;
+  searchHighlight?: boolean;
 }
 
 // Function to handle file download with correct filename (fetch-to-blob pattern)
@@ -252,6 +253,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   onRetryMediaDownload,
   onScrollToQuoted,
   isHighlighted,
+  searchHighlight,
 }: ZappMessageBubbleProps) {
   const { toast } = useToast();
   const [showActions, setShowActions] = useState(false);
@@ -406,7 +408,9 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             // Visual indicator for failed messages
             message.send_status === "failed" && "ring-2 ring-red-500/50 bg-red-950/30",
             // Highlight effect when scrolled to
-            isHighlighted && "ring-2 ring-zapp-accent animate-pulse"
+            isHighlighted && "ring-2 ring-zapp-accent animate-pulse",
+            // Search match highlight
+            searchHighlight && "ring-1 ring-amber-400/70 bg-amber-400/10"
           )}>
           {/* Sender name for group messages */}
           {message.is_from_client && isGroup && message.sender_name && (

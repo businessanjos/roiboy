@@ -4,6 +4,7 @@ import {
   ArrowRightLeft,
   MoreVertical,
   Phone,
+  Search,
   User,
   UserCheck,
   UserPlus,
@@ -55,6 +56,7 @@ interface ZappChatHeaderProps {
   onDismissConversation?: () => void;
   onOpenEditGroup?: () => void;
   onCall?: () => void;
+  onToggleSearch?: () => void;
 }
 
 export const ZappChatHeader = memo(function ZappChatHeader({
@@ -81,6 +83,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   onDismissConversation,
   onOpenEditGroup,
   onCall,
+  onToggleSearch,
 }: ZappChatHeaderProps) {
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const conversationId = assignment.zapp_conversation_id || assignment.zapp_conversation?.id;
@@ -241,6 +244,15 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               variant="ghost"
               size="icon"
               className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
+              onClick={onToggleSearch}
+              title="Buscar na conversa"
+            >
+              <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
               onClick={onOpenTransfer}
             >
               <ArrowRightLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -262,6 +274,13 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border z-50">
                 {/* Mobile-only actions */}
                 <div className="sm:hidden">
+                  <DropdownMenuItem 
+                    className="text-zapp-text hover:bg-zapp-hover"
+                    onClick={onToggleSearch}
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    Buscar na conversa
+                  </DropdownMenuItem>
                   <DropdownMenuItem 
                     className="text-zapp-text hover:bg-zapp-hover"
                     onClick={onOpenTransfer}
