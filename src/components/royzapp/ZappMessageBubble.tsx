@@ -48,6 +48,7 @@ interface ZappMessageBubbleProps {
   onRetryMediaDownload?: (messageId: string) => void;
   onScrollToQuoted?: (quotedMessageId: string) => void;
   isHighlighted?: boolean;
+  searchHighlight?: boolean;
 }
 
 // Function to handle file download with correct filename (fetch-to-blob pattern)
