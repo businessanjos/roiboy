@@ -120,6 +120,9 @@ export default function Products() {
     setName("");
     setDescription("");
     setPrice("");
+    setCashPrice("");
+    setInstallmentPrice("");
+    setPaymentMethods([]);
     setBillingPeriod("monthly");
     setIsActive(true);
     setIsMls(false);
