@@ -280,7 +280,7 @@ export default function Renewals() {
                 <TableRow>
                   <TableHead className="w-[280px]">Cliente</TableHead>
                   <TableHead className="text-center">Produto</TableHead>
-                  <TableHead className="text-center">Valor</TableHead>
+                  <TableHead className="text-center">Valor Renovação</TableHead>
                   <TableHead className="text-center">Início</TableHead>
                   <TableHead className="text-center">Vencimento</TableHead>
                   <TableHead className="text-center">Tempo Restante</TableHead>
@@ -328,7 +328,7 @@ export default function Renewals() {
                       )}
                     </TableCell>
                     <TableCell className="text-center text-sm font-medium">
-                      {formatCurrency(contract.value, contract.currency)}
+                      {formatCurrency(contract.renewal_value, contract.currency)}
                     </TableCell>
                     <TableCell className="text-center text-sm text-muted-foreground">
                       {formatLocalDate(contract.start_date)}
