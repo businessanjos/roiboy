@@ -186,6 +186,7 @@ export default function Products() {
     setInstallmentPrice("");
     setRenewalDiscountPercent("50");
     setPaymentMethods([]);
+    setDeliverables({ ...DEFAULT_DELIVERABLES });
     setBillingPeriod("monthly");
     setIsActive(true);
     setIsMls(false);
