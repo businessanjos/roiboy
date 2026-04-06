@@ -331,6 +331,9 @@ export default function Renewals() {
                         </div>
                       </Link>
                     </TableCell>
+                    <TableCell className="text-center text-sm text-muted-foreground">
+                      {contract.responsible_name || "—"}
+                    </TableCell>
                     <TableCell className="text-center">
                       {contract.product_name ? (
                         <Badge
