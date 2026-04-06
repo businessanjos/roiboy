@@ -150,12 +150,13 @@ export default function SharedInsights() {
     }
   }, [status, email, dateRange, userId, productId, callEdgeFunction]);
 
-  // Re-fetch when filters change (skip initial load, but trigger once when initial load completes)
+  // Re-fetch when filters change (skip during initial load since initial data is already filtered)
   const [initialLoad, setInitialLoad] = useState(true);
   useEffect(() => {
     if (initialLoad) return;
     fetchFilteredData();
-  }, [preset, customRange, userId, productId, initialLoad]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preset, customRange, userId, productId]);
 
   // Initial validation
   useEffect(() => {
