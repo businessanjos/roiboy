@@ -116,6 +116,7 @@ export default function Renewals() {
             return (c.value || 0) * (discountPercent / 100);
           })(),
         };
+      });
 
       setContracts(mapped);
     } catch (err) {
