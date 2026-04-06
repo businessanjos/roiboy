@@ -107,8 +107,15 @@ export default function Renewals() {
           product_name: c.products?.name || null,
           product_color: c.products?.color || null,
           days_until_expiry: daysUntil,
+          renewal_value: (() => {
+            const discountPercent = c.products?.renewal_discount_percent ?? 50;
+            const productPrice = c.products?.price;
+            if (productPrice) {
+              return productPrice * (discountPercent / 100);
+            }
+            return (c.value || 0) * (discountPercent / 100);
+          })(),
         };
-      });
 
       setContracts(mapped);
     } catch (err) {
