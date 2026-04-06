@@ -40,6 +40,7 @@ interface Product {
   is_mls: boolean;
   mls_level: string | null;
   color: string | null;
+  renewal_discount_percent: number | null;
   created_at: string;
 }
 
