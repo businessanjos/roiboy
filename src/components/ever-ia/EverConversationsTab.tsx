@@ -5,27 +5,38 @@ import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const EVER_AI_EMBED_URL = "https://everia.pro/embed/chat";
+const EVER_AI_EMBED_ORIGIN = new URL(EVER_AI_EMBED_URL).origin;
 
 export function EverConversationsTab() {
   const { currentUser } = useCurrentUser();
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const tokensRef = useRef<{ access_token: string; refresh_token: string | null }>({
+    access_token: "",
+    refresh_token: null,
+  });
+  const embedReadyRef = useRef(false);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
-  const tokensRef = useRef<{ access_token: string; refresh_token: string } | null>(null);
 
   const sendAuthToIframe = useCallback(() => {
-    const iframe = iframeRef.current;
-    const tokens = tokensRef.current;
-    if (iframe?.contentWindow && tokens) {
-      iframe.contentWindow.postMessage(
-        {
-          type: "EVER_AI_AUTH",
-          access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
-        },
-        "https://everia.pro"
-      );
+    const iframeWindow = iframeRef.current?.contentWindow;
+    const { access_token, refresh_token } = tokensRef.current;
+
+    if (!iframeWindow || !embedReadyRef.current || !access_token) {
+      return false;
     }
+
+    iframeWindow.postMessage(
+      {
+        type: "EVER_AI_AUTH",
+        access_token,
+        refresh_token,
+      },
+      EVER_AI_EMBED_ORIGIN
+    );
+
+    setStatus("ready");
+    return true;
   }, []);
 
   const authenticate = useCallback(async () => {
@@ -33,33 +44,48 @@ export function EverConversationsTab() {
 
     setStatus("loading");
     setErrorMsg("");
+    tokensRef.current = { access_token: "", refresh_token: null };
 
     try {
       const { data, error } = await supabase.functions.invoke("ever-ia-auth", {
         method: "POST",
       });
 
-      if (error) throw new Error(error.message || "Erro na autenticação");
+      if (error) {
+        throw new Error(error.message || "Erro na autenticação");
+      }
 
-      const { access_token, refresh_token } = data;
-      if (!access_token) throw new Error("Token não recebido");
+      const { access_token, refresh_token } = data ?? {};
 
-      tokensRef.current = { access_token, refresh_token };
-      setStatus("ready");
+      if (!access_token) {
+        throw new Error("Token não recebido");
+      }
+
+      tokensRef.current = {
+        access_token,
+        refresh_token: refresh_token ?? null,
+      };
+
+      sendAuthToIframe();
     } catch (err: any) {
       console.error("[EverIA] Auth error:", err);
       setErrorMsg(err.message || "Falha na autenticação");
       setStatus("error");
     }
-  }, [currentUser]);
+  }, [currentUser, sendAuthToIframe]);
 
-  // Listen for "ever-embed-ready" from iframe, then send tokens
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== "https://everia.pro") return;
-      if (event.data?.type === "ever-embed-ready" && tokensRef.current) {
-        sendAuthToIframe();
-      }
+      if (event.origin !== EVER_AI_EMBED_ORIGIN) return;
+      if (event.source !== iframeRef.current?.contentWindow) return;
+
+      const messageType =
+        typeof event.data === "string" ? event.data : event.data?.type;
+
+      if (messageType !== "ever-embed-ready") return;
+
+      embedReadyRef.current = true;
+      sendAuthToIframe();
     };
 
     window.addEventListener("message", handleMessage);
@@ -67,7 +93,11 @@ export function EverConversationsTab() {
   }, [sendAuthToIframe]);
 
   useEffect(() => {
-    if (currentUser) authenticate();
+    embedReadyRef.current = false;
+
+    if (currentUser) {
+      authenticate();
+    }
   }, [currentUser, authenticate]);
 
   if (status === "error") {
