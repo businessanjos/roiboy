@@ -313,11 +313,11 @@ export default function Products() {
                 <div className="space-y-2">
                   <Label>Valor (R$)</Label>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
+                    onChange={(e) => handleCurrencyChange(e.target.value, setPrice)}
                     placeholder="0,00"
-                    step="0.01"
                   />
                 </div>
                 <div className="space-y-2">
