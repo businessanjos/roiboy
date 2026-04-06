@@ -328,7 +328,7 @@ export default function Renewals() {
                       )}
                     </TableCell>
                     <TableCell className="text-center text-sm font-medium">
-                      {formatCurrency(contract.value, contract.currency)}
+                      {formatCurrency(contract.renewal_value, contract.currency)}
                     </TableCell>
                     <TableCell className="text-center text-sm text-muted-foreground">
                       {formatLocalDate(contract.start_date)}
