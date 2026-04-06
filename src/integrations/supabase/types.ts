@@ -8536,6 +8536,7 @@ export type Database = {
           cash_price: number | null
           color: string | null
           created_at: string
+          deliverables: Json | null
           description: string | null
           id: string
           installment_price: number | null
@@ -8554,6 +8555,7 @@ export type Database = {
           cash_price?: number | null
           color?: string | null
           created_at?: string
+          deliverables?: Json | null
           description?: string | null
           id?: string
           installment_price?: number | null
@@ -8572,6 +8574,7 @@ export type Database = {
           cash_price?: number | null
           color?: string | null
           created_at?: string
+          deliverables?: Json | null
           description?: string | null
           id?: string
           installment_price?: number | null
