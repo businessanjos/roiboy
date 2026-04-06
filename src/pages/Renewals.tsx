@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Loader2, ArrowRight, CalendarDays, AlertTriangle, Clock, RefreshCw } from "lucide-react";
+import { Search, Loader2, ArrowRight, CalendarDays, AlertTriangle, Clock, RefreshCw, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,7 @@ interface RenewalContract {
   product_name: string | null;
   product_color: string | null;
   days_until_expiry: number;
+  renewal_value: number;
 }
 
 export default function Renewals() {
@@ -60,7 +61,7 @@ export default function Renewals() {
           currency,
           product_id,
           clients!inner(full_name, phone_e164, emails, logo_url, status),
-          products(name, color)
+          products(name, color, price, renewal_discount_percent)
         `)
         .eq("account_id", currentUser.account_id)
         .eq("status", "active")
@@ -106,6 +107,14 @@ export default function Renewals() {
           product_name: c.products?.name || null,
           product_color: c.products?.color || null,
           days_until_expiry: daysUntil,
+          renewal_value: (() => {
+            const discountPercent = c.products?.renewal_discount_percent ?? 50;
+            const productPrice = c.products?.price;
+            if (productPrice) {
+              return productPrice * (discountPercent / 100);
+            }
+            return (c.value || 0) * (discountPercent / 100);
+          })(),
         };
       });
 
@@ -134,6 +143,7 @@ export default function Renewals() {
   const urgentCount = filtered.filter((c) => c.days_until_expiry <= 30).length;
   const warningCount = filtered.filter((c) => c.days_until_expiry > 30 && c.days_until_expiry <= 60).length;
   const okCount = filtered.filter((c) => c.days_until_expiry > 60).length;
+  const totalRenewalValue = filtered.reduce((sum, c) => sum + c.renewal_value, 0);
 
   const getUrgencyBadge = (days: number) => {
     if (days <= 30) {
@@ -193,7 +203,18 @@ export default function Renewals() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardContent className="p-4 flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+              <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold">{formatCurrency(totalRenewalValue, "BRL")}</p>
+              <p className="text-xs text-muted-foreground">Valor total de renovação</p>
+            </div>
+          </CardContent>
+        </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
             <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
