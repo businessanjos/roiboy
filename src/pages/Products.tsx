@@ -240,7 +240,7 @@ export default function Products() {
         is_mls: isMls,
         mls_level: isMls ? (mlsLevel || null) : null,
         color: color,
-        deliverables: deliverables as unknown as Record<string, unknown>,
+        deliverables: JSON.parse(JSON.stringify(deliverables)),
       };
 
       if (editingId) {
