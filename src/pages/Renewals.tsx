@@ -31,6 +31,7 @@ interface RenewalContract {
   product_color: string | null;
   days_until_expiry: number;
   renewal_value: number;
+  responsible_name: string | null;
 }
 
 export default function Renewals() {
@@ -62,7 +63,7 @@ export default function Renewals() {
           currency,
           product_id,
           payment_option,
-          clients!inner(full_name, phone_e164, emails, logo_url, status),
+          clients!inner(full_name, phone_e164, emails, logo_url, status, responsible_user_id, users:responsible_user_id(full_name)),
           products(name, color, price, cash_price, installment_price, renewal_discount_percent)
         `)
         .eq("account_id", currentUser.account_id)
@@ -130,6 +131,7 @@ export default function Renewals() {
             
             return priceToUse * (discountPercent / 100);
           })(),
+          responsible_name: (c.clients as any)?.users?.full_name || null,
         };
       });
 
@@ -294,6 +296,7 @@ export default function Renewals() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[280px]">Cliente</TableHead>
+                  <TableHead className="text-center">Consultora</TableHead>
                   <TableHead className="text-center">Produto</TableHead>
                   <TableHead className="text-center">Valor Renovação</TableHead>
                   <TableHead className="text-center">Início</TableHead>
@@ -326,6 +329,9 @@ export default function Renewals() {
                           )}
                         </div>
                       </Link>
+                    </TableCell>
+                    <TableCell className="text-center text-sm text-muted-foreground">
+                      {contract.responsible_name || "—"}
                     </TableCell>
                     <TableCell className="text-center">
                       {contract.product_name ? (
