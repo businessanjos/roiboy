@@ -440,6 +440,16 @@ export default function Products() {
                               parseFormattedNumber(price) * (parseFloat(renewalDiscountPercent) / 100)
                             )}
                           </span>
+                          {installmentPrice && parseFormattedNumber(installmentPrice) > 0 && (
+                            <>
+                              <br />
+                              Valor renovação parcelado: <span className="font-medium text-foreground">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                                  parseFormattedNumber(installmentPrice) * (parseFloat(renewalDiscountPercent) / 100)
+                                )}
+                              </span>
+                            </>
+                          )}
                         </>
                       )}
                     </p>
