@@ -87,7 +87,7 @@ export default function Renewals() {
           client_id: c.client_id,
           client_name: c.clients?.full_name || "—",
           client_phone: c.clients?.phone_e164 || null,
-          client_email: c.clients?.email || null,
+          client_email: Array.isArray(c.clients?.emails) ? c.clients.emails[0] : (c.clients?.emails || null),
           client_photo_url: c.clients?.photo_url || null,
           client_status: c.clients?.status || "active",
           contract_status: c.status,
