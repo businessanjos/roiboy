@@ -93,7 +93,32 @@ export default function Products() {
   const [installmentPrice, setInstallmentPrice] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
 
-  const fetchProducts = async () => {
+  // Format number with thousand separators (pt-BR)
+  const formatNumberInput = (raw: string): string => {
+    const clean = raw.replace(/[^\d,]/g, "");
+    const parts = clean.split(",");
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return parts.length > 1 ? `${intPart},${parts[1].slice(0, 2)}` : intPart;
+  };
+
+  const parseFormattedNumber = (formatted: string): number => {
+    if (!formatted) return 0;
+    return parseFloat(formatted.replace(/\./g, "").replace(",", ".")) || 0;
+  };
+
+  const handleCurrencyChange = (
+    value: string,
+    setter: (v: string) => void
+  ) => {
+    const raw = value.replace(/[^\d,]/g, "");
+    setter(formatNumberInput(raw));
+  };
+
+  const toFormattedString = (num: number): string => {
+    if (!num) return "";
+    return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
     try {
       const { data, error } = await supabase
         .from("products")
