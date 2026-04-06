@@ -305,6 +305,7 @@ export function ZappMessagesList({
                   onRetryMediaDownload={onRetryMediaDownload}
                   onScrollToQuoted={handleScrollToQuoted}
                   isHighlighted={highlightedMessageId === message.id}
+                  searchHighlight={searchMatchSet.has(message.id)}
                 />
               </div>
             );
