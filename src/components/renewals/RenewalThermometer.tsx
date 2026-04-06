@@ -10,11 +10,10 @@ interface RenewalThermometerProps {
 }
 
 interface ScoreBreakdown {
-  financial: number;    // 0-100, weight 40%
-  escore: number;       // 0-100, weight 25%
-  attendance: number;   // 0-100, weight 20%
-  roizometer: number;   // 0-100, weight 15%
-  total: number;        // 0-100 weighted
+  financial: number;
+  engagement: number;
+  attendance: number;
+  total: number;
 }
 
 export function RenewalThermometer({ clientId, accountId }: RenewalThermometerProps) {
@@ -28,14 +27,13 @@ export function RenewalThermometer({ clientId, accountId }: RenewalThermometerPr
       setLoading(true);
       try {
         const today = new Date();
-        const sixMonthsAgo = new Date(today);
-        sixMonthsAgo.setMonth(today.getMonth() - 6);
         const ninetyDaysAgo = new Date(today);
         ninetyDaysAgo.setDate(today.getDate() - 90);
+        const sixMonthsAgo = new Date(today);
+        sixMonthsAgo.setMonth(today.getMonth() - 6);
 
-        // Fetch all data in parallel
-        const [financialRes, scoreRes, attendanceRes] = await Promise.all([
-          // 1. Financial health: pending entries in last 90 days
+        const [financialRes, messagesRes, attendanceRes] = await Promise.all([
+          // 1. Financial: overdue income entries
           supabase
             .from("financial_entries")
             .select("id, due_date, status")
@@ -45,14 +43,14 @@ export function RenewalThermometer({ clientId, accountId }: RenewalThermometerPr
             .gte("due_date", ninetyDaysAgo.toISOString().split("T")[0])
             .lte("due_date", today.toISOString().split("T")[0]),
 
-          // 2. Latest score snapshot (escore + roizometer)
+          // 2. Client messages in last 90 days (engagement)
           supabase
-            .from("score_snapshots")
-            .select("escore, roizometer")
+            .from("message_events")
+            .select("id, created_at")
             .eq("account_id", accountId)
             .eq("client_id", clientId)
-            .order("computed_at", { ascending: false })
-            .limit(1),
+            .eq("direction", "client_to_team" as any)
+            .gte("created_at", ninetyDaysAgo.toISOString()),
 
           // 3. Event attendance in last 6 months
           supabase
@@ -65,77 +63,60 @@ export function RenewalThermometer({ clientId, accountId }: RenewalThermometerPr
 
         if (cancelled) return;
 
-        // --- Score: Financial Health (40%) ---
-        let financialScore = 100;
+        // --- Financial Health (45%) ---
+        let financialScore = 80; // default if no entries
         if (financialRes.data && financialRes.data.length > 0) {
-          const total = financialRes.data.length;
-          const pending = financialRes.data.filter((e: any) => e.status === "pending");
-          const overduePending = pending.filter((e: any) => {
-            const due = new Date(e.due_date);
-            return due < today;
+          const overdue = financialRes.data.filter((e: any) => {
+            return e.status === "pending" && new Date(e.due_date) < today;
           });
-          const overdueCount = overduePending.length;
-          
-          // Check max overdue days
+
           let maxOverdueDays = 0;
-          overduePending.forEach((e: any) => {
-            const due = new Date(e.due_date);
-            const days = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+          overdue.forEach((e: any) => {
+            const days = Math.floor((today.getTime() - new Date(e.due_date).getTime()) / (1000 * 60 * 60 * 24));
             if (days > maxOverdueDays) maxOverdueDays = days;
           });
 
-          if (maxOverdueDays > 60) {
-            financialScore = 10; // Very bad
-          } else if (maxOverdueDays > 30) {
-            financialScore = 30;
-          } else if (overdueCount > 0) {
-            financialScore = 60;
-          } else {
-            // All paid - check payment ratio
-            const paidCount = financialRes.data.filter((e: any) => e.status === "paid").length;
-            financialScore = total > 0 ? Math.min(100, Math.round((paidCount / total) * 100)) : 80;
+          if (maxOverdueDays > 60) financialScore = 5;
+          else if (maxOverdueDays > 30) financialScore = 25;
+          else if (overdue.length > 0) financialScore = 55;
+          else {
+            const paid = financialRes.data.filter((e: any) => e.status === "paid").length;
+            financialScore = financialRes.data.length > 0
+              ? Math.min(100, Math.round((paid / financialRes.data.length) * 100))
+              : 80;
           }
-        } else {
-          financialScore = 70; // No data, neutral
         }
 
-        // --- Score: Escore (25%) ---
-        let escoreScore = 50;
-        let roizometerScore = 50;
-        if (scoreRes.data && scoreRes.data.length > 0) {
-          const snap = scoreRes.data[0] as any;
-          // escore is typically 0-1000
-          escoreScore = Math.min(100, Math.round((snap.escore || 0) / 10));
-          // roizometer is typically 0-1000
-          roizometerScore = Math.min(100, Math.round((snap.roizometer || 0) / 10));
+        // --- Engagement via Messages (35%) ---
+        let engagementScore = 20; // default if no messages
+        if (messagesRes.data) {
+          const count = messagesRes.data.length;
+          if (count >= 40) engagementScore = 100;
+          else if (count >= 20) engagementScore = 85;
+          else if (count >= 10) engagementScore = 70;
+          else if (count >= 5) engagementScore = 50;
+          else if (count >= 1) engagementScore = 30;
+          else engagementScore = 5;
         }
 
-        // --- Score: Attendance (20%) ---
-        let attendanceScore = 0;
+        // --- Attendance (20%) ---
+        let attendanceScore = 15; // default if no attendance
         if (attendanceRes.data) {
           const count = attendanceRes.data.length;
-          if (count >= 6) attendanceScore = 100;
-          else if (count >= 4) attendanceScore = 80;
+          if (count >= 5) attendanceScore = 100;
+          else if (count >= 3) attendanceScore = 80;
           else if (count >= 2) attendanceScore = 60;
           else if (count >= 1) attendanceScore = 40;
-          else attendanceScore = 10;
+          else attendanceScore = 5;
         }
 
-        // --- Weighted Total ---
         const total = Math.round(
-          financialScore * 0.4 +
-          escoreScore * 0.25 +
-          attendanceScore * 0.2 +
-          roizometerScore * 0.15
+          financialScore * 0.45 +
+          engagementScore * 0.35 +
+          attendanceScore * 0.20
         );
 
-        setScore({
-          financial: financialScore,
-          escore: escoreScore,
-          attendance: attendanceScore,
-          roizometer: roizometerScore,
-          total,
-        });
+        setScore({ financial: financialScore, engagement: engagementScore, attendance: attendanceScore, total });
       } catch (err) {
         console.error("Error calculating renewal score:", err);
       } finally {
@@ -181,8 +162,6 @@ export function RenewalThermometer({ clientId, accountId }: RenewalThermometerPr
     Icon = Snowflake;
   }
 
-  const barWidth = `${Math.max(8, total)}%`;
-
   return (
     <TooltipProvider>
       <Tooltip>
@@ -195,7 +174,7 @@ export function RenewalThermometer({ clientId, accountId }: RenewalThermometerPr
             <div className="w-full h-1.5 rounded-full bg-muted overflow-hidden">
               <div
                 className={cn("h-full rounded-full transition-all", bgClass)}
-                style={{ width: barWidth }}
+                style={{ width: `${Math.max(8, total)}%` }}
               />
             </div>
           </div>
@@ -204,9 +183,8 @@ export function RenewalThermometer({ clientId, accountId }: RenewalThermometerPr
           <p className="font-semibold">Termômetro: {total}%</p>
           <div className="space-y-0.5">
             <p>💰 Financeiro: {score.financial}%</p>
-            <p>⭐ Escore: {score.escore}%</p>
+            <p>💬 Engajamento: {score.engagement}%</p>
             <p>📍 Presença: {score.attendance}%</p>
-            <p>📊 ROI: {score.roizometer}%</p>
           </div>
         </TooltipContent>
       </Tooltip>
