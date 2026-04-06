@@ -444,6 +444,7 @@ export default function Renewals() {
                       <RenewalThermometer
                         clientId={contract.client_id}
                         accountId={currentUser?.account_id || ""}
+                        onScoreCalculated={handleScoreCalculated}
                       />
                     </TableCell>
                     <TableCell>
