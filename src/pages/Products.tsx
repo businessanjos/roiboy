@@ -349,17 +349,6 @@ export default function Products() {
               </div>
 
               <div className="space-y-2">
-                <Label>Preço parcelado (R$)</Label>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={installmentPrice}
-                  onChange={(e) => handleCurrencyChange(e.target.value, setInstallmentPrice)}
-                  placeholder="0,00"
-                />
-              </div>
-
-              <div className="space-y-2">
                 <Label>Formas de pagamento</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {PAYMENT_METHOD_OPTIONS.map((method) => (
