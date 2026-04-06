@@ -207,8 +207,8 @@ export default function Renewals() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+              <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{warningCount}</p>
