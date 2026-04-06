@@ -171,7 +171,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
   // Focus mode overlay
   const focusModeOverlay = isFocusMode
     ? createPortal(
-        <div ref={focusModeRef} className="fixed inset-0 z-[9999] bg-background overflow-hidden">
+        <div ref={focusModeRef} className="fixed inset-0 z-[9999] bg-background overflow-auto">
           <div className="p-4 flex flex-col" style={{ minHeight: '100%' }}>
             <div className="flex items-center justify-between mb-4 shrink-0">
               <div>
