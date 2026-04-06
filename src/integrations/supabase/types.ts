@@ -9157,6 +9157,97 @@ export type Database = {
           },
         ]
       }
+      renewal_outcomes: {
+        Row: {
+          account_id: string
+          client_id: string
+          contract_id: string
+          created_at: string
+          id: string
+          loss_notes: string | null
+          loss_reason: string | null
+          new_contract_id: string | null
+          outcome: string
+          renewal_value: number | null
+          resolved_at: string | null
+          resolved_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          contract_id: string
+          created_at?: string
+          id?: string
+          loss_notes?: string | null
+          loss_reason?: string | null
+          new_contract_id?: string | null
+          outcome?: string
+          renewal_value?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          contract_id?: string
+          created_at?: string
+          id?: string
+          loss_notes?: string | null
+          loss_reason?: string | null
+          new_contract_id?: string | null
+          outcome?: string
+          renewal_value?: number | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "renewal_outcomes_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renewal_outcomes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "renewal_outcomes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renewal_outcomes_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: true
+            referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renewal_outcomes_new_contract_id_fkey"
+            columns: ["new_contract_id"]
+            isOneToOne: false
+            referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "renewal_outcomes_resolved_by_fkey"
+            columns: ["resolved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       risk_events: {
         Row: {
           account_id: string

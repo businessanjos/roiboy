@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { RenewalThermometer } from "@/components/renewals/RenewalThermometer";
+import { RenewalLosses } from "@/components/renewals/RenewalLosses";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -9,7 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Loader2, ArrowRight, CalendarDays, AlertTriangle, Clock, RefreshCw, DollarSign } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Loader2, ArrowRight, CalendarDays, AlertTriangle, Clock, RefreshCw, DollarSign, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
@@ -275,222 +277,241 @@ export default function Renewals() {
         </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-              <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{formatCurrency(totalRenewalValue, "BRL")}</p>
-              <p className="text-xs text-muted-foreground">Valor total de renovação</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-              <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{urgentCount}</p>
-              <p className="text-xs text-muted-foreground">Até 30 dias</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
-              <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{warningCount}</p>
-              <p className="text-xs text-muted-foreground">31 a 60 dias</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-              <CalendarDays className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{okCount}</p>
-              <p className="text-xs text-muted-foreground">61 a 90 dias</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Tabs defaultValue="pending" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="pending" className="gap-2">
+            <CalendarDays className="h-4 w-4" />
+            Pendentes ({filtered.length})
+          </TabsTrigger>
+          <TabsTrigger value="losses" className="gap-2">
+            <TrendingDown className="h-4 w-4" />
+            Relatório de Perdas
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, email ou produto..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={filterConsultora} onValueChange={setFilterConsultora}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Consultora" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas consultoras</SelectItem>
-            {uniqueConsultoras.sort().map((name) => (
-              <SelectItem key={name} value={name}>{name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterProduto} onValueChange={setFilterProduto}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Produto" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos produtos</SelectItem>
-            {uniqueProdutos.sort().map((name) => (
-              <SelectItem key={name} value={name}>{name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterTempo} onValueChange={setFilterTempo}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Tempo Restante" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os prazos</SelectItem>
-            <SelectItem value="urgent">Até 30 dias</SelectItem>
-            <SelectItem value="warning">31 a 60 dias</SelectItem>
-            <SelectItem value="ok">61 a 90 dias</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filterChance} onValueChange={setFilterChance}>
-          <SelectTrigger className="w-full sm:w-[150px]">
-            <SelectValue placeholder="Chance" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas chances</SelectItem>
-            <SelectItem value="alta">Alta</SelectItem>
-            <SelectItem value="media">Média</SelectItem>
-            <SelectItem value="baixa">Baixa</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+        <TabsContent value="pending" className="space-y-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
+                  <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{formatCurrency(totalRenewalValue, "BRL")}</p>
+                  <p className="text-xs text-muted-foreground">Valor total de renovação</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
+                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{urgentCount}</p>
+                  <p className="text-xs text-muted-foreground">Até 30 dias</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                  <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{warningCount}</p>
+                  <p className="text-xs text-muted-foreground">31 a 60 dias</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+                  <CalendarDays className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{okCount}</p>
+                  <p className="text-xs text-muted-foreground">61 a 90 dias</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex items-center justify-center py-16">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          {/* Search & Filters */}
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por nome, email ou produto..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
             </div>
-          ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <CalendarDays className="h-10 w-10 mb-3 opacity-50" />
-              <p className="font-medium">Nenhum contrato a vencer nos próximos 90 dias</p>
-              <p className="text-sm">Todos os contratos estão com vencimento distante.</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[280px]">Cliente</TableHead>
-                  <TableHead className="text-center">Consultora</TableHead>
-                  <TableHead className="text-center">Produto</TableHead>
-                  <TableHead className="text-center">Valor Renovação</TableHead>
-                  <TableHead className="text-center">Início</TableHead>
-                  <TableHead className="text-center">Vencimento</TableHead>
-                  <TableHead className="text-center">Tempo Restante</TableHead>
-                  <TableHead className="text-center">Chance</TableHead>
-                  <TableHead className="w-[50px]"></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((contract) => (
-                  <TableRow key={contract.id} className="group">
-                    <TableCell>
-                      <Link
-                        to={`/clients/${contract.client_id}`}
-                        className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-                      >
-                        <Avatar className="h-8 w-8">
-                          {contract.client_photo_url ? (
-                            <AvatarImage src={contract.client_photo_url} alt={contract.client_name} />
-                          ) : null}
-                          <AvatarFallback className="text-xs bg-muted">
-                            {getInitials(contract.client_name)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium break-words whitespace-normal max-w-[220px]">{contract.client_name}</p>
-                          {contract.client_email && (
-                            <p className="text-xs text-muted-foreground truncate">{contract.client_email}</p>
-                          )}
-                        </div>
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {contract.responsible_name || "—"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {contract.product_name ? (
-                        <Badge
-                          variant="outline"
-                          className="text-xs"
-                          style={{
-                            borderColor: contract.product_color || undefined,
-                            color: contract.product_color || undefined,
-                          }}
-                        >
-                          {contract.product_name}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center text-sm font-medium">
-                      {formatCurrency(contract.renewal_value, contract.currency)}
-                    </TableCell>
-                    <TableCell className="text-center text-sm text-muted-foreground">
-                      {formatLocalDate(contract.start_date)}
-                    </TableCell>
-                    <TableCell className="text-center text-sm font-medium">
-                      {formatLocalDate(contract.end_date)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {getUrgencyBadge(contract.days_until_expiry)}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <RenewalThermometer
-                        clientId={contract.client_id}
-                        accountId={currentUser?.account_id || ""}
-                        onScoreCalculated={handleScoreCalculated}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Link to={`/clients/${contract.client_id}`}>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <ArrowRight className="h-4 w-4" />
-                              </Button>
-                            </Link>
-                          </TooltipTrigger>
-                          <TooltipContent>Ver cliente</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
-                  </TableRow>
+            <Select value={filterConsultora} onValueChange={setFilterConsultora}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Consultora" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas consultoras</SelectItem>
+                {uniqueConsultoras.sort().map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
                 ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+              </SelectContent>
+            </Select>
+            <Select value={filterProduto} onValueChange={setFilterProduto}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Produto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos produtos</SelectItem>
+                {uniqueProdutos.sort().map((name) => (
+                  <SelectItem key={name} value={name}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterTempo} onValueChange={setFilterTempo}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Tempo Restante" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os prazos</SelectItem>
+                <SelectItem value="urgent">Até 30 dias</SelectItem>
+                <SelectItem value="warning">31 a 60 dias</SelectItem>
+                <SelectItem value="ok">61 a 90 dias</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterChance} onValueChange={setFilterChance}>
+              <SelectTrigger className="w-full sm:w-[150px]">
+                <SelectValue placeholder="Chance" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas chances</SelectItem>
+                <SelectItem value="alta">Alta</SelectItem>
+                <SelectItem value="media">Média</SelectItem>
+                <SelectItem value="baixa">Baixa</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Table */}
+          <Card>
+            <CardContent className="p-0">
+              {loading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+                  <CalendarDays className="h-10 w-10 mb-3 opacity-50" />
+                  <p className="font-medium">Nenhum contrato a vencer nos próximos 90 dias</p>
+                  <p className="text-sm">Todos os contratos estão com vencimento distante.</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[280px]">Cliente</TableHead>
+                      <TableHead className="text-center">Consultora</TableHead>
+                      <TableHead className="text-center">Produto</TableHead>
+                      <TableHead className="text-center">Valor Renovação</TableHead>
+                      <TableHead className="text-center">Início</TableHead>
+                      <TableHead className="text-center">Vencimento</TableHead>
+                      <TableHead className="text-center">Tempo Restante</TableHead>
+                      <TableHead className="text-center">Chance</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((contract) => (
+                      <TableRow key={contract.id} className="group">
+                        <TableCell>
+                          <Link
+                            to={`/clients/${contract.client_id}`}
+                            className="flex items-center gap-3 hover:opacity-80 transition-opacity"
+                          >
+                            <Avatar className="h-8 w-8">
+                              {contract.client_photo_url ? (
+                                <AvatarImage src={contract.client_photo_url} alt={contract.client_name} />
+                              ) : null}
+                              <AvatarFallback className="text-xs bg-muted">
+                                {getInitials(contract.client_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium break-words whitespace-normal max-w-[220px]">{contract.client_name}</p>
+                              {contract.client_email && (
+                                <p className="text-xs text-muted-foreground truncate">{contract.client_email}</p>
+                              )}
+                            </div>
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-center text-sm text-muted-foreground">
+                          {contract.responsible_name || "—"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {contract.product_name ? (
+                            <Badge
+                              variant="outline"
+                              className="text-xs"
+                              style={{
+                                borderColor: contract.product_color || undefined,
+                                color: contract.product_color || undefined,
+                              }}
+                            >
+                              {contract.product_name}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center text-sm font-medium">
+                          {formatCurrency(contract.renewal_value, contract.currency)}
+                        </TableCell>
+                        <TableCell className="text-center text-sm text-muted-foreground">
+                          {formatLocalDate(contract.start_date)}
+                        </TableCell>
+                        <TableCell className="text-center text-sm font-medium">
+                          {formatLocalDate(contract.end_date)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {getUrgencyBadge(contract.days_until_expiry)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <RenewalThermometer
+                            clientId={contract.client_id}
+                            accountId={currentUser?.account_id || ""}
+                            onScoreCalculated={handleScoreCalculated}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Link to={`/clients/${contract.client_id}`}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <ArrowRight className="h-4 w-4" />
+                                  </Button>
+                                </Link>
+                              </TooltipTrigger>
+                              <TooltipContent>Ver cliente</TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="losses">
+          <RenewalLosses />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
