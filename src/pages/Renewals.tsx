@@ -87,7 +87,15 @@ export default function Renewals() {
           client_id: c.client_id,
           client_name: c.clients?.full_name || "—",
           client_phone: c.clients?.phone_e164 || null,
-          client_email: Array.isArray(c.clients?.emails) ? c.clients.emails[0] : (c.clients?.emails || null),
+          client_email: (() => {
+            const emails = c.clients?.emails;
+            if (!emails) return null;
+            if (Array.isArray(emails)) {
+              const first = emails[0];
+              return typeof first === 'object' && first !== null ? (first as any).email : first;
+            }
+            return typeof emails === 'object' ? (emails as any).email : String(emails);
+          })(),
           client_photo_url: c.clients?.logo_url || null,
           client_status: c.clients?.status || "active",
           contract_status: c.status,
