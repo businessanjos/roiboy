@@ -188,7 +188,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
                 </Button>
               </div>
             </div>
-            <div ref={contentRef} style={{ zoom: focusZoom / 100, transformOrigin: 'top left' }}>
+            <div className="flex-1" style={{ zoom: focusZoom / 100, transformOrigin: 'top left' }}>
               {dashboardContent}
             </div>
           </div>
