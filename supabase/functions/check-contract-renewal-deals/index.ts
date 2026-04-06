@@ -125,6 +125,24 @@ serve(async (req) => {
         continue;
       }
 
+      // Renewal rule: 50% of the CURRENT product price (not the original contract value)
+      let renewalValue = (contract.value || 0) * 0.5; // fallback: 50% of contract value
+      
+      if (contract.product_id) {
+        const { data: product, error: productError } = await supabase
+          .from("products")
+          .select("price")
+          .eq("id", contract.product_id)
+          .single();
+
+        if (!productError && product && product.price) {
+          renewalValue = product.price * 0.5;
+          console.log(`Using 50% of current product price: ${product.price} → ${renewalValue}`);
+        } else {
+          console.log(`Product not found for contract ${contract.id}, using 50% of contract value as fallback`);
+        }
+      }
+
       const endDate = new Date(contract.end_date);
       const daysUntilExpiry = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       const isExpired = daysUntilExpiry < 0;
@@ -140,12 +158,12 @@ serve(async (req) => {
           title: `[RENOVAÇÃO] ${clientName}`,
           client_id: contract.client_id,
           stage_id: stages[0].id,
-          value: contract.value || 0,
+          value: renewalValue,
           currency: contract.currency || "BRL",
           source: "contract_renewal",
           source_contract_id: contract.id,
           tags: isExpired ? ["renovação", "vencido"] : ["renovação"],
-          notes: `Renovação automática do contrato que ${isExpired ? 'venceu' : 'vence'} em ${endDate.toLocaleDateString("pt-BR")}.\n\n${urgencyLabel}\nContrato original: ${contract.id}`,
+          notes: `Renovação automática do contrato que ${isExpired ? 'venceu' : 'vence'} em ${endDate.toLocaleDateString("pt-BR")}.\n\n${urgencyLabel}\nValor original: R$ ${(contract.value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nValor de renovação (50% do ticket atual): R$ ${renewalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nContrato original: ${contract.id}`,
           expected_close_date: isExpired ? formatDate(today) : contract.end_date,
           status: "open",
         })
