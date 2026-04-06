@@ -60,10 +60,8 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
   const [hiddenSections, setHiddenSections] = useState<Set<SectionId>>(new Set());
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [focusZoom, setFocusZoom] = useState(100);
+  const [focusZoom, setFocusZoom] = useState(80);
   const focusModeRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const zoomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hasCustomVisuals = visuals.length > 0;
   const hasHiddenSections = hiddenSections.size > 0;
