@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { RenewalThermometer } from "@/components/renewals/RenewalThermometer";
+import { RenewalLosses } from "@/components/renewals/RenewalLosses";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -9,7 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Search, Loader2, ArrowRight, CalendarDays, AlertTriangle, Clock, RefreshCw, DollarSign } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Loader2, ArrowRight, CalendarDays, AlertTriangle, Clock, RefreshCw, DollarSign, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
