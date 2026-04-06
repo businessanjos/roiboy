@@ -258,6 +258,22 @@ export function ZappMessagesList({
     }
   }, [enrichedMessages]);
 
+  // Scroll to search focus
+  useEffect(() => {
+    if (searchFocusId) {
+      const element = messageRefs.current.get(searchFocusId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "center" });
+        setHighlightedMessageId(searchFocusId);
+        const timer = setTimeout(() => setHighlightedMessageId(null), 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [searchFocusId]);
+
+  // Build search match set for fast lookup
+  const searchMatchSet = useMemo(() => new Set(searchMatchIds || []), [searchMatchIds]);
+
   return (
     <ScrollArea className="flex-1 px-2 sm:px-4 py-2">
       <div className="space-y-1 w-full min-w-0">
