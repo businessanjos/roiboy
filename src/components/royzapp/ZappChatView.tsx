@@ -4,6 +4,7 @@ import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
 import { ZappMessageInput, MentionData } from "./ZappMessageInput";
 import { ZappAIAssistBar } from "./ZappAIAssistBar";
+import { ZappMessageSearchBar } from "./ZappMessageSearchBar";
 import { ConversationAssignment, ContactInfo } from "./types";
 import { Message } from "@/hooks/useZappData";
 import { useMessageAssistant } from "@/hooks/useMessageAssistant";
