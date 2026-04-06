@@ -529,14 +529,9 @@ export default function Products() {
                     <Badge variant="destructive">Inativo</Badge>
                   )}
                 </div>
-                {(product.cash_price > 0 || product.installment_price > 0) && (
+                {product.installment_price > 0 && (
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    {product.cash_price > 0 && (
-                      <span>À vista: <span className="font-medium text-foreground">{formatCurrency(product.cash_price)}</span></span>
-                    )}
-                    {product.installment_price > 0 && (
-                      <span>Parcelado: <span className="font-medium text-foreground">{formatCurrency(product.installment_price)}</span></span>
-                    )}
+                    <span>Parcelado: <span className="font-medium text-foreground">{formatCurrency(product.installment_price)}</span></span>
                   </div>
                 )}
                 {product.payment_methods.length > 0 && (
