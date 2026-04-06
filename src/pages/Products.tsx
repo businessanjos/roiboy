@@ -337,27 +337,26 @@ export default function Products() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Preço à vista (R$)</Label>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={cashPrice}
-                    onChange={(e) => handleCurrencyChange(e.target.value, setCashPrice)}
-                    placeholder="0,00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Preço parcelado (R$)</Label>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={installmentPrice}
-                    onChange={(e) => handleCurrencyChange(e.target.value, setInstallmentPrice)}
-                    placeholder="0,00"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label>Preço parcelado (R$)</Label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={installmentPrice}
+                  onChange={(e) => handleCurrencyChange(e.target.value, setInstallmentPrice)}
+                  placeholder="0,00"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Preço parcelado (R$)</Label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={installmentPrice}
+                  onChange={(e) => handleCurrencyChange(e.target.value, setInstallmentPrice)}
+                  placeholder="0,00"
+                />
               </div>
 
               <div className="space-y-2">
@@ -530,14 +529,9 @@ export default function Products() {
                     <Badge variant="destructive">Inativo</Badge>
                   )}
                 </div>
-                {(product.cash_price > 0 || product.installment_price > 0) && (
+                {product.installment_price > 0 && (
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    {product.cash_price > 0 && (
-                      <span>À vista: <span className="font-medium text-foreground">{formatCurrency(product.cash_price)}</span></span>
-                    )}
-                    {product.installment_price > 0 && (
-                      <span>Parcelado: <span className="font-medium text-foreground">{formatCurrency(product.installment_price)}</span></span>
-                    )}
+                    <span>Parcelado: <span className="font-medium text-foreground">{formatCurrency(product.installment_price)}</span></span>
                   </div>
                 )}
                 {product.payment_methods.length > 0 && (
