@@ -63,7 +63,7 @@ export default function Renewals() {
           currency,
           product_id,
           payment_option,
-          clients!inner(full_name, phone_e164, emails, logo_url, status, responsible_user_id, users:responsible_user_id(full_name)),
+          clients!inner(full_name, phone_e164, emails, logo_url, status, responsible_user_id, users:responsible_user_id(name)),
           products(name, color, price, cash_price, installment_price, renewal_discount_percent)
         `)
         .eq("account_id", currentUser.account_id)
@@ -131,7 +131,7 @@ export default function Renewals() {
             
             return priceToUse * (discountPercent / 100);
           })(),
-          responsible_name: (c.clients as any)?.users?.full_name || null,
+          responsible_name: (c.clients as any)?.users?.name || null,
         };
       });
 
