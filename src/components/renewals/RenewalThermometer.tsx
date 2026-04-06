@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface RenewalThermometerProps {
   clientId: string;
   accountId: string;
+  onScoreCalculated?: (clientId: string, score: number) => void;
 }
 
 interface ScoreBreakdown {
