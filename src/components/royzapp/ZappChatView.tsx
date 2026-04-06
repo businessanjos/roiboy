@@ -305,6 +305,7 @@ export function ZappChatView({
         onOpenEditGroup={onOpenEditGroup}
         accountId={accountId}
         onCall={handleCall}
+        onToggleSearch={() => setShowSearch(s => !s)}
       />
 
       {/* Messages */}
