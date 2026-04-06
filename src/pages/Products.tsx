@@ -240,6 +240,7 @@ export default function Products() {
         is_mls: isMls,
         mls_level: isMls ? (mlsLevel || null) : null,
         color: color,
+        deliverables: deliverables,
       };
 
       if (editingId) {
