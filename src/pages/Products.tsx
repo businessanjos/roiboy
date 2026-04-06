@@ -613,12 +613,21 @@ export default function Products() {
                   {deliverables.group_mentoring_enabled && (
                     <div className="space-y-1.5">
                       <Label className="text-xs">Periodicidade</Label>
-                      <Input
+                      <Select
                         value={deliverables.group_mentoring_periodicity}
-                        onChange={(e) => setDeliverables({ ...deliverables, group_mentoring_periodicity: e.target.value })}
-                        placeholder="Ex: Semanal"
-                        className="h-9"
-                      />
+                        onValueChange={(v) => setDeliverables({ ...deliverables, group_mentoring_periodicity: v })}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="diario">Diário</SelectItem>
+                          <SelectItem value="semanal">Semanal</SelectItem>
+                          <SelectItem value="quinzenal">Quinzenal</SelectItem>
+                          <SelectItem value="mensal">Mensal</SelectItem>
+                          <SelectItem value="trimestral">Trimestral</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   )}
                 </div>
