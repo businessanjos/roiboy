@@ -253,6 +253,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   onRetryMediaDownload,
   onScrollToQuoted,
   isHighlighted,
+  searchHighlight,
 }: ZappMessageBubbleProps) {
   const { toast } = useToast();
   const [showActions, setShowActions] = useState(false);
