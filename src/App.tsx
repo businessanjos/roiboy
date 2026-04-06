@@ -44,6 +44,7 @@ const ZappErrorBoundary = lazyRetry(() => import("@/components/royzapp/ZappError
 // Lazy loaded pages
 const Dashboard = lazyRetry(() => import("./pages/Dashboard"));
 const Clients = lazyRetry(() => import("./pages/Clients"));
+const Renewals = lazyRetry(() => import("./pages/Renewals"));
 const ClientDetail = lazyRetry(() => import("./pages/ClientDetail"));
 const Integrations = lazyRetry(() => import("./pages/Integrations"));
 const Settings = lazyRetry(() => import("./pages/Settings"));
