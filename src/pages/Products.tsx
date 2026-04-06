@@ -351,11 +351,11 @@ export default function Products() {
                 <div className="space-y-2">
                   <Label>Preço parcelado (R$)</Label>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={installmentPrice}
-                    onChange={(e) => setInstallmentPrice(e.target.value)}
+                    onChange={(e) => handleCurrencyChange(e.target.value, setInstallmentPrice)}
                     placeholder="0,00"
-                    step="0.01"
                   />
                 </div>
               </div>
