@@ -237,7 +237,8 @@ export default function SharedInsights() {
     localStorage.setItem("shared_insights_email", normalizedEmail);
     setEmail(normalizedEmail);
 
-    const { data, error } = await callEdgeFunction("request_access", { email: normalizedEmail });
+    const defaultFilters = getDefaultDateFilters();
+    const { data, error } = await callEdgeFunction("request_access", { email: normalizedEmail, filters: defaultFilters });
     setSubmitting(false);
 
     if (error || !data) {
