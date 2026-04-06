@@ -97,7 +97,10 @@ export default function Products() {
         .order("name", { ascending: true });
 
       if (error) throw error;
-      setProducts(data || []);
+      setProducts((data || []).map((p: any) => ({
+        ...p,
+        payment_methods: Array.isArray(p.payment_methods) ? p.payment_methods : [],
+      })));
     } catch (error) {
       console.error("Error fetching products:", error);
       toast.error("Erro ao carregar produtos");
