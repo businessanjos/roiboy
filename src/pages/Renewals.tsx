@@ -143,6 +143,7 @@ export default function Renewals() {
   const urgentCount = filtered.filter((c) => c.days_until_expiry <= 30).length;
   const warningCount = filtered.filter((c) => c.days_until_expiry > 30 && c.days_until_expiry <= 60).length;
   const okCount = filtered.filter((c) => c.days_until_expiry > 60).length;
+  const totalRenewalValue = filtered.reduce((sum, c) => sum + c.renewal_value, 0);
 
   const getUrgencyBadge = (days: number) => {
     if (days <= 30) {
