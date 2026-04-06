@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN deliverables JSONB DEFAULT '{}'::jsonb;
