@@ -547,22 +547,34 @@ export default function Products() {
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs">Duração</Label>
+                        <Label className="text-xs">Duração (horas)</Label>
                         <Input
+                          type="number"
+                          min={0}
+                          step={0.5}
                           value={deliverables.individual_session_duration}
                           onChange={(e) => setDeliverables({ ...deliverables, individual_session_duration: e.target.value })}
-                          placeholder="Ex: 60 min"
+                          placeholder="Ex: 1"
                           className="h-9"
                         />
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Periodicidade</Label>
-                        <Input
+                        <Select
                           value={deliverables.individual_session_periodicity}
-                          onChange={(e) => setDeliverables({ ...deliverables, individual_session_periodicity: e.target.value })}
-                          placeholder="Ex: Quinzenal"
-                          className="h-9"
-                        />
+                          onValueChange={(v) => setDeliverables({ ...deliverables, individual_session_periodicity: v })}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="diario">Diário</SelectItem>
+                            <SelectItem value="semanal">Semanal</SelectItem>
+                            <SelectItem value="quinzenal">Quinzenal</SelectItem>
+                            <SelectItem value="mensal">Mensal</SelectItem>
+                            <SelectItem value="trimestral">Trimestral</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   )}
