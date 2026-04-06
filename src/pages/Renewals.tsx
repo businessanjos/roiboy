@@ -134,7 +134,6 @@ export default function Renewals() {
           responsible_name: (c.clients as any)?.users?.full_name || null,
         };
       });
-      });
 
       setContracts(mapped);
     } catch (err) {
