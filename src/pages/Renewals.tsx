@@ -323,7 +323,7 @@ export default function Renewals() {
                           </AvatarFallback>
                         </Avatar>
                         <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{contract.client_name}</p>
+                          <p className="text-sm font-medium break-words whitespace-normal max-w-[220px]">{contract.client_name}</p>
                           {contract.client_email && (
                             <p className="text-xs text-muted-foreground truncate">{contract.client_email}</p>
                           )}
