@@ -82,6 +82,13 @@ export function EverConversationsTab() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      console.log("[EverIA] postMessage received:", {
+        origin: event.origin,
+        expectedOrigin: EVER_AI_EMBED_ORIGIN,
+        data: event.data,
+        sourceMatch: event.source === iframeRef.current?.contentWindow,
+      });
+
       if (event.origin !== EVER_AI_EMBED_ORIGIN) return;
       if (event.source !== iframeRef.current?.contentWindow) return;
 
@@ -90,6 +97,7 @@ export function EverConversationsTab() {
 
       if (messageType !== "ever-embed-ready") return;
 
+      console.log("[EverIA] embed ready signal received!");
       embedReadyRef.current = true;
       sendAuthToIframe();
     };
