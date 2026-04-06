@@ -17,7 +17,7 @@ interface ScoreBreakdown {
   total: number;
 }
 
-export function RenewalThermometer({ clientId, accountId }: RenewalThermometerProps) {
+export function RenewalThermometer({ clientId, accountId, onScoreCalculated }: RenewalThermometerProps) {
   const [score, setScore] = useState<ScoreBreakdown | null>(null);
   const [loading, setLoading] = useState(true);
 
