@@ -162,9 +162,9 @@ export default function Products() {
     setEditingId(product.id);
     setName(product.name);
     setDescription(product.description || "");
-    setPrice(product.price.toString());
-    setCashPrice(product.cash_price ? product.cash_price.toString() : "");
-    setInstallmentPrice(product.installment_price ? product.installment_price.toString() : "");
+    setPrice(toFormattedString(product.price));
+    setCashPrice(product.cash_price ? toFormattedString(product.cash_price) : "");
+    setInstallmentPrice(product.installment_price ? toFormattedString(product.installment_price) : "");
     setPaymentMethods(product.payment_methods || []);
     setBillingPeriod(product.billing_period);
     setIsActive(product.is_active);
