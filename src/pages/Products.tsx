@@ -284,7 +284,7 @@ export default function Products() {
               {!canCreate("products") ? "Limite atingido" : "Novo Produto"}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingId ? "Editar Produto" : "Novo Produto"}
@@ -294,16 +294,39 @@ export default function Products() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Nome *</Label>
-                <Input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Ex: Mentoria Premium"
-                />
+            <div className="space-y-5 py-4">
+              {/* Row 1: Nome + Cor */}
+              <div className="grid grid-cols-[1fr_auto] gap-4 items-end">
+                <div className="space-y-2">
+                  <Label>Nome *</Label>
+                  <Input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ex: Mentoria Premium"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cor</Label>
+                  <div className="flex gap-1.5">
+                    {COLOR_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setColor(option.value)}
+                        className={`w-7 h-7 rounded-full border-2 transition-all ${
+                          color === option.value 
+                            ? "border-foreground scale-110" 
+                            : "border-transparent hover:scale-105"
+                        }`}
+                        style={{ backgroundColor: option.value }}
+                        title={option.label}
+                      />
+                    ))}
+                  </div>
+                </div>
               </div>
 
+              {/* Row 2: Descrição */}
               <div className="space-y-2">
                 <Label>Descrição</Label>
                 <Textarea
@@ -314,7 +337,8 @@ export default function Products() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Row 3: Valor, Parcelado, Periodicidade */}
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label>Valor (R$)</Label>
                   <Input
@@ -322,6 +346,16 @@ export default function Products() {
                     inputMode="decimal"
                     value={price}
                     onChange={(e) => handleCurrencyChange(e.target.value, setPrice)}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Preço parcelado (R$)</Label>
+                  <Input
+                    type="text"
+                    inputMode="decimal"
+                    value={installmentPrice}
+                    onChange={(e) => handleCurrencyChange(e.target.value, setInstallmentPrice)}
                     placeholder="0,00"
                   />
                 </div>
@@ -342,75 +376,65 @@ export default function Products() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Preço parcelado (R$)</Label>
-                <Input
-                  type="text"
-                  inputMode="decimal"
-                  value={installmentPrice}
-                  onChange={(e) => handleCurrencyChange(e.target.value, setInstallmentPrice)}
-                  placeholder="0,00"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Desconto na renovação (%)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={renewalDiscountPercent}
-                  onChange={(e) => setRenewalDiscountPercent(e.target.value)}
-                  placeholder="50"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Percentual do ticket atual cobrado na renovação (ex: 50 = 50% do valor atual)
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Formas de pagamento</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {PAYMENT_METHOD_OPTIONS.map((method) => (
-                    <label
-                      key={method.value}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition-colors text-sm",
-                        paymentMethods.includes(method.value)
-                          ? "border-primary bg-primary/5 text-foreground"
-                          : "border-border hover:bg-muted/50 text-muted-foreground"
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        className="rounded border-border"
-                        checked={paymentMethods.includes(method.value)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setPaymentMethods([...paymentMethods, method.value]);
-                          } else {
-                            setPaymentMethods(paymentMethods.filter((m) => m !== method.value));
-                          }
-                        }}
-                      />
-                      {method.label}
-                    </label>
-                  ))}
+              {/* Row 4: Renovação + Formas de pagamento */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Desconto renovação (%)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={renewalDiscountPercent}
+                    onChange={(e) => setRenewalDiscountPercent(e.target.value)}
+                    placeholder="50"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    % do ticket atual cobrado na renovação
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Formas de pagamento</Label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {PAYMENT_METHOD_OPTIONS.map((method) => (
+                      <label
+                        key={method.value}
+                        className={cn(
+                          "flex items-center gap-2 px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors text-sm",
+                          paymentMethods.includes(method.value)
+                            ? "border-primary bg-primary/5 text-foreground"
+                            : "border-border hover:bg-muted/50 text-muted-foreground"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          className="rounded border-border"
+                          checked={paymentMethods.includes(method.value)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setPaymentMethods([...paymentMethods, method.value]);
+                            } else {
+                              setPaymentMethods(paymentMethods.filter((m) => m !== method.value));
+                            }
+                          }}
+                        />
+                        {method.label}
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <Label htmlFor="is-active">Produto ativo</Label>
-                <Switch
-                  id="is-active"
-                  checked={isActive}
-                  onCheckedChange={setIsActive}
-                />
-              </div>
-
-              <div className="space-y-3 pt-2 border-t">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="is-mls">Produto MLS</Label>
+              {/* Row 5: Toggles + MLS */}
+              <div className="flex items-center gap-6 pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="is-active"
+                    checked={isActive}
+                    onCheckedChange={setIsActive}
+                  />
+                  <Label htmlFor="is-active" className="mb-0">Ativo</Label>
+                </div>
+                <div className="flex items-center gap-2">
                   <Switch
                     id="is-mls"
                     checked={isMls}
@@ -419,14 +443,13 @@ export default function Products() {
                       if (!checked) setMlsLevel("");
                     }}
                   />
+                  <Label htmlFor="is-mls" className="mb-0">MLS</Label>
                 </div>
-
                 {isMls && (
-                  <div className="space-y-2">
-                    <Label>Nível do Título</Label>
+                  <div className="flex-1">
                     <Select value={mlsLevel} onValueChange={setMlsLevel}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o nível" />
+                      <SelectTrigger className="h-8">
+                        <SelectValue placeholder="Nível MLS" />
                       </SelectTrigger>
                       <SelectContent>
                         {MLS_LEVELS.map((level) => (
@@ -441,26 +464,6 @@ export default function Products() {
                     </Select>
                   </div>
                 )}
-              </div>
-
-              <div className="space-y-2">
-                <Label>Cor da Tag</Label>
-                <div className="flex flex-wrap gap-2">
-                  {COLOR_OPTIONS.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setColor(option.value)}
-                      className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        color === option.value 
-                          ? "border-foreground scale-110" 
-                          : "border-transparent hover:scale-105"
-                      }`}
-                      style={{ backgroundColor: option.value }}
-                      title={option.label}
-                    />
-                  ))}
-                </div>
               </div>
             </div>
 
