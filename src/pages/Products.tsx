@@ -150,6 +150,7 @@ export default function Products() {
     setPrice("");
     setCashPrice("");
     setInstallmentPrice("");
+    setRenewalDiscountPercent("50");
     setPaymentMethods([]);
     setBillingPeriod("monthly");
     setIsActive(true);
