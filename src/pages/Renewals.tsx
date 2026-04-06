@@ -146,7 +146,7 @@ export default function Renewals() {
     }
     if (days <= 60) {
       return (
-        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 gap-1">
+        <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 gap-1">
           <Clock className="h-3 w-3" />
           {days} dias
         </Badge>
