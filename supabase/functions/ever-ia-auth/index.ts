@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         email: profile.email,
-        name: profile.name,
+        full_name: profile.name,
         external_id: profile.id,
         role: profile.role,
       }),
