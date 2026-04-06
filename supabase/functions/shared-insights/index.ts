@@ -193,7 +193,9 @@ Deno.serve(async (req) => {
       }
 
       if (request.status === "approved") {
-        const dashboardData = await fetchDashboardDataWithVisuals(supabaseAdmin, share.dashboard_id, share.account_id);
+        // Apply filters if provided (e.g. default "year" range from client)
+        const appliedFilters: SharedFilters = reqFilters || {};
+        const dashboardData = await fetchDashboardDataWithVisuals(supabaseAdmin, share.dashboard_id, share.account_id, appliedFilters);
         const filterOptions = await fetchFilterOptions(supabaseAdmin, share.account_id);
         return new Response(JSON.stringify({ status: "approved", ...dashboardData, filterOptions }), {
           status: 200,
