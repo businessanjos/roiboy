@@ -156,6 +156,7 @@ export default function Renewals() {
             return priceToUse * (discountPercent / 100);
           })(),
           responsible_name: (c.clients as any)?.users?.name || null,
+          responsible_user_id: (c.clients as any)?.responsible_user_id || null,
         };
       });
 
