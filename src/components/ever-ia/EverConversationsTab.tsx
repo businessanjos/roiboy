@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { supabase } from "@/integrations/supabase/client";
 import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const EVER_AI_FUNCTIONS_URL = "https://rpvlvbfbqerfdgwetemx.supabase.co/functions/v1";
 const EVER_AI_EMBED_URL = "https://everia.pro/embed/chat";
 
 export function EverConversationsTab() {
@@ -11,6 +11,7 @@ export function EverConversationsTab() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
+  const authSentRef = useRef(false);
 
   const authenticate = useCallback(async () => {
     if (!currentUser) return;
@@ -19,41 +20,39 @@ export function EverConversationsTab() {
     setErrorMsg("");
 
     try {
-      const res = await fetch(`${EVER_AI_FUNCTIONS_URL}/embed-auth`, {
+      const { data, error } = await supabase.functions.invoke("ever-ia-auth", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-embed-secret": import.meta.env.VITE_SUPABASE_PROJECT_ID
-            ? await getEmbedSecret()
-            : "",
-        },
-        body: JSON.stringify({
-          email: currentUser.email,
-          name: currentUser.name,
-          external_id: currentUser.id,
-          role: currentUser.role,
-        }),
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || `Erro ${res.status}`);
+      if (error) {
+        throw new Error(error.message || "Erro na autenticação");
       }
 
-      const { access_token, refresh_token } = await res.json();
+      const { access_token, refresh_token } = data;
 
-      // Wait for iframe to load, then send tokens via postMessage
-      const iframe = iframeRef.current;
-      if (iframe?.contentWindow) {
-        iframe.contentWindow.postMessage(
-          {
-            type: "EVER_AI_AUTH",
-            access_token,
-            refresh_token,
-          },
-          "https://everia.pro"
-        );
+      if (!access_token) {
+        throw new Error("Token não recebido");
       }
+
+      // Send tokens to iframe via postMessage
+      const sendAuth = () => {
+        const iframe = iframeRef.current;
+        if (iframe?.contentWindow) {
+          iframe.contentWindow.postMessage(
+            {
+              type: "EVER_AI_AUTH",
+              access_token,
+              refresh_token,
+            },
+            "https://everia.pro"
+          );
+          authSentRef.current = true;
+        }
+      };
+
+      sendAuth();
+      // Retry after a short delay in case iframe wasn't ready
+      setTimeout(sendAuth, 500);
 
       setStatus("ready");
     } catch (err: any) {
@@ -65,8 +64,7 @@ export function EverConversationsTab() {
 
   useEffect(() => {
     if (currentUser) {
-      // Small delay to let iframe start loading
-      const timer = setTimeout(authenticate, 1000);
+      const timer = setTimeout(authenticate, 1500);
       return () => clearTimeout(timer);
     }
   }, [currentUser, authenticate]);
@@ -107,20 +105,7 @@ export function EverConversationsTab() {
         className="w-full h-full border-0"
         allow="microphone; clipboard-write"
         title="Ever IA Chat"
-        onLoad={() => {
-          // Re-send auth if iframe reloads
-          if (status === "ready" && currentUser) {
-            authenticate();
-          }
-        }}
       />
     </div>
   );
-}
-
-async function getEmbedSecret(): Promise<string> {
-  // The secret is stored as EVER_AI_EMBED_SECRET in edge functions,
-  // but we need to call our own edge function to proxy the auth
-  // For now, we call our own proxy edge function
-  return "";
 }
