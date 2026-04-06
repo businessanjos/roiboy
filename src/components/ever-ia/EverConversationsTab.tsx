@@ -12,13 +12,11 @@ export function EverConversationsTab() {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const tokensRef = useRef<{ access_token: string; refresh_token: string } | null>(null);
-  const retryIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const authAcknowledgedRef = useRef(false);
 
   const sendAuthToIframe = useCallback(() => {
     const iframe = iframeRef.current;
     const tokens = tokensRef.current;
-    if (iframe?.contentWindow && tokens && !authAcknowledgedRef.current) {
+    if (iframe?.contentWindow && tokens) {
       iframe.contentWindow.postMessage(
         {
           type: "EVER_AI_AUTH",
@@ -35,85 +33,41 @@ export function EverConversationsTab() {
 
     setStatus("loading");
     setErrorMsg("");
-    authAcknowledgedRef.current = false;
 
     try {
       const { data, error } = await supabase.functions.invoke("ever-ia-auth", {
         method: "POST",
       });
 
-      if (error) {
-        throw new Error(error.message || "Erro na autenticação");
-      }
+      if (error) throw new Error(error.message || "Erro na autenticação");
 
       const { access_token, refresh_token } = data;
-
-      if (!access_token) {
-        throw new Error("Token não recebido");
-      }
+      if (!access_token) throw new Error("Token não recebido");
 
       tokensRef.current = { access_token, refresh_token };
-
-      // Send immediately
-      sendAuthToIframe();
-
-      // Keep retrying every 1s for up to 15s until acknowledged
-      if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
-      let attempts = 0;
-      retryIntervalRef.current = setInterval(() => {
-        attempts++;
-        if (authAcknowledgedRef.current || attempts > 15) {
-          if (retryIntervalRef.current) clearInterval(retryIntervalRef.current);
-          retryIntervalRef.current = null;
-          return;
-        }
-        sendAuthToIframe();
-      }, 1000);
-
       setStatus("ready");
     } catch (err: any) {
       console.error("[EverIA] Auth error:", err);
       setErrorMsg(err.message || "Falha na autenticação");
       setStatus("error");
     }
-  }, [currentUser, sendAuthToIframe]);
+  }, [currentUser]);
 
-  // Listen for acknowledgment from iframe
+  // Listen for "ever-embed-ready" from iframe, then send tokens
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== "https://everia.pro") return;
-      // Accept any message from everia.pro as acknowledgment
-      if (event.data?.type === "EVER_AI_AUTH_ACK" || event.data?.type === "EVER_AI_READY") {
-        authAcknowledgedRef.current = true;
-        if (retryIntervalRef.current) {
-          clearInterval(retryIntervalRef.current);
-          retryIntervalRef.current = null;
-        }
+      if (event.data?.type === "ever-embed-ready" && tokensRef.current) {
+        sendAuthToIframe();
       }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
-
-  // Start auth when iframe loads
-  const handleIframeLoad = useCallback(() => {
-    // Wait a brief moment for the iframe JS to initialize, then send auth
-    setTimeout(() => {
-      sendAuthToIframe();
-    }, 300);
   }, [sendAuthToIframe]);
 
   useEffect(() => {
-    if (currentUser) {
-      authenticate();
-    }
-    return () => {
-      if (retryIntervalRef.current) {
-        clearInterval(retryIntervalRef.current);
-        retryIntervalRef.current = null;
-      }
-    };
+    if (currentUser) authenticate();
   }, [currentUser, authenticate]);
 
   if (status === "error") {
@@ -152,7 +106,6 @@ export function EverConversationsTab() {
         className="w-full h-full border-0"
         allow="microphone; clipboard-write"
         title="Ever IA Chat"
-        onLoad={handleIframeLoad}
       />
     </div>
   );
