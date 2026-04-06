@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { RenewalThermometer } from "@/components/renewals/RenewalThermometer";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -298,6 +299,7 @@ export default function Renewals() {
                   <TableHead className="text-center">Início</TableHead>
                   <TableHead className="text-center">Vencimento</TableHead>
                   <TableHead className="text-center">Tempo Restante</TableHead>
+                  <TableHead className="text-center">Chance</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -352,6 +354,12 @@ export default function Renewals() {
                     </TableCell>
                     <TableCell className="text-center">
                       {getUrgencyBadge(contract.days_until_expiry)}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <RenewalThermometer
+                        clientId={contract.client_id}
+                        accountId={currentUser?.account_id || ""}
+                      />
                     </TableCell>
                     <TableCell>
                       <TooltipProvider>
