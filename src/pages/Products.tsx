@@ -28,6 +28,36 @@ import { toast } from "sonner";
 import { getMlsBadgeClasses, getMlsLevelLabel, MLS_LEVELS } from "@/lib/mls-utils";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
 
+interface ProductDeliverables {
+  individual_session_enabled: boolean;
+  individual_session_format: "presencial" | "online" | "";
+  individual_session_duration: string;
+  individual_session_periodicity: string;
+  whatsapp_individual_group: boolean;
+  whatsapp_all_group: boolean;
+  group_mentoring_enabled: boolean;
+  group_mentoring_periodicity: string;
+  presential_event: boolean;
+  roy_private: boolean;
+  clinica_ryka: boolean;
+  dedicated_consultant: boolean;
+}
+
+const DEFAULT_DELIVERABLES: ProductDeliverables = {
+  individual_session_enabled: false,
+  individual_session_format: "",
+  individual_session_duration: "",
+  individual_session_periodicity: "",
+  whatsapp_individual_group: false,
+  whatsapp_all_group: false,
+  group_mentoring_enabled: false,
+  group_mentoring_periodicity: "",
+  presential_event: false,
+  roy_private: false,
+  clinica_ryka: false,
+  dedicated_consultant: false,
+};
+
 interface Product {
   id: string;
   name: string;
@@ -42,6 +72,7 @@ interface Product {
   mls_level: string | null;
   color: string | null;
   renewal_discount_percent: number | null;
+  deliverables: ProductDeliverables | null;
   created_at: string;
 }
 
