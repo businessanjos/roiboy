@@ -33,6 +33,7 @@ interface RenewalContract {
   days_until_expiry: number;
   renewal_value: number;
   responsible_name: string | null;
+  responsible_user_id: string | null;
 }
 
 // Users with full visibility on renewals (everyone else sees only their own)
