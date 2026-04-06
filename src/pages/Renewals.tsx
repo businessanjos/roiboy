@@ -297,6 +297,7 @@ export default function Renewals() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-[280px]">Cliente</TableHead>
+                  <TableHead className="text-center">Consultora</TableHead>
                   <TableHead className="text-center">Produto</TableHead>
                   <TableHead className="text-center">Valor Renovação</TableHead>
                   <TableHead className="text-center">Início</TableHead>
