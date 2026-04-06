@@ -1,0 +1,1 @@
+ALTER TABLE public.products ADD COLUMN renewal_discount_percent numeric DEFAULT 50;
