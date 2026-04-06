@@ -29,6 +29,7 @@ interface RenewalContract {
   product_name: string | null;
   product_color: string | null;
   days_until_expiry: number;
+  renewal_value: number;
 }
 
 export default function Renewals() {
