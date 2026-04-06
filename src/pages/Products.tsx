@@ -88,6 +88,9 @@ export default function Products() {
   const [isMls, setIsMls] = useState(false);
   const [mlsLevel, setMlsLevel] = useState<string>("");
   const [color, setColor] = useState<string>("#10b981");
+  const [cashPrice, setCashPrice] = useState("");
+  const [installmentPrice, setInstallmentPrice] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
 
   const fetchProducts = async () => {
     try {
