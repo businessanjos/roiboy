@@ -8533,42 +8533,51 @@ export type Database = {
         Row: {
           account_id: string
           billing_period: Database["public"]["Enums"]["billing_period"]
+          cash_price: number | null
           color: string | null
           created_at: string
           description: string | null
           id: string
+          installment_price: number | null
           is_active: boolean
           is_mls: boolean
           mls_level: string | null
           name: string
+          payment_methods: Json | null
           price: number
           updated_at: string
         }
         Insert: {
           account_id: string
           billing_period?: Database["public"]["Enums"]["billing_period"]
+          cash_price?: number | null
           color?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          installment_price?: number | null
           is_active?: boolean
           is_mls?: boolean
           mls_level?: string | null
           name: string
+          payment_methods?: Json | null
           price?: number
           updated_at?: string
         }
         Update: {
           account_id?: string
           billing_period?: Database["public"]["Enums"]["billing_period"]
+          cash_price?: number | null
           color?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          installment_price?: number | null
           is_active?: boolean
           is_mls?: boolean
           mls_level?: string | null
           name?: string
+          payment_methods?: Json | null
           price?: number
           updated_at?: string
         }

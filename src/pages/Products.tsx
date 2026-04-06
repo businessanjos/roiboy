@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
@@ -31,6 +32,9 @@ interface Product {
   name: string;
   description: string | null;
   price: number;
+  cash_price: number;
+  installment_price: number;
+  payment_methods: string[];
   billing_period: "monthly" | "quarterly" | "semiannual" | "annual" | "one_time";
   is_active: boolean;
   is_mls: boolean;
@@ -38,6 +42,13 @@ interface Product {
   color: string | null;
   created_at: string;
 }
+
+const PAYMENT_METHOD_OPTIONS = [
+  { value: "credit_card", label: "Cartão de crédito" },
+  { value: "boleto", label: "Boleto" },
+  { value: "pix", label: "Pix" },
+  { value: "cheque", label: "Cheque" },
+];
 
 const COLOR_OPTIONS = [
   { value: "#10b981", label: "Verde", class: "bg-emerald-500" },
@@ -78,6 +89,9 @@ export default function Products() {
   const [isMls, setIsMls] = useState(false);
   const [mlsLevel, setMlsLevel] = useState<string>("");
   const [color, setColor] = useState<string>("#10b981");
+  const [cashPrice, setCashPrice] = useState("");
+  const [installmentPrice, setInstallmentPrice] = useState("");
+  const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
 
   const fetchProducts = async () => {
     try {
@@ -87,7 +101,10 @@ export default function Products() {
         .order("name", { ascending: true });
 
       if (error) throw error;
-      setProducts(data || []);
+      setProducts((data || []).map((p: any) => ({
+        ...p,
+        payment_methods: Array.isArray(p.payment_methods) ? p.payment_methods : [],
+      })));
     } catch (error) {
       console.error("Error fetching products:", error);
       toast.error("Erro ao carregar produtos");
@@ -104,6 +121,9 @@ export default function Products() {
     setName("");
     setDescription("");
     setPrice("");
+    setCashPrice("");
+    setInstallmentPrice("");
+    setPaymentMethods([]);
     setBillingPeriod("monthly");
     setIsActive(true);
     setIsMls(false);
@@ -117,6 +137,9 @@ export default function Products() {
     setName(product.name);
     setDescription(product.description || "");
     setPrice(product.price.toString());
+    setCashPrice(product.cash_price ? product.cash_price.toString() : "");
+    setInstallmentPrice(product.installment_price ? product.installment_price.toString() : "");
+    setPaymentMethods(product.payment_methods || []);
     setBillingPeriod(product.billing_period);
     setIsActive(product.is_active);
     setIsMls(product.is_mls);
@@ -143,6 +166,9 @@ export default function Products() {
         name: name.trim(),
         description: description.trim() || null,
         price: parseFloat(price) || 0,
+        cash_price: parseFloat(cashPrice) || 0,
+        installment_price: parseFloat(installmentPrice) || 0,
+        payment_methods: paymentMethods,
         billing_period: billingPeriod as "monthly" | "quarterly" | "semiannual" | "annual" | "one_time",
         is_active: isActive,
         is_mls: isMls,
@@ -285,6 +311,60 @@ export default function Products() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Preço à vista (R$)</Label>
+                  <Input
+                    type="number"
+                    value={cashPrice}
+                    onChange={(e) => setCashPrice(e.target.value)}
+                    placeholder="0,00"
+                    step="0.01"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Preço parcelado (R$)</Label>
+                  <Input
+                    type="number"
+                    value={installmentPrice}
+                    onChange={(e) => setInstallmentPrice(e.target.value)}
+                    placeholder="0,00"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Formas de pagamento</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {PAYMENT_METHOD_OPTIONS.map((method) => (
+                    <label
+                      key={method.value}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition-colors text-sm",
+                        paymentMethods.includes(method.value)
+                          ? "border-primary bg-primary/5 text-foreground"
+                          : "border-border hover:bg-muted/50 text-muted-foreground"
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        className="rounded border-border"
+                        checked={paymentMethods.includes(method.value)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setPaymentMethods([...paymentMethods, method.value]);
+                          } else {
+                            setPaymentMethods(paymentMethods.filter((m) => m !== method.value));
+                          }
+                        }}
+                      />
+                      {method.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-center justify-between">
                 <Label htmlFor="is-active">Produto ativo</Label>
                 <Switch
@@ -424,6 +504,25 @@ export default function Products() {
                     <Badge variant="destructive">Inativo</Badge>
                   )}
                 </div>
+                {(product.cash_price > 0 || product.installment_price > 0) && (
+                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                    {product.cash_price > 0 && (
+                      <span>À vista: <span className="font-medium text-foreground">{formatCurrency(product.cash_price)}</span></span>
+                    )}
+                    {product.installment_price > 0 && (
+                      <span>Parcelado: <span className="font-medium text-foreground">{formatCurrency(product.installment_price)}</span></span>
+                    )}
+                  </div>
+                )}
+                {product.payment_methods.length > 0 && (
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {product.payment_methods.map((m) => (
+                      <Badge key={m} variant="outline" className="text-[10px] px-1.5 py-0">
+                        {PAYMENT_METHOD_OPTIONS.find((o) => o.value === m)?.label || m}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
