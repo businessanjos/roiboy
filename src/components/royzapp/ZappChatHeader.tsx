@@ -4,6 +4,7 @@ import {
   ArrowRightLeft,
   MoreVertical,
   Phone,
+  Search,
   User,
   UserCheck,
   UserPlus,
