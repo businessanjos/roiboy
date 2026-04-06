@@ -110,11 +110,24 @@ export default function Renewals() {
           days_until_expiry: daysUntil,
           renewal_value: (() => {
             const discountPercent = c.products?.renewal_discount_percent ?? 50;
-            const productPrice = c.products?.price;
-            if (productPrice) {
-              return productPrice * (discountPercent / 100);
+            const paymentOption = c.payment_option || '';
+            const isInstallment = paymentOption && paymentOption !== 'a_vista' && paymentOption !== 'parcelado_1x' && paymentOption !== 'parcelado_1x_cheque';
+            const installmentPrice = c.products?.installment_price;
+            const cashPrice = c.products?.cash_price;
+            const basePrice = c.products?.price;
+            
+            let priceToUse: number;
+            if (isInstallment && installmentPrice && installmentPrice > 0) {
+              priceToUse = installmentPrice;
+            } else if (!isInstallment && cashPrice && cashPrice > 0) {
+              priceToUse = cashPrice;
+            } else if (basePrice && basePrice > 0) {
+              priceToUse = basePrice;
+            } else {
+              priceToUse = c.value || 0;
             }
-            return (c.value || 0) * (discountPercent / 100);
+            
+            return priceToUse * (discountPercent / 100);
           })(),
         };
       });
