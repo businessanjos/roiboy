@@ -44,6 +44,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (profileError || !profile) {
+      console.error("Profile not found for auth_user_id:", user.id, profileError);
       return new Response(JSON.stringify({ error: "Perfil não encontrado" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -60,21 +61,51 @@ Deno.serve(async (req) => {
       });
     }
 
+    const payload = {
+      email: profile.email,
+      full_name: profile.name,
+      external_id: profile.id,
+      role: profile.role,
+    };
+
+    console.log("Calling Ever AI embed-auth with payload:", JSON.stringify(payload));
+
     const everRes = await fetch(`${EVER_AI_FUNCTIONS_URL}/embed-auth`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-embed-secret": embedSecret,
       },
-      body: JSON.stringify({
-        email: profile.email,
-        full_name: profile.name,
-        external_id: profile.id,
-        role: profile.role,
-      }),
+      body: JSON.stringify(payload),
     });
 
-    const everData = await everRes.json();
+    // Safely read response body
+    const responseText = await everRes.text();
+    console.log("Ever AI embed-auth response:", {
+      status: everRes.status,
+      statusText: everRes.statusText,
+      bodyLength: responseText.length,
+      bodyPreview: responseText.substring(0, 500),
+    });
+
+    if (!responseText) {
+      console.error("Ever AI embed-auth returned empty response");
+      return new Response(JSON.stringify({ error: "Resposta vazia do Ever AI" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let everData;
+    try {
+      everData = JSON.parse(responseText);
+    } catch (parseErr) {
+      console.error("Ever AI embed-auth returned non-JSON:", responseText.substring(0, 200));
+      return new Response(JSON.stringify({ error: "Resposta inválida do Ever AI", details: responseText.substring(0, 200) }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!everRes.ok) {
       console.error("Ever AI embed-auth error:", everData);
@@ -83,6 +114,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    console.log("Ever AI auth success, has access_token:", !!everData.access_token);
 
     return new Response(JSON.stringify(everData), {
       status: 200,
