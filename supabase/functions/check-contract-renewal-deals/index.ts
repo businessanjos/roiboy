@@ -125,19 +125,21 @@ serve(async (req) => {
         continue;
       }
 
-      // Renewal rule: 50% of the CURRENT product price (not the original contract value)
+      // Renewal rule: use the product's renewal_discount_percent of the CURRENT product price
       let renewalValue = (contract.value || 0) * 0.5; // fallback: 50% of contract value
+      let discountPercent = 50;
       
       if (contract.product_id) {
         const { data: product, error: productError } = await supabase
           .from("products")
-          .select("price")
+          .select("price, renewal_discount_percent")
           .eq("id", contract.product_id)
           .single();
 
         if (!productError && product && product.price) {
-          renewalValue = product.price * 0.5;
-          console.log(`Using 50% of current product price: ${product.price} → ${renewalValue}`);
+          discountPercent = product.renewal_discount_percent ?? 50;
+          renewalValue = product.price * (discountPercent / 100);
+          console.log(`Using ${discountPercent}% of current product price: ${product.price} → ${renewalValue}`);
         } else {
           console.log(`Product not found for contract ${contract.id}, using 50% of contract value as fallback`);
         }
@@ -163,7 +165,7 @@ serve(async (req) => {
           source: "contract_renewal",
           source_contract_id: contract.id,
           tags: isExpired ? ["renovação", "vencido"] : ["renovação"],
-          notes: `Renovação automática do contrato que ${isExpired ? 'venceu' : 'vence'} em ${endDate.toLocaleDateString("pt-BR")}.\n\n${urgencyLabel}\nValor original: R$ ${(contract.value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nValor de renovação (50% do ticket atual): R$ ${renewalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nContrato original: ${contract.id}`,
+          notes: `Renovação automática do contrato que ${isExpired ? 'venceu' : 'vence'} em ${endDate.toLocaleDateString("pt-BR")}.\n\n${urgencyLabel}\nValor original: R$ ${(contract.value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nValor de renovação (${discountPercent}% do ticket atual): R$ ${renewalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nContrato original: ${contract.id}`,
           expected_close_date: isExpired ? formatDate(today) : contract.end_date,
           status: "open",
         })

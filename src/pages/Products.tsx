@@ -40,6 +40,7 @@ interface Product {
   is_mls: boolean;
   mls_level: string | null;
   color: string | null;
+  renewal_discount_percent: number | null;
   created_at: string;
 }
 
@@ -91,6 +92,7 @@ export default function Products() {
   const [color, setColor] = useState<string>("#10b981");
   const [cashPrice, setCashPrice] = useState("");
   const [installmentPrice, setInstallmentPrice] = useState("");
+  const [renewalDiscountPercent, setRenewalDiscountPercent] = useState("50");
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
 
   // Format number with thousand separators (pt-BR)
@@ -149,6 +151,7 @@ export default function Products() {
     setPrice("");
     setCashPrice("");
     setInstallmentPrice("");
+    setRenewalDiscountPercent("50");
     setPaymentMethods([]);
     setBillingPeriod("monthly");
     setIsActive(true);
@@ -165,6 +168,7 @@ export default function Products() {
     setPrice(toFormattedString(product.price));
     setCashPrice(product.cash_price ? toFormattedString(product.cash_price) : "");
     setInstallmentPrice(product.installment_price ? toFormattedString(product.installment_price) : "");
+    setRenewalDiscountPercent(String(product.renewal_discount_percent ?? 50));
     setPaymentMethods(product.payment_methods || []);
     setBillingPeriod(product.billing_period);
     setIsActive(product.is_active);
@@ -194,6 +198,7 @@ export default function Products() {
         price: parseFormattedNumber(price),
         cash_price: parseFormattedNumber(cashPrice),
         installment_price: parseFormattedNumber(installmentPrice),
+        renewal_discount_percent: parseFloat(renewalDiscountPercent) || 50,
         payment_methods: paymentMethods,
         billing_period: billingPeriod as "monthly" | "quarterly" | "semiannual" | "annual" | "one_time",
         is_active: isActive,
@@ -346,6 +351,21 @@ export default function Products() {
                   onChange={(e) => handleCurrencyChange(e.target.value, setInstallmentPrice)}
                   placeholder="0,00"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Desconto na renovação (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={renewalDiscountPercent}
+                  onChange={(e) => setRenewalDiscountPercent(e.target.value)}
+                  placeholder="50"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Percentual do ticket atual cobrado na renovação (ex: 50 = 50% do valor atual)
+                </p>
               </div>
 
               <div className="space-y-2">
