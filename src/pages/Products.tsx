@@ -390,6 +390,16 @@ export default function Products() {
                   />
                   <p className="text-xs text-muted-foreground">
                     % do ticket atual cobrado na renovação
+                    {price && parseFloat(renewalDiscountPercent) > 0 && (
+                      <>
+                        <br />
+                        Valor renovação: <span className="font-medium text-foreground">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                            parseFormattedNumber(price) * (parseFloat(renewalDiscountPercent) / 100)
+                          )}
+                        </span>
+                      </>
+                    )}
                   </p>
                 </div>
                 <div className="space-y-2">
