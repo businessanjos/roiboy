@@ -218,8 +218,8 @@ export default function Renewals() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <CalendarDays className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+              <CalendarDays className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{okCount}</p>
