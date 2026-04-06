@@ -299,6 +299,7 @@ export default function Renewals() {
                   <TableHead className="text-center">Início</TableHead>
                   <TableHead className="text-center">Vencimento</TableHead>
                   <TableHead className="text-center">Tempo Restante</TableHead>
+                  <TableHead className="text-center">Chance</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
