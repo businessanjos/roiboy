@@ -337,17 +337,16 @@ export default function Products() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Preço à vista (R$)</Label>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={cashPrice}
-                    onChange={(e) => handleCurrencyChange(e.target.value, setCashPrice)}
-                    placeholder="0,00"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label>Preço parcelado (R$)</Label>
+                <Input
+                  type="text"
+                  inputMode="decimal"
+                  value={installmentPrice}
+                  onChange={(e) => handleCurrencyChange(e.target.value, setInstallmentPrice)}
+                  placeholder="0,00"
+                />
+              </div>
                 <div className="space-y-2">
                   <Label>Preço parcelado (R$)</Label>
                   <Input
