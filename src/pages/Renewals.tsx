@@ -300,15 +300,61 @@ export default function Renewals() {
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome, email ou produto..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search & Filters */}
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, email ou produto..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={filterConsultora} onValueChange={setFilterConsultora}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Consultora" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas consultoras</SelectItem>
+            {uniqueConsultoras.sort().map((name) => (
+              <SelectItem key={name} value={name}>{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterProduto} onValueChange={setFilterProduto}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Produto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos produtos</SelectItem>
+            {uniqueProdutos.sort().map((name) => (
+              <SelectItem key={name} value={name}>{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterTempo} onValueChange={setFilterTempo}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Tempo Restante" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os prazos</SelectItem>
+            <SelectItem value="urgent">Até 30 dias</SelectItem>
+            <SelectItem value="warning">31 a 60 dias</SelectItem>
+            <SelectItem value="ok">61 a 90 dias</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterChance} onValueChange={setFilterChance}>
+          <SelectTrigger className="w-full sm:w-[150px]">
+            <SelectValue placeholder="Chance" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas chances</SelectItem>
+            <SelectItem value="alta">Alta</SelectItem>
+            <SelectItem value="media">Média</SelectItem>
+            <SelectItem value="baixa">Baixa</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
