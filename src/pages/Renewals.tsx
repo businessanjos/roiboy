@@ -355,6 +355,13 @@ export default function Renewals() {
                     <TableCell className="text-center">
                       {getUrgencyBadge(contract.days_until_expiry)}
                     </TableCell>
+                    <TableCell className="text-center">
+                      <RenewalThermometer
+                        clientId={contract.client_id}
+                        accountId={currentUser?.account_id || ""}
+                      />
+                    </TableCell>
+                    </TableCell>
                     <TableCell>
                       <TooltipProvider>
                         <Tooltip>
