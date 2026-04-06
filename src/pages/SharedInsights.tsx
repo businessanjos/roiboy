@@ -150,12 +150,12 @@ export default function SharedInsights() {
     }
   }, [status, email, dateRange, userId, productId, callEdgeFunction]);
 
-  // Re-fetch when filters change (skip initial load)
+  // Re-fetch when filters change (skip initial load, but trigger once when initial load completes)
   const [initialLoad, setInitialLoad] = useState(true);
   useEffect(() => {
     if (initialLoad) return;
     fetchFilteredData();
-  }, [preset, customRange, userId, productId]);
+  }, [preset, customRange, userId, productId, initialLoad]);
 
   // Initial validation
   useEffect(() => {
