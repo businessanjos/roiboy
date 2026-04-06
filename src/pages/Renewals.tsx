@@ -146,14 +146,14 @@ export default function Renewals() {
     }
     if (days <= 60) {
       return (
-        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 gap-1">
+        <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 gap-1">
           <Clock className="h-3 w-3" />
           {days} dias
         </Badge>
       );
     }
     return (
-      <Badge className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 gap-1">
+      <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 gap-1">
         <CalendarDays className="h-3 w-3" />
         {days} dias
       </Badge>
@@ -207,8 +207,8 @@ export default function Renewals() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-              <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+              <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{warningCount}</p>
@@ -218,8 +218,8 @@ export default function Renewals() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <CalendarDays className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
+              <CalendarDays className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <p className="text-2xl font-bold">{okCount}</p>
