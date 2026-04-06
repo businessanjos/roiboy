@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Clock, Filter, Zap, Monitor, Maximize2, Minimize2, X, Plus, EyeOff, RotateCcw } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -27,31 +27,7 @@ interface WhatsAppDashboardPanelProps {
   isLoadingVisuals?: boolean;
 }
 
-function calculateAutoFitZoom(overlayEl: HTMLElement, contentEl: HTMLElement): number {
-  const viewportHeight = overlayEl.clientHeight;
-  const viewportWidth = overlayEl.clientWidth;
 
-  const contentRect = contentEl.getBoundingClientRect();
-  const overlayRect = overlayEl.getBoundingClientRect();
-  const chromeHeight = contentRect.top - overlayRect.top;
-
-  // CSS zoom: scrollHeight/scrollWidth return natural (unscaled) dimensions
-  const contentNaturalHeight = contentEl.scrollHeight;
-  const contentNaturalWidth = contentEl.scrollWidth;
-
-  const availableHeight = viewportHeight - chromeHeight;
-  const availableWidth = viewportWidth;
-
-  if (contentNaturalHeight <= 0 || availableHeight <= 0) return 100;
-
-  const zoomByHeight = (availableHeight / contentNaturalHeight) * 100;
-  const zoomByWidth = contentNaturalWidth > 0
-    ? (availableWidth / contentNaturalWidth) * 100
-    : 200;
-
-  const idealZoom = Math.min(zoomByHeight, zoomByWidth);
-  return Math.min(Math.max(Math.floor(idealZoom * 0.95), 25), 200);
-}
 
 export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChange, isLoadingVisuals }: WhatsAppDashboardPanelProps) {
   const isMobile = useIsMobile();
@@ -60,10 +36,8 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
   const [hiddenSections, setHiddenSections] = useState<Set<SectionId>>(new Set());
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [focusZoom, setFocusZoom] = useState(100);
+  const [focusZoom, setFocusZoom] = useState(80);
   const focusModeRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const zoomTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const hasCustomVisuals = visuals.length > 0;
   const hasHiddenSections = hiddenSections.size > 0;
@@ -91,99 +65,25 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
     </Button>
   );
 
-  // Shared zoom calculation that polls until layout stabilises
-  const runAutoFitZoom = useCallback(() => {
-    if (zoomTimerRef.current) {
-      clearInterval(zoomTimerRef.current);
-      zoomTimerRef.current = null;
-    }
-    setFocusZoom(100);
-
-    let attempts = 0;
-    let lastHeight = 0;
-    let stableCount = 0;
-    const maxAttempts = 40;
-
-    zoomTimerRef.current = setInterval(() => {
-      attempts++;
-      const overlay = focusModeRef.current;
-      const content = contentRef.current;
-
-      if (!overlay || !content || attempts > maxAttempts) {
-        if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
-        zoomTimerRef.current = null;
-        if (overlay && content) setFocusZoom(calculateAutoFitZoom(overlay, content));
-        return;
-      }
-
-      const h = content.scrollHeight;
-      if (h === lastHeight && h > 0) stableCount++;
-      else stableCount = 0;
-      lastHeight = h;
-
-      if (stableCount >= 3) {
-        if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
-        zoomTimerRef.current = null;
-        setFocusZoom(calculateAutoFitZoom(overlay, content));
-      }
-    }, 80);
-  }, []);
-
-  // After zoom is applied, watch for content re-layout and re-adjust
-  useEffect(() => {
-    if (!isFocusMode || focusZoom === 100) return;
-    const content = contentRef.current;
-    const overlay = focusModeRef.current;
-    if (!content || !overlay) return;
-
-    let debounce: ReturnType<typeof setTimeout> | null = null;
-    let adjustCount = 0;
-    const ro = new ResizeObserver(() => {
-      if (debounce) clearTimeout(debounce);
-      if (adjustCount >= 3) return;
-      debounce = setTimeout(() => {
-        const contentBottom = content.getBoundingClientRect().bottom;
-        const overlayBottom = overlay.getBoundingClientRect().bottom;
-        if (contentBottom > overlayBottom + 2) {
-          adjustCount++;
-          runAutoFitZoom();
-        }
-      }, 300);
-    });
-    ro.observe(content);
-    return () => { ro.disconnect(); if (debounce) clearTimeout(debounce); };
-  }, [isFocusMode, focusZoom, runAutoFitZoom]);
-
-  // Cleanup
-  useEffect(() => {
-    return () => { if (zoomTimerRef.current) clearInterval(zoomTimerRef.current); };
-  }, []);
-
   // ESC listener
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isFocusMode) setIsFocusMode(false);
+      if (e.key === "Escape" && isFocusMode) {
+        setIsFocusMode(false);
+        setFocusZoom(80);
+        if (document.fullscreenElement) document.exitFullscreen();
+      }
     };
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
   }, [isFocusMode]);
 
-  // Auto-fit zoom when entering focus mode
+  // Fullscreen change listener
   useEffect(() => {
-    if (!isFocusMode) return;
-    const t = setTimeout(runAutoFitZoom, 50);
-    return () => clearTimeout(t);
-  }, [isFocusMode, runAutoFitZoom]);
-
-  // Fullscreen change listener — recalculate zoom
-  useEffect(() => {
-    const handler = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-      if (isFocusMode) setTimeout(runAutoFitZoom, 350);
-    };
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
-  }, [isFocusMode, runAutoFitZoom]);
+  }, []);
 
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement && focusModeRef.current) {
@@ -271,7 +171,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
   // Focus mode overlay
   const focusModeOverlay = isFocusMode
     ? createPortal(
-        <div ref={focusModeRef} className="fixed inset-0 z-[9999] bg-background overflow-hidden">
+        <div ref={focusModeRef} className="fixed inset-0 z-[9999] bg-background overflow-auto">
           <div className="p-4 flex flex-col" style={{ minHeight: '100%' }}>
             <div className="flex items-center justify-between mb-4 shrink-0">
               <div>
@@ -288,7 +188,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
                 </Button>
               </div>
             </div>
-            <div ref={contentRef} style={{ zoom: focusZoom / 100, transformOrigin: 'top left' }}>
+            <div className="flex-1" style={{ zoom: focusZoom / 100, transformOrigin: 'top left' }}>
               {dashboardContent}
             </div>
           </div>
