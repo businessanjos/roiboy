@@ -158,7 +158,18 @@ export default function Renewals() {
         };
       });
 
-      setContracts(mapped);
+      // Filter by visibility: restricted users see only their own clients
+      const hasFullAccess = currentUser.role === "admin" || currentUser.role === "super_admin" 
+        || currentUser.is_also_admin 
+        || RENEWALS_FULL_ACCESS_USER_IDS.includes(currentUser.id);
+      
+      if (hasFullAccess) {
+        setContracts(mapped);
+      } else {
+        // Filter to only contracts where the client's responsible_user_id matches this user
+        const filtered = mapped.filter(c => c.responsible_user_id === currentUser.id);
+        setContracts(filtered);
+      }
     } catch (err) {
       console.error("Error:", err);
     } finally {
