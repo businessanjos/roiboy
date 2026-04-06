@@ -328,6 +328,9 @@ export function ZappChatView({
         onEditMessage={onEditMessage}
         onRetryMessage={onRetryMessage}
         onRetryMediaDownload={onRetryMediaDownload}
+        searchQuery={searchQuery}
+        searchMatchIds={searchMatchIds}
+        searchFocusId={searchMatchIds.length > 0 && searchCurrentIndex > 0 ? searchMatchIds[searchCurrentIndex - 1] : null}
       />
 
       {/* AI Assist Bar - spelling correction only */}
