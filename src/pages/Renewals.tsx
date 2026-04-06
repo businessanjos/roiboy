@@ -60,7 +60,7 @@ export default function Renewals() {
           currency,
           product_id,
           clients!inner(full_name, phone_e164, emails, logo_url, status),
-          products(name, color)
+          products(name, color, price, renewal_discount_percent)
         `)
         .eq("account_id", currentUser.account_id)
         .eq("status", "active")
