@@ -252,6 +252,7 @@ export default function SharedInsights() {
         filterOptions: data.filterOptions,
       });
       setStatus("approved");
+      // Trigger a filtered fetch immediately to ensure data parity
       setInitialLoad(false);
     } else if (data.status === "rejected") {
       setStatus("rejected");
