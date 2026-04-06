@@ -93,6 +93,32 @@ export default function Products() {
   const [installmentPrice, setInstallmentPrice] = useState("");
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
 
+  // Format number with thousand separators (pt-BR)
+  const formatNumberInput = (raw: string): string => {
+    const clean = raw.replace(/[^\d,]/g, "");
+    const parts = clean.split(",");
+    const intPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    return parts.length > 1 ? `${intPart},${parts[1].slice(0, 2)}` : intPart;
+  };
+
+  const parseFormattedNumber = (formatted: string): number => {
+    if (!formatted) return 0;
+    return parseFloat(formatted.replace(/\./g, "").replace(",", ".")) || 0;
+  };
+
+  const handleCurrencyChange = (
+    value: string,
+    setter: (v: string) => void
+  ) => {
+    const raw = value.replace(/[^\d,]/g, "");
+    setter(formatNumberInput(raw));
+  };
+
+  const toFormattedString = (num: number): string => {
+    if (!num) return "";
+    return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
   const fetchProducts = async () => {
     try {
       const { data, error } = await supabase
@@ -136,9 +162,9 @@ export default function Products() {
     setEditingId(product.id);
     setName(product.name);
     setDescription(product.description || "");
-    setPrice(product.price.toString());
-    setCashPrice(product.cash_price ? product.cash_price.toString() : "");
-    setInstallmentPrice(product.installment_price ? product.installment_price.toString() : "");
+    setPrice(toFormattedString(product.price));
+    setCashPrice(product.cash_price ? toFormattedString(product.cash_price) : "");
+    setInstallmentPrice(product.installment_price ? toFormattedString(product.installment_price) : "");
     setPaymentMethods(product.payment_methods || []);
     setBillingPeriod(product.billing_period);
     setIsActive(product.is_active);
@@ -165,9 +191,9 @@ export default function Products() {
         account_id: currentUser.account_id,
         name: name.trim(),
         description: description.trim() || null,
-        price: parseFloat(price) || 0,
-        cash_price: parseFloat(cashPrice) || 0,
-        installment_price: parseFloat(installmentPrice) || 0,
+        price: parseFormattedNumber(price),
+        cash_price: parseFormattedNumber(cashPrice),
+        installment_price: parseFormattedNumber(installmentPrice),
         payment_methods: paymentMethods,
         billing_period: billingPeriod as "monthly" | "quarterly" | "semiannual" | "annual" | "one_time",
         is_active: isActive,
@@ -287,11 +313,11 @@ export default function Products() {
                 <div className="space-y-2">
                   <Label>Valor (R$)</Label>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
+                    onChange={(e) => handleCurrencyChange(e.target.value, setPrice)}
                     placeholder="0,00"
-                    step="0.01"
                   />
                 </div>
                 <div className="space-y-2">
@@ -315,21 +341,21 @@ export default function Products() {
                 <div className="space-y-2">
                   <Label>Preço à vista (R$)</Label>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={cashPrice}
-                    onChange={(e) => setCashPrice(e.target.value)}
+                    onChange={(e) => handleCurrencyChange(e.target.value, setCashPrice)}
                     placeholder="0,00"
-                    step="0.01"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Preço parcelado (R$)</Label>
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     value={installmentPrice}
-                    onChange={(e) => setInstallmentPrice(e.target.value)}
+                    onChange={(e) => handleCurrencyChange(e.target.value, setInstallmentPrice)}
                     placeholder="0,00"
-                    step="0.01"
                   />
                 </div>
               </div>
