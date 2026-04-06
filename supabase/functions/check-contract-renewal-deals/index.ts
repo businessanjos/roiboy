@@ -165,7 +165,7 @@ serve(async (req) => {
           source: "contract_renewal",
           source_contract_id: contract.id,
           tags: isExpired ? ["renovação", "vencido"] : ["renovação"],
-          notes: `Renovação automática do contrato que ${isExpired ? 'venceu' : 'vence'} em ${endDate.toLocaleDateString("pt-BR")}.\n\n${urgencyLabel}\nValor original: R$ ${(contract.value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nValor de renovação (50% do ticket atual): R$ ${renewalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nContrato original: ${contract.id}`,
+          notes: `Renovação automática do contrato que ${isExpired ? 'venceu' : 'vence'} em ${endDate.toLocaleDateString("pt-BR")}.\n\n${urgencyLabel}\nValor original: R$ ${(contract.value || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nValor de renovação (${discountPercent}% do ticket atual): R$ ${renewalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}\nContrato original: ${contract.id}`,
           expected_close_date: isExpired ? formatDate(today) : contract.end_date,
           status: "open",
         })
