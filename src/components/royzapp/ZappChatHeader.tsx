@@ -56,6 +56,7 @@ interface ZappChatHeaderProps {
   onDismissConversation?: () => void;
   onOpenEditGroup?: () => void;
   onCall?: () => void;
+  onToggleSearch?: () => void;
 }
 
 export const ZappChatHeader = memo(function ZappChatHeader({
