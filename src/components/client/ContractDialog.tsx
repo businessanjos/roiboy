@@ -321,9 +321,10 @@ export function ContractDialog({
       setMode("list");
       setEditingContract(null);
       onSuccess?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving contract:", error);
-      toast.error("Erro ao salvar contrato");
+      const msg = error?.message || "Erro desconhecido";
+      toast.error(`Erro ao salvar contrato: ${msg}`);
     } finally {
       setSaving(false);
     }
