@@ -22,6 +22,12 @@ export function EverConversationsTab() {
     const iframeWindow = iframeRef.current?.contentWindow;
     const { access_token, refresh_token } = tokensRef.current;
 
+    console.log("[EverIA] sendAuthToIframe check:", {
+      hasIframeWindow: !!iframeWindow,
+      embedReady: embedReadyRef.current,
+      hasToken: !!access_token,
+    });
+
     if (!iframeWindow || !embedReadyRef.current || !access_token) {
       return false;
     }
@@ -76,6 +82,13 @@ export function EverConversationsTab() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      console.log("[EverIA] postMessage received:", {
+        origin: event.origin,
+        expectedOrigin: EVER_AI_EMBED_ORIGIN,
+        data: event.data,
+        sourceMatch: event.source === iframeRef.current?.contentWindow,
+      });
+
       if (event.origin !== EVER_AI_EMBED_ORIGIN) return;
       if (event.source !== iframeRef.current?.contentWindow) return;
 
@@ -84,6 +97,7 @@ export function EverConversationsTab() {
 
       if (messageType !== "ever-embed-ready") return;
 
+      console.log("[EverIA] embed ready signal received!");
       embedReadyRef.current = true;
       sendAuthToIframe();
     };
