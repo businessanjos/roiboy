@@ -310,6 +310,60 @@ export default function Products() {
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Preço à vista (R$)</Label>
+                  <Input
+                    type="number"
+                    value={cashPrice}
+                    onChange={(e) => setCashPrice(e.target.value)}
+                    placeholder="0,00"
+                    step="0.01"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Preço parcelado (R$)</Label>
+                  <Input
+                    type="number"
+                    value={installmentPrice}
+                    onChange={(e) => setInstallmentPrice(e.target.value)}
+                    placeholder="0,00"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Formas de pagamento</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {PAYMENT_METHOD_OPTIONS.map((method) => (
+                    <label
+                      key={method.value}
+                      className={cn(
+                        "flex items-center gap-2 px-3 py-2 rounded-md border cursor-pointer transition-colors text-sm",
+                        paymentMethods.includes(method.value)
+                          ? "border-primary bg-primary/5 text-foreground"
+                          : "border-border hover:bg-muted/50 text-muted-foreground"
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        className="rounded border-border"
+                        checked={paymentMethods.includes(method.value)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setPaymentMethods([...paymentMethods, method.value]);
+                          } else {
+                            setPaymentMethods(paymentMethods.filter((m) => m !== method.value));
+                          }
+                        }}
+                      />
+                      {method.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex items-center justify-between">
                 <Label htmlFor="is-active">Produto ativo</Label>
                 <Switch
