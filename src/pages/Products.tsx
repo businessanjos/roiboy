@@ -353,6 +353,21 @@ export default function Products() {
               </div>
 
               <div className="space-y-2">
+                <Label>Desconto na renovação (%)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={renewalDiscountPercent}
+                  onChange={(e) => setRenewalDiscountPercent(e.target.value)}
+                  placeholder="50"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Percentual do ticket atual cobrado na renovação (ex: 50 = 50% do valor atual)
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Formas de pagamento</Label>
                 <div className="grid grid-cols-2 gap-2">
                   {PAYMENT_METHOD_OPTIONS.map((method) => (
