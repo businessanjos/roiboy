@@ -118,6 +118,7 @@ export function RenewalThermometer({ clientId, accountId, onScoreCalculated }: R
         );
 
         setScore({ financial: financialScore, engagement: engagementScore, attendance: attendanceScore, total });
+        onScoreCalculated?.(clientId, total);
       } catch (err) {
         console.error("Error calculating renewal score:", err);
       } finally {
