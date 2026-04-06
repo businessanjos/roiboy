@@ -161,6 +161,39 @@ export function ZappChatView({
   onToggleSignature,
   onOpenPlaybook,
 }: ZappChatViewProps) {
+  // Search state
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchCurrentIndex, setSearchCurrentIndex] = useState(0);
+
+  // Compute search matches
+  const searchMatchIds = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return messages
+      .filter(m => m.content?.toLowerCase().includes(q))
+      .map(m => m.id);
+  }, [searchQuery, messages]);
+
+  const handleSearchNavigate = useCallback((direction: "prev" | "next") => {
+    if (searchMatchIds.length === 0) return;
+    setSearchCurrentIndex(prev => {
+      if (direction === "next") return prev >= searchMatchIds.length ? 1 : prev + 1;
+      return prev <= 1 ? searchMatchIds.length : prev - 1;
+    });
+  }, [searchMatchIds.length]);
+
+  const handleCloseSearch = useCallback(() => {
+    setShowSearch(false);
+    setSearchQuery("");
+    setSearchCurrentIndex(0);
+  }, []);
+
+  const handleSearchQuery = useCallback((q: string) => {
+    setSearchQuery(q);
+    setSearchCurrentIndex(q.trim() ? 1 : 0);
+  }, []);
+
   // AI Message Assistant hook (spelling correction only)
   const {
     correction,
