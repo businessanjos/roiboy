@@ -136,6 +136,9 @@ export default function Products() {
     setName(product.name);
     setDescription(product.description || "");
     setPrice(product.price.toString());
+    setCashPrice(product.cash_price ? product.cash_price.toString() : "");
+    setInstallmentPrice(product.installment_price ? product.installment_price.toString() : "");
+    setPaymentMethods(product.payment_methods || []);
     setBillingPeriod(product.billing_period);
     setIsActive(product.is_active);
     setIsMls(product.is_mls);
