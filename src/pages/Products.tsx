@@ -119,6 +119,7 @@ export default function Products() {
     return num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
+  const fetchProducts = async () => {
     try {
       const { data, error } = await supabase
         .from("products")
