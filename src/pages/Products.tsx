@@ -209,6 +209,7 @@ export default function Products() {
     setIsMls(product.is_mls);
     setMlsLevel(product.mls_level || "");
     setColor(product.color || "#10b981");
+    setDeliverables(product.deliverables ? { ...DEFAULT_DELIVERABLES, ...product.deliverables } : { ...DEFAULT_DELIVERABLES });
     setDialogOpen(true);
   };
 
