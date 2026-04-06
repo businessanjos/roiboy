@@ -70,6 +70,9 @@ export function ZappMessagesList({
   onEditMessage,
   onRetryMessage,
   onRetryMediaDownload,
+  searchQuery,
+  searchMatchIds,
+  searchFocusId,
 }: ZappMessagesListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
