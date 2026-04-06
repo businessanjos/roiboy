@@ -197,6 +197,7 @@ export default function Products() {
         price: parseFormattedNumber(price),
         cash_price: parseFormattedNumber(cashPrice),
         installment_price: parseFormattedNumber(installmentPrice),
+        renewal_discount_percent: parseFloat(renewalDiscountPercent) || 50,
         payment_methods: paymentMethods,
         billing_period: billingPeriod as "monthly" | "quarterly" | "semiannual" | "annual" | "one_time",
         is_active: isActive,
