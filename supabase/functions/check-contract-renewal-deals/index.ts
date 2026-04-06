@@ -125,19 +125,21 @@ serve(async (req) => {
         continue;
       }
 
-      // Renewal rule: 50% of the CURRENT product price (not the original contract value)
+      // Renewal rule: use the product's renewal_discount_percent of the CURRENT product price
       let renewalValue = (contract.value || 0) * 0.5; // fallback: 50% of contract value
+      let discountPercent = 50;
       
       if (contract.product_id) {
         const { data: product, error: productError } = await supabase
           .from("products")
-          .select("price")
+          .select("price, renewal_discount_percent")
           .eq("id", contract.product_id)
           .single();
 
         if (!productError && product && product.price) {
-          renewalValue = product.price * 0.5;
-          console.log(`Using 50% of current product price: ${product.price} → ${renewalValue}`);
+          discountPercent = product.renewal_discount_percent ?? 50;
+          renewalValue = product.price * (discountPercent / 100);
+          console.log(`Using ${discountPercent}% of current product price: ${product.price} → ${renewalValue}`);
         } else {
           console.log(`Product not found for contract ${contract.id}, using 50% of contract value as fallback`);
         }
