@@ -150,12 +150,13 @@ export default function SharedInsights() {
     }
   }, [status, email, dateRange, userId, productId, callEdgeFunction]);
 
-  // Re-fetch when filters change (skip initial load, but trigger once when initial load completes)
+  // Re-fetch when filters change (skip during initial load since initial data is already filtered)
   const [initialLoad, setInitialLoad] = useState(true);
   useEffect(() => {
     if (initialLoad) return;
     fetchFilteredData();
-  }, [preset, customRange, userId, productId, initialLoad]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preset, customRange, userId, productId]);
 
   // Initial validation
   useEffect(() => {
@@ -187,9 +188,23 @@ export default function SharedInsights() {
     init();
   }, [token]);
 
+  const getDefaultDateFilters = useCallback(() => {
+    const range = getDateRangeFromPreset("year");
+    return {
+      startDate: range.start.toISOString(),
+      endDate: range.end.toISOString(),
+      userId: "all",
+      productId: "all",
+    };
+  }, []);
+
   const checkAccess = async (emailToCheck: string) => {
     setStatus("loading");
-    const { data, error } = await callEdgeFunction("check_access", { email: emailToCheck });
+    const defaultFilters = getDefaultDateFilters();
+    const { data, error } = await callEdgeFunction("check_access", {
+      email: emailToCheck,
+      filters: defaultFilters,
+    });
 
     if (error || !data) {
       setStatus("email_prompt");
@@ -238,6 +253,7 @@ export default function SharedInsights() {
         filterOptions: data.filterOptions,
       });
       setStatus("approved");
+      // Trigger a filtered fetch immediately to ensure data parity
       setInitialLoad(false);
     } else if (data.status === "rejected") {
       setStatus("rejected");
