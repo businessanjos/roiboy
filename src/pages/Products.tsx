@@ -126,6 +126,7 @@ export default function Products() {
   const [installmentPrice, setInstallmentPrice] = useState("");
   const [renewalDiscountPercent, setRenewalDiscountPercent] = useState("50");
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
+  const [deliverables, setDeliverables] = useState<ProductDeliverables>({ ...DEFAULT_DELIVERABLES });
 
   // Format number with thousand separators (pt-BR)
   const formatNumberInput = (raw: string): string => {
