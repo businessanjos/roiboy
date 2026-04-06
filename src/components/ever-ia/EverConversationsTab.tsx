@@ -22,6 +22,12 @@ export function EverConversationsTab() {
     const iframeWindow = iframeRef.current?.contentWindow;
     const { access_token, refresh_token } = tokensRef.current;
 
+    console.log("[EverIA] sendAuthToIframe check:", {
+      hasIframeWindow: !!iframeWindow,
+      embedReady: embedReadyRef.current,
+      hasToken: !!access_token,
+    });
+
     if (!iframeWindow || !embedReadyRef.current || !access_token) {
       return false;
     }
