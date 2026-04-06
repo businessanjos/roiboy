@@ -276,6 +276,13 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                 <div className="sm:hidden">
                   <DropdownMenuItem 
                     className="text-zapp-text hover:bg-zapp-hover"
+                    onClick={onToggleSearch}
+                  >
+                    <Search className="h-4 w-4 mr-2" />
+                    Buscar na conversa
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    className="text-zapp-text hover:bg-zapp-hover"
                     onClick={onOpenTransfer}
                   >
                     <ArrowRightLeft className="h-4 w-4 mr-2" />
