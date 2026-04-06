@@ -133,27 +133,7 @@ export default function Renewals() {
           })(),
           responsible_name: (c.clients as any)?.users?.full_name || null,
         };
-            const discountPercent = c.products?.renewal_discount_percent ?? 50;
-            const paymentOption = c.payment_option || '';
-            const isCash = paymentOption === 'a_vista' || paymentOption === 'parcelado_1x' || paymentOption === 'parcelado_1x_cheque';
-            const installmentPrice = c.products?.installment_price;
-            const cashPrice = c.products?.cash_price;
-            const basePrice = c.products?.price;
-            
-            let priceToUse: number;
-            if (isCash && cashPrice && cashPrice > 0) {
-              priceToUse = cashPrice;
-            } else if (installmentPrice && installmentPrice > 0) {
-              priceToUse = installmentPrice;
-            } else if (basePrice && basePrice > 0) {
-              priceToUse = basePrice;
-            } else {
-              priceToUse = c.value || 0;
-            }
-            
-            return priceToUse * (discountPercent / 100);
-          })(),
-        };
+      });
       });
 
       setContracts(mapped);
