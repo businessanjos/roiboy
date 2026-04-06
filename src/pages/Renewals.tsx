@@ -160,14 +160,34 @@ export default function Renewals() {
     fetchRenewals();
   }, [currentUser?.account_id]);
 
+  // Extract unique values for filters
+  const uniqueConsultoras = [...new Set(contracts.map(c => c.responsible_name).filter(Boolean))] as string[];
+  const uniqueProdutos = [...new Set(contracts.map(c => c.product_name).filter(Boolean))] as string[];
+
   const filtered = contracts.filter((c) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      c.client_name.toLowerCase().includes(q) ||
-      c.client_email?.toLowerCase().includes(q) ||
-      c.product_name?.toLowerCase().includes(q)
-    );
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (
+        !c.client_name.toLowerCase().includes(q) &&
+        !c.client_email?.toLowerCase().includes(q) &&
+        !c.product_name?.toLowerCase().includes(q)
+      ) return false;
+    }
+    if (filterConsultora !== "all" && c.responsible_name !== filterConsultora) return false;
+    if (filterProduto !== "all" && c.product_name !== filterProduto) return false;
+    if (filterTempo !== "all") {
+      if (filterTempo === "urgent" && c.days_until_expiry > 30) return false;
+      if (filterTempo === "warning" && (c.days_until_expiry <= 30 || c.days_until_expiry > 60)) return false;
+      if (filterTempo === "ok" && c.days_until_expiry <= 60) return false;
+    }
+    if (filterChance !== "all") {
+      const score = chanceScores[c.client_id];
+      if (score === undefined) return true; // still loading, show it
+      if (filterChance === "alta" && score < 70) return false;
+      if (filterChance === "media" && (score < 40 || score >= 70)) return false;
+      if (filterChance === "baixa" && score >= 40) return false;
+    }
+    return true;
   });
 
   const urgentCount = filtered.filter((c) => c.days_until_expiry <= 30).length;
