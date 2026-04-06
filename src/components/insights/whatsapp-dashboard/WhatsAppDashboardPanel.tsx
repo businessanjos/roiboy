@@ -65,99 +65,25 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
     </Button>
   );
 
-  // Shared zoom calculation that polls until layout stabilises
-  const runAutoFitZoom = useCallback(() => {
-    if (zoomTimerRef.current) {
-      clearInterval(zoomTimerRef.current);
-      zoomTimerRef.current = null;
-    }
-    setFocusZoom(100);
-
-    let attempts = 0;
-    let lastHeight = 0;
-    let stableCount = 0;
-    const maxAttempts = 40;
-
-    zoomTimerRef.current = setInterval(() => {
-      attempts++;
-      const overlay = focusModeRef.current;
-      const content = contentRef.current;
-
-      if (!overlay || !content || attempts > maxAttempts) {
-        if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
-        zoomTimerRef.current = null;
-        if (overlay && content) setFocusZoom(calculateAutoFitZoom(overlay, content));
-        return;
-      }
-
-      const h = content.scrollHeight;
-      if (h === lastHeight && h > 0) stableCount++;
-      else stableCount = 0;
-      lastHeight = h;
-
-      if (stableCount >= 3) {
-        if (zoomTimerRef.current) clearInterval(zoomTimerRef.current);
-        zoomTimerRef.current = null;
-        setFocusZoom(calculateAutoFitZoom(overlay, content));
-      }
-    }, 80);
-  }, []);
-
-  // After zoom is applied, watch for content re-layout and re-adjust
-  useEffect(() => {
-    if (!isFocusMode || focusZoom === 100) return;
-    const content = contentRef.current;
-    const overlay = focusModeRef.current;
-    if (!content || !overlay) return;
-
-    let debounce: ReturnType<typeof setTimeout> | null = null;
-    let adjustCount = 0;
-    const ro = new ResizeObserver(() => {
-      if (debounce) clearTimeout(debounce);
-      if (adjustCount >= 3) return;
-      debounce = setTimeout(() => {
-        const contentBottom = content.getBoundingClientRect().bottom;
-        const overlayBottom = overlay.getBoundingClientRect().bottom;
-        if (contentBottom > overlayBottom + 2) {
-          adjustCount++;
-          runAutoFitZoom();
-        }
-      }, 300);
-    });
-    ro.observe(content);
-    return () => { ro.disconnect(); if (debounce) clearTimeout(debounce); };
-  }, [isFocusMode, focusZoom, runAutoFitZoom]);
-
-  // Cleanup
-  useEffect(() => {
-    return () => { if (zoomTimerRef.current) clearInterval(zoomTimerRef.current); };
-  }, []);
-
   // ESC listener
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isFocusMode) setIsFocusMode(false);
+      if (e.key === "Escape" && isFocusMode) {
+        setIsFocusMode(false);
+        setFocusZoom(80);
+        if (document.fullscreenElement) document.exitFullscreen();
+      }
     };
     document.addEventListener("keydown", handleEsc);
     return () => document.removeEventListener("keydown", handleEsc);
   }, [isFocusMode]);
 
-  // Auto-fit zoom when entering focus mode
+  // Fullscreen change listener
   useEffect(() => {
-    if (!isFocusMode) return;
-    const t = setTimeout(runAutoFitZoom, 50);
-    return () => clearTimeout(t);
-  }, [isFocusMode, runAutoFitZoom]);
-
-  // Fullscreen change listener — recalculate zoom
-  useEffect(() => {
-    const handler = () => {
-      setIsFullscreen(!!document.fullscreenElement);
-      if (isFocusMode) setTimeout(runAutoFitZoom, 350);
-    };
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
-  }, [isFocusMode, runAutoFitZoom]);
+  }, []);
 
   const toggleFullscreen = async () => {
     if (!document.fullscreenElement && focusModeRef.current) {
