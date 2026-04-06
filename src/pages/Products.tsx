@@ -91,6 +91,7 @@ export default function Products() {
   const [color, setColor] = useState<string>("#10b981");
   const [cashPrice, setCashPrice] = useState("");
   const [installmentPrice, setInstallmentPrice] = useState("");
+  const [renewalDiscountPercent, setRenewalDiscountPercent] = useState("50");
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
 
   // Format number with thousand separators (pt-BR)
