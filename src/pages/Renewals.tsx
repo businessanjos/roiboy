@@ -40,6 +40,18 @@ export default function Renewals() {
   const [contracts, setContracts] = useState<RenewalContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterConsultora, setFilterConsultora] = useState("all");
+  const [filterProduto, setFilterProduto] = useState("all");
+  const [filterTempo, setFilterTempo] = useState("all");
+  const [filterChance, setFilterChance] = useState("all");
+  const [chanceScores, setChanceScores] = useState<Record<string, number>>({});
+
+  const handleScoreCalculated = useCallback((clientId: string, score: number) => {
+    setChanceScores(prev => {
+      if (prev[clientId] === score) return prev;
+      return { ...prev, [clientId]: score };
+    });
+  }, []);
 
   const fetchRenewals = async () => {
     if (!currentUser?.account_id) return;
