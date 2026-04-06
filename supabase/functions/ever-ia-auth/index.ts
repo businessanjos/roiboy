@@ -13,7 +13,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Validate JWT
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
@@ -36,7 +35,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get user profile from users table
     const { data: profile, error: profileError } = await supabase
       .from("users")
       .select("id, name, email, role")
@@ -44,13 +42,13 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (profileError || !profile) {
+      console.error("Profile not found for auth_user_id:", user.id, profileError);
       return new Response(JSON.stringify({ error: "Perfil não encontrado" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Call Ever AI embed-auth with the shared secret
     const embedSecret = Deno.env.get("EVER_AI_EMBED_SECRET");
     if (!embedSecret) {
       console.error("EVER_AI_EMBED_SECRET not configured");
@@ -60,36 +58,80 @@ Deno.serve(async (req) => {
       });
     }
 
-    const everRes = await fetch(`${EVER_AI_FUNCTIONS_URL}/embed-auth`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-embed-secret": embedSecret,
-      },
-      body: JSON.stringify({
-        email: profile.email,
-        full_name: profile.name,
-        external_id: profile.id,
-        role: profile.role,
-      }),
-    });
+    const payload = {
+      email: profile.email,
+      full_name: profile.name,
+      external_id: profile.id,
+      role: profile.role,
+    };
 
-    const everData = await everRes.json();
+    console.log("[ever-ia-auth] Calling embed-auth for:", profile.email);
+
+    // Add 15s timeout to avoid hanging
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    let everRes: Response;
+    try {
+      everRes = await fetch(`${EVER_AI_FUNCTIONS_URL}/embed-auth`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-embed-secret": embedSecret,
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+    } catch (fetchErr: any) {
+      clearTimeout(timeout);
+      if (fetchErr.name === "AbortError") {
+        console.error("[ever-ia-auth] Timeout calling Ever AI embed-auth");
+        return new Response(JSON.stringify({ error: "Timeout ao conectar com Ever AI" }), {
+          status: 504,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      throw fetchErr;
+    }
+    clearTimeout(timeout);
+
+    const responseText = await everRes.text();
+    console.log("[ever-ia-auth] Ever AI response:", everRes.status, responseText.substring(0, 300));
+
+    if (!responseText) {
+      return new Response(JSON.stringify({ error: "Resposta vazia do Ever AI" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let everData;
+    try {
+      everData = JSON.parse(responseText);
+    } catch {
+      console.error("[ever-ia-auth] Non-JSON response:", responseText.substring(0, 200));
+      return new Response(JSON.stringify({ error: "Resposta inválida do Ever AI" }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!everRes.ok) {
-      console.error("Ever AI embed-auth error:", everData);
+      console.error("[ever-ia-auth] Ever AI error:", everData);
       return new Response(JSON.stringify({ error: everData.error || "Erro na autenticação Ever AI" }), {
         status: everRes.status,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    console.log("[ever-ia-auth] Success, has access_token:", !!everData.access_token);
+
     return new Response(JSON.stringify(everData), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("ever-ia-auth error:", err);
+    console.error("[ever-ia-auth] error:", err);
     return new Response(JSON.stringify({ error: "Erro interno" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

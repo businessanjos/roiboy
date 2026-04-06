@@ -17,20 +17,17 @@ export function EverConversationsTab() {
   const embedReadyRef = useRef(false);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [errorMsg, setErrorMsg] = useState("");
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sendAuthToIframe = useCallback(() => {
     const iframeWindow = iframeRef.current?.contentWindow;
     const { access_token, refresh_token } = tokensRef.current;
 
-    console.log("[EverIA] sendAuthToIframe check:", {
-      hasIframeWindow: !!iframeWindow,
-      embedReady: embedReadyRef.current,
-      hasToken: !!access_token,
-    });
-
-    if (!iframeWindow || !embedReadyRef.current || !access_token) {
+    if (!iframeWindow || !access_token) {
       return false;
     }
+
+    console.log("[EverIA] Sending auth to iframe, embedReady:", embedReadyRef.current);
 
     iframeWindow.postMessage(
       {
@@ -64,7 +61,7 @@ export function EverConversationsTab() {
       const { access_token, refresh_token } = data ?? {};
 
       if (!access_token) {
-        throw new Error("Token não recebido");
+        throw new Error(data?.error || "Token não recebido");
       }
 
       tokensRef.current = {
@@ -72,7 +69,13 @@ export function EverConversationsTab() {
         refresh_token: refresh_token ?? null,
       };
 
-      sendAuthToIframe();
+      console.log("[EverIA] Tokens received, attempting to send to iframe");
+
+      // Try sending immediately
+      if (!sendAuthToIframe()) {
+        // If iframe not ready, set up a retry
+        console.log("[EverIA] Iframe not ready yet, will retry on ready signal or load");
+      }
     } catch (err: any) {
       console.error("[EverIA] Auth error:", err);
       setErrorMsg(err.message || "Falha na autenticação");
@@ -80,38 +83,65 @@ export function EverConversationsTab() {
     }
   }, [currentUser, sendAuthToIframe]);
 
+  // Listen for ever-embed-ready from iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      console.log("[EverIA] postMessage received:", {
-        origin: event.origin,
-        expectedOrigin: EVER_AI_EMBED_ORIGIN,
-        data: event.data,
-        sourceMatch: event.source === iframeRef.current?.contentWindow,
-      });
-
       if (event.origin !== EVER_AI_EMBED_ORIGIN) return;
       if (event.source !== iframeRef.current?.contentWindow) return;
 
       const messageType =
         typeof event.data === "string" ? event.data : event.data?.type;
 
-      if (messageType !== "ever-embed-ready") return;
-
-      console.log("[EverIA] embed ready signal received!");
-      embedReadyRef.current = true;
-      sendAuthToIframe();
+      if (messageType === "ever-embed-ready") {
+        console.log("[EverIA] embed ready signal received!");
+        embedReadyRef.current = true;
+        sendAuthToIframe();
+      }
     };
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, [sendAuthToIframe]);
 
+  // Handle iframe load - try sending auth after a delay as fallback
+  const handleIframeLoad = useCallback(() => {
+    console.log("[EverIA] iframe loaded");
+    
+    // Clear any existing retry timer
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+
+    // If we have tokens but embed hasn't signaled ready, try sending after delays
+    const tryWithDelay = (delay: number) => {
+      retryTimerRef.current = setTimeout(() => {
+        if (tokensRef.current.access_token && status !== "ready") {
+          console.log("[EverIA] Fallback: sending auth after", delay, "ms");
+          embedReadyRef.current = true; // Force it
+          sendAuthToIframe();
+        }
+      }, delay);
+    };
+
+    // Try at 1s, 2s, 4s as fallback
+    tryWithDelay(1000);
+    setTimeout(() => {
+      if (status !== "ready" && tokensRef.current.access_token) tryWithDelay(2000);
+    }, 1000);
+    setTimeout(() => {
+      if (status !== "ready" && tokensRef.current.access_token) tryWithDelay(4000);
+    }, 3000);
+  }, [sendAuthToIframe, status]);
+
   useEffect(() => {
     embedReadyRef.current = false;
+    if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
 
     if (currentUser) {
       authenticate();
     }
+
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+    };
   }, [currentUser, authenticate]);
 
   if (status === "error") {
@@ -150,6 +180,7 @@ export function EverConversationsTab() {
         className="w-full h-full border-0"
         allow="microphone; clipboard-write"
         title="Ever IA Chat"
+        onLoad={handleIframeLoad}
       />
     </div>
   );
