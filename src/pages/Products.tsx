@@ -31,6 +31,9 @@ interface Product {
   name: string;
   description: string | null;
   price: number;
+  cash_price: number;
+  installment_price: number;
+  payment_methods: string[];
   billing_period: "monthly" | "quarterly" | "semiannual" | "annual" | "one_time";
   is_active: boolean;
   is_mls: boolean;
@@ -38,6 +41,13 @@ interface Product {
   color: string | null;
   created_at: string;
 }
+
+const PAYMENT_METHOD_OPTIONS = [
+  { value: "credit_card", label: "Cartão de crédito" },
+  { value: "boleto", label: "Boleto" },
+  { value: "pix", label: "Pix" },
+  { value: "cheque", label: "Cheque" },
+];
 
 const COLOR_OPTIONS = [
   { value: "#10b981", label: "Verde", class: "bg-emerald-500" },
