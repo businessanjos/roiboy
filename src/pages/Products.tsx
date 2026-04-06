@@ -330,188 +330,323 @@ export default function Products() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-5 py-4">
-              {/* Row 1: Nome + Cor */}
-              <div className="grid grid-cols-[1fr_auto] gap-4 items-end">
-                <div className="space-y-2">
-                  <Label>Nome *</Label>
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Ex: Mentoria Premium"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Cor</Label>
-                  <div className="flex gap-1.5">
-                    {COLOR_OPTIONS.map((option) => (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setColor(option.value)}
-                        className={`w-7 h-7 rounded-full border-2 transition-all ${
-                          color === option.value 
-                            ? "border-foreground scale-110" 
-                            : "border-transparent hover:scale-105"
-                        }`}
-                        style={{ backgroundColor: option.value }}
-                        title={option.label}
-                      />
-                    ))}
+            <Tabs defaultValue="general" className="w-full">
+              <TabsList className="w-full grid grid-cols-2">
+                <TabsTrigger value="general">Geral</TabsTrigger>
+                <TabsTrigger value="deliverables">Entregas</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="general" className="space-y-5 pt-2">
+                {/* Row 1: Nome + Cor */}
+                <div className="grid grid-cols-[1fr_auto] gap-4 items-end">
+                  <div className="space-y-2">
+                    <Label>Nome *</Label>
+                    <Input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Ex: Mentoria Premium"
+                    />
                   </div>
-                </div>
-              </div>
-
-              {/* Row 2: Descrição */}
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Descrição do produto..."
-                  rows={2}
-                />
-              </div>
-
-              {/* Row 3: Valor, Parcelado, Periodicidade */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Valor (R$)</Label>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={price}
-                    onChange={(e) => handleCurrencyChange(e.target.value, setPrice)}
-                    placeholder="0,00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Preço parcelado (R$)</Label>
-                  <Input
-                    type="text"
-                    inputMode="decimal"
-                    value={installmentPrice}
-                    onChange={(e) => handleCurrencyChange(e.target.value, setInstallmentPrice)}
-                    placeholder="0,00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Periodicidade</Label>
-                  <Select value={billingPeriod} onValueChange={setBillingPeriod}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="monthly">Mensal</SelectItem>
-                      <SelectItem value="quarterly">Trimestral</SelectItem>
-                      <SelectItem value="semiannual">Semestral</SelectItem>
-                      <SelectItem value="annual">Anual</SelectItem>
-                      <SelectItem value="one_time">Pagamento Único</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 4: Renovação + Formas de pagamento */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Desconto renovação (%)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={renewalDiscountPercent}
-                    onChange={(e) => setRenewalDiscountPercent(e.target.value)}
-                    placeholder="50"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    % do ticket atual cobrado na renovação
-                    {price && parseFloat(renewalDiscountPercent) > 0 && (
-                      <>
-                        <br />
-                        Valor renovação: <span className="font-medium text-foreground">
-                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
-                            parseFormattedNumber(price) * (parseFloat(renewalDiscountPercent) / 100)
-                          )}
-                        </span>
-                      </>
-                    )}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Formas de pagamento</Label>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {PAYMENT_METHOD_OPTIONS.map((method) => (
-                      <label
-                        key={method.value}
-                        className={cn(
-                          "flex items-center gap-2 px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors text-sm",
-                          paymentMethods.includes(method.value)
-                            ? "border-primary bg-primary/5 text-foreground"
-                            : "border-border hover:bg-muted/50 text-muted-foreground"
-                        )}
-                      >
-                        <input
-                          type="checkbox"
-                          className="rounded border-border"
-                          checked={paymentMethods.includes(method.value)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setPaymentMethods([...paymentMethods, method.value]);
-                            } else {
-                              setPaymentMethods(paymentMethods.filter((m) => m !== method.value));
-                            }
-                          }}
+                  <div className="space-y-2">
+                    <Label>Cor</Label>
+                    <div className="flex gap-1.5">
+                      {COLOR_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setColor(option.value)}
+                          className={`w-7 h-7 rounded-full border-2 transition-all ${
+                            color === option.value 
+                              ? "border-foreground scale-110" 
+                              : "border-transparent hover:scale-105"
+                          }`}
+                          style={{ backgroundColor: option.value }}
+                          title={option.label}
                         />
-                        {method.label}
-                      </label>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Row 5: Toggles + MLS */}
-              <div className="flex items-center gap-6 pt-2 border-t">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="is-active"
-                    checked={isActive}
-                    onCheckedChange={setIsActive}
+                {/* Row 2: Descrição */}
+                <div className="space-y-2">
+                  <Label>Descrição</Label>
+                  <Textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Descrição do produto..."
+                    rows={2}
                   />
-                  <Label htmlFor="is-active" className="mb-0">Ativo</Label>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="is-mls"
-                    checked={isMls}
-                    onCheckedChange={(checked) => {
-                      setIsMls(checked);
-                      if (!checked) setMlsLevel("");
-                    }}
-                  />
-                  <Label htmlFor="is-mls" className="mb-0">MLS</Label>
-                </div>
-                {isMls && (
-                  <div className="flex-1">
-                    <Select value={mlsLevel} onValueChange={setMlsLevel}>
-                      <SelectTrigger className="h-8">
-                        <SelectValue placeholder="Nível MLS" />
+
+                {/* Row 3: Valor, Parcelado, Periodicidade */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Valor (R$)</Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={price}
+                      onChange={(e) => handleCurrencyChange(e.target.value, setPrice)}
+                      placeholder="0,00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Preço parcelado (R$)</Label>
+                    <Input
+                      type="text"
+                      inputMode="decimal"
+                      value={installmentPrice}
+                      onChange={(e) => handleCurrencyChange(e.target.value, setInstallmentPrice)}
+                      placeholder="0,00"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Periodicidade</Label>
+                    <Select value={billingPeriod} onValueChange={setBillingPeriod}>
+                      <SelectTrigger>
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {MLS_LEVELS.map((level) => (
-                          <SelectItem key={level.value} value={level.value}>
-                            <div className="flex items-center gap-2">
-                              <div className={`w-3 h-3 rounded-full ${level.dotColor}`} />
-                              {level.label}
-                            </div>
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="monthly">Mensal</SelectItem>
+                        <SelectItem value="quarterly">Trimestral</SelectItem>
+                        <SelectItem value="semiannual">Semestral</SelectItem>
+                        <SelectItem value="annual">Anual</SelectItem>
+                        <SelectItem value="one_time">Pagamento Único</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                )}
-              </div>
-            </div>
+                </div>
+
+                {/* Row 4: Renovação + Formas de pagamento */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Desconto renovação (%)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={renewalDiscountPercent}
+                      onChange={(e) => setRenewalDiscountPercent(e.target.value)}
+                      placeholder="50"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      % do ticket atual cobrado na renovação
+                      {price && parseFloat(renewalDiscountPercent) > 0 && (
+                        <>
+                          <br />
+                          Valor renovação: <span className="font-medium text-foreground">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(
+                              parseFormattedNumber(price) * (parseFloat(renewalDiscountPercent) / 100)
+                            )}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Formas de pagamento</Label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {PAYMENT_METHOD_OPTIONS.map((method) => (
+                        <label
+                          key={method.value}
+                          className={cn(
+                            "flex items-center gap-2 px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors text-sm",
+                            paymentMethods.includes(method.value)
+                              ? "border-primary bg-primary/5 text-foreground"
+                              : "border-border hover:bg-muted/50 text-muted-foreground"
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            className="rounded border-border"
+                            checked={paymentMethods.includes(method.value)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setPaymentMethods([...paymentMethods, method.value]);
+                              } else {
+                                setPaymentMethods(paymentMethods.filter((m) => m !== method.value));
+                              }
+                            }}
+                          />
+                          {method.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Row 5: Toggles + MLS */}
+                <div className="flex items-center gap-6 pt-2 border-t">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="is-active"
+                      checked={isActive}
+                      onCheckedChange={setIsActive}
+                    />
+                    <Label htmlFor="is-active" className="mb-0">Ativo</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="is-mls"
+                      checked={isMls}
+                      onCheckedChange={(checked) => {
+                        setIsMls(checked);
+                        if (!checked) setMlsLevel("");
+                      }}
+                    />
+                    <Label htmlFor="is-mls" className="mb-0">MLS</Label>
+                  </div>
+                  {isMls && (
+                    <div className="flex-1">
+                      <Select value={mlsLevel} onValueChange={setMlsLevel}>
+                        <SelectTrigger className="h-8">
+                          <SelectValue placeholder="Nível MLS" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {MLS_LEVELS.map((level) => (
+                            <SelectItem key={level.value} value={level.value}>
+                              <div className="flex items-center gap-2">
+                                <div className={`w-3 h-3 rounded-full ${level.dotColor}`} />
+                                {level.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="deliverables" className="space-y-4 pt-2">
+                {/* Sessão Individual */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold mb-0">Sessão Individual</Label>
+                    <Switch
+                      checked={deliverables.individual_session_enabled}
+                      onCheckedChange={(v) => setDeliverables({ ...deliverables, individual_session_enabled: v })}
+                    />
+                  </div>
+                  {deliverables.individual_session_enabled && (
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Formato</Label>
+                        <Select
+                          value={deliverables.individual_session_format}
+                          onValueChange={(v) => setDeliverables({ ...deliverables, individual_session_format: v as "presencial" | "online" })}
+                        >
+                          <SelectTrigger className="h-9">
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="presencial">Presencial</SelectItem>
+                            <SelectItem value="online">Online</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Duração</Label>
+                        <Input
+                          value={deliverables.individual_session_duration}
+                          onChange={(e) => setDeliverables({ ...deliverables, individual_session_duration: e.target.value })}
+                          placeholder="Ex: 60 min"
+                          className="h-9"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Periodicidade</Label>
+                        <Input
+                          value={deliverables.individual_session_periodicity}
+                          onChange={(e) => setDeliverables({ ...deliverables, individual_session_periodicity: e.target.value })}
+                          placeholder="Ex: Quinzenal"
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Grupos WhatsApp */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <Label className="text-sm font-semibold">Grupos WhatsApp</Label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm mb-0">Grupo individual</Label>
+                      <Switch
+                        checked={deliverables.whatsapp_individual_group}
+                        onCheckedChange={(v) => setDeliverables({ ...deliverables, whatsapp_individual_group: v })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm mb-0">Grupo com todos</Label>
+                      <Switch
+                        checked={deliverables.whatsapp_all_group}
+                        onCheckedChange={(v) => setDeliverables({ ...deliverables, whatsapp_all_group: v })}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Mentoria em Grupo */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-semibold mb-0">Sessões online de mentoria em grupo</Label>
+                    <Switch
+                      checked={deliverables.group_mentoring_enabled}
+                      onCheckedChange={(v) => setDeliverables({ ...deliverables, group_mentoring_enabled: v })}
+                    />
+                  </div>
+                  {deliverables.group_mentoring_enabled && (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Periodicidade</Label>
+                      <Input
+                        value={deliverables.group_mentoring_periodicity}
+                        onChange={(e) => setDeliverables({ ...deliverables, group_mentoring_periodicity: e.target.value })}
+                        placeholder="Ex: Semanal"
+                        className="h-9"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Outros benefícios */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <Label className="text-sm font-semibold">Outros benefícios</Label>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm mb-0">Evento presencial</Label>
+                      <Switch
+                        checked={deliverables.presential_event}
+                        onCheckedChange={(v) => setDeliverables({ ...deliverables, presential_event: v })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm mb-0">ROY Private</Label>
+                      <Switch
+                        checked={deliverables.roy_private}
+                        onCheckedChange={(v) => setDeliverables({ ...deliverables, roy_private: v })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm mb-0">Clínica Ryka</Label>
+                      <Switch
+                        checked={deliverables.clinica_ryka}
+                        onCheckedChange={(v) => setDeliverables({ ...deliverables, clinica_ryka: v })}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm mb-0">Consultor Dedicado</Label>
+                      <Switch
+                        checked={deliverables.dedicated_consultant}
+                        onCheckedChange={(v) => setDeliverables({ ...deliverables, dedicated_consultant: v })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)}>
