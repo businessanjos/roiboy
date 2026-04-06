@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import fixWebmDuration from "fix-webm-duration";
 import { Message } from "@/hooks/useZappData";
 import { ConversationAssignment, getContactInfo } from "@/components/royzapp/types";
 import { invokeWhatsAppManager } from "@/lib/whatsappRouting";
@@ -51,6 +52,7 @@ export function useZappMessaging({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const recordingStartTimeRef = useRef<number>(0);
 
   // Contact picker state
   const [contactPickerOpen, setContactPickerOpen] = useState(false);
@@ -649,15 +651,30 @@ export function useZappMessaging({
         stream.getTracks().forEach(track => track.stop());
         if (audioChunksRef.current.length > 0) {
           const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
-          const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
+          let audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
+          
+          // Calculate actual duration from wall clock (avoids stale closure on state)
+          const elapsedMs = Date.now() - recordingStartTimeRef.current;
+          const elapsedSec = Math.max(1, Math.round(elapsedMs / 1000));
+          
+          // Fix WebM duration metadata (Chrome records without it)
+          if (actualMimeType.includes('webm')) {
+            try {
+              audioBlob = await fixWebmDuration(audioBlob, elapsedMs, { logger: false });
+            } catch (e) {
+              console.warn("[AudioRecorder] fixWebmDuration failed, using raw blob:", e);
+            }
+          }
+          
           const audioUrl = URL.createObjectURL(audioBlob);
-          setAudioPreview({ blob: audioBlob, url: audioUrl, duration: recordingDuration });
+          setAudioPreview({ blob: audioBlob, url: audioUrl, duration: elapsedSec });
         }
       };
       
       mediaRecorder.start(100);
       setIsRecording(true);
       setRecordingDuration(0);
+      recordingStartTimeRef.current = Date.now();
       
       recordingIntervalRef.current = setInterval(() => {
         setRecordingDuration(prev => prev + 1);
@@ -678,7 +695,6 @@ export function useZappMessaging({
         clearInterval(recordingIntervalRef.current);
         recordingIntervalRef.current = null;
       }
-      setRecordingDuration(0);
     }
   };
 
@@ -694,6 +710,7 @@ export function useZappMessaging({
         recordingIntervalRef.current = null;
       }
       setRecordingDuration(0);
+      recordingStartTimeRef.current = 0;
       toast.info("Gravação cancelada");
     }
   };
@@ -702,6 +719,7 @@ export function useZappMessaging({
     if (audioPreview) {
       URL.revokeObjectURL(audioPreview.url);
       setAudioPreview(null);
+      setRecordingDuration(0);
     }
   };
 
@@ -710,6 +728,7 @@ export function useZappMessaging({
       await sendAudioMessage(audioPreview.blob, audioPreview.duration);
       URL.revokeObjectURL(audioPreview.url);
       setAudioPreview(null);
+      setRecordingDuration(0);
     }
   };
 
@@ -794,9 +813,9 @@ export function useZappMessaging({
         const payload: Record<string, string> = {
           action,
           media_url: mediaUrl,
-          media_type: "audio",
+          media_type: "ptt",
           caption: "",
-          file_name: `audio_${Date.now()}.webm`,
+          file_name: `audio_${Date.now()}.${extension}`,
           sector_id: selectedSectorId || "",
           integration_id: effectiveIntegrationId || "",
         };
