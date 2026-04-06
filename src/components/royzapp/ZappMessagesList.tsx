@@ -12,6 +12,9 @@ interface ZappMessagesListProps {
   onEditMessage?: (messageId: string, newContent: string) => Promise<void>;
   onRetryMessage?: (message: Message) => void;
   onRetryMediaDownload?: (messageId: string) => void;
+  searchQuery?: string;
+  searchMatchIds?: string[];
+  searchFocusId?: string | null;
 }
 
 // Build a fallback mention map from sender_phone data in group messages
