@@ -27,31 +27,7 @@ interface WhatsAppDashboardPanelProps {
   isLoadingVisuals?: boolean;
 }
 
-function calculateAutoFitZoom(overlayEl: HTMLElement, contentEl: HTMLElement): number {
-  const viewportHeight = overlayEl.clientHeight;
-  const viewportWidth = overlayEl.clientWidth;
 
-  const contentRect = contentEl.getBoundingClientRect();
-  const overlayRect = overlayEl.getBoundingClientRect();
-  const chromeHeight = contentRect.top - overlayRect.top;
-
-  // CSS zoom: scrollHeight/scrollWidth return natural (unscaled) dimensions
-  const contentNaturalHeight = contentEl.scrollHeight;
-  const contentNaturalWidth = contentEl.scrollWidth;
-
-  const availableHeight = viewportHeight - chromeHeight;
-  const availableWidth = viewportWidth;
-
-  if (contentNaturalHeight <= 0 || availableHeight <= 0) return 100;
-
-  const zoomByHeight = (availableHeight / contentNaturalHeight) * 100;
-  const zoomByWidth = contentNaturalWidth > 0
-    ? (availableWidth / contentNaturalWidth) * 100
-    : 200;
-
-  const idealZoom = Math.min(zoomByHeight, zoomByWidth);
-  return Math.min(Math.max(Math.floor(idealZoom * 0.95), 25), 200);
-}
 
 export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChange, isLoadingVisuals }: WhatsAppDashboardPanelProps) {
   const isMobile = useIsMobile();
