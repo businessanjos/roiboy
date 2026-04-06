@@ -361,7 +361,6 @@ export default function Renewals() {
                         accountId={currentUser?.account_id || ""}
                       />
                     </TableCell>
-                    </TableCell>
                     <TableCell>
                       <TooltipProvider>
                         <Tooltip>
