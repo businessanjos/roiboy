@@ -35,6 +35,16 @@ interface RenewalContract {
   responsible_name: string | null;
 }
 
+// Users with full visibility on renewals (everyone else sees only their own)
+const RENEWALS_FULL_ACCESS_USER_IDS = [
+  "d20201f6-a9bd-4934-ae50-07ce7a47574b", // Maikol
+  "de43a643-0109-4afb-ac35-be768dbf4090", // Everton
+  "1232ec15-5f66-4b5f-9e74-f40d436f9d0f", // Jonathan
+  "a1625047-8b72-4b1b-a42c-24bbdc9fd143", // Jéssica Campos
+  "c064c5d5-cdb5-47cc-99ce-ad416b6407b1", // Jéssica Marcato
+  "b625a448-23e6-40bf-a503-d876a9a701db", // Bruna
+];
+
 export default function Renewals() {
   const { currentUser } = useCurrentUser();
   const [contracts, setContracts] = useState<RenewalContract[]>([]);
