@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface RenewalThermometerProps {
   clientId: string;
   accountId: string;
+  onScoreCalculated?: (clientId: string, score: number) => void;
 }
 
 interface ScoreBreakdown {
@@ -16,7 +17,7 @@ interface ScoreBreakdown {
   total: number;
 }
 
-export function RenewalThermometer({ clientId, accountId }: RenewalThermometerProps) {
+export function RenewalThermometer({ clientId, accountId, onScoreCalculated }: RenewalThermometerProps) {
   const [score, setScore] = useState<ScoreBreakdown | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -117,6 +118,7 @@ export function RenewalThermometer({ clientId, accountId }: RenewalThermometerPr
         );
 
         setScore({ financial: financialScore, engagement: engagementScore, attendance: attendanceScore, total });
+        onScoreCalculated?.(clientId, total);
       } catch (err) {
         console.error("Error calculating renewal score:", err);
       } finally {

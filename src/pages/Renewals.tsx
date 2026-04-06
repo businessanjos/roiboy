@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { RenewalThermometer } from "@/components/renewals/RenewalThermometer";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Search, Loader2, ArrowRight, CalendarDays, AlertTriangle, Clock, RefreshCw, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 
@@ -39,6 +40,18 @@ export default function Renewals() {
   const [contracts, setContracts] = useState<RenewalContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterConsultora, setFilterConsultora] = useState("all");
+  const [filterProduto, setFilterProduto] = useState("all");
+  const [filterTempo, setFilterTempo] = useState("all");
+  const [filterChance, setFilterChance] = useState("all");
+  const [chanceScores, setChanceScores] = useState<Record<string, number>>({});
+
+  const handleScoreCalculated = useCallback((clientId: string, score: number) => {
+    setChanceScores(prev => {
+      if (prev[clientId] === score) return prev;
+      return { ...prev, [clientId]: score };
+    });
+  }, []);
 
   const fetchRenewals = async () => {
     if (!currentUser?.account_id) return;
@@ -147,14 +160,34 @@ export default function Renewals() {
     fetchRenewals();
   }, [currentUser?.account_id]);
 
+  // Extract unique values for filters
+  const uniqueConsultoras = [...new Set(contracts.map(c => c.responsible_name).filter(Boolean))] as string[];
+  const uniqueProdutos = [...new Set(contracts.map(c => c.product_name).filter(Boolean))] as string[];
+
   const filtered = contracts.filter((c) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      c.client_name.toLowerCase().includes(q) ||
-      c.client_email?.toLowerCase().includes(q) ||
-      c.product_name?.toLowerCase().includes(q)
-    );
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      if (
+        !c.client_name.toLowerCase().includes(q) &&
+        !c.client_email?.toLowerCase().includes(q) &&
+        !c.product_name?.toLowerCase().includes(q)
+      ) return false;
+    }
+    if (filterConsultora !== "all" && c.responsible_name !== filterConsultora) return false;
+    if (filterProduto !== "all" && c.product_name !== filterProduto) return false;
+    if (filterTempo !== "all") {
+      if (filterTempo === "urgent" && c.days_until_expiry > 30) return false;
+      if (filterTempo === "warning" && (c.days_until_expiry <= 30 || c.days_until_expiry > 60)) return false;
+      if (filterTempo === "ok" && c.days_until_expiry <= 60) return false;
+    }
+    if (filterChance !== "all") {
+      const score = chanceScores[c.client_id];
+      if (score === undefined) return true; // still loading, show it
+      if (filterChance === "alta" && score < 70) return false;
+      if (filterChance === "media" && (score < 40 || score >= 70)) return false;
+      if (filterChance === "baixa" && score >= 40) return false;
+    }
+    return true;
   });
 
   const urgentCount = filtered.filter((c) => c.days_until_expiry <= 30).length;
@@ -267,15 +300,61 @@ export default function Renewals() {
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome, email ou produto..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search & Filters */}
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, email ou produto..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={filterConsultora} onValueChange={setFilterConsultora}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Consultora" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas consultoras</SelectItem>
+            {uniqueConsultoras.sort().map((name) => (
+              <SelectItem key={name} value={name}>{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterProduto} onValueChange={setFilterProduto}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Produto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos produtos</SelectItem>
+            {uniqueProdutos.sort().map((name) => (
+              <SelectItem key={name} value={name}>{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterTempo} onValueChange={setFilterTempo}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Tempo Restante" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os prazos</SelectItem>
+            <SelectItem value="urgent">Até 30 dias</SelectItem>
+            <SelectItem value="warning">31 a 60 dias</SelectItem>
+            <SelectItem value="ok">61 a 90 dias</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select value={filterChance} onValueChange={setFilterChance}>
+          <SelectTrigger className="w-full sm:w-[150px]">
+            <SelectValue placeholder="Chance" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas chances</SelectItem>
+            <SelectItem value="alta">Alta</SelectItem>
+            <SelectItem value="media">Média</SelectItem>
+            <SelectItem value="baixa">Baixa</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Table */}
@@ -365,6 +444,7 @@ export default function Renewals() {
                       <RenewalThermometer
                         clientId={contract.client_id}
                         accountId={currentUser?.account_id || ""}
+                        onScoreCalculated={handleScoreCalculated}
                       />
                     </TableCell>
                     <TableCell>
