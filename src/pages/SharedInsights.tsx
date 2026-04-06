@@ -187,9 +187,23 @@ export default function SharedInsights() {
     init();
   }, [token]);
 
+  const getDefaultDateFilters = useCallback(() => {
+    const range = getDateRangeFromPreset("year");
+    return {
+      startDate: range.start.toISOString(),
+      endDate: range.end.toISOString(),
+      userId: "all",
+      productId: "all",
+    };
+  }, []);
+
   const checkAccess = async (emailToCheck: string) => {
     setStatus("loading");
-    const { data, error } = await callEdgeFunction("check_access", { email: emailToCheck });
+    const defaultFilters = getDefaultDateFilters();
+    const { data, error } = await callEdgeFunction("check_access", {
+      email: emailToCheck,
+      filters: defaultFilters,
+    });
 
     if (error || !data) {
       setStatus("email_prompt");
