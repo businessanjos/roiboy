@@ -308,6 +308,17 @@ export function ZappChatView({
         onToggleSearch={() => setShowSearch(s => !s)}
       />
 
+      {/* Search bar */}
+      {showSearch && (
+        <ZappMessageSearchBar
+          onSearch={handleSearchQuery}
+          onNavigate={handleSearchNavigate}
+          onClose={handleCloseSearch}
+          currentMatch={searchCurrentIndex}
+          totalMatches={searchMatchIds.length}
+        />
+      )}
+
       {/* Messages */}
       <ZappMessagesList 
         messages={messages} 
