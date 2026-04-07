@@ -88,6 +88,7 @@ const SocialMedia = lazyRetry(() => import("./pages/SocialMedia"));
 const MarketingTasks = lazyRetry(() => import("./pages/MarketingTasks"));
 const MarketingInsights = lazyRetry(() => import("./pages/MarketingInsights"));
 const Insights = lazyRetry(() => import("./pages/Insights"));
+const RHDashboard = lazyRetry(() => import("./pages/RHDashboard"));
 const SharedInsights = lazyRetry(() => import("./pages/SharedInsights"));
 const ExternalDashboard = lazyRetry(() => import("./pages/ExternalDashboard"));
 const WhatsAppDiagnostics = lazyRetry(() => import("./pages/admin/WhatsAppDiagnostics"));
@@ -221,6 +222,8 @@ const App = () => (
                             <Route path="/admin" element={<Admin />} />
                             <Route path="/admin/whatsapp-diagnostics" element={<WhatsAppDiagnostics />} />
                             <Route path="/sales-scripts" element={<SalesScripts />} />
+                            
+                            <Route path="/rh" element={<RHDashboard />} />
                             
                           </Route>
                           <Route path="*" element={<NotFound />} />

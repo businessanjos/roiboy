@@ -33,12 +33,19 @@ import {
   Percent,
   DollarSign,
   Bot,
+  Briefcase,
+  UsersRound,
+  GraduationCap,
+  Brain,
+  Star,
+  FileCheck,
+  BookOpen,
   
   type LucideIcon,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/hooks/usePermissions";
 
-export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "configuracoes";
+export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "rh" | "configuracoes";
 
 export interface NavItem {
   to: string;
@@ -184,6 +191,30 @@ export const sectors: Sector[] = [
       { to: "/social-media", icon: Instagram, label: "Social Media" },
       { to: "/marketing-tasks", icon: ClipboardList, label: "Tarefas" },
       { to: "/marketing-insights", icon: BarChart3, label: "Insights" },
+      { to: "/notifications", icon: Bell, label: "Notificações" },
+    ],
+  },
+  {
+    id: "rh",
+    name: "RH",
+    description: "Gestão de pessoas, testes comportamentais e desenvolvimento",
+    icon: Briefcase,
+    color: "text-rose-600",
+    bgColor: "bg-rose-500/10",
+    defaultRoute: "/rh",
+    navItems: [
+      { to: "/rh", icon: LayoutDashboard, label: "Painel RH" },
+      { to: "/rh/collaborators", icon: UsersRound, label: "Colaboradores" },
+      { to: "/rh/teams", icon: Users, label: "Equipes" },
+      { to: "/rh/tests", icon: Brain, label: "Testes" },
+      { to: "/rh/performance", icon: Star, label: "Desempenho" },
+      { to: "/rh/feedback", icon: MessageCircle, label: "Feedback" },
+      { to: "/rh/evaluations", icon: FileCheck, label: "Avaliações" },
+      { to: "/rh/development", icon: GraduationCap, label: "Desenvolvimento" },
+      { to: "/rh/job-descriptions", icon: FileText, label: "Cargos" },
+      { to: "/rh/resumes", icon: BookOpen, label: "Currículos" },
+      { to: "/rh/procedures", icon: ClipboardList, label: "Procedimentos" },
+      { to: "/rh/interview-scripts", icon: ScrollText, label: "Entrevistas" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },

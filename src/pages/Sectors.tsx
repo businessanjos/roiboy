@@ -6,7 +6,7 @@ import { sectors, SectorId } from "@/config/sectors";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { RoyLogo } from "@/components/ui/roy-logo";
-import { ArrowRight, BarChart3, Wallet, Target, Palette, MessageCircle, Zap, Bot } from "lucide-react";
+import { ArrowRight, BarChart3, Wallet, Target, Palette, MessageCircle, Zap, Bot, Briefcase } from "lucide-react";
 import eternumSimbolo from "@/assets/simbolo-eternum.png";
 
 // Sectors accessible by sales rep roles
@@ -70,6 +70,14 @@ const SECTOR_IDENTITY: Record<string, {
     patternClass: "sector-pattern-everia",
     overrideIcon: Bot,
   },
+  rh: {
+    accent: "border-l-rose-500",
+    hoverBorder: "hover:border-rose-500/30",
+    hoverIconBg: "group-hover:bg-rose-500/10",
+    hoverIconColor: "group-hover:text-rose-600",
+    patternClass: "sector-pattern-rh",
+    overrideIcon: Briefcase,
+  },
 };
 
 function SectorPattern({ sectorId }: { sectorId: string }) {
@@ -112,6 +120,13 @@ function SectorPattern({ sectorId }: { sectorId: string }) {
         <path d="M20 58 Q30 48 40 48 Q50 48 60 58" stroke="currentColor" strokeWidth="2" fill="none" />
         <circle cx="34" cy="30" r="2" fill="currentColor" />
         <circle cx="46" cy="30" r="2" fill="currentColor" />
+      </svg>
+    ),
+    rh: (
+      <svg className="absolute right-3 bottom-3 opacity-[0.04] group-hover:opacity-[0.08] transition-opacity duration-500" width="80" height="80" viewBox="0 0 80 80">
+        <circle cx="30" cy="25" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+        <circle cx="50" cy="25" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
+        <path d="M15 55 Q15 40 30 40 Q40 40 40 45 Q40 40 50 40 Q65 40 65 55" stroke="currentColor" strokeWidth="2" fill="none" />
       </svg>
     ),
   };
@@ -162,7 +177,7 @@ export default function Sectors() {
     return sectors;
   }, [isSalesRep, isManager]);
 
-  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "royzapp", "everia"];
+  const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "royzapp", "everia", "rh"];
   const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);
 
   return (
