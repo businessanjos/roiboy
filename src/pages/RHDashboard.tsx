@@ -5,8 +5,9 @@ import {
   LayoutDashboard, Network, Building, UserPlus, UserMinus,
   Palmtree, Heart, Clock, type LucideIcon
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface RHModule {
   icon: LucideIcon;
