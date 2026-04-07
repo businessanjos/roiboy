@@ -78,6 +78,13 @@ export function EverConversationsTab() {
       }
     } catch (err: any) {
       console.error("[EverIA] Auth error:", err);
+      console.error("[EverIA] Auth error details:", JSON.stringify({
+        message: err.message,
+        status: err.status,
+        statusCode: err.statusCode,
+        name: err.name,
+        context: err.context,
+      }));
       setErrorMsg(err.message || "Falha na autenticação");
       setStatus("error");
     }
