@@ -1,43 +1,38 @@
-## Plano Anterior: Filtro por Status do Negócio (concluído)
 
----
+# Plano: Área de RH no ROY (importando LIDERANÇA RYKA)
 
-## Plano do Módulo Financeiro - Contas a Receber
+## Visão Geral
+O projeto LIDERANÇA RYKA possui ~30 páginas com funcionalidades de RH completas: testes comportamentais (DISC, Big Five, Eneagrama, Temperamento), gestão de colaboradores, equipes, avaliações de desempenho, feedbacks, procedimentos, descrição de cargos, banco de currículos, código de ética, manual do colaborador, scripts de entrevista, etc.
 
-### Análise dos Documentos (Esqueleto + Complemento)
+## ⚠️ Considerações Importantes
+- O LIDERANÇA RYKA usa seu **próprio banco de dados Supabase** com tabelas específicas (collaborators, organizations, disc_results, teams, etc.)
+- Possui seu **próprio sistema de auth e organizações** independente do ROY
+- **Será necessário criar todas as tabelas no banco do ROY** via migrações
+- A portagem completa pode levar **várias iterações** devido ao volume
 
-### Fase 1 — Wizard de Criação de Venda
-- Fluxo em etapas: Cliente → Produto → Condições de Pagamento → Parcelas → Confirmação
-- Geração automática de parcelas (financial_entries) a partir do contrato (client_contracts)
-- Suporte a múltiplas formas de pagamento: boleto, cartão, PIX, cheque, dinheiro
-- Cálculo automático de datas de vencimento baseado na data da primeira parcela
+## Fases Propostas
 
-### Fase 2 — Layout Pós-Geração (Gestão do Título)
-- Visualização e gestão individual de cada parcela/título
-- Status de cobrança: pendente, pago, atrasado, cancelado, renegociado
-- Campos adicionais por forma de pagamento:
-  - Cheque: nº do cheque, banco, agência, conta, data de compensação
-  - Cartão: NSU, bandeira, últimos 4 dígitos
-  - Boleto: linha digitável, código de barras
-  - PIX: chave, ID da transação
-- Registro de tratativas/observações por título
-- Baixa manual e automática de pagamentos
+### Fase 1 — Fundação (esta sessão)
+1. **Adicionar o setor "RH" no config/sectors.ts** com rotas e ícone
+2. **Adicionar o card de RH na tela de setores** (Sectors.tsx)
+3. **Criar a página principal de RH** (`/rh/dashboard`) com visão geral das funcionalidades
+4. **Criar as migrações de banco** para as tabelas principais (collaborators, teams, etc.)
 
-### Fase 3 — Regras de Negócio Avançadas
-- Bloqueio de edição após confirmação
-- Validações rigorosas (valores, datas, dados obrigatórios)
-- Auditoria de alterações
-- Renegociação de parcelas com histórico
+### Fase 2 — Colaboradores e Equipes
+5. Portar páginas: Collaborators, CollaboratorProfile, Teams, TeamDetail
+6. Registros de RH: faltas, movimentações, advertências, treinamentos
 
-### Entidades Existentes Mapeadas
-- `client_contracts` — contratos de clientes
-- `financial_entries` — lançamentos financeiros / parcelas
-- `bank_accounts` — contas bancárias
-- `clients` — clientes
-- `products` — produtos
-- `boletos` — boletos
+### Fase 3 — Testes Comportamentais
+7. Portar DISC, Big Five, Eneagrama, Temperamento (testes + resultados)
+8. Sistema de convites para testes
 
-### Status
-- [ ] Fase 1 — Wizard de Venda
-- [ ] Fase 2 — Gestão de Títulos
-- [ ] Fase 3 — Regras Avançadas
+### Fase 4 — Gestão de Pessoas
+9. Avaliações de desempenho, sessões de feedback
+10. Avaliações de candidatos, scripts de entrevista
+11. Banco de currículos, descrição de cargos
+
+### Fase 5 — Documentos Organizacionais
+12. Procedimentos, código de ética, manual do colaborador
+13. Missão/Visão/Valores
+
+## Vamos começar pela Fase 1?
