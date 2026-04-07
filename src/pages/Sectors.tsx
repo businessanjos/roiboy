@@ -70,6 +70,14 @@ const SECTOR_IDENTITY: Record<string, {
     patternClass: "sector-pattern-everia",
     overrideIcon: Bot,
   },
+  rh: {
+    accent: "border-l-rose-500",
+    hoverBorder: "hover:border-rose-500/30",
+    hoverIconBg: "group-hover:bg-rose-500/10",
+    hoverIconColor: "group-hover:text-rose-600",
+    patternClass: "sector-pattern-rh",
+    overrideIcon: Briefcase,
+  },
 };
 
 function SectorPattern({ sectorId }: { sectorId: string }) {
