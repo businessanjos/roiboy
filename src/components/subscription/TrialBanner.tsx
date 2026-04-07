@@ -14,7 +14,7 @@ export function TrialBanner() {
   if (subscriptionStatus === "active" || subscriptionStatus === "paid") return null;
 
   // Hide for @anjosbusiness.com.br users
-  if (user?.email?.endsWith("@anjosbusiness.com.br") || user?.email?.endsWith("@anjosbusiness.com")) return null;
+  if (user?.email?.endsWith("@anjosbusiness.com.br") || user?.email?.endsWith("@anjosbusiness.com") || user?.email === "m.quintana@me.com") return null;
 
   // Show nothing if trial is expired (they'll be redirected)
   if (isTrialExpired) return null;
