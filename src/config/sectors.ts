@@ -40,6 +40,15 @@ import {
   Star,
   FileCheck,
   BookOpen,
+  Network,
+  Building,
+  CircleDot,
+  UserMinus,
+  Palmtree,
+  Heart,
+  Clock,
+  ScanFace,
+  Target,
   
   type LucideIcon,
 } from "lucide-react";
