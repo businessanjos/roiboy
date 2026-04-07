@@ -5,8 +5,9 @@ import {
   LayoutDashboard, Network, Building, UserPlus, UserMinus,
   Palmtree, Heart, Clock, type LucideIcon
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface RHModule {
   icon: LucideIcon;
@@ -60,9 +61,15 @@ const rhGroups: { title: string; modules: RHModule[] }[] = [
   },
 ];
 
+const RH_ALLOWED_EMAIL = "m.quintana@me.com";
+
 export default function RHDashboard() {
   const navigate = useNavigate();
+  const { currentUser } = useCurrentUser();
 
+  if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
+    return <Navigate to="/" replace />;
+  }
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-8">
       {/* Header */}

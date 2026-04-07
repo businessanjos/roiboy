@@ -170,12 +170,19 @@ export default function Sectors() {
            teamRole === "Gestor" || teamRole === "Admin";
   }, [currentUser?.role, currentUser?.is_also_admin, currentUser?.team_role_name]);
 
+  const RH_ALLOWED_EMAIL = "m.quintana@me.com";
+
   const availableSectors = useMemo(() => {
+    let filtered = sectors;
     if (isSalesRep && !isManager) {
-      return sectors.filter(s => SALES_REP_ALLOWED_SECTORS.includes(s.id));
+      filtered = filtered.filter(s => SALES_REP_ALLOWED_SECTORS.includes(s.id));
     }
-    return sectors;
-  }, [isSalesRep, isManager]);
+    // RH is only visible to the allowed email
+    if (currentUser?.email !== RH_ALLOWED_EMAIL) {
+      filtered = filtered.filter(s => s.id !== "rh");
+    }
+    return filtered;
+  }, [isSalesRep, isManager, currentUser?.email]);
 
   const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "royzapp", "everia", "rh"];
   const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);
