@@ -33,6 +33,13 @@ import {
   Percent,
   DollarSign,
   Bot,
+  Briefcase,
+  UsersRound,
+  GraduationCap,
+  Brain,
+  Star,
+  FileCheck,
+  BookOpen,
   
   type LucideIcon,
 } from "lucide-react";
