@@ -223,6 +223,8 @@ const App = () => (
                             <Route path="/admin/whatsapp-diagnostics" element={<WhatsAppDiagnostics />} />
                             <Route path="/sales-scripts" element={<SalesScripts />} />
                             
+                            <Route path="/rh" element={<RHDashboard />} />
+                            
                           </Route>
                           <Route path="*" element={<NotFound />} />
                         </Routes>
