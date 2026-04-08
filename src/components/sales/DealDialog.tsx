@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Deal, DealStage } from "@/hooks/useDeals";
 import { supabase } from "@/integrations/supabase/client";
-import { DEAL_FIELD_IDS } from "@/utils/dealToClientContractMapping";
+import { DEAL_FIELD_IDS, mapItemVendaToProductId } from "@/utils/dealToClientContractMapping";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MarkAsLostDialog } from "@/components/sales/MarkAsLostDialog";
