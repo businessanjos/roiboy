@@ -408,12 +408,12 @@ export default function SalesPipeline() {
     [openDeals, activeFilter, searchTerm, openDealProductMap]
   );
   const filteredWonDeals = useMemo(() => 
-    applyFilterToDeals(wonDeals, activeFilter, searchTerm, openDealProductMap), 
-    [wonDeals, activeFilter, searchTerm, openDealProductMap]
+    applyFilterToDeals(wonDeals, null, searchTerm, openDealProductMap), 
+    [wonDeals, searchTerm, openDealProductMap]
   );
   const filteredLostDeals = useMemo(() => 
-    applyFilterToDeals(lostDeals, activeFilter, searchTerm, openDealProductMap), 
-    [lostDeals, activeFilter, searchTerm, openDealProductMap]
+    applyFilterToDeals(lostDeals, null, searchTerm, openDealProductMap), 
+    [lostDeals, searchTerm, openDealProductMap]
   );
 
   // Available months for won deals filter
@@ -1418,7 +1418,7 @@ export default function SalesPipeline() {
                   <XCircle className="h-3.5 w-3.5" />
                   Perdidas
                   <Badge variant="secondary" className="bg-red-500/20 text-red-700 text-[10px] ml-0.5">
-                    {filteredLostDeals.length}
+                    {filteredLostDealsByMonth.length}
                   </Badge>
                 </TabsTrigger>
               </TabsList>
