@@ -14,7 +14,7 @@ interface DealKanbanColumnProps {
   onDealClick: (deal: Deal) => void;
   conversionRate?: number;
   faturamentoMap?: Record<string, string>;
-  itemVendaMap?: Record<string, string>;
+  itemVendaMap?: Record<string, { name: string; color: string | null }>;
   isDragActive?: boolean;
   activityStatusGetter?: (dealId: string) => ActivityStatus;
 }
@@ -161,7 +161,8 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
                   deal={deal}
                   onClick={() => onDealClick(deal)}
                   faturamentoLabel={faturamentoMap?.[deal.id]}
-                  itemVendaLabel={itemVendaMap?.[deal.id]}
+                  itemVendaLabel={itemVendaMap?.[deal.id]?.name}
+                  itemVendaColor={itemVendaMap?.[deal.id]?.color}
                   activityStatus={activityStatusGetter?.(deal.id)}
                 />
               ))}
