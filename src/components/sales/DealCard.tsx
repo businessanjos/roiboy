@@ -298,7 +298,19 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               </Badge>
             )}
             {itemVendaLabel && (
-              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-blue-500/10 text-blue-700 border-blue-500/20 truncate max-w-[80px]">
+              <Badge 
+                variant="outline" 
+                className="text-[9px] px-1 py-0 h-4 truncate max-w-[80px]"
+                style={itemVendaColor ? {
+                  backgroundColor: `${itemVendaColor}1A`,
+                  color: itemVendaColor,
+                  borderColor: `${itemVendaColor}33`,
+                } : {
+                  backgroundColor: 'rgb(59 130 246 / 0.1)',
+                  color: 'rgb(29 78 216)',
+                  borderColor: 'rgb(59 130 246 / 0.2)',
+                }}
+              >
                 {itemVendaLabel}
               </Badge>
             )}
