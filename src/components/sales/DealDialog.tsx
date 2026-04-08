@@ -248,6 +248,7 @@ export function DealDialog({
   }, [currentUser?.account_id, deal?.client_id]);
 
   // Load Item da Venda (product) from deal_field_values when editing
+  // Resolves both UUID (new format) and legacy option values to a product_id
   useEffect(() => {
     if (!deal?.id || !currentUser?.account_id) {
       setSelectedProductId("");
@@ -261,7 +262,19 @@ export function DealDialog({
         .eq('field_id', DEAL_FIELD_IDS.ITEM_VENDA)
         .maybeSingle();
       if (data?.value_text) {
-        setSelectedProductId(data.value_text);
+        // Check if already a valid product UUID
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(data.value_text)) {
+          setSelectedProductId(data.value_text);
+        } else {
+          // Legacy value — resolve to product UUID
+          const productId = await mapItemVendaToProductId(data.value_text);
+          if (productId) {
+            setSelectedProductId(productId);
+          } else {
+            setSelectedProductId("");
+          }
+        }
       } else {
         setSelectedProductId("");
       }
