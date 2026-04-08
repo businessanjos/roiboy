@@ -338,6 +338,56 @@ export default function SalesPipeline() {
     }
   }, [deals, selectedDeal]);
 
+  // Fetch products list and open deal→product mapping
+  const [pipelineProducts, setPipelineProducts] = useState<{ id: string; name: string; color: string | null }[]>([]);
+  const [openDealProductMap, setOpenDealProductMap] = useState<Record<string, string>>({});
+
+  const allDealIds = useMemo(() => deals.map(d => d.id).join(','), [deals]);
+
+  useEffect(() => {
+    if (!currentUser?.account_id) return;
+
+    const fetchProducts = async () => {
+      const { data } = await supabase
+        .from('products')
+        .select('id, name, color')
+        .eq('account_id', currentUser.account_id)
+        .eq('is_active', true)
+        .order('name');
+      setPipelineProducts(data || []);
+    };
+
+    const fetchDealProducts = async () => {
+      if (deals.length === 0) {
+        setOpenDealProductMap({});
+        return;
+      }
+      const dealIds = deals.map(d => d.id);
+      const batchSize = 200;
+      const map: Record<string, string> = {};
+
+      for (let i = 0; i < dealIds.length; i += batchSize) {
+        const batch = dealIds.slice(i, i + batchSize);
+        const { data } = await supabase
+          .from('deal_field_values')
+          .select('deal_id, value_text')
+          .eq('field_id', DEAL_FIELD_IDS.ITEM_VENDA)
+          .in('deal_id', batch)
+          .not('value_text', 'is', null);
+
+        (data || []).forEach(row => {
+          if (row.deal_id && row.value_text) {
+            map[row.deal_id] = row.value_text;
+          }
+        });
+      }
+      setOpenDealProductMap(map);
+    };
+
+    fetchProducts();
+    fetchDealProducts();
+  }, [currentUser?.account_id, allDealIds]);
+
   // Extract unique tags from all deals
   const availableTags = useMemo(() => {
     const tagSet = new Set<string>();
@@ -351,16 +401,16 @@ export default function SalesPipeline() {
 
   // Apply unified filter to deals
   const filteredOpenDeals = useMemo(() => 
-    applyFilterToDeals(openDeals, activeFilter, searchTerm), 
-    [openDeals, activeFilter, searchTerm]
+    applyFilterToDeals(openDeals, activeFilter, searchTerm, openDealProductMap), 
+    [openDeals, activeFilter, searchTerm, openDealProductMap]
   );
   const filteredWonDeals = useMemo(() => 
-    applyFilterToDeals(wonDeals, activeFilter, searchTerm), 
-    [wonDeals, activeFilter, searchTerm]
+    applyFilterToDeals(wonDeals, activeFilter, searchTerm, openDealProductMap), 
+    [wonDeals, activeFilter, searchTerm, openDealProductMap]
   );
   const filteredLostDeals = useMemo(() => 
-    applyFilterToDeals(lostDeals, activeFilter, searchTerm), 
-    [lostDeals, activeFilter, searchTerm]
+    applyFilterToDeals(lostDeals, activeFilter, searchTerm, openDealProductMap), 
+    [lostDeals, activeFilter, searchTerm, openDealProductMap]
   );
 
   // Available months for won deals filter
@@ -1170,6 +1220,7 @@ export default function SalesPipeline() {
                     activeFilter={activeFilter}
                     onFilterChange={setActiveFilter}
                     availableTags={availableTags}
+                    products={pipelineProducts}
                   />
                   <div className="relative hidden sm:block">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />

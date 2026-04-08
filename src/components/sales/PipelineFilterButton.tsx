@@ -22,6 +22,7 @@ import {
   X,
   ChevronDown,
   Trash2,
+  Package,
 } from "lucide-react";
 import { usePipelineFilters, RECOMMENDED_FILTERS, ActiveFilter, PipelineFilter } from "@/hooks/usePipelineFilters";
 import { PipelineFilterDialog } from "./PipelineFilterDialog";
@@ -34,12 +35,19 @@ interface SalesUser {
   avatar_url: string | null;
 }
 
+interface ProductOption {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 interface PipelineFilterButtonProps {
   salesUsers: SalesUser[];
   stages: DealStage[];
   activeFilter: ActiveFilter | null;
   onFilterChange: (filter: ActiveFilter | null) => void;
   availableTags: string[];
+  products?: ProductOption[];
 }
 
 export function PipelineFilterButton({
@@ -48,6 +56,7 @@ export function PipelineFilterButton({
   activeFilter,
   onFilterChange,
   availableTags,
+  products = [],
 }: PipelineFilterButtonProps) {
   const { currentUser } = useCurrentUser();
   const { filters, fetchFilters, createFilter, updateFilter, deleteFilter } = usePipelineFilters();
@@ -74,6 +83,13 @@ export function PipelineFilterButton({
       f.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [searchQuery]);
+
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) return products;
+    return products.filter(p =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [products, searchQuery]);
 
   const filteredCustomFilters = useMemo(() => {
     if (!searchQuery.trim()) return filters;
@@ -109,6 +125,15 @@ export function PipelineFilterButton({
       name: filter.name,
       conditions: filter.conditions,
       match_type: filter.match_type,
+    });
+    setIsOpen(false);
+  };
+
+  const handleSelectProduct = (product: ProductOption) => {
+    onFilterChange({
+      type: 'product',
+      id: product.id,
+      name: product.name,
     });
     setIsOpen(false);
   };
@@ -207,24 +232,31 @@ export function PipelineFilterButton({
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full grid grid-cols-3 h-10 rounded-none border-b bg-transparent p-0">
+            <TabsList className="w-full grid grid-cols-4 h-10 rounded-none border-b bg-transparent p-0">
               <TabsTrigger
                 value="vendedores"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1.5 text-xs"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1 text-[11px]"
               >
                 <Users className="h-3.5 w-3.5" />
                 Vendedores
               </TabsTrigger>
               <TabsTrigger
+                value="produtos"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1 text-[11px]"
+              >
+                <Package className="h-3.5 w-3.5" />
+                Produtos
+              </TabsTrigger>
+              <TabsTrigger
                 value="recomendados"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1.5 text-xs"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1 text-[11px]"
               >
                 <Star className="h-3.5 w-3.5" />
                 Recomendados
               </TabsTrigger>
               <TabsTrigger
                 value="personalizados"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1.5 text-xs"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1 text-[11px]"
               >
                 <Settings2 className="h-3.5 w-3.5" />
                 Personalizados
@@ -274,6 +306,55 @@ export function PipelineFilterButton({
                   {filteredSalesUsers.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-8">
                       Nenhum vendedor encontrado
+                    </p>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
+            {/* Produtos Tab */}
+            <TabsContent value="produtos" className="m-0">
+              <ScrollArea className="h-[280px]">
+                <div className="p-2 space-y-1">
+                  {/* All products option */}
+                  <button
+                    onClick={() => {
+                      onFilterChange(null);
+                      setIsOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors text-left ${
+                      !activeFilter ? "bg-accent" : ""
+                    }`}
+                  >
+                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <span className="font-medium text-sm">Todos os produtos</span>
+                  </button>
+
+                  {filteredProducts.map((product) => (
+                    <button
+                      key={product.id}
+                      onClick={() => handleSelectProduct(product)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors text-left ${
+                        activeFilter?.type === "product" && activeFilter?.id === product.id
+                          ? "bg-accent"
+                          : ""
+                      }`}
+                    >
+                      <div
+                        className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: product.color || 'hsl(var(--primary))' }}
+                      >
+                        <Package className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="font-medium text-sm">{product.name}</span>
+                    </button>
+                  ))}
+
+                  {filteredProducts.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      Nenhum produto encontrado
                     </p>
                   )}
                 </div>
