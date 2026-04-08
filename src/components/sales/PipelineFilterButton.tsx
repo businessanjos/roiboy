@@ -129,6 +129,15 @@ export function PipelineFilterButton({
     setIsOpen(false);
   };
 
+  const handleSelectProduct = (product: ProductOption) => {
+    onFilterChange({
+      type: 'product',
+      id: product.id,
+      name: product.name,
+    });
+    setIsOpen(false);
+  };
+
   const handleClearFilter = () => {
     onFilterChange(null);
   };
