@@ -1385,6 +1385,22 @@ export default function SalesPipeline() {
                       {filteredWonDealsByMonth.length}
                     </p>
                   </div>
+                  <div className="h-8 sm:h-10 w-px bg-emerald-500/20" />
+                  <div>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Ciclo Médio</p>
+                    <p className="text-lg sm:text-xl font-semibold">
+                      {(() => {
+                        const dealsWithCycle = filteredWonDealsByMonth.filter(d => d.won_at && d.created_at);
+                        if (dealsWithCycle.length === 0) return "—";
+                        const totalDays = dealsWithCycle.reduce((sum, d) => {
+                          const days = Math.round((new Date(d.won_at!).getTime() - new Date(d.created_at).getTime()) / (1000 * 60 * 60 * 24));
+                          return sum + days;
+                        }, 0);
+                        const avg = Math.round(totalDays / dealsWithCycle.length);
+                        return `${avg} dias`;
+                      })()}
+                    </p>
+                  </div>
                 </div>
 
                 <DealListView 
