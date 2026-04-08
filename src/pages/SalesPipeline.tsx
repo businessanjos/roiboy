@@ -160,19 +160,20 @@ export default function SalesPipeline() {
   const [lostSellerFilter, setLostSellerFilter] = usePersistedFilter<string>("salesPipeline", "lostSellerFilter", "all");
   const [lostProductFilter, setLostProductFilter] = usePersistedFilter<string>("salesPipeline", "lostProductFilter", "all");
   
-  // Fetch deal→product mapping from contracts for won deals
+  // Fetch deal→product mapping from contracts for won AND lost deals
   const [dealProductMap, setDealProductMap] = useState<Record<string, { productId: string; productName: string; isUpsell?: boolean }>>({});
   
   // Stabilize dependency to prevent infinite re-fetch
-  const wonDealIds = useMemo(() => wonDeals.map(d => d.id).join(','), [wonDeals]);
+  const outcomeDeals = useMemo(() => [...wonDeals, ...lostDeals], [wonDeals, lostDeals]);
+  const outcomeDealIds = useMemo(() => outcomeDeals.map(d => d.id).join(','), [outcomeDeals]);
   
   useEffect(() => {
-    if (!currentUser?.account_id || wonDeals.length === 0) {
+    if (!currentUser?.account_id || outcomeDeals.length === 0) {
       setDealProductMap({});
       return;
     }
 
-    const dealIds = wonDeals.map((deal) => deal.id);
+    const dealIds = outcomeDeals.map((deal) => deal.id);
 
     const chunk = <T,>(items: T[], size: number) => {
       const chunks: T[][] = [];
@@ -268,7 +269,7 @@ export default function SalesPipeline() {
       }
 
       const mergedMap: Record<string, { productId: string; productName: string; isUpsell?: boolean }> = { ...contractMap };
-      wonDeals.forEach((deal) => {
+      outcomeDeals.forEach((deal) => {
         if (mergedMap[deal.id]) {
           // Also flag as upsell if deal title contains "upsell"
           if (!mergedMap[deal.id].isUpsell && deal.title?.toLowerCase().includes('upsell')) {
@@ -294,7 +295,7 @@ export default function SalesPipeline() {
       console.error('[SalesPipeline] Error fetching won deal product map:', error);
       setDealProductMap({});
     });
-  }, [currentUser?.account_id, wonDealIds]);
+  }, [currentUser?.account_id, outcomeDealIds]);
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
   
