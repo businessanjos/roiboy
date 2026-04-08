@@ -312,6 +312,55 @@ export function PipelineFilterButton({
               </ScrollArea>
             </TabsContent>
 
+            {/* Produtos Tab */}
+            <TabsContent value="produtos" className="m-0">
+              <ScrollArea className="h-[280px]">
+                <div className="p-2 space-y-1">
+                  {/* All products option */}
+                  <button
+                    onClick={() => {
+                      onFilterChange(null);
+                      setIsOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors text-left ${
+                      !activeFilter ? "bg-accent" : ""
+                    }`}
+                  >
+                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                      <Package className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <span className="font-medium text-sm">Todos os produtos</span>
+                  </button>
+
+                  {filteredProducts.map((product) => (
+                    <button
+                      key={product.id}
+                      onClick={() => handleSelectProduct(product)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors text-left ${
+                        activeFilter?.type === "product" && activeFilter?.id === product.id
+                          ? "bg-accent"
+                          : ""
+                      }`}
+                    >
+                      <div
+                        className="h-8 w-8 rounded-full flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: product.color || 'hsl(var(--primary))' }}
+                      >
+                        <Package className="h-4 w-4 text-white" />
+                      </div>
+                      <span className="font-medium text-sm">{product.name}</span>
+                    </button>
+                  ))}
+
+                  {filteredProducts.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      Nenhum produto encontrado
+                    </p>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+
             {/* Recomendados Tab */}
             <TabsContent value="recomendados" className="m-0">
               <ScrollArea className="h-[280px]">
