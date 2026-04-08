@@ -246,6 +246,28 @@ export function DealDialog({
     loadData();
   }, [currentUser?.account_id, deal?.client_id]);
 
+  // Load Item da Venda (product) from deal_field_values when editing
+  useEffect(() => {
+    if (!deal?.id || !currentUser?.account_id) {
+      setSelectedProductId("");
+      return;
+    }
+    const loadDealProduct = async () => {
+      const { data } = await supabase
+        .from('deal_field_values')
+        .select('value_text')
+        .eq('deal_id', deal.id)
+        .eq('field_id', DEAL_FIELD_IDS.ITEM_VENDA)
+        .maybeSingle();
+      if (data?.value_text) {
+        setSelectedProductId(data.value_text);
+      } else {
+        setSelectedProductId("");
+      }
+    };
+    loadDealProduct();
+  }, [deal?.id, currentUser?.account_id]);
+
   // Reset form when deal changes
   useEffect(() => {
     if (deal) {
@@ -280,7 +302,6 @@ export function DealDialog({
         notes: "",
         tags: [],
       });
-      // Reset notification checkbox and product for new deals
       setSendNotification(false);
       setSelectedProductId("");
     }
