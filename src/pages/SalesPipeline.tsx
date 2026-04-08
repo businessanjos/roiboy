@@ -1201,37 +1201,112 @@ export default function SalesPipeline() {
           <TabsContent value="pipeline" className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
             {/* Pipeline Selector + Sub-tabs Row */}
             <div className="space-y-3">
-              {/* Pipeline selector row */}
-              <div className="flex items-center justify-between gap-3">
-                <PipelineSelector
-                  pipelines={pipelines}
-                  activePipelineId={activePipelineId}
-                  onSelect={setActivePipelineId}
-                  onCreate={createPipeline}
-                  onUpdate={updatePipeline}
-                  onDelete={deletePipeline}
-                />
-                
-                {/* Filters */}
-                <div className="flex items-center gap-2">
-                  <PipelineFilterButton
-                    salesUsers={salesUsers}
-                    stages={stages}
-                    activeFilter={activeFilter}
-                    onFilterChange={setActiveFilter}
-                    availableTags={availableTags}
-                    products={pipelineProducts}
+              {/* Pipeline selector row + unified filters */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <PipelineSelector
+                    pipelines={pipelines}
+                    activePipelineId={activePipelineId}
+                    onSelect={setActivePipelineId}
+                    onCreate={createPipeline}
+                    onUpdate={updatePipeline}
+                    onDelete={deletePipeline}
                   />
-                  <div className="relative hidden sm:block">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      placeholder="Buscar negócio..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-9 h-8 w-[200px] bg-background border-border text-sm"
-                    />
+                  
+                  {/* Filters */}
+                  <div className="flex items-center gap-2">
+                    {activeTab === 'open' && (
+                      <PipelineFilterButton
+                        salesUsers={salesUsers}
+                        stages={stages}
+                        activeFilter={activeFilter}
+                        onFilterChange={setActiveFilter}
+                        availableTags={availableTags}
+                        products={pipelineProducts}
+                      />
+                    )}
+                    <div className="relative hidden sm:block">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Buscar negócio..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-9 h-8 w-[200px] bg-background border-border text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
+
+                {/* Contextual filters for won/lost tabs */}
+                {activeTab === 'won' && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Select value={wonMonthFilter} onValueChange={setWonMonthFilter}>
+                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
+                        <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os meses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os meses</SelectItem>
+                        {availableWonMonths.map(([key, label]) => (
+                          <SelectItem key={key} value={key}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={wonSellerFilter} onValueChange={setWonSellerFilter}>
+                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
+                        <User className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os vendedores" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os vendedores</SelectItem>
+                        {availableWonSellers.map(([id, name]) => (
+                          <SelectItem key={id} value={id}>{name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={wonProductFilter} onValueChange={setWonProductFilter}>
+                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
+                        <Package className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os produtos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os produtos</SelectItem>
+                        {availableWonProducts.map(([id, name]) => (
+                          <SelectItem key={id} value={id}>{name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {activeTab === 'lost' && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Select value={lostMonthFilter} onValueChange={setLostMonthFilter}>
+                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
+                        <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os meses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os meses</SelectItem>
+                        {availableLostMonths.map(([key, label]) => (
+                          <SelectItem key={key} value={key}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={lostReasonFilter} onValueChange={setLostReasonFilter}>
+                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
+                        <XCircle className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                        <SelectValue placeholder="Todos os motivos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os motivos</SelectItem>
+                        {lossReasons.map((reason) => (
+                          <SelectItem key={reason.id} value={reason.id}>{reason.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               {/* Summary metrics - compact inline */}
@@ -1295,72 +1370,20 @@ export default function SalesPipeline() {
               </TabsContent>
 
               <TabsContent value="won" className="mt-0 space-y-3 sm:space-y-4">
-                {/* Summary and Month Filter */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 sm:p-4">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Total de Ganhas</p>
-                      <p className="text-lg sm:text-2xl font-bold text-emerald-600">
-                        {formatCurrency(filteredWonTotal)}
-                      </p>
-                    </div>
-                    <div className="h-8 sm:h-10 w-px bg-emerald-500/20" />
-                    <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Negócios</p>
-                      <p className="text-lg sm:text-xl font-semibold">
-                        {filteredWonDealsByMonth.length}
-                      </p>
-                    </div>
+                {/* Summary stats */}
+                <div className="flex items-center gap-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 sm:p-4">
+                  <div>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Total de Ganhas</p>
+                    <p className="text-lg sm:text-2xl font-bold text-emerald-600">
+                      {formatCurrency(filteredWonTotal)}
+                    </p>
                   </div>
-                  
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    {/* Month Filter */}
-                    <Select value={wonMonthFilter} onValueChange={setWonMonthFilter}>
-                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
-                        <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os meses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os meses</SelectItem>
-                        {availableWonMonths.map(([key, label]) => (
-                          <SelectItem key={key} value={key}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {/* Seller Filter */}
-                    <Select value={wonSellerFilter} onValueChange={setWonSellerFilter}>
-                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
-                        <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os vendedores" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os vendedores</SelectItem>
-                        {availableWonSellers.map(([id, name]) => (
-                          <SelectItem key={id} value={id}>
-                            {name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {/* Product Filter */}
-                    <Select value={wonProductFilter} onValueChange={setWonProductFilter}>
-                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
-                        <Package className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os produtos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os produtos</SelectItem>
-                        {availableWonProducts.map(([id, name]) => (
-                          <SelectItem key={id} value={id}>
-                            {name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="h-8 sm:h-10 w-px bg-emerald-500/20" />
+                  <div>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Negócios</p>
+                    <p className="text-lg sm:text-xl font-semibold">
+                      {filteredWonDealsByMonth.length}
+                    </p>
                   </div>
                 </div>
 
@@ -1374,56 +1397,20 @@ export default function SalesPipeline() {
               </TabsContent>
 
               <TabsContent value="lost" className="mt-0 space-y-3 sm:space-y-4">
-                {/* Summary and Month Filter - Red Style */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-red-500/10 border border-red-500/20 rounded-lg p-3 sm:p-4">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Total de Perdidas</p>
-                      <p className="text-lg sm:text-2xl font-bold text-red-600">
-                        {formatCurrency(filteredLostTotal)}
-                      </p>
-                    </div>
-                    <div className="h-8 sm:h-10 w-px bg-red-500/20" />
-                    <div>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Negócios</p>
-                      <p className="text-lg sm:text-xl font-semibold">
-                        {filteredLostDealsByMonth.length}
-                      </p>
-                    </div>
+                {/* Summary stats */}
+                <div className="flex items-center gap-4 bg-red-500/10 border border-red-500/20 rounded-lg p-3 sm:p-4">
+                  <div>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Total de Perdidas</p>
+                    <p className="text-lg sm:text-2xl font-bold text-red-600">
+                      {formatCurrency(filteredLostTotal)}
+                    </p>
                   </div>
-                  
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    {/* Month Filter */}
-                    <Select value={lostMonthFilter} onValueChange={setLostMonthFilter}>
-                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
-                        <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os meses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os meses</SelectItem>
-                        {availableLostMonths.map(([key, label]) => (
-                          <SelectItem key={key} value={key}>
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {/* Reason Filter */}
-                    <Select value={lostReasonFilter} onValueChange={setLostReasonFilter}>
-                      <SelectTrigger className="w-full sm:w-[200px] bg-background">
-                        <XCircle className="h-4 w-4 mr-2 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os motivos" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os motivos</SelectItem>
-                        {lossReasons.map((reason) => (
-                          <SelectItem key={reason.id} value={reason.id}>
-                            {reason.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                  <div className="h-8 sm:h-10 w-px bg-red-500/20" />
+                  <div>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Negócios</p>
+                    <p className="text-lg sm:text-xl font-semibold">
+                      {filteredLostDealsByMonth.length}
+                    </p>
                   </div>
                 </div>
 
