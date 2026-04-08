@@ -42,7 +42,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
   const { validateDealMove } = useRequiredFieldsValidation();
   const [requiredFieldsModal, setRequiredFieldsModal] = useState<RequiredFieldsModalState | null>(null);
   const [faturamentoMap, setFaturamentoMap] = useState<Record<string, string>>({});
-  const [itemVendaMap, setItemVendaMap] = useState<Record<string, string>>({});
+  const [itemVendaMap, setItemVendaMap] = useState<Record<string, { name: string; color: string | null }>>({});
 
   // Batch fetch activity statuses for ALL deals in a single query
   const dealIds = useMemo(() => deals.map(d => d.id), [deals]);
