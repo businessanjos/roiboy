@@ -157,6 +157,8 @@ export default function SalesPipeline() {
   const [wonProductFilter, setWonProductFilter] = usePersistedFilter<string>("salesPipeline", "wonProductFilter", "all");
   const [lostMonthFilter, setLostMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostMonthFilter", "all");
   const [lostReasonFilter, setLostReasonFilter] = usePersistedFilter<string>("salesPipeline", "lostReasonFilter", "all");
+  const [lostSellerFilter, setLostSellerFilter] = usePersistedFilter<string>("salesPipeline", "lostSellerFilter", "all");
+  const [lostProductFilter, setLostProductFilter] = usePersistedFilter<string>("salesPipeline", "lostProductFilter", "all");
   
   // Fetch deal→product mapping from contracts for won deals
   const [dealProductMap, setDealProductMap] = useState<Record<string, { productId: string; productName: string; isUpsell?: boolean }>>({});
