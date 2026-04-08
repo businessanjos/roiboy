@@ -248,7 +248,6 @@ export function ThreeCPlusPanel() {
   const showDialSection =
     extensionLoaded &&
     isConnected &&
-    Boolean(connectionInfo?.has_agent_token) &&
     !hasCallActivity;
   const defaultStatusInfo =
     agentStatus !== "offline"
