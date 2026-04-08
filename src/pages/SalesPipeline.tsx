@@ -408,12 +408,12 @@ export default function SalesPipeline() {
     [openDeals, activeFilter, searchTerm, openDealProductMap]
   );
   const filteredWonDeals = useMemo(() => 
-    applyFilterToDeals(wonDeals, activeFilter, searchTerm, openDealProductMap), 
-    [wonDeals, activeFilter, searchTerm, openDealProductMap]
+    applyFilterToDeals(wonDeals, null, searchTerm, openDealProductMap), 
+    [wonDeals, searchTerm, openDealProductMap]
   );
   const filteredLostDeals = useMemo(() => 
-    applyFilterToDeals(lostDeals, activeFilter, searchTerm, openDealProductMap), 
-    [lostDeals, activeFilter, searchTerm, openDealProductMap]
+    applyFilterToDeals(lostDeals, null, searchTerm, openDealProductMap), 
+    [lostDeals, searchTerm, openDealProductMap]
   );
 
   // Available months for won deals filter
