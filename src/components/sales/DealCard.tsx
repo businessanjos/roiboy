@@ -26,7 +26,7 @@ interface DealCardProps {
 
 const DEFAULT_ACTIVITY_STATUS: ActivityStatus = { pendingCount: 0, hasOverdue: false, totalActivities: 0 };
 
-export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel, activityStatus = DEFAULT_ACTIVITY_STATUS }: DealCardProps) {
+export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, itemVendaLabel, itemVendaColor, activityStatus = DEFAULT_ACTIVITY_STATUS }: DealCardProps) {
   const [activitiesDialogOpen, setActivitiesDialogOpen] = useState(false);
   
   const { openZappConversation, loading: zappLoading } = useZappNavigationContext();
