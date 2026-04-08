@@ -202,7 +202,8 @@ export function usePipelineFilters() {
 export function applyFilterToDeals(
   deals: Deal[],
   activeFilter: ActiveFilter | null,
-  searchTerm?: string
+  searchTerm?: string,
+  dealProductMap?: Record<string, string>
 ): Deal[] {
   if (!activeFilter && !searchTerm?.trim()) return deals;
 
@@ -225,6 +226,12 @@ export function applyFilterToDeals(
   // Salesperson filter
   if (activeFilter.type === 'salesperson') {
     return filtered.filter(deal => deal.responsible_user_id === activeFilter.id);
+  }
+
+  // Product filter
+  if (activeFilter.type === 'product') {
+    if (!dealProductMap) return filtered;
+    return filtered.filter(deal => dealProductMap[deal.id] === activeFilter.id);
   }
 
   // Recommended or Custom filters
