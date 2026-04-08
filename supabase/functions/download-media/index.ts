@@ -65,12 +65,11 @@ serve(async (req) => {
     const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
     // SECURITY: Build query with optional account_id filter
-    // Include: pending, OR downloading stuck for >5 min
+    // Fetch ALL requested messages (no media_encrypted_url filter) to handle auto-correction
     let messagesQuery = supabase
       .from("zapp_messages")
-      .select("id, account_id, media_type, media_encrypted_url, media_key, media_mimetype, zapp_conversation_id, media_download_status, updated_at")
-      .in("id", idsToProcess)
-      .not("media_encrypted_url", "is", null);
+      .select("id, account_id, media_type, media_url, media_encrypted_url, media_key, media_mimetype, zapp_conversation_id, media_download_status, updated_at")
+      .in("id", idsToProcess);
     
     // SECURITY: If account_id provided, filter to prevent cross-account access
     if (requestedAccountId) {
@@ -85,15 +84,37 @@ serve(async (req) => {
       throw fetchError;
     }
 
-    // Filter to only those that need processing:
-    // - pending or null status (null = webhook didn't set status)
-    // - downloading status but stuck (updated_at > 5 min ago)
+    // Auto-correct: messages that already have a permanent media_url (e.g. Supabase Storage)
+    // but are stuck with wrong status — fix them immediately without downloading
+    const autoCorrectMsgs = (allMessages || []).filter((msg: any) => {
+      return msg.media_url 
+        && msg.media_url.includes("supabase") 
+        && msg.media_download_status !== "completed";
+    });
+
+    if (autoCorrectMsgs.length > 0) {
+      console.log(`Auto-correcting ${autoCorrectMsgs.length} messages with existing permanent URLs`);
+      await Promise.all(autoCorrectMsgs.map((msg: any) =>
+        supabase.from("zapp_messages")
+          .update({ media_download_status: "completed", updated_at: new Date().toISOString() })
+          .eq("id", msg.id)
+      ));
+    }
+
+    // Filter to only those that actually need downloading:
+    // Must have media_encrypted_url AND be in pending/failed/stuck-downloading state
     const messages = (allMessages || []).filter((msg: any) => {
+      // Skip if no encrypted URL to download from
+      if (!msg.media_encrypted_url) return false;
+      // Skip already completed
+      if (msg.media_download_status === "completed") return false;
+      // Skip auto-corrected
+      if (autoCorrectMsgs.some((ac: any) => ac.id === msg.id)) return false;
+      
       if (!msg.media_download_status || msg.media_download_status === "pending") return true;
       if (msg.media_download_status === "downloading") {
         return msg.updated_at && msg.updated_at < fiveMinutesAgo;
       }
-      // Also retry "failed" if explicitly requested
       if (msg.media_download_status === "failed") return true;
       return false;
     });
@@ -102,7 +123,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ 
         success: true, 
         processed: 0, 
-        message: "No pending media to download" 
+        auto_corrected: autoCorrectMsgs.length,
+        message: autoCorrectMsgs.length > 0 
+          ? `Auto-corrected ${autoCorrectMsgs.length} messages, no downloads needed` 
+          : "No pending media to download"
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

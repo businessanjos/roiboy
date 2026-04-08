@@ -232,11 +232,15 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
       setMessages(msgs);
 
-      // Auto-download pending media
+      // Auto-download pending media (no permanent URL yet)
+      // Also include messages with permanent URL but wrong status for auto-correction
       const pendingMediaMsgs = msgs.filter(
-        (m) => (m.media_download_status === "pending" || !m.media_download_status)
-          && m.media_type
-          && !m.media_url
+        (m) => m.media_type && (
+          // Needs actual download: pending/null status, no permanent URL
+          (((m.media_download_status === "pending" || !m.media_download_status) && !m.media_url))
+          // Needs auto-correction: has permanent URL but wrong status
+          || (m.media_url && m.media_url.includes("supabase") && m.media_download_status !== "completed")
+        )
       );
 
       if (pendingMediaMsgs.length > 0) {
