@@ -20,6 +20,7 @@ interface DealCardProps {
   isDragging?: boolean;
   faturamentoLabel?: string;
   itemVendaLabel?: string;
+  itemVendaColor?: string | null;
   activityStatus?: ActivityStatus;
 }
 
