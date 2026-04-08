@@ -1418,7 +1418,7 @@ export default function SalesPipeline() {
                   <XCircle className="h-3.5 w-3.5" />
                   Perdidas
                   <Badge variant="secondary" className="bg-red-500/20 text-red-700 text-[10px] ml-0.5">
-                    {filteredLostDeals.length}
+                    {filteredLostDealsByMonth.length}
                   </Badge>
                 </TabsTrigger>
               </TabsList>
