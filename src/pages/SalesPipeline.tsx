@@ -519,7 +519,37 @@ export default function SalesPipeline() {
   // Use structured loss reasons from hook
   const { reasons: lossReasons } = useLossReasons();
 
-  // Filter lost deals by selected month and reason
+  // Available sellers for lost deals filter
+  const availableLostSellers = useMemo(() => {
+    const sellersMap = new Map<string, string>();
+    lostDeals.forEach(deal => {
+      if (deal.responsible_user_id && deal.responsible_user?.name) {
+        sellersMap.set(deal.responsible_user_id, deal.responsible_user.name);
+      }
+    });
+    return Array.from(sellersMap.entries())
+      .sort((a, b) => a[1].localeCompare(b[1]));
+  }, [lostDeals]);
+
+  // Available products for lost deals filter (deduplicated by name)
+  const availableLostProducts = useMemo(() => {
+    const productsMap = new Map<string, string>();
+    const seenNames = new Set<string>();
+    lostDeals.forEach(deal => {
+      const product = dealProductMap[deal.id];
+      if (product) {
+        const normalizedName = product.productName.trim().toLowerCase();
+        if (!seenNames.has(normalizedName)) {
+          seenNames.add(normalizedName);
+          productsMap.set(product.productId, product.productName);
+        }
+      }
+    });
+    return Array.from(productsMap.entries())
+      .sort((a, b) => a[1].localeCompare(b[1]));
+  }, [lostDeals, dealProductMap]);
+
+  // Filter lost deals by selected month, reason, seller, and product
   const filteredLostDealsByMonth = useMemo(() => {
     let result = filteredLostDeals;
     if (lostMonthFilter !== 'all') {
@@ -538,8 +568,21 @@ export default function SalesPipeline() {
         return false;
       });
     }
+    if (lostSellerFilter !== 'all') {
+      result = result.filter(deal => deal.responsible_user_id === lostSellerFilter);
+    }
+    if (lostProductFilter !== 'all') {
+      const selectedEntry = availableLostProducts.find(([id]) => id === lostProductFilter);
+      const selectedName = selectedEntry?.[1]?.trim().toLowerCase();
+      result = result.filter(deal => {
+        const product = dealProductMap[deal.id];
+        if (!product) return false;
+        return product.productId === lostProductFilter || 
+               product.productName.trim().toLowerCase() === selectedName;
+      });
+    }
     return result;
-  }, [filteredLostDeals, lostMonthFilter, lostReasonFilter, lossReasons]);
+  }, [filteredLostDeals, lostMonthFilter, lostReasonFilter, lossReasons, lostSellerFilter, lostProductFilter, availableLostProducts, dealProductMap]);
 
   const filteredLostTotal = useMemo(() => {
     return filteredLostDealsByMonth.reduce((sum, deal) => sum + (deal.value || 0), 0);
