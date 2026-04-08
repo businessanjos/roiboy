@@ -269,7 +269,7 @@ export default function SalesPipeline() {
       }
 
       const mergedMap: Record<string, { productId: string; productName: string; isUpsell?: boolean }> = { ...contractMap };
-      wonDeals.forEach((deal) => {
+      outcomeDeals.forEach((deal) => {
         if (mergedMap[deal.id]) {
           // Also flag as upsell if deal title contains "upsell"
           if (!mergedMap[deal.id].isUpsell && deal.title?.toLowerCase().includes('upsell')) {
@@ -295,7 +295,7 @@ export default function SalesPipeline() {
       console.error('[SalesPipeline] Error fetching won deal product map:', error);
       setDealProductMap({});
     });
-  }, [currentUser?.account_id, wonDealIds]);
+  }, [currentUser?.account_id, outcomeDealIds]);
   // State to prevent double-click on "Mark as Won" button
   const [processingWonDealId, setProcessingWonDealId] = useState<string | null>(null);
   
