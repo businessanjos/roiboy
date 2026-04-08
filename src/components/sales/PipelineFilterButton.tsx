@@ -84,6 +84,13 @@ export function PipelineFilterButton({
     );
   }, [searchQuery]);
 
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) return products;
+    return products.filter(p =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [products, searchQuery]);
+
   const filteredCustomFilters = useMemo(() => {
     if (!searchQuery.trim()) return filters;
     return filters.filter(f =>
