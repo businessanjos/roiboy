@@ -387,9 +387,11 @@ async function tryClick2Call(
   apiToken: string,
   phone: string,
   extension?: string | null,
+  password?: string | null,
 ) {
   const payload: Record<string, string> = { phone };
   if (extension) payload.extension = extension;
+  if (password) payload.password = password;
 
   const response = await postToAgentEndpoint(apiBase, apiToken, "/click2call", payload);
   const text = await response.text();
@@ -403,31 +405,64 @@ async function tryClick2Call(
   };
 }
 
-async function loginWebphoneSession(apiBase: string, apiToken: string, preferredCampaignId?: unknown) {
-  const campaignsResult = await fetchAvailableAgentCampaigns(apiBase, apiToken);
-  if (!campaignsResult.success) {
-    return { success: false, error: campaignsResult.error };
-  }
+async function loginWebphoneSession(
+  apiBase: string,
+  apiToken: string,
+  preferredCampaignId?: unknown,
+  fallbackApiToken?: string | null,
+) {
+  const attemptLogin = async (tokenToUse: string, label: "primary" | "fallback") => {
+    const campaignsResult = await fetchAvailableAgentCampaigns(apiBase, tokenToUse);
+    if (!campaignsResult.success) {
+      return { success: false, error: campaignsResult.error, apiTokenUsed: tokenToUse };
+    }
 
-  const campaign = pickAgentCampaign(campaignsResult.campaigns, preferredCampaignId);
-  const campaignId = normalizeCampaignId(campaign?.id);
-  if (!campaignId) {
-    return { success: false, error: "Nenhuma campanha disponível para este agente no 3C Plus." };
-  }
+    const campaign = pickAgentCampaign(campaignsResult.campaigns, preferredCampaignId);
+    const campaignId = normalizeCampaignId(campaign?.id);
+    if (!campaignId) {
+      return {
+        success: false,
+        error: "Nenhuma campanha disponível para este agente no 3C Plus.",
+        apiTokenUsed: tokenToUse,
+      };
+    }
 
-  const webphoneRes = await postToAgentEndpoint(apiBase, apiToken, "/agent/webphone/login", { campaign: campaignId });
-  const webphoneText = await webphoneRes.text();
-  console.log("[threecplus-agent] loginWebphoneSession agent/webphone/login:", webphoneRes.status, webphoneText);
+    const webphoneRes = await postToAgentEndpoint(apiBase, tokenToUse, "/agent/webphone/login", { campaign: campaignId });
+    const webphoneText = await webphoneRes.text();
+    console.log(
+      `[threecplus-agent] loginWebphoneSession agent/webphone/login (${label}):`,
+      webphoneRes.status,
+      webphoneText,
+    );
 
-  if (webphoneRes.ok || webphoneRes.status === 204) {
-    await connectAgentSession(apiBase, apiToken);
-    return { success: true, error: null };
-  }
+    if (webphoneRes.ok || webphoneRes.status === 204) {
+      await connectAgentSession(apiBase, tokenToUse);
+      return { success: true, error: null, apiTokenUsed: tokenToUse };
+    }
 
-  return {
-    success: false,
-    error: extractApiMessage(webphoneText, "A 3C Plus não confirmou o login do WebRTC para este agente."),
+    return {
+      success: false,
+      error: extractApiMessage(webphoneText, "A 3C Plus não confirmou o login do WebRTC para este agente."),
+      permissionDenied: isPermissionDenied(webphoneRes.status, webphoneText),
+      apiTokenUsed: tokenToUse,
+    };
   };
+
+  const primaryAttempt = await attemptLogin(apiToken, "primary");
+  if (primaryAttempt.success) {
+    return primaryAttempt;
+  }
+
+  if (
+    fallbackApiToken &&
+    fallbackApiToken !== apiToken &&
+    primaryAttempt.permissionDenied
+  ) {
+    console.log("[threecplus-agent] loginWebphoneSession retrying with account token after permission denial");
+    return attemptLogin(fallbackApiToken, "fallback");
+  }
+
+  return primaryAttempt;
 }
 
 async function waitForAgentReady(apiBase: string, apiToken: string, timeoutMs = 12000) {
@@ -926,8 +961,9 @@ Deno.serve(async (req) => {
       }
       const cleanPhone = phone.replace(/\D/g, "");
 
-      const { extension } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, effectiveApiToken);
+      const { extension, password } = await resolveClick2CallExtension(supabaseAdmin, userData.id, baseDomain, effectiveApiToken);
       const click2CallFallbackToken = effectiveApiToken !== apiToken ? apiToken : null;
+      let flowApiToken = effectiveApiToken;
 
       try {
         const connectRes = await fetch(`${apiBase}/agent/connect?api_token=${effectiveApiToken}`, {
@@ -939,7 +975,7 @@ Deno.serve(async (req) => {
         console.warn("[threecplus-agent] place_call agent/connect failed (non-blocking):", connectErr);
       }
 
-      const click2CallResult = await tryClick2Call(apiBase, effectiveApiToken, cleanPhone, extension);
+      const click2CallResult = await tryClick2Call(apiBase, flowApiToken, cleanPhone, extension, password);
       if (click2CallResult.success) {
         await logCallToDb(supabaseAdmin, userData.account_id, userData.id, click2CallResult.call, "click2call");
         return new Response(JSON.stringify({ success: true, mode: "click2call", call: click2CallResult.call }),
@@ -950,7 +986,7 @@ Deno.serve(async (req) => {
 
       if (click2CallFallbackToken && isPermissionDenied(click2CallResult.status, click2CallResult.text)) {
         console.log("[threecplus-agent] place_call retrying click2call with account token after agent token permission denial");
-        fallbackClick2CallResult = await tryClick2Call(apiBase, click2CallFallbackToken, cleanPhone, extension);
+        fallbackClick2CallResult = await tryClick2Call(apiBase, click2CallFallbackToken, cleanPhone, extension, password);
         if (fallbackClick2CallResult.success) {
           await logCallToDb(supabaseAdmin, userData.account_id, userData.id, fallbackClick2CallResult.call, "click2call_account_token");
           return new Response(JSON.stringify({ success: true, mode: "click2call", call: fallbackClick2CallResult.call }),
@@ -972,18 +1008,17 @@ Deno.serve(async (req) => {
       let preparedWebphone = false;
 
       if (shouldPrepareWebphone) {
-        const webphoneResult = await loginWebphoneSession(apiBase, effectiveApiToken, campaign_id);
+        const webphoneResult = await loginWebphoneSession(apiBase, flowApiToken, campaign_id, click2CallFallbackToken);
         if (webphoneResult.success) {
+          flowApiToken = webphoneResult.apiTokenUsed ?? flowApiToken;
           preparedWebphone = true;
           await new Promise((resolve) => setTimeout(resolve, 2000));
 
-          if (click2CallFallbackToken) {
-            const retryClick2CallResult = await tryClick2Call(apiBase, click2CallFallbackToken, cleanPhone, extension);
-            if (retryClick2CallResult.success) {
-              await logCallToDb(supabaseAdmin, userData.account_id, userData.id, retryClick2CallResult.call, "click2call_webphone_retry");
-              return new Response(JSON.stringify({ success: true, mode: "click2call", call: retryClick2CallResult.call }),
-                { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-            }
+          const retryClick2CallResult = await tryClick2Call(apiBase, flowApiToken, cleanPhone, extension, password);
+          if (retryClick2CallResult.success) {
+            await logCallToDb(supabaseAdmin, userData.account_id, userData.id, retryClick2CallResult.call, "click2call_webphone_retry");
+            return new Response(JSON.stringify({ success: true, mode: "click2call", call: retryClick2CallResult.call }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
           }
         } else {
           console.warn("[threecplus-agent] place_call webphone login skipped/failed:", webphoneResult.error);
@@ -991,10 +1026,10 @@ Deno.serve(async (req) => {
       }
 
       if (!preparedWebphone) {
-        await cleanupAgentState(apiBase, effectiveApiToken);
+        await cleanupAgentState(apiBase, flowApiToken);
         await new Promise((resolve) => setTimeout(resolve, 1200));
 
-        const postCleanupClick2CallResult = await tryClick2Call(apiBase, effectiveApiToken, cleanPhone, extension);
+        const postCleanupClick2CallResult = await tryClick2Call(apiBase, flowApiToken, cleanPhone, extension, password);
         if (postCleanupClick2CallResult.success) {
           await logCallToDb(supabaseAdmin, userData.account_id, userData.id, postCleanupClick2CallResult.call, "click2call_after_cleanup");
           return new Response(JSON.stringify({ success: true, mode: "click2call", call: postCleanupClick2CallResult.call }),
@@ -1002,13 +1037,23 @@ Deno.serve(async (req) => {
         }
       }
 
-      const readyResult = await ensureAgentReadyForDial(apiBase, effectiveApiToken, campaign_id);
+      let readyResult = await ensureAgentReadyForDial(apiBase, flowApiToken, campaign_id);
+      if (!readyResult.success && click2CallFallbackToken && flowApiToken !== click2CallFallbackToken) {
+        console.log("[threecplus-agent] place_call retrying ensureAgentReadyForDial with account token");
+        const fallbackReadyResult = await ensureAgentReadyForDial(apiBase, click2CallFallbackToken, campaign_id);
+        if (fallbackReadyResult.success) {
+          readyResult = fallbackReadyResult;
+          flowApiToken = click2CallFallbackToken;
+        }
+      }
+
       if (!readyResult.success) {
         console.log("[threecplus-agent] place_call ensureAgentReadyForDial failed, attempting webphone login + manual_call/enter:", readyResult.error);
         
         // Try webphone login to establish the SIP/WebRTC session that makes the agent idle
-        const webphoneResult = await loginWebphoneSession(apiBase, effectiveApiToken, campaign_id);
+        const webphoneResult = await loginWebphoneSession(apiBase, flowApiToken, campaign_id, click2CallFallbackToken);
         if (webphoneResult.success) {
+          flowApiToken = webphoneResult.apiTokenUsed ?? flowApiToken;
           console.log("[threecplus-agent] place_call webphone login succeeded, waiting for agent to become idle...");
           await new Promise((resolve) => setTimeout(resolve, 3000));
         } else {
@@ -1024,7 +1069,7 @@ Deno.serve(async (req) => {
       const maxEnterAttempts = 6;
 
       for (let attempt = 1; attempt <= maxEnterAttempts; attempt++) {
-        enterRes = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${effectiveApiToken}`, {
+        enterRes = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${flowApiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         });
         enterText = await enterRes.text();
@@ -1043,11 +1088,14 @@ Deno.serve(async (req) => {
           // On attempt 3, try a fresh webphone login as recovery
           if (attempt === 3) {
             console.log("[threecplus-agent] place_call mid-retry webphone recovery attempt...");
-            await loginWebphoneSession(apiBase, effectiveApiToken, campaign_id);
+            const recoveryWebphoneResult = await loginWebphoneSession(apiBase, flowApiToken, campaign_id, click2CallFallbackToken);
+            if (recoveryWebphoneResult.success) {
+              flowApiToken = recoveryWebphoneResult.apiTokenUsed ?? flowApiToken;
+            }
             await new Promise((resolve) => setTimeout(resolve, 4000));
           } else {
             await new Promise((resolve) => setTimeout(resolve, 3000));
-            await cleanupAgentState(apiBase, effectiveApiToken);
+            await cleanupAgentState(apiBase, flowApiToken);
             await new Promise((resolve) => setTimeout(resolve, 1500));
           }
         } else if (!agentNotIdle) {
@@ -1060,7 +1108,7 @@ Deno.serve(async (req) => {
           console.log("[threecplus-agent] place_call proceeding to dial because agent is already in manual dialing state");
         }
 
-        const dialRes = await postToAgentEndpoint(apiBase, effectiveApiToken, "/agent/manual_call/dial", { phone: cleanPhone });
+        const dialRes = await postToAgentEndpoint(apiBase, flowApiToken, "/agent/manual_call/dial", { phone: cleanPhone });
         const dialText = await dialRes.text();
         const dialPayloadResponse = safeJsonParse(dialText);
         const manualCall = extractCallDetails(dialPayloadResponse) || { phone: cleanPhone };
@@ -1075,7 +1123,7 @@ Deno.serve(async (req) => {
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      const latestRuntime = await fetchAgentRuntimeState(apiBase, effectiveApiToken);
+      const latestRuntime = await fetchAgentRuntimeState(apiBase, flowApiToken);
       return new Response(
         JSON.stringify({
           success: false,
