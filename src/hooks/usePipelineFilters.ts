@@ -23,7 +23,7 @@ export interface PipelineFilter {
 }
 
 export interface ActiveFilter {
-  type: 'salesperson' | 'recommended' | 'custom';
+  type: 'salesperson' | 'recommended' | 'custom' | 'product';
   id: string;
   name: string;
   conditions?: FilterCondition[];
