@@ -239,12 +239,11 @@ export function ThreeCPlusPanel() {
           : agentStatus === "connecting"
             ? "Preparando o agente para discagem"
             : "Aguardando atualização do status da ligação";
-  const canLogin = !loading && extensionLoaded && isConnected && Boolean(connectionInfo?.has_agent_token);
+  const canLogin = !loading && extensionLoaded && isConnected;
   const canDialManually =
     !loading &&
     extensionLoaded &&
-    isConnected &&
-    Boolean(connectionInfo?.has_agent_token);
+    isConnected;
   const showDialSection =
     extensionLoaded &&
     isConnected &&
