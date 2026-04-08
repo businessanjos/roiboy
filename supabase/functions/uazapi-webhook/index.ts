@@ -823,6 +823,9 @@ serve(async (req) => {
           initialMediaDownloadStatus = "pending";
         } else if (isInvalidMediaUrl) {
           initialMediaDownloadStatus = "failed";
+        } else if (permanentMediaUrl) {
+          // URL already points to permanent storage (e.g. Supabase Storage for outbound audio)
+          initialMediaDownloadStatus = "completed";
         }
         
         const messageId = msg.id || `${Date.now()}`;
