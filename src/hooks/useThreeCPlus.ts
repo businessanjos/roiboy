@@ -599,12 +599,7 @@ export function useThreeCPlus() {
       return false;
     }
 
-    if (!connectionInfo?.has_agent_token) {
-      toast.error("Token do agente obrigatório", {
-        description: "Configure o token de API do agente para usar o discador.",
-      });
-      return false;
-    }
+    // Agent token check removed - backend handles auto-selection of campaigns and tokens
 
     // Campaign is optional - backend auto-selects one if not provided
 

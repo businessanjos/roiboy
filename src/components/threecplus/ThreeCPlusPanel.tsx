@@ -239,12 +239,11 @@ export function ThreeCPlusPanel() {
           : agentStatus === "connecting"
             ? "Preparando o agente para discagem"
             : "Aguardando atualização do status da ligação";
-  const canLogin = !loading && extensionLoaded && isConnected && Boolean(connectionInfo?.has_agent_token);
+  const canLogin = !loading && extensionLoaded && isConnected;
   const canDialManually =
     !loading &&
     extensionLoaded &&
-    isConnected &&
-    Boolean(connectionInfo?.has_agent_token);
+    isConnected;
   const showDialSection =
     extensionLoaded &&
     isConnected &&
@@ -691,7 +690,7 @@ export function ThreeCPlusPanel() {
                 )}
 
                 {/* Campaign selector */}
-                {agentStatus === "offline" && (
+                {(agentStatus === "offline" || (!selectedCampaign && !hasCallActivity)) && (
                   <>
                     {campaigns.length === 0 ? (
                       <div className="text-sm text-muted-foreground text-center py-2">
