@@ -56,6 +56,7 @@ export function PipelineFilterButton({
   activeFilter,
   onFilterChange,
   availableTags,
+  products = [],
 }: PipelineFilterButtonProps) {
   const { currentUser } = useCurrentUser();
   const { filters, fetchFilters, createFilter, updateFilter, deleteFilter } = usePipelineFilters();
