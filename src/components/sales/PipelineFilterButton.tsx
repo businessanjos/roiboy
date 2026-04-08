@@ -223,24 +223,31 @@ export function PipelineFilterButton({
 
           {/* Tabs */}
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full grid grid-cols-3 h-10 rounded-none border-b bg-transparent p-0">
+            <TabsList className="w-full grid grid-cols-4 h-10 rounded-none border-b bg-transparent p-0">
               <TabsTrigger
                 value="vendedores"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1.5 text-xs"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1 text-[11px]"
               >
                 <Users className="h-3.5 w-3.5" />
                 Vendedores
               </TabsTrigger>
               <TabsTrigger
+                value="produtos"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1 text-[11px]"
+              >
+                <Package className="h-3.5 w-3.5" />
+                Produtos
+              </TabsTrigger>
+              <TabsTrigger
                 value="recomendados"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1.5 text-xs"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1 text-[11px]"
               >
                 <Star className="h-3.5 w-3.5" />
                 Recomendados
               </TabsTrigger>
               <TabsTrigger
                 value="personalizados"
-                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1.5 text-xs"
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent gap-1 text-[11px]"
               >
                 <Settings2 className="h-3.5 w-3.5" />
                 Personalizados
