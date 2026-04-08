@@ -691,7 +691,7 @@ export function ThreeCPlusPanel() {
                 )}
 
                 {/* Campaign selector */}
-                {agentStatus === "offline" && (
+                {(agentStatus === "offline" || (!selectedCampaign && !hasCallActivity)) && (
                   <>
                     {campaigns.length === 0 ? (
                       <div className="text-sm text-muted-foreground text-center py-2">
