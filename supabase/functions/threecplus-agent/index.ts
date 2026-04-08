@@ -1193,6 +1193,20 @@ Deno.serve(async (req) => {
         success = true;
       }
 
+      // Last resort: logout to force-clear the call
+      if (!success) {
+        console.log("[threecplus-agent] hangup: trying logout as last resort after call_id attempt");
+        const logoutRes = await fetch(`${apiBase}/agent/logout?api_token=${effectiveApiToken}`, {
+          method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
+        });
+        const logoutText = await logoutRes.text();
+        console.log("[threecplus-agent] hangup logout fallback:", logoutRes.status, logoutText);
+        runtime = await fetchAgentRuntimeState(apiBase, effectiveApiToken);
+        if (logoutRes.ok || logoutRes.status === 204 || !runtime.has_active_call) {
+          success = true;
+        }
+      }
+
       // Update call log with ended_at and duration
       if (success) {
         try {

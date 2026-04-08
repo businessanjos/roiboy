@@ -660,8 +660,12 @@ export function useThreeCPlus() {
     try {
       const data = await invokeAgent("hangup", currentCall?.id ? { call_id: currentCall.id } : {});
       if (!data?.success) {
-        toast.error("Não foi possível desligar", {
-          description: data?.error || "A 3C Plus não confirmou o encerramento da chamada.",
+        // Even if the API says it failed, force-clear the local state
+        // so the user isn't stuck with a phantom call UI
+        console.warn("[useThreeCPlus] hangup API returned failure, force-clearing local state");
+        reconcileTelephonyState(data?.runtime, "call_ended");
+        toast.warning("Chamada pode já ter sido encerrada", {
+          description: "O estado local foi limpo. Se a chamada persistir no 3C Plus, faça logout e login novamente.",
         });
         return false;
       }
@@ -677,7 +681,9 @@ export function useThreeCPlus() {
       return true;
     } catch (err) {
       console.error("[useThreeCPlus] hangup error:", err);
-      toast.error("Erro ao encerrar chamada");
+      // Force-clear state even on network errors
+      reconcileTelephonyState(null, "call_ended");
+      toast.warning("Erro na comunicação, estado local limpo");
       return false;
     } finally {
       setLoading(false);
