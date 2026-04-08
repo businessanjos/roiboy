@@ -35,12 +35,19 @@ interface SalesUser {
   avatar_url: string | null;
 }
 
+interface ProductOption {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 interface PipelineFilterButtonProps {
   salesUsers: SalesUser[];
   stages: DealStage[];
   activeFilter: ActiveFilter | null;
   onFilterChange: (filter: ActiveFilter | null) => void;
   availableTags: string[];
+  products?: ProductOption[];
 }
 
 export function PipelineFilterButton({
