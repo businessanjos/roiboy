@@ -1004,9 +1004,16 @@ Deno.serve(async (req) => {
 
       const readyResult = await ensureAgentReadyForDial(apiBase, effectiveApiToken, campaign_id);
       if (!readyResult.success) {
-        // Even if ensureAgentReadyForDial failed, attempt manual_call/enter as a last resort
-        // The 3C Plus API may still accept the call if the agent session exists
-        console.log("[threecplus-agent] place_call ensureAgentReadyForDial failed, attempting manual_call/enter anyway:", readyResult.error);
+        console.log("[threecplus-agent] place_call ensureAgentReadyForDial failed, attempting webphone login + manual_call/enter:", readyResult.error);
+        
+        // Try webphone login to establish the SIP/WebRTC session that makes the agent idle
+        const webphoneResult = await loginWebphoneSession(apiBase, effectiveApiToken, campaign_id);
+        if (webphoneResult.success) {
+          console.log("[threecplus-agent] place_call webphone login succeeded, waiting for agent to become idle...");
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        } else {
+          console.warn("[threecplus-agent] place_call webphone login also failed:", webphoneResult.error);
+        }
       }
 
       // Try manual_call/enter with retries - agent may need time to become idle
@@ -1014,7 +1021,7 @@ Deno.serve(async (req) => {
       let enterText = "";
       let manualModeAlreadyActive = false;
       let agentNotIdle = false;
-      const maxEnterAttempts = 4;
+      const maxEnterAttempts = 6;
 
       for (let attempt = 1; attempt <= maxEnterAttempts; attempt++) {
         enterRes = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${effectiveApiToken}`, {
@@ -1031,11 +1038,18 @@ Deno.serve(async (req) => {
         }
 
         if (agentNotIdle && attempt < maxEnterAttempts) {
-          console.log(`[threecplus-agent] place_call agent not idle, waiting 3s before retry ${attempt + 1}...`);
-          await new Promise((resolve) => setTimeout(resolve, 3000));
-          // Try cleanup between retries
-          await cleanupAgentState(apiBase, effectiveApiToken);
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          console.log(`[threecplus-agent] place_call agent not idle, waiting before retry ${attempt + 1}...`);
+          
+          // On attempt 3, try a fresh webphone login as recovery
+          if (attempt === 3) {
+            console.log("[threecplus-agent] place_call mid-retry webphone recovery attempt...");
+            await loginWebphoneSession(apiBase, effectiveApiToken, campaign_id);
+            await new Promise((resolve) => setTimeout(resolve, 4000));
+          } else {
+            await new Promise((resolve) => setTimeout(resolve, 3000));
+            await cleanupAgentState(apiBase, effectiveApiToken);
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+          }
         } else if (!agentNotIdle) {
           break; // Different error, don't retry
         }
