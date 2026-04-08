@@ -113,37 +113,44 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove }: DealKanba
       return map;
     };
 
-    const resolveProductUUIDs = async (map: Record<string, string>) => {
+    const resolveProductUUIDs = async (map: Record<string, string>): Promise<Record<string, { name: string; color: string | null }>> => {
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const unresolvedUUIDs = [...new Set(
         Object.values(map).filter(value => uuidRegex.test(value))
       )];
 
-      if (unresolvedUUIDs.length === 0) return map;
+      const result: Record<string, { name: string; color: string | null }> = {};
+
+      if (unresolvedUUIDs.length === 0) {
+        // No UUIDs to resolve — values are already labels
+        for (const [dealId, value] of Object.entries(map)) {
+          result[dealId] = { name: value, color: null };
+        }
+        return result;
+      }
 
       const idChunks = chunk(unresolvedUUIDs, CHUNK_SIZE);
       const chunkedResults = await Promise.all(
         idChunks.map(ids =>
-          supabase.from("products").select("id, name").in("id", ids)
+          supabase.from("products").select("id, name, color").in("id", ids)
         )
       );
 
-      const productMap: Record<string, string> = {};
+      const productMap: Record<string, { name: string; color: string | null }> = {};
       for (const res of chunkedResults) {
         if (res.data) {
-          res.data.forEach(p => { productMap[p.id] = p.name; });
+          res.data.forEach(p => { productMap[p.id] = { name: p.name, color: p.color }; });
         }
       }
 
-      if (Object.keys(productMap).length === 0) return map;
-
-      const resolved = { ...map };
-      for (const [dealId, value] of Object.entries(resolved)) {
+      for (const [dealId, value] of Object.entries(map)) {
         if (productMap[value]) {
-          resolved[dealId] = productMap[value];
+          result[dealId] = productMap[value];
+        } else {
+          result[dealId] = { name: value, color: null };
         }
       }
-      return resolved;
+      return result;
     };
 
     Promise.all([
