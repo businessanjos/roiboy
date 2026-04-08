@@ -22,6 +22,7 @@ import {
   X,
   ChevronDown,
   Trash2,
+  Package,
 } from "lucide-react";
 import { usePipelineFilters, RECOMMENDED_FILTERS, ActiveFilter, PipelineFilter } from "@/hooks/usePipelineFilters";
 import { PipelineFilterDialog } from "./PipelineFilterDialog";
