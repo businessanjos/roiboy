@@ -1220,6 +1220,7 @@ export default function SalesPipeline() {
                     activeFilter={activeFilter}
                     onFilterChange={setActiveFilter}
                     availableTags={availableTags}
+                    products={pipelineProducts}
                   />
                   <div className="relative hidden sm:block">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
