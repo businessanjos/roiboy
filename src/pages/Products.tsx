@@ -681,11 +681,6 @@ export default function Products() {
                     </div>
                   )}
                 </div>
-                        </Select>
-                      </div>
-                    </div>
-                  )}
-                </div>
 
                 {/* Grupos WhatsApp */}
                 <div className="rounded-lg border p-4 space-y-3">
