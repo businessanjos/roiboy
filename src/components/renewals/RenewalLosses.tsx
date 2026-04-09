@@ -717,3 +717,4 @@ export function RenewalLosses() {
     </div>
   );
 }
+
