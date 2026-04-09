@@ -21,7 +21,9 @@ import {
   Loader2,
   DollarSign,
   Award,
-  Lock
+  Lock,
+  PlusCircle,
+  X
 } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { toast } from "sonner";
