@@ -209,7 +209,39 @@ export function RenewalLosses() {
     setEditNotes(item.loss_notes || "");
   };
 
-  const handleSaveOutcome = async (outcome: "lost" | "renewed") => {
+  const handleConfirmRenewal = async (item: ExpiredContract) => {
+    if (!currentUser) return;
+    setConfirmingRenewal(item.id);
+    try {
+      const payload = {
+        account_id: currentUser.account_id,
+        contract_id: item.id,
+        client_id: item.client_id,
+        outcome: "renewed",
+        loss_reason: null,
+        loss_notes: null,
+        renewal_value: item.renewal_value,
+        resolved_at: new Date().toISOString(),
+        resolved_by: currentUser.id,
+      };
+
+      if (item.outcome_id) {
+        await supabase.from("renewal_outcomes").update(payload).eq("id", item.outcome_id);
+      } else {
+        await supabase.from("renewal_outcomes").insert(payload);
+      }
+
+      toast({ title: "Renovação confirmada!" });
+      fetchExpired();
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Erro ao confirmar", variant: "destructive" });
+    } finally {
+      setConfirmingRenewal(null);
+    }
+  };
+
+
     if (!editItem || !currentUser) return;
     setSaving(true);
     try {
