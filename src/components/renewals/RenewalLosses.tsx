@@ -276,8 +276,10 @@ export function RenewalLosses() {
 
   // Analytics
   const losses = items.filter(i => i.outcome === "lost");
+  const confirmedRenewed = items.filter(i => i.outcome === "renewed");
+  const suggestedRenewed = items.filter(i => i.has_new_contract && i.outcome !== "renewed" && i.outcome !== "lost");
   const renewed = items.filter(i => i.outcome === "renewed" || i.has_new_contract);
-  const pending = items.filter(i => !i.outcome && !i.has_new_contract);
+  const pending = items.filter(i => (!i.outcome || i.outcome === "pending") && !i.has_new_contract);
   const totalLostValue = losses.reduce((s, i) => s + i.renewal_value, 0);
   const totalRenewedValue = renewed.reduce((s, i) => s + i.renewal_value, 0);
   const renewalRate = items.length > 0 ? (renewed.length / items.length) * 100 : 0;
