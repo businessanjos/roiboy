@@ -227,7 +227,21 @@ export default function Products() {
     setIsMls(product.is_mls);
     setMlsLevel(product.mls_level || "");
     setColor(product.color || "#10b981");
-    setDeliverables(product.deliverables ? { ...DEFAULT_DELIVERABLES, ...product.deliverables } : { ...DEFAULT_DELIVERABLES });
+    const rawDeliverables = product.deliverables ? { ...DEFAULT_DELIVERABLES, ...product.deliverables } : { ...DEFAULT_DELIVERABLES };
+    // Migrate old single-field format to phases if needed
+    if (rawDeliverables.individual_session_enabled && (!rawDeliverables.individual_session_phases || rawDeliverables.individual_session_phases.length === 0)) {
+      if (rawDeliverables.individual_session_duration || rawDeliverables.individual_session_periodicity) {
+        rawDeliverables.individual_session_phases = [{
+          duration_hours: rawDeliverables.individual_session_duration || "",
+          periodicity: rawDeliverables.individual_session_periodicity || "mensal",
+          months: "",
+          format: rawDeliverables.individual_session_format || "",
+        }];
+      } else {
+        rawDeliverables.individual_session_phases = [{ ...DEFAULT_PHASE }];
+      }
+    }
+    setDeliverables(rawDeliverables);
     setDialogOpen(true);
   };
 
