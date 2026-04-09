@@ -601,17 +601,21 @@ export function RenewalLosses() {
                       {formatLocalDate(item.end_date)}
                     </TableCell>
                     <TableCell className="text-center">
-                      {item.outcome === "renewed" || item.has_new_contract ? (
+                      {item.outcome === "renewed" ? (
                         <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                          Renovado
+                          ✅ Renovado
+                        </Badge>
+                      ) : item.has_new_contract && item.outcome !== "lost" ? (
+                        <Badge className="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 border-dashed">
+                          🔄 Sugestão: Renovado
                         </Badge>
                       ) : item.outcome === "lost" ? (
                         <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                          Perdido
+                          ❌ Perdido
                         </Badge>
                       ) : (
                         <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                          Pendente
+                          ⏳ Pendente
                         </Badge>
                       )}
                     </TableCell>
@@ -620,9 +624,31 @@ export function RenewalLosses() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        {item.has_new_contract && item.outcome !== "renewed" && item.outcome !== "lost" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-7 text-emerald-600 border-emerald-300 hover:bg-emerald-50"
+                            onClick={() => handleConfirmRenewal(item)}
+                            disabled={confirmingRenewal === item.id}
+                          >
+                            {confirmingRenewal === item.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : (
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                            )}
+                            Confirmar
+                          </Button>
+                        )}
                         {(!item.outcome || item.outcome === "pending") && !item.has_new_contract && (
                           <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => handleMarkAsLost(item)}>
                             Registrar
+                          </Button>
+                        )}
+                        {item.has_new_contract && item.outcome !== "renewed" && item.outcome !== "lost" && (
+                          <Button variant="ghost" size="sm" className="text-xs h-7 text-red-500" onClick={() => handleMarkAsLost(item)}>
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Perda
                           </Button>
                         )}
                         {item.outcome === "lost" && (
