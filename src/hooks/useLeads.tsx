@@ -278,13 +278,17 @@ export function useLeads(options?: { enabled?: boolean }) {
         .eq('account_id', currentUser.account_id);
 
       // 4. Delete the lead
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from('leads')
-        .delete()
+        .delete({ count: 'exact' })
         .eq('id', leadId)
         .eq('account_id', currentUser.account_id);
 
       if (error) throw error;
+
+      if (count === 0) {
+        throw new Error('Não foi possível excluir o lead. Verifique suas permissões.');
+      }
 
       setLeads(prev => prev.filter(l => l.id !== leadId));
 
