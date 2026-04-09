@@ -548,61 +548,139 @@ export default function Products() {
               </TabsContent>
 
               <TabsContent value="deliverables" className="space-y-4 pt-2">
-                {/* Sessão Individual */}
+                {/* Sessão Individual com Fases */}
                 <div className="rounded-lg border p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <Label className="text-sm font-semibold mb-0">Sessão Individual</Label>
                     <Switch
                       checked={deliverables.individual_session_enabled}
-                      onCheckedChange={(v) => setDeliverables({ ...deliverables, individual_session_enabled: v })}
+                      onCheckedChange={(v) => {
+                        const updated = { ...deliverables, individual_session_enabled: v };
+                        if (v && (!updated.individual_session_phases || updated.individual_session_phases.length === 0)) {
+                          updated.individual_session_phases = [{ ...DEFAULT_PHASE }];
+                        }
+                        setDeliverables(updated);
+                      }}
                     />
                   </div>
                   {deliverables.individual_session_enabled && (
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Formato</Label>
-                        <Select
-                          value={deliverables.individual_session_format}
-                          onValueChange={(v) => setDeliverables({ ...deliverables, individual_session_format: v as "presencial" | "online" })}
-                        >
-                          <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="presencial">Presencial</SelectItem>
-                            <SelectItem value="online">Online</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Duração (horas)</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          step={0.5}
-                          value={deliverables.individual_session_duration}
-                          onChange={(e) => setDeliverables({ ...deliverables, individual_session_duration: e.target.value })}
-                          placeholder="Ex: 1"
-                          className="h-9"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Frequência</Label>
-                        <Select
-                          value={deliverables.individual_session_periodicity}
-                          onValueChange={(v) => setDeliverables({ ...deliverables, individual_session_periodicity: v })}
-                        >
-                          <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1x_semana">1x por semana</SelectItem>
-                            <SelectItem value="2x_semana">2x por semana</SelectItem>
-                            <SelectItem value="3x_semana">3x por semana</SelectItem>
-                            <SelectItem value="quinzenal">Quinzenal</SelectItem>
-                            <SelectItem value="mensal">Mensal</SelectItem>
-                            <SelectItem value="trimestral">Trimestral</SelectItem>
-                          </SelectContent>
+                    <div className="space-y-3">
+                      <p className="text-xs text-muted-foreground">
+                        Configure as fases da sessão individual. Ex: 3h nos primeiros 3 meses, depois 1h por 9 meses.
+                      </p>
+                      {(deliverables.individual_session_phases || []).map((phase, idx) => (
+                        <div key={idx} className="relative rounded-md border border-dashed p-3 space-y-2 bg-muted/30">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-muted-foreground">
+                              Fase {idx + 1}
+                            </span>
+                            {(deliverables.individual_session_phases || []).length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const phases = [...(deliverables.individual_session_phases || [])];
+                                  phases.splice(idx, 1);
+                                  setDeliverables({ ...deliverables, individual_session_phases: phases });
+                                }}
+                                className="text-muted-foreground hover:text-destructive transition-colors"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-4 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-xs">Duração (h)</Label>
+                              <Input
+                                type="number"
+                                min={0}
+                                step={0.5}
+                                value={phase.duration_hours}
+                                onChange={(e) => {
+                                  const phases = [...(deliverables.individual_session_phases || [])];
+                                  phases[idx] = { ...phases[idx], duration_hours: e.target.value };
+                                  setDeliverables({ ...deliverables, individual_session_phases: phases });
+                                }}
+                                placeholder="1"
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Frequência</Label>
+                              <Select
+                                value={phase.periodicity}
+                                onValueChange={(v) => {
+                                  const phases = [...(deliverables.individual_session_phases || [])];
+                                  phases[idx] = { ...phases[idx], periodicity: v };
+                                  setDeliverables({ ...deliverables, individual_session_phases: phases });
+                                }}
+                              >
+                                <SelectTrigger className="h-8 text-sm">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="1x_semana">1x/semana</SelectItem>
+                                  <SelectItem value="2x_semana">2x/semana</SelectItem>
+                                  <SelectItem value="3x_semana">3x/semana</SelectItem>
+                                  <SelectItem value="quinzenal">Quinzenal</SelectItem>
+                                  <SelectItem value="mensal">Mensal</SelectItem>
+                                  <SelectItem value="trimestral">Trimestral</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Meses</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                value={phase.months}
+                                onChange={(e) => {
+                                  const phases = [...(deliverables.individual_session_phases || [])];
+                                  phases[idx] = { ...phases[idx], months: e.target.value };
+                                  setDeliverables({ ...deliverables, individual_session_phases: phases });
+                                }}
+                                placeholder="3"
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-xs">Formato</Label>
+                              <Select
+                                value={phase.format || ""}
+                                onValueChange={(v) => {
+                                  const phases = [...(deliverables.individual_session_phases || [])];
+                                  phases[idx] = { ...phases[idx], format: v as "presencial" | "online" };
+                                  setDeliverables({ ...deliverables, individual_session_phases: phases });
+                                }}
+                              >
+                                <SelectTrigger className="h-8 text-sm">
+                                  <SelectValue placeholder="—" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="presencial">Presencial</SelectItem>
+                                  <SelectItem value="online">Online</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="w-full gap-1.5"
+                        onClick={() => {
+                          const phases = [...(deliverables.individual_session_phases || []), { ...DEFAULT_PHASE }];
+                          setDeliverables({ ...deliverables, individual_session_phases: phases });
+                        }}
+                      >
+                        <PlusCircle className="h-3.5 w-3.5" />
+                        Adicionar fase
+                      </Button>
+                    </div>
+                  )}
+                </div>
                         </Select>
                       </div>
                     </div>
