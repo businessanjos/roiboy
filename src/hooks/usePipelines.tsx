@@ -54,8 +54,20 @@ export function usePipelines() {
         setActivePipelineId(newPipeline.id);
       } else {
         setPipelines(data);
-        if (!activePipelineId || !data.find(p => p.id === activePipelineId)) {
+        // Read the persisted value directly from localStorage to avoid stale closure
+        const userId = currentUser?.id;
+        let persistedId: string | null = null;
+        if (userId) {
+          try {
+            const saved = localStorage.getItem(`roy_filters_${userId}_salesPipeline_activePipelineId`);
+            if (saved) persistedId = JSON.parse(saved);
+          } catch { /* ignore */ }
+        }
+        const currentId = persistedId || activePipelineId;
+        if (!currentId || !data.find(p => p.id === currentId)) {
           setActivePipelineId(data[0].id);
+        } else if (currentId !== activePipelineId) {
+          setActivePipelineId(currentId);
         }
       }
     } catch (error: any) {
