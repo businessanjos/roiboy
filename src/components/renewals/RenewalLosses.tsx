@@ -533,6 +533,17 @@ export function RenewalLosses() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={filterOutcome} onValueChange={setFilterOutcome}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="renewed">Renovados</SelectItem>
+            <SelectItem value="lost">Perdidos</SelectItem>
+            <SelectItem value="pending">Pendentes</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Expired Contracts Table */}
