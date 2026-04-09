@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Link } from "react-router-dom";
-import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percent } from "lucide-react";
+import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percent, CheckCircle2, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
@@ -69,10 +69,12 @@ export function RenewalLosses() {
   const [loading, setLoading] = useState(true);
   const [filterPeriod, setFilterPeriod] = useState("90");
   const [filterConsultora, setFilterConsultora] = useState("all");
+  const [filterOutcome, setFilterOutcome] = useState("all");
   const [editItem, setEditItem] = useState<ExpiredContract | null>(null);
   const [editReason, setEditReason] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirmingRenewal, setConfirmingRenewal] = useState<string | null>(null);
 
   const hasFullAccess = currentUser?.role === "admin" || currentUser?.role === "super_admin"
     || currentUser?.is_also_admin
@@ -207,7 +209,39 @@ export function RenewalLosses() {
     setEditNotes(item.loss_notes || "");
   };
 
-  const handleSaveOutcome = async (outcome: "lost" | "renewed") => {
+  const handleConfirmRenewal = async (item: ExpiredContract) => {
+    if (!currentUser) return;
+    setConfirmingRenewal(item.id);
+    try {
+      const payload = {
+        account_id: currentUser.account_id,
+        contract_id: item.id,
+        client_id: item.client_id,
+        outcome: "renewed",
+        loss_reason: null,
+        loss_notes: null,
+        renewal_value: item.renewal_value,
+        resolved_at: new Date().toISOString(),
+        resolved_by: currentUser.id,
+      };
+
+      if (item.outcome_id) {
+        await supabase.from("renewal_outcomes").update(payload).eq("id", item.outcome_id);
+      } else {
+        await supabase.from("renewal_outcomes").insert(payload);
+      }
+
+      toast({ title: "Renovação confirmada!" });
+      fetchExpired();
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Erro ao confirmar", variant: "destructive" });
+    } finally {
+      setConfirmingRenewal(null);
+    }
+  };
+
+
     if (!editItem || !currentUser) return;
     setSaving(true);
     try {
@@ -242,8 +276,10 @@ export function RenewalLosses() {
 
   // Analytics
   const losses = items.filter(i => i.outcome === "lost");
+  const confirmedRenewed = items.filter(i => i.outcome === "renewed");
+  const suggestedRenewed = items.filter(i => i.has_new_contract && i.outcome !== "renewed" && i.outcome !== "lost");
   const renewed = items.filter(i => i.outcome === "renewed" || i.has_new_contract);
-  const pending = items.filter(i => !i.outcome && !i.has_new_contract);
+  const pending = items.filter(i => (!i.outcome || i.outcome === "pending") && !i.has_new_contract);
   const totalLostValue = losses.reduce((s, i) => s + i.renewal_value, 0);
   const totalRenewedValue = renewed.reduce((s, i) => s + i.renewal_value, 0);
   const renewalRate = items.length > 0 ? (renewed.length / items.length) * 100 : 0;
@@ -288,6 +324,11 @@ export function RenewalLosses() {
 
   const filteredItems = items.filter(i => {
     if (filterConsultora !== "all" && i.responsible_name !== filterConsultora) return false;
+    if (filterOutcome !== "all") {
+      const effectiveOutcome = (i.outcome === "renewed" || i.has_new_contract) ? "renewed" 
+        : i.outcome === "lost" ? "lost" : "pending";
+      if (filterOutcome !== effectiveOutcome) return false;
+    }
     return true;
   });
 
@@ -494,6 +535,17 @@ export function RenewalLosses() {
             ))}
           </SelectContent>
         </Select>
+        <Select value={filterOutcome} onValueChange={setFilterOutcome}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os status</SelectItem>
+            <SelectItem value="renewed">Renovados</SelectItem>
+            <SelectItem value="lost">Perdidos</SelectItem>
+            <SelectItem value="pending">Pendentes</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Expired Contracts Table */}
@@ -551,17 +603,21 @@ export function RenewalLosses() {
                       {formatLocalDate(item.end_date)}
                     </TableCell>
                     <TableCell className="text-center">
-                      {item.outcome === "renewed" || item.has_new_contract ? (
+                      {item.outcome === "renewed" ? (
                         <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                          Renovado
+                          ✅ Renovado
+                        </Badge>
+                      ) : item.has_new_contract && item.outcome !== "lost" ? (
+                        <Badge className="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 border-dashed">
+                          🔄 Sugestão: Renovado
                         </Badge>
                       ) : item.outcome === "lost" ? (
                         <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                          Perdido
+                          ❌ Perdido
                         </Badge>
                       ) : (
                         <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                          Pendente
+                          ⏳ Pendente
                         </Badge>
                       )}
                     </TableCell>
@@ -570,9 +626,31 @@ export function RenewalLosses() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        {item.has_new_contract && item.outcome !== "renewed" && item.outcome !== "lost" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs h-7 text-emerald-600 border-emerald-300 hover:bg-emerald-50"
+                            onClick={() => handleConfirmRenewal(item)}
+                            disabled={confirmingRenewal === item.id}
+                          >
+                            {confirmingRenewal === item.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : (
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                            )}
+                            Confirmar
+                          </Button>
+                        )}
                         {(!item.outcome || item.outcome === "pending") && !item.has_new_contract && (
                           <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => handleMarkAsLost(item)}>
                             Registrar
+                          </Button>
+                        )}
+                        {item.has_new_contract && item.outcome !== "renewed" && item.outcome !== "lost" && (
+                          <Button variant="ghost" size="sm" className="text-xs h-7 text-red-500" onClick={() => handleMarkAsLost(item)}>
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Perda
                           </Button>
                         )}
                         {item.outcome === "lost" && (
