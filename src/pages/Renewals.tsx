@@ -283,9 +283,9 @@ export default function Renewals() {
             <CalendarDays className="h-4 w-4" />
             Pendentes ({filtered.length})
           </TabsTrigger>
-          <TabsTrigger value="losses" className="gap-2">
+          <TabsTrigger value="results" className="gap-2">
             <TrendingDown className="h-4 w-4" />
-            Relatório de Perdas
+            Resultados
           </TabsTrigger>
         </TabsList>
 
