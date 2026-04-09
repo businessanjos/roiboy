@@ -69,10 +69,12 @@ export function RenewalLosses() {
   const [loading, setLoading] = useState(true);
   const [filterPeriod, setFilterPeriod] = useState("90");
   const [filterConsultora, setFilterConsultora] = useState("all");
+  const [filterOutcome, setFilterOutcome] = useState("all");
   const [editItem, setEditItem] = useState<ExpiredContract | null>(null);
   const [editReason, setEditReason] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [saving, setSaving] = useState(false);
+  const [confirmingRenewal, setConfirmingRenewal] = useState<string | null>(null);
 
   const hasFullAccess = currentUser?.role === "admin" || currentUser?.role === "super_admin"
     || currentUser?.is_also_admin
