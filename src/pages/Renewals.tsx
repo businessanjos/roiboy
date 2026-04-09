@@ -508,7 +508,7 @@ export default function Renewals() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="losses">
+        <TabsContent value="results">
           <RenewalLosses />
         </TabsContent>
       </Tabs>
