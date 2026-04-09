@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { toast } from "sonner";
 
 export interface Pipeline {
@@ -19,7 +20,7 @@ export function usePipelines() {
   const { currentUser } = useCurrentUser();
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activePipelineId, setActivePipelineId] = useState<string | null>(null);
+  const [activePipelineId, setActivePipelineId] = usePersistedFilter<string | null>("salesPipeline", "activePipelineId", null);
 
   const fetchPipelines = useCallback(async () => {
     if (!currentUser?.account_id) return;
