@@ -241,7 +241,7 @@ export function RenewalLosses() {
     }
   };
 
-
+  const handleSaveOutcome = async (outcome: "lost" | "renewed") => {
     if (!editItem || !currentUser) return;
     setSaving(true);
     try {
