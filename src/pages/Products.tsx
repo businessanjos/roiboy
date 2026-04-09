@@ -30,11 +30,26 @@ import { toast } from "sonner";
 import { getMlsBadgeClasses, getMlsLevelLabel, MLS_LEVELS } from "@/lib/mls-utils";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
 
+interface SessionPhase {
+  duration_hours: string;
+  periodicity: string;
+  months: string;
+  format: "presencial" | "online" | "";
+}
+
+const DEFAULT_PHASE: SessionPhase = {
+  duration_hours: "",
+  periodicity: "mensal",
+  months: "",
+  format: "",
+};
+
 interface ProductDeliverables {
   individual_session_enabled: boolean;
   individual_session_format: "presencial" | "online" | "";
   individual_session_duration: string;
   individual_session_periodicity: string;
+  individual_session_phases?: SessionPhase[];
   whatsapp_individual_group: boolean;
   whatsapp_all_group: boolean;
   group_mentoring_enabled: boolean;
@@ -50,6 +65,7 @@ const DEFAULT_DELIVERABLES: ProductDeliverables = {
   individual_session_format: "",
   individual_session_duration: "",
   individual_session_periodicity: "",
+  individual_session_phases: [],
   whatsapp_individual_group: false,
   whatsapp_all_group: false,
   group_mentoring_enabled: false,
