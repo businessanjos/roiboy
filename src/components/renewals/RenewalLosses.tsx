@@ -322,6 +322,11 @@ export function RenewalLosses() {
 
   const filteredItems = items.filter(i => {
     if (filterConsultora !== "all" && i.responsible_name !== filterConsultora) return false;
+    if (filterOutcome !== "all") {
+      const effectiveOutcome = (i.outcome === "renewed" || i.has_new_contract) ? "renewed" 
+        : i.outcome === "lost" ? "lost" : "pending";
+      if (filterOutcome !== effectiveOutcome) return false;
+    }
     return true;
   });
 
