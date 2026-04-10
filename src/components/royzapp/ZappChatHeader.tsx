@@ -11,6 +11,7 @@ import {
   Users2,
   Plus,
   AlertTriangle,
+  Image,
   ExternalLink,
   CheckCircle,
   Link2,
@@ -57,6 +58,7 @@ interface ZappChatHeaderProps {
   onOpenEditGroup?: () => void;
   onCall?: () => void;
   onToggleSearch?: () => void;
+  onOpenMediaGallery?: () => void;
 }
 
 export const ZappChatHeader = memo(function ZappChatHeader({
@@ -84,6 +86,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   onOpenEditGroup,
   onCall,
   onToggleSearch,
+  onOpenMediaGallery,
 }: ZappChatHeaderProps) {
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const conversationId = assignment.zapp_conversation_id || assignment.zapp_conversation?.id;
@@ -303,6 +306,14 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                   )}
                   <DropdownMenuSeparator className="bg-zapp-border" />
                 </div>
+                <DropdownMenuItem 
+                  className="text-zapp-text hover:bg-zapp-hover"
+                  onClick={onOpenMediaGallery}
+                >
+                  <Image className="h-4 w-4 mr-2 text-zapp-accent" />
+                  Mídias e Links
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-zapp-border" />
                 {clientId && (
                   <>
                     <DropdownMenuItem 

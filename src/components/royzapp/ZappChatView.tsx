@@ -5,6 +5,7 @@ import { ZappMessagesList } from "./ZappMessagesList";
 import { ZappMessageInput, MentionData } from "./ZappMessageInput";
 import { ZappAIAssistBar } from "./ZappAIAssistBar";
 import { ZappMessageSearchBar } from "./ZappMessageSearchBar";
+import { ZappMediaGallery } from "./ZappMediaGallery";
 import { ConversationAssignment, ContactInfo } from "./types";
 import { Message } from "@/hooks/useZappData";
 import { useMessageAssistant } from "@/hooks/useMessageAssistant";
@@ -165,6 +166,7 @@ export function ZappChatView({
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchCurrentIndex, setSearchCurrentIndex] = useState(0);
+  const [showMediaGallery, setShowMediaGallery] = useState(false);
 
   // Compute search matches
   const searchMatchIds = useMemo(() => {
@@ -306,6 +308,7 @@ export function ZappChatView({
         accountId={accountId}
         onCall={handleCall}
         onToggleSearch={() => setShowSearch(s => !s)}
+        onOpenMediaGallery={() => setShowMediaGallery(true)}
       />
 
       {/* Search bar */}
@@ -381,6 +384,14 @@ export function ZappChatView({
         hasSignature={hasSignature}
         onToggleSignature={onToggleSignature}
         onOpenPlaybook={onOpenPlaybook}
+      />
+
+      {/* Media Gallery */}
+      <ZappMediaGallery
+        open={showMediaGallery}
+        onOpenChange={setShowMediaGallery}
+        messages={messages}
+        contactName={contactInfo.name}
       />
     </div>
   );
