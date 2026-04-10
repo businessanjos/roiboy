@@ -73,8 +73,14 @@ import {
   Package,
   User,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import LeadsTab from "@/components/sales/LeadsTab";
 import { MeetingScheduleDialog } from "@/components/sales/videocall/MeetingScheduleDialog";
 
@@ -153,6 +159,9 @@ export default function SalesPipeline() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
+  const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
+  const [wonDateEnd, setWonDateEnd] = usePersistedFilter<string>("salesPipeline", "wonDateEnd", "");
+  const [wonDatePopoverOpen, setWonDatePopoverOpen] = useState(false);
   const [wonSellerFilter, setWonSellerFilter] = usePersistedFilter<string>("salesPipeline", "wonSellerFilter", "all");
   const [wonProductFilter, setWonProductFilter] = usePersistedFilter<string>("salesPipeline", "wonProductFilter", "all");
   const [lostMonthFilter, setLostMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostMonthFilter", "all");
@@ -465,7 +474,14 @@ export default function SalesPipeline() {
   const filteredWonDealsByMonth = useMemo(() => {
     let result = filteredWonDeals;
     
-    if (wonMonthFilter !== 'all') {
+    if (wonMonthFilter === 'custom' && wonDateStart && wonDateEnd) {
+      const start = startOfDay(new Date(wonDateStart));
+      const end = endOfDay(new Date(wonDateEnd));
+      result = result.filter(deal => {
+        if (!deal.won_at) return false;
+        return isWithinInterval(new Date(deal.won_at), { start, end });
+      });
+    } else if (wonMonthFilter !== 'all' && wonMonthFilter !== 'custom') {
       result = result.filter(deal => {
         if (!deal.won_at) return false;
         const date = new Date(deal.won_at);
@@ -496,7 +512,7 @@ export default function SalesPipeline() {
       const dateB = b.won_at ? new Date(b.won_at).getTime() : 0;
       return dateB - dateA;
     });
-  }, [filteredWonDeals, wonMonthFilter, wonSellerFilter, wonProductFilter, dealProductMap]);
+  }, [filteredWonDeals, wonMonthFilter, wonSellerFilter, wonProductFilter, dealProductMap, wonDateStart, wonDateEnd]);
 
   const filteredWonTotal = useMemo(() => {
     return filteredWonDealsByMonth.reduce((sum, deal) => sum + (deal.value || 0), 0);
@@ -1286,18 +1302,72 @@ export default function SalesPipeline() {
                 {/* Contextual filters for won/lost tabs */}
                 {activeTab === 'won' && (
                   <div className="flex flex-wrap items-center gap-2">
-                    <Select value={wonMonthFilter} onValueChange={setWonMonthFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
-                        <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os meses" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os meses</SelectItem>
-                        {availableWonMonths.map(([key, label]) => (
-                          <SelectItem key={key} value={key}>{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {/* Date filter: months + custom range */}
+                    <Popover open={wonDatePopoverOpen} onOpenChange={setWonDatePopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn(
+                          "w-full sm:w-auto h-8 text-xs bg-background justify-start",
+                          wonMonthFilter !== 'all' && "border-primary text-primary"
+                        )}>
+                          <Calendar className="h-3.5 w-3.5 mr-1.5" />
+                          {wonMonthFilter === 'all' && 'Todas as datas'}
+                          {wonMonthFilter === 'custom' && wonDateStart && wonDateEnd && 
+                            `${format(new Date(wonDateStart), "dd/MM/yy")} - ${format(new Date(wonDateEnd), "dd/MM/yy")}`
+                          }
+                          {wonMonthFilter !== 'all' && wonMonthFilter !== 'custom' && (() => {
+                            const entry = availableWonMonths.find(([k]) => k === wonMonthFilter);
+                            return entry ? entry[1] : wonMonthFilter;
+                          })()}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <div className="flex flex-col sm:flex-row">
+                          {/* Presets */}
+                          <div className="border-b sm:border-b-0 sm:border-r p-2 space-y-0.5 min-w-[150px]">
+                            <Button
+                              variant={wonMonthFilter === 'all' ? 'secondary' : 'ghost'}
+                              size="sm"
+                              className="w-full justify-start text-xs h-7"
+                              onClick={() => { setWonMonthFilter('all'); setWonDateStart(''); setWonDateEnd(''); setWonDatePopoverOpen(false); }}
+                            >
+                              Todas as datas
+                            </Button>
+                            {availableWonMonths.map(([key, label]) => (
+                              <Button
+                                key={key}
+                                variant={wonMonthFilter === key ? 'secondary' : 'ghost'}
+                                size="sm"
+                                className="w-full justify-start text-xs h-7"
+                                onClick={() => { setWonMonthFilter(key); setWonDateStart(''); setWonDateEnd(''); setWonDatePopoverOpen(false); }}
+                              >
+                                {label}
+                              </Button>
+                            ))}
+                          </div>
+                          {/* Custom range calendar */}
+                          <div className="p-2">
+                            <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Período personalizado</p>
+                            <CalendarComponent
+                              mode="range"
+                              selected={wonDateStart && wonDateEnd ? { from: new Date(wonDateStart), to: new Date(wonDateEnd) } : undefined}
+                              onSelect={(range) => {
+                                if (range?.from) {
+                                  setWonDateStart(range.from.toISOString());
+                                  setWonDateEnd(range.to ? range.to.toISOString() : range.from.toISOString());
+                                  if (range.to) {
+                                    setWonMonthFilter('custom');
+                                    setWonDatePopoverOpen(false);
+                                  }
+                                }
+                              }}
+                              numberOfMonths={1}
+                              locale={ptBR}
+                              className="pointer-events-auto"
+                            />
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                     <Select value={wonSellerFilter} onValueChange={setWonSellerFilter}>
                       <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
                         <User className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
