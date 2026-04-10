@@ -306,6 +306,14 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                   )}
                   <DropdownMenuSeparator className="bg-zapp-border" />
                 </div>
+                <DropdownMenuItem 
+                  className="text-zapp-text hover:bg-zapp-hover"
+                  onClick={onOpenMediaGallery}
+                >
+                  <Image className="h-4 w-4 mr-2 text-zapp-accent" />
+                  Mídias e Links
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-zapp-border" />
                 {clientId && (
                   <>
                     <DropdownMenuItem 
