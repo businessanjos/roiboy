@@ -11,6 +11,7 @@ import {
   Users2,
   Plus,
   AlertTriangle,
+  Image,
   ExternalLink,
   CheckCircle,
   Link2,
@@ -57,6 +58,7 @@ interface ZappChatHeaderProps {
   onOpenEditGroup?: () => void;
   onCall?: () => void;
   onToggleSearch?: () => void;
+  onOpenMediaGallery?: () => void;
 }
 
 export const ZappChatHeader = memo(function ZappChatHeader({
