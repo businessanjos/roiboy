@@ -474,7 +474,14 @@ export default function SalesPipeline() {
   const filteredWonDealsByMonth = useMemo(() => {
     let result = filteredWonDeals;
     
-    if (wonMonthFilter !== 'all') {
+    if (wonMonthFilter === 'custom' && wonDateStart && wonDateEnd) {
+      const start = startOfDay(new Date(wonDateStart));
+      const end = endOfDay(new Date(wonDateEnd));
+      result = result.filter(deal => {
+        if (!deal.won_at) return false;
+        return isWithinInterval(new Date(deal.won_at), { start, end });
+      });
+    } else if (wonMonthFilter !== 'all' && wonMonthFilter !== 'custom') {
       result = result.filter(deal => {
         if (!deal.won_at) return false;
         const date = new Date(deal.won_at);
@@ -505,7 +512,7 @@ export default function SalesPipeline() {
       const dateB = b.won_at ? new Date(b.won_at).getTime() : 0;
       return dateB - dateA;
     });
-  }, [filteredWonDeals, wonMonthFilter, wonSellerFilter, wonProductFilter, dealProductMap]);
+  }, [filteredWonDeals, wonMonthFilter, wonSellerFilter, wonProductFilter, dealProductMap, wonDateStart, wonDateEnd]);
 
   const filteredWonTotal = useMemo(() => {
     return filteredWonDealsByMonth.reduce((sum, deal) => sum + (deal.value || 0), 0);
