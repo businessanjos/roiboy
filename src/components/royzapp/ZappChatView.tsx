@@ -308,6 +308,7 @@ export function ZappChatView({
         accountId={accountId}
         onCall={handleCall}
         onToggleSearch={() => setShowSearch(s => !s)}
+        onOpenMediaGallery={() => setShowMediaGallery(true)}
       />
 
       {/* Search bar */}
