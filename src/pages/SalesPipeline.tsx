@@ -73,8 +73,14 @@ import {
   Package,
   User,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfMonth, endOfMonth, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import LeadsTab from "@/components/sales/LeadsTab";
 import { MeetingScheduleDialog } from "@/components/sales/videocall/MeetingScheduleDialog";
 
@@ -153,6 +159,9 @@ export default function SalesPipeline() {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter | null>(null);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
+  const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
+  const [wonDateEnd, setWonDateEnd] = usePersistedFilter<string>("salesPipeline", "wonDateEnd", "");
+  const [wonDatePopoverOpen, setWonDatePopoverOpen] = useState(false);
   const [wonSellerFilter, setWonSellerFilter] = usePersistedFilter<string>("salesPipeline", "wonSellerFilter", "all");
   const [wonProductFilter, setWonProductFilter] = usePersistedFilter<string>("salesPipeline", "wonProductFilter", "all");
   const [lostMonthFilter, setLostMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostMonthFilter", "all");
