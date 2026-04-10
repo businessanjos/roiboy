@@ -385,6 +385,14 @@ export function ZappChatView({
         onToggleSignature={onToggleSignature}
         onOpenPlaybook={onOpenPlaybook}
       />
+
+      {/* Media Gallery */}
+      <ZappMediaGallery
+        open={showMediaGallery}
+        onOpenChange={setShowMediaGallery}
+        messages={messages}
+        contactName={contactInfo.name}
+      />
     </div>
   );
 }
