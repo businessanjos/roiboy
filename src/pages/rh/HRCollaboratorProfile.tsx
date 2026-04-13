@@ -17,7 +17,7 @@ import {
 import {
   ArrowLeft, Save, User, Briefcase, Phone, Mail, MapPin, AlertTriangle,
   Calendar, FileText, Trash2, Clock, Gift, TrendingUp, CalendarDays,
-  CheckCircle2, Loader2,
+  CheckCircle2, Loader2, Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
