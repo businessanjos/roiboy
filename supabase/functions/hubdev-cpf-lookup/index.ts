@@ -33,82 +33,44 @@ Deno.serve(async (req) => {
       );
     }
 
-    // HubDev API URLs to try
-    // Basic CPF (requires birth date): /v2/cpf/{cpf}/{nascimento}
-    // Cadastral CPF (full data, no birth date needed): /v2/cadastral-cpf/{cpf}
-    const urls: string[] = [];
-    
-    // Try cadastral-cpf first (returns more data, doesn't need birth date)
-    urls.push(`https://ws.hubdodesenvolvedor.com.br/v2/cadastral-cpf/${cleanCpf}?token=${HUBDEV_API_KEY}`);
-    
-    // If birth date provided, also try the basic CPF endpoint
-    if (nascimento) {
-      // nascimento can be YYYY-MM-DD or DD/MM/YYYY
-      let formattedDate = nascimento;
-      if (nascimento.includes("-")) {
-        const [y, m, d] = nascimento.split("-");
-        formattedDate = `${d}/${m}/${y}`;
-      }
-      urls.push(`https://ws.hubdodesenvolvedor.com.br/v2/cpf/${cleanCpf}/${formattedDate}?token=${HUBDEV_API_KEY}`);
+    // Format birth date to DD/MM/YYYY if provided as YYYY-MM-DD
+    let formattedDate = nascimento || "";
+    if (nascimento && nascimento.includes("-")) {
+      const [y, m, d] = nascimento.split("-");
+      formattedDate = `${d}/${m}/${y}`;
     }
 
-    let result = null;
-    let lastError = "";
-
-    for (const url of urls) {
-      try {
-        const safeUrl = url.replace(HUBDEV_API_KEY, "***");
-        console.log(`Trying: ${safeUrl}`);
-        const response = await fetch(url);
-        const text = await response.text();
-        console.log(`Status: ${response.status}, Body: ${text.substring(0, 500)}`);
-
-        if (response.ok) {
-          try {
-            const data = JSON.parse(text);
-            // HubDev returns status:true on success, status:false on error
-            if (data && data.status === true && data.result) {
-              result = data.result;
-              break;
-            }
-            if (data && data.status === false) {
-              lastError = data.message || "CPF não encontrado";
-            }
-          } catch {
-            lastError = "Resposta inválida da API";
-          }
-        } else {
-          lastError = `HTTP ${response.status}`;
-        }
-      } catch (e) {
-        lastError = String(e);
-        console.error(`URL failed: ${e}`);
-      }
+    // HubDev API: GET /v2/cpf/?cpf=XXX&nascimento=DD/MM/YYYY&token=XXX
+    const params = new URLSearchParams({
+      cpf: cleanCpf,
+      token: HUBDEV_API_KEY,
+    });
+    if (formattedDate) {
+      params.set("nascimento", formattedDate);
     }
 
-    if (!result) {
+    const url = `https://ws.hubdodesenvolvedor.com.br/v2/cpf/?${params.toString()}`;
+    console.log(`Calling HubDev: /v2/cpf/?cpf=${cleanCpf}&nascimento=${formattedDate}&token=***`);
+
+    const response = await fetch(url);
+    const data = await response.json();
+    console.log(`Response: ${JSON.stringify(data).substring(0, 500)}`);
+
+    if (!data || data.status === false) {
       return new Response(
-        JSON.stringify({ error: lastError || "Não foi possível consultar o CPF" }),
+        JSON.stringify({ error: data?.message || "CPF não encontrado" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Normalize response from HubDev
+    // Normalize response
+    const r = data.result || data;
     const normalized = {
-      nome: result.nome_da_pf || result.nome || null,
-      nascimento: result.data_nascimento || result.nascimento || null,
-      situacao: result.situacao_cadastral || result.situacao || null,
-      genero: result.sexo || result.genero || null,
-      mae: result.nome_da_mae || result.mae || null,
-      telefone: result.telefone_fixo || result.telefone_celular || result.telefone || null,
-      celular: result.telefone_celular || null,
-      endereco: result.logradouro || result.endereco || null,
-      numero: result.numero || null,
-      complemento: result.complemento || null,
-      bairro: result.bairro || null,
-      cidade: result.municipio || result.cidade || null,
-      estado: result.uf || result.estado || null,
-      cep: result.cep || null,
+      nome: r.nome_da_pf || r.nome || null,
+      nascimento: r.data_nascimento || r.nascimento || null,
+      situacao: r.situacao_cadastral || r.situacao || null,
+      comprovante_emitido: r.comprovante_emitido || null,
+      digito_verificador: r.digito_verificador || null,
     };
 
     return new Response(JSON.stringify(normalized), {
