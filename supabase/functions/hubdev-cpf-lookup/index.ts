@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { cpf } = await req.json();
+    const { cpf, nascimento } = await req.json();
     if (!cpf || typeof cpf !== "string") {
       return new Response(
         JSON.stringify({ error: "CPF é obrigatório" }),
@@ -33,36 +33,53 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Try multiple URL patterns for HubDev API
-    const urls = [
-      `https://ws.hubdodesenvolvedor.com.br/v2/cpf/${cleanCpf}?token=${HUBDEV_API_KEY}`,
-      `https://ws.hubdodesenvolvedor.com.br/cpf/${cleanCpf}?token=${HUBDEV_API_KEY}`,
-    ];
+    // HubDev API URLs to try
+    // Basic CPF (requires birth date): /v2/cpf/{cpf}/{nascimento}
+    // Cadastral CPF (full data, no birth date needed): /v2/cadastral-cpf/{cpf}
+    const urls: string[] = [];
+    
+    // Try cadastral-cpf first (returns more data, doesn't need birth date)
+    urls.push(`https://ws.hubdodesenvolvedor.com.br/v2/cadastral-cpf/${cleanCpf}?token=${HUBDEV_API_KEY}`);
+    
+    // If birth date provided, also try the basic CPF endpoint
+    if (nascimento) {
+      // nascimento can be YYYY-MM-DD or DD/MM/YYYY
+      let formattedDate = nascimento;
+      if (nascimento.includes("-")) {
+        const [y, m, d] = nascimento.split("-");
+        formattedDate = `${d}/${m}/${y}`;
+      }
+      urls.push(`https://ws.hubdodesenvolvedor.com.br/v2/cpf/${cleanCpf}/${formattedDate}?token=${HUBDEV_API_KEY}`);
+    }
 
     let result = null;
     let lastError = "";
 
     for (const url of urls) {
       try {
-        console.log(`Trying URL: ${url.replace(HUBDEV_API_KEY, "***")}`);
+        const safeUrl = url.replace(HUBDEV_API_KEY, "***");
+        console.log(`Trying: ${safeUrl}`);
         const response = await fetch(url);
         const text = await response.text();
-        console.log(`Response status: ${response.status}, body: ${text.substring(0, 500)}`);
-        
+        console.log(`Status: ${response.status}, Body: ${text.substring(0, 500)}`);
+
         if (response.ok) {
-          const data = JSON.parse(text);
-          if (data && data.status !== false && !data.erro) {
-            result = data;
-            break;
+          try {
+            const data = JSON.parse(text);
+            // HubDev returns status:true on success, status:false on error
+            if (data && data.status === true && data.result) {
+              result = data.result;
+              break;
+            }
+            if (data && data.status === false) {
+              lastError = data.message || "CPF não encontrado";
+            }
+          } catch {
+            lastError = "Resposta inválida da API";
           }
-          if (data && (data.status === false || data.erro)) {
-            return new Response(
-              JSON.stringify({ error: data.message || data.erro || "CPF não encontrado na Receita Federal" }),
-              { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
-          }
+        } else {
+          lastError = `HTTP ${response.status}`;
         }
-        lastError = `HTTP ${response.status}: ${text.substring(0, 200)}`;
       } catch (e) {
         lastError = String(e);
         console.error(`URL failed: ${e}`);
@@ -71,25 +88,27 @@ Deno.serve(async (req) => {
 
     if (!result) {
       return new Response(
-        JSON.stringify({ error: "Não foi possível consultar o CPF", details: lastError }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: lastError || "Não foi possível consultar o CPF" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Normalize response - handle various HubDev response formats
-    const r = result.result || result;
+    // Normalize response from HubDev
     const normalized = {
-      nome: r.nome || r.nome_da_pf || null,
-      nascimento: r.nascimento || r.data_nascimento || null,
-      situacao: r.situacao || r.situacao_cadastral || null,
-      genero: r.genero || r.sexo || null,
-      mae: r.mae || r.nome_da_mae || null,
-      telefone: r.telefone || null,
-      endereco: r.endereco || r.logradouro || null,
-      bairro: r.bairro || null,
-      cidade: r.cidade || r.municipio || null,
-      estado: r.estado || r.uf || null,
-      cep: r.cep || null,
+      nome: result.nome_da_pf || result.nome || null,
+      nascimento: result.data_nascimento || result.nascimento || null,
+      situacao: result.situacao_cadastral || result.situacao || null,
+      genero: result.sexo || result.genero || null,
+      mae: result.nome_da_mae || result.mae || null,
+      telefone: result.telefone_fixo || result.telefone_celular || result.telefone || null,
+      celular: result.telefone_celular || null,
+      endereco: result.logradouro || result.endereco || null,
+      numero: result.numero || null,
+      complemento: result.complemento || null,
+      bairro: result.bairro || null,
+      cidade: result.municipio || result.cidade || null,
+      estado: result.uf || result.estado || null,
+      cep: result.cep || null,
     };
 
     return new Response(JSON.stringify(normalized), {
