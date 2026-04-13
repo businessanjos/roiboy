@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  Search, Plus, UsersRound, ArrowLeft, Briefcase, Filter, Eye,
+  Search, Plus, UsersRound, ArrowLeft, Briefcase, Filter, Eye, UserPlus,
 } from "lucide-react";
 
 const RH_ALLOWED_EMAIL = "m.quintana@me.com";
