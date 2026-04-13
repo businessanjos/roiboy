@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  Search, Plus, UsersRound, ArrowLeft, Briefcase, Filter, Eye,
+  Search, Plus, UsersRound, ArrowLeft, Briefcase, Filter, Eye, UserPlus,
 } from "lucide-react";
 
 const RH_ALLOWED_EMAIL = "m.quintana@me.com";
@@ -49,7 +49,7 @@ function getInitials(name: string) {
 export default function HRCollaborators() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
-  const { collaborators, loading, createCollaborator } = useHRCollaborators();
+  const { collaborators, loading, createCollaborator, importFromTeam } = useHRCollaborators();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -186,6 +186,7 @@ export default function HRCollaborators() {
                 <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Cargo</th>
                 <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Vínculo</th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                <th className="text-left p-3 font-medium text-muted-foreground hidden sm:table-cell">Origem</th>
                 <th className="text-right p-3 font-medium text-muted-foreground">Ações</th>
               </tr>
             </thead>
@@ -218,10 +219,35 @@ export default function HRCollaborators() {
                     <td className="p-3">
                       <Badge variant={st.variant} className="text-xs">{st.label}</Badge>
                     </td>
-                    <td className="p-3 text-right">
-                      <Button variant="ghost" size="icon" onClick={() => navigate(`/rh/collaborators/${c.id}`)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                    <td className="p-3 hidden sm:table-cell">
+                      <Badge variant={c.source === "team" ? "outline" : "secondary"} className="text-xs">
+                        {c.source === "team" ? "Equipe" : "RH"}
+                      </Badge>
+                    </td>
+                    <td className="p-3 text-right flex items-center justify-end gap-1">
+                      {c.source === "team" ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Importar para o RH"
+                          onClick={async () => {
+                            await importFromTeam(c.user_id!, {
+                              full_name: c.full_name,
+                              email: c.email,
+                              avatar_url: c.avatar_url,
+                              department: c.department,
+                              position: c.position,
+                              status: "active",
+                            });
+                          }}
+                        >
+                          <UserPlus className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button variant="ghost" size="icon" onClick={() => navigate(`/rh/collaborators/${c.id}`)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 );
