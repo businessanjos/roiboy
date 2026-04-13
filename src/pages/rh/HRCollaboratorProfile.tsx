@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -17,6 +17,7 @@ import {
 import {
   ArrowLeft, Save, User, Briefcase, Phone, Mail, MapPin, AlertTriangle,
   Calendar, FileText, Trash2, Clock, Gift, TrendingUp, CalendarDays,
+  CheckCircle2, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -82,7 +83,13 @@ export default function HRCollaboratorProfile() {
   const [collab, setCollab] = useState<HRCollaborator | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [form, setForm] = useState<Partial<HRCollaborator>>({});
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const formRef = useRef(form);
+  const initialLoad = useRef(true);
+
+  formRef.current = form;
 
   useEffect(() => {
     if (!id) return;
@@ -101,15 +108,40 @@ export default function HRCollaboratorProfile() {
       setCollab(data as HRCollaborator);
       setForm(data as HRCollaborator);
       setLoading(false);
+      setTimeout(() => { initialLoad.current = false; }, 100);
     })();
   }, [id]);
 
-  const handleSave = async () => {
-    if (!id || !form.full_name?.trim()) return;
+  const performSave = useCallback(async () => {
+    const currentForm = formRef.current;
+    if (!id || !currentForm.full_name?.trim()) return;
     setSaving(true);
-    const ok = await updateCollaborator(id, form);
+    const ok = await updateCollaborator(id, currentForm);
     setSaving(false);
-    if (ok) setCollab({ ...collab!, ...form } as HRCollaborator);
+    if (ok) {
+      setCollab(prev => ({ ...prev!, ...currentForm } as HRCollaborator));
+      setLastSaved(new Date());
+    }
+  }, [id, updateCollaborator]);
+
+  useEffect(() => {
+    if (initialLoad.current || loading) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => { performSave(); }, 2000);
+    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
+  }, [form, performSave, loading]);
+
+  useEffect(() => {
+    const onUnload = () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
+  }, []);
+
+  const handleSave = async () => {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    await performSave();
   };
 
   const handleDelete = async () => {
@@ -161,9 +193,21 @@ export default function HRCollaboratorProfile() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        <Button onClick={handleSave} disabled={saving}>
-          <Save className="h-4 w-4 mr-2" /> {saving ? "Salvando..." : "Salvar"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {saving && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground animate-pulse">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...
+            </span>
+          )}
+          {!saving && lastSaved && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> Salvo às {lastSaved.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
+          <Button onClick={handleSave} disabled={saving} size="sm">
+            <Save className="h-4 w-4 mr-2" /> Salvar
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
