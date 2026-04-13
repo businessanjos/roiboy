@@ -42,6 +42,34 @@ const EMPLOYMENT_TYPES: Record<string, string> = {
   clt: "CLT", pj: "PJ", intern: "Estágio", temporary: "Temporário", freelancer: "Freelancer",
 };
 
+const DEPARTMENT_OPTIONS = [
+  "Administrativo",
+  "Comercial",
+  "Financeiro",
+  "Jurídico",
+  "Marketing",
+  "Operações",
+  "Recursos Humanos",
+  "Tecnologia",
+  "Suporte",
+  "Diretoria",
+];
+
+function getSalaryLabel(employmentType?: string | null) {
+  return employmentType === "pj" ? "Fee mensal" : "Salário";
+}
+
+function formatBRL(value: number | null | undefined): string {
+  if (value == null || isNaN(value)) return "";
+  return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function parseBRL(formatted: string): number | null {
+  const cleaned = formatted.replace(/\./g, "").replace(",", ".");
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? null : num;
+}
+
 function getInitials(name: string) {
   return name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 }
