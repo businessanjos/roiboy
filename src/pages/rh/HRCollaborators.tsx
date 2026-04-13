@@ -70,11 +70,6 @@ export default function HRCollaborators() {
     salary: "",
     status: "active",
   });
-
-  if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
-    return <Navigate to="/" replace />;
-  }
-
   const departments = useMemo(() => {
     const depts = new Set(collaborators.map(c => c.department).filter(Boolean));
     return Array.from(depts).sort();
