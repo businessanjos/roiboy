@@ -216,13 +216,35 @@ export default function HRCollaborators() {
                         <Badge variant="outline" className="text-xs">{EMPLOYMENT_TYPES[c.employment_type] || c.employment_type}</Badge>
                       ) : "—"}
                     </td>
-                    <td className="p-3">
-                      <Badge variant={st.variant} className="text-xs">{st.label}</Badge>
+                    <td className="p-3 hidden sm:table-cell">
+                      <Badge variant={c.source === "team" ? "outline" : "secondary"} className="text-xs">
+                        {c.source === "team" ? "Equipe" : "RH"}
+                      </Badge>
                     </td>
-                    <td className="p-3 text-right">
-                      <Button variant="ghost" size="icon" onClick={() => navigate(`/rh/collaborators/${c.id}`)}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                    <td className="p-3 text-right flex items-center justify-end gap-1">
+                      {c.source === "team" ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Importar para o RH"
+                          onClick={async () => {
+                            await importFromTeam(c.user_id!, {
+                              full_name: c.full_name,
+                              email: c.email,
+                              avatar_url: c.avatar_url,
+                              department: c.department,
+                              position: c.position,
+                              status: "active",
+                            });
+                          }}
+                        >
+                          <UserPlus className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button variant="ghost" size="icon" onClick={() => navigate(`/rh/collaborators/${c.id}`)}>
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 );
