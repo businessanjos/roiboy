@@ -6197,6 +6197,75 @@ export type Database = {
           },
         ]
       }
+      hr_benefits: {
+        Row: {
+          account_id: string
+          benefit_type: string
+          card_number: string | null
+          collaborator_id: string
+          created_at: string
+          employee_contribution: number | null
+          end_date: string | null
+          id: string
+          notes: string | null
+          plan_name: string | null
+          provider: string | null
+          start_date: string | null
+          status: string
+          updated_at: string
+          value: number | null
+        }
+        Insert: {
+          account_id: string
+          benefit_type: string
+          card_number?: string | null
+          collaborator_id: string
+          created_at?: string
+          employee_contribution?: number | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          plan_name?: string | null
+          provider?: string | null
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+          value?: number | null
+        }
+        Update: {
+          account_id?: string
+          benefit_type?: string
+          card_number?: string | null
+          collaborator_id?: string
+          created_at?: string
+          employee_contribution?: number | null
+          end_date?: string | null
+          id?: string
+          notes?: string | null
+          plan_name?: string | null
+          provider?: string | null
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+          value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_benefits_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_benefits_collaborator_id_fkey"
+            columns: ["collaborator_id"]
+            isOneToOne: false
+            referencedRelation: "hr_collaborators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_collaborators: {
         Row: {
           account_id: string
@@ -6301,6 +6370,303 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_documents: {
+        Row: {
+          account_id: string
+          collaborator_id: string
+          created_at: string
+          description: string | null
+          document_type: string
+          expiry_date: string | null
+          file_name: string | null
+          file_size: number | null
+          file_url: string | null
+          id: string
+          issue_date: string | null
+          status: string
+          title: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          account_id: string
+          collaborator_id: string
+          created_at?: string
+          description?: string | null
+          document_type?: string
+          expiry_date?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          issue_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          collaborator_id?: string
+          created_at?: string
+          description?: string | null
+          document_type?: string
+          expiry_date?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          issue_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_documents_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_documents_collaborator_id_fkey"
+            columns: ["collaborator_id"]
+            isOneToOne: false
+            referencedRelation: "hr_collaborators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_documents_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_salary_history: {
+        Row: {
+          account_id: string
+          approved_by: string | null
+          change_type: string
+          collaborator_id: string
+          created_at: string
+          effective_date: string
+          id: string
+          new_department: string | null
+          new_position: string | null
+          new_salary: number | null
+          notes: string | null
+          previous_department: string | null
+          previous_position: string | null
+          previous_salary: number | null
+          reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          approved_by?: string | null
+          change_type?: string
+          collaborator_id: string
+          created_at?: string
+          effective_date: string
+          id?: string
+          new_department?: string | null
+          new_position?: string | null
+          new_salary?: number | null
+          notes?: string | null
+          previous_department?: string | null
+          previous_position?: string | null
+          previous_salary?: number | null
+          reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          approved_by?: string | null
+          change_type?: string
+          collaborator_id?: string
+          created_at?: string
+          effective_date?: string
+          id?: string
+          new_department?: string | null
+          new_position?: string | null
+          new_salary?: number | null
+          notes?: string | null
+          previous_department?: string | null
+          previous_position?: string | null
+          previous_salary?: number | null
+          reason?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_salary_history_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_salary_history_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_salary_history_collaborator_id_fkey"
+            columns: ["collaborator_id"]
+            isOneToOne: false
+            referencedRelation: "hr_collaborators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_time_records: {
+        Row: {
+          account_id: string
+          break_end: string | null
+          break_start: string | null
+          clock_in: string | null
+          clock_out: string | null
+          collaborator_id: string
+          created_at: string
+          id: string
+          justification: string | null
+          notes: string | null
+          overtime_hours: number | null
+          record_date: string
+          status: string
+          total_hours: number | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          break_end?: string | null
+          break_start?: string | null
+          clock_in?: string | null
+          clock_out?: string | null
+          collaborator_id: string
+          created_at?: string
+          id?: string
+          justification?: string | null
+          notes?: string | null
+          overtime_hours?: number | null
+          record_date: string
+          status?: string
+          total_hours?: number | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          break_end?: string | null
+          break_start?: string | null
+          clock_in?: string | null
+          clock_out?: string | null
+          collaborator_id?: string
+          created_at?: string
+          id?: string
+          justification?: string | null
+          notes?: string | null
+          overtime_hours?: number | null
+          record_date?: string
+          status?: string
+          total_hours?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_time_records_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_time_records_collaborator_id_fkey"
+            columns: ["collaborator_id"]
+            isOneToOne: false
+            referencedRelation: "hr_collaborators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_vacation_requests: {
+        Row: {
+          account_id: string
+          approved_at: string | null
+          approved_by: string | null
+          collaborator_id: string
+          created_at: string
+          days_count: number
+          end_date: string
+          id: string
+          notes: string | null
+          rejection_reason: string | null
+          request_type: string
+          start_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          approved_at?: string | null
+          approved_by?: string | null
+          collaborator_id: string
+          created_at?: string
+          days_count: number
+          end_date: string
+          id?: string
+          notes?: string | null
+          rejection_reason?: string | null
+          request_type?: string
+          start_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          collaborator_id?: string
+          created_at?: string
+          days_count?: number
+          end_date?: string
+          id?: string
+          notes?: string | null
+          rejection_reason?: string | null
+          request_type?: string
+          start_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_vacation_requests_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_vacation_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_vacation_requests_collaborator_id_fkey"
+            columns: ["collaborator_id"]
+            isOneToOne: false
+            referencedRelation: "hr_collaborators"
             referencedColumns: ["id"]
           },
         ]
