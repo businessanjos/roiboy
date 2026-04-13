@@ -186,6 +186,7 @@ export default function HRCollaborators() {
                 <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Cargo</th>
                 <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Vínculo</th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                <th className="text-left p-3 font-medium text-muted-foreground hidden sm:table-cell">Origem</th>
                 <th className="text-right p-3 font-medium text-muted-foreground">Ações</th>
               </tr>
             </thead>
