@@ -162,7 +162,7 @@ export default function HRCollaboratorProfile() {
     setCpfLooking(true);
     try {
       const { data, error } = await supabase.functions.invoke("hubdev-cpf-lookup", {
-        body: { cpf },
+        body: { cpf, nascimento: form.birth_date || undefined },
       });
       if (error || data?.error) {
         toast.error(data?.error || "Erro ao consultar CPF");
