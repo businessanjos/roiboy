@@ -254,7 +254,15 @@ export default function HRCollaboratorProfile() {
               <CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" /> Dados Profissionais</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div><Label>Departamento</Label><Input value={form.department || ""} onChange={e => setField("department", e.target.value)} /></div>
+              <div>
+                <Label>Departamento</Label>
+                <Select value={form.department || ""} onValueChange={v => setField("department", v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o departamento" /></SelectTrigger>
+                  <SelectContent>
+                    {DEPARTMENT_OPTIONS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div><Label>Cargo</Label><Input value={form.position || ""} onChange={e => setField("position", e.target.value)} /></div>
               <div><Label>Data de admissão</Label><Input type="date" value={form.hire_date || ""} onChange={e => setField("hire_date", e.target.value)} /></div>
               <div><Label>Data de desligamento</Label><Input type="date" value={form.termination_date || ""} onChange={e => setField("termination_date", e.target.value)} /></div>
@@ -265,7 +273,21 @@ export default function HRCollaboratorProfile() {
                   <SelectContent>{Object.entries(EMPLOYMENT_TYPES).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div><Label>Salário</Label><Input type="number" value={form.salary ?? ""} onChange={e => setField("salary", e.target.value ? parseFloat(e.target.value) : null)} /></div>
+              <div>
+                <Label>{getSalaryLabel(form.employment_type)}</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                  <Input
+                    className="pl-10"
+                    value={formatBRL(form.salary)}
+                    onChange={e => {
+                      const raw = e.target.value.replace(/[^\d.,]/g, "");
+                      setField("salary", parseBRL(raw));
+                    }}
+                    placeholder="0,00"
+                  />
+                </div>
+              </div>
               <div>
                 <Label>Status</Label>
                 <Select value={form.status || "active"} onValueChange={v => setField("status", v)}>
