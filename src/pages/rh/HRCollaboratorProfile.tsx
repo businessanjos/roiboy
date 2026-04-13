@@ -282,7 +282,23 @@ export default function HRCollaboratorProfile() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div><Label>Nome completo</Label><Input value={form.full_name || ""} onChange={e => setField("full_name", e.target.value)} /></div>
-              <div><Label>CPF</Label><Input value={form.cpf || ""} onChange={e => setField("cpf", e.target.value)} /></div>
+              <div>
+                <Label>CPF</Label>
+                <div className="flex gap-2">
+                  <Input value={form.cpf || ""} onChange={e => setField("cpf", e.target.value)} placeholder="000.000.000-00" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCpfLookup}
+                    disabled={cpfLooking}
+                    title="Consultar dados pelo CPF (HubDev)"
+                    className="shrink-0"
+                  >
+                    {cpfLooking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
               <div><Label>RG</Label><Input value={form.rg || ""} onChange={e => setField("rg", e.target.value)} /></div>
               <div><Label>Data de nascimento</Label><Input type="date" value={form.birth_date || ""} onChange={e => setField("birth_date", e.target.value)} /></div>
               <div>
