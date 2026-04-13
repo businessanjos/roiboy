@@ -3,8 +3,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const HUBDEV_BASE_URL = "https://ws.hubdodesenvolvedor.com.br/v2";
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -35,51 +33,63 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Try the full data endpoint first (cadastral-cpf), fallback to basic cpf
+    // Try multiple URL patterns for HubDev API
     const urls = [
-      `${HUBDEV_BASE_URL}/cpf/${cleanCpf}/?token=${HUBDEV_API_KEY}`,
+      `https://ws.hubdodesenvolvedor.com.br/v2/cpf/${cleanCpf}?token=${HUBDEV_API_KEY}`,
+      `https://ws.hubdodesenvolvedor.com.br/cpf/${cleanCpf}?token=${HUBDEV_API_KEY}`,
     ];
 
     let result = null;
+    let lastError = "";
+
     for (const url of urls) {
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.status !== false && !data.erro) {
-          result = data;
-          break;
+      try {
+        console.log(`Trying URL: ${url.replace(HUBDEV_API_KEY, "***")}`);
+        const response = await fetch(url);
+        const text = await response.text();
+        console.log(`Response status: ${response.status}, body: ${text.substring(0, 500)}`);
+        
+        if (response.ok) {
+          const data = JSON.parse(text);
+          if (data && data.status !== false && !data.erro) {
+            result = data;
+            break;
+          }
+          if (data && (data.status === false || data.erro)) {
+            return new Response(
+              JSON.stringify({ error: data.message || data.erro || "CPF não encontrado na Receita Federal" }),
+              { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
         }
-        // If status is false, treat as not found
-        if (data && (data.status === false || data.erro)) {
-          return new Response(
-            JSON.stringify({ error: data.message || data.erro || "CPF não encontrado na Receita Federal" }),
-            { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
+        lastError = `HTTP ${response.status}: ${text.substring(0, 200)}`;
+      } catch (e) {
+        lastError = String(e);
+        console.error(`URL failed: ${e}`);
       }
     }
 
     if (!result) {
       return new Response(
-        JSON.stringify({ error: "Não foi possível consultar o CPF" }),
+        JSON.stringify({ error: "Não foi possível consultar o CPF", details: lastError }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Normalize response
+    // Normalize response - handle various HubDev response formats
+    const r = result.result || result;
     const normalized = {
-      nome: result.nome || result.result?.nome_da_pf || null,
-      nascimento: result.nascimento || result.result?.data_nascimento || null,
-      situacao: result.situacao || result.result?.situacao_cadastral || null,
-      genero: result.genero || result.result?.sexo || null,
-      mae: result.mae || result.result?.nome_da_mae || null,
-      telefone: result.telefone || result.result?.telefone || null,
-      endereco: result.endereco || result.result?.endereco || null,
-      bairro: result.bairro || result.result?.bairro || null,
-      cidade: result.cidade || result.result?.municipio || null,
-      estado: result.estado || result.result?.uf || null,
-      cep: result.cep || result.result?.cep || null,
-      raw: result,
+      nome: r.nome || r.nome_da_pf || null,
+      nascimento: r.nascimento || r.data_nascimento || null,
+      situacao: r.situacao || r.situacao_cadastral || null,
+      genero: r.genero || r.sexo || null,
+      mae: r.mae || r.nome_da_mae || null,
+      telefone: r.telefone || null,
+      endereco: r.endereco || r.logradouro || null,
+      bairro: r.bairro || null,
+      cidade: r.cidade || r.municipio || null,
+      estado: r.estado || r.uf || null,
+      cep: r.cep || null,
     };
 
     return new Response(JSON.stringify(normalized), {
