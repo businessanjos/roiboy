@@ -193,9 +193,21 @@ export default function HRCollaboratorProfile() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        <Button onClick={handleSave} disabled={saving}>
-          <Save className="h-4 w-4 mr-2" /> {saving ? "Salvando..." : "Salvar"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {saving && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground animate-pulse">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...
+            </span>
+          )}
+          {!saving && lastSaved && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> Salvo às {lastSaved.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+            </span>
+          )}
+          <Button onClick={handleSave} disabled={saving} size="sm">
+            <Save className="h-4 w-4 mr-2" /> Salvar
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
