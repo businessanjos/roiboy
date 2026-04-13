@@ -6197,6 +6197,114 @@ export type Database = {
           },
         ]
       }
+      hr_collaborators: {
+        Row: {
+          account_id: string
+          address: string | null
+          avatar_url: string | null
+          birth_date: string | null
+          city: string | null
+          cpf: string | null
+          created_at: string
+          department: string | null
+          email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          employment_type: string | null
+          full_name: string
+          gender: string | null
+          hire_date: string | null
+          id: string
+          marital_status: string | null
+          notes: string | null
+          phone: string | null
+          position: string | null
+          rg: string | null
+          salary: number | null
+          state: string | null
+          status: string | null
+          termination_date: string | null
+          updated_at: string
+          user_id: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          account_id: string
+          address?: string | null
+          avatar_url?: string | null
+          birth_date?: string | null
+          city?: string | null
+          cpf?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employment_type?: string | null
+          full_name: string
+          gender?: string | null
+          hire_date?: string | null
+          id?: string
+          marital_status?: string | null
+          notes?: string | null
+          phone?: string | null
+          position?: string | null
+          rg?: string | null
+          salary?: number | null
+          state?: string | null
+          status?: string | null
+          termination_date?: string | null
+          updated_at?: string
+          user_id?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          account_id?: string
+          address?: string | null
+          avatar_url?: string | null
+          birth_date?: string | null
+          city?: string | null
+          cpf?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          employment_type?: string | null
+          full_name?: string
+          gender?: string | null
+          hire_date?: string | null
+          id?: string
+          marital_status?: string | null
+          notes?: string | null
+          phone?: string | null
+          position?: string | null
+          rg?: string | null
+          salary?: number | null
+          state?: string | null
+          status?: string | null
+          termination_date?: string | null
+          updated_at?: string
+          user_id?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_collaborators_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_collaborators_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insights_dashboard_shares: {
         Row: {
           account_id: string

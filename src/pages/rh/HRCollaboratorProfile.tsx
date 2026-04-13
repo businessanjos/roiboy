@@ -1,0 +1,326 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, Navigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useHRCollaborators, HRCollaborator } from "@/hooks/useHRCollaborators";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  ArrowLeft, Save, User, Briefcase, Phone, Mail, MapPin, AlertTriangle,
+  Calendar, CreditCard, FileText, Trash2,
+} from "lucide-react";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
+const RH_ALLOWED_EMAIL = "m.quintana@me.com";
+
+const STATUS_OPTIONS = [
+  { value: "active", label: "Ativo" },
+  { value: "inactive", label: "Inativo" },
+  { value: "vacation", label: "Férias" },
+  { value: "leave", label: "Afastado" },
+];
+
+const EMPLOYMENT_TYPES: Record<string, string> = {
+  clt: "CLT", pj: "PJ", intern: "Estágio", temporary: "Temporário", freelancer: "Freelancer",
+};
+
+function getInitials(name: string) {
+  return name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+}
+
+export default function HRCollaboratorProfile() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { currentUser } = useCurrentUser();
+  const { updateCollaborator, deleteCollaborator } = useHRCollaborators();
+  const [collab, setCollab] = useState<HRCollaborator | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<Partial<HRCollaborator>>({});
+
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from("hr_collaborators")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (error || !data) {
+        toast.error("Colaborador não encontrado");
+        navigate("/rh/collaborators");
+        return;
+      }
+      setCollab(data as HRCollaborator);
+      setForm(data as HRCollaborator);
+      setLoading(false);
+    })();
+  }, [id]);
+
+  const handleSave = async () => {
+    if (!id || !form.full_name?.trim()) return;
+    setSaving(true);
+    const ok = await updateCollaborator(id, form);
+    setSaving(false);
+    if (ok) setCollab({ ...collab!, ...form } as HRCollaborator);
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    const ok = await deleteCollaborator(id);
+    if (ok) navigate("/rh/collaborators");
+  };
+
+  const setField = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }));
+
+  if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (loading) return <div className="p-6 text-center text-muted-foreground">Carregando...</div>;
+  if (!collab) return null;
+
+  return (
+    <div className="p-6 max-w-4xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/rh/collaborators")}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <Avatar className="h-12 w-12">
+          <AvatarImage src={collab.avatar_url || undefined} />
+          <AvatarFallback className="bg-blue-500/10 text-blue-600 font-medium">
+            {getInitials(collab.full_name)}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1">
+          <h1 className="text-xl font-semibold text-foreground">{collab.full_name}</h1>
+          <p className="text-sm text-muted-foreground">{collab.position || "Sem cargo"} • {collab.department || "Sem departamento"}</p>
+        </div>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button variant="outline" size="sm" className="text-destructive border-destructive/30">
+              <Trash2 className="h-4 w-4 mr-1" /> Excluir
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir colaborador?</AlertDialogTitle>
+              <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <Button onClick={handleSave} disabled={saving}>
+          <Save className="h-4 w-4 mr-2" /> {saving ? "Salvando..." : "Salvar"}
+        </Button>
+      </div>
+
+      {/* Dados Pessoais */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <User className="h-4 w-4" /> Dados Pessoais
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Nome completo</Label>
+            <Input value={form.full_name || ""} onChange={e => setField("full_name", e.target.value)} />
+          </div>
+          <div>
+            <Label>CPF</Label>
+            <Input value={form.cpf || ""} onChange={e => setField("cpf", e.target.value)} />
+          </div>
+          <div>
+            <Label>RG</Label>
+            <Input value={form.rg || ""} onChange={e => setField("rg", e.target.value)} />
+          </div>
+          <div>
+            <Label>Data de nascimento</Label>
+            <Input type="date" value={form.birth_date || ""} onChange={e => setField("birth_date", e.target.value)} />
+          </div>
+          <div>
+            <Label>Gênero</Label>
+            <Select value={form.gender || ""} onValueChange={v => setField("gender", v)}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Masculino</SelectItem>
+                <SelectItem value="female">Feminino</SelectItem>
+                <SelectItem value="other">Outro</SelectItem>
+                <SelectItem value="prefer_not_say">Prefiro não informar</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Estado civil</Label>
+            <Select value={form.marital_status || ""} onValueChange={v => setField("marital_status", v)}>
+              <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single">Solteiro(a)</SelectItem>
+                <SelectItem value="married">Casado(a)</SelectItem>
+                <SelectItem value="divorced">Divorciado(a)</SelectItem>
+                <SelectItem value="widowed">Viúvo(a)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Contato */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Phone className="h-4 w-4" /> Contato
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Email</Label>
+            <Input value={form.email || ""} onChange={e => setField("email", e.target.value)} />
+          </div>
+          <div>
+            <Label>Telefone</Label>
+            <Input value={form.phone || ""} onChange={e => setField("phone", e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Endereço */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <MapPin className="h-4 w-4" /> Endereço
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="col-span-2">
+            <Label>Endereço</Label>
+            <Input value={form.address || ""} onChange={e => setField("address", e.target.value)} />
+          </div>
+          <div>
+            <Label>Cidade</Label>
+            <Input value={form.city || ""} onChange={e => setField("city", e.target.value)} />
+          </div>
+          <div>
+            <Label>Estado</Label>
+            <Input value={form.state || ""} onChange={e => setField("state", e.target.value)} />
+          </div>
+          <div>
+            <Label>CEP</Label>
+            <Input value={form.zip_code || ""} onChange={e => setField("zip_code", e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Dados Profissionais */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Briefcase className="h-4 w-4" /> Dados Profissionais
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Departamento</Label>
+            <Input value={form.department || ""} onChange={e => setField("department", e.target.value)} />
+          </div>
+          <div>
+            <Label>Cargo</Label>
+            <Input value={form.position || ""} onChange={e => setField("position", e.target.value)} />
+          </div>
+          <div>
+            <Label>Data de admissão</Label>
+            <Input type="date" value={form.hire_date || ""} onChange={e => setField("hire_date", e.target.value)} />
+          </div>
+          <div>
+            <Label>Data de desligamento</Label>
+            <Input type="date" value={form.termination_date || ""} onChange={e => setField("termination_date", e.target.value)} />
+          </div>
+          <div>
+            <Label>Vínculo</Label>
+            <Select value={form.employment_type || "clt"} onValueChange={v => setField("employment_type", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {Object.entries(EMPLOYMENT_TYPES).map(([k, v]) => (
+                  <SelectItem key={k} value={k}>{v}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Salário</Label>
+            <Input type="number" value={form.salary ?? ""} onChange={e => setField("salary", e.target.value ? parseFloat(e.target.value) : null)} />
+          </div>
+          <div>
+            <Label>Status</Label>
+            <Select value={form.status || "active"} onValueChange={v => setField("status", v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {STATUS_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Contato de Emergência */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" /> Contato de Emergência
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Nome</Label>
+            <Input value={form.emergency_contact_name || ""} onChange={e => setField("emergency_contact_name", e.target.value)} />
+          </div>
+          <div>
+            <Label>Telefone</Label>
+            <Input value={form.emergency_contact_phone || ""} onChange={e => setField("emergency_contact_phone", e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Observações */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="h-4 w-4" /> Observações
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Textarea rows={4} value={form.notes || ""} onChange={e => setField("notes", e.target.value)} placeholder="Anotações sobre o colaborador..." />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
