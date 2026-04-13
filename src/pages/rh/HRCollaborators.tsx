@@ -49,7 +49,7 @@ function getInitials(name: string) {
 export default function HRCollaborators() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
-  const { collaborators, loading, createCollaborator } = useHRCollaborators();
+  const { collaborators, loading, createCollaborator, importFromTeam } = useHRCollaborators();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
