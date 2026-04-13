@@ -107,6 +107,10 @@ export default function HRCollaborators() {
     }
   };
 
+  if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
+    return <Navigate to="/" replace />;
+  }
+
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       {/* Header */}
