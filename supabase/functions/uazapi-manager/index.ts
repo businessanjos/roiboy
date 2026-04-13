@@ -525,11 +525,20 @@ serve(async (req) => {
       const linkedNames = new Set((existingInts || []).map((i: any) => i.config?.instance_name).filter(Boolean));
       const linkedMap = new Map((existingInts || []).map((i: any) => [i.config?.instance_name, i]));
       
-      // Filter: instances that belong to this account (roy-prefix), SDR instances, or explicitly linked
+      // Filter: instances that belong to this account (roy-prefix), SDR instances, explicitly linked,
+      // or custom-named instances (e.g. [CANAL], [COMERCIAL]) that don't belong to other accounts
       const accountPrefix = `roy-${accountId.slice(0,8)}`;
+      const otherAccountPattern = /^roy-[a-f0-9]{8}/;
       const filtered = all.filter((i) => {
         const name = getInstanceName(i);
-        return !!name && (name.startsWith(accountPrefix) || name.startsWith("sdr-") || linkedNames.has(name));
+        if (!name) return false;
+        // Include if: matches this account prefix, is SDR, is already linked, or is a custom-named instance
+        // Exclude only instances that clearly belong to OTHER accounts (roy-{otherPrefix})
+        if (name.startsWith(accountPrefix) || name.startsWith("sdr-") || linkedNames.has(name)) return true;
+        // If it starts with roy- but not our prefix, it belongs to another account
+        if (otherAccountPattern.test(name) && !name.startsWith(accountPrefix)) return false;
+        // Otherwise include it (custom-named instances like [CANAL], [COMERCIAL], etc.)
+        return true;
       });
       
       result = { instances: filtered.map(i => {
