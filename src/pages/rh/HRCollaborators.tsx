@@ -216,6 +216,9 @@ export default function HRCollaborators() {
                         <Badge variant="outline" className="text-xs">{EMPLOYMENT_TYPES[c.employment_type] || c.employment_type}</Badge>
                       ) : "—"}
                     </td>
+                    <td className="p-3">
+                      <Badge variant={st.variant} className="text-xs">{st.label}</Badge>
+                    </td>
                     <td className="p-3 hidden sm:table-cell">
                       <Badge variant={c.source === "team" ? "outline" : "secondary"} className="text-xs">
                         {c.source === "team" ? "Equipe" : "RH"}
