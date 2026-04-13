@@ -83,7 +83,13 @@ export default function HRCollaboratorProfile() {
   const [collab, setCollab] = useState<HRCollaborator | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [form, setForm] = useState<Partial<HRCollaborator>>({});
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const formRef = useRef(form);
+  const initialLoad = useRef(true);
+
+  formRef.current = form;
 
   useEffect(() => {
     if (!id) return;
@@ -102,15 +108,40 @@ export default function HRCollaboratorProfile() {
       setCollab(data as HRCollaborator);
       setForm(data as HRCollaborator);
       setLoading(false);
+      setTimeout(() => { initialLoad.current = false; }, 100);
     })();
   }, [id]);
 
-  const handleSave = async () => {
-    if (!id || !form.full_name?.trim()) return;
+  const performSave = useCallback(async () => {
+    const currentForm = formRef.current;
+    if (!id || !currentForm.full_name?.trim()) return;
     setSaving(true);
-    const ok = await updateCollaborator(id, form);
+    const ok = await updateCollaborator(id, currentForm);
     setSaving(false);
-    if (ok) setCollab({ ...collab!, ...form } as HRCollaborator);
+    if (ok) {
+      setCollab(prev => ({ ...prev!, ...currentForm } as HRCollaborator));
+      setLastSaved(new Date());
+    }
+  }, [id, updateCollaborator]);
+
+  useEffect(() => {
+    if (initialLoad.current || loading) return;
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => { performSave(); }, 2000);
+    return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
+  }, [form, performSave, loading]);
+
+  useEffect(() => {
+    const onUnload = () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
+  }, []);
+
+  const handleSave = async () => {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    await performSave();
   };
 
   const handleDelete = async () => {
