@@ -153,6 +153,46 @@ export default function HRCollaboratorProfile() {
 
   const setField = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }));
 
+  const handleCpfLookup = async () => {
+    const cpf = form.cpf?.replace(/\D/g, "");
+    if (!cpf || cpf.length !== 11) {
+      toast.error("Informe um CPF válido com 11 dígitos");
+      return;
+    }
+    setCpfLooking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("hubdev-cpf-lookup", {
+        body: { cpf },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || "Erro ao consultar CPF");
+        setCpfLooking(false);
+        return;
+      }
+      const updates: Partial<HRCollaborator> = {};
+      if (data.nome) updates.full_name = data.nome;
+      if (data.nascimento) {
+        // Format DD/MM/YYYY to YYYY-MM-DD
+        const parts = data.nascimento.split("/");
+        if (parts.length === 3) {
+          updates.birth_date = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+      }
+      if (data.telefone) updates.phone = data.telefone;
+      if (data.endereco) updates.address = data.endereco;
+      if (data.bairro && data.endereco) updates.address = `${data.endereco}, ${data.bairro}`;
+      if (data.cidade) updates.city = data.cidade;
+      if (data.estado) updates.state = data.estado;
+      if (data.cep) updates.zip_code = data.cep;
+
+      setForm(f => ({ ...f, ...updates }));
+      toast.success("Dados do CPF preenchidos com sucesso!");
+    } catch (err) {
+      toast.error("Erro ao consultar CPF");
+    }
+    setCpfLooking(false);
+  };
+
   if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
     return <Navigate to="/" replace />;
   }
