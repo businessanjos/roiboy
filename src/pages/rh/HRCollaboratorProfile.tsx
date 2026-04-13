@@ -61,10 +61,6 @@ export default function HRCollaboratorProfile() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Partial<HRCollaborator>>({});
 
-  if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
-    return <Navigate to="/" replace />;
-  }
-
   useEffect(() => {
     if (!id) return;
     (async () => {
@@ -100,6 +96,10 @@ export default function HRCollaboratorProfile() {
   };
 
   const setField = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }));
+
+  if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
+    return <Navigate to="/" replace />;
+  }
 
   if (loading) return <div className="p-6 text-center text-muted-foreground">Carregando...</div>;
   if (!collab) return null;
