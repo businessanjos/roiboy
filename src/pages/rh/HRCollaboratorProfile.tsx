@@ -17,7 +17,7 @@ import {
 import {
   ArrowLeft, Save, User, Briefcase, Phone, Mail, MapPin, AlertTriangle,
   Calendar, FileText, Trash2, Clock, Gift, TrendingUp, CalendarDays,
-  CheckCircle2, Loader2,
+  CheckCircle2, Loader2, Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -85,6 +85,7 @@ export default function HRCollaboratorProfile() {
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [form, setForm] = useState<Partial<HRCollaborator>>({});
+  const [cpfLooking, setCpfLooking] = useState(false);
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
   const initialLoad = useRef(true);
@@ -151,6 +152,46 @@ export default function HRCollaboratorProfile() {
   };
 
   const setField = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }));
+
+  const handleCpfLookup = async () => {
+    const cpf = form.cpf?.replace(/\D/g, "");
+    if (!cpf || cpf.length !== 11) {
+      toast.error("Informe um CPF válido com 11 dígitos");
+      return;
+    }
+    setCpfLooking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("hubdev-cpf-lookup", {
+        body: { cpf, nascimento: form.birth_date || undefined },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || "Erro ao consultar CPF");
+        setCpfLooking(false);
+        return;
+      }
+      const updates: Partial<HRCollaborator> = {};
+      if (data.nome) updates.full_name = data.nome;
+      if (data.nascimento) {
+        // Format DD/MM/YYYY to YYYY-MM-DD
+        const parts = data.nascimento.split("/");
+        if (parts.length === 3) {
+          updates.birth_date = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        }
+      }
+      if (data.telefone) updates.phone = data.telefone;
+      if (data.endereco) updates.address = data.endereco;
+      if (data.bairro && data.endereco) updates.address = `${data.endereco}, ${data.bairro}`;
+      if (data.cidade) updates.city = data.cidade;
+      if (data.estado) updates.state = data.estado;
+      if (data.cep) updates.zip_code = data.cep;
+
+      setForm(f => ({ ...f, ...updates }));
+      toast.success("Dados do CPF preenchidos com sucesso!");
+    } catch (err) {
+      toast.error("Erro ao consultar CPF");
+    }
+    setCpfLooking(false);
+  };
 
   if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
     return <Navigate to="/" replace />;
@@ -241,7 +282,23 @@ export default function HRCollaboratorProfile() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div><Label>Nome completo</Label><Input value={form.full_name || ""} onChange={e => setField("full_name", e.target.value)} /></div>
-              <div><Label>CPF</Label><Input value={form.cpf || ""} onChange={e => setField("cpf", e.target.value)} /></div>
+              <div>
+                <Label>CPF</Label>
+                <div className="flex gap-2">
+                  <Input value={form.cpf || ""} onChange={e => setField("cpf", e.target.value)} placeholder="000.000.000-00" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCpfLookup}
+                    disabled={cpfLooking}
+                    title="Consultar dados pelo CPF (HubDev)"
+                    className="shrink-0"
+                  >
+                    {cpfLooking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                  </Button>
+                </div>
+              </div>
               <div><Label>RG</Label><Input value={form.rg || ""} onChange={e => setField("rg", e.target.value)} /></div>
               <div><Label>Data de nascimento</Label><Input type="date" value={form.birth_date || ""} onChange={e => setField("birth_date", e.target.value)} /></div>
               <div>
