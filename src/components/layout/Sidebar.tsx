@@ -291,7 +291,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {filteredNavItems.map((item, idx) => {
-          const isActive = location.pathname === item.to || (item.to !== "/" && !item.to.endsWith("/") && item.to.split("/").length > 2 && location.pathname.startsWith(item.to + "/"));
+          const segmentCount = item.to.split("/").filter(Boolean).length;
+          const isActive = location.pathname === item.to || (item.to !== "/" && segmentCount >= 2 && location.pathname.startsWith(item.to + "/"));
           const isHighlighted = item.to === "/sales-team";
           const showGroupHeader = item.group && !collapsed;
           return (
