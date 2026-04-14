@@ -143,7 +143,7 @@ export default function CandidateKanbanBoard({ jobId, jobTitle = "Vaga" }: { job
           </DndContext>
         </CardContent>
       </Card>
-      <CandidateDrawer open={drawerState.open} onOpenChange={o => setDrawerState({ ...drawerState, open: o })} candidate={drawerState.candidate} />
+      <CandidateDetailDrawer open={drawerState.open} onOpenChange={o => setDrawerState({ ...drawerState, open: o })} candidate={drawerState.candidate} jobId={jobId} />
     </>
   );
 }
