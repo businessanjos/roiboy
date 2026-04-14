@@ -140,33 +140,60 @@ serve(async (req) => {
         }))
         .filter((m) => m.value_text !== null);
 
-      // Auto-set MQL based on revenue_range using smart label analysis
+      // Auto-set MQL based on product-level criteria or fallback to global logic
       const MQL_FIELD_ID = "e4270e93-e9b9-4d9b-9589-d614ce335bcd";
       const FATURAMENTO_FIELD_ID = "e352a1ca-cfbc-435a-95f7-2f53b5cac041";
       const rawRevenue = payload.revenue_range?.trim() || "";
+
       if (rawRevenue) {
         const normalizedRaw = normalize(rawRevenue);
 
-        // Try to resolve the label from option definitions
+        // Resolve faturamento option
         const faturamentoField = customFields?.find((f: any) => f.id === FATURAMENTO_FIELD_ID);
         const matchedOption = (faturamentoField?.options as any[])?.find(
           (opt: any) => normalize(opt.label) === normalizedRaw || opt.value === rawRevenue
         );
-        // Use the option label if resolved, otherwise use the raw text itself
+        const resolvedFatValue = matchedOption?.value || rawRevenue;
         const labelToAnalyze = matchedOption ? normalize(matchedOption.label) : normalizedRaw;
 
-        // Smart detection: parse numeric values from the label
-        const isBelow30k = (() => {
-          // "abaixo de X" where X <= 30
-          const abaixoMatch = labelToAnalyze.match(/abaixo\s+de\s+(\d+)/);
-          if (abaixoMatch && parseInt(abaixoMatch[1]) <= 30) return true;
-          // "entre X e Y" where Y <= 30
-          const entreMatch = labelToAnalyze.match(/entre\s+(\d+)\s+e\s+(\d+)/);
-          if (entreMatch && parseInt(entreMatch[2]) <= 30) return true;
-          return false;
-        })();
+        // Try product-level MQL criteria first
+        const { data: productsWithCriteria } = await supabase
+          .from("products")
+          .select("id, name, mql_criteria")
+          .eq("account_id", accountId)
+          .eq("is_active", true)
+          .not("mql_criteria", "is", null);
 
-        const mqlValue = isBelow30k ? "opt_2" : "opt_1";
+        let mqlDetermined = false;
+        let mqlValue = "opt_1"; // default SIM
+
+        if (productsWithCriteria && productsWithCriteria.length > 0) {
+          // Check if the lead's revenue matches ANY product's criteria
+          const matchesAnyProduct = productsWithCriteria.some((prod: any) => {
+            const criteria = prod.mql_criteria;
+            if (!criteria || !criteria.revenue_ranges || criteria.revenue_ranges.length === 0) return false;
+            
+            // Map the resolved faturamento value to our revenue range keys
+            const revenueKey = resolveRevenueKey(labelToAnalyze, resolvedFatValue);
+            return criteria.revenue_ranges.includes(revenueKey);
+          });
+
+          mqlValue = matchesAnyProduct ? "opt_1" : "opt_2";
+          mqlDetermined = true;
+        }
+
+        // Fallback: global logic if no products have criteria configured
+        if (!mqlDetermined) {
+          const isBelow30k = (() => {
+            const abaixoMatch = labelToAnalyze.match(/abaixo\s+de\s+(\d+)/);
+            if (abaixoMatch && parseInt(abaixoMatch[1]) <= 30) return true;
+            const entreMatch = labelToAnalyze.match(/entre\s+(\d+)\s+e\s+(\d+)/);
+            if (entreMatch && parseInt(entreMatch[2]) <= 30) return true;
+            return false;
+          })();
+          mqlValue = isBelow30k ? "opt_2" : "opt_1";
+        }
+
         const existingMql = fieldInserts.findIndex((f) => f.field_id === MQL_FIELD_ID);
         if (existingMql >= 0) {
           fieldInserts[existingMql].value_text = mqlValue;
