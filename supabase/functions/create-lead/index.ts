@@ -217,14 +217,54 @@ serve(async (req) => {
         let mqlValue = "opt_1"; // default SIM
 
         if (productsWithCriteria && productsWithCriteria.length > 0) {
-          // Check if the lead's revenue matches ANY product's criteria
+          const leadSegment = payload.segment?.trim() || "";
+          const leadSpecialty = payload.specialty?.trim() || "";
+          const normalizedLeadSegment = leadSegment ? normalize(leadSegment) : "";
+          const normalizedLeadSpecialty = leadSpecialty ? normalize(leadSpecialty) : "";
+
+          // Known segments (anything not in this list is "Outros")
+          const KNOWN_SEGMENTS = [
+            "clinica de estetica",
+            "esteticista autonoma",
+            "biomedica",
+            "medico",
+            "dentista",
+          ];
+
+          const resolvedLeadSegment = normalizedLeadSegment
+            ? (KNOWN_SEGMENTS.includes(normalizedLeadSegment) ? normalizedLeadSegment : "outros")
+            : "";
+
           const matchesAnyProduct = productsWithCriteria.some((prod: any) => {
             const criteria = prod.mql_criteria;
-            if (!criteria || !criteria.revenue_ranges || criteria.revenue_ranges.length === 0) return false;
-            
-            // Map the resolved faturamento value to our revenue range keys
-            const revenueKey = resolveRevenueKey(labelToAnalyze, resolvedFatValue);
-            return criteria.revenue_ranges.includes(revenueKey);
+            if (!criteria) return false;
+
+            // 1. Revenue check (mandatory if criteria has revenue_ranges)
+            const hasRevenueCriteria = criteria.revenue_ranges && criteria.revenue_ranges.length > 0;
+            let revenueMatches = true;
+            if (hasRevenueCriteria) {
+              const revenueKey = resolveRevenueKey(labelToAnalyze, resolvedFatValue);
+              revenueMatches = criteria.revenue_ranges.includes(revenueKey);
+            }
+            if (!revenueMatches) return false;
+
+            // 2. Segment check (optional - if criteria has segments, lead must match one)
+            const hasSegmentCriteria = criteria.segments && criteria.segments.length > 0;
+            if (hasSegmentCriteria && resolvedLeadSegment) {
+              const normalizedCriteriaSegments = criteria.segments.map((s: string) => normalize(s));
+              const segmentMatches = normalizedCriteriaSegments.includes(resolvedLeadSegment);
+              if (!segmentMatches) return false;
+            }
+
+            // 3. Specialty check (optional - only relevant for "Médico" segment)
+            const hasSpecialtyCriteria = criteria.specialties && criteria.specialties.length > 0;
+            if (hasSpecialtyCriteria && normalizedLeadSpecialty && normalizedLeadSegment === "medico") {
+              const normalizedCriteriaSpecialties = criteria.specialties.map((s: string) => normalize(s));
+              const specialtyMatches = normalizedCriteriaSpecialties.includes(normalizedLeadSpecialty);
+              if (!specialtyMatches) return false;
+            }
+
+            return true;
           });
 
           mqlValue = matchesAnyProduct ? "opt_1" : "opt_2";
