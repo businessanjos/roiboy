@@ -1093,6 +1093,11 @@ export default function Products() {
                   {!product.is_active && (
                     <Badge variant="destructive">Inativo</Badge>
                   )}
+                  {product.mql_criteria && product.mql_criteria.revenue_ranges?.length > 0 && (
+                    <Badge variant="outline" className="gap-1 text-emerald-600 border-emerald-300">
+                      MQL Configurado
+                    </Badge>
+                  )}
                 </div>
                 {product.installment_price > 0 && (
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
