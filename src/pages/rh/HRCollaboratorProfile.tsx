@@ -57,7 +57,9 @@ const DEPARTMENT_OPTIONS = [
 ];
 
 function getSalaryLabel(employmentType?: string | null) {
-  return employmentType === "pj" ? "Fee mensal" : "Salário";
+  if (employmentType === "pj") return "Fee mensal";
+  if (employmentType === "socio") return "Pró-labore";
+  return "Salário";
 }
 
 function formatBRL(value: number | null | undefined): string {
