@@ -16,7 +16,7 @@ import { JobStepProcess } from "@/components/rh/jobs/JobStepProcess";
 import { JobStepReview } from "@/components/rh/jobs/JobStepReview";
 import { useCreateHRJob, useUpdateHRJob, useHRJobById } from "@/hooks/useHRJobs";
 import { JOB_WIZARD_STEPS } from "@/constants/jobOptions";
-import { DEFAULT_JOB_FORM_DATA, type JobFormData } from "@/types/job";
+import { DEFAULT_JOB_FORM_DATA, type JobFormData, type JobSeniority, type EducationLevel } from "@/types/job";
 
 const formSchema = z.object({
   title: z.string().min(1, "Título é obrigatório"),
