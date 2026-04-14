@@ -20,6 +20,7 @@ export interface HRCollaborator {
   state: string | null;
   zip_code: string | null;
   department: string | null;
+  hr_department_id: string | null;
   position: string | null;
   hire_date: string | null;
   termination_date: string | null;
