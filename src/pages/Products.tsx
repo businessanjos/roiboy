@@ -425,10 +425,10 @@ export default function Products() {
             </DialogHeader>
 
             <Tabs defaultValue="general" className="w-full">
-              <TabsList className="w-full grid grid-cols-3">
+              <TabsList className={`w-full grid ${isRenewal ? 'grid-cols-2' : 'grid-cols-3'}`}>
                 <TabsTrigger value="general">Geral</TabsTrigger>
                 <TabsTrigger value="deliverables">Entregas</TabsTrigger>
-                <TabsTrigger value="mql">Qualificação MQL</TabsTrigger>
+                {!isRenewal && <TabsTrigger value="mql">Qualificação MQL</TabsTrigger>}
               </TabsList>
 
               <TabsContent value="general" className="space-y-5 pt-2">
@@ -856,7 +856,7 @@ export default function Products() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="mql" className="space-y-4 pt-2">
+              {!isRenewal && <TabsContent value="mql" className="space-y-4 pt-2">
                 <p className="text-sm text-muted-foreground">
                   Defina os critérios para que um lead seja considerado MQL (Marketing Qualified Lead) para este produto.
                   O faturamento é obrigatório; segmentos e especialidades são filtros adicionais.
@@ -986,7 +986,7 @@ export default function Products() {
                     )}
                   </div>
                 )}
-              </TabsContent>
+              </TabsContent>}
             </Tabs>
 
             <DialogFooter>
