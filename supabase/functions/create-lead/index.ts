@@ -45,10 +45,12 @@ function resolveRevenueKey(label: string, optionValue: string): string {
     return "abaixo_20k";
   }
 
-  const entre = label.match(/entre\s+(\d+)\s+e\s+(\d+)/);
+  const entre = label.match(/entre\s+(\d+)[\s\w]*e\s+(\d+)/);
   if (entre) {
-    const low = parseInt(entre[1]);
-    const high = parseInt(entre[2]);
+    let low = parseInt(entre[1]);
+    let high = parseInt(entre[2]);
+    // Handle "entre 500 e 1" (meaning 500k to 1M) — if high < low, high is in millions
+    if (high < low) high = high * 1000;
     if (high <= 30) return "20k_30k";
     if (high <= 50) return "30k_50k";
     if (high <= 100) return "50k_100k";
