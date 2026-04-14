@@ -143,17 +143,24 @@ serve(async (req) => {
       // Auto-set MQL based on revenue_range
       const MQL_FIELD_ID = "e4270e93-e9b9-4d9b-9589-d614ce335bcd";
       const FATURAMENTO_FIELD_ID = "e352a1ca-cfbc-435a-95f7-2f53b5cac041";
-      const faturamentoEntry = fieldInserts.find((f) => f.field_id === FATURAMENTO_FIELD_ID);
-      if (faturamentoEntry) {
-        const BELOW_30K_VALUES = ["abaixo_20k", "opt_1767729831203"];
-        const rawInput = payload.revenue_range?.trim() || "";
-        const normalizedInput = normalize(rawInput);
+      const rawRevenue = payload.revenue_range?.trim() || "";
+      if (rawRevenue) {
+        const BELOW_30K_OPTION_VALUES = ["abaixo_20k", "opt_1767729831203"];
+        const BELOW_30K_LABEL_PATTERNS = ["abaixo de 20", "entre 20 e 30"];
+        const normalizedRaw = normalize(rawRevenue);
+
+        // Try to resolve via option value first
         const faturamentoField = customFields?.find((f: any) => f.id === FATURAMENTO_FIELD_ID);
         const matchedOption = (faturamentoField?.options as any[])?.find(
-          (opt: any) => normalize(opt.label) === normalizedInput
+          (opt: any) => normalize(opt.label) === normalizedRaw
         );
-        const resolvedFatValue = matchedOption ? matchedOption.value : faturamentoEntry.value_text;
-        const mqlValue = BELOW_30K_VALUES.includes(resolvedFatValue || "") ? "opt_2" : "opt_1";
+        const resolvedValue = matchedOption ? matchedOption.value : null;
+
+        const isBelow30k = resolvedValue
+          ? BELOW_30K_OPTION_VALUES.includes(resolvedValue)
+          : BELOW_30K_LABEL_PATTERNS.some((p) => normalizedRaw.includes(p));
+
+        const mqlValue = isBelow30k ? "opt_2" : "opt_1";
         const existingMql = fieldInserts.findIndex((f) => f.field_id === MQL_FIELD_ID);
         if (existingMql >= 0) {
           fieldInserts[existingMql].value_text = mqlValue;
