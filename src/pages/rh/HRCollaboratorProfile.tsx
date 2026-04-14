@@ -119,7 +119,7 @@ export default function HRCollaboratorProfile() {
     const currentForm = formRef.current;
     if (!id || !currentForm.full_name?.trim()) return;
     setSaving(true);
-    const ok = await updateCollaborator(id, currentForm);
+    const ok = await updateCollaborator(id, currentForm, true);
     setSaving(false);
     if (ok) {
       setCollab(prev => ({ ...prev!, ...currentForm } as HRCollaborator));
