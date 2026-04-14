@@ -140,25 +140,31 @@ serve(async (req) => {
         }))
         .filter((m) => m.value_text !== null);
 
-      // Auto-set MQL based on revenue_range
+      // Auto-set MQL based on revenue_range using smart label analysis
       const MQL_FIELD_ID = "e4270e93-e9b9-4d9b-9589-d614ce335bcd";
       const FATURAMENTO_FIELD_ID = "e352a1ca-cfbc-435a-95f7-2f53b5cac041";
       const rawRevenue = payload.revenue_range?.trim() || "";
       if (rawRevenue) {
-        const BELOW_30K_OPTION_VALUES = ["abaixo_20k", "opt_1767729831203"];
-        const BELOW_30K_LABEL_PATTERNS = ["abaixo de 20", "entre 20 e 30"];
         const normalizedRaw = normalize(rawRevenue);
 
-        // Try to resolve via option value first
+        // Try to resolve the label from option definitions
         const faturamentoField = customFields?.find((f: any) => f.id === FATURAMENTO_FIELD_ID);
         const matchedOption = (faturamentoField?.options as any[])?.find(
-          (opt: any) => normalize(opt.label) === normalizedRaw
+          (opt: any) => normalize(opt.label) === normalizedRaw || opt.value === rawRevenue
         );
-        const resolvedValue = matchedOption ? matchedOption.value : null;
+        // Use the option label if resolved, otherwise use the raw text itself
+        const labelToAnalyze = matchedOption ? normalize(matchedOption.label) : normalizedRaw;
 
-        const isBelow30k = resolvedValue
-          ? BELOW_30K_OPTION_VALUES.includes(resolvedValue)
-          : BELOW_30K_LABEL_PATTERNS.some((p) => normalizedRaw.includes(p));
+        // Smart detection: parse numeric values from the label
+        const isBelow30k = (() => {
+          // "abaixo de X" where X <= 30
+          const abaixoMatch = labelToAnalyze.match(/abaixo\s+de\s+(\d+)/);
+          if (abaixoMatch && parseInt(abaixoMatch[1]) <= 30) return true;
+          // "entre X e Y" where Y <= 30
+          const entreMatch = labelToAnalyze.match(/entre\s+(\d+)\s+e\s+(\d+)/);
+          if (entreMatch && parseInt(entreMatch[2]) <= 30) return true;
+          return false;
+        })();
 
         const mqlValue = isBelow30k ? "opt_2" : "opt_1";
         const existingMql = fieldInserts.findIndex((f) => f.field_id === MQL_FIELD_ID);
