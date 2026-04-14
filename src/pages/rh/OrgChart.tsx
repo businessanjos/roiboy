@@ -124,8 +124,14 @@ export default function OrgChart() {
 
     for (const [, members] of grouped) {
       members.sort((a, b) => {
-        const aHead = a.position?.toLowerCase().includes("head") ? 0 : 1;
-        const bHead = b.position?.toLowerCase().includes("head") ? 0 : 1;
+        const rank = (p: string | null) => {
+          const low = p?.toLowerCase() || "";
+          if (low === "ceo" || low === "diretor" || low === "sócio") return 0;
+          if (low.includes("head")) return 1;
+          return 2;
+        };
+        const aHead = rank(a.position);
+        const bHead = rank(b.position);
         if (aHead !== bHead) return aHead - bHead;
         return a.full_name.localeCompare(b.full_name);
       });
@@ -331,7 +337,10 @@ export default function OrgChart() {
               const badgeColor = DEPARTMENT_COLORS[dept.name] || "bg-gray-500/15 text-gray-700 border-gray-300";
               const avgTenure = getDeptAvgTenureMonths(dept.collaborators);
               const isCollapsed = collapsedDepts.has(dept.name);
-              const head = dept.collaborators.find(c => c.position?.toLowerCase().includes("head"));
+              const head = dept.collaborators.find(c => {
+                const p = c.position?.toLowerCase() || "";
+                return p === "ceo" || p === "diretor" || p === "sócio" || p.includes("head");
+              });
 
               return (
                 <Card key={dept.name} className="overflow-hidden border-0 shadow-md flex flex-col">
@@ -408,7 +417,7 @@ export default function OrgChart() {
                       {dept.collaborators
                         .filter(c => viewMode === "expanded" ? c.id !== head?.id : true)
                         .map((c) => {
-                          const isHead = c.position?.toLowerCase().includes("head");
+                          const isHead = (() => { const p = c.position?.toLowerCase() || ""; return p === "ceo" || p === "diretor" || p === "sócio" || p.includes("head"); })();
                           const tenure = getTenure(c.hire_date);
                           const birthday = isBirthdayThisMonth(c.birth_date);
 
