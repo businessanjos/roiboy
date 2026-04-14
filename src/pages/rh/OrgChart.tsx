@@ -337,7 +337,10 @@ export default function OrgChart() {
               const badgeColor = DEPARTMENT_COLORS[dept.name] || "bg-gray-500/15 text-gray-700 border-gray-300";
               const avgTenure = getDeptAvgTenureMonths(dept.collaborators);
               const isCollapsed = collapsedDepts.has(dept.name);
-              const head = dept.collaborators.find(c => c.position?.toLowerCase().includes("head"));
+              const head = dept.collaborators.find(c => {
+                const p = c.position?.toLowerCase() || "";
+                return p === "ceo" || p === "diretor" || p === "sócio" || p.includes("head");
+              });
 
               return (
                 <Card key={dept.name} className="overflow-hidden border-0 shadow-md flex flex-col">
@@ -414,7 +417,7 @@ export default function OrgChart() {
                       {dept.collaborators
                         .filter(c => viewMode === "expanded" ? c.id !== head?.id : true)
                         .map((c) => {
-                          const isHead = c.position?.toLowerCase().includes("head");
+                          const isHead = (() => { const p = c.position?.toLowerCase() || ""; return p === "ceo" || p === "diretor" || p === "sócio" || p.includes("head"); })();
                           const tenure = getTenure(c.hire_date);
                           const birthday = isBirthdayThisMonth(c.birth_date);
 
