@@ -332,9 +332,11 @@ export default function Products() {
         mls_level: isMls ? (mlsLevel || null) : null,
         color: color,
         deliverables: JSON.parse(JSON.stringify(deliverables)),
-        mql_criteria: (mqlCriteria.revenue_ranges.length > 0 || mqlCriteria.segments.length > 0 || mqlCriteria.specialties.length > 0) 
-          ? JSON.parse(JSON.stringify(mqlCriteria)) 
-          : null,
+        mql_criteria: isRenewal ? null : (
+          (mqlCriteria.revenue_ranges.length > 0 || mqlCriteria.segments.length > 0 || mqlCriteria.specialties.length > 0) 
+            ? JSON.parse(JSON.stringify(mqlCriteria)) 
+            : null
+        ),
       };
 
       if (editingId) {
