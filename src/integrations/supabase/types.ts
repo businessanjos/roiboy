@@ -9327,6 +9327,7 @@ export type Database = {
           installment_price: number | null
           is_active: boolean
           is_mls: boolean
+          is_renewal: boolean
           mls_level: string | null
           mql_criteria: Json | null
           name: string
@@ -9347,6 +9348,7 @@ export type Database = {
           installment_price?: number | null
           is_active?: boolean
           is_mls?: boolean
+          is_renewal?: boolean
           mls_level?: string | null
           mql_criteria?: Json | null
           name: string
@@ -9367,6 +9369,7 @@ export type Database = {
           installment_price?: number | null
           is_active?: boolean
           is_mls?: boolean
+          is_renewal?: boolean
           mls_level?: string | null
           mql_criteria?: Json | null
           name?: string
