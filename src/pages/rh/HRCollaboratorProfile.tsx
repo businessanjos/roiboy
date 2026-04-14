@@ -268,9 +268,11 @@ export default function HRCollaboratorProfile() {
           <TabsTrigger value="history" className="gap-1.5 text-xs sm:text-sm">
             <TrendingUp className="h-4 w-4" /> Histórico
           </TabsTrigger>
-          <TabsTrigger value="timerecords" className="gap-1.5 text-xs sm:text-sm">
-            <Clock className="h-4 w-4" /> Ponto
-          </TabsTrigger>
+          {form.employment_type !== 'PJ' && (
+            <TabsTrigger value="timerecords" className="gap-1.5 text-xs sm:text-sm">
+              <Clock className="h-4 w-4" /> Ponto
+            </TabsTrigger>
+          )}
           <TabsTrigger value="benefits" className="gap-1.5 text-xs sm:text-sm">
             <Gift className="h-4 w-4" /> Benefícios
           </TabsTrigger>
