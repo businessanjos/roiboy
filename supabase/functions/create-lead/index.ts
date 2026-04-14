@@ -140,6 +140,33 @@ serve(async (req) => {
         }))
         .filter((m) => m.value_text !== null);
 
+      // Auto-set MQL based on revenue_range
+      const MQL_FIELD_ID = "e4270e93-e9b9-4d9b-9589-d614ce335bcd";
+      const FATURAMENTO_FIELD_ID = "e352a1ca-cfbc-435a-95f7-2f53b5cac041";
+      const faturamentoEntry = fieldInserts.find((f) => f.field_id === FATURAMENTO_FIELD_ID);
+      if (faturamentoEntry) {
+        const BELOW_30K_VALUES = ["abaixo_20k", "opt_1767729831203"];
+        const rawInput = payload.revenue_range?.trim() || "";
+        const normalizedInput = normalize(rawInput);
+        const faturamentoField = customFields?.find((f: any) => f.id === FATURAMENTO_FIELD_ID);
+        const matchedOption = (faturamentoField?.options as any[])?.find(
+          (opt: any) => normalize(opt.label) === normalizedInput
+        );
+        const resolvedFatValue = matchedOption ? matchedOption.value : faturamentoEntry.value_text;
+        const mqlValue = BELOW_30K_VALUES.includes(resolvedFatValue || "") ? "opt_2" : "opt_1";
+        const existingMql = fieldInserts.findIndex((f) => f.field_id === MQL_FIELD_ID);
+        if (existingMql >= 0) {
+          fieldInserts[existingMql].value_text = mqlValue;
+        } else {
+          fieldInserts.push({
+            lead_id: newLead.id,
+            field_id: MQL_FIELD_ID,
+            account_id: accountId,
+            value_text: mqlValue,
+          });
+        }
+      }
+
       if (fieldInserts.length > 0) {
         const { error: fieldError } = await supabase
           .from("lead_field_values")
