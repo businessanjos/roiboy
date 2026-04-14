@@ -299,6 +299,7 @@ export default function Products() {
       }
     }
     setDeliverables(rawDeliverables);
+    setMqlCriteria(product.mql_criteria ? { ...DEFAULT_MQL_CRITERIA, ...product.mql_criteria } : { ...DEFAULT_MQL_CRITERIA });
     setDialogOpen(true);
   };
 
