@@ -86,6 +86,7 @@ export default function HRCollaboratorProfile() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [form, setForm] = useState<Partial<HRCollaborator>>({});
   const [cpfLooking, setCpfLooking] = useState(false);
+  const [salaryDisplay, setSalaryDisplay] = useState("");
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
   const initialLoad = useRef(true);
@@ -108,6 +109,7 @@ export default function HRCollaboratorProfile() {
       }
       setCollab(data as HRCollaborator);
       setForm(data as HRCollaborator);
+      setSalaryDisplay(formatBRL((data as HRCollaborator).salary));
       setLoading(false);
       setTimeout(() => { initialLoad.current = false; }, 100);
     })();
@@ -380,12 +382,18 @@ export default function HRCollaboratorProfile() {
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
                   <Input
                     className="pl-10"
-                    value={formatBRL(form.salary)}
+                    value={salaryDisplay}
                     onChange={e => {
-                      const raw = e.target.value.replace(/[^\d.,]/g, "");
-                      setField("salary", parseBRL(raw));
+                      const raw = e.target.value.replace(/[^\d,]/g, "");
+                      setSalaryDisplay(raw);
+                    }}
+                    onBlur={() => {
+                      const parsed = parseBRL(salaryDisplay);
+                      setField("salary", parsed);
+                      setSalaryDisplay(formatBRL(parsed));
                     }}
                     placeholder="0,00"
+                    inputMode="decimal"
                   />
                 </div>
               </div>
