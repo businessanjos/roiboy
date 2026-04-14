@@ -124,8 +124,14 @@ export default function OrgChart() {
 
     for (const [, members] of grouped) {
       members.sort((a, b) => {
-        const aHead = a.position?.toLowerCase().includes("head") ? 0 : 1;
-        const bHead = b.position?.toLowerCase().includes("head") ? 0 : 1;
+        const rank = (p: string | null) => {
+          const low = p?.toLowerCase() || "";
+          if (low === "ceo" || low === "diretor" || low === "sócio") return 0;
+          if (low.includes("head")) return 1;
+          return 2;
+        };
+        const aHead = rank(a.position);
+        const bHead = rank(b.position);
         if (aHead !== bHead) return aHead - bHead;
         return a.full_name.localeCompare(b.full_name);
       });
