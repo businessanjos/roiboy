@@ -102,28 +102,24 @@ const REVENUE_RANGE_OPTIONS = [
 
 const SEGMENT_OPTIONS = [
   "Clínica de Estética",
-  "Consultório Odontológico",
-  "Clínica Médica",
-  "Salão de Beleza",
-  "Spa",
-  "Clínica de Fisioterapia",
-  "Clínica Veterinária",
-  "Laboratório",
-  "Hospital",
-  "Farmácia",
+  "Esteticista Autônoma",
+  "Biomédica",
+  "Médico",
+  "Dentista",
+  "Outros",
 ];
 
 const SPECIALTY_OPTIONS = [
   "Dermatologia",
-  "Odontologia",
-  "Estética Corporal",
-  "Estética Facial",
   "Cirurgia Plástica",
-  "Nutrição",
-  "Harmonização Orofacial",
-  "Tricologia",
-  "Podologia",
-  "Fisioterapia",
+  "Nutrologia",
+  "Endocrinologia",
+  "Ginecologia",
+  "Ortopedia",
+  "Oftalmologia",
+  "Cardiologia",
+  "Pediatria",
+  "Clínico Geral",
 ];
 
 interface Product {
