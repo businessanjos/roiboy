@@ -115,7 +115,7 @@ export function useHRCollaborators() {
     }
   };
 
-  const updateCollaborator = async (id: string, data: Partial<HRCollaborator>) => {
+  const updateCollaborator = async (id: string, data: Partial<HRCollaborator>, silent = false) => {
     try {
       const { error } = await supabase
         .from("hr_collaborators")
@@ -123,7 +123,7 @@ export function useHRCollaborators() {
         .eq("id", id);
 
       if (error) throw error;
-      toast.success("Colaborador atualizado!");
+      if (!silent) toast.success("Colaborador atualizado!");
       fetchCollaborators();
       return true;
     } catch (err: any) {
