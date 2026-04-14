@@ -54,11 +54,11 @@ export default function RHJobForm() {
       form.reset({
         title: existingJob.title || "", department: existingJob.department || "", unit: existingJob.unit || "",
         work_model: (existingJob.work_model as any) || "onsite", contract_type: (existingJob.contract_type as any) || "clt",
-        seniority: existingJob.seniority || "", openings_count: existingJob.openings_count || 1, position: existingJob.position || "",
+        seniority: (existingJob.seniority as JobSeniority) || "", openings_count: existingJob.openings_count || 1, position: existingJob.position || "",
         description_tone: (existingJob.description_tone as any) || "", description_context: existingJob.description_context || "",
         description: existingJob.description || "", required_skills: existingJob.required_skills || [],
         desired_skills: existingJob.desired_skills || [], experience_years: existingJob.experience_years,
-        education_level: existingJob.education_level || "", languages: existingJob.languages || [],
+        education_level: (existingJob.education_level as EducationLevel) || "", languages: existingJob.languages || [],
         requirements: existingJob.requirements || "", salary_type: (existingJob.salary_type as any) || "not_disclosed",
         salary_min: existingJob.salary_min, salary_max: existingJob.salary_max, benefits: existingJob.benefits || [],
         application_deadline: existingJob.application_deadline ? new Date(existingJob.application_deadline) : null,
