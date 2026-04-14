@@ -38,6 +38,7 @@ const STATUS_MAP: Record<string, { label: string; variant: "default" | "secondar
 const EMPLOYMENT_TYPES: Record<string, string> = {
   clt: "CLT",
   pj: "PJ",
+  socio: "Sócio",
   intern: "Estágio",
   temporary: "Temporário",
   freelancer: "Freelancer",

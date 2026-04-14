@@ -40,7 +40,7 @@ const STATUS_OPTIONS = [
 ];
 
 const EMPLOYMENT_TYPES: Record<string, string> = {
-  clt: "CLT", pj: "PJ", intern: "Estágio", temporary: "Temporário", freelancer: "Freelancer",
+  clt: "CLT", pj: "PJ", socio: "Sócio", intern: "Estágio", temporary: "Temporário", freelancer: "Freelancer",
 };
 
 const DEPARTMENT_OPTIONS = [
@@ -57,7 +57,9 @@ const DEPARTMENT_OPTIONS = [
 ];
 
 function getSalaryLabel(employmentType?: string | null) {
-  return employmentType === "pj" ? "Fee mensal" : "Salário";
+  if (employmentType === "pj") return "Fee mensal";
+  if (employmentType === "socio") return "Pró-labore";
+  return "Salário";
 }
 
 function formatBRL(value: number | null | undefined): string {
@@ -268,7 +270,7 @@ export default function HRCollaboratorProfile() {
           <TabsTrigger value="history" className="gap-1.5 text-xs sm:text-sm">
             <TrendingUp className="h-4 w-4" /> Histórico
           </TabsTrigger>
-          {form.employment_type !== 'PJ' && (
+          {form.employment_type !== 'PJ' && form.employment_type !== 'socio' && (
             <TabsTrigger value="timerecords" className="gap-1.5 text-xs sm:text-sm">
               <Clock className="h-4 w-4" /> Ponto
             </TabsTrigger>
