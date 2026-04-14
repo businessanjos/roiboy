@@ -92,6 +92,9 @@ const RHDashboard = lazyRetry(() => import("./pages/RHDashboard"));
 const HRCollaborators = lazyRetry(() => import("./pages/rh/HRCollaborators"));
 const HRCollaboratorProfile = lazyRetry(() => import("./pages/rh/HRCollaboratorProfile"));
 const OrgChart = lazyRetry(() => import("./pages/rh/OrgChart"));
+const RHVagas = lazyRetry(() => import("./pages/rh/RHVagas"));
+const RHJobForm = lazyRetry(() => import("./pages/rh/RHJobForm"));
+const RHJobDetail = lazyRetry(() => import("./pages/rh/RHJobDetail"));
 const SharedInsights = lazyRetry(() => import("./pages/SharedInsights"));
 const ExternalDashboard = lazyRetry(() => import("./pages/ExternalDashboard"));
 const WhatsAppDiagnostics = lazyRetry(() => import("./pages/admin/WhatsAppDiagnostics"));
@@ -230,6 +233,10 @@ const App = () => (
                             <Route path="/rh/collaborators" element={<HRCollaborators />} />
                             <Route path="/rh/collaborators/:id" element={<HRCollaboratorProfile />} />
                             <Route path="/rh/org-chart" element={<OrgChart />} />
+                            <Route path="/rh/vacancies" element={<RHVagas />} />
+                            <Route path="/rh/vacancies/new" element={<RHJobForm />} />
+                            <Route path="/rh/vacancies/:id" element={<RHJobDetail />} />
+                            <Route path="/rh/vacancies/:id/edit" element={<RHJobForm />} />
                             
                           </Route>
                           <Route path="*" element={<NotFound />} />
