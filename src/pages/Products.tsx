@@ -259,6 +259,9 @@ export default function Products() {
     setRenewalDiscountPercent("50");
     setPaymentMethods([]);
     setDeliverables({ ...DEFAULT_DELIVERABLES });
+    setMqlCriteria({ ...DEFAULT_MQL_CRITERIA });
+    setNewSegment("");
+    setNewSpecialty("");
     setBillingPeriod("monthly");
     setIsActive(true);
     setIsMls(false);
