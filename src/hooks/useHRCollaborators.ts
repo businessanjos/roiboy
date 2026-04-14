@@ -45,6 +45,21 @@ export function useHRCollaborators() {
   const [collaborators, setCollaborators] = useState<HRCollaborator[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const resolveDepartmentId = useCallback(async (departmentName: string | null | undefined) => {
+    if (!currentUser?.account_id || !departmentName?.trim()) return null;
+
+    const { data, error } = await supabase
+      .from("hr_departments")
+      .select("id")
+      .eq("account_id", currentUser.account_id)
+      .ilike("name", departmentName.trim())
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data?.id ?? null;
+  }, [currentUser?.account_id]);
+
   const fetchCollaborators = useCallback(async () => {
     if (!currentUser?.account_id) return;
     setLoading(true);
@@ -77,9 +92,15 @@ export function useHRCollaborators() {
   const createCollaborator = async (data: Partial<HRCollaboratorInsert>) => {
     if (!currentUser?.account_id) return null;
     try {
+      const hrDepartmentId = await resolveDepartmentId(data.department);
+
       const { data: created, error } = await supabase
         .from("hr_collaborators")
-        .insert({ ...data, account_id: currentUser.account_id } as any)
+        .insert({
+          ...data,
+          account_id: currentUser.account_id,
+          hr_department_id: hrDepartmentId,
+        } as any)
         .select()
         .single();
 
@@ -96,12 +117,15 @@ export function useHRCollaborators() {
   const importFromTeam = async (userId: string, teamData: Partial<HRCollaboratorInsert>) => {
     if (!currentUser?.account_id) return null;
     try {
+      const hrDepartmentId = await resolveDepartmentId(teamData.department);
+
       const { data: created, error } = await supabase
         .from("hr_collaborators")
         .insert({
           ...teamData,
           user_id: userId,
           account_id: currentUser.account_id,
+          hr_department_id: hrDepartmentId,
         } as any)
         .select()
         .single();
@@ -118,9 +142,15 @@ export function useHRCollaborators() {
 
   const updateCollaborator = async (id: string, data: Partial<HRCollaborator>, silent = false) => {
     try {
+      const updatePayload = { ...data };
+
+      if (Object.prototype.hasOwnProperty.call(data, "department")) {
+        updatePayload.hr_department_id = await resolveDepartmentId(data.department);
+      }
+
       const { error } = await supabase
         .from("hr_collaborators")
-        .update(data as any)
+        .update(updatePayload as any)
         .eq("id", id);
 
       if (error) throw error;
