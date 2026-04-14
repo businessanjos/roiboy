@@ -6450,6 +6450,246 @@ export type Database = {
           },
         ]
       }
+      hr_job_applications: {
+        Row: {
+          account_id: string
+          ai_analysis_status:
+            | Database["public"]["Enums"]["hr_ai_analysis_status"]
+            | null
+          ai_report: string | null
+          ai_score: number | null
+          applied_at: string
+          candidate_birth_date: string | null
+          candidate_city: string | null
+          candidate_email: string
+          candidate_gender: string | null
+          candidate_name: string
+          candidate_pcd: boolean | null
+          candidate_pcd_type: string | null
+          candidate_phone: string | null
+          candidate_race: string | null
+          candidate_sexual_orientation: string | null
+          candidate_state: string | null
+          cover_letter: string | null
+          desired_position: string | null
+          desired_seniority: string | null
+          id: string
+          job_id: string
+          notes: string | null
+          profiler_completed_at: string | null
+          profiler_result_code: string | null
+          profiler_result_detail: Json | null
+          resume_url: string | null
+          stage: Database["public"]["Enums"]["hr_candidate_stage"]
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          ai_analysis_status?:
+            | Database["public"]["Enums"]["hr_ai_analysis_status"]
+            | null
+          ai_report?: string | null
+          ai_score?: number | null
+          applied_at?: string
+          candidate_birth_date?: string | null
+          candidate_city?: string | null
+          candidate_email: string
+          candidate_gender?: string | null
+          candidate_name: string
+          candidate_pcd?: boolean | null
+          candidate_pcd_type?: string | null
+          candidate_phone?: string | null
+          candidate_race?: string | null
+          candidate_sexual_orientation?: string | null
+          candidate_state?: string | null
+          cover_letter?: string | null
+          desired_position?: string | null
+          desired_seniority?: string | null
+          id?: string
+          job_id: string
+          notes?: string | null
+          profiler_completed_at?: string | null
+          profiler_result_code?: string | null
+          profiler_result_detail?: Json | null
+          resume_url?: string | null
+          stage?: Database["public"]["Enums"]["hr_candidate_stage"]
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          ai_analysis_status?:
+            | Database["public"]["Enums"]["hr_ai_analysis_status"]
+            | null
+          ai_report?: string | null
+          ai_score?: number | null
+          applied_at?: string
+          candidate_birth_date?: string | null
+          candidate_city?: string | null
+          candidate_email?: string
+          candidate_gender?: string | null
+          candidate_name?: string
+          candidate_pcd?: boolean | null
+          candidate_pcd_type?: string | null
+          candidate_phone?: string | null
+          candidate_race?: string | null
+          candidate_sexual_orientation?: string | null
+          candidate_state?: string | null
+          cover_letter?: string | null
+          desired_position?: string | null
+          desired_seniority?: string | null
+          id?: string
+          job_id?: string
+          notes?: string | null
+          profiler_completed_at?: string | null
+          profiler_result_code?: string | null
+          profiler_result_detail?: Json | null
+          resume_url?: string | null
+          stage?: Database["public"]["Enums"]["hr_candidate_stage"]
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_job_applications_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_job_applications_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_jobs: {
+        Row: {
+          account_id: string
+          application_deadline: string | null
+          benefits: string[] | null
+          closed_at: string | null
+          contract_type: string | null
+          created_at: string
+          created_by: string | null
+          department: string | null
+          description: string | null
+          description_context: string | null
+          description_tone: string | null
+          desired_skills: string[] | null
+          education_level: string | null
+          expected_start_date: string | null
+          experience_years: number | null
+          id: string
+          languages: Json | null
+          openings_count: number | null
+          position: string | null
+          require_cover_letter: boolean | null
+          required_skills: string[] | null
+          requirements: string | null
+          salary_max: number | null
+          salary_min: number | null
+          salary_type: string | null
+          seniority: string | null
+          status: Database["public"]["Enums"]["hr_job_status"]
+          tags: string[] | null
+          title: string
+          unit: string | null
+          updated_at: string
+          urgency: string | null
+          work_model: string | null
+        }
+        Insert: {
+          account_id: string
+          application_deadline?: string | null
+          benefits?: string[] | null
+          closed_at?: string | null
+          contract_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          description?: string | null
+          description_context?: string | null
+          description_tone?: string | null
+          desired_skills?: string[] | null
+          education_level?: string | null
+          expected_start_date?: string | null
+          experience_years?: number | null
+          id?: string
+          languages?: Json | null
+          openings_count?: number | null
+          position?: string | null
+          require_cover_letter?: boolean | null
+          required_skills?: string[] | null
+          requirements?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_type?: string | null
+          seniority?: string | null
+          status?: Database["public"]["Enums"]["hr_job_status"]
+          tags?: string[] | null
+          title: string
+          unit?: string | null
+          updated_at?: string
+          urgency?: string | null
+          work_model?: string | null
+        }
+        Update: {
+          account_id?: string
+          application_deadline?: string | null
+          benefits?: string[] | null
+          closed_at?: string | null
+          contract_type?: string | null
+          created_at?: string
+          created_by?: string | null
+          department?: string | null
+          description?: string | null
+          description_context?: string | null
+          description_tone?: string | null
+          desired_skills?: string[] | null
+          education_level?: string | null
+          expected_start_date?: string | null
+          experience_years?: number | null
+          id?: string
+          languages?: Json | null
+          openings_count?: number | null
+          position?: string | null
+          require_cover_letter?: boolean | null
+          required_skills?: string[] | null
+          requirements?: string | null
+          salary_max?: number | null
+          salary_min?: number | null
+          salary_type?: string | null
+          seniority?: string | null
+          status?: Database["public"]["Enums"]["hr_job_status"]
+          tags?: string[] | null
+          title?: string
+          unit?: string | null
+          updated_at?: string
+          urgency?: string | null
+          work_model?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_jobs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_jobs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_salary_history: {
         Row: {
           account_id: string
@@ -13966,6 +14206,16 @@ export type Database = {
         | "movimento"
         | "viagem"
         | "autoridade"
+      hr_ai_analysis_status: "pending" | "processing" | "completed" | "failed"
+      hr_candidate_stage:
+        | "applied"
+        | "screening"
+        | "interview"
+        | "technical_test"
+        | "offer"
+        | "hired"
+        | "rejected"
+      hr_job_status: "draft" | "active" | "on_hold" | "closed"
       impact_level: "low" | "medium" | "high"
       integration_status: "connected" | "disconnected"
       integration_type:
@@ -14276,6 +14526,17 @@ export const Constants = {
         "viagem",
         "autoridade",
       ],
+      hr_ai_analysis_status: ["pending", "processing", "completed", "failed"],
+      hr_candidate_stage: [
+        "applied",
+        "screening",
+        "interview",
+        "technical_test",
+        "offer",
+        "hired",
+        "rejected",
+      ],
+      hr_job_status: ["draft", "active", "on_hold", "closed"],
       impact_level: ["low", "medium", "high"],
       integration_status: ["connected", "disconnected"],
       integration_type: [
