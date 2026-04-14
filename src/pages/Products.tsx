@@ -76,6 +76,56 @@ const DEFAULT_DELIVERABLES: ProductDeliverables = {
   dedicated_consultant: false,
 };
 
+interface MqlCriteria {
+  revenue_ranges: string[];
+  segments: string[];
+  specialties: string[];
+}
+
+const DEFAULT_MQL_CRITERIA: MqlCriteria = {
+  revenue_ranges: [],
+  segments: [],
+  specialties: [],
+};
+
+const REVENUE_RANGE_OPTIONS = [
+  { value: "abaixo_20k", label: "Abaixo de 20 mil" },
+  { value: "20k_30k", label: "Entre 20 e 30 mil" },
+  { value: "30k_50k", label: "Entre 30 e 50 mil" },
+  { value: "50k_100k", label: "Entre 50 e 100 mil" },
+  { value: "100k_150k", label: "Entre 100 e 150 mil" },
+  { value: "150k_300k", label: "Entre 150 e 300 mil" },
+  { value: "300k_500k", label: "Entre 300 e 500 mil" },
+  { value: "500k_1m", label: "Entre 500 mil e 1 milhão" },
+  { value: "acima_1m", label: "Acima de 1 milhão" },
+];
+
+const SEGMENT_OPTIONS = [
+  "Clínica de Estética",
+  "Consultório Odontológico",
+  "Clínica Médica",
+  "Salão de Beleza",
+  "Spa",
+  "Clínica de Fisioterapia",
+  "Clínica Veterinária",
+  "Laboratório",
+  "Hospital",
+  "Farmácia",
+];
+
+const SPECIALTY_OPTIONS = [
+  "Dermatologia",
+  "Odontologia",
+  "Estética Corporal",
+  "Estética Facial",
+  "Cirurgia Plástica",
+  "Nutrição",
+  "Harmonização Orofacial",
+  "Tricologia",
+  "Podologia",
+  "Fisioterapia",
+];
+
 interface Product {
   id: string;
   name: string;
@@ -91,6 +141,7 @@ interface Product {
   color: string | null;
   renewal_discount_percent: number | null;
   deliverables: ProductDeliverables | null;
+  mql_criteria: MqlCriteria | null;
   created_at: string;
 }
 
