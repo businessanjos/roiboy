@@ -23,6 +23,8 @@ interface CreateLeadPayload {
   canal?: string;
   tags?: string[];
   notes?: string;
+  segment?: string;
+  specialty?: string;
 }
 
 /**
