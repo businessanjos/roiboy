@@ -14,11 +14,7 @@ import { Users } from "lucide-react";
 import { useHRJobApplications, useUpdateCandidateStage } from "@/hooks/useHRJobs";
 import type { HRJobApplication, CandidateStage } from "@/types/job";
 import { CANDIDATE_STAGE_LABELS, KANBAN_STAGES } from "@/types/job";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Separator } from "@/components/ui/separator";
-import { Mail, Phone, MapPin, Calendar } from "lucide-react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import CandidateDetailDrawer from "./CandidateDetailDrawer";
 
 const getScoreColor = (score: number | null) => {
   if (score === null) return "secondary";
