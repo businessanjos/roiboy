@@ -133,6 +133,7 @@ interface Product {
   billing_period: "monthly" | "quarterly" | "semiannual" | "annual" | "one_time";
   is_active: boolean;
   is_mls: boolean;
+  is_renewal: boolean;
   mls_level: string | null;
   color: string | null;
   renewal_discount_percent: number | null;
@@ -185,6 +186,7 @@ export default function Products() {
   const [billingPeriod, setBillingPeriod] = useState<string>("monthly");
   const [isActive, setIsActive] = useState(true);
   const [isMls, setIsMls] = useState(false);
+  const [isRenewal, setIsRenewal] = useState(false);
   const [mlsLevel, setMlsLevel] = useState<string>("");
   const [color, setColor] = useState<string>("#10b981");
   const [cashPrice, setCashPrice] = useState("");
@@ -261,6 +263,7 @@ export default function Products() {
     setBillingPeriod("monthly");
     setIsActive(true);
     setIsMls(false);
+    setIsRenewal(false);
     setMlsLevel("");
     setColor("#10b981");
     setEditingId(null);
@@ -278,6 +281,7 @@ export default function Products() {
     setBillingPeriod(product.billing_period);
     setIsActive(product.is_active);
     setIsMls(product.is_mls);
+    setIsRenewal(product.is_renewal ?? false);
     setMlsLevel(product.mls_level || "");
     setColor(product.color || "#10b981");
     const rawDeliverables = product.deliverables ? { ...DEFAULT_DELIVERABLES, ...product.deliverables } : { ...DEFAULT_DELIVERABLES };
@@ -324,6 +328,7 @@ export default function Products() {
         billing_period: billingPeriod as "monthly" | "quarterly" | "semiannual" | "annual" | "one_time",
         is_active: isActive,
         is_mls: isMls,
+        is_renewal: isRenewal,
         mls_level: isMls ? (mlsLevel || null) : null,
         color: color,
         deliverables: JSON.parse(JSON.stringify(deliverables)),
@@ -577,7 +582,7 @@ export default function Products() {
                 </div>
 
                 {/* Row 5: Toggles + MLS */}
-                <div className="flex items-center gap-6 pt-2 border-t">
+                <div className="flex items-center gap-6 pt-2 border-t flex-wrap">
                   <div className="flex items-center gap-2">
                     <Switch
                       id="is-active"
@@ -585,6 +590,14 @@ export default function Products() {
                       onCheckedChange={setIsActive}
                     />
                     <Label htmlFor="is-active" className="mb-0">Ativo</Label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="is-renewal"
+                      checked={isRenewal}
+                      onCheckedChange={setIsRenewal}
+                    />
+                    <Label htmlFor="is-renewal" className="mb-0">Renovação</Label>
                   </div>
                   <div className="flex items-center gap-2">
                     <Switch
@@ -1040,6 +1053,11 @@ export default function Products() {
                   <Badge variant="outline">
                     {billingPeriodLabels[product.billing_period]}
                   </Badge>
+                  {product.is_renewal && (
+                    <Badge variant="outline" className="gap-1 text-amber-600 border-amber-300">
+                      🔄 Renovação
+                    </Badge>
+                  )}
                   {product.is_mls && (
                     <Badge className={`${getMlsBadgeClasses(product.mls_level)} gap-1`}>
                       <Award className="h-3 w-3" />
