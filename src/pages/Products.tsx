@@ -102,28 +102,24 @@ const REVENUE_RANGE_OPTIONS = [
 
 const SEGMENT_OPTIONS = [
   "Clínica de Estética",
-  "Consultório Odontológico",
-  "Clínica Médica",
-  "Salão de Beleza",
-  "Spa",
-  "Clínica de Fisioterapia",
-  "Clínica Veterinária",
-  "Laboratório",
-  "Hospital",
-  "Farmácia",
+  "Esteticista Autônoma",
+  "Biomédica",
+  "Médico",
+  "Dentista",
+  "Outros",
 ];
 
 const SPECIALTY_OPTIONS = [
   "Dermatologia",
-  "Odontologia",
-  "Estética Corporal",
-  "Estética Facial",
   "Cirurgia Plástica",
-  "Nutrição",
-  "Harmonização Orofacial",
-  "Tricologia",
-  "Podologia",
-  "Fisioterapia",
+  "Nutrologia",
+  "Endocrinologia",
+  "Ginecologia",
+  "Ortopedia",
+  "Oftalmologia",
+  "Cardiologia",
+  "Pediatria",
+  "Clínico Geral",
 ];
 
 interface Product {
@@ -889,112 +885,72 @@ export default function Products() {
                 {/* Segmentos */}
                 <div className="rounded-lg border p-4 space-y-3">
                   <Label className="text-sm font-semibold">Segmentos de Negócio</Label>
-                  <p className="text-xs text-muted-foreground">Tipos de empresa aceitos (opcional)</p>
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {mqlCriteria.segments.map((seg) => (
-                      <Badge key={seg} variant="secondary" className="gap-1 pr-1">
+                  <p className="text-xs text-muted-foreground">
+                    Tipos de empresa aceitos. "Outros" = qualquer empresa fora dos 5 segmentos acima.
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {SEGMENT_OPTIONS.map((seg) => (
+                      <label key={seg} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded p-1.5">
+                        <input
+                          type="checkbox"
+                          checked={mqlCriteria.segments.includes(seg)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setMqlCriteria({ ...mqlCriteria, segments: [...mqlCriteria.segments, seg] });
+                            } else {
+                              const newSegments = mqlCriteria.segments.filter((s) => s !== seg);
+                              const newSpecialties = seg === "Médico" ? [] : mqlCriteria.specialties;
+                              setMqlCriteria({ ...mqlCriteria, segments: newSegments, specialties: newSpecialties });
+                            }
+                          }}
+                          className="rounded border-input"
+                        />
                         {seg}
-                        <button
-                          type="button"
-                          onClick={() => setMqlCriteria({ ...mqlCriteria, segments: mqlCriteria.segments.filter((s) => s !== seg) })}
-                          className="ml-0.5 hover:text-destructive"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
+                      </label>
                     ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <Select
-                      value={newSegment}
-                      onValueChange={(v) => {
-                        if (v && !mqlCriteria.segments.includes(v)) {
-                          setMqlCriteria({ ...mqlCriteria, segments: [...mqlCriteria.segments, v] });
-                        }
-                        setNewSegment("");
-                      }}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Adicionar segmento..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SEGMENT_OPTIONS.filter((s) => !mqlCriteria.segments.includes(s)).map((s) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Ou digite um segmento personalizado..."
-                      value={newSegment}
-                      onChange={(e) => setNewSegment(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && newSegment.trim() && !mqlCriteria.segments.includes(newSegment.trim())) {
-                          e.preventDefault();
-                          setMqlCriteria({ ...mqlCriteria, segments: [...mqlCriteria.segments, newSegment.trim()] });
-                          setNewSegment("");
-                        }
-                      }}
-                      className="h-8 text-sm"
-                    />
                   </div>
                 </div>
 
-                {/* Especialidades */}
-                <div className="rounded-lg border p-4 space-y-3">
-                  <Label className="text-sm font-semibold">Especialidades</Label>
-                  <p className="text-xs text-muted-foreground">Especialidades médicas/profissionais aceitas (opcional)</p>
-                  <div className="flex flex-wrap gap-1.5 mb-2">
-                    {mqlCriteria.specialties.map((spec) => (
-                      <Badge key={spec} variant="secondary" className="gap-1 pr-1">
-                        {spec}
-                        <button
-                          type="button"
-                          onClick={() => setMqlCriteria({ ...mqlCriteria, specialties: mqlCriteria.specialties.filter((s) => s !== spec) })}
-                          className="ml-0.5 hover:text-destructive"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
+                {mqlCriteria.segments.includes("Médico") && (
+                  <div className="rounded-lg border p-4 space-y-3">
+                    <Label className="text-sm font-semibold">Especialidades Médicas</Label>
+                    <p className="text-xs text-muted-foreground">Especialidades aceitas para o segmento Médico (opcional)</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {SPECIALTY_OPTIONS.map((spec) => (
+                        <label key={spec} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 rounded p-1.5">
+                          <input
+                            type="checkbox"
+                            checked={mqlCriteria.specialties.includes(spec)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setMqlCriteria({ ...mqlCriteria, specialties: [...mqlCriteria.specialties, spec] });
+                              } else {
+                                setMqlCriteria({ ...mqlCriteria, specialties: mqlCriteria.specialties.filter((s) => s !== spec) });
+                              }
+                            }}
+                            className="rounded border-input"
+                          />
+                          {spec}
+                        </label>
+                      ))}
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Adicionar outra especialidade..."
+                        value={newSpecialty}
+                        onChange={(e) => setNewSpecialty(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && newSpecialty.trim() && !mqlCriteria.specialties.includes(newSpecialty.trim())) {
+                            e.preventDefault();
+                            setMqlCriteria({ ...mqlCriteria, specialties: [...mqlCriteria.specialties, newSpecialty.trim()] });
+                            setNewSpecialty("");
+                          }
+                        }}
+                        className="h-8 text-sm"
+                      />
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Select
-                      value={newSpecialty}
-                      onValueChange={(v) => {
-                        if (v && !mqlCriteria.specialties.includes(v)) {
-                          setMqlCriteria({ ...mqlCriteria, specialties: [...mqlCriteria.specialties, v] });
-                        }
-                        setNewSpecialty("");
-                      }}
-                    >
-                      <SelectTrigger className="h-8 text-sm">
-                        <SelectValue placeholder="Adicionar especialidade..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {SPECIALTY_OPTIONS.filter((s) => !mqlCriteria.specialties.includes(s)).map((s) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Ou digite uma especialidade personalizada..."
-                      value={newSpecialty}
-                      onChange={(e) => setNewSpecialty(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && newSpecialty.trim() && !mqlCriteria.specialties.includes(newSpecialty.trim())) {
-                          e.preventDefault();
-                          setMqlCriteria({ ...mqlCriteria, specialties: [...mqlCriteria.specialties, newSpecialty.trim()] });
-                          setNewSpecialty("");
-                        }
-                      }}
-                      className="h-8 text-sm"
-                    />
-                  </div>
-                </div>
+                )}
 
                 {/* Preview summary */}
                 {(mqlCriteria.revenue_ranges.length > 0 || mqlCriteria.segments.length > 0 || mqlCriteria.specialties.length > 0) && (
