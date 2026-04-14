@@ -497,7 +497,27 @@ export function DealDetailSheet({
 
   const FATURAMENTO_FIELD_ID = 'ed5c7c0e-0740-4945-b982-70a593ffae0c';
   const MQL_FIELD_ID = '448404cd-0344-4892-a574-2387b1c17578';
-  const FATURAMENTO_BELOW_30K = ['abaixo_20k', 'opt_1767729831203'];
+
+  // Smart detection: resolve if a faturamento option value means "below 30k"
+  // by checking the option label for numeric clues instead of hardcoding values
+  const isFaturamentoBelow30k = (optionValue: string): boolean => {
+    // Find the matching option from deal custom fields to get its label
+    const fatField = dealCustomFields.find((f: any) => f.id === FATURAMENTO_FIELD_ID);
+    const options = (fatField as any)?.options as Array<{ label: string; value: string }> | undefined;
+    const opt = options?.find((o) => o.value === optionValue);
+    const label = opt?.label || optionValue;
+    const normalized = label.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    // "abaixo de X" where X <= 30
+    const abaixoMatch = normalized.match(/abaixo\s+de\s+(\d+)/);
+    if (abaixoMatch && parseInt(abaixoMatch[1]) <= 30) return true;
+
+    // "entre X e Y" where Y <= 30
+    const entreMatch = normalized.match(/entre\s+(\d+)\s+e\s+(\d+)/);
+    if (entreMatch && parseInt(entreMatch[2]) <= 30) return true;
+
+    return false;
+  };
 
   const handleDealFieldValueChange = async (fieldId: string, newValue: any) => {
     setDealFieldValues(prev => ({
@@ -507,7 +527,7 @@ export function DealDetailSheet({
 
     // Auto-set MQL based on faturamento
     if (fieldId === FATURAMENTO_FIELD_ID && currentUser?.account_id) {
-      const mqlValue = FATURAMENTO_BELOW_30K.includes(newValue) ? 'nao_abaixo_30k' : newValue ? 'sim_acima_30k' : null;
+      const mqlValue = isFaturamentoBelow30k(newValue) ? 'nao_abaixo_30k' : newValue ? 'sim_acima_30k' : null;
       if (mqlValue) {
         setDealFieldValues(prev => ({ ...prev, [MQL_FIELD_ID]: mqlValue }));
         // Persist MQL value
