@@ -424,9 +424,10 @@ export default function Products() {
             </DialogHeader>
 
             <Tabs defaultValue="general" className="w-full">
-              <TabsList className="w-full grid grid-cols-2">
+              <TabsList className="w-full grid grid-cols-3">
                 <TabsTrigger value="general">Geral</TabsTrigger>
                 <TabsTrigger value="deliverables">Entregas</TabsTrigger>
+                <TabsTrigger value="mql">Qualificação MQL</TabsTrigger>
               </TabsList>
 
               <TabsContent value="general" className="space-y-5 pt-2">
