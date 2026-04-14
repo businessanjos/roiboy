@@ -89,15 +89,15 @@ const DEFAULT_MQL_CRITERIA: MqlCriteria = {
 };
 
 const REVENUE_RANGE_OPTIONS = [
-  { value: "abaixo_20k", label: "Abaixo de 20 mil" },
-  { value: "20k_30k", label: "Entre 20 e 30 mil" },
-  { value: "30k_50k", label: "Entre 30 e 50 mil" },
-  { value: "50k_100k", label: "Entre 50 e 100 mil" },
-  { value: "100k_150k", label: "Entre 100 e 150 mil" },
-  { value: "150k_300k", label: "Entre 150 e 300 mil" },
-  { value: "300k_500k", label: "Entre 300 e 500 mil" },
-  { value: "500k_1m", label: "Entre 500 mil e 1 milhão" },
-  { value: "acima_1m", label: "Acima de 1 milhão" },
+  { value: "abaixo_20k", label: "Abaixo de R$ 20 mil" },
+  { value: "20k_30k", label: "R$ 20 mil – R$ 30 mil" },
+  { value: "30k_50k", label: "R$ 30 mil – R$ 50 mil" },
+  { value: "50k_100k", label: "R$ 50 mil – R$ 100 mil" },
+  { value: "100k_150k", label: "R$ 100 mil – R$ 150 mil" },
+  { value: "150k_300k", label: "R$ 150 mil – R$ 300 mil" },
+  { value: "300k_500k", label: "R$ 300 mil – R$ 500 mil" },
+  { value: "500k_1m", label: "R$ 500 mil – R$ 1 milhão" },
+  { value: "acima_1m", label: "Acima de R$ 1 milhão" },
 ];
 
 const SEGMENT_OPTIONS = [
@@ -851,8 +851,8 @@ export default function Products() {
 
                 {/* Faixas de Faturamento */}
                 <div className="rounded-lg border p-4 space-y-3">
-                  <Label className="text-sm font-semibold">Faixas de Faturamento (obrigatório)</Label>
-                  <p className="text-xs text-muted-foreground">Selecione as faixas aceitas para qualificação</p>
+                   <Label className="text-sm font-semibold">Faturamento Mensal (obrigatório)</Label>
+                   <p className="text-xs text-muted-foreground">Selecione as faixas de faturamento mensal em R$ aceitas para qualificação</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {REVENUE_RANGE_OPTIONS.map((opt) => (
                       <label
