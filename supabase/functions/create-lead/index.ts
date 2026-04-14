@@ -25,6 +25,51 @@ interface CreateLeadPayload {
   notes?: string;
 }
 
+/**
+ * Maps a faturamento label/value to the standard revenue range key used in product mql_criteria.
+ */
+function resolveRevenueKey(label: string, optionValue: string): string {
+  // Direct match to known option values
+  const directMap: Record<string, string> = {
+    abaixo_20k: "abaixo_20k",
+    opt_1767729831203: "20k_30k",
+  };
+  if (directMap[optionValue]) return directMap[optionValue];
+
+  // Parse from label text
+  const abaixo = label.match(/abaixo\s+de\s+(\d+)/);
+  if (abaixo) {
+    const v = parseInt(abaixo[1]);
+    if (v <= 20) return "abaixo_20k";
+    if (v <= 30) return "20k_30k";
+    return "abaixo_20k";
+  }
+
+  const entre = label.match(/entre\s+(\d+)\s+e\s+(\d+)/);
+  if (entre) {
+    const low = parseInt(entre[1]);
+    const high = parseInt(entre[2]);
+    if (high <= 30) return "20k_30k";
+    if (high <= 50) return "30k_50k";
+    if (high <= 100) return "50k_100k";
+    if (high <= 150) return "100k_150k";
+    if (high <= 300) return "150k_300k";
+    if (high <= 500) return "300k_500k";
+    return "500k_1m";
+  }
+
+  const acima = label.match(/acima\s+de\s+(\d+)/);
+  if (acima) {
+    const v = parseInt(acima[1]);
+    if (v >= 1000 || label.includes("milh")) return "acima_1m";
+    if (v >= 500) return "500k_1m";
+    return "acima_1m";
+  }
+
+  // Fallback: return the option value itself
+  return optionValue;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
