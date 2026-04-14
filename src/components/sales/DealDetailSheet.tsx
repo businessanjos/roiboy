@@ -495,11 +495,36 @@ export function DealDetailSheet({
     }
   };
 
-  const handleDealFieldValueChange = (fieldId: string, newValue: any) => {
+  const FATURAMENTO_FIELD_ID = 'ed5c7c0e-0740-4945-b982-70a593ffae0c';
+  const MQL_FIELD_ID = '448404cd-0344-4892-a574-2387b1c17578';
+  const FATURAMENTO_BELOW_30K = ['abaixo_20k', 'opt_1767729831203'];
+
+  const handleDealFieldValueChange = async (fieldId: string, newValue: any) => {
     setDealFieldValues(prev => ({
       ...prev,
       [fieldId]: newValue,
     }));
+
+    // Auto-set MQL based on faturamento
+    if (fieldId === FATURAMENTO_FIELD_ID && currentUser?.account_id) {
+      const mqlValue = FATURAMENTO_BELOW_30K.includes(newValue) ? 'nao_abaixo_30k' : newValue ? 'sim_acima_30k' : null;
+      if (mqlValue) {
+        setDealFieldValues(prev => ({ ...prev, [MQL_FIELD_ID]: mqlValue }));
+        // Persist MQL value
+        await supabase
+          .from("deal_field_values")
+          .upsert({
+            account_id: currentUser.account_id,
+            deal_id: deal!.id,
+            field_id: MQL_FIELD_ID,
+            value_text: mqlValue,
+            value_number: null,
+            value_boolean: null,
+            value_date: null,
+            value_json: null,
+          }, { onConflict: "deal_id,field_id" });
+      }
+    }
   };
 
   const fetchCurrentUser = async () => {
