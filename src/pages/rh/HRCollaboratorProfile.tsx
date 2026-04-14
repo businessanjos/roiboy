@@ -86,6 +86,7 @@ export default function HRCollaboratorProfile() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [form, setForm] = useState<Partial<HRCollaborator>>({});
   const [cpfLooking, setCpfLooking] = useState(false);
+  const [salaryDisplay, setSalaryDisplay] = useState("");
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
   const initialLoad = useRef(true);
