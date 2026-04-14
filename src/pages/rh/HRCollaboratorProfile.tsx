@@ -109,9 +109,10 @@ export default function HRCollaboratorProfile() {
         navigate("/rh/collaborators");
         return;
       }
-      setCollab(data as HRCollaborator);
-      setForm(data as HRCollaborator);
-      setSalaryDisplay(formatBRL((data as HRCollaborator).salary));
+      const collabData = { ...data, source: "hr" as const } as HRCollaborator;
+      setCollab(collabData);
+      setForm(collabData);
+      setSalaryDisplay(formatBRL(collabData.salary));
       setLoading(false);
       setTimeout(() => { initialLoad.current = false; }, 100);
     })();

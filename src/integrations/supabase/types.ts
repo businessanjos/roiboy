@@ -6283,6 +6283,7 @@ export type Database = {
           full_name: string
           gender: string | null
           hire_date: string | null
+          hr_department_id: string | null
           id: string
           marital_status: string | null
           notes: string | null
@@ -6313,6 +6314,7 @@ export type Database = {
           full_name: string
           gender?: string | null
           hire_date?: string | null
+          hr_department_id?: string | null
           id?: string
           marital_status?: string | null
           notes?: string | null
@@ -6343,6 +6345,7 @@ export type Database = {
           full_name?: string
           gender?: string | null
           hire_date?: string | null
+          hr_department_id?: string | null
           id?: string
           marital_status?: string | null
           notes?: string | null
@@ -6366,10 +6369,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "hr_collaborators_hr_department_id_fkey"
+            columns: ["hr_department_id"]
+            isOneToOne: false
+            referencedRelation: "hr_departments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "hr_collaborators_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hr_departments: {
+        Row: {
+          account_id: string
+          color: string
+          created_at: string
+          description: string | null
+          head_collaborator_id: string | null
+          id: string
+          is_active: boolean
+          name: string
+          parent_department_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          head_collaborator_id?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          parent_department_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          color?: string
+          created_at?: string
+          description?: string | null
+          head_collaborator_id?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          parent_department_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_departments_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_departments_head_collaborator_id_fkey"
+            columns: ["head_collaborator_id"]
+            isOneToOne: false
+            referencedRelation: "hr_collaborators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_departments_parent_department_id_fkey"
+            columns: ["parent_department_id"]
+            isOneToOne: false
+            referencedRelation: "hr_departments"
             referencedColumns: ["id"]
           },
         ]
