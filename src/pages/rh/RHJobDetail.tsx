@@ -1,0 +1,58 @@
+import { useParams, useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ArrowLeft, Share2, Pencil, Copy, Check } from "lucide-react";
+import { useHRJobById } from "@/hooks/useHRJobs";
+import CandidateKanbanBoard from "@/components/rh/jobs/CandidateKanbanBoard";
+import { JOB_STATUS_LABELS, JOB_STATUS_COLORS } from "@/types/job";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useState } from "react";
+import { toast } from "sonner";
+
+export default function RHJobDetail() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { data: job, isLoading } = useHRJobById(id);
+  const [copied, setCopied] = useState(false);
+  const applicationUrl = `${window.location.origin}/rh/vacancies/${id}/aplicar`;
+
+  const handleCopyLink = async () => {
+    await navigator.clipboard.writeText(applicationUrl);
+    setCopied(true);
+    toast.success("Link copiado!");
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (isLoading) return <div className="p-6 space-y-6"><Skeleton className="h-8 w-48" /><Skeleton className="h-32 w-full" /></div>;
+  if (!job) return (
+    <div className="text-center py-12 p-6">
+      <h1 className="text-2xl font-bold mb-4">Vaga não encontrada</h1>
+      <Button onClick={() => navigate("/rh/vacancies")}><ArrowLeft className="h-4 w-4 mr-2" />Voltar</Button>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6 p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="icon" onClick={() => navigate("/rh/vacancies")}><ArrowLeft className="h-4 w-4" /></Button>
+          <div>
+            <h1 className="text-2xl font-bold">{job.title}</h1>
+            <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-muted-foreground">
+              <Badge variant="outline" className={JOB_STATUS_COLORS[job.status]}>{JOB_STATUS_LABELS[job.status]}</Badge>
+              {job.department && <span>{job.department}</span>}
+              <span>{format(new Date(job.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => navigate(`/rh/vacancies/${job.id}/edit`)}><Pencil className="h-4 w-4 mr-2" />Editar</Button>
+          <Button variant="outline" onClick={handleCopyLink}>{copied ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}{copied ? "Copiado!" : "Copiar Link"}</Button>
+        </div>
+      </div>
+      <CandidateKanbanBoard jobId={job.id} jobTitle={job.title} />
+    </div>
+  );
+}
