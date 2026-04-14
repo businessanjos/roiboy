@@ -76,6 +76,56 @@ const DEFAULT_DELIVERABLES: ProductDeliverables = {
   dedicated_consultant: false,
 };
 
+interface MqlCriteria {
+  revenue_ranges: string[];
+  segments: string[];
+  specialties: string[];
+}
+
+const DEFAULT_MQL_CRITERIA: MqlCriteria = {
+  revenue_ranges: [],
+  segments: [],
+  specialties: [],
+};
+
+const REVENUE_RANGE_OPTIONS = [
+  { value: "abaixo_20k", label: "Abaixo de 20 mil" },
+  { value: "20k_30k", label: "Entre 20 e 30 mil" },
+  { value: "30k_50k", label: "Entre 30 e 50 mil" },
+  { value: "50k_100k", label: "Entre 50 e 100 mil" },
+  { value: "100k_150k", label: "Entre 100 e 150 mil" },
+  { value: "150k_300k", label: "Entre 150 e 300 mil" },
+  { value: "300k_500k", label: "Entre 300 e 500 mil" },
+  { value: "500k_1m", label: "Entre 500 mil e 1 milhão" },
+  { value: "acima_1m", label: "Acima de 1 milhão" },
+];
+
+const SEGMENT_OPTIONS = [
+  "Clínica de Estética",
+  "Consultório Odontológico",
+  "Clínica Médica",
+  "Salão de Beleza",
+  "Spa",
+  "Clínica de Fisioterapia",
+  "Clínica Veterinária",
+  "Laboratório",
+  "Hospital",
+  "Farmácia",
+];
+
+const SPECIALTY_OPTIONS = [
+  "Dermatologia",
+  "Odontologia",
+  "Estética Corporal",
+  "Estética Facial",
+  "Cirurgia Plástica",
+  "Nutrição",
+  "Harmonização Orofacial",
+  "Tricologia",
+  "Podologia",
+  "Fisioterapia",
+];
+
 interface Product {
   id: string;
   name: string;
@@ -91,6 +141,7 @@ interface Product {
   color: string | null;
   renewal_discount_percent: number | null;
   deliverables: ProductDeliverables | null;
+  mql_criteria: MqlCriteria | null;
   created_at: string;
 }
 
@@ -145,6 +196,9 @@ export default function Products() {
   const [renewalDiscountPercent, setRenewalDiscountPercent] = useState("50");
   const [paymentMethods, setPaymentMethods] = useState<string[]>([]);
   const [deliverables, setDeliverables] = useState<ProductDeliverables>({ ...DEFAULT_DELIVERABLES });
+  const [mqlCriteria, setMqlCriteria] = useState<MqlCriteria>({ ...DEFAULT_MQL_CRITERIA });
+  const [newSegment, setNewSegment] = useState("");
+  const [newSpecialty, setNewSpecialty] = useState("");
 
   // Format number with thousand separators (pt-BR)
   const formatNumberInput = (raw: string): string => {
@@ -205,6 +259,9 @@ export default function Products() {
     setRenewalDiscountPercent("50");
     setPaymentMethods([]);
     setDeliverables({ ...DEFAULT_DELIVERABLES });
+    setMqlCriteria({ ...DEFAULT_MQL_CRITERIA });
+    setNewSegment("");
+    setNewSpecialty("");
     setBillingPeriod("monthly");
     setIsActive(true);
     setIsMls(false);
@@ -242,6 +299,7 @@ export default function Products() {
       }
     }
     setDeliverables(rawDeliverables);
+    setMqlCriteria(product.mql_criteria ? { ...DEFAULT_MQL_CRITERIA, ...product.mql_criteria } : { ...DEFAULT_MQL_CRITERIA });
     setDialogOpen(true);
   };
 
@@ -273,6 +331,9 @@ export default function Products() {
         mls_level: isMls ? (mlsLevel || null) : null,
         color: color,
         deliverables: JSON.parse(JSON.stringify(deliverables)),
+        mql_criteria: (mqlCriteria.revenue_ranges.length > 0 || mqlCriteria.segments.length > 0 || mqlCriteria.specialties.length > 0) 
+          ? JSON.parse(JSON.stringify(mqlCriteria)) 
+          : null,
       };
 
       if (editingId) {
@@ -363,9 +424,10 @@ export default function Products() {
             </DialogHeader>
 
             <Tabs defaultValue="general" className="w-full">
-              <TabsList className="w-full grid grid-cols-2">
+              <TabsList className="w-full grid grid-cols-3">
                 <TabsTrigger value="general">Geral</TabsTrigger>
                 <TabsTrigger value="deliverables">Entregas</TabsTrigger>
+                <TabsTrigger value="mql">Qualificação MQL</TabsTrigger>
               </TabsList>
 
               <TabsContent value="general" className="space-y-5 pt-2">
@@ -784,6 +846,178 @@ export default function Products() {
                   </div>
                 </div>
               </TabsContent>
+
+              <TabsContent value="mql" className="space-y-4 pt-2">
+                <p className="text-sm text-muted-foreground">
+                  Defina os critérios para que um lead seja considerado MQL (Marketing Qualified Lead) para este produto.
+                  O faturamento é obrigatório; segmentos e especialidades são filtros adicionais.
+                </p>
+
+                {/* Faixas de Faturamento */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <Label className="text-sm font-semibold">Faixas de Faturamento (obrigatório)</Label>
+                  <p className="text-xs text-muted-foreground">Selecione as faixas aceitas para qualificação</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {REVENUE_RANGE_OPTIONS.map((opt) => (
+                      <label
+                        key={opt.value}
+                        className={cn(
+                          "flex items-center gap-2 px-2.5 py-1.5 rounded-md border cursor-pointer transition-colors text-sm",
+                          mqlCriteria.revenue_ranges.includes(opt.value)
+                            ? "border-primary bg-primary/5 text-foreground"
+                            : "border-border hover:bg-muted/50 text-muted-foreground"
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          className="rounded border-border"
+                          checked={mqlCriteria.revenue_ranges.includes(opt.value)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setMqlCriteria({ ...mqlCriteria, revenue_ranges: [...mqlCriteria.revenue_ranges, opt.value] });
+                            } else {
+                              setMqlCriteria({ ...mqlCriteria, revenue_ranges: mqlCriteria.revenue_ranges.filter((v) => v !== opt.value) });
+                            }
+                          }}
+                        />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Segmentos */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <Label className="text-sm font-semibold">Segmentos de Negócio</Label>
+                  <p className="text-xs text-muted-foreground">Tipos de empresa aceitos (opcional)</p>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {mqlCriteria.segments.map((seg) => (
+                      <Badge key={seg} variant="secondary" className="gap-1 pr-1">
+                        {seg}
+                        <button
+                          type="button"
+                          onClick={() => setMqlCriteria({ ...mqlCriteria, segments: mqlCriteria.segments.filter((s) => s !== seg) })}
+                          className="ml-0.5 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Select
+                      value={newSegment}
+                      onValueChange={(v) => {
+                        if (v && !mqlCriteria.segments.includes(v)) {
+                          setMqlCriteria({ ...mqlCriteria, segments: [...mqlCriteria.segments, v] });
+                        }
+                        setNewSegment("");
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Adicionar segmento..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SEGMENT_OPTIONS.filter((s) => !mqlCriteria.segments.includes(s)).map((s) => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Ou digite um segmento personalizado..."
+                      value={newSegment}
+                      onChange={(e) => setNewSegment(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newSegment.trim() && !mqlCriteria.segments.includes(newSegment.trim())) {
+                          e.preventDefault();
+                          setMqlCriteria({ ...mqlCriteria, segments: [...mqlCriteria.segments, newSegment.trim()] });
+                          setNewSegment("");
+                        }
+                      }}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Especialidades */}
+                <div className="rounded-lg border p-4 space-y-3">
+                  <Label className="text-sm font-semibold">Especialidades</Label>
+                  <p className="text-xs text-muted-foreground">Especialidades médicas/profissionais aceitas (opcional)</p>
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {mqlCriteria.specialties.map((spec) => (
+                      <Badge key={spec} variant="secondary" className="gap-1 pr-1">
+                        {spec}
+                        <button
+                          type="button"
+                          onClick={() => setMqlCriteria({ ...mqlCriteria, specialties: mqlCriteria.specialties.filter((s) => s !== spec) })}
+                          className="ml-0.5 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Select
+                      value={newSpecialty}
+                      onValueChange={(v) => {
+                        if (v && !mqlCriteria.specialties.includes(v)) {
+                          setMqlCriteria({ ...mqlCriteria, specialties: [...mqlCriteria.specialties, v] });
+                        }
+                        setNewSpecialty("");
+                      }}
+                    >
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue placeholder="Adicionar especialidade..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {SPECIALTY_OPTIONS.filter((s) => !mqlCriteria.specialties.includes(s)).map((s) => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Ou digite uma especialidade personalizada..."
+                      value={newSpecialty}
+                      onChange={(e) => setNewSpecialty(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && newSpecialty.trim() && !mqlCriteria.specialties.includes(newSpecialty.trim())) {
+                          e.preventDefault();
+                          setMqlCriteria({ ...mqlCriteria, specialties: [...mqlCriteria.specialties, newSpecialty.trim()] });
+                          setNewSpecialty("");
+                        }
+                      }}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Preview summary */}
+                {(mqlCriteria.revenue_ranges.length > 0 || mqlCriteria.segments.length > 0 || mqlCriteria.specialties.length > 0) && (
+                  <div className="rounded-lg bg-muted/40 p-3 space-y-1">
+                    <p className="text-xs font-semibold text-foreground">Resumo da qualificação:</p>
+                    {mqlCriteria.revenue_ranges.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        💰 Faturamento: {mqlCriteria.revenue_ranges.map((v) => REVENUE_RANGE_OPTIONS.find((o) => o.value === v)?.label || v).join(", ")}
+                      </p>
+                    )}
+                    {mqlCriteria.segments.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        🏢 Segmentos: {mqlCriteria.segments.join(", ")}
+                      </p>
+                    )}
+                    {mqlCriteria.specialties.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        🩺 Especialidades: {mqlCriteria.specialties.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </TabsContent>
             </Tabs>
 
             <DialogFooter>
@@ -858,6 +1092,11 @@ export default function Products() {
                   )}
                   {!product.is_active && (
                     <Badge variant="destructive">Inativo</Badge>
+                  )}
+                  {product.mql_criteria && product.mql_criteria.revenue_ranges?.length > 0 && (
+                    <Badge variant="outline" className="gap-1 text-emerald-600 border-emerald-300">
+                      MQL Configurado
+                    </Badge>
                   )}
                 </div>
                 {product.installment_price > 0 && (

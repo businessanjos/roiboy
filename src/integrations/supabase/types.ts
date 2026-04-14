@@ -9328,6 +9328,7 @@ export type Database = {
           is_active: boolean
           is_mls: boolean
           mls_level: string | null
+          mql_criteria: Json | null
           name: string
           payment_methods: Json | null
           price: number
@@ -9347,6 +9348,7 @@ export type Database = {
           is_active?: boolean
           is_mls?: boolean
           mls_level?: string | null
+          mql_criteria?: Json | null
           name: string
           payment_methods?: Json | null
           price?: number
@@ -9366,6 +9368,7 @@ export type Database = {
           is_active?: boolean
           is_mls?: boolean
           mls_level?: string | null
+          mql_criteria?: Json | null
           name?: string
           payment_methods?: Json | null
           price?: number
