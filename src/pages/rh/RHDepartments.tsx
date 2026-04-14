@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Building, ArrowLeft, Plus, Search, MoreVertical, Pencil, Trash2, Users, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,6 +37,9 @@ const getColorHsl = (color: string) => {
   return COLOR_OPTIONS.find(c => c.value === color)?.hsl || "hsl(215 20% 65%)";
 };
 
+const normalizeDepartmentName = (value: string | null | undefined) =>
+  value?.trim().toLocaleLowerCase("pt-BR") ?? "";
+
 export default function RHDepartments() {
   const navigate = useNavigate();
   const { departments, loading, createDepartment, updateDepartment, deleteDepartment } = useHRDepartments();
@@ -52,6 +55,23 @@ export default function RHDepartments() {
     d.name.toLowerCase().includes(search.toLowerCase()) ||
     d.description?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const collaboratorCountByDepartment = useMemo(() => {
+    const departmentIdByName = new Map(
+      departments.map((department) => [normalizeDepartmentName(department.name), department.id])
+    );
+
+    return collaborators.reduce((counts, collaborator) => {
+      const resolvedDepartmentId =
+        collaborator.hr_department_id ||
+        departmentIdByName.get(normalizeDepartmentName(collaborator.department));
+
+      if (!resolvedDepartmentId) return counts;
+
+      counts.set(resolvedDepartmentId, (counts.get(resolvedDepartmentId) ?? 0) + 1);
+      return counts;
+    }, new Map<string, number>());
+  }, [collaborators, departments]);
 
   const openDialog = (dept?: HRDepartment) => {
     if (dept) {
@@ -94,9 +114,6 @@ export default function RHDepartments() {
     if (!confirm("Tem certeza que deseja excluir este departamento?")) return;
     await deleteDepartment(id);
   };
-
-  const getCollabCount = (deptId: string) =>
-    collaborators.filter(c => (c as any).hr_department_id === deptId).length;
 
   const getHeadName = (headId: string | null) => {
     if (!headId) return null;
@@ -160,7 +177,7 @@ export default function RHDepartments() {
           {filtered.map(dept => {
             const headName = getHeadName(dept.head_collaborator_id);
             const parentName = getParentName(dept.parent_department_id);
-            const collabCount = getCollabCount(dept.id);
+            const collabCount = collaboratorCountByDepartment.get(dept.id) ?? 0;
 
             return (
               <Card key={dept.id} className="group hover:shadow-md transition-shadow">
