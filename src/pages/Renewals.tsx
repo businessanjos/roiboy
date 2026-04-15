@@ -69,6 +69,43 @@ export default function Renewals() {
     });
   }, []);
 
+  const handleOutcomeChange = useCallback(async (contract: RenewalContract, newOutcome: string) => {
+    if (!currentUser?.account_id) return;
+    const existing = outcomeMap[contract.id];
+
+    try {
+      if (existing) {
+        await supabase
+          .from("renewal_outcomes")
+          .update({ outcome: newOutcome, resolved_at: new Date().toISOString(), resolved_by: currentUser.id })
+          .eq("id", existing.id);
+        setOutcomeMap(prev => ({ ...prev, [contract.id]: { ...existing, outcome: newOutcome } }));
+      } else {
+        const { data } = await supabase
+          .from("renewal_outcomes")
+          .insert({
+            account_id: currentUser.account_id,
+            client_id: contract.client_id,
+            contract_id: contract.id,
+            outcome: newOutcome,
+            renewal_value: contract.renewal_value,
+            resolved_at: new Date().toISOString(),
+            resolved_by: currentUser.id,
+          })
+          .select("id")
+          .single();
+        if (data) {
+          setOutcomeMap(prev => ({ ...prev, [contract.id]: { id: data.id, outcome: newOutcome } }));
+        }
+      }
+      const labels: Record<string, string> = { negotiating: "Em Negociação", renewed: "Renovado", lost: "Cancelou" };
+      toast.success(`Status alterado para "${labels[newOutcome] || newOutcome}"`);
+    } catch (err) {
+      console.error("Error saving outcome:", err);
+      toast.error("Erro ao salvar status");
+    }
+  }, [currentUser, outcomeMap]);
+
   const fetchRenewals = async () => {
     if (!currentUser?.account_id) return;
     setLoading(true);
