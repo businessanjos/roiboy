@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { RenewalThermometer } from "@/components/renewals/RenewalThermometer";
 import { RenewalLosses } from "@/components/renewals/RenewalLosses";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent } from "@/components/ui/card";
@@ -57,7 +58,9 @@ export default function Renewals() {
   const [filterProduto, setFilterProduto] = useState("all");
   const [filterTempo, setFilterTempo] = useState("all");
   const [filterChance, setFilterChance] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [chanceScores, setChanceScores] = useState<Record<string, number>>({});
+  const [outcomeMap, setOutcomeMap] = useState<Record<string, { id: string; outcome: string }>>({});
 
   const handleScoreCalculated = useCallback((clientId: string, score: number) => {
     setChanceScores(prev => {
@@ -167,12 +170,22 @@ export default function Renewals() {
         || currentUser.is_also_admin 
         || RENEWALS_FULL_ACCESS_USER_IDS.includes(currentUser.id);
       
-      if (hasFullAccess) {
-        setContracts(mapped);
-      } else {
-        // Filter to only contracts where the client's responsible_user_id matches this user
-        const filtered = mapped.filter(c => c.responsible_user_id === currentUser.id);
-        setContracts(filtered);
+      const finalContracts = hasFullAccess ? mapped : mapped.filter(c => c.responsible_user_id === currentUser.id);
+      setContracts(finalContracts);
+
+      // Fetch existing outcomes for these contracts
+      const contractIds = finalContracts.map(c => c.id);
+      if (contractIds.length > 0) {
+        const { data: outcomes } = await supabase
+          .from("renewal_outcomes")
+          .select("id, contract_id, outcome")
+          .in("contract_id", contractIds);
+
+        const oMap: Record<string, { id: string; outcome: string }> = {};
+        (outcomes || []).forEach((o: any) => {
+          oMap[o.contract_id] = { id: o.id, outcome: o.outcome };
+        });
+        setOutcomeMap(oMap);
       }
     } catch (err) {
       console.error("Error:", err);
