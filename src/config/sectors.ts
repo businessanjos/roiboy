@@ -49,6 +49,7 @@ import {
   Clock,
   ScanFace,
   Target,
+  Handshake,
   
   type LucideIcon,
 } from "lucide-react";
