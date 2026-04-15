@@ -18,7 +18,8 @@ import { QuotasIncentivesTab } from "@/components/sales/quotas/QuotasIncentivesT
 
 export default function SalesTeam() {
   const { currentUser } = useCurrentUser();
-  const isJonathan = currentUser?.name?.toLowerCase().includes("jonathan");
+  const userName = currentUser?.name?.toLowerCase() || "";
+  const hasFullAccess = userName.includes("jonathan") || userName.includes("maikol") || userName.includes("everton");
   const { plan, saveSalesLevels } = useCommissionPlan();
   const [activeTab, setActiveTab] = useState("performance");
 
