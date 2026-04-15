@@ -147,9 +147,9 @@ const App = () => (
                   <TooltipProvider>
                     <Toaster />
                     <Sonner />
-                    <ImpersonationBanner />
                     <BrowserRouter>
                       <SectorProvider>
+                        <ImpersonationBanner />
                         <Suspense fallback={<PageLoader />}>
                           <Routes>
                             <Route path="/" element={<Navigate to="/setores" replace />} />
