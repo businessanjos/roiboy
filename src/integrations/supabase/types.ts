@@ -10777,34 +10777,49 @@ export type Database = {
         Row: {
           account_id: string
           bonus_base_value: number | null
+          clawback_days: number
+          clawback_enabled: boolean
+          clawback_percent: number
           created_at: string
           description: string | null
           id: string
           is_active: boolean | null
           name: string
           period_type: string
+          quarterly_bonus_enabled: boolean
+          quarterly_bonus_value: number
           updated_at: string
         }
         Insert: {
           account_id: string
           bonus_base_value?: number | null
+          clawback_days?: number
+          clawback_enabled?: boolean
+          clawback_percent?: number
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean | null
           name: string
           period_type?: string
+          quarterly_bonus_enabled?: boolean
+          quarterly_bonus_value?: number
           updated_at?: string
         }
         Update: {
           account_id?: string
           bonus_base_value?: number | null
+          clawback_days?: number
+          clawback_enabled?: boolean
+          clawback_percent?: number
           created_at?: string
           description?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
           period_type?: string
+          quarterly_bonus_enabled?: boolean
+          quarterly_bonus_value?: number
           updated_at?: string
         }
         Relationships: [
@@ -11360,6 +11375,79 @@ export type Database = {
           },
         ]
       }
+      sales_spiffs: {
+        Row: {
+          account_id: string
+          bonus_amount: number
+          bonus_type: string
+          created_at: string
+          description: string | null
+          end_date: string
+          id: string
+          is_active: boolean
+          name: string
+          plan_id: string | null
+          product_id: string | null
+          start_date: string
+          target_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          bonus_amount?: number
+          bonus_type?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          plan_id?: string | null
+          product_id?: string | null
+          start_date?: string
+          target_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          bonus_amount?: number
+          bonus_type?: string
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          plan_id?: string | null
+          product_id?: string | null
+          start_date?: string
+          target_quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_spiffs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_spiffs_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "sales_incentive_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_spiffs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_team_careers: {
         Row: {
           account_id: string
@@ -11410,6 +11498,50 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_user_ote: {
+        Row: {
+          account_id: string
+          base_salary_annual: number
+          created_at: string
+          id: string
+          notes: string | null
+          updated_at: string
+          user_id: string
+          variable_target_annual: number
+          year: number
+        }
+        Insert: {
+          account_id: string
+          base_salary_annual?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+          variable_target_annual?: number
+          year: number
+        }
+        Update: {
+          account_id?: string
+          base_salary_annual?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+          variable_target_annual?: number
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_user_ote_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
             referencedColumns: ["id"]
           },
         ]
