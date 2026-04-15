@@ -168,6 +168,46 @@ export default function HRServiceProviderProfile() {
     setCpfLooking(false);
   };
 
+  const handleCnpjLookup = async () => {
+    const cnpj = form.cnpj?.replace(/\D/g, "");
+    if (!cnpj || cnpj.length !== 14) {
+      toast.error("Informe um CNPJ válido com 14 dígitos");
+      return;
+    }
+    setCnpjLooking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("hubdev-cnpj-lookup", {
+        body: { cnpj },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || "Erro ao consultar CNPJ");
+        setCnpjLooking(false);
+        return;
+      }
+      const updates: Partial<HRServiceProvider> = {};
+      if (data.razao_social) updates.company_name = data.razao_social;
+      if (data.nome_fantasia) updates.trade_name = data.nome_fantasia;
+      if (data.email && !form.email) updates.email = data.email;
+      if (data.telefone && !form.phone) updates.phone = data.telefone;
+      if (data.logradouro) {
+        let addr = data.logradouro;
+        if (data.numero) addr += `, ${data.numero}`;
+        if (data.complemento) addr += ` - ${data.complemento}`;
+        if (data.bairro) addr += `, ${data.bairro}`;
+        updates.address = addr;
+      }
+      if (data.cidade) updates.city = data.cidade;
+      if (data.estado) updates.state = data.estado;
+      if (data.cep) updates.zip_code = data.cep;
+      isDirty.current = true;
+      setForm(f => ({ ...f, ...updates }));
+      toast.success("Dados do CNPJ preenchidos com sucesso!");
+    } catch {
+      toast.error("Erro ao consultar CNPJ");
+    }
+    setCnpjLooking(false);
+  };
+
   if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
     return <Navigate to="/" replace />;
   }
