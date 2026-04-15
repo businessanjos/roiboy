@@ -242,6 +242,7 @@ const App = () => (
                             <Route path="/rh/collaborators/:id" element={<HRCollaboratorProfile />} />
                             <Route path="/rh/org-chart" element={<OrgChart />} />
                             <Route path="/rh/departments" element={<RHDepartments />} />
+                            <Route path="/rh/job-descriptions" element={<RHPositions />} />
                             <Route path="/rh/vacancies" element={<RHVagas />} />
                             <Route path="/rh/vacancies/new" element={<RHJobForm />} />
                             <Route path="/rh/vacancies/:id" element={<RHJobDetail />} />
