@@ -69,7 +69,6 @@ export default function HRServiceProviderProfile() {
   const [feeDisplay, setFeeDisplay] = useState("");
   const [totalDisplay, setTotalDisplay] = useState("");
   const [downPaymentDisplay, setDownPaymentDisplay] = useState("");
-  const [installmentValueDisplay, setInstallmentValueDisplay] = useState("");
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
   const isDirty = useRef(false);
@@ -96,7 +95,6 @@ export default function HRServiceProviderProfile() {
       setFeeDisplay(formatBRL(providerData.fee_amount));
       setTotalDisplay(formatBRL(providerData.contract_total_value));
       setDownPaymentDisplay(formatBRL(providerData.contract_down_payment));
-      setInstallmentValueDisplay(formatBRL(providerData.contract_installment_value));
       setLoading(false);
       isDirty.current = false;
     })();
@@ -135,6 +133,24 @@ export default function HRServiceProviderProfile() {
   const setField = (key: string, value: any) => {
     isDirty.current = true;
     setForm(f => ({ ...f, [key]: value }));
+  };
+
+  const recalcFee = (total?: number | null, down?: number | null, installments?: number | null) => {
+    const t = total ?? (form as any).contract_total_value ?? 0;
+    const d = down ?? (form as any).contract_down_payment ?? 0;
+    const n = installments ?? (form as any).contract_installments_count ?? 0;
+    if (t > 0 && n > 0) {
+      const remaining = t - (d || 0);
+      const parcelsAfterDown = d && d > 0 ? n - 1 : n;
+      if (parcelsAfterDown > 0) {
+        const fee = Math.round((remaining / parcelsAfterDown) * 100) / 100;
+        setField("fee_amount", fee);
+        setFeeDisplay(formatBRL(fee));
+        return;
+      }
+    }
+    setField("fee_amount", null);
+    setFeeDisplay("");
   };
 
   const handleCpfLookup = async () => {
@@ -388,6 +404,7 @@ export default function HRServiceProviderProfile() {
                     const parsed = parseBRL(totalDisplay);
                     setField("contract_total_value", parsed);
                     setTotalDisplay(formatBRL(parsed));
+                    recalcFee(parsed, undefined, undefined);
                   }}
                   placeholder="0,00"
                   inputMode="decimal"
@@ -406,6 +423,7 @@ export default function HRServiceProviderProfile() {
                     const parsed = parseBRL(downPaymentDisplay);
                     setField("contract_down_payment", parsed);
                     setDownPaymentDisplay(formatBRL(parsed));
+                    recalcFee(undefined, parsed, undefined);
                   }}
                   placeholder="0,00"
                   inputMode="decimal"
@@ -418,46 +436,23 @@ export default function HRServiceProviderProfile() {
                 type="number"
                 min={1}
                 value={(form as any).contract_installments_count || ""}
-                onChange={e => setField("contract_installments_count", parseInt(e.target.value) || null)}
+                onChange={e => {
+                  const val = parseInt(e.target.value) || null;
+                  setField("contract_installments_count", val);
+                  recalcFee(undefined, undefined, val);
+                }}
                 placeholder="1"
               />
             </div>
             <div>
-              <Label>Valor da Parcela</Label>
+              <Label>Fee mensal (calculado)</Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
                 <Input
-                  className="pl-10"
-                  value={installmentValueDisplay}
-                  onChange={e => { setInstallmentValueDisplay(e.target.value.replace(/[^\d,]/g, "")); }}
-                  onBlur={() => {
-                    const parsed = parseBRL(installmentValueDisplay);
-                    setField("contract_installment_value", parsed);
-                    setInstallmentValueDisplay(formatBRL(parsed));
-                  }}
-                  placeholder="0,00"
-                  inputMode="decimal"
-                />
-              </div>
-            </div>
-            <div>
-              <Label>Fee mensal</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
-                <Input
-                  className="pl-10"
+                  className="pl-10 bg-muted"
                   value={feeDisplay}
-                  onChange={e => {
-                    const raw = e.target.value.replace(/[^\d,]/g, "");
-                    setFeeDisplay(raw);
-                  }}
-                  onBlur={() => {
-                    const parsed = parseBRL(feeDisplay);
-                    setField("fee_amount", parsed);
-                    setFeeDisplay(formatBRL(parsed));
-                  }}
-                  placeholder="0,00"
-                  inputMode="decimal"
+                  readOnly
+                  placeholder="Preenchido automaticamente"
                 />
               </div>
             </div>
