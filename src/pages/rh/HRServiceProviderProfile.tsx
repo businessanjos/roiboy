@@ -17,6 +17,7 @@ import {
   FileText, Trash2, Handshake, CheckCircle2, Loader2, Search,
   Landmark, Building2,
 } from "lucide-react";
+import { BankCombobox } from "@/components/rh/BankCombobox";
 import { toast } from "sonner";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
