@@ -142,7 +142,7 @@ export function useHRCollaborators() {
 
   const updateCollaborator = async (id: string, data: Partial<HRCollaborator>, silent = false) => {
     try {
-      const updatePayload = { ...data };
+      const { source, team_role_name, id: _id, created_at, updated_at, ...updatePayload } = data as any;
 
       if (Object.prototype.hasOwnProperty.call(data, "department")) {
         updatePayload.hr_department_id = await resolveDepartmentId(data.department);
