@@ -65,6 +65,7 @@ export default function HRServiceProviderProfile() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [form, setForm] = useState<Partial<HRServiceProvider>>({});
   const [cpfLooking, setCpfLooking] = useState(false);
+  const [cnpjLooking, setCnpjLooking] = useState(false);
   const [feeDisplay, setFeeDisplay] = useState("");
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
@@ -165,6 +166,46 @@ export default function HRServiceProviderProfile() {
       toast.error("Erro ao consultar CPF");
     }
     setCpfLooking(false);
+  };
+
+  const handleCnpjLookup = async () => {
+    const cnpj = form.cnpj?.replace(/\D/g, "");
+    if (!cnpj || cnpj.length !== 14) {
+      toast.error("Informe um CNPJ válido com 14 dígitos");
+      return;
+    }
+    setCnpjLooking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("hubdev-cnpj-lookup", {
+        body: { cnpj },
+      });
+      if (error || data?.error) {
+        toast.error(data?.error || "Erro ao consultar CNPJ");
+        setCnpjLooking(false);
+        return;
+      }
+      const updates: Partial<HRServiceProvider> = {};
+      if (data.razao_social) updates.company_name = data.razao_social;
+      if (data.nome_fantasia) updates.trade_name = data.nome_fantasia;
+      if (data.email && !form.email) updates.email = data.email;
+      if (data.telefone && !form.phone) updates.phone = data.telefone;
+      if (data.logradouro) {
+        let addr = data.logradouro;
+        if (data.numero) addr += `, ${data.numero}`;
+        if (data.complemento) addr += ` - ${data.complemento}`;
+        if (data.bairro) addr += `, ${data.bairro}`;
+        updates.address = addr;
+      }
+      if (data.cidade) updates.city = data.cidade;
+      if (data.estado) updates.state = data.estado;
+      if (data.cep) updates.zip_code = data.cep;
+      isDirty.current = true;
+      setForm(f => ({ ...f, ...updates }));
+      toast.success("Dados do CNPJ preenchidos com sucesso!");
+    } catch {
+      toast.error("Erro ao consultar CNPJ");
+    }
+    setCnpjLooking(false);
   };
 
   if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
@@ -281,7 +322,15 @@ export default function HRServiceProviderProfile() {
             <CardTitle className="text-base flex items-center gap-2"><Building2 className="h-4 w-4" /> Dados da Empresa (PJ)</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><Label>CNPJ</Label><Input value={form.cnpj || ""} onChange={e => setField("cnpj", e.target.value)} placeholder="00.000.000/0000-00" /></div>
+            <div>
+              <Label>CNPJ</Label>
+              <div className="flex gap-2">
+                <Input value={form.cnpj || ""} onChange={e => setField("cnpj", e.target.value)} placeholder="00.000.000/0000-00" />
+                <Button type="button" variant="outline" size="icon" onClick={handleCnpjLookup} disabled={cnpjLooking} title="Consultar CNPJ (HubDev)" className="shrink-0">
+                  {cnpjLooking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
             <div><Label>Razão Social</Label><Input value={form.company_name || ""} onChange={e => setField("company_name", e.target.value)} /></div>
             <div><Label>Nome Fantasia</Label><Input value={form.trade_name || ""} onChange={e => setField("trade_name", e.target.value)} /></div>
           </CardContent>
