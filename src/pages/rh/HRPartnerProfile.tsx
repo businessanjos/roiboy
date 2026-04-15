@@ -125,7 +125,10 @@ export default function HRPartnerProfile() {
     if (ok) navigate("/rh/partners");
   };
 
-  const setField = (key: string, value: any) => setForm(f => ({ ...f, [key]: value }));
+  const setField = (key: string, value: any) => {
+    isDirty.current = true;
+    setForm(f => ({ ...f, [key]: value }));
+  };
 
   const handleCpfLookup = async () => {
     const cpf = form.cpf?.replace(/\D/g, "");
