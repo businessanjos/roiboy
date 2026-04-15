@@ -468,8 +468,6 @@ export default function HRServiceProviderProfile() {
 
             <div><Label>Início do Contrato</Label><Input type="date" value={(form as any).contract_start_date || ""} onChange={e => setField("contract_start_date", e.target.value)} /></div>
             <div><Label>Fim do Contrato</Label><Input type="date" value={(form as any).contract_end_date || ""} onChange={e => setField("contract_end_date", e.target.value)} /></div>
-            <div><Label>Data de contratação</Label><Input type="date" value={form.hire_date || ""} onChange={e => setField("hire_date", e.target.value)} /></div>
-            <div><Label>Data de encerramento</Label><Input type="date" value={form.termination_date || ""} onChange={e => setField("termination_date", e.target.value)} /></div>
 
             <div>
               <Label>Renovação Automática</Label>
