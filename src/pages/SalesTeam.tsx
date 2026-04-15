@@ -23,7 +23,7 @@ export default function SalesTeam() {
   const { plan, saveSalesLevels } = useCommissionPlan();
   const [activeTab, setActiveTab] = useState("performance");
 
-  if (!isJonathan) {
+  if (!hasFullAccess) {
     return (
       <div className="p-4 space-y-4">
         <div>
