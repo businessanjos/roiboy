@@ -334,6 +334,12 @@ export default function Renewals() {
 
   useEffect(() => {
     fetchRenewals();
+    // Fetch products for renewal dialog
+    const fetchProducts = async () => {
+      const { data } = await supabase.from("products").select("id, name, price").eq("is_active", true).order("name");
+      setProducts(data || []);
+    };
+    fetchProducts();
   }, [currentUser?.account_id]);
 
   // Extract unique values for filters
