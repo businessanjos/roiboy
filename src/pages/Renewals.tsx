@@ -562,8 +562,6 @@ export default function Renewals() {
                 <SelectItem value="all">Todos status</SelectItem>
                 <SelectItem value="pending">Pendente</SelectItem>
                 <SelectItem value="negotiating">Em Negociação</SelectItem>
-                <SelectItem value="renewed">Renovado</SelectItem>
-                <SelectItem value="lost">Cancelou</SelectItem>
               </SelectContent>
             </Select>
           </div>
