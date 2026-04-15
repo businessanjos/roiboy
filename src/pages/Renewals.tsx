@@ -175,21 +175,13 @@ export default function Renewals() {
       const today = new Date();
       const in90Days = new Date(today);
       in90Days.setDate(today.getDate() + 90);
-
       const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
-      const { data, error } = await supabase
+      // 1) Fetch contracts expiring in next 90 days (future renewals)
+      const { data: futureData, error: futureError } = await supabase
         .from("client_contracts")
         .select(`
-          id,
-          client_id,
-          status,
-          start_date,
-          end_date,
-          value,
-          currency,
-          product_id,
-          payment_option,
+          id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
           clients!inner(full_name, phone_e164, emails, logo_url, status, responsible_user_id, users:responsible_user_id(name)),
           products(name, color, price, cash_price, installment_price, renewal_discount_percent)
         `)
@@ -201,14 +193,84 @@ export default function Renewals() {
         .is("parent_contract_id", null)
         .order("end_date", { ascending: true });
 
-      if (error) {
-        console.error("Error fetching renewal contracts:", error);
+      // 2) Fetch already expired contracts that have pending/negotiating outcomes
+      const { data: expiredPendingOutcomes } = await supabase
+        .from("renewal_outcomes")
+        .select("contract_id")
+        .eq("account_id", currentUser.account_id)
+        .in("outcome", ["pending", "negotiating"]);
+
+      const pendingContractIds = (expiredPendingOutcomes || []).map((o: any) => o.contract_id);
+      
+      let expiredPendingData: any[] = [];
+      if (pendingContractIds.length > 0) {
+        const { data } = await supabase
+          .from("client_contracts")
+          .select(`
+            id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
+            clients!inner(full_name, phone_e164, emails, logo_url, status, responsible_user_id, users:responsible_user_id(name)),
+            products(name, color, price, cash_price, installment_price, renewal_discount_percent)
+          `)
+          .eq("account_id", currentUser.account_id)
+          .in("id", pendingContractIds)
+          .not("end_date", "is", null)
+          .lt("end_date", formatDate(today))
+          .is("parent_contract_id", null)
+          .order("end_date", { ascending: true });
+        expiredPendingData = data || [];
+      }
+
+      // 3) Also fetch expired contracts without any outcome at all (truly pending)
+      const { data: expiredNoOutcome } = await supabase
+        .from("client_contracts")
+        .select(`
+          id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
+          clients!inner(full_name, phone_e164, emails, logo_url, status, responsible_user_id, users:responsible_user_id(name)),
+          products(name, color, price, cash_price, installment_price, renewal_discount_percent)
+        `)
+        .eq("account_id", currentUser.account_id)
+        .not("end_date", "is", null)
+        .lt("end_date", formatDate(today))
+        .gte("end_date", "2025-03-01")
+        .is("parent_contract_id", null)
+        .order("end_date", { ascending: true });
+
+      if (futureError) {
+        console.error("Error fetching renewal contracts:", futureError);
         setContracts([]);
         setLoading(false);
         return;
       }
 
-      const mapped: RenewalContract[] = (data || []).map((c: any) => {
+      // Merge all, dedup by contract id
+      const allRaw = [...(futureData || []), ...expiredPendingData, ...(expiredNoOutcome || [])];
+      const seen = new Set<string>();
+      const deduped = allRaw.filter((c: any) => {
+        if (seen.has(c.id)) return false;
+        seen.add(c.id);
+        return true;
+      });
+
+      // Fetch all outcomes for these contracts to know which are already resolved
+      const allContractIds = deduped.map((c: any) => c.id);
+      let allOutcomesMap: Record<string, { id: string; outcome: string }> = {};
+      if (allContractIds.length > 0) {
+        const { data: outcomes } = await supabase
+          .from("renewal_outcomes")
+          .select("id, contract_id, outcome")
+          .in("contract_id", allContractIds);
+        (outcomes || []).forEach((o: any) => {
+          allOutcomesMap[o.contract_id] = { id: o.id, outcome: o.outcome };
+        });
+      }
+
+      // Filter out contracts already marked as renewed or lost
+      const pendingContracts = deduped.filter((c: any) => {
+        const outcome = allOutcomesMap[c.id]?.outcome;
+        return !outcome || outcome === "pending" || outcome === "negotiating";
+      });
+
+      const mapped: RenewalContract[] = pendingContracts.map((c: any) => {
         const endDate = parseLocalDate(c.end_date);
         const diffMs = endDate ? endDate.getTime() - today.getTime() : 0;
         const daysUntil = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
@@ -244,18 +306,11 @@ export default function Renewals() {
             const installmentPrice = c.products?.installment_price;
             const cashPrice = c.products?.cash_price;
             const basePrice = c.products?.price;
-            
             let priceToUse: number;
-            if (isCash && cashPrice && cashPrice > 0) {
-              priceToUse = cashPrice;
-            } else if (installmentPrice && installmentPrice > 0) {
-              priceToUse = installmentPrice;
-            } else if (basePrice && basePrice > 0) {
-              priceToUse = basePrice;
-            } else {
-              priceToUse = c.value || 0;
-            }
-            
+            if (isCash && cashPrice && cashPrice > 0) priceToUse = cashPrice;
+            else if (installmentPrice && installmentPrice > 0) priceToUse = installmentPrice;
+            else if (basePrice && basePrice > 0) priceToUse = basePrice;
+            else priceToUse = c.value || 0;
             return priceToUse * (discountPercent / 100);
           })(),
           responsible_name: (c.clients as any)?.users?.name || null,
@@ -263,28 +318,13 @@ export default function Renewals() {
         };
       });
 
-      // Filter by visibility: restricted users see only their own clients
       const hasFullAccess = currentUser.role === "admin" || currentUser.role === "super_admin" 
         || currentUser.is_also_admin 
         || RENEWALS_FULL_ACCESS_USER_IDS.includes(currentUser.id);
       
       const finalContracts = hasFullAccess ? mapped : mapped.filter(c => c.responsible_user_id === currentUser.id);
       setContracts(finalContracts);
-
-      // Fetch existing outcomes for these contracts
-      const contractIds = finalContracts.map(c => c.id);
-      if (contractIds.length > 0) {
-        const { data: outcomes } = await supabase
-          .from("renewal_outcomes")
-          .select("id, contract_id, outcome")
-          .in("contract_id", contractIds);
-
-        const oMap: Record<string, { id: string; outcome: string }> = {};
-        (outcomes || []).forEach((o: any) => {
-          oMap[o.contract_id] = { id: o.id, outcome: o.outcome };
-        });
-        setOutcomeMap(oMap);
-      }
+      setOutcomeMap(allOutcomesMap);
     } catch (err) {
       console.error("Error:", err);
     } finally {
