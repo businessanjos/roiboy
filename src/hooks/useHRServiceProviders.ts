@@ -35,6 +35,11 @@ export interface HRServiceProvider {
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   notes: string | null;
+  bank_name: string | null;
+  bank_agency: string | null;
+  bank_account: string | null;
+  bank_pix_key: string | null;
+  contract_number: string | null;
   created_at: string;
   updated_at: string;
 }
