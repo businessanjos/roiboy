@@ -8,7 +8,11 @@ interface SectorContextType {
   clearSector: () => void;
 }
 
-const SectorContext = createContext<SectorContextType | undefined>(undefined);
+const SectorContext = createContext<SectorContextType>({
+  currentSector: null,
+  setCurrentSector: () => {},
+  clearSector: () => {},
+});
 
 export function SectorProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -61,9 +65,5 @@ export function SectorProvider({ children }: { children: ReactNode }) {
 }
 
 export function useSector() {
-  const context = useContext(SectorContext);
-  if (context === undefined) {
-    throw new Error("useSector must be used within a SectorProvider");
-  }
-  return context;
+  return useContext(SectorContext);
 }
