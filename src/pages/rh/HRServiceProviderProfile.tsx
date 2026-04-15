@@ -69,7 +69,6 @@ export default function HRServiceProviderProfile() {
   const [feeDisplay, setFeeDisplay] = useState("");
   const [totalDisplay, setTotalDisplay] = useState("");
   const [downPaymentDisplay, setDownPaymentDisplay] = useState("");
-  const [installmentValueDisplay, setInstallmentValueDisplay] = useState("");
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
   const isDirty = useRef(false);
@@ -96,7 +95,6 @@ export default function HRServiceProviderProfile() {
       setFeeDisplay(formatBRL(providerData.fee_amount));
       setTotalDisplay(formatBRL(providerData.contract_total_value));
       setDownPaymentDisplay(formatBRL(providerData.contract_down_payment));
-      setInstallmentValueDisplay(formatBRL(providerData.contract_installment_value));
       setLoading(false);
       isDirty.current = false;
     })();
@@ -135,6 +133,24 @@ export default function HRServiceProviderProfile() {
   const setField = (key: string, value: any) => {
     isDirty.current = true;
     setForm(f => ({ ...f, [key]: value }));
+  };
+
+  const recalcFee = (total?: number | null, down?: number | null, installments?: number | null) => {
+    const t = total ?? (form as any).contract_total_value ?? 0;
+    const d = down ?? (form as any).contract_down_payment ?? 0;
+    const n = installments ?? (form as any).contract_installments_count ?? 0;
+    if (t > 0 && n > 0) {
+      const remaining = t - (d || 0);
+      const parcelsAfterDown = d && d > 0 ? n - 1 : n;
+      if (parcelsAfterDown > 0) {
+        const fee = Math.round((remaining / parcelsAfterDown) * 100) / 100;
+        setField("fee_amount", fee);
+        setFeeDisplay(formatBRL(fee));
+        return;
+      }
+    }
+    setField("fee_amount", null);
+    setFeeDisplay("");
   };
 
   const handleCpfLookup = async () => {
