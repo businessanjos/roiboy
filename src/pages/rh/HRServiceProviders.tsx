@@ -56,10 +56,6 @@ export default function HRServiceProviders() {
     position: "",
   });
 
-  if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
-    return <Navigate to="/" replace />;
-  }
-
   const filtered = useMemo(() => {
     return providers.filter(p => {
       const matchSearch =
