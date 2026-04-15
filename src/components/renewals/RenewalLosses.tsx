@@ -167,10 +167,12 @@ export function RenewalLosses() {
           loss_notes: outcome?.loss_notes || null,
           resolved_at: outcome?.resolved_at || null,
           days_expired: daysExpired,
-          has_new_contract: hasNew,
+          has_new_contract: false,
         };
       });
 
+      // Only show in Resultados contracts explicitly marked as renewed or lost
+      const resolvedItems = mapped.filter(item => item.outcome === "renewed" || item.outcome === "lost");
       // Apply visibility filter
       if (hasFullAccess) {
         setItems(mapped);
