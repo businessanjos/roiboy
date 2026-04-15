@@ -245,6 +245,7 @@ const App = () => (
                             <Route path="/rh/vacancies/:id" element={<RHJobDetail />} />
                             <Route path="/rh/vacancies/:id/edit" element={<RHJobForm />} />
                             <Route path="/rh/service-providers" element={<HRServiceProviders />} />
+                            <Route path="/rh/service-providers/:id" element={<HRServiceProviderProfile />} />
                             <Route path="/rh/partners" element={<HRPartners />} />
                             <Route path="/rh/partners/:id" element={<HRPartnerProfile />} />
                             
