@@ -6766,6 +6766,10 @@ export type Database = {
           account_id: string
           address: string | null
           avatar_url: string | null
+          bank_account: string | null
+          bank_agency: string | null
+          bank_name: string | null
+          bank_pix_key: string | null
           birth_date: string | null
           city: string | null
           cpf: string | null
@@ -6777,16 +6781,23 @@ export type Database = {
           exit_date: string | null
           full_name: string
           gender: string | null
+          holding_cnpj: string | null
           hr_department_id: string | null
           id: string
           join_date: string | null
+          marital_property_regime: string | null
           marital_status: string | null
+          nationality: string | null
           notes: string | null
           ownership_percentage: number | null
+          partner_type: string | null
           phone: string | null
+          pis_pasep: string | null
           position: string | null
           pro_labore: number | null
+          profession: string | null
           rg: string | null
+          social_contract_number: string | null
           state: string | null
           status: string | null
           updated_at: string
@@ -6797,6 +6808,10 @@ export type Database = {
           account_id: string
           address?: string | null
           avatar_url?: string | null
+          bank_account?: string | null
+          bank_agency?: string | null
+          bank_name?: string | null
+          bank_pix_key?: string | null
           birth_date?: string | null
           city?: string | null
           cpf?: string | null
@@ -6808,16 +6823,23 @@ export type Database = {
           exit_date?: string | null
           full_name: string
           gender?: string | null
+          holding_cnpj?: string | null
           hr_department_id?: string | null
           id?: string
           join_date?: string | null
+          marital_property_regime?: string | null
           marital_status?: string | null
+          nationality?: string | null
           notes?: string | null
           ownership_percentage?: number | null
+          partner_type?: string | null
           phone?: string | null
+          pis_pasep?: string | null
           position?: string | null
           pro_labore?: number | null
+          profession?: string | null
           rg?: string | null
+          social_contract_number?: string | null
           state?: string | null
           status?: string | null
           updated_at?: string
@@ -6828,6 +6850,10 @@ export type Database = {
           account_id?: string
           address?: string | null
           avatar_url?: string | null
+          bank_account?: string | null
+          bank_agency?: string | null
+          bank_name?: string | null
+          bank_pix_key?: string | null
           birth_date?: string | null
           city?: string | null
           cpf?: string | null
@@ -6839,16 +6865,23 @@ export type Database = {
           exit_date?: string | null
           full_name?: string
           gender?: string | null
+          holding_cnpj?: string | null
           hr_department_id?: string | null
           id?: string
           join_date?: string | null
+          marital_property_regime?: string | null
           marital_status?: string | null
+          nationality?: string | null
           notes?: string | null
           ownership_percentage?: number | null
+          partner_type?: string | null
           phone?: string | null
+          pis_pasep?: string | null
           position?: string | null
           pro_labore?: number | null
+          profession?: string | null
           rg?: string | null
+          social_contract_number?: string | null
           state?: string | null
           status?: string | null
           updated_at?: string
