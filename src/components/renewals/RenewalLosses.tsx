@@ -126,22 +126,7 @@ export function RenewalLosses() {
         });
       }
 
-      // Check for newer contracts per client (indicates renewal)
-      const clientIds = [...new Set((expiredContracts || []).map((c: any) => c.client_id))];
-      let newerContractsMap: Record<string, boolean> = {};
-      if (clientIds.length > 0) {
-        const { data: newerContracts } = await supabase
-          .from("client_contracts")
-          .select("client_id")
-          .eq("account_id", currentUser.account_id)
-          .in("client_id", clientIds)
-          .in("status", ["active", "a_iniciar", "pendente"])
-          .is("parent_contract_id", null);
-        (newerContracts || []).forEach((nc: any) => {
-          newerContractsMap[nc.client_id] = true;
-        });
-      }
-
+      // No more auto-detection: only use explicit outcomes from renewal_outcomes table
       const mapped: ExpiredContract[] = (expiredContracts || []).map((c: any) => {
         const endDate = parseLocalDate(c.end_date);
         const diffMs = endDate ? today.getTime() - endDate.getTime() : 0;
@@ -161,8 +146,8 @@ export function RenewalLosses() {
         else priceToUse = c.value || 0;
 
         const outcome = outcomesMap[c.id];
-        const hasNew = newerContractsMap[c.client_id] || false;
-        const effectiveOutcome = outcome?.outcome || (hasNew ? "renewed" : null);
+        // Only show in results if explicitly marked as renewed or lost
+        const effectiveOutcome = outcome?.outcome || null;
 
         return {
           id: c.id,
@@ -182,15 +167,17 @@ export function RenewalLosses() {
           loss_notes: outcome?.loss_notes || null,
           resolved_at: outcome?.resolved_at || null,
           days_expired: daysExpired,
-          has_new_contract: hasNew,
+          has_new_contract: false,
         };
       });
 
+      // Only show in Resultados contracts explicitly marked as renewed or lost
+      const resolvedItems = mapped.filter(item => item.outcome === "renewed" || item.outcome === "lost");
       // Apply visibility filter
       if (hasFullAccess) {
-        setItems(mapped);
+        setItems(resolvedItems);
       } else {
-        setItems(mapped.filter(c => c.responsible_user_id === currentUser.id));
+        setItems(resolvedItems.filter(c => c.responsible_user_id === currentUser.id));
       }
     } catch (err) {
       console.error("Error:", err);
@@ -274,27 +261,23 @@ export function RenewalLosses() {
     }
   };
 
-  // Analytics
+  // Analytics - no more has_new_contract, only explicit outcomes
   const losses = items.filter(i => i.outcome === "lost");
-  const confirmedRenewed = items.filter(i => i.outcome === "renewed");
-  const suggestedRenewed = items.filter(i => i.has_new_contract && i.outcome !== "renewed" && i.outcome !== "lost");
-  const renewed = items.filter(i => i.outcome === "renewed" || i.has_new_contract);
-  const pending = items.filter(i => (!i.outcome || i.outcome === "pending") && !i.has_new_contract);
+  const renewed = items.filter(i => i.outcome === "renewed");
   const totalLostValue = losses.reduce((s, i) => s + i.renewal_value, 0);
   const totalRenewedValue = renewed.reduce((s, i) => s + i.renewal_value, 0);
   const renewalRate = items.length > 0 ? (renewed.length / items.length) * 100 : 0;
 
   // Monthly chart data
-  const monthlyData: Record<string, { month: string; lost: number; renewed: number; pending: number }> = {};
+  const monthlyData: Record<string, { month: string; lost: number; renewed: number }> = {};
   items.forEach(item => {
     const d = parseLocalDate(item.end_date);
     if (!d) return;
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const label = `${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-    if (!monthlyData[key]) monthlyData[key] = { month: label, lost: 0, renewed: 0, pending: 0 };
+    if (!monthlyData[key]) monthlyData[key] = { month: label, lost: 0, renewed: 0 };
     if (item.outcome === "lost") monthlyData[key].lost += item.renewal_value / 100;
-    else if (item.outcome === "renewed" || item.has_new_contract) monthlyData[key].renewed += item.renewal_value / 100;
-    else monthlyData[key].pending += item.renewal_value / 100;
+    else if (item.outcome === "renewed") monthlyData[key].renewed += item.renewal_value / 100;
   });
   const monthlyChartData = Object.keys(monthlyData).sort().map(k => monthlyData[k]);
 
@@ -314,7 +297,7 @@ export function RenewalLosses() {
     if (item.outcome === "lost") {
       consultantStats[name].lost++;
       consultantStats[name].lostValue += item.renewal_value;
-    } else if (item.outcome === "renewed" || item.has_new_contract) {
+    } else if (item.outcome === "renewed") {
       consultantStats[name].renewed++;
     }
   });
@@ -325,9 +308,7 @@ export function RenewalLosses() {
   const filteredItems = items.filter(i => {
     if (filterConsultora !== "all" && i.responsible_name !== filterConsultora) return false;
     if (filterOutcome !== "all") {
-      const effectiveOutcome = (i.outcome === "renewed" || i.has_new_contract) ? "renewed" 
-        : i.outcome === "lost" ? "lost" : "pending";
-      if (filterOutcome !== effectiveOutcome) return false;
+      if (filterOutcome !== i.outcome) return false;
     }
     return true;
   });
@@ -407,13 +388,12 @@ export function RenewalLosses() {
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [
                       `R$ ${(value * 100).toLocaleString("pt-BR")}`,
-                      name === "lost" ? "Perdido" : name === "renewed" ? "Renovado" : "Pendente"
+                      name === "lost" ? "Perdido" : "Renovado"
                     ]}
                   />
-                  <Legend formatter={(v) => v === "lost" ? "Perdido" : v === "renewed" ? "Renovado" : "Pendente"} />
+                  <Legend formatter={(v) => v === "lost" ? "Perdido" : "Renovado"} />
                   <Bar dataKey="renewed" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="lost" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="pending" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="lost" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -607,52 +587,17 @@ export function RenewalLosses() {
                         <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
                           ✅ Renovado
                         </Badge>
-                      ) : item.has_new_contract && item.outcome !== "lost" ? (
-                        <Badge className="bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 border-dashed">
-                          🔄 Sugestão: Renovado
-                        </Badge>
                       ) : item.outcome === "lost" ? (
                         <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                          ❌ Perdido
+                          ❌ Cancelou
                         </Badge>
-                      ) : (
-                        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                          ⏳ Pendente
-                        </Badge>
-                      )}
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-center text-xs text-muted-foreground">
                       {item.loss_reason || "—"}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        {item.has_new_contract && item.outcome !== "renewed" && item.outcome !== "lost" && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs h-7 text-emerald-600 border-emerald-300 hover:bg-emerald-50"
-                            onClick={() => handleConfirmRenewal(item)}
-                            disabled={confirmingRenewal === item.id}
-                          >
-                            {confirmingRenewal === item.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                            ) : (
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                            )}
-                            Confirmar
-                          </Button>
-                        )}
-                        {(!item.outcome || item.outcome === "pending") && !item.has_new_contract && (
-                          <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => handleMarkAsLost(item)}>
-                            Registrar
-                          </Button>
-                        )}
-                        {item.has_new_contract && item.outcome !== "renewed" && item.outcome !== "lost" && (
-                          <Button variant="ghost" size="sm" className="text-xs h-7 text-red-500" onClick={() => handleMarkAsLost(item)}>
-                            <XCircle className="h-3 w-3 mr-1" />
-                            Perda
-                          </Button>
-                        )}
                         {item.outcome === "lost" && (
                           <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => handleMarkAsLost(item)}>
                             Editar

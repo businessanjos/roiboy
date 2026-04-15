@@ -7,11 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Search, Loader2, ArrowRight, CalendarDays, AlertTriangle, Clock, RefreshCw, DollarSign, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -61,6 +63,10 @@ export default function Renewals() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [chanceScores, setChanceScores] = useState<Record<string, number>>({});
   const [outcomeMap, setOutcomeMap] = useState<Record<string, { id: string; outcome: string }>>({});
+  const [products, setProducts] = useState<{ id: string; name: string; price: number }[]>([]);
+  const [renewalDialog, setRenewalDialog] = useState<{ open: boolean; contract: RenewalContract | null }>({ open: false, contract: null });
+  const [renewalForm, setRenewalForm] = useState({ product_id: "", payment_method: "", value: "" });
+  const [savingRenewal, setSavingRenewal] = useState(false);
 
   const handleScoreCalculated = useCallback((clientId: string, score: number) => {
     setChanceScores(prev => {
@@ -71,8 +77,15 @@ export default function Renewals() {
 
   const handleOutcomeChange = useCallback(async (contract: RenewalContract, newOutcome: string) => {
     if (!currentUser?.account_id) return;
-    const existing = outcomeMap[contract.id];
 
+    // If selecting "renewed", open dialog instead of saving directly
+    if (newOutcome === "renewed") {
+      setRenewalForm({ product_id: "", payment_method: "", value: String(contract.renewal_value) });
+      setRenewalDialog({ open: true, contract });
+      return;
+    }
+
+    const existing = outcomeMap[contract.id];
     try {
       if (existing) {
         await supabase
@@ -98,13 +111,61 @@ export default function Renewals() {
           setOutcomeMap(prev => ({ ...prev, [contract.id]: { id: data.id, outcome: newOutcome } }));
         }
       }
-      const labels: Record<string, string> = { negotiating: "Em Negociação", renewed: "Renovado", lost: "Cancelou" };
+      const labels: Record<string, string> = { negotiating: "Em Negociação", renewed: "Renovado", lost: "Cancelou", pending: "Pendente" };
       toast.success(`Status alterado para "${labels[newOutcome] || newOutcome}"`);
+      // If lost, remove from pending list
+      if (newOutcome === "lost") {
+        setContracts(prev => prev.filter(c => c.id !== contract.id));
+      }
     } catch (err) {
       console.error("Error saving outcome:", err);
       toast.error("Erro ao salvar status");
     }
   }, [currentUser, outcomeMap]);
+
+  const handleConfirmRenewal = async () => {
+    const contract = renewalDialog.contract;
+    if (!contract || !currentUser?.account_id) return;
+    setSavingRenewal(true);
+
+    const existing = outcomeMap[contract.id];
+    const renewalValue = parseFloat(renewalForm.value) || contract.renewal_value;
+
+    try {
+      const payload: any = {
+        account_id: currentUser.account_id,
+        client_id: contract.client_id,
+        contract_id: contract.id,
+        outcome: "renewed",
+        renewal_value: renewalValue,
+        resolved_at: new Date().toISOString(),
+        resolved_by: currentUser.id,
+        loss_notes: renewalForm.product_id || renewalForm.payment_method
+          ? `Produto: ${products.find(p => p.id === renewalForm.product_id)?.name || "—"} | Forma: ${renewalForm.payment_method || "—"}`
+          : null,
+      };
+
+      if (existing) {
+        await supabase.from("renewal_outcomes").update(payload).eq("id", existing.id);
+        setOutcomeMap(prev => ({ ...prev, [contract.id]: { ...existing, outcome: "renewed" } }));
+      } else {
+        const { data } = await supabase.from("renewal_outcomes").insert(payload).select("id").single();
+        if (data) {
+          setOutcomeMap(prev => ({ ...prev, [contract.id]: { id: data.id, outcome: "renewed" } }));
+        }
+      }
+
+      toast.success("Renovação registrada com sucesso!");
+      setRenewalDialog({ open: false, contract: null });
+      // Remove from pending list
+      setContracts(prev => prev.filter(c => c.id !== contract.id));
+    } catch (err) {
+      console.error("Error confirming renewal:", err);
+      toast.error("Erro ao registrar renovação");
+    } finally {
+      setSavingRenewal(false);
+    }
+  };
 
   const fetchRenewals = async () => {
     if (!currentUser?.account_id) return;
@@ -114,21 +175,13 @@ export default function Renewals() {
       const today = new Date();
       const in90Days = new Date(today);
       in90Days.setDate(today.getDate() + 90);
-
       const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
-      const { data, error } = await supabase
+      // 1) Fetch contracts expiring in next 90 days (future renewals)
+      const { data: futureData, error: futureError } = await supabase
         .from("client_contracts")
         .select(`
-          id,
-          client_id,
-          status,
-          start_date,
-          end_date,
-          value,
-          currency,
-          product_id,
-          payment_option,
+          id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
           clients!inner(full_name, phone_e164, emails, logo_url, status, responsible_user_id, users:responsible_user_id(name)),
           products(name, color, price, cash_price, installment_price, renewal_discount_percent)
         `)
@@ -140,14 +193,84 @@ export default function Renewals() {
         .is("parent_contract_id", null)
         .order("end_date", { ascending: true });
 
-      if (error) {
-        console.error("Error fetching renewal contracts:", error);
+      // 2) Fetch already expired contracts that have pending/negotiating outcomes
+      const { data: expiredPendingOutcomes } = await supabase
+        .from("renewal_outcomes")
+        .select("contract_id")
+        .eq("account_id", currentUser.account_id)
+        .in("outcome", ["pending", "negotiating"]);
+
+      const pendingContractIds = (expiredPendingOutcomes || []).map((o: any) => o.contract_id);
+      
+      let expiredPendingData: any[] = [];
+      if (pendingContractIds.length > 0) {
+        const { data } = await supabase
+          .from("client_contracts")
+          .select(`
+            id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
+            clients!inner(full_name, phone_e164, emails, logo_url, status, responsible_user_id, users:responsible_user_id(name)),
+            products(name, color, price, cash_price, installment_price, renewal_discount_percent)
+          `)
+          .eq("account_id", currentUser.account_id)
+          .in("id", pendingContractIds)
+          .not("end_date", "is", null)
+          .lt("end_date", formatDate(today))
+          .is("parent_contract_id", null)
+          .order("end_date", { ascending: true });
+        expiredPendingData = data || [];
+      }
+
+      // 3) Also fetch expired contracts without any outcome at all (truly pending)
+      const { data: expiredNoOutcome } = await supabase
+        .from("client_contracts")
+        .select(`
+          id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
+          clients!inner(full_name, phone_e164, emails, logo_url, status, responsible_user_id, users:responsible_user_id(name)),
+          products(name, color, price, cash_price, installment_price, renewal_discount_percent)
+        `)
+        .eq("account_id", currentUser.account_id)
+        .not("end_date", "is", null)
+        .lt("end_date", formatDate(today))
+        .gte("end_date", "2025-03-01")
+        .is("parent_contract_id", null)
+        .order("end_date", { ascending: true });
+
+      if (futureError) {
+        console.error("Error fetching renewal contracts:", futureError);
         setContracts([]);
         setLoading(false);
         return;
       }
 
-      const mapped: RenewalContract[] = (data || []).map((c: any) => {
+      // Merge all, dedup by contract id
+      const allRaw = [...(futureData || []), ...expiredPendingData, ...(expiredNoOutcome || [])];
+      const seen = new Set<string>();
+      const deduped = allRaw.filter((c: any) => {
+        if (seen.has(c.id)) return false;
+        seen.add(c.id);
+        return true;
+      });
+
+      // Fetch all outcomes for these contracts to know which are already resolved
+      const allContractIds = deduped.map((c: any) => c.id);
+      let allOutcomesMap: Record<string, { id: string; outcome: string }> = {};
+      if (allContractIds.length > 0) {
+        const { data: outcomes } = await supabase
+          .from("renewal_outcomes")
+          .select("id, contract_id, outcome")
+          .in("contract_id", allContractIds);
+        (outcomes || []).forEach((o: any) => {
+          allOutcomesMap[o.contract_id] = { id: o.id, outcome: o.outcome };
+        });
+      }
+
+      // Filter out contracts already marked as renewed or lost
+      const pendingContracts = deduped.filter((c: any) => {
+        const outcome = allOutcomesMap[c.id]?.outcome;
+        return !outcome || outcome === "pending" || outcome === "negotiating";
+      });
+
+      const mapped: RenewalContract[] = pendingContracts.map((c: any) => {
         const endDate = parseLocalDate(c.end_date);
         const diffMs = endDate ? endDate.getTime() - today.getTime() : 0;
         const daysUntil = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
@@ -183,18 +306,11 @@ export default function Renewals() {
             const installmentPrice = c.products?.installment_price;
             const cashPrice = c.products?.cash_price;
             const basePrice = c.products?.price;
-            
             let priceToUse: number;
-            if (isCash && cashPrice && cashPrice > 0) {
-              priceToUse = cashPrice;
-            } else if (installmentPrice && installmentPrice > 0) {
-              priceToUse = installmentPrice;
-            } else if (basePrice && basePrice > 0) {
-              priceToUse = basePrice;
-            } else {
-              priceToUse = c.value || 0;
-            }
-            
+            if (isCash && cashPrice && cashPrice > 0) priceToUse = cashPrice;
+            else if (installmentPrice && installmentPrice > 0) priceToUse = installmentPrice;
+            else if (basePrice && basePrice > 0) priceToUse = basePrice;
+            else priceToUse = c.value || 0;
             return priceToUse * (discountPercent / 100);
           })(),
           responsible_name: (c.clients as any)?.users?.name || null,
@@ -202,28 +318,13 @@ export default function Renewals() {
         };
       });
 
-      // Filter by visibility: restricted users see only their own clients
       const hasFullAccess = currentUser.role === "admin" || currentUser.role === "super_admin" 
         || currentUser.is_also_admin 
         || RENEWALS_FULL_ACCESS_USER_IDS.includes(currentUser.id);
       
       const finalContracts = hasFullAccess ? mapped : mapped.filter(c => c.responsible_user_id === currentUser.id);
       setContracts(finalContracts);
-
-      // Fetch existing outcomes for these contracts
-      const contractIds = finalContracts.map(c => c.id);
-      if (contractIds.length > 0) {
-        const { data: outcomes } = await supabase
-          .from("renewal_outcomes")
-          .select("id, contract_id, outcome")
-          .in("contract_id", contractIds);
-
-        const oMap: Record<string, { id: string; outcome: string }> = {};
-        (outcomes || []).forEach((o: any) => {
-          oMap[o.contract_id] = { id: o.id, outcome: o.outcome };
-        });
-        setOutcomeMap(oMap);
-      }
+      setOutcomeMap(allOutcomesMap);
     } catch (err) {
       console.error("Error:", err);
     } finally {
@@ -233,6 +334,12 @@ export default function Renewals() {
 
   useEffect(() => {
     fetchRenewals();
+    // Fetch products for renewal dialog
+    const fetchProducts = async () => {
+      const { data } = await supabase.from("products").select("id, name, price").eq("is_active", true).order("name");
+      setProducts(data || []);
+    };
+    fetchProducts();
   }, [currentUser?.account_id]);
 
   // Extract unique values for filters
@@ -600,6 +707,73 @@ export default function Renewals() {
           <RenewalLosses />
         </TabsContent>
       </Tabs>
+
+      {/* Renewal Confirmation Dialog */}
+      <Dialog open={renewalDialog.open} onOpenChange={(open) => !open && setRenewalDialog({ open: false, contract: null })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar Renovação</DialogTitle>
+          </DialogHeader>
+          {renewalDialog.contract && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Cliente: <strong>{renewalDialog.contract.client_name}</strong>
+              </p>
+
+              <div className="space-y-2">
+                <Label>Produto</Label>
+                <Select value={renewalForm.product_id} onValueChange={(v) => setRenewalForm(prev => ({ ...prev, product_id: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o produto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Forma de Pagamento</Label>
+                <Select value={renewalForm.payment_method} onValueChange={(v) => setRenewalForm(prev => ({ ...prev, payment_method: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a forma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pix">PIX</SelectItem>
+                    <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                    <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
+                    <SelectItem value="boleto">Boleto</SelectItem>
+                    <SelectItem value="transferencia">Transferência</SelectItem>
+                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                    <SelectItem value="parcelado">Parcelado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Valor da Renovação (R$)</Label>
+                <Input
+                  type="number"
+                  value={renewalForm.value}
+                  onChange={(e) => setRenewalForm(prev => ({ ...prev, value: e.target.value }))}
+                  placeholder="0,00"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenewalDialog({ open: false, contract: null })}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmRenewal} disabled={savingRenewal}>
+              {savingRenewal && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Confirmar Renovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
