@@ -10773,6 +10773,89 @@ export type Database = {
           },
         ]
       }
+      sales_history: {
+        Row: {
+          account_id: string
+          address: string | null
+          cep: string | null
+          city: string | null
+          client_name: string | null
+          cnpj: string | null
+          cpf: string | null
+          created_at: string
+          current_revenue: number | null
+          email: string | null
+          first_contact: string | null
+          id: string
+          notes: string | null
+          origin: string | null
+          payment_method: string | null
+          payment_type: string | null
+          phone: string | null
+          product: string | null
+          sale_date: string | null
+          sale_value: number | null
+          seller_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          address?: string | null
+          cep?: string | null
+          city?: string | null
+          client_name?: string | null
+          cnpj?: string | null
+          cpf?: string | null
+          created_at?: string
+          current_revenue?: number | null
+          email?: string | null
+          first_contact?: string | null
+          id?: string
+          notes?: string | null
+          origin?: string | null
+          payment_method?: string | null
+          payment_type?: string | null
+          phone?: string | null
+          product?: string | null
+          sale_date?: string | null
+          sale_value?: number | null
+          seller_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          address?: string | null
+          cep?: string | null
+          city?: string | null
+          client_name?: string | null
+          cnpj?: string | null
+          cpf?: string | null
+          created_at?: string
+          current_revenue?: number | null
+          email?: string | null
+          first_contact?: string | null
+          id?: string
+          notes?: string | null
+          origin?: string | null
+          payment_method?: string | null
+          payment_type?: string | null
+          phone?: string | null
+          product?: string | null
+          sale_date?: string | null
+          sale_value?: number | null
+          seller_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_history_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_incentive_plans: {
         Row: {
           account_id: string

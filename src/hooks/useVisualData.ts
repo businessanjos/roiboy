@@ -78,6 +78,9 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
             result = await fetchTasksData(accountId, measure, dimension, filters, dateDisplayFormat);
           }
           break;
+        case 'sales_history':
+          result = await fetchSalesHistoryData(accountId, measure, dimension, filters, dateDisplayFormat);
+          break;
         default:
           result = [];
       }
@@ -1733,6 +1736,80 @@ async function fetchTasksCallCommercialData(
     result.push({ name, value: scheduledDeals.size, count: completedDeals.size });
   }
   result.sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+
+  return result;
+}
+
+// ==================== SALES HISTORY ====================
+async function fetchSalesHistoryData(
+  accountId: string,
+  measure: VisualConfig['measure'],
+  dimension: VisualConfig['dimension'],
+  filters: any,
+  dateDisplayFormat: string
+): Promise<AggregatedDataPoint[]> {
+  let query = supabase
+    .from('sales_history')
+    .select('id, sale_date, sale_value, seller_name, product, origin, city, payment_type, payment_method')
+    .eq('account_id', accountId);
+
+  // Date filters on sale_date
+  if (filters.startDate) query = query.gte('sale_date', filters.startDate.split('T')[0]);
+  if (filters.endDate) query = query.lte('sale_date', filters.endDate.split('T')[0]);
+
+  // Paginate
+  let allRecords: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if (error) { console.error('Error fetching sales_history:', error); return []; }
+    allRecords = allRecords.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  if (allRecords.length === 0) return [];
+
+  // Group by dimension
+  const groups = new Map<string, { total: number; count: number }>();
+
+  for (const record of allRecords) {
+    let groupKey: string;
+
+    if (dimension.field === '_total') {
+      groupKey = 'Total';
+    } else if (dimension.type === 'date') {
+      const dateStr = record.sale_date;
+      if (!dateStr) continue;
+      groupKey = formatDateGroup(dateStr, dimension.dateGrouping || 'month', dateDisplayFormat as any);
+    } else {
+      groupKey = record[dimension.field] || 'Não informado';
+    }
+
+    if (!groups.has(groupKey)) groups.set(groupKey, { total: 0, count: 0 });
+    const g = groups.get(groupKey)!;
+    g.total += record.sale_value || 0;
+    g.count += 1;
+  }
+
+  const result: AggregatedDataPoint[] = [];
+  for (const [name, { total, count }] of groups) {
+    let value: number;
+    switch (measure.aggregation) {
+      case 'sum': value = total; break;
+      case 'avg': value = count > 0 ? total / count : 0; break;
+      case 'count': value = count; break;
+      default: value = total;
+    }
+    result.push({ name, value, count });
+  }
+
+  if (dimension.type === 'date') {
+    result.sort((a, b) => a.name.localeCompare(b.name));
+  } else {
+    result.sort((a, b) => b.value - a.value);
+  }
 
   return result;
 }

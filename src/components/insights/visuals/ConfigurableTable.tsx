@@ -79,12 +79,24 @@ const PRODUCT_COLUMNS: TableColumnDef[] = [
   { key: 'date', label: 'Data Criação', defaultWidth: 120, getValue: (r) => formatDate(r.date) },
 ];
 
+const SALES_HISTORY_COLUMNS: TableColumnDef[] = [
+  { key: 'name', label: 'Cliente', defaultWidth: 200, getValue: (r) => r.name },
+  { key: 'value', label: 'Valor', defaultWidth: 120, getValue: (r) => formatCurrency(r.value) },
+  { key: 'seller', label: 'Vendedor', defaultWidth: 140, getValue: (r) => r.extra?.seller_name || '-' },
+  { key: 'product', label: 'Produto', defaultWidth: 160, getValue: (r) => r.extra?.product || '-' },
+  { key: 'origin', label: 'Origem', defaultWidth: 140, getValue: (r) => r.extra?.origin || '-' },
+  { key: 'city', label: 'Cidade', defaultWidth: 160, getValue: (r) => r.extra?.city || '-' },
+  { key: 'payment_method', label: 'Forma Pgto', defaultWidth: 130, getValue: (r) => r.extra?.payment_method || '-' },
+  { key: 'date', label: 'Data Venda', defaultWidth: 120, getValue: (r) => formatDate(r.date) },
+];
+
 export function getColumnsForDataSource(dataSource: DataSource): TableColumnDef[] {
   switch (dataSource) {
     case 'deals': return DEAL_COLUMNS;
     case 'leads': return LEAD_COLUMNS;
     case 'tasks': return TASK_COLUMNS;
     case 'products': return PRODUCT_COLUMNS;
+    case 'sales_history': return SALES_HISTORY_COLUMNS;
     default: return DEAL_COLUMNS;
   }
 }
@@ -117,6 +129,7 @@ export function getDefaultColumns(dataSource: DataSource): string[] {
     case 'leads': return ['name', 'status', 'source', 'date'];
     case 'tasks': return ['name', 'status', 'activity_type', 'responsible', 'date'];
     case 'products': return ['name', 'value', 'status', 'date'];
+    case 'sales_history': return ['name', 'value', 'seller', 'product', 'date'];
     default: return ['name', 'value', 'status'];
   }
 }

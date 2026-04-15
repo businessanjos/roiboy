@@ -45,6 +45,8 @@ export function useVisualDrilldown({ config, groupName, enabled = true, extraCfC
           return fetchProductsRecords(currentUser.account_id, config, filters, groupName);
         case 'tasks':
           return fetchTasksRecords(currentUser.account_id, config, filters, groupName);
+        case 'sales_history':
+          return fetchSalesHistoryRecords(currentUser.account_id, config, filters, groupName);
         default:
           return [];
       }
@@ -637,4 +639,48 @@ async function fetchDealSourceForLeads(
   }
 
   return { sourceMap, statusMap };
+}
+
+// ==================== SALES HISTORY DRILLDOWN ====================
+async function fetchSalesHistoryRecords(
+  accountId: string,
+  config: VisualConfig,
+  filters: any,
+  groupName?: string
+): Promise<DrilldownRecord[]> {
+  let query = supabase
+    .from('sales_history')
+    .select('id, sale_date, client_name, sale_value, seller_name, product, origin, city, payment_type, payment_method')
+    .eq('account_id', accountId)
+    .order('sale_date', { ascending: false });
+
+  if (filters.startDate) query = query.gte('sale_date', filters.startDate.split('T')[0]);
+  if (filters.endDate) query = query.lte('sale_date', filters.endDate.split('T')[0]);
+
+  let allRecords: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if (error) { console.error('Error fetching sales_history drilldown:', error); return []; }
+    allRecords = allRecords.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  return allRecords.map(r => ({
+    id: r.id,
+    name: r.client_name || 'Sem nome',
+    value: r.sale_value || 0,
+    status: undefined,
+    date: r.sale_date || '',
+    extra: {
+      seller_name: r.seller_name,
+      product: r.product,
+      origin: r.origin,
+      city: r.city,
+      payment_type: r.payment_type,
+      payment_method: r.payment_method,
+    },
+  }));
 }
