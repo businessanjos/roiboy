@@ -232,13 +232,37 @@ serve(async (req) => {
         );
 
         // Auto-fill deal value with product price when not provided
-        const { data: productMatch } = await supabase
+        // Try exact match first, then partial — prefer non-renewal products
+        let productMatch: { id: string; name: string; price: number; is_renewal?: boolean } | null = null;
+
+        // 1. Exact name match
+        const { data: exactMatches } = await supabase
           .from("products")
-          .select("id, name, price")
+          .select("id, name, price, is_renewal")
           .eq("account_id", accountId)
-          .or(`name.ilike.${productName},name.ilike.%${productName}%`)
-          .limit(1)
-          .maybeSingle();
+          .ilike("name", productName);
+
+        if (exactMatches && exactMatches.length > 0) {
+          // Prefer non-renewal product
+          productMatch = exactMatches.find((p) => !p.is_renewal) || exactMatches[0];
+        }
+
+        // 2. Partial match only if no exact match found
+        if (!productMatch) {
+          const { data: partialMatches } = await supabase
+            .from("products")
+            .select("id, name, price, is_renewal")
+            .eq("account_id", accountId)
+            .ilike("name", `%${productName}%`);
+
+          if (partialMatches && partialMatches.length > 0) {
+            productMatch = partialMatches.find((p) => !p.is_renewal) || partialMatches[0];
+          }
+        }
+
+        if (productMatch) {
+          console.log(`[PRODUCT] Matched: "${productMatch.name}" (renewal=${productMatch.is_renewal}, price=${productMatch.price})`);
+        }
 
         if (productMatch?.price && (!payload.value || payload.value === 0)) {
           await supabase.from("deals").update({ value: productMatch.price }).eq("id", newDeal.id);
