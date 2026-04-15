@@ -1,4 +1,4 @@
-export type DataSource = 'deals' | 'leads' | 'products' | 'tasks';
+export type DataSource = 'deals' | 'leads' | 'products' | 'tasks' | 'sales_history';
 export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate' | 'sales_cycle';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
@@ -125,6 +125,7 @@ export const DATA_SOURCE_OPTIONS: { value: DataSource; label: string }[] = [
   { value: 'leads', label: 'Leads' },
   { value: 'products', label: 'Produtos' },
   { value: 'tasks', label: 'Tarefas' },
+  { value: 'sales_history', label: 'Histórico de Vendas' },
 ];
 
 // Aggregation options
@@ -285,6 +286,20 @@ export const DATA_SOURCE_FIELDS: Record<DataSource, {
       { value: 'status', label: 'Status (Pendente/Concluída)', type: 'text' },
       { value: 'due_date', label: 'Data de Vencimento', type: 'date' },
       { value: 'created_at', label: 'Data de Criação', type: 'date' },
+    ],
+  },
+  sales_history: {
+    numeric: [
+      { value: 'sale_value', label: 'Valor da Venda', type: 'numeric' },
+    ],
+    dimension: [
+      { value: 'seller_name', label: 'Vendedor', type: 'text' },
+      { value: 'product', label: 'Produto', type: 'text' },
+      { value: 'origin', label: 'Origem', type: 'text' },
+      { value: 'city', label: 'Cidade', type: 'text' },
+      { value: 'payment_type', label: 'Tipo de Pagamento', type: 'text' },
+      { value: 'payment_method', label: 'Forma de Pagamento', type: 'text' },
+      { value: 'sale_date', label: 'Data da Venda', type: 'date' },
     ],
   },
 };
