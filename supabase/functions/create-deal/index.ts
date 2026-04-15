@@ -35,6 +35,175 @@ interface CreateDealPayload {
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const ITEM_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
+
+interface ItemVendaOption {
+  label: string;
+  value: string;
+}
+
+interface ProductMatch {
+  id: string;
+  name: string;
+  price: number;
+  is_renewal: boolean | null;
+  updated_at?: string | null;
+}
+
+interface ResolvedProductSelection {
+  fieldValue: string;
+  matchedBy: "product_uuid" | "legacy_option" | "product_name" | "raw_input";
+  usedLegacyIdentifier: boolean;
+  product: ProductMatch | null;
+}
+
+function normalizeComparableText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function inferRenewalFromText(value?: string | null): boolean {
+  if (!value) return false;
+  const normalized = normalizeComparableText(value);
+  return normalized.startsWith("ren ") || normalized.includes(" renovacao") || normalized.includes(" renovação");
+}
+
+function selectBestProductMatch(
+  matches: ProductMatch[],
+  desiredRenewal: boolean,
+  hintedValue?: number
+): ProductMatch | null {
+  if (matches.length === 0) return null;
+
+  const renewalScopedMatches = matches.filter(
+    (product) => Boolean(product.is_renewal) === desiredRenewal
+  );
+  const candidatePool = renewalScopedMatches.length > 0 ? renewalScopedMatches : matches;
+
+  if (typeof hintedValue === "number" && Number.isFinite(hintedValue) && hintedValue > 0) {
+    const exactPriceMatch = candidatePool.find((product) => Number(product.price) === hintedValue);
+    if (exactPriceMatch) return exactPriceMatch;
+  }
+
+  return [...candidatePool].sort((left, right) => {
+    if (Number(right.price) !== Number(left.price)) {
+      return Number(right.price) - Number(left.price);
+    }
+
+    return String(right.updated_at ?? "").localeCompare(String(left.updated_at ?? ""));
+  })[0] ?? null;
+}
+
+async function resolveProductSelection(
+  supabase: any,
+  accountId: string,
+  rawProductInput: string,
+  hintedValue?: number
+): Promise<ResolvedProductSelection> {
+  const sanitizedInput = rawProductInput.replace(/\\n/g, "").replace(/\n/g, "").trim();
+  const isUuidInput = UUID_REGEX.test(sanitizedInput);
+
+  if (isUuidInput) {
+    const { data: productByIdData } = await supabase
+      .from("products")
+      .select("id, name, price, is_renewal, updated_at")
+      .eq("account_id", accountId)
+      .eq("id", sanitizedInput)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    const productById = (productByIdData as ProductMatch | null) ?? null;
+
+    if (productById) {
+      return {
+        fieldValue: productById.id,
+        matchedBy: "product_uuid",
+        usedLegacyIdentifier: false,
+        product: productById,
+      };
+    }
+  }
+
+  const { data: fieldDefData } = await supabase
+    .from("custom_fields")
+    .select("options")
+    .eq("id", ITEM_VENDA_FIELD_ID)
+    .maybeSingle();
+
+  const fieldDef = (fieldDefData as { options?: unknown } | null) ?? null;
+  const options = Array.isArray(fieldDef?.options) ? (fieldDef.options as ItemVendaOption[]) : [];
+  const normalizedInput = normalizeComparableText(sanitizedInput);
+
+  const matchedOption =
+    options.find((option) => normalizeComparableText(option.value) === normalizedInput) ||
+    options.find((option) => normalizeComparableText(option.label) === normalizedInput) ||
+    options.find((option) => {
+      const normalizedLabel = normalizeComparableText(option.label);
+      return normalizedLabel.includes(normalizedInput) || normalizedInput.includes(normalizedLabel);
+    }) ||
+    options.find((option) => {
+      const normalizedValue = normalizeComparableText(option.value);
+      return normalizedValue.includes(normalizedInput) || normalizedInput.includes(normalizedValue);
+    });
+
+  const desiredRenewal = matchedOption
+    ? inferRenewalFromText(matchedOption.label) || inferRenewalFromText(matchedOption.value)
+    : inferRenewalFromText(sanitizedInput);
+
+  const searchTerms = Array.from(
+    new Set(
+      [matchedOption?.label, sanitizedInput, sanitizedInput.replace(/[_-]+/g, " ")].filter(
+        (value): value is string => Boolean(value?.trim())
+      )
+    )
+  );
+
+  let productMatch: ProductMatch | null = null;
+
+  for (const term of searchTerms) {
+    const { data: exactMatches } = await supabase
+      .from("products")
+      .select("id, name, price, is_renewal, updated_at")
+      .eq("account_id", accountId)
+      .eq("is_active", true)
+      .ilike("name", term);
+
+    productMatch = selectBestProductMatch(exactMatches || [], desiredRenewal, hintedValue);
+    if (productMatch) break;
+  }
+
+  if (!productMatch) {
+    for (const term of searchTerms) {
+      const { data: partialMatches } = await supabase
+        .from("products")
+        .select("id, name, price, is_renewal, updated_at")
+        .eq("account_id", accountId)
+        .eq("is_active", true)
+        .ilike("name", `%${term}%`);
+
+      productMatch = selectBestProductMatch(partialMatches || [], desiredRenewal, hintedValue);
+      if (productMatch) break;
+    }
+  }
+
+  return {
+    fieldValue: productMatch?.id || matchedOption?.value || sanitizedInput,
+    matchedBy: productMatch
+      ? matchedOption
+        ? "legacy_option"
+        : "product_name"
+      : matchedOption
+        ? "legacy_option"
+        : "raw_input",
+    usedLegacyIdentifier: !isUuidInput,
+    product: productMatch,
+  };
+}
 
 /**
  * Resolves the pipeline and first stage for a deal.
@@ -42,7 +211,7 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
  * ALWAYS returns both pipeline_id and stage_id, or throws.
  */
 async function resolvePipelineAndStage(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   accountId: string,
   preferredPipelineName?: string
 ): Promise<{ pipelineId: string; stageId: string }> {
@@ -58,7 +227,7 @@ async function resolvePipelineAndStage(
       .ilike("name", `%${preferredPipelineName.trim()}%`)
       .limit(1)
       .maybeSingle();
-    pipeline = data;
+    pipeline = (data as { id: string; name: string } | null) ?? null;
     if (pipeline) console.log(`[PIPELINE] Matched by payload name: "${pipeline.name}" (${pipeline.id})`);
   }
 
@@ -72,7 +241,7 @@ async function resolvePipelineAndStage(
       .ilike("name", "%closer%")
       .limit(1)
       .maybeSingle();
-    pipeline = data;
+    pipeline = (data as { id: string; name: string } | null) ?? null;
     if (pipeline) console.log(`[PIPELINE] Using Closer pipeline: "${pipeline.name}" (${pipeline.id})`);
   }
 
@@ -86,7 +255,7 @@ async function resolvePipelineAndStage(
       .order("display_order", { ascending: true })
       .limit(1)
       .maybeSingle();
-    pipeline = data;
+    pipeline = (data as { id: string; name: string } | null) ?? null;
     if (pipeline) console.log(`[PIPELINE] Fallback to first pipeline: "${pipeline.name}" (${pipeline.id})`);
   }
 
@@ -95,7 +264,7 @@ async function resolvePipelineAndStage(
   }
 
   // Resolve first stage in the chosen pipeline
-  const { data: firstStage } = await supabase
+  const { data: firstStageData } = await supabase
     .from("deal_stages")
     .select("id, name")
     .eq("account_id", accountId)
@@ -104,6 +273,8 @@ async function resolvePipelineAndStage(
     .order("display_order", { ascending: true })
     .limit(1)
     .maybeSingle();
+
+  const firstStage = (firstStageData as { id: string; name: string } | null) ?? null;
 
   if (!firstStage) {
     throw new Error(`No active stage found in pipeline "${pipeline.name}" (${pipeline.id}). Create at least one stage.`);
@@ -167,6 +338,26 @@ serve(async (req) => {
     // Build tags array filtering empty strings
     const tags = (payload.tags || []).filter((t) => t && t.trim());
 
+    const resolvedProduct = payload.product_id?.trim()
+      ? await resolveProductSelection(supabase, accountId, payload.product_id, payload.value)
+      : null;
+
+    const hasExplicitValue =
+      typeof payload.value === "number" && Number.isFinite(payload.value) && payload.value > 0;
+
+    const resolvedDealValue =
+      resolvedProduct?.product && (resolvedProduct.usedLegacyIdentifier || !hasExplicitValue)
+        ? resolvedProduct.product.price
+        : payload.value || 0;
+
+    if (resolvedProduct?.product) {
+      console.log(
+        `[PRODUCT] Resolved input="${payload.product_id}" -> "${resolvedProduct.product.name}" ` +
+          `(renewal=${resolvedProduct.product.is_renewal}, price=${resolvedProduct.product.price}, ` +
+          `matchedBy=${resolvedProduct.matchedBy}, legacy=${resolvedProduct.usedLegacyIdentifier})`
+      );
+    }
+
     // Insert deal — pipeline_id and stage_id are ALWAYS set
     const { data: newDeal, error: insertError } = await supabase
       .from("deals")
@@ -182,7 +373,7 @@ serve(async (req) => {
         source: payload.source?.trim() || null,
         notes: payload.notes?.trim() || null,
         tags: tags.length > 0 ? tags : [],
-        value: payload.value || 0,
+        value: resolvedDealValue,
         status: "open",
         responsible_user_id: payload.responsible_user_id || null,
       })
@@ -199,76 +390,24 @@ serve(async (req) => {
 
     console.log(`[DEAL] Created: "${newDeal.title}" → pipeline=${newDeal.pipeline_id}, stage=${newDeal.stage_id}`);
 
-    // ── Fuzzy match product and save to deal_field_values ──
-    if (payload.product_id && payload.product_id.trim()) {
+    // ── Save resolved product / Item da Venda ──
+    if (resolvedProduct) {
       try {
-        const productName = payload.product_id.trim().replace(/\\n/g, "").replace(/\n/g, "").trim();
-        const fieldId = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
-
-        const { data: fieldDef } = await supabase
-          .from("custom_fields")
-          .select("options")
-          .eq("id", fieldId)
-          .maybeSingle();
-
-        let selectValue: string = productName;
-        if (fieldDef?.options && Array.isArray(fieldDef.options)) {
-          const options = fieldDef.options as Array<{ label: string; value: string }>;
-          const lower = productName.toLowerCase();
-          const match =
-            options.find((o) => o.label.toLowerCase() === lower) ||
-            options.find((o) => o.label.toLowerCase().includes(lower) || lower.includes(o.label.toLowerCase()));
-          if (match) selectValue = match.value;
-        }
-
-        await supabase.from("deal_field_values").upsert(
+        const { error: productFieldError } = await supabase.from("deal_field_values").upsert(
           {
             account_id: accountId,
             deal_id: newDeal.id,
-            field_id: fieldId,
-            value_text: selectValue,
+            field_id: ITEM_VENDA_FIELD_ID,
+            value_text: resolvedProduct.fieldValue,
           },
           { onConflict: "deal_id,field_id" }
         );
 
-        // Auto-fill deal value with product price when not provided
-        // Try exact match first, then partial — prefer non-renewal products
-        let productMatch: { id: string; name: string; price: number; is_renewal?: boolean } | null = null;
-
-        // 1. Exact name match
-        const { data: exactMatches } = await supabase
-          .from("products")
-          .select("id, name, price, is_renewal")
-          .eq("account_id", accountId)
-          .ilike("name", productName);
-
-        if (exactMatches && exactMatches.length > 0) {
-          // Prefer non-renewal product
-          productMatch = exactMatches.find((p) => !p.is_renewal) || exactMatches[0];
-        }
-
-        // 2. Partial match only if no exact match found
-        if (!productMatch) {
-          const { data: partialMatches } = await supabase
-            .from("products")
-            .select("id, name, price, is_renewal")
-            .eq("account_id", accountId)
-            .ilike("name", `%${productName}%`);
-
-          if (partialMatches && partialMatches.length > 0) {
-            productMatch = partialMatches.find((p) => !p.is_renewal) || partialMatches[0];
-          }
-        }
-
-        if (productMatch) {
-          console.log(`[PRODUCT] Matched: "${productMatch.name}" (renewal=${productMatch.is_renewal}, price=${productMatch.price})`);
-        }
-
-        if (productMatch?.price && (!payload.value || payload.value === 0)) {
-          await supabase.from("deals").update({ value: productMatch.price }).eq("id", newDeal.id);
+        if (productFieldError) {
+          console.error("Error saving resolved product:", productFieldError);
         }
       } catch (err) {
-        console.error("Error matching product:", err);
+        console.error("Error resolving product:", err);
       }
     }
 
