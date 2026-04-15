@@ -290,7 +290,7 @@ export function useQuotasIncentives(year: number, month: number) {
         if (error) throw error;
       } else {
         const { id, created_at, updated_at, ...insertPayload } = payload;
-        const { error } = await supabase.from("sales_spiffs").insert(insertPayload);
+        const { error } = await supabase.from("sales_spiffs").insert([insertPayload as any]);
         if (error) throw error;
       }
     },
