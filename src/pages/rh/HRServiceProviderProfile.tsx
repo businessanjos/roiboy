@@ -502,8 +502,6 @@ export default function HRServiceProviderProfile() {
                 value={(form as any).bank_name || ""}
                 onChange={(bank) => {
                   setField("bank_name", bank.name);
-                  // store bank code in notes or a future field
-                  autoSave({ ...formRef.current, bank_name: bank.name } as any);
                 }}
               />
             </div>
