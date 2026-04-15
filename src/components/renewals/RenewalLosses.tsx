@@ -175,9 +175,9 @@ export function RenewalLosses() {
       const resolvedItems = mapped.filter(item => item.outcome === "renewed" || item.outcome === "lost");
       // Apply visibility filter
       if (hasFullAccess) {
-        setItems(mapped);
+        setItems(resolvedItems);
       } else {
-        setItems(mapped.filter(c => c.responsible_user_id === currentUser.id));
+        setItems(resolvedItems.filter(c => c.responsible_user_id === currentUser.id));
       }
     } catch (err) {
       console.error("Error:", err);
