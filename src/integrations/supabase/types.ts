@@ -6840,6 +6840,129 @@ export type Database = {
           },
         ]
       }
+      hr_service_providers: {
+        Row: {
+          account_id: string
+          address: string | null
+          avatar_url: string | null
+          birth_date: string | null
+          city: string | null
+          cnpj: string | null
+          company_name: string | null
+          cpf: string | null
+          created_at: string
+          department: string | null
+          email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          fee_amount: number | null
+          full_name: string
+          gender: string | null
+          hire_date: string | null
+          hr_department_id: string | null
+          id: string
+          marital_status: string | null
+          notes: string | null
+          payment_method: string | null
+          phone: string | null
+          position: string | null
+          rg: string | null
+          service_type: string | null
+          state: string | null
+          status: string | null
+          termination_date: string | null
+          trade_name: string | null
+          updated_at: string
+          user_id: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          account_id: string
+          address?: string | null
+          avatar_url?: string | null
+          birth_date?: string | null
+          city?: string | null
+          cnpj?: string | null
+          company_name?: string | null
+          cpf?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          fee_amount?: number | null
+          full_name: string
+          gender?: string | null
+          hire_date?: string | null
+          hr_department_id?: string | null
+          id?: string
+          marital_status?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          phone?: string | null
+          position?: string | null
+          rg?: string | null
+          service_type?: string | null
+          state?: string | null
+          status?: string | null
+          termination_date?: string | null
+          trade_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          account_id?: string
+          address?: string | null
+          avatar_url?: string | null
+          birth_date?: string | null
+          city?: string | null
+          cnpj?: string | null
+          company_name?: string | null
+          cpf?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          fee_amount?: number | null
+          full_name?: string
+          gender?: string | null
+          hire_date?: string | null
+          hr_department_id?: string | null
+          id?: string
+          marital_status?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          phone?: string | null
+          position?: string | null
+          rg?: string | null
+          service_type?: string | null
+          state?: string | null
+          status?: string | null
+          termination_date?: string | null
+          trade_name?: string | null
+          updated_at?: string
+          user_id?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_service_providers_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_service_providers_hr_department_id_fkey"
+            columns: ["hr_department_id"]
+            isOneToOne: false
+            referencedRelation: "hr_departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_time_records: {
         Row: {
           account_id: string

@@ -97,6 +97,7 @@ const RHVagas = lazyRetry(() => import("./pages/rh/RHVagas"));
 const RHJobForm = lazyRetry(() => import("./pages/rh/RHJobForm"));
 const RHJobDetail = lazyRetry(() => import("./pages/rh/RHJobDetail"));
 const PublicJobApplication = lazyRetry(() => import("./pages/rh/PublicJobApplication"));
+const HRServiceProviders = lazyRetry(() => import("./pages/rh/HRServiceProviders"));
 const SharedInsights = lazyRetry(() => import("./pages/SharedInsights"));
 const ExternalDashboard = lazyRetry(() => import("./pages/ExternalDashboard"));
 const WhatsAppDiagnostics = lazyRetry(() => import("./pages/admin/WhatsAppDiagnostics"));
@@ -241,6 +242,7 @@ const App = () => (
                             <Route path="/rh/vacancies/new" element={<RHJobForm />} />
                             <Route path="/rh/vacancies/:id" element={<RHJobDetail />} />
                             <Route path="/rh/vacancies/:id/edit" element={<RHJobForm />} />
+                            <Route path="/rh/service-providers" element={<HRServiceProviders />} />
                             
                           </Route>
                           <Route path="*" element={<NotFound />} />
