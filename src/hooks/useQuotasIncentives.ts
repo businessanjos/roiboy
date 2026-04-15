@@ -27,6 +27,11 @@ export interface IncentivePlan {
   is_active: boolean;
   period_type: string;
   bonus_base_value: number;
+  clawback_enabled: boolean;
+  clawback_days: number;
+  clawback_percent: number;
+  quarterly_bonus_enabled: boolean;
+  quarterly_bonus_value: number;
   created_at: string;
   updated_at: string;
 }
@@ -50,11 +55,41 @@ export interface IncentiveTier {
   created_at: string;
 }
 
+export interface SalesSpiff {
+  id: string;
+  account_id: string;
+  plan_id: string | null;
+  name: string;
+  description: string | null;
+  product_id: string | null;
+  bonus_amount: number;
+  bonus_type: string;
+  target_quantity: number;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SalesUserOTE {
+  id: string;
+  account_id: string;
+  user_id: string;
+  year: number;
+  base_salary_annual: number;
+  variable_target_annual: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export function useQuotasIncentives(year: number, month: number) {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
   const accountId = currentUser?.account_id;
 
+  // ── Quotas ──
   const quotasQuery = useQuery({
     queryKey: ["sales-quotas", accountId, year, month],
     queryFn: async () => {
@@ -70,6 +105,7 @@ export function useQuotasIncentives(year: number, month: number) {
     enabled: !!accountId,
   });
 
+  // ── Plans ──
   const plansQuery = useQuery({
     queryKey: ["incentive-plans", accountId],
     queryFn: async () => {
@@ -84,6 +120,7 @@ export function useQuotasIncentives(year: number, month: number) {
     enabled: !!accountId,
   });
 
+  // ── Product Rates ──
   const productRatesQuery = useQuery({
     queryKey: ["incentive-product-rates", accountId],
     queryFn: async () => {
@@ -99,6 +136,7 @@ export function useQuotasIncentives(year: number, month: number) {
     enabled: !!accountId && !!plansQuery.data,
   });
 
+  // ── Tiers ──
   const tiersQuery = useQuery({
     queryKey: ["incentive-tiers", accountId],
     queryFn: async () => {
@@ -115,10 +153,40 @@ export function useQuotasIncentives(year: number, month: number) {
     enabled: !!accountId && !!plansQuery.data,
   });
 
+  // ── SPIFFs ──
+  const spiffsQuery = useQuery({
+    queryKey: ["sales-spiffs", accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sales_spiffs")
+        .select("*")
+        .eq("account_id", accountId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as SalesSpiff[];
+    },
+    enabled: !!accountId,
+  });
+
+  // ── User OTEs ──
+  const oteQuery = useQuery({
+    queryKey: ["sales-user-ote", accountId, year],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sales_user_ote")
+        .select("*")
+        .eq("account_id", accountId!)
+        .eq("year", year);
+      if (error) throw error;
+      return data as SalesUserOTE[];
+    },
+    enabled: !!accountId,
+  });
+
+  // ── Mutations ──
   const upsertQuota = useMutation({
     mutationFn: async (quota: Partial<SalesQuota> & { user_id: string; year: number; month: number }) => {
       const payload = { ...quota, account_id: accountId! };
-      // Try to find existing
       const { data: existing } = await supabase
         .from("sales_quotas")
         .select("id")
@@ -132,11 +200,7 @@ export function useQuotasIncentives(year: number, month: number) {
       if (existing) {
         const { error } = await supabase
           .from("sales_quotas")
-          .update({
-            target_quantity: quota.target_quantity,
-            target_value: quota.target_value,
-            notes: quota.notes,
-          })
+          .update({ target_quantity: quota.target_quantity, target_value: quota.target_value, notes: quota.notes })
           .eq("id", existing.id);
         if (error) throw error;
       } else {
@@ -156,10 +220,7 @@ export function useQuotasIncentives(year: number, month: number) {
       const payload = { ...plan, account_id: accountId! };
       if (plan.id) {
         const { id, created_at, updated_at, ...updatePayload } = payload;
-        const { error } = await supabase
-          .from("sales_incentive_plans")
-          .update(updatePayload)
-          .eq("id", plan.id);
+        const { error } = await supabase.from("sales_incentive_plans").update(updatePayload).eq("id", plan.id);
         if (error) throw error;
       } else {
         const { id, created_at, updated_at, ...insertPayload } = payload;
@@ -205,7 +266,6 @@ export function useQuotasIncentives(year: number, month: number) {
 
   const saveTiers = useMutation({
     mutationFn: async ({ planId, tiers }: { planId: string; tiers: Omit<IncentiveTier, "id" | "created_at">[] }) => {
-      // Delete old tiers and insert new
       await supabase.from("sales_incentive_tiers").delete().eq("plan_id", planId);
       if (tiers.length > 0) {
         const { error } = await supabase
@@ -221,16 +281,81 @@ export function useQuotasIncentives(year: number, month: number) {
     onError: (err: any) => toast.error("Erro: " + err.message),
   });
 
+  const saveSpiff = useMutation({
+    mutationFn: async (spiff: Partial<SalesSpiff>) => {
+      const payload = { ...spiff, account_id: accountId! };
+      if (spiff.id) {
+        const { id, created_at, updated_at, ...updatePayload } = payload;
+        const { error } = await supabase.from("sales_spiffs").update(updatePayload).eq("id", spiff.id);
+        if (error) throw error;
+      } else {
+        const { id, created_at, updated_at, ...insertPayload } = payload;
+        const { error } = await supabase.from("sales_spiffs").insert(insertPayload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sales-spiffs"] });
+      toast.success("SPIFF salvo com sucesso");
+    },
+    onError: (err: any) => toast.error("Erro: " + err.message),
+  });
+
+  const deleteSpiff = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("sales_spiffs").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sales-spiffs"] });
+      toast.success("SPIFF removido");
+    },
+    onError: (err: any) => toast.error("Erro: " + err.message),
+  });
+
+  const upsertOTE = useMutation({
+    mutationFn: async (ote: { user_id: string; year: number; base_salary_annual: number; variable_target_annual: number; notes?: string }) => {
+      const { data: existing } = await supabase
+        .from("sales_user_ote")
+        .select("id")
+        .eq("account_id", accountId!)
+        .eq("user_id", ote.user_id)
+        .eq("year", ote.year)
+        .maybeSingle();
+
+      if (existing) {
+        const { error } = await supabase
+          .from("sales_user_ote")
+          .update({ base_salary_annual: ote.base_salary_annual, variable_target_annual: ote.variable_target_annual, notes: ote.notes })
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("sales_user_ote").insert({ ...ote, account_id: accountId! });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sales-user-ote"] });
+      toast.success("OTE salvo com sucesso");
+    },
+    onError: (err: any) => toast.error("Erro: " + err.message),
+  });
+
   return {
     quotas: quotasQuery.data ?? [],
     plans: plansQuery.data ?? [],
     productRates: productRatesQuery.data ?? [],
     tiers: tiersQuery.data ?? [],
+    spiffs: spiffsQuery.data ?? [],
+    userOTEs: oteQuery.data ?? [],
     loading: quotasQuery.isLoading || plansQuery.isLoading,
     activePlan: plansQuery.data?.find((p) => p.is_active) ?? null,
     upsertQuota,
     savePlan,
     saveProductRate,
     saveTiers,
+    saveSpiff,
+    deleteSpiff,
+    upsertOTE,
   };
 }

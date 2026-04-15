@@ -4,14 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Save, Plus, Trash2, Gift, Percent, DollarSign } from "lucide-react";
-import { useQuotasIncentives, IncentiveTier } from "@/hooks/useQuotasIncentives";
+import { Save, Plus, Trash2, Gift, Percent, DollarSign, ShieldAlert, Zap, TrendingUp, TrendingDown } from "lucide-react";
+import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { SpiffsSection } from "./SpiffsSection";
+import { OTESection } from "./OTESection";
+import { CommissionSimulator } from "./CommissionSimulator";
 
 export function IncentivePlanSection() {
   const now = new Date();
@@ -22,6 +26,11 @@ export function IncentivePlanSection() {
   const [planName, setPlanName] = useState("");
   const [planDesc, setPlanDesc] = useState("");
   const [bonusBase, setBonusBase] = useState(0);
+  const [clawbackEnabled, setClawbackEnabled] = useState(false);
+  const [clawbackDays, setClawbackDays] = useState(90);
+  const [clawbackPercent, setClawbackPercent] = useState(100);
+  const [quarterlyBonusEnabled, setQuarterlyBonusEnabled] = useState(false);
+  const [quarterlyBonusValue, setQuarterlyBonusValue] = useState(0);
   const [draftRates, setDraftRates] = useState<Record<string, { percent: number; fixed: number }>>({});
   const [draftTiers, setDraftTiers] = useState<{ min: number; max: string; multiplier: number; label: string }[]>([]);
 
@@ -48,6 +57,11 @@ export function IncentivePlanSection() {
       setPlanName(activePlan.name);
       setPlanDesc(activePlan.description || "");
       setBonusBase(Number(activePlan.bonus_base_value));
+      setClawbackEnabled(activePlan.clawback_enabled);
+      setClawbackDays(activePlan.clawback_days);
+      setClawbackPercent(Number(activePlan.clawback_percent));
+      setQuarterlyBonusEnabled(activePlan.quarterly_bonus_enabled);
+      setQuarterlyBonusValue(Number(activePlan.quarterly_bonus_value));
     }
   }, [activePlan]);
 
@@ -62,8 +76,8 @@ export function IncentivePlanSection() {
         }))
       );
     } else if (!activePlan) {
-      // Default tiers
       setDraftTiers([
+        { min: 0, max: "80", multiplier: 0, label: "Abaixo da Meta" },
         { min: 80, max: "100", multiplier: 0.5, label: "Bronze" },
         { min: 100, max: "120", multiplier: 1, label: "Prata" },
         { min: 120, max: "", multiplier: 1.5, label: "Ouro" },
@@ -84,6 +98,11 @@ export function IncentivePlanSection() {
       description: planDesc,
       bonus_base_value: bonusBase,
       is_active: true,
+      clawback_enabled: clawbackEnabled,
+      clawback_days: clawbackDays,
+      clawback_percent: clawbackPercent,
+      quarterly_bonus_enabled: quarterlyBonusEnabled,
+      quarterly_bonus_value: quarterlyBonusValue,
     });
   };
 
@@ -126,13 +145,25 @@ export function IncentivePlanSection() {
     setDraftTiers(draftTiers.filter((_, i) => i !== idx));
   };
 
+  const getTierIcon = (min: number) => {
+    if (min >= 100) return <TrendingUp className="h-3.5 w-3.5 text-green-600" />;
+    if (min >= 80) return <DollarSign className="h-3.5 w-3.5 text-yellow-600" />;
+    return <TrendingDown className="h-3.5 w-3.5 text-red-500" />;
+  };
+
+  const getTierBadge = (min: number) => {
+    if (min >= 100) return <Badge variant="default" className="text-[10px]">Acelerador</Badge>;
+    if (min >= 80) return <Badge variant="secondary" className="text-[10px]">Base</Badge>;
+    return <Badge variant="outline" className="text-[10px] text-destructive border-destructive">Desacelerador</Badge>;
+  };
+
   if (loading || productsQuery.isLoading) {
     return <div className="space-y-3"><Skeleton className="h-10 w-60" /><Skeleton className="h-64" /></div>;
   }
 
   return (
     <div className="space-y-6">
-      {/* Plan config */}
+      {/* ── Plan Config ── */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -141,7 +172,7 @@ export function IncentivePlanSection() {
                 <Gift className="h-4 w-4" />
                 Configuração do Plano
               </CardTitle>
-              <CardDescription>Modelo híbrido: comissão por produto + bônus por atingimento</CardDescription>
+              <CardDescription>Modelo híbrido: comissão por produto + bônus por atingimento + aceleradores</CardDescription>
             </div>
             <Button onClick={handleSavePlan} disabled={savePlan.isPending} className="gap-1.5">
               <Save className="h-4 w-4" />
@@ -156,23 +187,67 @@ export function IncentivePlanSection() {
               <Input value={planName} onChange={(e) => setPlanName(e.target.value)} placeholder="Ex: Plano Comercial 2026" />
             </div>
             <div className="space-y-2">
-              <Label>Bônus Base (R$) — ao atingir 100%</Label>
-              <Input
-                type="number"
-                value={bonusBase || ""}
-                onChange={(e) => setBonusBase(parseFloat(e.target.value) || 0)}
-                placeholder="0"
-              />
+              <Label>Bônus Base Mensal (R$) — ao atingir 100%</Label>
+              <Input type="number" value={bonusBase || ""} onChange={(e) => setBonusBase(parseFloat(e.target.value) || 0)} placeholder="0" />
             </div>
           </div>
           <div className="space-y-2">
             <Label>Descrição / Regras</Label>
             <Textarea value={planDesc} onChange={(e) => setPlanDesc(e.target.value)} rows={3} placeholder="Descreva as regras gerais do plano..." />
           </div>
+
+          {/* Quarterly Bonus */}
+          <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+            <div className="flex items-center gap-3">
+              <Zap className="h-4 w-4 text-amber-500" />
+              <div>
+                <p className="text-sm font-medium">Bônus Trimestral</p>
+                <p className="text-xs text-muted-foreground">Bônus adicional por atingimento da meta no trimestre</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {quarterlyBonusEnabled && (
+                <Input
+                  type="number"
+                  className="w-32 text-right"
+                  value={quarterlyBonusValue || ""}
+                  onChange={(e) => setQuarterlyBonusValue(parseFloat(e.target.value) || 0)}
+                  placeholder="R$ 0"
+                />
+              )}
+              <Switch checked={quarterlyBonusEnabled} onCheckedChange={setQuarterlyBonusEnabled} />
+            </div>
+          </div>
+
+          {/* Clawback */}
+          <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
+            <div className="flex items-center gap-3">
+              <ShieldAlert className="h-4 w-4 text-destructive" />
+              <div>
+                <p className="text-sm font-medium">Clawback (Estorno de Comissão)</p>
+                <p className="text-xs text-muted-foreground">Devolução de comissão se o cliente cancelar dentro do prazo</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              {clawbackEnabled && (
+                <>
+                  <div className="text-right">
+                    <Label className="text-[10px] text-muted-foreground">Prazo (dias)</Label>
+                    <Input type="number" className="w-20 text-center" value={clawbackDays} onChange={(e) => setClawbackDays(parseInt(e.target.value) || 90)} />
+                  </div>
+                  <div className="text-right">
+                    <Label className="text-[10px] text-muted-foreground">Estorno (%)</Label>
+                    <Input type="number" className="w-20 text-center" value={clawbackPercent} onChange={(e) => setClawbackPercent(parseFloat(e.target.value) || 100)} />
+                  </div>
+                </>
+              )}
+              <Switch checked={clawbackEnabled} onCheckedChange={setClawbackEnabled} />
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Commission per product */}
+      {/* ── Commission per product ── */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
@@ -240,16 +315,16 @@ export function IncentivePlanSection() {
         </CardContent>
       </Card>
 
-      {/* Bonus tiers */}
+      {/* ── Bonus Tiers with Accelerators/Decelerators ── */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
                 <DollarSign className="h-4 w-4" />
-                Faixas de Bônus por Atingimento
+                Faixas de Atingimento — Aceleradores & Desaceleradores
               </CardTitle>
-              <CardDescription>Multiplicadores aplicados sobre o bônus base</CardDescription>
+              <CardDescription>Multiplicadores sobre o bônus base. Abaixo de 80% = desacelerador, acima de 100% = acelerador</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={addTier} className="gap-1.5">
@@ -267,10 +342,11 @@ export function IncentivePlanSection() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">Tipo</TableHead>
                 <TableHead className="w-[120px]">Label</TableHead>
-                <TableHead className="text-center w-[130px]">De (%)</TableHead>
-                <TableHead className="text-center w-[130px]">Até (%)</TableHead>
-                <TableHead className="text-center w-[130px]">Multiplicador</TableHead>
+                <TableHead className="text-center w-[110px]">De (%)</TableHead>
+                <TableHead className="text-center w-[110px]">Até (%)</TableHead>
+                <TableHead className="text-center w-[120px]">Multiplicador</TableHead>
                 <TableHead className="text-right w-[130px]">Bônus (R$)</TableHead>
                 <TableHead className="w-10"></TableHead>
               </TableRow>
@@ -278,6 +354,12 @@ export function IncentivePlanSection() {
             <TableBody>
               {draftTiers.map((tier, idx) => (
                 <TableRow key={idx}>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      {getTierIcon(tier.min)}
+                      {getTierBadge(tier.min)}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Input
                       value={tier.label}
@@ -299,7 +381,7 @@ export function IncentivePlanSection() {
                         t[idx] = { ...t[idx], min: parseFloat(e.target.value) || 0 };
                         setDraftTiers(t);
                       }}
-                      className="w-24 text-center mx-auto"
+                      className="w-20 text-center mx-auto"
                     />
                   </TableCell>
                   <TableCell className="text-center">
@@ -311,7 +393,7 @@ export function IncentivePlanSection() {
                         t[idx] = { ...t[idx], max: e.target.value };
                         setDraftTiers(t);
                       }}
-                      className="w-24 text-center mx-auto"
+                      className="w-20 text-center mx-auto"
                       placeholder="∞"
                     />
                   </TableCell>
@@ -325,7 +407,7 @@ export function IncentivePlanSection() {
                         t[idx] = { ...t[idx], multiplier: parseFloat(e.target.value) || 0 };
                         setDraftTiers(t);
                       }}
-                      className="w-24 text-center mx-auto"
+                      className="w-20 text-center mx-auto"
                     />
                   </TableCell>
                   <TableCell className="text-right font-medium">
@@ -340,7 +422,7 @@ export function IncentivePlanSection() {
               ))}
               {draftTiers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                     Nenhuma faixa configurada. Clique em "+ Faixa" para adicionar.
                   </TableCell>
                 </TableRow>
@@ -349,6 +431,15 @@ export function IncentivePlanSection() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* ── OTE Section ── */}
+      <OTESection year={now.getFullYear()} />
+
+      {/* ── SPIFFs Section ── */}
+      <SpiffsSection />
+
+      {/* ── Commission Simulator ── */}
+      <CommissionSimulator />
     </div>
   );
 }
