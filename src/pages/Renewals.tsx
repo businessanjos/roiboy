@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { RenewalThermometer } from "@/components/renewals/RenewalThermometer";
 import { RenewalLosses } from "@/components/renewals/RenewalLosses";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent } from "@/components/ui/card";
@@ -57,7 +58,9 @@ export default function Renewals() {
   const [filterProduto, setFilterProduto] = useState("all");
   const [filterTempo, setFilterTempo] = useState("all");
   const [filterChance, setFilterChance] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [chanceScores, setChanceScores] = useState<Record<string, number>>({});
+  const [outcomeMap, setOutcomeMap] = useState<Record<string, { id: string; outcome: string }>>({});
 
   const handleScoreCalculated = useCallback((clientId: string, score: number) => {
     setChanceScores(prev => {
@@ -65,6 +68,43 @@ export default function Renewals() {
       return { ...prev, [clientId]: score };
     });
   }, []);
+
+  const handleOutcomeChange = useCallback(async (contract: RenewalContract, newOutcome: string) => {
+    if (!currentUser?.account_id) return;
+    const existing = outcomeMap[contract.id];
+
+    try {
+      if (existing) {
+        await supabase
+          .from("renewal_outcomes")
+          .update({ outcome: newOutcome, resolved_at: new Date().toISOString(), resolved_by: currentUser.id })
+          .eq("id", existing.id);
+        setOutcomeMap(prev => ({ ...prev, [contract.id]: { ...existing, outcome: newOutcome } }));
+      } else {
+        const { data } = await supabase
+          .from("renewal_outcomes")
+          .insert({
+            account_id: currentUser.account_id,
+            client_id: contract.client_id,
+            contract_id: contract.id,
+            outcome: newOutcome,
+            renewal_value: contract.renewal_value,
+            resolved_at: new Date().toISOString(),
+            resolved_by: currentUser.id,
+          })
+          .select("id")
+          .single();
+        if (data) {
+          setOutcomeMap(prev => ({ ...prev, [contract.id]: { id: data.id, outcome: newOutcome } }));
+        }
+      }
+      const labels: Record<string, string> = { negotiating: "Em Negociação", renewed: "Renovado", lost: "Cancelou" };
+      toast.success(`Status alterado para "${labels[newOutcome] || newOutcome}"`);
+    } catch (err) {
+      console.error("Error saving outcome:", err);
+      toast.error("Erro ao salvar status");
+    }
+  }, [currentUser, outcomeMap]);
 
   const fetchRenewals = async () => {
     if (!currentUser?.account_id) return;
@@ -167,12 +207,22 @@ export default function Renewals() {
         || currentUser.is_also_admin 
         || RENEWALS_FULL_ACCESS_USER_IDS.includes(currentUser.id);
       
-      if (hasFullAccess) {
-        setContracts(mapped);
-      } else {
-        // Filter to only contracts where the client's responsible_user_id matches this user
-        const filtered = mapped.filter(c => c.responsible_user_id === currentUser.id);
-        setContracts(filtered);
+      const finalContracts = hasFullAccess ? mapped : mapped.filter(c => c.responsible_user_id === currentUser.id);
+      setContracts(finalContracts);
+
+      // Fetch existing outcomes for these contracts
+      const contractIds = finalContracts.map(c => c.id);
+      if (contractIds.length > 0) {
+        const { data: outcomes } = await supabase
+          .from("renewal_outcomes")
+          .select("id, contract_id, outcome")
+          .in("contract_id", contractIds);
+
+        const oMap: Record<string, { id: string; outcome: string }> = {};
+        (outcomes || []).forEach((o: any) => {
+          oMap[o.contract_id] = { id: o.id, outcome: o.outcome };
+        });
+        setOutcomeMap(oMap);
       }
     } catch (err) {
       console.error("Error:", err);
@@ -211,6 +261,10 @@ export default function Renewals() {
       if (filterChance === "alta" && score < 70) return false;
       if (filterChance === "media" && (score < 40 || score >= 70)) return false;
       if (filterChance === "baixa" && score >= 40) return false;
+    }
+    if (filterStatus !== "all") {
+      const currentOutcome = outcomeMap[c.id]?.outcome || "pending";
+      if (filterStatus !== currentOutcome) return false;
     }
     return true;
   });
@@ -393,6 +447,18 @@ export default function Renewals() {
                 <SelectItem value="baixa">Baixa</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos status</SelectItem>
+                <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="negotiating">Em Negociação</SelectItem>
+                <SelectItem value="renewed">Renovado</SelectItem>
+                <SelectItem value="lost">Cancelou</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Table */}
@@ -419,6 +485,7 @@ export default function Renewals() {
                       <TableHead className="text-center">Início</TableHead>
                       <TableHead className="text-center">Vencimento</TableHead>
                       <TableHead className="text-center">Tempo Restante</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
                       <TableHead className="text-center">Chance</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -477,6 +544,27 @@ export default function Renewals() {
                         </TableCell>
                         <TableCell className="text-center">
                           {getUrgencyBadge(contract.days_until_expiry)}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Select
+                            value={outcomeMap[contract.id]?.outcome || "pending"}
+                            onValueChange={(val) => handleOutcomeChange(contract, val)}
+                          >
+                            <SelectTrigger className={cn(
+                              "h-8 w-[140px] text-xs mx-auto",
+                              outcomeMap[contract.id]?.outcome === "renewed" && "border-emerald-500 text-emerald-700 dark:text-emerald-400",
+                              outcomeMap[contract.id]?.outcome === "negotiating" && "border-blue-500 text-blue-700 dark:text-blue-400",
+                              outcomeMap[contract.id]?.outcome === "lost" && "border-red-500 text-red-700 dark:text-red-400",
+                            )}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pendente</SelectItem>
+                              <SelectItem value="negotiating">Em Negociação</SelectItem>
+                              <SelectItem value="renewed">Renovado</SelectItem>
+                              <SelectItem value="lost">Cancelou</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell className="text-center">
                           <RenewalThermometer
