@@ -354,9 +354,21 @@ serve(async (req) => {
         });
       }
       
-      const status = ack === 4 ? "read" : ack === 3 ? "delivered" : ack === 2 ? "sent" : ack === 1 ? "pending" : "failed";
+      // ack=5 is "played" (for audio messages), treat as "read"
+      // ack=0 means unknown/missing ack field — skip instead of marking as "failed"
+      const status = ack === 5 ? "read" : ack === 4 ? "read" : ack === 3 ? "delivered" : ack === 2 ? "sent" : ack === 1 ? "pending" : null;
+      
+      if (!status) {
+        console.log(`[ACK] Ignoring unknown ack=${ack} for ids=${JSON.stringify(idsToProcess)}`);
+        return new Response(JSON.stringify({ ignored: true, reason: "unknown_ack_value", ack }), { 
+          headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
       
       console.log(`[ACK] Processing: ids=${JSON.stringify(idsToProcess)}, ack=${ack}, status="${status}"`);
+      
+      // Status hierarchy: prevent downgrades (e.g. "read" should not become "sent")
+      const statusRank: Record<string, number> = { pending: 1, sent: 2, delivered: 3, read: 4 };
       
       // Single lightweight query - no integration lookup needed
       const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -366,12 +378,29 @@ serve(async (req) => {
       let totalUpdated = 0;
       
       for (const id of idsToProcess) {
-        // Use ilike with suffix match because external_message_id is stored as "owner:messageId"
-        // but UAZAPI sends only the messageId part
+        // First fetch current status to prevent downgrades
+        const { data: existing } = await ackSupabase
+          .from("zapp_messages")
+          .select("id, delivery_status")
+          .ilike("external_message_id", `%${id}`)
+          .limit(5);
+        
+        const toUpdate = (existing || []).filter((m: any) => {
+          const currentRank = statusRank[m.delivery_status] || 0;
+          const newRank = statusRank[status] || 0;
+          return newRank > currentRank; // Only upgrade, never downgrade
+        });
+        
+        if (toUpdate.length === 0) {
+          console.log(`[ACK] No upgrade needed for id="${id}" (current status >= "${status}")`);
+          continue;
+        }
+        
+        const updateIds = toUpdate.map((m: any) => m.id);
         const { data: updateResult, error: updateError } = await ackSupabase
           .from("zapp_messages")
           .update({ delivery_status: status })
-          .ilike("external_message_id", `%${id}`)
+          .in("id", updateIds)
           .select("id, external_message_id, delivery_status");
         
         if (updateError) {
@@ -379,7 +408,7 @@ serve(async (req) => {
         } else {
           const count = updateResult?.length || 0;
           totalUpdated += count;
-          console.log(`[ACK] Updated ${count} messages to status "${status}" for id="${id}" (ilike match)`);
+          console.log(`[ACK] Updated ${count} messages to status "${status}" for id="${id}"`);
         }
       }
       
