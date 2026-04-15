@@ -67,6 +67,9 @@ export default function HRServiceProviderProfile() {
   const [cpfLooking, setCpfLooking] = useState(false);
   const [cnpjLooking, setCnpjLooking] = useState(false);
   const [feeDisplay, setFeeDisplay] = useState("");
+  const [totalDisplay, setTotalDisplay] = useState("");
+  const [downPaymentDisplay, setDownPaymentDisplay] = useState("");
+  const [installmentValueDisplay, setInstallmentValueDisplay] = useState("");
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
   const isDirty = useRef(false);
@@ -91,6 +94,9 @@ export default function HRServiceProviderProfile() {
       setProvider(providerData);
       setForm(providerData);
       setFeeDisplay(formatBRL(providerData.fee_amount));
+      setTotalDisplay(formatBRL(providerData.contract_total_value));
+      setDownPaymentDisplay(formatBRL(providerData.contract_down_payment));
+      setInstallmentValueDisplay(formatBRL(providerData.contract_installment_value));
       setLoading(false);
       isDirty.current = false;
     })();
@@ -365,9 +371,75 @@ export default function HRServiceProviderProfile() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" /> Dados do Contrato</CardTitle>
           </CardHeader>
-          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div><Label>Nº do Contrato</Label><Input value={(form as any).contract_number || ""} onChange={e => setField("contract_number", e.target.value)} placeholder="Ex: PSC-001/2025" /></div>
             <div><Label>Tipo de Serviço</Label><Input value={form.service_type || ""} onChange={e => setField("service_type", e.target.value)} placeholder="Ex: Consultoria, Design..." /></div>
             <div><Label>Função / Cargo</Label><Input value={form.position || ""} onChange={e => setField("position", e.target.value)} placeholder="Ex: Consultor, Designer..." /></div>
+
+            <div>
+              <Label>Valor Total do Contrato</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                <Input
+                  className="pl-10"
+                  value={totalDisplay}
+                  onChange={e => { setTotalDisplay(e.target.value.replace(/[^\d,]/g, "")); }}
+                  onBlur={() => {
+                    const parsed = parseBRL(totalDisplay);
+                    setField("contract_total_value", parsed);
+                    setTotalDisplay(formatBRL(parsed));
+                  }}
+                  placeholder="0,00"
+                  inputMode="decimal"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Valor de Entrada</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                <Input
+                  className="pl-10"
+                  value={downPaymentDisplay}
+                  onChange={e => { setDownPaymentDisplay(e.target.value.replace(/[^\d,]/g, "")); }}
+                  onBlur={() => {
+                    const parsed = parseBRL(downPaymentDisplay);
+                    setField("contract_down_payment", parsed);
+                    setDownPaymentDisplay(formatBRL(parsed));
+                  }}
+                  placeholder="0,00"
+                  inputMode="decimal"
+                />
+              </div>
+            </div>
+            <div>
+              <Label>Qtd. de Parcelas</Label>
+              <Input
+                type="number"
+                min={1}
+                value={(form as any).contract_installments_count || ""}
+                onChange={e => setField("contract_installments_count", parseInt(e.target.value) || null)}
+                placeholder="1"
+              />
+            </div>
+            <div>
+              <Label>Valor da Parcela</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">R$</span>
+                <Input
+                  className="pl-10"
+                  value={installmentValueDisplay}
+                  onChange={e => { setInstallmentValueDisplay(e.target.value.replace(/[^\d,]/g, "")); }}
+                  onBlur={() => {
+                    const parsed = parseBRL(installmentValueDisplay);
+                    setField("contract_installment_value", parsed);
+                    setInstallmentValueDisplay(formatBRL(parsed));
+                  }}
+                  placeholder="0,00"
+                  inputMode="decimal"
+                />
+              </div>
+            </div>
             <div>
               <Label>Fee mensal</Label>
               <div className="relative">
@@ -398,8 +470,22 @@ export default function HRServiceProviderProfile() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div><Label>Início do Contrato</Label><Input type="date" value={(form as any).contract_start_date || ""} onChange={e => setField("contract_start_date", e.target.value)} /></div>
+            <div><Label>Fim do Contrato</Label><Input type="date" value={(form as any).contract_end_date || ""} onChange={e => setField("contract_end_date", e.target.value)} /></div>
             <div><Label>Data de contratação</Label><Input type="date" value={form.hire_date || ""} onChange={e => setField("hire_date", e.target.value)} /></div>
             <div><Label>Data de encerramento</Label><Input type="date" value={form.termination_date || ""} onChange={e => setField("termination_date", e.target.value)} /></div>
+
+            <div>
+              <Label>Renovação Automática</Label>
+              <Select value={(form as any).contract_auto_renewal ? "yes" : "no"} onValueChange={v => setField("contract_auto_renewal", v === "yes")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">Sim</SelectItem>
+                  <SelectItem value="no">Não</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div>
               <Label>Status</Label>
               <Select value={form.status || "active"} onValueChange={v => setField("status", v)}>
@@ -407,7 +493,6 @@ export default function HRServiceProviderProfile() {
                 <SelectContent>{STATUS_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>Nº do Contrato</Label><Input value={(form as any).contract_number || ""} onChange={e => setField("contract_number", e.target.value)} placeholder="Ex: PSC-001/2025" /></div>
           </CardContent>
         </Card>
 

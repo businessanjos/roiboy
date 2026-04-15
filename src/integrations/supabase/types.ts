@@ -6997,7 +6997,14 @@ export type Database = {
           city: string | null
           cnpj: string | null
           company_name: string | null
+          contract_auto_renewal: boolean | null
+          contract_down_payment: number | null
+          contract_end_date: string | null
+          contract_installment_value: number | null
+          contract_installments_count: number | null
           contract_number: string | null
+          contract_start_date: string | null
+          contract_total_value: number | null
           cpf: string | null
           created_at: string
           department: string | null
@@ -7037,7 +7044,14 @@ export type Database = {
           city?: string | null
           cnpj?: string | null
           company_name?: string | null
+          contract_auto_renewal?: boolean | null
+          contract_down_payment?: number | null
+          contract_end_date?: string | null
+          contract_installment_value?: number | null
+          contract_installments_count?: number | null
           contract_number?: string | null
+          contract_start_date?: string | null
+          contract_total_value?: number | null
           cpf?: string | null
           created_at?: string
           department?: string | null
@@ -7077,7 +7091,14 @@ export type Database = {
           city?: string | null
           cnpj?: string | null
           company_name?: string | null
+          contract_auto_renewal?: boolean | null
+          contract_down_payment?: number | null
+          contract_end_date?: string | null
+          contract_installment_value?: number | null
+          contract_installments_count?: number | null
           contract_number?: string | null
+          contract_start_date?: string | null
+          contract_total_value?: number | null
           cpf?: string | null
           created_at?: string
           department?: string | null

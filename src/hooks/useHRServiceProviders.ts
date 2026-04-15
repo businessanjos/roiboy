@@ -40,6 +40,13 @@ export interface HRServiceProvider {
   bank_account: string | null;
   bank_pix_key: string | null;
   contract_number: string | null;
+  contract_total_value: number | null;
+  contract_start_date: string | null;
+  contract_end_date: string | null;
+  contract_down_payment: number | null;
+  contract_installments_count: number | null;
+  contract_installment_value: number | null;
+  contract_auto_renewal: boolean | null;
   created_at: string;
   updated_at: string;
 }
