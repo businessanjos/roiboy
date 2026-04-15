@@ -6761,6 +6761,117 @@ export type Database = {
           },
         ]
       }
+      hr_partners: {
+        Row: {
+          account_id: string
+          address: string | null
+          avatar_url: string | null
+          birth_date: string | null
+          city: string | null
+          cpf: string | null
+          created_at: string
+          department: string | null
+          email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          exit_date: string | null
+          full_name: string
+          gender: string | null
+          hr_department_id: string | null
+          id: string
+          join_date: string | null
+          marital_status: string | null
+          notes: string | null
+          ownership_percentage: number | null
+          phone: string | null
+          position: string | null
+          pro_labore: number | null
+          rg: string | null
+          state: string | null
+          status: string | null
+          updated_at: string
+          user_id: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          account_id: string
+          address?: string | null
+          avatar_url?: string | null
+          birth_date?: string | null
+          city?: string | null
+          cpf?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          exit_date?: string | null
+          full_name: string
+          gender?: string | null
+          hr_department_id?: string | null
+          id?: string
+          join_date?: string | null
+          marital_status?: string | null
+          notes?: string | null
+          ownership_percentage?: number | null
+          phone?: string | null
+          position?: string | null
+          pro_labore?: number | null
+          rg?: string | null
+          state?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          account_id?: string
+          address?: string | null
+          avatar_url?: string | null
+          birth_date?: string | null
+          city?: string | null
+          cpf?: string | null
+          created_at?: string
+          department?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          exit_date?: string | null
+          full_name?: string
+          gender?: string | null
+          hr_department_id?: string | null
+          id?: string
+          join_date?: string | null
+          marital_status?: string | null
+          notes?: string | null
+          ownership_percentage?: number | null
+          phone?: string | null
+          position?: string | null
+          pro_labore?: number | null
+          rg?: string | null
+          state?: string | null
+          status?: string | null
+          updated_at?: string
+          user_id?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_partners_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_partners_hr_department_id_fkey"
+            columns: ["hr_department_id"]
+            isOneToOne: false
+            referencedRelation: "hr_departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_salary_history: {
         Row: {
           account_id: string
