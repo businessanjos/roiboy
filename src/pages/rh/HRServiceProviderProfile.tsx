@@ -496,7 +496,17 @@ export default function HRServiceProviderProfile() {
             <CardTitle className="text-base flex items-center gap-2"><Landmark className="h-4 w-4" /> Dados Bancários</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><Label>Banco</Label><Input value={(form as any).bank_name || ""} onChange={e => setField("bank_name", e.target.value)} placeholder="Ex: Itaú" /></div>
+            <div className="md:col-span-2">
+              <Label>Banco</Label>
+              <BankCombobox
+                value={(form as any).bank_name || ""}
+                onChange={(bank) => {
+                  setField("bank_name", bank.name);
+                  // store bank code in notes or a future field
+                  autoSave({ ...formRef.current, bank_name: bank.name } as any);
+                }}
+              />
+            </div>
             <div><Label>Agência</Label><Input value={(form as any).bank_agency || ""} onChange={e => setField("bank_agency", e.target.value)} /></div>
             <div><Label>Conta</Label><Input value={(form as any).bank_account || ""} onChange={e => setField("bank_account", e.target.value)} /></div>
             <div><Label>Chave PIX</Label><Input value={(form as any).bank_pix_key || ""} onChange={e => setField("bank_pix_key", e.target.value)} placeholder="CPF, email, telefone ou chave aleatória" /></div>
