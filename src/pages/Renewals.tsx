@@ -567,6 +567,7 @@ export default function Renewals() {
                           </Select>
                         </TableCell>
                         <TableCell className="text-center">
+                          <RenewalThermometer
                             clientId={contract.client_id}
                             accountId={currentUser?.account_id || ""}
                             onScoreCalculated={handleScoreCalculated}
