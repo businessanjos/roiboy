@@ -392,6 +392,59 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "WhatsApp não configurado para este setor." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ========== ANTI-SPAM PROTECTION ==========
+    if (["send_text", "send_media"].includes(action) && phone && message) {
+      const cleanPhoneCheck = phone.replace(/\D/g, "");
+      const effectiveSectorId = sector_id || null;
+      
+      // 1. Check identical messages sent to multiple contacts in last 30 min
+      const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+      const { data: duplicateCheck } = await supabase
+        .from("zapp_messages")
+        .select("id, phone_e164")
+        .eq("account_id", accountId)
+        .eq("direction", "outbound")
+        .eq("content", message)
+        .gte("created_at", thirtyMinAgo)
+        .limit(10);
+      
+      const uniquePhones = new Set((duplicateCheck || []).map((m: any) => m.phone_e164));
+      // Don't count the current phone - we're checking OTHER recipients
+      uniquePhones.delete(cleanPhoneCheck);
+      uniquePhones.delete(`+${cleanPhoneCheck}`);
+      uniquePhones.delete(`+55${cleanPhoneCheck}`);
+      
+      if (uniquePhones.size >= 5) {
+        console.warn(`[uazapi-manager] ⚠️ SPAM BLOCKED: Identical message already sent to ${uniquePhones.size} different contacts in last 30min. User: ${userData.name}`);
+        return new Response(JSON.stringify({ 
+          error: "Mensagem idêntica já enviada para muitos contatos. Personalize o texto para cada destinatário.",
+          spam_blocked: true,
+          unique_recipients: uniquePhones.size
+        }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      
+      // 2. Check hourly volume per user
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const { count: hourlyCount } = await supabase
+        .from("zapp_messages")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", accountId)
+        .eq("direction", "outbound")
+        .eq("sender_user_id", userData.id)
+        .gte("created_at", oneHourAgo);
+      
+      const MAX_MESSAGES_PER_HOUR = 80;
+      if ((hourlyCount || 0) >= MAX_MESSAGES_PER_HOUR) {
+        console.warn(`[uazapi-manager] ⚠️ RATE LIMIT: User ${userData.name} sent ${hourlyCount} messages in last hour. Limit: ${MAX_MESSAGES_PER_HOUR}`);
+        return new Response(JSON.stringify({ 
+          error: `Limite de ${MAX_MESSAGES_PER_HOUR} mensagens por hora atingido. Aguarde alguns minutos.`,
+          rate_limited: true,
+          current_count: hourlyCount
+        }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
+    // ========== END ANTI-SPAM ==========
+
     let result: unknown = { success: true };
 
     if (action === "status") {
