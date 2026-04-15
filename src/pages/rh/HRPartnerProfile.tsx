@@ -15,6 +15,7 @@ import {
 import {
   ArrowLeft, Save, User, Briefcase, Phone, MapPin, AlertTriangle,
   FileText, Trash2, Crown, CheckCircle2, Loader2, Search, Percent,
+  Landmark, Building2, Globe,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -28,6 +29,19 @@ const STATUS_OPTIONS = [
   { value: "active", label: "Ativo" },
   { value: "inactive", label: "Inativo" },
   { value: "exited", label: "Saído" },
+];
+
+const PARTNER_TYPE_OPTIONS = [
+  { value: "administrador", label: "Sócio-Administrador" },
+  { value: "quotista", label: "Sócio Quotista" },
+  { value: "investidor", label: "Sócio Investidor" },
+];
+
+const MARITAL_PROPERTY_OPTIONS = [
+  { value: "comunhao_parcial", label: "Comunhão Parcial de Bens" },
+  { value: "comunhao_universal", label: "Comunhão Universal de Bens" },
+  { value: "separacao_total", label: "Separação Total de Bens" },
+  { value: "participacao_final", label: "Participação Final nos Aquestos" },
 ];
 
 const DEPARTMENT_OPTIONS = [
@@ -67,7 +81,6 @@ export default function HRPartnerProfile() {
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
   const isDirty = useRef(false);
-  const initialLoad = useRef(true);
 
   formRef.current = form;
 
@@ -173,6 +186,8 @@ export default function HRPartnerProfile() {
   if (loading) return <div className="p-6 text-center text-muted-foreground">Carregando...</div>;
   if (!partner) return null;
 
+  const showMaritalRegime = form.marital_status === "married";
+
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       {/* Header */}
@@ -216,13 +231,9 @@ export default function HRPartnerProfile() {
         <div className="flex items-center gap-2 min-w-[200px] justify-end">
           <span className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-[120px] justify-end">
             {saving ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...
-              </>
+              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...</>
             ) : lastSaved ? (
-              <>
-                <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> Salvo às {lastSaved.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-              </>
+              <><CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> Salvo às {lastSaved.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
             ) : null}
           </span>
           <Button onClick={handleSave} disabled={saving} size="sm">
@@ -233,6 +244,7 @@ export default function HRPartnerProfile() {
 
       {/* Content */}
       <div className="space-y-4">
+        {/* Dados Pessoais */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2"><User className="h-4 w-4" /> Dados Pessoais</CardTitle>
@@ -250,6 +262,9 @@ export default function HRPartnerProfile() {
             </div>
             <div><Label>RG</Label><Input value={form.rg || ""} onChange={e => setField("rg", e.target.value)} /></div>
             <div><Label>Data de nascimento</Label><Input type="date" value={form.birth_date || ""} onChange={e => setField("birth_date", e.target.value)} /></div>
+            <div><Label>Nacionalidade</Label><Input value={form.nationality || ""} onChange={e => setField("nationality", e.target.value)} placeholder="Brasileiro(a)" /></div>
+            <div><Label>Profissão / Formação</Label><Input value={form.profession || ""} onChange={e => setField("profession", e.target.value)} placeholder="Ex: Administrador" /></div>
+            <div><Label>PIS/PASEP</Label><Input value={form.pis_pasep || ""} onChange={e => setField("pis_pasep", e.target.value)} /></div>
             <div>
               <Label>Gênero</Label>
               <Select value={form.gender || ""} onValueChange={v => setField("gender", v)}>
@@ -274,9 +289,21 @@ export default function HRPartnerProfile() {
                 </SelectContent>
               </Select>
             </div>
+            {showMaritalRegime && (
+              <div>
+                <Label>Regime de bens</Label>
+                <Select value={form.marital_property_regime || ""} onValueChange={v => setField("marital_property_regime", v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {MARITAL_PROPERTY_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </CardContent>
         </Card>
 
+        {/* Contato */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2"><Phone className="h-4 w-4" /> Contato</CardTitle>
@@ -287,6 +314,7 @@ export default function HRPartnerProfile() {
           </CardContent>
         </Card>
 
+        {/* Endereço */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2"><MapPin className="h-4 w-4" /> Endereço</CardTitle>
@@ -299,13 +327,23 @@ export default function HRPartnerProfile() {
           </CardContent>
         </Card>
 
+        {/* Dados Societários */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2"><Briefcase className="h-4 w-4" /> Dados Societários</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label>Departamento</Label>
+              <Label>Tipo de sócio</Label>
+              <Select value={form.partner_type || "quotista"} onValueChange={v => setField("partner_type", v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {PARTNER_TYPE_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Área de atuação</Label>
               <Select value={form.department || ""} onValueChange={v => setField("department", v)}>
                 <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
@@ -319,9 +357,7 @@ export default function HRPartnerProfile() {
               <div className="relative">
                 <Input
                   value={ownershipDisplay}
-                  onChange={e => {
-                    setOwnershipDisplay(e.target.value);
-                  }}
+                  onChange={e => setOwnershipDisplay(e.target.value)}
                   onBlur={() => {
                     const val = parseFloat(ownershipDisplay);
                     setField("ownership_percentage", isNaN(val) ? null : val);
@@ -365,9 +401,25 @@ export default function HRPartnerProfile() {
                 <SelectContent>{STATUS_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            <div><Label>Nº Contrato Social / Alteração</Label><Input value={form.social_contract_number || ""} onChange={e => setField("social_contract_number", e.target.value)} placeholder="Ex: 1ª Alteração" /></div>
+            <div><Label>CNPJ da Holding (se PJ)</Label><Input value={form.holding_cnpj || ""} onChange={e => setField("holding_cnpj", e.target.value)} placeholder="00.000.000/0000-00" /></div>
           </CardContent>
         </Card>
 
+        {/* Dados Bancários */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2"><Landmark className="h-4 w-4" /> Dados Bancários</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div><Label>Banco</Label><Input value={form.bank_name || ""} onChange={e => setField("bank_name", e.target.value)} placeholder="Ex: Itaú" /></div>
+            <div><Label>Agência</Label><Input value={form.bank_agency || ""} onChange={e => setField("bank_agency", e.target.value)} /></div>
+            <div><Label>Conta</Label><Input value={form.bank_account || ""} onChange={e => setField("bank_account", e.target.value)} /></div>
+            <div><Label>Chave PIX</Label><Input value={form.bank_pix_key || ""} onChange={e => setField("bank_pix_key", e.target.value)} placeholder="CPF, email, telefone ou chave aleatória" /></div>
+          </CardContent>
+        </Card>
+
+        {/* Contato de Emergência */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> Contato de Emergência</CardTitle>
@@ -378,6 +430,7 @@ export default function HRPartnerProfile() {
           </CardContent>
         </Card>
 
+        {/* Observações */}
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2"><FileText className="h-4 w-4" /> Observações</CardTitle>
