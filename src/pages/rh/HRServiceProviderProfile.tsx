@@ -67,6 +67,9 @@ export default function HRServiceProviderProfile() {
   const [cpfLooking, setCpfLooking] = useState(false);
   const [cnpjLooking, setCnpjLooking] = useState(false);
   const [feeDisplay, setFeeDisplay] = useState("");
+  const [totalDisplay, setTotalDisplay] = useState("");
+  const [downPaymentDisplay, setDownPaymentDisplay] = useState("");
+  const [installmentValueDisplay, setInstallmentValueDisplay] = useState("");
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
   const isDirty = useRef(false);
