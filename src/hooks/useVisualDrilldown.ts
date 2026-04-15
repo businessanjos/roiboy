@@ -45,6 +45,8 @@ export function useVisualDrilldown({ config, groupName, enabled = true, extraCfC
           return fetchProductsRecords(currentUser.account_id, config, filters, groupName);
         case 'tasks':
           return fetchTasksRecords(currentUser.account_id, config, filters, groupName);
+        case 'sales_history':
+          return fetchSalesHistoryRecords(currentUser.account_id, config, filters, groupName);
         default:
           return [];
       }
