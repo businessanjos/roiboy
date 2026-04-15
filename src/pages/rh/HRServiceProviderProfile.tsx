@@ -322,7 +322,15 @@ export default function HRServiceProviderProfile() {
             <CardTitle className="text-base flex items-center gap-2"><Building2 className="h-4 w-4" /> Dados da Empresa (PJ)</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><Label>CNPJ</Label><Input value={form.cnpj || ""} onChange={e => setField("cnpj", e.target.value)} placeholder="00.000.000/0000-00" /></div>
+            <div>
+              <Label>CNPJ</Label>
+              <div className="flex gap-2">
+                <Input value={form.cnpj || ""} onChange={e => setField("cnpj", e.target.value)} placeholder="00.000.000/0000-00" />
+                <Button type="button" variant="outline" size="icon" onClick={handleCnpjLookup} disabled={cnpjLooking} title="Consultar CNPJ (HubDev)" className="shrink-0">
+                  {cnpjLooking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
             <div><Label>Razão Social</Label><Input value={form.company_name || ""} onChange={e => setField("company_name", e.target.value)} /></div>
             <div><Label>Nome Fantasia</Label><Input value={form.trade_name || ""} onChange={e => setField("trade_name", e.target.value)} /></div>
           </CardContent>
