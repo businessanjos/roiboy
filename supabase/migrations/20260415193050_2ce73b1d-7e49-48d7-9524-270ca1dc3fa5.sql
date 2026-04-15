@@ -1,0 +1,1 @@
+ALTER TABLE hr_service_providers ADD COLUMN education_level text;
