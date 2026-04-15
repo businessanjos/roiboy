@@ -50,6 +50,7 @@ import {
   ScanFace,
   Target,
   Handshake,
+  Crown,
   
   type LucideIcon,
 } from "lucide-react";
@@ -220,6 +221,7 @@ export const sectors: Sector[] = [
       { to: "/rh/my-evaluations", icon: CircleDot, label: "Minhas Avaliações" },
       // Gestão de Pessoas
       { to: "/rh", icon: LayoutDashboard, label: "Dashboard", group: "Gestão de Pessoas" },
+      { to: "/rh/partners", icon: Crown, label: "Quadro Societário" },
       { to: "/rh/collaborators", icon: UsersRound, label: "Colaboradores" },
       { to: "/rh/service-providers", icon: Handshake, label: "Prestadores de Serviço" },
       { to: "/rh/org-chart", icon: Network, label: "Organograma" },
