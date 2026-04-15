@@ -63,6 +63,10 @@ export default function Renewals() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [chanceScores, setChanceScores] = useState<Record<string, number>>({});
   const [outcomeMap, setOutcomeMap] = useState<Record<string, { id: string; outcome: string }>>({});
+  const [products, setProducts] = useState<{ id: string; name: string; price: number }[]>([]);
+  const [renewalDialog, setRenewalDialog] = useState<{ open: boolean; contract: RenewalContract | null }>({ open: false, contract: null });
+  const [renewalForm, setRenewalForm] = useState({ product_id: "", payment_method: "", value: "" });
+  const [savingRenewal, setSavingRenewal] = useState(false);
 
   const handleScoreCalculated = useCallback((clientId: string, score: number) => {
     setChanceScores(prev => {
