@@ -3,7 +3,7 @@ import {
   GraduationCap, FileText, BookOpen, ClipboardList, ScrollText, 
   ArrowRight, Briefcase, UserCircle, ScanFace, Target, CircleDot,
   LayoutDashboard, Network, Building, UserPlus, UserMinus,
-  Palmtree, Heart, Clock, type LucideIcon
+  Palmtree, Heart, Clock, Handshake, Crown, type LucideIcon
 } from "lucide-react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";

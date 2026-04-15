@@ -64,18 +64,6 @@ export default function HRPartners() {
     return <Navigate to="/" replace />;
   }
 
-  const filtered = useMemo(() => {
-    return partners.filter(p => {
-      const s = search.toLowerCase();
-      if (s && !(
-        p.full_name.toLowerCase().includes(s) ||
-        (p.email || "").toLowerCase().includes(s) ||
-        (p.cpf || "").includes(s) ||
-        (p.department || "").toLowerCase().includes(s)
-      )) return false;
-      return true;
-    });
-  }, [partners, search]);
 
   const handleCreate = async () => {
     if (!form.full_name.trim()) return;
