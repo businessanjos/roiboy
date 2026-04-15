@@ -126,7 +126,7 @@ export function useQuotasIncentives(year: number, month: number) {
         .eq("user_id", quota.user_id)
         .eq("year", quota.year)
         .eq("month", quota.month)
-        .is("product_id", quota.product_id ?? null)
+        .filter("product_id", quota.product_id ? "eq" : "is", quota.product_id ?? "null")
         .maybeSingle();
 
       if (existing) {
@@ -155,13 +155,15 @@ export function useQuotasIncentives(year: number, month: number) {
     mutationFn: async (plan: Partial<IncentivePlan>) => {
       const payload = { ...plan, account_id: accountId! };
       if (plan.id) {
+        const { id, created_at, updated_at, ...updatePayload } = payload;
         const { error } = await supabase
           .from("sales_incentive_plans")
-          .update(payload)
+          .update(updatePayload)
           .eq("id", plan.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("sales_incentive_plans").insert(payload);
+        const { id, created_at, updated_at, ...insertPayload } = payload;
+        const { error } = await supabase.from("sales_incentive_plans").insert({ ...insertPayload, name: insertPayload.name || "Novo Plano" });
         if (error) throw error;
       }
     },
