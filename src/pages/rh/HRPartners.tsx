@@ -47,6 +47,19 @@ export default function HRPartners() {
     ownership_percentage: "",
   });
 
+  const filtered = useMemo(() => {
+    return partners.filter(p => {
+      const s = search.toLowerCase();
+      if (s && !(
+        p.full_name.toLowerCase().includes(s) ||
+        (p.email || "").toLowerCase().includes(s) ||
+        (p.cpf || "").includes(s) ||
+        (p.department || "").toLowerCase().includes(s)
+      )) return false;
+      return true;
+    });
+  }, [partners, search]);
+
   if (currentUser && currentUser.email !== RH_ALLOWED_EMAIL) {
     return <Navigate to="/" replace />;
   }
