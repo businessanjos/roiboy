@@ -3,7 +3,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CommissionTab } from "@/components/sales/commission/CommissionTab";
 import { CareerPlanTab } from "@/components/sales/commission/CareerPlanTab";
 import { SalesTeamWrapper } from "@/components/sales/team/SalesTeamWrapper";
-import { Users, DollarSign, GraduationCap, Activity, Video, BarChart3, Target, MessageSquareText, Phone, Sparkles } from "lucide-react";
+import { Users, DollarSign, GraduationCap, Activity, Video, BarChart3, Target, MessageSquareText, Phone, Sparkles, Gift } from "lucide-react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useCommissionPlan } from "@/hooks/useCommissionPlan";
 import { ThreeCPlusMetrics } from "@/components/threecplus/ThreeCPlusMetrics";
@@ -14,6 +14,7 @@ import { TeamCareerTab } from "@/components/sales/team/TeamCareerTab";
 import { TeamGoalsTab } from "@/components/sales/team/TeamGoalsTab";
 import { TeamInsightsTab } from "@/components/sales/team/TeamInsightsTab";
 import { TeamConversationAnalysisTab } from "@/components/sales/team/TeamConversationAnalysisTab";
+import { QuotasIncentivesTab } from "@/components/sales/quotas/QuotasIncentivesTab";
 
 export default function SalesTeam() {
   const { currentUser } = useCurrentUser();
@@ -75,6 +76,11 @@ export default function SalesTeam() {
               <Sparkles className="h-3.5 w-3.5" />
               Insights
             </TabsTrigger>
+            <TabsTrigger value="quotas-incentives" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium whitespace-nowrap">
+              <Gift className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Quotas & Incentivos</span>
+              <span className="sm:hidden">Quotas</span>
+            </TabsTrigger>
             <TabsTrigger value="commission" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium whitespace-nowrap">
               <DollarSign className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Comissão</span>
@@ -115,6 +121,10 @@ export default function SalesTeam() {
 
         <TabsContent value="insights">
           <TeamInsightsTab />
+        </TabsContent>
+
+        <TabsContent value="quotas-incentives">
+          <QuotasIncentivesTab />
         </TabsContent>
 
         <TabsContent value="commission">

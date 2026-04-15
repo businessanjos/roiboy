@@ -10773,6 +10773,130 @@ export type Database = {
           },
         ]
       }
+      sales_incentive_plans: {
+        Row: {
+          account_id: string
+          bonus_base_value: number | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          period_type: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          bonus_base_value?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          period_type?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          bonus_base_value?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          period_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_incentive_plans_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_incentive_product_rates: {
+        Row: {
+          commission_percent: number
+          created_at: string
+          fixed_amount: number | null
+          id: string
+          plan_id: string
+          product_id: string | null
+        }
+        Insert: {
+          commission_percent?: number
+          created_at?: string
+          fixed_amount?: number | null
+          id?: string
+          plan_id: string
+          product_id?: string | null
+        }
+        Update: {
+          commission_percent?: number
+          created_at?: string
+          fixed_amount?: number | null
+          id?: string
+          plan_id?: string
+          product_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_incentive_product_rates_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "sales_incentive_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_incentive_product_rates_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_incentive_tiers: {
+        Row: {
+          bonus_multiplier: number
+          created_at: string
+          id: string
+          label: string | null
+          max_achievement_percent: number | null
+          min_achievement_percent: number
+          plan_id: string
+        }
+        Insert: {
+          bonus_multiplier?: number
+          created_at?: string
+          id?: string
+          label?: string | null
+          max_achievement_percent?: number | null
+          min_achievement_percent: number
+          plan_id: string
+        }
+        Update: {
+          bonus_multiplier?: number
+          created_at?: string
+          id?: string
+          label?: string | null
+          max_achievement_percent?: number | null
+          min_achievement_percent?: number
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_incentive_tiers_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "sales_incentive_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_materials: {
         Row: {
           account_id: string
@@ -11044,6 +11168,76 @@ export type Database = {
           },
           {
             foreignKeyName: "sales_playbooks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_quotas: {
+        Row: {
+          account_id: string
+          achieved_quantity: number | null
+          achieved_value: number | null
+          created_at: string
+          id: string
+          month: number
+          notes: string | null
+          product_id: string | null
+          target_quantity: number | null
+          target_value: number | null
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          account_id: string
+          achieved_quantity?: number | null
+          achieved_value?: number | null
+          created_at?: string
+          id?: string
+          month: number
+          notes?: string | null
+          product_id?: string | null
+          target_quantity?: number | null
+          target_value?: number | null
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          account_id?: string
+          achieved_quantity?: number | null
+          achieved_value?: number | null
+          created_at?: string
+          id?: string
+          month?: number
+          notes?: string | null
+          product_id?: string | null
+          target_quantity?: number | null
+          target_value?: number | null
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_quotas_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_quotas_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_quotas_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
