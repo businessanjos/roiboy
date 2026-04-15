@@ -77,8 +77,15 @@ export default function Renewals() {
 
   const handleOutcomeChange = useCallback(async (contract: RenewalContract, newOutcome: string) => {
     if (!currentUser?.account_id) return;
-    const existing = outcomeMap[contract.id];
 
+    // If selecting "renewed", open dialog instead of saving directly
+    if (newOutcome === "renewed") {
+      setRenewalForm({ product_id: "", payment_method: "", value: String(contract.renewal_value) });
+      setRenewalDialog({ open: true, contract });
+      return;
+    }
+
+    const existing = outcomeMap[contract.id];
     try {
       if (existing) {
         await supabase
@@ -104,13 +111,61 @@ export default function Renewals() {
           setOutcomeMap(prev => ({ ...prev, [contract.id]: { id: data.id, outcome: newOutcome } }));
         }
       }
-      const labels: Record<string, string> = { negotiating: "Em Negociação", renewed: "Renovado", lost: "Cancelou" };
+      const labels: Record<string, string> = { negotiating: "Em Negociação", renewed: "Renovado", lost: "Cancelou", pending: "Pendente" };
       toast.success(`Status alterado para "${labels[newOutcome] || newOutcome}"`);
+      // If lost, remove from pending list
+      if (newOutcome === "lost") {
+        setContracts(prev => prev.filter(c => c.id !== contract.id));
+      }
     } catch (err) {
       console.error("Error saving outcome:", err);
       toast.error("Erro ao salvar status");
     }
   }, [currentUser, outcomeMap]);
+
+  const handleConfirmRenewal = async () => {
+    const contract = renewalDialog.contract;
+    if (!contract || !currentUser?.account_id) return;
+    setSavingRenewal(true);
+
+    const existing = outcomeMap[contract.id];
+    const renewalValue = parseFloat(renewalForm.value) || contract.renewal_value;
+
+    try {
+      const payload: any = {
+        account_id: currentUser.account_id,
+        client_id: contract.client_id,
+        contract_id: contract.id,
+        outcome: "renewed",
+        renewal_value: renewalValue,
+        resolved_at: new Date().toISOString(),
+        resolved_by: currentUser.id,
+        loss_notes: renewalForm.product_id || renewalForm.payment_method
+          ? `Produto: ${products.find(p => p.id === renewalForm.product_id)?.name || "—"} | Forma: ${renewalForm.payment_method || "—"}`
+          : null,
+      };
+
+      if (existing) {
+        await supabase.from("renewal_outcomes").update(payload).eq("id", existing.id);
+        setOutcomeMap(prev => ({ ...prev, [contract.id]: { ...existing, outcome: "renewed" } }));
+      } else {
+        const { data } = await supabase.from("renewal_outcomes").insert(payload).select("id").single();
+        if (data) {
+          setOutcomeMap(prev => ({ ...prev, [contract.id]: { id: data.id, outcome: "renewed" } }));
+        }
+      }
+
+      toast.success("Renovação registrada com sucesso!");
+      setRenewalDialog({ open: false, contract: null });
+      // Remove from pending list
+      setContracts(prev => prev.filter(c => c.id !== contract.id));
+    } catch (err) {
+      console.error("Error confirming renewal:", err);
+      toast.error("Erro ao registrar renovação");
+    } finally {
+      setSavingRenewal(false);
+    }
+  };
 
   const fetchRenewals = async () => {
     if (!currentUser?.account_id) return;
