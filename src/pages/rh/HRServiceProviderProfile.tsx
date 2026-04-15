@@ -40,7 +40,7 @@ const PAYMENT_METHOD_OPTIONS = [
 ];
 
 function formatBRL(value: number | null | undefined): string {
-  if (value == null || isNaN(value)) return "";
+  if (value == null || isNaN(value) || value === 0) return "";
   return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
