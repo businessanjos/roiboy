@@ -78,6 +78,9 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
             result = await fetchTasksData(accountId, measure, dimension, filters, dateDisplayFormat);
           }
           break;
+        case 'sales_history':
+          result = await fetchSalesHistoryData(accountId, measure, dimension, filters, dateDisplayFormat);
+          break;
         default:
           result = [];
       }
