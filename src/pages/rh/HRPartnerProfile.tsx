@@ -66,6 +66,7 @@ export default function HRPartnerProfile() {
   const [ownershipDisplay, setOwnershipDisplay] = useState("");
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
+  const isDirty = useRef(false);
   const initialLoad = useRef(true);
 
   formRef.current = form;
@@ -90,7 +91,7 @@ export default function HRPartnerProfile() {
       setProLaboreDisplay(formatBRL(partnerData.pro_labore));
       setOwnershipDisplay(partnerData.ownership_percentage != null ? String(partnerData.ownership_percentage) : "");
       setLoading(false);
-      setTimeout(() => { initialLoad.current = false; }, 100);
+      isDirty.current = false;
     })();
   }, [id]);
 
@@ -107,9 +108,9 @@ export default function HRPartnerProfile() {
   }, [id, updatePartner]);
 
   useEffect(() => {
-    if (initialLoad.current || loading) return;
+    if (!isDirty.current || loading) return;
     if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
-    autosaveTimer.current = setTimeout(() => { performSave(); }, 2000);
+    autosaveTimer.current = setTimeout(() => { performSave(); isDirty.current = false; }, 2000);
     return () => { if (autosaveTimer.current) clearTimeout(autosaveTimer.current); };
   }, [form, performSave, loading]);
 
