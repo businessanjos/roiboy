@@ -261,27 +261,23 @@ export function RenewalLosses() {
     }
   };
 
-  // Analytics
+  // Analytics - no more has_new_contract, only explicit outcomes
   const losses = items.filter(i => i.outcome === "lost");
-  const confirmedRenewed = items.filter(i => i.outcome === "renewed");
-  const suggestedRenewed = items.filter(i => i.has_new_contract && i.outcome !== "renewed" && i.outcome !== "lost");
-  const renewed = items.filter(i => i.outcome === "renewed" || i.has_new_contract);
-  const pending = items.filter(i => (!i.outcome || i.outcome === "pending") && !i.has_new_contract);
+  const renewed = items.filter(i => i.outcome === "renewed");
   const totalLostValue = losses.reduce((s, i) => s + i.renewal_value, 0);
   const totalRenewedValue = renewed.reduce((s, i) => s + i.renewal_value, 0);
   const renewalRate = items.length > 0 ? (renewed.length / items.length) * 100 : 0;
 
   // Monthly chart data
-  const monthlyData: Record<string, { month: string; lost: number; renewed: number; pending: number }> = {};
+  const monthlyData: Record<string, { month: string; lost: number; renewed: number }> = {};
   items.forEach(item => {
     const d = parseLocalDate(item.end_date);
     if (!d) return;
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const label = `${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-    if (!monthlyData[key]) monthlyData[key] = { month: label, lost: 0, renewed: 0, pending: 0 };
+    if (!monthlyData[key]) monthlyData[key] = { month: label, lost: 0, renewed: 0 };
     if (item.outcome === "lost") monthlyData[key].lost += item.renewal_value / 100;
-    else if (item.outcome === "renewed" || item.has_new_contract) monthlyData[key].renewed += item.renewal_value / 100;
-    else monthlyData[key].pending += item.renewal_value / 100;
+    else if (item.outcome === "renewed") monthlyData[key].renewed += item.renewal_value / 100;
   });
   const monthlyChartData = Object.keys(monthlyData).sort().map(k => monthlyData[k]);
 
@@ -301,7 +297,7 @@ export function RenewalLosses() {
     if (item.outcome === "lost") {
       consultantStats[name].lost++;
       consultantStats[name].lostValue += item.renewal_value;
-    } else if (item.outcome === "renewed" || item.has_new_contract) {
+    } else if (item.outcome === "renewed") {
       consultantStats[name].renewed++;
     }
   });
@@ -312,9 +308,7 @@ export function RenewalLosses() {
   const filteredItems = items.filter(i => {
     if (filterConsultora !== "all" && i.responsible_name !== filterConsultora) return false;
     if (filterOutcome !== "all") {
-      const effectiveOutcome = (i.outcome === "renewed" || i.has_new_contract) ? "renewed" 
-        : i.outcome === "lost" ? "lost" : "pending";
-      if (filterOutcome !== effectiveOutcome) return false;
+      if (filterOutcome !== i.outcome) return false;
     }
     return true;
   });
