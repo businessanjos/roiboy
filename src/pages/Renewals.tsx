@@ -262,6 +262,10 @@ export default function Renewals() {
       if (filterChance === "media" && (score < 40 || score >= 70)) return false;
       if (filterChance === "baixa" && score >= 40) return false;
     }
+    if (filterStatus !== "all") {
+      const currentOutcome = outcomeMap[c.id]?.outcome || "pending";
+      if (filterStatus !== currentOutcome) return false;
+    }
     return true;
   });
 
@@ -443,6 +447,18 @@ export default function Renewals() {
                 <SelectItem value="baixa">Baixa</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos status</SelectItem>
+                <SelectItem value="pending">Pendente</SelectItem>
+                <SelectItem value="negotiating">Em Negociação</SelectItem>
+                <SelectItem value="renewed">Renovado</SelectItem>
+                <SelectItem value="lost">Cancelou</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Table */}
@@ -469,6 +485,7 @@ export default function Renewals() {
                       <TableHead className="text-center">Início</TableHead>
                       <TableHead className="text-center">Vencimento</TableHead>
                       <TableHead className="text-center">Tempo Restante</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
                       <TableHead className="text-center">Chance</TableHead>
                       <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
@@ -529,7 +546,27 @@ export default function Renewals() {
                           {getUrgencyBadge(contract.days_until_expiry)}
                         </TableCell>
                         <TableCell className="text-center">
-                          <RenewalThermometer
+                          <Select
+                            value={outcomeMap[contract.id]?.outcome || "pending"}
+                            onValueChange={(val) => handleOutcomeChange(contract, val)}
+                          >
+                            <SelectTrigger className={cn(
+                              "h-8 w-[140px] text-xs mx-auto",
+                              outcomeMap[contract.id]?.outcome === "renewed" && "border-emerald-500 text-emerald-700 dark:text-emerald-400",
+                              outcomeMap[contract.id]?.outcome === "negotiating" && "border-blue-500 text-blue-700 dark:text-blue-400",
+                              outcomeMap[contract.id]?.outcome === "lost" && "border-red-500 text-red-700 dark:text-red-400",
+                            )}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pendente</SelectItem>
+                              <SelectItem value="negotiating">Em Negociação</SelectItem>
+                              <SelectItem value="renewed">Renovado</SelectItem>
+                              <SelectItem value="lost">Cancelou</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell className="text-center">
                             clientId={contract.client_id}
                             accountId={currentUser?.account_id || ""}
                             onScoreCalculated={handleScoreCalculated}
