@@ -209,17 +209,18 @@ export default function HRPartnerProfile() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        <div className="flex items-center gap-2">
-          {saving && (
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground animate-pulse">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...
-            </span>
-          )}
-          {!saving && lastSaved && (
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> Salvo às {lastSaved.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-            </span>
-          )}
+        <div className="flex items-center gap-2 min-w-[200px] justify-end">
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-[120px] justify-end">
+            {saving ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...
+              </>
+            ) : lastSaved ? (
+              <>
+                <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> Salvo às {lastSaved.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              </>
+            ) : null}
+          </span>
           <Button onClick={handleSave} disabled={saving} size="sm">
             <Save className="h-4 w-4 mr-2" /> Salvar
           </Button>
