@@ -6989,10 +6989,15 @@ export type Database = {
           account_id: string
           address: string | null
           avatar_url: string | null
+          bank_account: string | null
+          bank_agency: string | null
+          bank_name: string | null
+          bank_pix_key: string | null
           birth_date: string | null
           city: string | null
           cnpj: string | null
           company_name: string | null
+          contract_number: string | null
           cpf: string | null
           created_at: string
           department: string | null
@@ -7024,10 +7029,15 @@ export type Database = {
           account_id: string
           address?: string | null
           avatar_url?: string | null
+          bank_account?: string | null
+          bank_agency?: string | null
+          bank_name?: string | null
+          bank_pix_key?: string | null
           birth_date?: string | null
           city?: string | null
           cnpj?: string | null
           company_name?: string | null
+          contract_number?: string | null
           cpf?: string | null
           created_at?: string
           department?: string | null
@@ -7059,10 +7069,15 @@ export type Database = {
           account_id?: string
           address?: string | null
           avatar_url?: string | null
+          bank_account?: string | null
+          bank_agency?: string | null
+          bank_name?: string | null
+          bank_pix_key?: string | null
           birth_date?: string | null
           city?: string | null
           cnpj?: string | null
           company_name?: string | null
+          contract_number?: string | null
           cpf?: string | null
           created_at?: string
           department?: string | null
