@@ -109,13 +109,15 @@ async function resolveProductSelection(
   const isUuidInput = UUID_REGEX.test(sanitizedInput);
 
   if (isUuidInput) {
-    const { data: productById } = await supabase
+    const { data: productByIdData } = await supabase
       .from("products")
       .select("id, name, price, is_renewal, updated_at")
       .eq("account_id", accountId)
       .eq("id", sanitizedInput)
       .eq("is_active", true)
       .maybeSingle();
+
+    const productById = (productByIdData as ProductMatch | null) ?? null;
 
     if (productById) {
       return {
@@ -127,12 +129,13 @@ async function resolveProductSelection(
     }
   }
 
-  const { data: fieldDef } = await supabase
+  const { data: fieldDefData } = await supabase
     .from("custom_fields")
     .select("options")
     .eq("id", ITEM_VENDA_FIELD_ID)
     .maybeSingle();
 
+  const fieldDef = (fieldDefData as { options?: unknown } | null) ?? null;
   const options = Array.isArray(fieldDef?.options) ? (fieldDef.options as ItemVendaOption[]) : [];
   const normalizedInput = normalizeComparableText(sanitizedInput);
 
@@ -224,7 +227,7 @@ async function resolvePipelineAndStage(
       .ilike("name", `%${preferredPipelineName.trim()}%`)
       .limit(1)
       .maybeSingle();
-    pipeline = data;
+    pipeline = (data as { id: string; name: string } | null) ?? null;
     if (pipeline) console.log(`[PIPELINE] Matched by payload name: "${pipeline.name}" (${pipeline.id})`);
   }
 
@@ -238,7 +241,7 @@ async function resolvePipelineAndStage(
       .ilike("name", "%closer%")
       .limit(1)
       .maybeSingle();
-    pipeline = data;
+    pipeline = (data as { id: string; name: string } | null) ?? null;
     if (pipeline) console.log(`[PIPELINE] Using Closer pipeline: "${pipeline.name}" (${pipeline.id})`);
   }
 
@@ -252,7 +255,7 @@ async function resolvePipelineAndStage(
       .order("display_order", { ascending: true })
       .limit(1)
       .maybeSingle();
-    pipeline = data;
+    pipeline = (data as { id: string; name: string } | null) ?? null;
     if (pipeline) console.log(`[PIPELINE] Fallback to first pipeline: "${pipeline.name}" (${pipeline.id})`);
   }
 
@@ -261,7 +264,7 @@ async function resolvePipelineAndStage(
   }
 
   // Resolve first stage in the chosen pipeline
-  const { data: firstStage } = await supabase
+  const { data: firstStageData } = await supabase
     .from("deal_stages")
     .select("id, name")
     .eq("account_id", accountId)
@@ -270,6 +273,8 @@ async function resolvePipelineAndStage(
     .order("display_order", { ascending: true })
     .limit(1)
     .maybeSingle();
+
+  const firstStage = (firstStageData as { id: string; name: string } | null) ?? null;
 
   if (!firstStage) {
     throw new Error(`No active stage found in pipeline "${pipeline.name}" (${pipeline.id}). Create at least one stage.`);
