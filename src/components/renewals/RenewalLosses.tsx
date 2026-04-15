@@ -126,22 +126,7 @@ export function RenewalLosses() {
         });
       }
 
-      // Check for newer contracts per client (indicates renewal)
-      const clientIds = [...new Set((expiredContracts || []).map((c: any) => c.client_id))];
-      let newerContractsMap: Record<string, boolean> = {};
-      if (clientIds.length > 0) {
-        const { data: newerContracts } = await supabase
-          .from("client_contracts")
-          .select("client_id")
-          .eq("account_id", currentUser.account_id)
-          .in("client_id", clientIds)
-          .in("status", ["active", "a_iniciar", "pendente"])
-          .is("parent_contract_id", null);
-        (newerContracts || []).forEach((nc: any) => {
-          newerContractsMap[nc.client_id] = true;
-        });
-      }
-
+      // No more auto-detection: only use explicit outcomes from renewal_outcomes table
       const mapped: ExpiredContract[] = (expiredContracts || []).map((c: any) => {
         const endDate = parseLocalDate(c.end_date);
         const diffMs = endDate ? today.getTime() - endDate.getTime() : 0;
@@ -161,8 +146,8 @@ export function RenewalLosses() {
         else priceToUse = c.value || 0;
 
         const outcome = outcomesMap[c.id];
-        const hasNew = newerContractsMap[c.client_id] || false;
-        const effectiveOutcome = outcome?.outcome || (hasNew ? "renewed" : null);
+        // Only show in results if explicitly marked as renewed or lost
+        const effectiveOutcome = outcome?.outcome || null;
 
         return {
           id: c.id,

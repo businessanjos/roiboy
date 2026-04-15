@@ -707,6 +707,73 @@ export default function Renewals() {
           <RenewalLosses />
         </TabsContent>
       </Tabs>
+
+      {/* Renewal Confirmation Dialog */}
+      <Dialog open={renewalDialog.open} onOpenChange={(open) => !open && setRenewalDialog({ open: false, contract: null })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmar Renovação</DialogTitle>
+          </DialogHeader>
+          {renewalDialog.contract && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Cliente: <strong>{renewalDialog.contract.client_name}</strong>
+              </p>
+
+              <div className="space-y-2">
+                <Label>Produto</Label>
+                <Select value={renewalForm.product_id} onValueChange={(v) => setRenewalForm(prev => ({ ...prev, product_id: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o produto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Forma de Pagamento</Label>
+                <Select value={renewalForm.payment_method} onValueChange={(v) => setRenewalForm(prev => ({ ...prev, payment_method: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a forma" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pix">PIX</SelectItem>
+                    <SelectItem value="cartao_credito">Cartão de Crédito</SelectItem>
+                    <SelectItem value="cartao_debito">Cartão de Débito</SelectItem>
+                    <SelectItem value="boleto">Boleto</SelectItem>
+                    <SelectItem value="transferencia">Transferência</SelectItem>
+                    <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                    <SelectItem value="parcelado">Parcelado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Valor da Renovação (R$)</Label>
+                <Input
+                  type="number"
+                  value={renewalForm.value}
+                  onChange={(e) => setRenewalForm(prev => ({ ...prev, value: e.target.value }))}
+                  placeholder="0,00"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenewalDialog({ open: false, contract: null })}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirmRenewal} disabled={savingRenewal}>
+              {savingRenewal && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Confirmar Renovação
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
