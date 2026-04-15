@@ -136,9 +136,9 @@ export default function HRServiceProviderProfile() {
   };
 
   const recalcFee = (total?: number | null, down?: number | null, installments?: number | null) => {
-    const t = total ?? (form as any).contract_total_value ?? 0;
-    const d = down ?? (form as any).contract_down_payment ?? 0;
-    const n = installments ?? (form as any).contract_installments_count ?? 0;
+    const t = total ?? (formRef.current as any).contract_total_value ?? 0;
+    const d = down ?? (formRef.current as any).contract_down_payment ?? 0;
+    const n = installments ?? (formRef.current as any).contract_installments_count ?? 0;
     if (t > 0 && n > 0) {
       const remaining = t - (d || 0);
       const parcelsAfterDown = d && d > 0 ? n - 1 : n;
