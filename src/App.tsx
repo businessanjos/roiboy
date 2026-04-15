@@ -101,6 +101,7 @@ const HRServiceProviders = lazyRetry(() => import("./pages/rh/HRServiceProviders
 const HRServiceProviderProfile = lazyRetry(() => import("./pages/rh/HRServiceProviderProfile"));
 const HRPartners = lazyRetry(() => import("./pages/rh/HRPartners"));
 const HRPartnerProfile = lazyRetry(() => import("./pages/rh/HRPartnerProfile"));
+const RHPositions = lazyRetry(() => import("./pages/rh/RHPositions"));
 const SharedInsights = lazyRetry(() => import("./pages/SharedInsights"));
 const ExternalDashboard = lazyRetry(() => import("./pages/ExternalDashboard"));
 const WhatsAppDiagnostics = lazyRetry(() => import("./pages/admin/WhatsAppDiagnostics"));
