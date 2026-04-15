@@ -6905,6 +6905,94 @@ export type Database = {
           },
         ]
       }
+      hr_positions: {
+        Row: {
+          account_id: string
+          behavioral_skills: string[] | null
+          career_path: string | null
+          created_at: string
+          department_id: string | null
+          description: string | null
+          education_level: string | null
+          experience_years: number | null
+          id: string
+          is_active: boolean
+          next_position_id: string | null
+          requirements: string | null
+          responsibilities: string[] | null
+          salary_max: number | null
+          salary_min: number | null
+          seniority: string | null
+          technical_skills: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          behavioral_skills?: string[] | null
+          career_path?: string | null
+          created_at?: string
+          department_id?: string | null
+          description?: string | null
+          education_level?: string | null
+          experience_years?: number | null
+          id?: string
+          is_active?: boolean
+          next_position_id?: string | null
+          requirements?: string | null
+          responsibilities?: string[] | null
+          salary_max?: number | null
+          salary_min?: number | null
+          seniority?: string | null
+          technical_skills?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          behavioral_skills?: string[] | null
+          career_path?: string | null
+          created_at?: string
+          department_id?: string | null
+          description?: string | null
+          education_level?: string | null
+          experience_years?: number | null
+          id?: string
+          is_active?: boolean
+          next_position_id?: string | null
+          requirements?: string | null
+          responsibilities?: string[] | null
+          salary_max?: number | null
+          salary_min?: number | null
+          seniority?: string | null
+          technical_skills?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_positions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_positions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "hr_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_positions_next_position_id_fkey"
+            columns: ["next_position_id"]
+            isOneToOne: false
+            referencedRelation: "hr_positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_salary_history: {
         Row: {
           account_id: string
