@@ -31,6 +31,17 @@ export interface HRPartner {
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   notes: string | null;
+  nationality: string | null;
+  profession: string | null;
+  pis_pasep: string | null;
+  bank_name: string | null;
+  bank_agency: string | null;
+  bank_account: string | null;
+  bank_pix_key: string | null;
+  marital_property_regime: string | null;
+  holding_cnpj: string | null;
+  partner_type: string | null;
+  social_contract_number: string | null;
   created_at: string;
   updated_at: string;
 }
