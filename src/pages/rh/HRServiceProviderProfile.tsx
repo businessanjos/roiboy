@@ -94,6 +94,9 @@ export default function HRServiceProviderProfile() {
       setProvider(providerData);
       setForm(providerData);
       setFeeDisplay(formatBRL(providerData.fee_amount));
+      setTotalDisplay(formatBRL(providerData.contract_total_value));
+      setDownPaymentDisplay(formatBRL(providerData.contract_down_payment));
+      setInstallmentValueDisplay(formatBRL(providerData.contract_installment_value));
       setLoading(false);
       isDirty.current = false;
     })();
