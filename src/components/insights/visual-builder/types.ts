@@ -316,6 +316,7 @@ export function generateVisualTitle(
     leads: 'Leads',
     products: 'Produtos',
     tasks: 'Tarefas',
+    sales_history: 'Histórico de Vendas',
   };
 
   const aggLabels: Record<Aggregation, string> = {
