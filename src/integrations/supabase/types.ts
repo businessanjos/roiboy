@@ -7008,6 +7008,7 @@ export type Database = {
           cpf: string | null
           created_at: string
           department: string | null
+          education_level: string | null
           email: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
@@ -7055,6 +7056,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           department?: string | null
+          education_level?: string | null
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
@@ -7102,6 +7104,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           department?: string | null
+          education_level?: string | null
           email?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
