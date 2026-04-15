@@ -388,13 +388,12 @@ export function RenewalLosses() {
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [
                       `R$ ${(value * 100).toLocaleString("pt-BR")}`,
-                      name === "lost" ? "Perdido" : name === "renewed" ? "Renovado" : "Pendente"
+                      name === "lost" ? "Perdido" : "Renovado"
                     ]}
                   />
-                  <Legend formatter={(v) => v === "lost" ? "Perdido" : v === "renewed" ? "Renovado" : "Pendente"} />
+                  <Legend formatter={(v) => v === "lost" ? "Perdido" : "Renovado"} />
                   <Bar dataKey="renewed" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="lost" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="pending" stackId="a" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="lost" stackId="a" fill="#ef4444" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
