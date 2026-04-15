@@ -100,7 +100,7 @@ function selectBestProductMatch(
 }
 
 async function resolveProductSelection(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   accountId: string,
   rawProductInput: string,
   hintedValue?: number
@@ -211,7 +211,7 @@ async function resolveProductSelection(
  * ALWAYS returns both pipeline_id and stage_id, or throws.
  */
 async function resolvePipelineAndStage(
-  supabase: ReturnType<typeof createClient>,
+  supabase: any,
   accountId: string,
   preferredPipelineName?: string
 ): Promise<{ pipelineId: string; stageId: string }> {
