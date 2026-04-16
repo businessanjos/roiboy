@@ -1,0 +1,1 @@
+UPDATE insights_visuals SET config = jsonb_set(config, '{tableConfig,columns}', '["name", "value", "product", "status", "stage", "responsible", "won_at"]'::jsonb) WHERE id = '6067d25d-c195-48e7-88b0-d814ea9e7c80';
