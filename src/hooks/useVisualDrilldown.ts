@@ -164,9 +164,10 @@ async function fetchDealsRecords(
     filteredData = await filterByDealFields(filteredData, accountId, dealFilters) as any[];
   }
 
-  // Enrich with product if dimension is product/product_name
+  // Enrich with product if dimension is product/product_name OR if product column is in tableConfig
   const isProductDimension = config.dimension?.field === 'product' || config.dimension?.field === 'product_name';
-  if (isProductDimension) {
+  const hasProductColumn = config.tableConfig?.columns?.includes('product');
+  if (isProductDimension || hasProductColumn) {
     filteredData = await enrichDealsWithProduct(accountId, filteredData);
   }
 
@@ -211,6 +212,7 @@ async function fetchDealsRecords(
       won_at: deal.won_at,
       lost_at: deal.lost_at,
       lost_reason: deal.lost_reason,
+      product: deal.product,
       custom_fields: customFieldsData.get(deal.id),
     },
   }));
