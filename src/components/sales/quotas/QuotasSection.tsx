@@ -187,10 +187,10 @@ export function QuotasSection() {
                       </TableCell>
                       <TableCell className="text-center">{u.productCount}</TableCell>
                       <TableCell className="text-right">
-                        {u.totalTarget > 0 ? `R$ ${(u.totalTarget / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
+                        {u.totalTarget > 0 ? `R$ ${u.totalTarget.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
                       </TableCell>
                       <TableCell className="text-right">
-                        {u.totalAchieved > 0 ? `R$ ${(u.totalAchieved / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
+                        {u.totalAchieved > 0 ? `R$ ${u.totalAchieved.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
                       </TableCell>
                       <TableCell className="text-right">
                         {u.totalTarget > 0 ? (
@@ -246,7 +246,7 @@ export function QuotasSection() {
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell className="text-right text-muted-foreground">
-                        {(Number(product.price) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        {Number(product.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-center">
                         <Input
@@ -280,9 +280,7 @@ export function QuotasSection() {
             <div className="mt-4 pt-3 border-t flex justify-between items-center text-sm">
               <span className="text-muted-foreground">Total da Meta:</span>
               <span className="font-bold text-lg">
-                R$ {(
-                  products.reduce((s, p) => s + (getQuotaValue(p.id, "value")), 0) / 100
-                ).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                R$ {products.reduce((s, p) => s + (getQuotaValue(p.id, "value")), 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
               </span>
             </div>
           </CardContent>
