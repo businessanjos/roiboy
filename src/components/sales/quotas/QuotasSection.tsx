@@ -141,8 +141,8 @@ export function QuotasSection() {
   const wonDeals = wonDealsQuery.data ?? {};
 
   const getGoalQty = (userId: string, productId: string) => {
-    const goal = productGoals.find((g) => g.user_id === userId && g.product_id === productId);
-    return goal?.target_quantity ?? 0;
+    const q = quotas.find((q) => q.user_id === userId && q.product_id === productId);
+    return q?.target_quantity ?? 0;
   };
 
   const getWonQty = (userId: string, productId: string) => {
