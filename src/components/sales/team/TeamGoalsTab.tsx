@@ -33,6 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { ProductGoalsSection } from "./ProductGoalsSection";
 
 const SALES_TEAM_NAMES = ["everton", "jonathan", "maikol", "darlan", "vanessa", "george"];
 
@@ -445,6 +446,8 @@ export function TeamGoalsTab() {
     <div className="space-y-5">
       {/* Company Goal Card */}
       <CompanyGoalCard />
+      {/* Product Goals Breakdown */}
+      <ProductGoalsSection />
       {/* Top bar: mode toggle + year + save */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">

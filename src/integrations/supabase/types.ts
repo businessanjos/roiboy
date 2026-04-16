@@ -11273,6 +11273,54 @@ export type Database = {
           },
         ]
       }
+      sales_product_goals: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          product_id: string
+          target_quantity: number
+          updated_at: string
+          user_id: string
+          year_month: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          product_id: string
+          target_quantity?: number
+          updated_at?: string
+          user_id: string
+          year_month: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          product_id?: string
+          target_quantity?: number
+          updated_at?: string
+          user_id?: string
+          year_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_product_goals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_product_goals_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales_quotas: {
         Row: {
           account_id: string
