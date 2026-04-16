@@ -188,7 +188,7 @@ export function SpiffsSection() {
                     <TableCell className="text-muted-foreground">{product?.name || "Todos"}</TableCell>
                     <TableCell className="text-center font-medium">
                       {spiff.bonus_type === "fixed"
-                        ? `R$ ${(Number(spiff.bonus_amount) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                        ? `R$ ${Number(spiff.bonus_amount).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
                         : `${spiff.bonus_amount}%`}
                     </TableCell>
                     <TableCell className="text-center">{spiff.target_quantity}</TableCell>

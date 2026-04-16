@@ -20,7 +20,7 @@ const SALES_USER_IDS = [
   "cefc44c7-d2e2-4937-94ac-069c1c94731b",
 ];
 
-const fmt = (v: number) => `R$ ${(v / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+const fmt = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
 export function CommissionSimulator() {
   const now = new Date();

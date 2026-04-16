@@ -119,7 +119,7 @@ export function OTESection({ year }: { year: number }) {
                     />
                   </TableCell>
                   <TableCell className="text-right font-bold">
-                    {total > 0 ? `R$ ${(total / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
+                    {total > 0 ? `R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
                   </TableCell>
                   <TableCell className="text-right text-muted-foreground text-xs">
                     {total > 0 ? `${basePct}/${100 - basePct}` : "—"}
