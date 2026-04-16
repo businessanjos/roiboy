@@ -106,18 +106,20 @@ export default function SalesScripts() {
   const [deleteScriptDialog, setDeleteScriptDialog] = useState<SalesScript | null>(null);
   const [scriptForm, setScriptForm] = useState({ title: '', content: '', objection_type: '', funnel_stage: '', tags: '' });
 
-  const [transcriptText, setTranscriptText] = useState('');
-  const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
+  const [transcriptEntries, setTranscriptEntries] = useState<Array<{ id: number; text: string; file: File | null }>>([{ id: 1, text: '', file: null }]);
   const [transcriptAnalysis, setTranscriptAnalysis] = useState<string | null>(null);
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   const [callOutcome, setCallOutcome] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedSellerId, setSelectedSellerId] = useState<string | null>(null);
   const [dealComboOpen, setDealComboOpen] = useState(false);
   const [dealSearch, setDealSearch] = useState('');
   const [clientComboOpen, setClientComboOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
+  const [sellerComboOpen, setSellerComboOpen] = useState(false);
+  const [sellerSearch, setSellerSearch] = useState('');
   const [outcomeNotes, setOutcomeNotes] = useState('');
-  const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string; deal_id?: string | null; deal_name?: string | null; call_outcome?: string | null; client_id?: string | null; client_name?: string | null; outcome_notes?: string | null } | null>(null);
+  const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string; deal_id?: string | null; deal_name?: string | null; call_outcome?: string | null; client_id?: string | null; client_name?: string | null; outcome_notes?: string | null; seller_user_id?: string | null; seller_name?: string | null } | null>(null);
   const [deleteAnalysisDialog, setDeleteAnalysisDialog] = useState<{ id: string; created_at: string } | null>(null);
   const [analysisSubTab, setAnalysisSubTab] = useState('analyze');
 
@@ -145,9 +147,19 @@ export default function SalesScripts() {
   const { data: savedAnalyses = [], isLoading: loadingAnalyses } = useQuery({
     queryKey: ['sales-call-analyses', accountId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('sales_call_analyses').select('*, deal:deals!sales_call_analyses_deal_id_fkey(id, title), client:clients!sales_call_analyses_client_id_fkey(id, full_name)').eq('account_id', accountId!).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('sales_call_analyses').select('*, deal:deals!sales_call_analyses_deal_id_fkey(id, title), client:clients!sales_call_analyses_client_id_fkey(id, full_name), seller:users!sales_call_analyses_seller_user_id_fkey(id, name)').eq('account_id', accountId!).order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []).map((a: any) => ({ ...a, deal_name: a.deal?.title || null, client_name: a.client?.full_name || null }));
+      return (data || []).map((a: any) => ({ ...a, deal_name: a.deal?.title || null, client_name: a.client?.full_name || null, seller_name: a.seller?.name || null }));
+    },
+    enabled: !!accountId,
+  });
+
+  const { data: teamUsers = [] } = useQuery({
+    queryKey: ['team-users-for-calls', accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('users').select('id, name').eq('account_id', accountId!).order('name');
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!accountId,
   });
