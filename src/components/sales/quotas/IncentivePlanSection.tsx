@@ -51,9 +51,14 @@ export function IncentivePlanSection() {
 
   const products = productsQuery.data ?? [];
 
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initializedRef = useRef(false);
+
   // Sync state from active plan
   useEffect(() => {
     if (activePlan) {
+      initializedRef.current = false;
       setPlanName(activePlan.name);
       setPlanDesc(activePlan.description || "");
       setBonusBase(Number(activePlan.bonus_base_value));
@@ -62,11 +67,13 @@ export function IncentivePlanSection() {
       setClawbackPercent(Number(activePlan.clawback_percent));
       setQuarterlyBonusEnabled(activePlan.quarterly_bonus_enabled);
       setQuarterlyBonusValue(Number(activePlan.quarterly_bonus_value));
+      setTimeout(() => { initializedRef.current = true; }, 100);
     }
   }, [activePlan]);
 
   useEffect(() => {
     if (tiers.length > 0) {
+      initializedRef.current = false;
       setDraftTiers(
         tiers.map((t) => ({
           min: Number(t.min_achievement_percent),
@@ -75,6 +82,7 @@ export function IncentivePlanSection() {
           label: t.label || "",
         }))
       );
+      setTimeout(() => { initializedRef.current = true; }, 100);
     } else if (!activePlan) {
       setDraftTiers([
         { min: 0, max: "80", multiplier: 0, label: "Abaixo da Meta" },
@@ -84,6 +92,61 @@ export function IncentivePlanSection() {
       ]);
     }
   }, [tiers, activePlan]);
+
+  // ── Smart autosave: only when data differs from server ──
+  const hasPlanChanges = useCallback(() => {
+    if (!activePlan) return planName.trim().length > 0;
+    return (
+      planName !== activePlan.name ||
+      planDesc !== (activePlan.description || "") ||
+      bonusBase !== Number(activePlan.bonus_base_value) ||
+      clawbackEnabled !== activePlan.clawback_enabled ||
+      clawbackDays !== activePlan.clawback_days ||
+      clawbackPercent !== Number(activePlan.clawback_percent) ||
+      quarterlyBonusEnabled !== activePlan.quarterly_bonus_enabled ||
+      quarterlyBonusValue !== Number(activePlan.quarterly_bonus_value)
+    );
+  }, [activePlan, planName, planDesc, bonusBase, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue]);
+
+  const hasTierChanges = useCallback(() => {
+    if (draftTiers.length !== tiers.length) return true;
+    return draftTiers.some((dt, i) => {
+      const st = tiers[i];
+      if (!st) return true;
+      return (
+        dt.min !== Number(st.min_achievement_percent) ||
+        dt.max !== (st.max_achievement_percent != null ? String(st.max_achievement_percent) : "") ||
+        dt.multiplier !== Number(st.bonus_multiplier) ||
+        dt.label !== (st.label || "")
+      );
+    });
+  }, [draftTiers, tiers]);
+
+  const hasRateChanges = Object.keys(draftRates).length > 0;
+
+  // Debounced autosave effect
+  useEffect(() => {
+    if (!initializedRef.current) return;
+    const planChanged = hasPlanChanges();
+    const tierChanged = hasTierChanges();
+    if (!planChanged && !tierChanged && !hasRateChanges) return;
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      setAutoSaveStatus("saving");
+      try {
+        if (planChanged) await handleSavePlanSilent();
+        if (hasRateChanges) await handleSaveRatesSilent();
+        if (tierChanged) await handleSaveTiersSilent();
+        setAutoSaveStatus("saved");
+        setTimeout(() => setAutoSaveStatus("idle"), 2000);
+      } catch {
+        setAutoSaveStatus("idle");
+      }
+    }, 1500);
+
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
+  }, [planName, planDesc, bonusBase, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, draftRates, draftTiers]);
 
   const getRate = (productId: string) => {
     if (draftRates[productId]) return draftRates[productId];
