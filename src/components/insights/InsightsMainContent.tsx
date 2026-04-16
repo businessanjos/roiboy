@@ -41,7 +41,7 @@ export function InsightsMainContent() {
   const focusModeRef = useRef<HTMLDivElement>(null);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
 
-  // Detect fixedDateRange year from visuals
+  // Detect fixedDateRange year from visuals (parse from ISO string to avoid timezone shift)
   const fixedYear = useMemo(() => {
     const first = (visuals || []).find((v) => {
       const cfg = v.config as any;
@@ -49,7 +49,10 @@ export function InsightsMainContent() {
     });
     if (!first) return null;
     const cfg = first.config as any;
-    return new Date(cfg.fixedDateRange.startDate).getFullYear();
+    // Extract year directly from ISO string to avoid timezone issues
+    const isoStr = cfg.fixedDateRange.startDate as string;
+    const yearMatch = isoStr.match(/^(\d{4})/);
+    return yearMatch ? parseInt(yearMatch[1], 10) : new Date(isoStr).getFullYear();
   }, [visuals]);
 
   // Override fixedDateRange when a month is selected
