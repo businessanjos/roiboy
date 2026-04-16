@@ -209,8 +209,17 @@ export default function MarketingInsightsTab() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-lg">{activeDashboard.name}</h3>
+             <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <h3 className="font-semibold text-lg">{activeDashboard.name}</h3>
+                {fixedYear !== null && (
+                  <MarketingDateFilter
+                    year={fixedYear}
+                    selectedMonth={selectedMonth}
+                    onMonthChange={setSelectedMonth}
+                  />
+                )}
+              </div>
               {canManage && (
                 <Button variant="outline" size="sm" onClick={() => setBuilderOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
