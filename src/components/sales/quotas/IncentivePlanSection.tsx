@@ -154,7 +154,8 @@ export function IncentivePlanSection() {
     return existing ? { percent: Number(existing.commission_percent) || 0, fixed: Number(existing.fixed_amount) || 0 } : { percent: 0, fixed: 0 };
   };
 
-  const handleSavePlan = async () => {
+  // Silent save functions (no toast — used by autosave)
+  const handleSavePlanSilent = async () => {
     await savePlan.mutateAsync({
       id: activePlan?.id,
       name: planName,
@@ -169,7 +170,7 @@ export function IncentivePlanSection() {
     });
   };
 
-  const handleSaveRates = async () => {
+  const handleSaveRatesSilent = async () => {
     const planId = activePlan?.id || plans[0]?.id;
     if (!planId) return;
     for (const [productId, rate] of Object.entries(draftRates)) {
@@ -183,7 +184,7 @@ export function IncentivePlanSection() {
     setDraftRates({});
   };
 
-  const handleSaveTiers = async () => {
+  const handleSaveTiersSilent = async () => {
     const planId = activePlan?.id || plans[0]?.id;
     if (!planId) return;
     await saveTiers.mutateAsync({
@@ -196,6 +197,18 @@ export function IncentivePlanSection() {
         label: t.label || null,
       })),
     });
+  };
+
+  const handleSavePlan = async () => {
+    await handleSavePlanSilent();
+  };
+
+  const handleSaveRates = async () => {
+    await handleSaveRatesSilent();
+  };
+
+  const handleSaveTiers = async () => {
+    await handleSaveTiersSilent();
   };
 
   const addTier = () => {
