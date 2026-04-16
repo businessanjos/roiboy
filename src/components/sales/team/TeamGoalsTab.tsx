@@ -446,6 +446,8 @@ export function TeamGoalsTab() {
     <div className="space-y-5">
       {/* Company Goal Card */}
       <CompanyGoalCard />
+      {/* Product Goals Breakdown */}
+      <ProductGoalsSection />
       {/* Top bar: mode toggle + year + save */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
