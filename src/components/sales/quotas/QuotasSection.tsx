@@ -210,19 +210,39 @@ export function QuotasSection() {
     return <div className="space-y-3"><Skeleton className="h-10 w-60" /><Skeleton className="h-64" /></div>;
   }
 
-  // Compute totals per product column
-  const totals = TRACKED_PRODUCTS.map((tp) => {
-    let metaSum = 0, realizadoSum = 0;
-    for (const u of users) {
-      metaSum += getGoalQty(u.id, tp.id);
-      realizadoSum += getWonQty(u.id, tp.id);
-    }
-    return { ...tp, metaSum, realizadoSum, faltamSum: Math.max(0, metaSum - realizadoSum) };
+  // Helper: get product price
+  const getProductPrice = (productId: string) => {
+    const p = products.find((pr) => pr.id === productId);
+    return p ? Number(p.price) : 0;
+  };
+
+  // Build user rows
+  const userRows = users.map((u) => {
+    const productCells = TRACKED_PRODUCTS.map((tp) => {
+      const meta = getGoalQty(u.id, tp.id);
+      const realizado = getWonQty(u.id, tp.id);
+      return { id: tp.id, short: tp.short, meta, realizado };
+    });
+    const metaTotalValue = TRACKED_PRODUCTS.reduce((s, tp) => s + getGoalQty(u.id, tp.id) * getProductPrice(tp.id), 0);
+    const realizadoTotalValue = TRACKED_PRODUCTS.reduce((s, tp) => s + getWonQty(u.id, tp.id) * getProductPrice(tp.id), 0);
+    const atingimento = metaTotalValue > 0 ? (realizadoTotalValue / metaTotalValue) * 100 : 0;
+    const falta = Math.max(0, 100 - atingimento);
+    return { ...u, productCells, metaTotalValue, realizadoTotalValue, atingimento, falta };
   });
 
-  const totalMetaAll = totals.reduce((s, t) => s + t.metaSum, 0);
-  const totalRealizadoAll = totals.reduce((s, t) => s + t.realizadoSum, 0);
-  const totalFaltamAll = Math.max(0, totalMetaAll - totalRealizadoAll);
+  // Footer totals
+  const footerProducts = TRACKED_PRODUCTS.map((tp) => ({
+    id: tp.id,
+    short: tp.short,
+    meta: users.reduce((s, u) => s + getGoalQty(u.id, tp.id), 0),
+    realizado: users.reduce((s, u) => s + getWonQty(u.id, tp.id), 0),
+  }));
+  const footerMetaTotal = userRows.reduce((s, r) => s + r.metaTotalValue, 0);
+  const footerRealizadoTotal = userRows.reduce((s, r) => s + r.realizadoTotalValue, 0);
+  const footerAtingimento = footerMetaTotal > 0 ? (footerRealizadoTotal / footerMetaTotal) * 100 : 0;
+  const footerFalta = Math.max(0, 100 - footerAtingimento);
+
+  const fmtBRL = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
 
   return (
     <div className="space-y-4">
@@ -252,98 +272,73 @@ export function QuotasSection() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead rowSpan={2} className="align-bottom border-r">Vendedor</TableHead>
+                    <TableHead>Vendedor</TableHead>
                     {TRACKED_PRODUCTS.map((tp) => (
-                      <TableHead key={tp.id} colSpan={3} className="text-center border-r border-b-0 px-1">
-                        <span className="text-xs font-semibold">{tp.short}</span>
-                      </TableHead>
+                      <TableHead key={tp.id} className="text-center text-xs px-2">{tp.short}</TableHead>
                     ))}
-                    <TableHead colSpan={3} className="text-center border-b-0 px-1">
-                      <span className="text-xs font-semibold">Total</span>
-                    </TableHead>
-                    <TableHead rowSpan={2} className="align-bottom" />
-                  </TableRow>
-                  <TableRow>
-                    {[...TRACKED_PRODUCTS, { id: "__total__", short: "Total" }].map((tp) => (
-                      <>
-                        <TableHead key={`${tp.id}-m`} className="text-center text-[10px] px-1 text-muted-foreground">Meta</TableHead>
-                        <TableHead key={`${tp.id}-r`} className="text-center text-[10px] px-1 text-emerald-600">Real.</TableHead>
-                        <TableHead key={`${tp.id}-f`} className="text-center text-[10px] px-1 border-r text-orange-500">Faltam</TableHead>
-                      </>
-                    ))}
+                    <TableHead className="text-right text-xs">Meta Total (R$)</TableHead>
+                    <TableHead className="text-right text-xs">Realizado (R$)</TableHead>
+                    <TableHead className="text-center text-xs">Atingimento (%)</TableHead>
+                    <TableHead className="text-center text-xs">Falta (%)</TableHead>
+                    <TableHead />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((u) => {
-                    let userMetaTotal = 0, userRealizadoTotal = 0;
-                    const cells = TRACKED_PRODUCTS.map((tp) => {
-                      const meta = getGoalQty(u.id, tp.id);
-                      const realizado = getWonQty(u.id, tp.id);
-                      const faltam = Math.max(0, meta - realizado);
-                      userMetaTotal += meta;
-                      userRealizadoTotal += realizado;
-                      return { meta, realizado, faltam, id: tp.id };
-                    });
-                    const userFaltamTotal = Math.max(0, userMetaTotal - userRealizadoTotal);
-
-                    return (
-                      <TableRow key={u.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedUserId(u.id); setDraftQuotas({}); }}>
-                        <TableCell className="font-medium border-r whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <User className="h-3.5 w-3.5 text-muted-foreground" />
-                            {u.name.split(" ")[0]}
+                  {userRows.map((u) => (
+                    <TableRow key={u.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedUserId(u.id); setDraftQuotas({}); }}>
+                      <TableCell className="font-medium whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          {u.name.split(" ")[0]}
+                        </div>
+                      </TableCell>
+                      {u.productCells.map((c) => (
+                        <TableCell key={c.id} className="text-center text-xs px-2">
+                          <div className="flex flex-col items-center">
+                            <span className="font-semibold">{c.realizado}/{c.meta}</span>
                           </div>
                         </TableCell>
-                        {cells.map((c) => (
-                          <>
-                            <TableCell key={`${c.id}-m`} className="text-center text-xs px-1">{c.meta || "—"}</TableCell>
-                            <TableCell key={`${c.id}-r`} className="text-center text-xs px-1 font-medium text-emerald-600">{c.realizado || "—"}</TableCell>
-                            <TableCell key={`${c.id}-f`} className="text-center text-xs px-1 border-r">
-                              {c.meta > 0 ? (
-                                <Badge variant={c.faltam === 0 ? "default" : "outline"} className="text-[10px] px-1.5">
-                                  {c.faltam}
-                                </Badge>
-                              ) : "—"}
-                            </TableCell>
-                          </>
-                        ))}
-                        {/* Total columns */}
-                        <TableCell className="text-center text-xs px-1 font-semibold">{userMetaTotal || "—"}</TableCell>
-                        <TableCell className="text-center text-xs px-1 font-bold text-emerald-600">{userRealizadoTotal || "—"}</TableCell>
-                        <TableCell className="text-center text-xs px-1 border-r">
-                          {userMetaTotal > 0 ? (
-                            <Badge variant={userFaltamTotal === 0 ? "default" : "outline"} className="text-[10px] px-1.5 font-bold">
-                              {userFaltamTotal}
-                            </Badge>
-                          ) : "—"}
-                        </TableCell>
-                        <TableCell>
-                          <Button size="sm" variant="ghost" className="text-xs">Editar</Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
+                      ))}
+                      <TableCell className="text-right text-xs font-medium whitespace-nowrap">
+                        {u.metaTotalValue > 0 ? fmtBRL(u.metaTotalValue) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right text-xs font-bold text-emerald-600 whitespace-nowrap">
+                        {u.realizadoTotalValue > 0 ? fmtBRL(u.realizadoTotalValue) : "—"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={u.atingimento >= 100 ? "default" : u.atingimento >= 80 ? "secondary" : "outline"} className="text-[10px] px-1.5">
+                          {u.atingimento.toFixed(0)}%
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={u.falta <= 0 ? "default" : "outline"} className="text-[10px] px-1.5">
+                          {u.falta.toFixed(0)}%
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button size="sm" variant="ghost" className="text-xs">Editar</Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
-                {/* Footer totals */}
                 <tfoot>
-                  <tr className="border-t-2 bg-muted/30">
-                    <td className="py-2 px-4 font-bold text-sm border-r">Total</td>
-                    {totals.map((t) => (
-                      <>
-                        <td key={`${t.id}-m`} className="py-2 text-center text-xs font-bold">{t.metaSum || "—"}</td>
-                        <td key={`${t.id}-r`} className="py-2 text-center text-xs font-bold text-emerald-600">{t.realizadoSum || "—"}</td>
-                        <td key={`${t.id}-f`} className="py-2 text-center border-r">
-                          <Badge variant={t.faltamSum === 0 ? "default" : "secondary"} className="text-[10px] px-1.5 font-bold">
-                            {t.faltamSum}
-                          </Badge>
-                        </td>
-                      </>
+                  <tr className="border-t-2 bg-muted/30 font-bold text-xs">
+                    <td className="py-2 px-4">Total</td>
+                    {footerProducts.map((fp) => (
+                      <td key={fp.id} className="py-2 text-center">
+                        <span>{fp.realizado}/{fp.meta}</span>
+                      </td>
                     ))}
-                    <td className="py-2 text-center text-xs font-bold">{totalMetaAll || "—"}</td>
-                    <td className="py-2 text-center text-xs font-bold text-emerald-600">{totalRealizadoAll || "—"}</td>
+                    <td className="py-2 text-right px-4 whitespace-nowrap">{fmtBRL(footerMetaTotal)}</td>
+                    <td className="py-2 text-right px-4 whitespace-nowrap text-emerald-600">{fmtBRL(footerRealizadoTotal)}</td>
                     <td className="py-2 text-center">
-                      <Badge variant={totalFaltamAll === 0 ? "default" : "secondary"} className="text-[10px] px-1.5 font-bold">
-                        {totalFaltamAll}
+                      <Badge variant={footerAtingimento >= 100 ? "default" : "secondary"} className="text-[10px] px-1.5">
+                        {footerAtingimento.toFixed(0)}%
+                      </Badge>
+                    </td>
+                    <td className="py-2 text-center">
+                      <Badge variant={footerFalta <= 0 ? "default" : "outline"} className="text-[10px] px-1.5">
+                        {footerFalta.toFixed(0)}%
                       </Badge>
                     </td>
                     <td />
