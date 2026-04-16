@@ -250,10 +250,18 @@ export function IncentivePlanSection() {
               </CardTitle>
               <CardDescription>Modelo híbrido: comissão por produto + bônus por atingimento + aceleradores</CardDescription>
             </div>
-            <Button onClick={handleSavePlan} disabled={savePlan.isPending} className="gap-1.5">
-              <Save className="h-4 w-4" />
-              Salvar Plano
-            </Button>
+            <div className="flex items-center gap-2">
+              {autoSaveStatus === "saving" && (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...
+                </span>
+              )}
+              {autoSaveStatus === "saved" && (
+                <span className="flex items-center gap-1.5 text-xs text-green-600">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Salvo
+                </span>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
