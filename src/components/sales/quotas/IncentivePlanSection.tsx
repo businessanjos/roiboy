@@ -278,7 +278,7 @@ export function IncentivePlanSection() {
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {(Number(product.price) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      {Number(product.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-center">
                       <Input
