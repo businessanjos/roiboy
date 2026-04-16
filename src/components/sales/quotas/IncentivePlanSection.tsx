@@ -88,7 +88,7 @@ export function IncentivePlanSection() {
   const getRate = (productId: string) => {
     if (draftRates[productId]) return draftRates[productId];
     const existing = productRates.find((r) => r.product_id === productId);
-    return existing ? { percent: Number(existing.commission_percent), fixed: Number(existing.fixed_amount) } : { percent: 0, fixed: 0 };
+    return existing ? { percent: Number(existing.commission_percent) || 0, fixed: Number(existing.fixed_amount) || 0 } : { percent: 0, fixed: 0 };
   };
 
   const handleSavePlan = async () => {
@@ -278,7 +278,7 @@ export function IncentivePlanSection() {
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell className="text-right text-muted-foreground">
-                      {Number(product.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      {(Number(product.price) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </TableCell>
                     <TableCell className="text-center">
                       <Input
@@ -411,7 +411,7 @@ export function IncentivePlanSection() {
                     />
                   </TableCell>
                   <TableCell className="text-right font-medium">
-                    {bonusBase > 0 ? `R$ ${(bonusBase * tier.multiplier).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
+                    {bonusBase > 0 ? `R$ ${((bonusBase || 0) * (tier.multiplier || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
                   </TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" onClick={() => removeTier(idx)} className="h-8 w-8">
