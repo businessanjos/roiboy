@@ -28,8 +28,16 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
   const accountId = globalFilters.accountIdOverride || currentUser?.account_id;
 
-  // Auto-scope daily grouping to current month
+  // Auto-scope daily grouping to current month, or use fixedDateRange if set
   const filters = (() => {
+    // Fixed date range override (ignores global filter)
+    if (config?.fixedDateRange?.startDate && config?.fixedDateRange?.endDate) {
+      return {
+        ...globalFilters,
+        startDate: config.fixedDateRange.startDate,
+        endDate: config.fixedDateRange.endDate,
+      };
+    }
     if (config?.dimension?.dateGrouping === 'day') {
       const now = new Date();
       return {
