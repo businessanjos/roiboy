@@ -1,5 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { BarChart3, Plus, Pencil, Trash2 } from "lucide-react";
+import { MarketingDateFilter } from "./MarketingDateFilter";
+import { startOfMonth, endOfMonth } from "date-fns";
 import { useMarketingDashboards } from "@/hooks/useMarketingDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { InsightsGrid } from "@/components/insights/grid/InsightsGrid";
