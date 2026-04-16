@@ -106,18 +106,20 @@ export default function SalesScripts() {
   const [deleteScriptDialog, setDeleteScriptDialog] = useState<SalesScript | null>(null);
   const [scriptForm, setScriptForm] = useState({ title: '', content: '', objection_type: '', funnel_stage: '', tags: '' });
 
-  const [transcriptText, setTranscriptText] = useState('');
-  const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
+  const [transcriptEntries, setTranscriptEntries] = useState<Array<{ id: number; text: string; file: File | null }>>([{ id: 1, text: '', file: null }]);
   const [transcriptAnalysis, setTranscriptAnalysis] = useState<string | null>(null);
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   const [callOutcome, setCallOutcome] = useState<string | null>(null);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
+  const [selectedSellerId, setSelectedSellerId] = useState<string | null>(null);
   const [dealComboOpen, setDealComboOpen] = useState(false);
   const [dealSearch, setDealSearch] = useState('');
   const [clientComboOpen, setClientComboOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
+  const [sellerComboOpen, setSellerComboOpen] = useState(false);
+  const [sellerSearch, setSellerSearch] = useState('');
   const [outcomeNotes, setOutcomeNotes] = useState('');
-  const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string; deal_id?: string | null; deal_name?: string | null; call_outcome?: string | null; client_id?: string | null; client_name?: string | null; outcome_notes?: string | null } | null>(null);
+  const [viewingAnalysis, setViewingAnalysis] = useState<{ id: string; analysis: string; created_at: string; deal_id?: string | null; deal_name?: string | null; call_outcome?: string | null; client_id?: string | null; client_name?: string | null; outcome_notes?: string | null; seller_user_id?: string | null; seller_name?: string | null } | null>(null);
   const [deleteAnalysisDialog, setDeleteAnalysisDialog] = useState<{ id: string; created_at: string } | null>(null);
   const [analysisSubTab, setAnalysisSubTab] = useState('analyze');
 
@@ -145,9 +147,19 @@ export default function SalesScripts() {
   const { data: savedAnalyses = [], isLoading: loadingAnalyses } = useQuery({
     queryKey: ['sales-call-analyses', accountId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('sales_call_analyses').select('*, deal:deals!sales_call_analyses_deal_id_fkey(id, title), client:clients!sales_call_analyses_client_id_fkey(id, full_name)').eq('account_id', accountId!).order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('sales_call_analyses').select('*, deal:deals!sales_call_analyses_deal_id_fkey(id, title), client:clients!sales_call_analyses_client_id_fkey(id, full_name), seller:users!sales_call_analyses_seller_user_id_fkey(id, name)').eq('account_id', accountId!).order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []).map((a: any) => ({ ...a, deal_name: a.deal?.title || null, client_name: a.client?.full_name || null }));
+      return (data || []).map((a: any) => ({ ...a, deal_name: a.deal?.title || null, client_name: a.client?.full_name || null, seller_name: a.seller?.name || null }));
+    },
+    enabled: !!accountId,
+  });
+
+  const { data: teamUsers = [] } = useQuery({
+    queryKey: ['team-users-for-calls', accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('users').select('id, name').eq('account_id', accountId!).order('name');
+      if (error) throw error;
+      return data || [];
     },
     enabled: !!accountId,
   });
@@ -256,17 +268,23 @@ export default function SalesScripts() {
 
   const analyzeTranscriptMutation = useMutation({
     mutationFn: async () => {
-      let text = transcriptText;
-      if (transcriptFile && !text) text = await transcriptFile.text();
-      if (!text.trim()) throw new Error('Insira ou envie uma transcrição');
-      const { data, error } = await supabase.functions.invoke('analyze-sales-call', { body: { transcript: text } });
+      const parts: string[] = [];
+      for (let i = 0; i < transcriptEntries.length; i++) {
+        const entry = transcriptEntries[i];
+        let text = entry.text;
+        if (entry.file && !text) text = await entry.file.text();
+        if (text.trim()) parts.push(transcriptEntries.length > 1 ? `=== CALL ${i + 1} ===\n${text.trim()}` : text.trim());
+      }
+      if (parts.length === 0) throw new Error('Insira ou envie pelo menos uma transcrição');
+      const fullTranscript = parts.join('\n\n');
+      const { data, error } = await supabase.functions.invoke('analyze-sales-call', { body: { transcript: fullTranscript } });
       if (error) throw error;
-      return data;
+      return { ...data, fullTranscript };
     },
     onSuccess: async (data) => {
       setTranscriptAnalysis(data.analysis);
-      const preview = (transcriptText || '').substring(0, 200);
-      await supabase.from('sales_call_analyses').insert({ account_id: accountId!, user_id: currentUser?.id!, analysis: data.analysis, transcript_preview: preview || null, deal_id: selectedDealId || null, call_outcome: callOutcome || null, client_id: selectedClientId || null, outcome_notes: outcomeNotes || null } as any);
+      const preview = (data.fullTranscript || '').substring(0, 200);
+      await supabase.from('sales_call_analyses').insert({ account_id: accountId!, user_id: currentUser?.id!, analysis: data.analysis, transcript_preview: preview || null, deal_id: selectedDealId || null, call_outcome: callOutcome || null, client_id: selectedClientId || null, outcome_notes: outcomeNotes || null, seller_user_id: selectedSellerId || null } as any);
       queryClient.invalidateQueries({ queryKey: ['sales-call-analyses'] });
       toast.success('Análise concluída e salva!');
     },
@@ -465,6 +483,42 @@ export default function SalesScripts() {
                 </Popover>
               </div>
 
+              {/* Seller Selector */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><Users className="w-4 h-4 text-primary" />Vendedor da Call</Label>
+                <Popover open={sellerComboOpen} onOpenChange={setSellerComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={sellerComboOpen} className="w-full justify-between font-normal">
+                      {selectedSellerId ? (() => { const u = teamUsers.find((u: any) => u.id === selectedSellerId); return u ? u.name : 'Selecione...'; })() : 'Nenhum (eu mesmo)'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput placeholder="Buscar vendedor..." value={sellerSearch} onValueChange={setSellerSearch} />
+                      <CommandList>
+                        <CommandEmpty>Nenhum vendedor encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem onSelect={() => { setSelectedSellerId(null); setSellerComboOpen(false); setSellerSearch(''); }}>
+                            <Check className={cn("mr-2 h-4 w-4", !selectedSellerId ? "opacity-100" : "opacity-0")} />
+                            Nenhum (eu mesmo)
+                          </CommandItem>
+                          {teamUsers.filter((u: any) => {
+                            if (!sellerSearch) return true;
+                            return u.name?.toLowerCase().includes(sellerSearch.toLowerCase());
+                          }).map((u: any) => (
+                            <CommandItem key={u.id} onSelect={() => { setSelectedSellerId(u.id); setSellerComboOpen(false); setSellerSearch(''); }}>
+                              <Check className={cn("mr-2 h-4 w-4", selectedSellerId === u.id ? "opacity-100" : "opacity-0")} />
+                              {u.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
               {/* Outcome Notes */}
               {callOutcome && (
                 <div className="space-y-2">
@@ -473,9 +527,39 @@ export default function SalesScripts() {
                 </div>
               )}
 
-              <div className="border border-dashed border-border rounded-lg p-4">{transcriptFile ? (<div className="flex items-center justify-between"><div className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /><span className="text-sm truncate">{transcriptFile.name}</span></div><Button variant="ghost" size="sm" onClick={() => setTranscriptFile(null)}><Trash2 className="w-4 h-4" /></Button></div>) : (<label htmlFor="transcript-file" className="flex flex-col items-center gap-2 cursor-pointer py-2"><Upload className="w-8 h-8 text-muted-foreground" /><span className="text-sm text-muted-foreground">Clique para enviar</span><span className="text-xs text-muted-foreground">TXT, PDF, Word</span><input id="transcript-file" type="file" className="hidden" accept=".txt,.pdf,.doc,.docx" onChange={e => { if (e.target.files?.[0]) setTranscriptFile(e.target.files[0]); }} /></label>)}</div>
-              <Textarea placeholder="Ou cole a transcrição aqui..." value={transcriptText} onChange={e => setTranscriptText(e.target.value)} className="min-h-[200px] font-mono text-sm" />
-              <Button onClick={() => analyzeTranscriptMutation.mutate()} disabled={analyzeTranscriptMutation.isPending || (!transcriptText.trim() && !transcriptFile)} className="w-full">{analyzeTranscriptMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analisando...</> : <><BarChart3 className="w-4 h-4 mr-2" />Analisar Call</>}</Button>
+              {/* Multi-transcript entries */}
+              {transcriptEntries.map((entry, idx) => (
+                <div key={entry.id} className="space-y-2">
+                  {transcriptEntries.length > 1 && (
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Call {idx + 1}</Label>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => setTranscriptEntries(prev => prev.filter(e => e.id !== entry.id))}>
+                        <Trash2 className="w-3 h-3 mr-1" />Remover
+                      </Button>
+                    </div>
+                  )}
+                  <div className="border border-dashed border-border rounded-lg p-4">
+                    {entry.file ? (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /><span className="text-sm truncate">{entry.file.name}</span></div>
+                        <Button variant="ghost" size="sm" onClick={() => setTranscriptEntries(prev => prev.map(e => e.id === entry.id ? { ...e, file: null } : e))}><Trash2 className="w-4 h-4" /></Button>
+                      </div>
+                    ) : (
+                      <label htmlFor={`transcript-file-${entry.id}`} className="flex flex-col items-center gap-2 cursor-pointer py-2">
+                        <Upload className="w-8 h-8 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Clique para enviar</span>
+                        <span className="text-xs text-muted-foreground">TXT, PDF, Word</span>
+                        <input id={`transcript-file-${entry.id}`} type="file" className="hidden" accept=".txt,.pdf,.doc,.docx" onChange={e => { if (e.target.files?.[0]) setTranscriptEntries(prev => prev.map(en => en.id === entry.id ? { ...en, file: e.target.files![0] } : en)); }} />
+                      </label>
+                    )}
+                  </div>
+                  <Textarea placeholder="Ou cole a transcrição aqui..." value={entry.text} onChange={e => setTranscriptEntries(prev => prev.map(en => en.id === entry.id ? { ...en, text: e.target.value } : en))} className="min-h-[150px] font-mono text-sm" />
+                </div>
+              ))}
+              <Button variant="outline" size="sm" className="w-full" onClick={() => setTranscriptEntries(prev => [...prev, { id: Date.now(), text: '', file: null }])}>
+                <Plus className="w-4 h-4 mr-2" />Adicionar outra call
+              </Button>
+              <Button onClick={() => analyzeTranscriptMutation.mutate()} disabled={analyzeTranscriptMutation.isPending || transcriptEntries.every(e => !e.text.trim() && !e.file)} className="w-full">{analyzeTranscriptMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analisando...</> : <><BarChart3 className="w-4 h-4 mr-2" />Analisar Call{transcriptEntries.length > 1 ? 's' : ''}</>}</Button>
             </CardContent></Card>
             {transcriptAnalysis && <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-primary" />Resultado da Análise</CardTitle></CardHeader><CardContent><MarkdownRenderer content={transcriptAnalysis} /><div className="flex gap-2 mt-4"><Button variant="outline" size="sm" onClick={() => handleCopy(transcriptAnalysis)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" onClick={() => exportSalesCallToPDF({ analysis: transcriptAnalysis, createdAt: new Date().toISOString() })}><Download className="w-4 h-4 mr-2" />PDF</Button></div></CardContent></Card>}
             
@@ -497,6 +581,7 @@ export default function SalesScripts() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-wrap mt-1">
+                        {a.seller_name && <Badge variant="outline" className="text-xs"><Users className="w-3 h-3 mr-1" />{a.seller_name}</Badge>}
                         {a.deal_name && <Badge variant="secondary" className="text-xs"><Target className="w-3 h-3 mr-1" />{a.deal_name}</Badge>}
                         {a.client_name && <Badge variant="outline" className="text-xs"><UserCheck className="w-3 h-3 mr-1" />{a.client_name}</Badge>}
                       </div>

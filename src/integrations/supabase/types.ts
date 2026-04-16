@@ -10597,6 +10597,7 @@ export type Database = {
           deal_id: string | null
           id: string
           outcome_notes: string | null
+          seller_user_id: string | null
           transcript_preview: string | null
           user_id: string
         }
@@ -10609,6 +10610,7 @@ export type Database = {
           deal_id?: string | null
           id?: string
           outcome_notes?: string | null
+          seller_user_id?: string | null
           transcript_preview?: string | null
           user_id: string
         }
@@ -10621,6 +10623,7 @@ export type Database = {
           deal_id?: string | null
           id?: string
           outcome_notes?: string | null
+          seller_user_id?: string | null
           transcript_preview?: string | null
           user_id?: string
         }
@@ -10651,6 +10654,13 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_call_analyses_seller_user_id_fkey"
+            columns: ["seller_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {
