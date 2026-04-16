@@ -412,9 +412,6 @@ export function IncentivePlanSection() {
                 <Plus className="h-4 w-4" />
                 Faixa
               </Button>
-              <Button onClick={handleSaveTiers} disabled={saveTiers.isPending} size="sm" className="gap-1.5">
-                <Save className="h-4 w-4" />
-                Salvar Faixas
               </Button>
             </div>
           </div>
