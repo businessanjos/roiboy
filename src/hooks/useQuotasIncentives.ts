@@ -32,6 +32,7 @@ export interface IncentivePlan {
   clawback_percent: number;
   quarterly_bonus_enabled: boolean;
   quarterly_bonus_value: number;
+  position_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -120,32 +121,32 @@ export function useQuotasIncentives(year: number, month: number) {
     enabled: !!accountId,
   });
 
-  // ── Product Rates ──
+  // ── Product Rates (all plans) ──
   const productRatesQuery = useQuery({
     queryKey: ["incentive-product-rates", accountId],
     queryFn: async () => {
-      const activePlan = plansQuery.data?.find((p) => p.is_active);
-      if (!activePlan) return [];
+      const planIds = (plansQuery.data || []).map((p) => p.id);
+      if (planIds.length === 0) return [];
       const { data, error } = await supabase
         .from("sales_incentive_product_rates")
         .select("*")
-        .eq("plan_id", activePlan.id);
+        .in("plan_id", planIds);
       if (error) throw error;
       return data as ProductRate[];
     },
     enabled: !!accountId && !!plansQuery.data,
   });
 
-  // ── Tiers ──
+  // ── Tiers (all plans) ──
   const tiersQuery = useQuery({
     queryKey: ["incentive-tiers", accountId],
     queryFn: async () => {
-      const activePlan = plansQuery.data?.find((p) => p.is_active);
-      if (!activePlan) return [];
+      const planIds = (plansQuery.data || []).map((p) => p.id);
+      if (planIds.length === 0) return [];
       const { data, error } = await supabase
         .from("sales_incentive_tiers")
         .select("*")
-        .eq("plan_id", activePlan.id)
+        .in("plan_id", planIds)
         .order("min_achievement_percent");
       if (error) throw error;
       return data as IncentiveTier[];
