@@ -5,12 +5,14 @@ import { ZoomControls } from "@/components/ui/zoom-controls";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { InsightsFilterBar } from "./InsightsFilterBar";
+import { MarketingDateFilter } from "@/components/marketing/MarketingDateFilter";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddVisualModal } from "./AddVisualModal";
 import { ShareDashboardModal } from "./ShareDashboardModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -37,6 +39,45 @@ export function InsightsMainContent() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusZoom, setFocusZoom] = useState(100);
   const focusModeRef = useRef<HTMLDivElement>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+
+  // Detect fixedDateRange year from visuals
+  const fixedYear = useMemo(() => {
+    const first = (visuals || []).find((v) => {
+      const cfg = v.config as any;
+      return cfg?.fixedDateRange?.startDate;
+    });
+    if (!first) return null;
+    const cfg = first.config as any;
+    return new Date(cfg.fixedDateRange.startDate).getFullYear();
+  }, [visuals]);
+
+  // Override fixedDateRange when a month is selected
+  const filteredVisuals = useMemo(() => {
+    if (fixedYear === null || selectedMonth === null) return visuals || [];
+    const monthStart = startOfMonth(new Date(fixedYear, selectedMonth, 1));
+    const monthEnd = endOfMonth(monthStart);
+    return (visuals || []).map((v) => {
+      const cfg = v.config as any;
+      if (!cfg?.fixedDateRange) return v;
+      return {
+        ...v,
+        config: {
+          ...cfg,
+          fixedDateRange: {
+            startDate: monthStart.toISOString(),
+            endDate: monthEnd.toISOString(),
+          },
+        },
+      };
+    });
+  }, [visuals, fixedYear, selectedMonth]);
+
+  // Reset month filter when dashboard changes
+  useEffect(() => {
+    setSelectedMonth(null);
+  }, [activeDashboardId]);
+
 
   // ESC listener
   useEffect(() => {
@@ -251,7 +292,17 @@ export function InsightsMainContent() {
         </div>
 
         {/* Filters */}
-        <InsightsFilterBar />
+        <div className="flex items-center gap-3 flex-wrap">
+          {fixedYear !== null ? (
+            <MarketingDateFilter
+              year={fixedYear}
+              selectedMonth={selectedMonth}
+              onMonthChange={setSelectedMonth}
+            />
+          ) : (
+            <InsightsFilterBar />
+          )}
+        </div>
 
         {/* Grid or Empty State */}
         {isLoadingVisuals ? (
@@ -261,7 +312,7 @@ export function InsightsMainContent() {
           </div>
         ) : hasVisuals ? (
           <InsightsGrid 
-            visuals={visuals} 
+            visuals={filteredVisuals} 
             onLayoutChange={handleLayoutChange}
             onUpdateVisual={updateVisual}
             onRemoveVisual={removeVisual}
