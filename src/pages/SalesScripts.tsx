@@ -154,12 +154,17 @@ export default function SalesScripts() {
     enabled: !!accountId,
   });
 
+  const SALES_TEAM_FIRST_NAMES = ["darlan", "jonathan", "everton", "maikol", "vanessa"];
+
   const { data: teamUsers = [] } = useQuery({
     queryKey: ['team-users-for-calls', accountId],
     queryFn: async () => {
       const { data, error } = await supabase.from('users').select('id, name').eq('account_id', accountId!).order('name');
       if (error) throw error;
-      return data || [];
+      return (data || []).filter((u: any) => {
+        const firstName = u.name?.trim().split(/\s+/)[0]?.toLowerCase();
+        return SALES_TEAM_FIRST_NAMES.includes(firstName);
+      });
     },
     enabled: !!accountId,
   });
