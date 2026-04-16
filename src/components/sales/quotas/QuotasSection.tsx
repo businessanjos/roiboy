@@ -233,7 +233,7 @@ export function QuotasSection() {
       return { id: tp.id, short: tp.short, meta, realizado };
     });
     const metaTotalValue = TRACKED_PRODUCTS.reduce((s, tp) => s + getGoalQty(u.id, tp.id) * getProductPrice(tp.id), 0);
-    const realizadoTotalValue = TRACKED_PRODUCTS.reduce((s, tp) => s + getWonQty(u.id, tp.id) * getProductPrice(tp.id), 0);
+    const realizadoTotalValue = TRACKED_PRODUCTS.reduce((s, tp) => s + getWonValue(u.id, tp.id), 0);
     const atingimento = metaTotalValue > 0 ? (realizadoTotalValue / metaTotalValue) * 100 : 0;
     const falta = Math.max(0, 100 - atingimento);
     return { ...u, productCells, metaTotalValue, realizadoTotalValue, atingimento, falta };
