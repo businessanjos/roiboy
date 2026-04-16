@@ -1,5 +1,7 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { BarChart3, Plus, Pencil, Trash2 } from "lucide-react";
+import { MarketingDateFilter } from "./MarketingDateFilter";
+import { startOfMonth, endOfMonth } from "date-fns";
 import { useMarketingDashboards } from "@/hooks/useMarketingDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { InsightsGrid } from "@/components/insights/grid/InsightsGrid";
@@ -62,6 +64,39 @@ export default function MarketingInsightsTab() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [builderOpen, setBuilderOpen] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+
+  // Detect if visuals have a fixedDateRange and extract the year
+  const fixedYear = useMemo(() => {
+    const first = visuals.find((v) => {
+      const cfg = v.config as any;
+      return cfg?.fixedDateRange?.startDate;
+    });
+    if (!first) return null;
+    const cfg = first.config as any;
+    return new Date(cfg.fixedDateRange.startDate).getFullYear();
+  }, [visuals]);
+
+  // Override visuals' fixedDateRange when a month is selected
+  const filteredVisuals = useMemo(() => {
+    if (fixedYear === null || selectedMonth === null) return visuals;
+    const monthStart = startOfMonth(new Date(fixedYear, selectedMonth, 1));
+    const monthEnd = endOfMonth(monthStart);
+    return visuals.map((v) => {
+      const cfg = v.config as any;
+      if (!cfg?.fixedDateRange) return v;
+      return {
+        ...v,
+        config: {
+          ...cfg,
+          fixedDateRange: {
+            startDate: monthStart.toISOString(),
+            endDate: monthEnd.toISOString(),
+          },
+        },
+      };
+    });
+  }, [visuals, fixedYear, selectedMonth]);
 
   const handleCreate = async () => {
     if (!createName.trim()) return;
@@ -174,8 +209,17 @@ export default function MarketingInsightsTab() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-lg">{activeDashboard.name}</h3>
+             <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <h3 className="font-semibold text-lg">{activeDashboard.name}</h3>
+                {fixedYear !== null && (
+                  <MarketingDateFilter
+                    year={fixedYear}
+                    selectedMonth={selectedMonth}
+                    onMonthChange={setSelectedMonth}
+                  />
+                )}
+              </div>
               {canManage && (
                 <Button variant="outline" size="sm" onClick={() => setBuilderOpen(true)}>
                   <Plus className="h-4 w-4 mr-2" />
@@ -199,7 +243,7 @@ export default function MarketingInsightsTab() {
               </div>
             ) : (
               <InsightsGrid
-                visuals={visuals}
+                visuals={filteredVisuals}
                 onLayoutChange={handleLayoutChange}
                 readOnly={!canManage}
                 onUpdateVisual={updateVisual}
