@@ -38,6 +38,7 @@ function DealStatusBadge({ status }: { status?: string }) {
 const DEAL_COLUMNS: TableColumnDef[] = [
   { key: 'name', label: 'Título', defaultWidth: 180, getValue: (r) => r.name },
   { key: 'value', label: 'Valor', defaultWidth: 120, getValue: (r) => formatCurrency(r.value) },
+  { key: 'product', label: 'Produto', defaultWidth: 160, getValue: (r) => r.extra?.product || '-' },
   { key: 'status', label: 'Status', defaultWidth: 100, getValue: (r) => translateStatus(r.status) },
   { key: 'date', label: 'Data Criação', defaultWidth: 120, getValue: (r) => formatDate(r.date) },
   { key: 'won_at', label: 'Data Ganho', defaultWidth: 120, getValue: (r) => formatDate(r.extra?.won_at) },
