@@ -268,17 +268,23 @@ export default function SalesScripts() {
 
   const analyzeTranscriptMutation = useMutation({
     mutationFn: async () => {
-      let text = transcriptText;
-      if (transcriptFile && !text) text = await transcriptFile.text();
-      if (!text.trim()) throw new Error('Insira ou envie uma transcrição');
-      const { data, error } = await supabase.functions.invoke('analyze-sales-call', { body: { transcript: text } });
+      const parts: string[] = [];
+      for (let i = 0; i < transcriptEntries.length; i++) {
+        const entry = transcriptEntries[i];
+        let text = entry.text;
+        if (entry.file && !text) text = await entry.file.text();
+        if (text.trim()) parts.push(transcriptEntries.length > 1 ? `=== CALL ${i + 1} ===\n${text.trim()}` : text.trim());
+      }
+      if (parts.length === 0) throw new Error('Insira ou envie pelo menos uma transcrição');
+      const fullTranscript = parts.join('\n\n');
+      const { data, error } = await supabase.functions.invoke('analyze-sales-call', { body: { transcript: fullTranscript } });
       if (error) throw error;
-      return data;
+      return { ...data, fullTranscript };
     },
     onSuccess: async (data) => {
       setTranscriptAnalysis(data.analysis);
-      const preview = (transcriptText || '').substring(0, 200);
-      await supabase.from('sales_call_analyses').insert({ account_id: accountId!, user_id: currentUser?.id!, analysis: data.analysis, transcript_preview: preview || null, deal_id: selectedDealId || null, call_outcome: callOutcome || null, client_id: selectedClientId || null, outcome_notes: outcomeNotes || null } as any);
+      const preview = (data.fullTranscript || '').substring(0, 200);
+      await supabase.from('sales_call_analyses').insert({ account_id: accountId!, user_id: currentUser?.id!, analysis: data.analysis, transcript_preview: preview || null, deal_id: selectedDealId || null, call_outcome: callOutcome || null, client_id: selectedClientId || null, outcome_notes: outcomeNotes || null, seller_user_id: selectedSellerId || null } as any);
       queryClient.invalidateQueries({ queryKey: ['sales-call-analyses'] });
       toast.success('Análise concluída e salva!');
     },
