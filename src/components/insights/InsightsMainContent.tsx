@@ -296,15 +296,14 @@ export function InsightsMainContent() {
 
         {/* Filters */}
         <div className="flex items-center gap-3 flex-wrap">
-          {fixedYear !== null ? (
+          {fixedYear !== null && (
             <MarketingDateFilter
               year={fixedYear}
               selectedMonth={selectedMonth}
               onMonthChange={setSelectedMonth}
             />
-          ) : (
-            <InsightsFilterBar />
           )}
+          <InsightsFilterBar />
         </div>
 
         {/* Grid or Empty State */}
