@@ -142,7 +142,8 @@ export function QuotasSection() {
   const users = usersQuery.data ?? [];
   const products = productsQuery.data ?? [];
   const productGoals = productGoalsQuery.data ?? [];
-  const wonDeals = wonDealsQuery.data ?? {};
+  const wonCounts = wonDealsQuery.data?.counts ?? {};
+  const wonValues = wonDealsQuery.data?.values ?? {};
 
   const getGoalQty = (userId: string, productId: string) => {
     const q = quotas.find((q) => q.user_id === userId && q.product_id === productId);
@@ -150,7 +151,11 @@ export function QuotasSection() {
   };
 
   const getWonQty = (userId: string, productId: string) => {
-    return wonDeals[`${userId}_${productId}`] ?? 0;
+    return wonCounts[`${userId}_${productId}`] ?? 0;
+  };
+
+  const getWonValue = (userId: string, productId: string) => {
+    return wonValues[`${userId}_${productId}`] ?? 0;
   };
 
   // Local draft state for the individual form
