@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Save, Plus, Trash2, Gift, Percent, DollarSign, ShieldAlert, Zap, TrendingUp, TrendingDown } from "lucide-react";
+import { Save, Plus, Trash2, Gift, Percent, DollarSign, ShieldAlert, Zap, TrendingUp, TrendingDown, CheckCircle2, Loader2 } from "lucide-react";
 import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,9 +51,14 @@ export function IncentivePlanSection() {
 
   const products = productsQuery.data ?? [];
 
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const initializedRef = useRef(false);
+
   // Sync state from active plan
   useEffect(() => {
     if (activePlan) {
+      initializedRef.current = false;
       setPlanName(activePlan.name);
       setPlanDesc(activePlan.description || "");
       setBonusBase(Number(activePlan.bonus_base_value));
@@ -62,11 +67,13 @@ export function IncentivePlanSection() {
       setClawbackPercent(Number(activePlan.clawback_percent));
       setQuarterlyBonusEnabled(activePlan.quarterly_bonus_enabled);
       setQuarterlyBonusValue(Number(activePlan.quarterly_bonus_value));
+      setTimeout(() => { initializedRef.current = true; }, 100);
     }
   }, [activePlan]);
 
   useEffect(() => {
     if (tiers.length > 0) {
+      initializedRef.current = false;
       setDraftTiers(
         tiers.map((t) => ({
           min: Number(t.min_achievement_percent),
@@ -75,6 +82,7 @@ export function IncentivePlanSection() {
           label: t.label || "",
         }))
       );
+      setTimeout(() => { initializedRef.current = true; }, 100);
     } else if (!activePlan) {
       setDraftTiers([
         { min: 0, max: "80", multiplier: 0, label: "Abaixo da Meta" },
@@ -85,13 +93,69 @@ export function IncentivePlanSection() {
     }
   }, [tiers, activePlan]);
 
+  // ── Smart autosave: only when data differs from server ──
+  const hasPlanChanges = useCallback(() => {
+    if (!activePlan) return planName.trim().length > 0;
+    return (
+      planName !== activePlan.name ||
+      planDesc !== (activePlan.description || "") ||
+      bonusBase !== Number(activePlan.bonus_base_value) ||
+      clawbackEnabled !== activePlan.clawback_enabled ||
+      clawbackDays !== activePlan.clawback_days ||
+      clawbackPercent !== Number(activePlan.clawback_percent) ||
+      quarterlyBonusEnabled !== activePlan.quarterly_bonus_enabled ||
+      quarterlyBonusValue !== Number(activePlan.quarterly_bonus_value)
+    );
+  }, [activePlan, planName, planDesc, bonusBase, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue]);
+
+  const hasTierChanges = useCallback(() => {
+    if (draftTiers.length !== tiers.length) return true;
+    return draftTiers.some((dt, i) => {
+      const st = tiers[i];
+      if (!st) return true;
+      return (
+        dt.min !== Number(st.min_achievement_percent) ||
+        dt.max !== (st.max_achievement_percent != null ? String(st.max_achievement_percent) : "") ||
+        dt.multiplier !== Number(st.bonus_multiplier) ||
+        dt.label !== (st.label || "")
+      );
+    });
+  }, [draftTiers, tiers]);
+
+  const hasRateChanges = Object.keys(draftRates).length > 0;
+
+  // Debounced autosave effect
+  useEffect(() => {
+    if (!initializedRef.current) return;
+    const planChanged = hasPlanChanges();
+    const tierChanged = hasTierChanges();
+    if (!planChanged && !tierChanged && !hasRateChanges) return;
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      setAutoSaveStatus("saving");
+      try {
+        if (planChanged) await handleSavePlanSilent();
+        if (hasRateChanges) await handleSaveRatesSilent();
+        if (tierChanged) await handleSaveTiersSilent();
+        setAutoSaveStatus("saved");
+        setTimeout(() => setAutoSaveStatus("idle"), 2000);
+      } catch {
+        setAutoSaveStatus("idle");
+      }
+    }, 1500);
+
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
+  }, [planName, planDesc, bonusBase, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, draftRates, draftTiers]);
+
   const getRate = (productId: string) => {
     if (draftRates[productId]) return draftRates[productId];
     const existing = productRates.find((r) => r.product_id === productId);
     return existing ? { percent: Number(existing.commission_percent) || 0, fixed: Number(existing.fixed_amount) || 0 } : { percent: 0, fixed: 0 };
   };
 
-  const handleSavePlan = async () => {
+  // Silent save functions (no toast — used by autosave)
+  const handleSavePlanSilent = async () => {
     await savePlan.mutateAsync({
       id: activePlan?.id,
       name: planName,
@@ -106,7 +170,7 @@ export function IncentivePlanSection() {
     });
   };
 
-  const handleSaveRates = async () => {
+  const handleSaveRatesSilent = async () => {
     const planId = activePlan?.id || plans[0]?.id;
     if (!planId) return;
     for (const [productId, rate] of Object.entries(draftRates)) {
@@ -120,7 +184,7 @@ export function IncentivePlanSection() {
     setDraftRates({});
   };
 
-  const handleSaveTiers = async () => {
+  const handleSaveTiersSilent = async () => {
     const planId = activePlan?.id || plans[0]?.id;
     if (!planId) return;
     await saveTiers.mutateAsync({
@@ -133,6 +197,18 @@ export function IncentivePlanSection() {
         label: t.label || null,
       })),
     });
+  };
+
+  const handleSavePlan = async () => {
+    await handleSavePlanSilent();
+  };
+
+  const handleSaveRates = async () => {
+    await handleSaveRatesSilent();
+  };
+
+  const handleSaveTiers = async () => {
+    await handleSaveTiersSilent();
   };
 
   const addTier = () => {
@@ -174,10 +250,18 @@ export function IncentivePlanSection() {
               </CardTitle>
               <CardDescription>Modelo híbrido: comissão por produto + bônus por atingimento + aceleradores</CardDescription>
             </div>
-            <Button onClick={handleSavePlan} disabled={savePlan.isPending} className="gap-1.5">
-              <Save className="h-4 w-4" />
-              Salvar Plano
-            </Button>
+            <div className="flex items-center gap-2">
+              {autoSaveStatus === "saving" && (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...
+                </span>
+              )}
+              {autoSaveStatus === "saved" && (
+                <span className="flex items-center gap-1.5 text-xs text-green-600">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Salvo
+                </span>
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -255,10 +339,7 @@ export function IncentivePlanSection() {
               <Percent className="h-4 w-4" />
               Comissão por Produto
             </CardTitle>
-            <Button onClick={handleSaveRates} disabled={Object.keys(draftRates).length === 0 || saveProductRate.isPending} size="sm" className="gap-1.5">
-              <Save className="h-4 w-4" />
-              Salvar Taxas
-            </Button>
+            {/* autosave handles rates */}
           </div>
         </CardHeader>
         <CardContent>
@@ -330,10 +411,6 @@ export function IncentivePlanSection() {
               <Button variant="outline" size="sm" onClick={addTier} className="gap-1.5">
                 <Plus className="h-4 w-4" />
                 Faixa
-              </Button>
-              <Button onClick={handleSaveTiers} disabled={saveTiers.isPending} size="sm" className="gap-1.5">
-                <Save className="h-4 w-4" />
-                Salvar Faixas
               </Button>
             </div>
           </div>
