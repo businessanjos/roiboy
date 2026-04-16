@@ -339,10 +339,7 @@ export function IncentivePlanSection() {
               <Percent className="h-4 w-4" />
               Comissão por Produto
             </CardTitle>
-            <Button onClick={handleSaveRates} disabled={Object.keys(draftRates).length === 0 || saveProductRate.isPending} size="sm" className="gap-1.5">
-              <Save className="h-4 w-4" />
-              Salvar Taxas
-            </Button>
+            {/* autosave handles rates */}
           </div>
         </CardHeader>
         <CardContent>
