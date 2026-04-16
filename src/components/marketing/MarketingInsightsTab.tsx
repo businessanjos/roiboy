@@ -243,7 +243,7 @@ export default function MarketingInsightsTab() {
               </div>
             ) : (
               <InsightsGrid
-                visuals={visuals}
+                visuals={filteredVisuals}
                 onLayoutChange={handleLayoutChange}
                 readOnly={!canManage}
                 onUpdateVisual={updateVisual}
