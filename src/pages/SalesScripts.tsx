@@ -483,6 +483,42 @@ export default function SalesScripts() {
                 </Popover>
               </div>
 
+              {/* Seller Selector */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><Users className="w-4 h-4 text-primary" />Vendedor da Call</Label>
+                <Popover open={sellerComboOpen} onOpenChange={setSellerComboOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={sellerComboOpen} className="w-full justify-between font-normal">
+                      {selectedSellerId ? (() => { const u = teamUsers.find((u: any) => u.id === selectedSellerId); return u ? u.name : 'Selecione...'; })() : 'Nenhum (eu mesmo)'}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command shouldFilter={false}>
+                      <CommandInput placeholder="Buscar vendedor..." value={sellerSearch} onValueChange={setSellerSearch} />
+                      <CommandList>
+                        <CommandEmpty>Nenhum vendedor encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem onSelect={() => { setSelectedSellerId(null); setSellerComboOpen(false); setSellerSearch(''); }}>
+                            <Check className={cn("mr-2 h-4 w-4", !selectedSellerId ? "opacity-100" : "opacity-0")} />
+                            Nenhum (eu mesmo)
+                          </CommandItem>
+                          {teamUsers.filter((u: any) => {
+                            if (!sellerSearch) return true;
+                            return u.name?.toLowerCase().includes(sellerSearch.toLowerCase());
+                          }).map((u: any) => (
+                            <CommandItem key={u.id} onSelect={() => { setSelectedSellerId(u.id); setSellerComboOpen(false); setSellerSearch(''); }}>
+                              <Check className={cn("mr-2 h-4 w-4", selectedSellerId === u.id ? "opacity-100" : "opacity-0")} />
+                              {u.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
               {/* Outcome Notes */}
               {callOutcome && (
                 <div className="space-y-2">
@@ -491,9 +527,39 @@ export default function SalesScripts() {
                 </div>
               )}
 
-              <div className="border border-dashed border-border rounded-lg p-4">{transcriptFile ? (<div className="flex items-center justify-between"><div className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /><span className="text-sm truncate">{transcriptFile.name}</span></div><Button variant="ghost" size="sm" onClick={() => setTranscriptFile(null)}><Trash2 className="w-4 h-4" /></Button></div>) : (<label htmlFor="transcript-file" className="flex flex-col items-center gap-2 cursor-pointer py-2"><Upload className="w-8 h-8 text-muted-foreground" /><span className="text-sm text-muted-foreground">Clique para enviar</span><span className="text-xs text-muted-foreground">TXT, PDF, Word</span><input id="transcript-file" type="file" className="hidden" accept=".txt,.pdf,.doc,.docx" onChange={e => { if (e.target.files?.[0]) setTranscriptFile(e.target.files[0]); }} /></label>)}</div>
-              <Textarea placeholder="Ou cole a transcrição aqui..." value={transcriptText} onChange={e => setTranscriptText(e.target.value)} className="min-h-[200px] font-mono text-sm" />
-              <Button onClick={() => analyzeTranscriptMutation.mutate()} disabled={analyzeTranscriptMutation.isPending || (!transcriptText.trim() && !transcriptFile)} className="w-full">{analyzeTranscriptMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analisando...</> : <><BarChart3 className="w-4 h-4 mr-2" />Analisar Call</>}</Button>
+              {/* Multi-transcript entries */}
+              {transcriptEntries.map((entry, idx) => (
+                <div key={entry.id} className="space-y-2">
+                  {transcriptEntries.length > 1 && (
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Call {idx + 1}</Label>
+                      <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => setTranscriptEntries(prev => prev.filter(e => e.id !== entry.id))}>
+                        <Trash2 className="w-3 h-3 mr-1" />Remover
+                      </Button>
+                    </div>
+                  )}
+                  <div className="border border-dashed border-border rounded-lg p-4">
+                    {entry.file ? (
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2"><FileText className="w-4 h-4 text-primary" /><span className="text-sm truncate">{entry.file.name}</span></div>
+                        <Button variant="ghost" size="sm" onClick={() => setTranscriptEntries(prev => prev.map(e => e.id === entry.id ? { ...e, file: null } : e))}><Trash2 className="w-4 h-4" /></Button>
+                      </div>
+                    ) : (
+                      <label htmlFor={`transcript-file-${entry.id}`} className="flex flex-col items-center gap-2 cursor-pointer py-2">
+                        <Upload className="w-8 h-8 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Clique para enviar</span>
+                        <span className="text-xs text-muted-foreground">TXT, PDF, Word</span>
+                        <input id={`transcript-file-${entry.id}`} type="file" className="hidden" accept=".txt,.pdf,.doc,.docx" onChange={e => { if (e.target.files?.[0]) setTranscriptEntries(prev => prev.map(en => en.id === entry.id ? { ...en, file: e.target.files![0] } : en)); }} />
+                      </label>
+                    )}
+                  </div>
+                  <Textarea placeholder="Ou cole a transcrição aqui..." value={entry.text} onChange={e => setTranscriptEntries(prev => prev.map(en => en.id === entry.id ? { ...en, text: e.target.value } : en))} className="min-h-[150px] font-mono text-sm" />
+                </div>
+              ))}
+              <Button variant="outline" size="sm" className="w-full" onClick={() => setTranscriptEntries(prev => [...prev, { id: Date.now(), text: '', file: null }])}>
+                <Plus className="w-4 h-4 mr-2" />Adicionar outra call
+              </Button>
+              <Button onClick={() => analyzeTranscriptMutation.mutate()} disabled={analyzeTranscriptMutation.isPending || transcriptEntries.every(e => !e.text.trim() && !e.file)} className="w-full">{analyzeTranscriptMutation.isPending ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Analisando...</> : <><BarChart3 className="w-4 h-4 mr-2" />Analisar Call{transcriptEntries.length > 1 ? 's' : ''}</>}</Button>
             </CardContent></Card>
             {transcriptAnalysis && <Card><CardHeader><CardTitle className="text-base flex items-center gap-2"><CheckCircle2 className="w-5 h-5 text-primary" />Resultado da Análise</CardTitle></CardHeader><CardContent><MarkdownRenderer content={transcriptAnalysis} /><div className="flex gap-2 mt-4"><Button variant="outline" size="sm" onClick={() => handleCopy(transcriptAnalysis)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" onClick={() => exportSalesCallToPDF({ analysis: transcriptAnalysis, createdAt: new Date().toISOString() })}><Download className="w-4 h-4 mr-2" />PDF</Button></div></CardContent></Card>}
             
