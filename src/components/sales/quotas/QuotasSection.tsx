@@ -88,24 +88,26 @@ export function QuotasSection() {
   });
 
   // Fetch won deals for the selected month, grouped by user and product
+  // Uses Brasília timezone (UTC-3) for date boundaries
   const wonDealsQuery = useQuery({
     queryKey: ["won-deals-by-product", accountId, year, month],
     queryFn: async () => {
-      const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+      // Build UTC boundaries for the month in Brasília time (UTC-3)
+      const startDate = `${year}-${String(month).padStart(2, "0")}-01T03:00:00.000Z`;
       const endMonth = month === 12 ? 1 : month + 1;
       const endYear = month === 12 ? year + 1 : year;
-      const endDate = `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
+      const endDate = `${endYear}-${String(endMonth).padStart(2, "0")}-01T03:00:00.000Z`;
 
       const { data, error } = await supabase
         .from("deals")
-        .select("id, responsible_user_id, won_at")
+        .select("id, responsible_user_id, won_at, value")
         .eq("account_id", accountId!)
         .eq("status", "won")
         .gte("won_at", startDate)
         .lt("won_at", endDate);
       if (error) throw error;
 
-      if (!data || data.length === 0) return {};
+      if (!data || data.length === 0) return { counts: {} as Record<string, number>, values: {} as Record<string, number> };
 
       // Fetch field values for these deals
       const dealIds = data.map((d) => d.id);
@@ -122,15 +124,17 @@ export function QuotasSection() {
         dealProductMap[fv.deal_id] = fv.value_text || "";
       }
 
-      // Aggregate: `userId_productId` -> count
-      const result: Record<string, number> = {};
+      // Aggregate counts and actual values
+      const counts: Record<string, number> = {};
+      const values: Record<string, number> = {};
       for (const deal of data) {
         const productId = dealProductMap[deal.id];
         if (!productId || !deal.responsible_user_id) continue;
         const key = `${deal.responsible_user_id}_${productId}`;
-        result[key] = (result[key] || 0) + 1;
+        counts[key] = (counts[key] || 0) + 1;
+        values[key] = (values[key] || 0) + Number(deal.value || 0);
       }
-      return result;
+      return { counts, values };
     },
     enabled: !!accountId,
   });
@@ -138,7 +142,8 @@ export function QuotasSection() {
   const users = usersQuery.data ?? [];
   const products = productsQuery.data ?? [];
   const productGoals = productGoalsQuery.data ?? [];
-  const wonDeals = wonDealsQuery.data ?? {};
+  const wonCounts = wonDealsQuery.data?.counts ?? {};
+  const wonValues = wonDealsQuery.data?.values ?? {};
 
   const getGoalQty = (userId: string, productId: string) => {
     const q = quotas.find((q) => q.user_id === userId && q.product_id === productId);
@@ -146,7 +151,11 @@ export function QuotasSection() {
   };
 
   const getWonQty = (userId: string, productId: string) => {
-    return wonDeals[`${userId}_${productId}`] ?? 0;
+    return wonCounts[`${userId}_${productId}`] ?? 0;
+  };
+
+  const getWonValue = (userId: string, productId: string) => {
+    return wonValues[`${userId}_${productId}`] ?? 0;
   };
 
   // Local draft state for the individual form
@@ -224,7 +233,7 @@ export function QuotasSection() {
       return { id: tp.id, short: tp.short, meta, realizado };
     });
     const metaTotalValue = TRACKED_PRODUCTS.reduce((s, tp) => s + getGoalQty(u.id, tp.id) * getProductPrice(tp.id), 0);
-    const realizadoTotalValue = TRACKED_PRODUCTS.reduce((s, tp) => s + getWonQty(u.id, tp.id) * getProductPrice(tp.id), 0);
+    const realizadoTotalValue = TRACKED_PRODUCTS.reduce((s, tp) => s + getWonValue(u.id, tp.id), 0);
     const atingimento = metaTotalValue > 0 ? (realizadoTotalValue / metaTotalValue) * 100 : 0;
     const falta = Math.max(0, 100 - atingimento);
     return { ...u, productCells, metaTotalValue, realizadoTotalValue, atingimento, falta };
