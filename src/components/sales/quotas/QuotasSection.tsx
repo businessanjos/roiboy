@@ -222,7 +222,7 @@ export function QuotasSection() {
   // Helper: get product price
   const getProductPrice = (productId: string) => {
     const p = products.find((pr) => pr.id === productId);
-    return p ? Number(p.price) : 0;
+    return p ? (Number(p.price) || 0) : 0;
   };
 
   // Build user rows
@@ -394,7 +394,7 @@ export function QuotasSection() {
                     <TableRow key={product.id}>
                       <TableCell className="font-medium">{product.name}</TableCell>
                       <TableCell className="text-right text-muted-foreground">
-                        {Number(product.price).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        {(Number(product.price) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                       </TableCell>
                       <TableCell className="text-center">
                         <Input
@@ -404,7 +404,7 @@ export function QuotasSection() {
                           value={qty || ""}
                           onChange={(e) => {
                             const q = parseInt(e.target.value) || 0;
-                            const autoVal = q * Number(product.price);
+                            const autoVal = q * (Number(product.price) || 0);
                             updateDraft(product.id, "quantity", q);
                             updateDraft(product.id, "value", autoVal);
                           }}
