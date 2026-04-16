@@ -412,7 +412,6 @@ export function IncentivePlanSection() {
                 <Plus className="h-4 w-4" />
                 Faixa
               </Button>
-              </Button>
             </div>
           </div>
         </CardHeader>
