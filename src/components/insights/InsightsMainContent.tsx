@@ -38,7 +38,45 @@ export function InsightsMainContent() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusZoom, setFocusZoom] = useState(100);
-  const focusModeRef = useRef<HTMLDivElement>(null);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+
+  // Detect fixedDateRange year from visuals
+  const fixedYear = useMemo(() => {
+    const first = (visuals || []).find((v) => {
+      const cfg = v.config as any;
+      return cfg?.fixedDateRange?.startDate;
+    });
+    if (!first) return null;
+    const cfg = first.config as any;
+    return new Date(cfg.fixedDateRange.startDate).getFullYear();
+  }, [visuals]);
+
+  // Override fixedDateRange when a month is selected
+  const filteredVisuals = useMemo(() => {
+    if (fixedYear === null || selectedMonth === null) return visuals || [];
+    const monthStart = startOfMonth(new Date(fixedYear, selectedMonth, 1));
+    const monthEnd = endOfMonth(monthStart);
+    return (visuals || []).map((v) => {
+      const cfg = v.config as any;
+      if (!cfg?.fixedDateRange) return v;
+      return {
+        ...v,
+        config: {
+          ...cfg,
+          fixedDateRange: {
+            startDate: monthStart.toISOString(),
+            endDate: monthEnd.toISOString(),
+          },
+        },
+      };
+    });
+  }, [visuals, fixedYear, selectedMonth]);
+
+  // Reset month filter when dashboard changes
+  useEffect(() => {
+    setSelectedMonth(null);
+  }, [activeDashboardId]);
+
 
   // ESC listener
   useEffect(() => {
