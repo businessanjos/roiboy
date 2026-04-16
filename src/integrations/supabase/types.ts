@@ -10869,6 +10869,7 @@ export type Database = {
           is_active: boolean | null
           name: string
           period_type: string
+          position_id: string | null
           quarterly_bonus_enabled: boolean
           quarterly_bonus_value: number
           updated_at: string
@@ -10885,6 +10886,7 @@ export type Database = {
           is_active?: boolean | null
           name: string
           period_type?: string
+          position_id?: string | null
           quarterly_bonus_enabled?: boolean
           quarterly_bonus_value?: number
           updated_at?: string
@@ -10901,6 +10903,7 @@ export type Database = {
           is_active?: boolean | null
           name?: string
           period_type?: string
+          position_id?: string | null
           quarterly_bonus_enabled?: boolean
           quarterly_bonus_value?: number
           updated_at?: string
@@ -10911,6 +10914,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_incentive_plans_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "hr_positions"
             referencedColumns: ["id"]
           },
         ]
