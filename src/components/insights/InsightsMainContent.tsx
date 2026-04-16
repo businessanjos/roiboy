@@ -5,12 +5,14 @@ import { ZoomControls } from "@/components/ui/zoom-controls";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { InsightsFilterBar } from "./InsightsFilterBar";
+import { MarketingDateFilter } from "@/components/marketing/MarketingDateFilter";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddVisualModal } from "./AddVisualModal";
 import { ShareDashboardModal } from "./ShareDashboardModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
+import { startOfMonth, endOfMonth } from "date-fns";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 
