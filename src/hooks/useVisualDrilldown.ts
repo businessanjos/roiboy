@@ -212,6 +212,7 @@ async function fetchDealsRecords(
       won_at: deal.won_at,
       lost_at: deal.lost_at,
       lost_reason: deal.lost_reason,
+      product: deal.product,
       custom_fields: customFieldsData.get(deal.id),
     },
   }));
