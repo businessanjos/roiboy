@@ -1,12 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Save, ChevronLeft, ChevronRight, User } from "lucide-react";
-import { useQuotasIncentives, SalesQuota } from "@/hooks/useQuotasIncentives";
+import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -14,15 +13,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-// Sales team member IDs based on known commercial team
 const SALES_USER_IDS = [
-  "de43a643-0109-4afb-ac35-be768dbf4090", // Everton
-  "1232ec15-5f66-4b5f-9e74-f40d436f9d0f", // Jonathan
-  "d20201f6-a9bd-4934-ae50-07ce7a47574b", // Maikol
-  "1d090543-1853-4cd0-bdb4-02e17a5df4d8", // Darlan
-  "1ac1c97c-bff6-4174-b48c-9b524b404ce6", // Vanessa
-  "cefc44c7-d2e2-4937-94ac-069c1c94731b", // George
+  "de43a643-0109-4afb-ac35-be768dbf4090",
+  "1232ec15-5f66-4b5f-9e74-f40d436f9d0f",
+  "d20201f6-a9bd-4934-ae50-07ce7a47574b",
+  "1d090543-1853-4cd0-bdb4-02e17a5df4d8",
+  "1ac1c97c-bff6-4174-b48c-9b524b404ce6",
+  "cefc44c7-d2e2-4937-94ac-069c1c94731b",
 ];
+
+const TRACKED_PRODUCTS = [
+  { id: "8d3e9bb6-054b-44b3-952f-5920e0ed8775", short: "Rykas" },
+  { id: "b8c50eca-6fd9-41ac-a1d3-f78086daaea7", short: "Eternum Club" },
+  { id: "8e8b0cc7-6965-4241-9aab-b959e7fc7893", short: "Eternum MVP" },
+  { id: "abf8cd6f-3399-4af4-92c6-50fc1a966243", short: "Conselho" },
+];
+
+const ITEM_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
 
 export function QuotasSection() {
   const now = new Date();
@@ -64,12 +71,86 @@ export function QuotasSection() {
     enabled: !!accountId,
   });
 
+  // Fetch product goals from sales_product_goals
+  const yearMonth = `${year}-${String(month).padStart(2, "0")}`;
+  const productGoalsQuery = useQuery({
+    queryKey: ["sales-product-goals-overview", accountId, yearMonth],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("sales_product_goals")
+        .select("*")
+        .eq("account_id", accountId!)
+        .eq("year_month", yearMonth);
+      if (error) throw error;
+      return data as { product_id: string; user_id: string; target_quantity: number }[];
+    },
+    enabled: !!accountId,
+  });
+
+  // Fetch won deals for the selected month, grouped by user and product
+  const wonDealsQuery = useQuery({
+    queryKey: ["won-deals-by-product", accountId, year, month],
+    queryFn: async () => {
+      const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
+      const endMonth = month === 12 ? 1 : month + 1;
+      const endYear = month === 12 ? year + 1 : year;
+      const endDate = `${endYear}-${String(endMonth).padStart(2, "0")}-01`;
+
+      const { data, error } = await supabase
+        .from("deals")
+        .select("id, responsible_user_id, won_at")
+        .eq("account_id", accountId!)
+        .eq("status", "won")
+        .gte("won_at", startDate)
+        .lt("won_at", endDate);
+      if (error) throw error;
+
+      if (!data || data.length === 0) return {};
+
+      // Fetch field values for these deals
+      const dealIds = data.map((d) => d.id);
+      const { data: fieldValues, error: fvError } = await supabase
+        .from("deal_field_values")
+        .select("deal_id, value_text")
+        .eq("field_id", ITEM_VENDA_FIELD_ID)
+        .in("deal_id", dealIds);
+      if (fvError) throw fvError;
+
+      // Build map: deal_id -> product_id
+      const dealProductMap: Record<string, string> = {};
+      for (const fv of fieldValues || []) {
+        dealProductMap[fv.deal_id] = fv.value_text || "";
+      }
+
+      // Aggregate: `userId_productId` -> count
+      const result: Record<string, number> = {};
+      for (const deal of data) {
+        const productId = dealProductMap[deal.id];
+        if (!productId || !deal.responsible_user_id) continue;
+        const key = `${deal.responsible_user_id}_${productId}`;
+        result[key] = (result[key] || 0) + 1;
+      }
+      return result;
+    },
+    enabled: !!accountId,
+  });
+
   const users = usersQuery.data ?? [];
   const products = productsQuery.data ?? [];
+  const productGoals = productGoalsQuery.data ?? [];
+  const wonDeals = wonDealsQuery.data ?? {};
 
-  // Local draft state for the form
+  const getGoalQty = (userId: string, productId: string) => {
+    const goal = productGoals.find((g) => g.user_id === userId && g.product_id === productId);
+    return goal?.target_quantity ?? 0;
+  };
+
+  const getWonQty = (userId: string, productId: string) => {
+    return wonDeals[`${userId}_${productId}`] ?? 0;
+  };
+
+  // Local draft state for the individual form
   const [draftQuotas, setDraftQuotas] = useState<Record<string, { quantity: number; value: number }>>({});
-
   const activeUser = selectedUserId ? users.find((u) => u.id === selectedUserId) : null;
 
   const userQuotas = useMemo(() => {
@@ -77,7 +158,6 @@ export function QuotasSection() {
     return quotas.filter((q) => q.user_id === selectedUserId);
   }, [quotas, selectedUserId]);
 
-  // Initialize drafts when user changes
   const getQuotaValue = (productId: string, field: "quantity" | "value") => {
     const key = `${productId}`;
     if (draftQuotas[key]) return draftQuotas[key][field];
@@ -126,20 +206,23 @@ export function QuotasSection() {
     setDraftQuotas({});
   };
 
-  // Summary per user for the overview
-  const userSummaries = useMemo(() => {
-    return users.map((u) => {
-      const uq = quotas.filter((q) => q.user_id === u.id);
-      const totalTarget = uq.reduce((s, q) => s + Number(q.target_value), 0);
-      const totalAchieved = uq.reduce((s, q) => s + Number(q.achieved_value), 0);
-      const productCount = uq.filter((q) => Number(q.target_value) > 0).length;
-      return { ...u, totalTarget, totalAchieved, productCount };
-    });
-  }, [users, quotas]);
-
   if (loading || usersQuery.isLoading || productsQuery.isLoading) {
     return <div className="space-y-3"><Skeleton className="h-10 w-60" /><Skeleton className="h-64" /></div>;
   }
+
+  // Compute totals per product column
+  const totals = TRACKED_PRODUCTS.map((tp) => {
+    let metaSum = 0, realizadoSum = 0;
+    for (const u of users) {
+      metaSum += getGoalQty(u.id, tp.id);
+      realizadoSum += getWonQty(u.id, tp.id);
+    }
+    return { ...tp, metaSum, realizadoSum, faltamSum: Math.max(0, metaSum - realizadoSum) };
+  });
+
+  const totalMetaAll = totals.reduce((s, t) => s + t.metaSum, 0);
+  const totalRealizadoAll = totals.reduce((s, t) => s + t.realizadoSum, 0);
+  const totalFaltamAll = Math.max(0, totalMetaAll - totalRealizadoAll);
 
   return (
     <div className="space-y-4">
@@ -162,51 +245,112 @@ export function QuotasSection() {
       {!selectedUserId && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Visão Geral — Quotas por Vendedor</CardTitle>
+            <CardTitle className="text-base">Quotas por Vendedor — {MONTHS[month - 1]} {year}</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Vendedor</TableHead>
-                  <TableHead className="text-center">Produtos c/ Meta</TableHead>
-                  <TableHead className="text-right">Meta Total (R$)</TableHead>
-                  <TableHead className="text-right">Realizado (R$)</TableHead>
-                  <TableHead className="text-right">Atingimento</TableHead>
-                  <TableHead></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {userSummaries.map((u) => {
-                  const pct = u.totalTarget > 0 ? (u.totalAchieved / u.totalTarget) * 100 : 0;
-                  return (
-                    <TableRow key={u.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedUserId(u.id); setDraftQuotas({}); }}>
-                      <TableCell className="font-medium flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        {u.name}
-                      </TableCell>
-                      <TableCell className="text-center">{u.productCount}</TableCell>
-                      <TableCell className="text-right">
-                        {u.totalTarget > 0 ? `R$ ${u.totalTarget.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {u.totalAchieved > 0 ? `R$ ${u.totalAchieved.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {u.totalTarget > 0 ? (
-                          <Badge variant={pct >= 100 ? "default" : pct >= 80 ? "secondary" : "outline"}>
-                            {pct.toFixed(0)}%
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead rowSpan={2} className="align-bottom border-r">Vendedor</TableHead>
+                    {TRACKED_PRODUCTS.map((tp) => (
+                      <TableHead key={tp.id} colSpan={3} className="text-center border-r border-b-0 px-1">
+                        <span className="text-xs font-semibold">{tp.short}</span>
+                      </TableHead>
+                    ))}
+                    <TableHead colSpan={3} className="text-center border-b-0 px-1">
+                      <span className="text-xs font-semibold">Total</span>
+                    </TableHead>
+                    <TableHead rowSpan={2} className="align-bottom" />
+                  </TableRow>
+                  <TableRow>
+                    {[...TRACKED_PRODUCTS, { id: "__total__", short: "Total" }].map((tp) => (
+                      <>
+                        <TableHead key={`${tp.id}-m`} className="text-center text-[10px] px-1 text-muted-foreground">Meta</TableHead>
+                        <TableHead key={`${tp.id}-r`} className="text-center text-[10px] px-1 text-emerald-600">Real.</TableHead>
+                        <TableHead key={`${tp.id}-f`} className="text-center text-[10px] px-1 border-r text-orange-500">Faltam</TableHead>
+                      </>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((u) => {
+                    let userMetaTotal = 0, userRealizadoTotal = 0;
+                    const cells = TRACKED_PRODUCTS.map((tp) => {
+                      const meta = getGoalQty(u.id, tp.id);
+                      const realizado = getWonQty(u.id, tp.id);
+                      const faltam = Math.max(0, meta - realizado);
+                      userMetaTotal += meta;
+                      userRealizadoTotal += realizado;
+                      return { meta, realizado, faltam, id: tp.id };
+                    });
+                    const userFaltamTotal = Math.max(0, userMetaTotal - userRealizadoTotal);
+
+                    return (
+                      <TableRow key={u.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedUserId(u.id); setDraftQuotas({}); }}>
+                        <TableCell className="font-medium border-r whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <User className="h-3.5 w-3.5 text-muted-foreground" />
+                            {u.name.split(" ")[0]}
+                          </div>
+                        </TableCell>
+                        {cells.map((c) => (
+                          <>
+                            <TableCell key={`${c.id}-m`} className="text-center text-xs px-1">{c.meta || "—"}</TableCell>
+                            <TableCell key={`${c.id}-r`} className="text-center text-xs px-1 font-medium text-emerald-600">{c.realizado || "—"}</TableCell>
+                            <TableCell key={`${c.id}-f`} className="text-center text-xs px-1 border-r">
+                              {c.meta > 0 ? (
+                                <Badge variant={c.faltam === 0 ? "default" : "outline"} className="text-[10px] px-1.5">
+                                  {c.faltam}
+                                </Badge>
+                              ) : "—"}
+                            </TableCell>
+                          </>
+                        ))}
+                        {/* Total columns */}
+                        <TableCell className="text-center text-xs px-1 font-semibold">{userMetaTotal || "—"}</TableCell>
+                        <TableCell className="text-center text-xs px-1 font-bold text-emerald-600">{userRealizadoTotal || "—"}</TableCell>
+                        <TableCell className="text-center text-xs px-1 border-r">
+                          {userMetaTotal > 0 ? (
+                            <Badge variant={userFaltamTotal === 0 ? "default" : "outline"} className="text-[10px] px-1.5 font-bold">
+                              {userFaltamTotal}
+                            </Badge>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          <Button size="sm" variant="ghost" className="text-xs">Editar</Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+                {/* Footer totals */}
+                <tfoot>
+                  <tr className="border-t-2 bg-muted/30">
+                    <td className="py-2 px-4 font-bold text-sm border-r">Total</td>
+                    {totals.map((t) => (
+                      <>
+                        <td key={`${t.id}-m`} className="py-2 text-center text-xs font-bold">{t.metaSum || "—"}</td>
+                        <td key={`${t.id}-r`} className="py-2 text-center text-xs font-bold text-emerald-600">{t.realizadoSum || "—"}</td>
+                        <td key={`${t.id}-f`} className="py-2 text-center border-r">
+                          <Badge variant={t.faltamSum === 0 ? "default" : "secondary"} className="text-[10px] px-1.5 font-bold">
+                            {t.faltamSum}
                           </Badge>
-                        ) : "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Button size="sm" variant="ghost">Editar</Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                        </td>
+                      </>
+                    ))}
+                    <td className="py-2 text-center text-xs font-bold">{totalMetaAll || "—"}</td>
+                    <td className="py-2 text-center text-xs font-bold text-emerald-600">{totalRealizadoAll || "—"}</td>
+                    <td className="py-2 text-center">
+                      <Badge variant={totalFaltamAll === 0 ? "default" : "secondary"} className="text-[10px] px-1.5 font-bold">
+                        {totalFaltamAll}
+                      </Badge>
+                    </td>
+                    <td />
+                  </tr>
+                </tfoot>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       )}
