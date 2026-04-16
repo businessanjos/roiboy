@@ -33,6 +33,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { ProductGoalsSection } from "./ProductGoalsSection";
 
 const SALES_TEAM_NAMES = ["everton", "jonathan", "maikol", "darlan", "vanessa", "george"];
 
