@@ -35,7 +35,7 @@ export function SpiffsSection() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name")
+        .select("id, name, price")
         .eq("account_id", accountId!)
         .eq("is_active", true)
         .order("name");
