@@ -27,7 +27,19 @@ interface UseVisualDrilldownParams {
 
 export function useVisualDrilldown({ config, groupName, enabled = true, extraCfColumns }: UseVisualDrilldownParams) {
   const { currentUser } = useCurrentUser();
-  const { filters } = useInsightsFilters();
+  const { filters: globalFilters } = useInsightsFilters();
+
+  // Apply fixedDateRange override if set on the visual config
+  const filters = (() => {
+    if (config?.fixedDateRange?.startDate && config?.fixedDateRange?.endDate) {
+      return {
+        ...globalFilters,
+        startDate: config.fixedDateRange.startDate,
+        endDate: config.fixedDateRange.endDate,
+      };
+    }
+    return globalFilters;
+  })();
 
   return useQuery({
     queryKey: ['visual-drilldown', config, groupName, filters, currentUser?.account_id, extraCfColumns],
