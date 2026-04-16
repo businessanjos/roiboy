@@ -581,6 +581,7 @@ export default function SalesScripts() {
                         )}
                       </div>
                       <div className="flex items-center gap-2 flex-wrap mt-1">
+                        {a.seller_name && <Badge variant="outline" className="text-xs"><Users className="w-3 h-3 mr-1" />{a.seller_name}</Badge>}
                         {a.deal_name && <Badge variant="secondary" className="text-xs"><Target className="w-3 h-3 mr-1" />{a.deal_name}</Badge>}
                         {a.client_name && <Badge variant="outline" className="text-xs"><UserCheck className="w-3 h-3 mr-1" />{a.client_name}</Badge>}
                       </div>
