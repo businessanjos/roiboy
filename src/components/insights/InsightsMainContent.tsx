@@ -292,7 +292,17 @@ export function InsightsMainContent() {
         </div>
 
         {/* Filters */}
-        <InsightsFilterBar />
+        <div className="flex items-center gap-3 flex-wrap">
+          {fixedYear !== null ? (
+            <MarketingDateFilter
+              year={fixedYear}
+              selectedMonth={selectedMonth}
+              onMonthChange={setSelectedMonth}
+            />
+          ) : (
+            <InsightsFilterBar />
+          )}
+        </div>
 
         {/* Grid or Empty State */}
         {isLoadingVisuals ? (
@@ -302,7 +312,7 @@ export function InsightsMainContent() {
           </div>
         ) : hasVisuals ? (
           <InsightsGrid 
-            visuals={visuals} 
+            visuals={filteredVisuals} 
             onLayoutChange={handleLayoutChange}
             onUpdateVisual={updateVisual}
             onRemoveVisual={removeVisual}
