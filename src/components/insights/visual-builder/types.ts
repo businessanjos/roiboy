@@ -97,6 +97,11 @@ export interface VisualConfig {
   };
   // Custom colors per series key (e.g., vendor name -> hex color)
   seriesColors?: Record<string, string>;
+  // Fixed date range override (ignores global filter)
+  fixedDateRange?: {
+    startDate: string; // ISO string
+    endDate: string;   // ISO string
+  };
 }
 
 // Individual field filter for multi-filter support
