@@ -39,9 +39,10 @@ import {
   Tag,
 } from "lucide-react";
 
-// IDs dos campos personalizados de DEAL que queremos espelhar como leitura no lead
-const DEAL_ITEM_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
-const DEAL_ORIGEM_VENDA_FIELD_ID = "43d7d9a1-9370-45f3-803a-93717d2a6d1d";
+// Nomes canônicos dos campos de DEAL espelhados no lead (resolvidos dinamicamente).
+// Usar nomes — não UUIDs — evita que renomear/recriar o campo no banco quebre a UI silenciosamente.
+const DEAL_ITEM_VENDA_FIELD_NAME = "Item da Venda";
+const DEAL_ORIGEM_VENDA_FIELD_NAME = "Origem da Venda";
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { LeadTimeline } from "./LeadTimeline";
 import { LeadCustomFieldsManager, LeadCustomField } from "@/components/custom-fields/LeadCustomFieldsManager";
