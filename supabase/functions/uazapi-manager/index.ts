@@ -262,9 +262,9 @@ function resolveStatusSnapshot(payload: unknown): StatusSnapshot {
   return { state, connected: state === "connected", owner };
 }
 
-async function resolveStatusFromToken(token: string): Promise<StatusSnapshot> {
+async function resolveStatusFromToken(token: string, server?: ServerConfig): Promise<StatusSnapshot> {
   try {
-    const instanceInfo = await uazapiInstance("/status", "GET", token);
+    const instanceInfo = await uazapiInstance("/status", "GET", token, undefined, server);
     console.log(`[uazapi-manager] Instance status fallback response:`, JSON.stringify(instanceInfo).substring(0, 300));
 
     const snapshot = resolveStatusSnapshot(instanceInfo);
@@ -276,7 +276,7 @@ async function resolveStatusFromToken(token: string): Promise<StatusSnapshot> {
   }
 
   try {
-    const meInfo = await uazapiInstance("/me", "GET", token);
+    const meInfo = await uazapiInstance("/me", "GET", token, undefined, server);
     if (meInfo && (meInfo.id || meInfo.wid || meInfo.phone || meInfo.number)) {
       const owner = meInfo.phone || meInfo.number || meInfo.id;
       console.log(`[uazapi-manager] /me endpoint confirmed connected:`, owner);
@@ -290,41 +290,54 @@ async function resolveStatusFromToken(token: string): Promise<StatusSnapshot> {
 }
 
 async function resolveLiveStatusesForIntegrations(
-  integrations: Array<{ config?: Record<string, unknown>; status?: string | null }>,
+  integrations: Array<{ config?: Record<string, unknown>; status?: string | null; sector_id?: string | null }>,
+  supabase?: any,
+  accountId?: string,
 ): Promise<Map<string, StatusSnapshot>> {
   const snapshots = new Map<string, StatusSnapshot>();
-  const unresolved = new Map<string, string>();
+  // Group integrations by sector_id so we hit the correct UAZAPI server for each.
+  const bySector = new Map<string | null, Array<{ name: string; token: string }>>();
 
   for (const integration of integrations) {
     const config = integration.config || {};
     const instanceName = getString(config.instance_name);
     const token = getString(config.instance_token);
-    if (instanceName) {
-      unresolved.set(instanceName, token || "");
-    }
+    if (!instanceName) continue;
+    const sid = (integration.sector_id ?? null) as string | null;
+    const arr = bySector.get(sid) || [];
+    arr.push({ name: instanceName, token: token || "" });
+    bySector.set(sid, arr);
   }
 
-  try {
-    const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET");
-    const all = extractInstancesList(allRaw);
+  for (const [sid, items] of bySector.entries()) {
+    const server = supabase && accountId
+      ? await resolveServerForSector(supabase, accountId, sid)
+      : GLOBAL_SERVER;
 
-    for (const instance of all) {
-      const name = getInstanceName(instance);
-      if (!name || !unresolved.has(name)) continue;
-      snapshots.set(name, resolveStatusSnapshot(instance));
-      unresolved.delete(name);
+    const remaining = new Map(items.map((i) => [i.name, i.token]));
+
+    try {
+      const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET", undefined, server);
+      const all = extractInstancesList(allRaw);
+
+      for (const instance of all) {
+        const name = getInstanceName(instance);
+        if (!name || !remaining.has(name)) continue;
+        snapshots.set(name, resolveStatusSnapshot(instance));
+        remaining.delete(name);
+      }
+    } catch (adminErr) {
+      console.warn(`[uazapi-manager] Admin fetchInstances failed for sector ${sid} (server: ${server.source})`);
     }
-  } catch (adminErr) {
-    console.warn(`[uazapi-manager] Admin fetchInstances failed while listing sector instances`);
-  }
 
-  await Promise.all(
-    Array.from(unresolved.entries()).map(async ([instanceName, token]) => {
-      if (!token) return;
-      const snapshot = await resolveStatusFromToken(token);
-      snapshots.set(instanceName, snapshot);
-    }),
-  );
+    await Promise.all(
+      Array.from(remaining.entries()).map(async ([instanceName, token]) => {
+        if (!token) return;
+        const snapshot = await resolveStatusFromToken(token, server);
+        snapshots.set(instanceName, snapshot);
+      }),
+    );
+  }
 
   return snapshots;
 }
