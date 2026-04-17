@@ -220,6 +220,55 @@ export function LeadDetailSheet({
 
       if (dealsError) throw dealsError;
       setDeals(dealsData || []);
+
+      // Espelhar Item da Venda + Origem da Venda do deal mais recente (somente leitura)
+      const latestDealId = dealsData?.[0]?.id;
+      if (latestDealId) {
+        const { data: dfvs } = await supabase
+          .from("deal_field_values")
+          .select("field_id, value_text")
+          .eq("deal_id", latestDealId)
+          .in("field_id", [DEAL_ITEM_VENDA_FIELD_ID, DEAL_ORIGEM_VENDA_FIELD_ID]);
+
+        const itemRaw = dfvs?.find(d => d.field_id === DEAL_ITEM_VENDA_FIELD_ID)?.value_text || null;
+        const origemRaw = dfvs?.find(d => d.field_id === DEAL_ORIGEM_VENDA_FIELD_ID)?.value_text || null;
+
+        if (itemRaw) {
+          if (UUID_REGEX.test(itemRaw)) {
+            const { data: prod } = await supabase
+              .from("products")
+              .select("name")
+              .eq("id", itemRaw)
+              .maybeSingle();
+            setDealItemVenda(prod?.name || itemRaw);
+          } else {
+            const { data: cf } = await supabase
+              .from("custom_fields")
+              .select("options")
+              .eq("id", DEAL_ITEM_VENDA_FIELD_ID)
+              .maybeSingle();
+            const opts = (cf?.options as Array<{ value: string; label: string }>) || [];
+            setDealItemVenda(opts.find(o => o.value === itemRaw)?.label || itemRaw);
+          }
+        } else {
+          setDealItemVenda(null);
+        }
+
+        if (origemRaw) {
+          const { data: cf } = await supabase
+            .from("custom_fields")
+            .select("options")
+            .eq("id", DEAL_ORIGEM_VENDA_FIELD_ID)
+            .maybeSingle();
+          const opts = (cf?.options as Array<{ value: string; label: string }>) || [];
+          setDealOrigemVenda(opts.find(o => o.value === origemRaw)?.label || origemRaw);
+        } else {
+          setDealOrigemVenda(null);
+        }
+      } else {
+        setDealItemVenda(null);
+        setDealOrigemVenda(null);
+      }
     } catch (error) {
       console.error("Error fetching lead data:", error);
       toast.error("Erro ao carregar dados do lead");
