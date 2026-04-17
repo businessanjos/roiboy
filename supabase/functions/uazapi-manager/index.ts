@@ -851,7 +851,7 @@ serve(async (req) => {
       for (const ep of endpoints) {
         try {
           console.log(`[uazapi-manager] Trying ${ep.method} ${ep.path}...`);
-          webhookResult = await uazapiInstance(ep.path, ep.method, token!, webhookConfig);
+          webhookResult = await uazapiInstance(ep.path, ep.method, token!, webhookConfig, sectorServer);
           webhookSuccess = true;
           console.log(`[uazapi-manager] Webhook configured via ${ep.path}`);
           break;
@@ -863,7 +863,7 @@ serve(async (req) => {
       if (!webhookSuccess) {
         // Fallback: tentar via admin endpoint
         try {
-          webhookResult = await uazapiAdmin(`/instance/webhook/${instanceName}`, "PUT", webhookConfig);
+          webhookResult = await uazapiAdmin(`/instance/webhook/${instanceName}`, "PUT", webhookConfig, sectorServer);
           webhookSuccess = true;
           console.log(`[uazapi-manager] Webhook configured via admin endpoint`);
         } catch (err) {
