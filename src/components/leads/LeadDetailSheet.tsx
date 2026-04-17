@@ -222,53 +222,62 @@ export function LeadDetailSheet({
       if (dealsError) throw dealsError;
       setDeals(dealsData || []);
 
-      // Espelhar Item da Venda + Origem da Venda do deal mais recente (somente leitura)
-      const latestDealId = dealsData?.[0]?.id;
-      if (latestDealId) {
-        const { data: dfvs } = await supabase
-          .from("deal_field_values")
-          .select("field_id, value_text")
-          .eq("deal_id", latestDealId)
-          .in("field_id", [DEAL_ITEM_VENDA_FIELD_ID, DEAL_ORIGEM_VENDA_FIELD_ID]);
+      // Espelhar Item da Venda + Origem da Venda do deal mais recente que tenha valor.
+      // Resolve IDs dinamicamente por NOME para não quebrar se o campo for renomeado/recriado.
+      setDealItemVenda(null);
+      setDealOrigemVenda(null);
 
-        const itemRaw = dfvs?.find(d => d.field_id === DEAL_ITEM_VENDA_FIELD_ID)?.value_text || null;
-        const origemRaw = dfvs?.find(d => d.field_id === DEAL_ORIGEM_VENDA_FIELD_ID)?.value_text || null;
+      if (dealsData && dealsData.length > 0) {
+        const { data: cfDefs } = await supabase
+          .from("custom_fields")
+          .select("id, name, options")
+          .in("name", [DEAL_ITEM_VENDA_FIELD_NAME, DEAL_ORIGEM_VENDA_FIELD_NAME])
+          .eq("show_in_deals", true)
+          .eq("is_active", true);
 
-        if (itemRaw) {
-          if (UUID_REGEX.test(itemRaw)) {
-            const { data: prod } = await supabase
-              .from("products")
-              .select("name")
-              .eq("id", itemRaw)
-              .maybeSingle();
-            setDealItemVenda(prod?.name || itemRaw);
-          } else {
-            const { data: cf } = await supabase
-              .from("custom_fields")
-              .select("options")
-              .eq("id", DEAL_ITEM_VENDA_FIELD_ID)
-              .maybeSingle();
-            const opts = (cf?.options as Array<{ value: string; label: string }>) || [];
-            setDealItemVenda(opts.find(o => o.value === itemRaw)?.label || itemRaw);
+        const itemDef = cfDefs?.find(c => c.name === DEAL_ITEM_VENDA_FIELD_NAME);
+        const origemDef = cfDefs?.find(c => c.name === DEAL_ORIGEM_VENDA_FIELD_NAME);
+        const targetFieldIds = [itemDef?.id, origemDef?.id].filter(Boolean) as string[];
+
+        if (targetFieldIds.length > 0) {
+          const dealIds = dealsData.map(d => d.id);
+          // Busca todos os valores em todos os deals do lead, processando do mais recente para o mais antigo
+          const { data: allDfvs } = await supabase
+            .from("deal_field_values")
+            .select("deal_id, field_id, value_text")
+            .in("deal_id", dealIds)
+            .in("field_id", targetFieldIds);
+
+          const valueByDeal = (fieldId: string): string | null => {
+            for (const deal of dealsData) {
+              const found = allDfvs?.find(d => d.deal_id === deal.id && d.field_id === fieldId);
+              if (found?.value_text) return found.value_text;
+            }
+            return null;
+          };
+
+          const itemRaw = itemDef ? valueByDeal(itemDef.id) : null;
+          const origemRaw = origemDef ? valueByDeal(origemDef.id) : null;
+
+          if (itemRaw) {
+            if (UUID_REGEX.test(itemRaw)) {
+              const { data: prod } = await supabase
+                .from("products")
+                .select("name")
+                .eq("id", itemRaw)
+                .maybeSingle();
+              setDealItemVenda(prod?.name || itemRaw);
+            } else {
+              const opts = (itemDef?.options as Array<{ value: string; label: string }>) || [];
+              setDealItemVenda(opts.find(o => o.value === itemRaw)?.label || itemRaw);
+            }
           }
-        } else {
-          setDealItemVenda(null);
-        }
 
-        if (origemRaw) {
-          const { data: cf } = await supabase
-            .from("custom_fields")
-            .select("options")
-            .eq("id", DEAL_ORIGEM_VENDA_FIELD_ID)
-            .maybeSingle();
-          const opts = (cf?.options as Array<{ value: string; label: string }>) || [];
-          setDealOrigemVenda(opts.find(o => o.value === origemRaw)?.label || origemRaw);
-        } else {
-          setDealOrigemVenda(null);
+          if (origemRaw) {
+            const opts = (origemDef?.options as Array<{ value: string; label: string }>) || [];
+            setDealOrigemVenda(opts.find(o => o.value === origemRaw)?.label || origemRaw);
+          }
         }
-      } else {
-        setDealItemVenda(null);
-        setDealOrigemVenda(null);
       }
     } catch (error) {
       console.error("Error fetching lead data:", error);
