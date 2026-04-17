@@ -35,7 +35,14 @@ import {
   Trash2,
   Instagram,
   User,
+  Package,
+  Tag,
 } from "lucide-react";
+
+// IDs dos campos personalizados de DEAL que queremos espelhar como leitura no lead
+const DEAL_ITEM_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
+const DEAL_ORIGEM_VENDA_FIELD_ID = "43d7d9a1-9370-45f3-803a-93717d2a6d1d";
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { LeadTimeline } from "./LeadTimeline";
 import { LeadCustomFieldsManager, LeadCustomField } from "@/components/custom-fields/LeadCustomFieldsManager";
 import { LeadFieldValueEditor } from "@/components/custom-fields/LeadFieldValueEditor";
@@ -122,6 +129,9 @@ export function LeadDetailSheet({
   
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [managerOpen, setManagerOpen] = useState(false);
+  // Valores espelhados do deal mais recente vinculado ao lead (somente leitura)
+  const [dealItemVenda, setDealItemVenda] = useState<string | null>(null);
+  const [dealOrigemVenda, setDealOrigemVenda] = useState<string | null>(null);
 
   const fetchCustomFields = async () => {
     const { data } = await supabase
@@ -210,6 +220,55 @@ export function LeadDetailSheet({
 
       if (dealsError) throw dealsError;
       setDeals(dealsData || []);
+
+      // Espelhar Item da Venda + Origem da Venda do deal mais recente (somente leitura)
+      const latestDealId = dealsData?.[0]?.id;
+      if (latestDealId) {
+        const { data: dfvs } = await supabase
+          .from("deal_field_values")
+          .select("field_id, value_text")
+          .eq("deal_id", latestDealId)
+          .in("field_id", [DEAL_ITEM_VENDA_FIELD_ID, DEAL_ORIGEM_VENDA_FIELD_ID]);
+
+        const itemRaw = dfvs?.find(d => d.field_id === DEAL_ITEM_VENDA_FIELD_ID)?.value_text || null;
+        const origemRaw = dfvs?.find(d => d.field_id === DEAL_ORIGEM_VENDA_FIELD_ID)?.value_text || null;
+
+        if (itemRaw) {
+          if (UUID_REGEX.test(itemRaw)) {
+            const { data: prod } = await supabase
+              .from("products")
+              .select("name")
+              .eq("id", itemRaw)
+              .maybeSingle();
+            setDealItemVenda(prod?.name || itemRaw);
+          } else {
+            const { data: cf } = await supabase
+              .from("custom_fields")
+              .select("options")
+              .eq("id", DEAL_ITEM_VENDA_FIELD_ID)
+              .maybeSingle();
+            const opts = (cf?.options as Array<{ value: string; label: string }>) || [];
+            setDealItemVenda(opts.find(o => o.value === itemRaw)?.label || itemRaw);
+          }
+        } else {
+          setDealItemVenda(null);
+        }
+
+        if (origemRaw) {
+          const { data: cf } = await supabase
+            .from("custom_fields")
+            .select("options")
+            .eq("id", DEAL_ORIGEM_VENDA_FIELD_ID)
+            .maybeSingle();
+          const opts = (cf?.options as Array<{ value: string; label: string }>) || [];
+          setDealOrigemVenda(opts.find(o => o.value === origemRaw)?.label || origemRaw);
+        } else {
+          setDealOrigemVenda(null);
+        }
+      } else {
+        setDealItemVenda(null);
+        setDealOrigemVenda(null);
+      }
     } catch (error) {
       console.error("Error fetching lead data:", error);
       toast.error("Erro ao carregar dados do lead");
@@ -371,6 +430,30 @@ export function LeadDetailSheet({
                   </div>
                 </div>
 
+
+                {/* Dados espelhados do negócio (somente leitura) */}
+                {(dealItemVenda || dealOrigemVenda) && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {dealItemVenda && (
+                      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-primary/20 bg-primary/5 text-xs">
+                        <Package className="h-3 w-3 text-primary" />
+                        <span className="font-medium text-muted-foreground whitespace-nowrap">
+                          Item da Venda:
+                        </span>
+                        <span className="text-primary font-medium">{dealItemVenda}</span>
+                      </div>
+                    )}
+                    {dealOrigemVenda && (
+                      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/50 bg-muted/30 text-xs">
+                        <Tag className="h-3 w-3 text-muted-foreground" />
+                        <span className="font-medium text-muted-foreground whitespace-nowrap">
+                          Origem da Venda:
+                        </span>
+                        <span className="text-foreground font-medium">{dealOrigemVenda}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {customFields.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
