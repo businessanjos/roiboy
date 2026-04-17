@@ -35,7 +35,14 @@ import {
   Trash2,
   Instagram,
   User,
+  Package,
+  Tag,
 } from "lucide-react";
+
+// IDs dos campos personalizados de DEAL que queremos espelhar como leitura no lead
+const DEAL_ITEM_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
+const DEAL_ORIGEM_VENDA_FIELD_ID = "43d7d9a1-9370-45f3-803a-93717d2a6d1d";
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { LeadTimeline } from "./LeadTimeline";
 import { LeadCustomFieldsManager, LeadCustomField } from "@/components/custom-fields/LeadCustomFieldsManager";
 import { LeadFieldValueEditor } from "@/components/custom-fields/LeadFieldValueEditor";
