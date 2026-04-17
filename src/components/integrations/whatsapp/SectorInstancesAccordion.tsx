@@ -209,6 +209,15 @@ export function SectorInstancesAccordion({
         sectorName={sector.name}
         onSuccess={onRefresh}
       />
+
+      {/* Sector server settings dialog */}
+      <SectorServerSettingsDialog
+        open={showServerDialog}
+        onOpenChange={setShowServerDialog}
+        sectorId={sector.id}
+        sectorName={sector.name}
+        onSaved={onRefresh}
+      />
     </>
   );
 }
