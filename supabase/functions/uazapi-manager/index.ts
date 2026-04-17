@@ -444,6 +444,16 @@ serve(async (req) => {
 
     console.log(`[uazapi-manager] Found integration: ${intData?.id || "NONE"}, token: ${token ? "present" : "MISSING"}`);
 
+    // Resolve which UAZAPI server to use for this request.
+    // Priority: explicit sector_id > integration's sector > global fallback.
+    // This isolates "Operações" (new server) from "Vendas" (legacy global server).
+    let sectorServer: ServerConfig = GLOBAL_SERVER;
+    if (sector_id) {
+      sectorServer = await resolveServerForSector(supabase, accountId, sector_id);
+    } else if (integration_id) {
+      sectorServer = await resolveServerForIntegrationId(supabase, accountId, integration_id);
+    }
+
     // Ações que requerem token
     const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect", "delete_message"];
     if (tokenRequiredActions.includes(action) && !token) {
