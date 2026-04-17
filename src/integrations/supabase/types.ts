@@ -11761,7 +11761,9 @@ export type Database = {
           created_at: string
           id: string
           pin_hash: string | null
+          royzapp_admin_token_secret_name: string | null
           royzapp_enabled: boolean | null
+          royzapp_host: string | null
           sector_id: string
           updated_at: string
         }
@@ -11770,7 +11772,9 @@ export type Database = {
           created_at?: string
           id?: string
           pin_hash?: string | null
+          royzapp_admin_token_secret_name?: string | null
           royzapp_enabled?: boolean | null
+          royzapp_host?: string | null
           sector_id: string
           updated_at?: string
         }
@@ -11779,7 +11783,9 @@ export type Database = {
           created_at?: string
           id?: string
           pin_hash?: string | null
+          royzapp_admin_token_secret_name?: string | null
           royzapp_enabled?: boolean | null
+          royzapp_host?: string | null
           sector_id?: string
           updated_at?: string
         }
