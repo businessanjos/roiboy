@@ -928,6 +928,75 @@ serve(async (req) => {
       
       console.log(`[uazapi-manager] Integration ${integration_id} unlinked successfully`);
       result = { success: true };
+    
+    } else if (action === "get_sector_server") {
+      // Returns the sector's RoyZapp server config (host + secret name).
+      // Does NOT return the actual secret value.
+      if (!sector_id) {
+        return new Response(JSON.stringify({ error: "sector_id é obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data } = await supabase
+        .from("sector_settings")
+        .select("royzapp_host, royzapp_admin_token_secret_name")
+        .eq("account_id", accountId)
+        .eq("sector_id", sector_id)
+        .maybeSingle();
+      const host = (data?.royzapp_host || "").trim();
+      const secretName = (data?.royzapp_admin_token_secret_name || "").trim();
+      const secretConfigured = secretName ? !!Deno.env.get(secretName) : false;
+      result = {
+        host: host || null,
+        admin_token_secret_name: secretName || null,
+        secret_configured: secretConfigured,
+        using_global_fallback: !host || !secretName || !secretConfigured,
+        global_host: UAZAPI_URL || null,
+      };
+    
+    } else if (action === "update_sector_server") {
+      // Admin-only: configure/clear the sector's custom server.
+      // Pass host=null and admin_token_secret_name=null to revert to global fallback.
+      if (!sector_id) {
+        return new Response(JSON.stringify({ error: "sector_id é obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const isAdmin = userData.role === "admin" || userData.is_also_admin === true;
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: "Apenas administradores podem alterar o servidor de um setor." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const newHost = payload.host ? String(payload.host).trim().replace(/\/$/, '') : null;
+      const newSecretName = payload.admin_token_secret_name ? String(payload.admin_token_secret_name).trim() : null;
+
+      // Validate host shape if provided
+      if (newHost && !/^https?:\/\//i.test(newHost)) {
+        return new Response(JSON.stringify({ error: "Host inválido. Use uma URL completa, ex: https://cs-roy-eternum.uazapi.com" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Validate secret exists when provided
+      if (newSecretName && !Deno.env.get(newSecretName)) {
+        return new Response(JSON.stringify({ error: `O secret "${newSecretName}" não está configurado no backend. Cadastre-o antes de salvar.` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Upsert into sector_settings
+      const { data: existing } = await supabase
+        .from("sector_settings")
+        .select("id")
+        .eq("account_id", accountId)
+        .eq("sector_id", sector_id)
+        .maybeSingle();
+
+      if (existing) {
+        const { error: updErr } = await supabase
+          .from("sector_settings")
+          .update({ royzapp_host: newHost, royzapp_admin_token_secret_name: newSecretName })
+          .eq("id", existing.id);
+        if (updErr) throw updErr;
+      } else {
+        const { error: insErr } = await supabase
+          .from("sector_settings")
+          .insert({ account_id: accountId, sector_id, royzapp_host: newHost, royzapp_admin_token_secret_name: newSecretName });
+        if (insErr) throw insErr;
+      }
+      console.log(`[uazapi-manager] Sector "${sector_id}" server updated: host=${newHost || "(global)"}, secret=${newSecretName || "(global)"}`);
+      result = { success: true, host: newHost, admin_token_secret_name: newSecretName };
     }
 
     return new Response(JSON.stringify({ data: result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
