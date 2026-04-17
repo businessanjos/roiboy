@@ -431,6 +431,30 @@ export function LeadDetailSheet({
                 </div>
 
 
+                {/* Dados espelhados do negócio (somente leitura) */}
+                {(dealItemVenda || dealOrigemVenda) && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {dealItemVenda && (
+                      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-primary/20 bg-primary/5 text-xs">
+                        <Package className="h-3 w-3 text-primary" />
+                        <span className="font-medium text-muted-foreground whitespace-nowrap">
+                          Item da Venda:
+                        </span>
+                        <span className="text-primary font-medium">{dealItemVenda}</span>
+                      </div>
+                    )}
+                    {dealOrigemVenda && (
+                      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border/50 bg-muted/30 text-xs">
+                        <Tag className="h-3 w-3 text-muted-foreground" />
+                        <span className="font-medium text-muted-foreground whitespace-nowrap">
+                          Origem da Venda:
+                        </span>
+                        <span className="text-foreground font-medium">{dealOrigemVenda}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {customFields.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {customFields.map(field => (
