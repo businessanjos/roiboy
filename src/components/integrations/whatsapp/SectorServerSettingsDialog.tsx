@@ -50,6 +50,14 @@ export function SectorServerSettingsDialog({
     void fetchConfig();
   }, [open, sectorId]);
 
+  // Sugestões conhecidas por setor (preenchimento automático)
+  const SECTOR_DEFAULTS: Record<string, { host: string; secret: string }> = {
+    operacoes: {
+      host: "https://cs-roy-eternum.uazapi.com",
+      secret: "UAZAPI_OPERACOES_ADMIN_TOKEN",
+    },
+  };
+
   const fetchConfig = async () => {
     setLoading(true);
     try {
@@ -59,8 +67,9 @@ export function SectorServerSettingsDialog({
       if (error) throw error;
       const cfg = (data?.data || data) as ServerConfig;
       setConfig(cfg);
-      setHost(cfg?.host || "");
-      setSecretName(cfg?.admin_token_secret_name || "");
+      const defaults = SECTOR_DEFAULTS[sectorId];
+      setHost(cfg?.host || defaults?.host || "");
+      setSecretName(cfg?.admin_token_secret_name || defaults?.secret || "");
     } catch (err) {
       console.error("Failed to load sector server config:", err);
       toast.error("Erro ao carregar configuração do servidor");
