@@ -524,7 +524,7 @@ serve(async (req) => {
       };
 
       try {
-        const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET");
+        const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET", undefined, sectorServer);
         const all = extractInstancesList(allRaw);
         const inst = all.find((i) => getInstanceName(i) === instanceName);
 
@@ -532,12 +532,12 @@ serve(async (req) => {
           statusSnapshot = resolveStatusSnapshot(inst);
         } else if (token) {
           console.warn(`[uazapi-manager] Instance ${instanceName} not found in admin list, trying instance-level status check`);
-          statusSnapshot = await resolveStatusFromToken(token);
+          statusSnapshot = await resolveStatusFromToken(token, sectorServer);
         }
       } catch (adminErr) {
         console.warn(`[uazapi-manager] Admin fetchInstances failed, trying instance-level status check for: ${instanceName}`);
         if (token) {
-          statusSnapshot = await resolveStatusFromToken(token);
+          statusSnapshot = await resolveStatusFromToken(token, sectorServer);
         }
       }
 
@@ -558,17 +558,17 @@ serve(async (req) => {
       }
     
     } else if (action === "create") {
-      const r = await uazapiAdmin("/instance/init", "POST", { name: instanceName });
+      const r = await uazapiAdmin("/instance/init", "POST", { name: instanceName }, sectorServer);
       const newToken = r.token || r.instance?.token;
       await supabase.from("integrations").upsert({ account_id: accountId, type: "whatsapp", sector_id: sector_id || null, status: "pending", config: { provider: "uazapi", instance_name: instanceName, instance_token: newToken } }, { onConflict: "account_id,type,sector_id" });
       result = { ...r, token: newToken };
     
     } else if (action === "connect" || action === "qrcode") {
       const instName = payload.instance_name || instanceName;
-      result = await uazapiAdmin(`/instance/connect/${instName}`, "GET");
+      result = await uazapiAdmin(`/instance/connect/${instName}`, "GET", undefined, sectorServer);
     
     } else if (action === "disconnect") {
-      try { await uazapiInstance("/logout", "POST", token!); } catch {}
+      try { await uazapiInstance("/logout", "POST", token!, undefined, sectorServer); } catch {}
       if (intData?.id) await supabase.from("integrations").update({ status: "disconnected" }).eq("id", intData.id);
       result = { disconnected: true };
     
@@ -586,7 +586,7 @@ serve(async (req) => {
       }
       if (payload.mentions) textBody.mentions = payload.mentions;
       
-      result = await uazapiInstance("/send/text", "POST", token!, textBody);
+      result = await uazapiInstance("/send/text", "POST", token!, textBody, sectorServer);
     
     } else if (action === "send_media") {
       // ✅ NOVO: Suporte a envio de mídia
@@ -605,7 +605,7 @@ serve(async (req) => {
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
-      result = await uazapiInstance("/send/media", "POST", token!, mediaBody);
+      result = await uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer);
     
     } else if (action === "send_to_group") {
       // ✅ CORRIGIDO: Usar /send/text para grupos
@@ -616,7 +616,7 @@ serve(async (req) => {
       if (normalizedQuotedMessageId) { groupBody.replyid = normalizedQuotedMessageId; }
       if (payload.mentions) groupBody.mentions = payload.mentions;
       
-      result = await uazapiInstance("/send/text", "POST", token!, groupBody);
+      result = await uazapiInstance("/send/text", "POST", token!, groupBody, sectorServer);
     
     } else if (action === "send_media_to_group") {
       // ✅ NOVO: Mídia em grupos
