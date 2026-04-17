@@ -893,7 +893,7 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      result = await uazapiInstance("/message/delete", "POST", token!, { id: messageId });
+      result = await uazapiInstance("/message/delete", "POST", token!, { id: messageId }, sectorServer);
       result = { deleted: true, api_response: result };
     
     } else if (action === "unlink_instance") {
