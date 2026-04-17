@@ -102,7 +102,7 @@ export function SectorInstancesAccordion({
                 <div className="text-center py-6 text-muted-foreground">
                   <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">Nenhuma instância neste setor</p>
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex flex-wrap gap-2 mt-3 justify-center">
                       <Button
                         variant="outline"
                         size="sm"
@@ -115,11 +115,21 @@ export function SectorInstancesAccordion({
                         variant="outline"
                         size="sm"
                         onClick={() => setShowMetaDialog(true)}
-                        className="border-primary/30 text-primary hover:bg-primary/5"
                       >
                         <Globe className="h-4 w-4 mr-2" />
                         Meta Cloud API
                       </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowServerDialog(true)}
+                          title="Configurar servidor RoyZapp deste setor"
+                        >
+                          <Server className="h-4 w-4 mr-2" />
+                          Servidor
+                        </Button>
+                      )}
                     </div>
                 </div>
               ) : (
@@ -154,6 +164,15 @@ export function SectorInstancesAccordion({
                       >
                         <Globe className="h-4 w-4 mr-2" />
                         Meta API
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowServerDialog(true)}
+                        title="Configurar servidor RoyZapp deste setor"
+                      >
+                        <Server className="h-4 w-4 mr-2" />
+                        Servidor
                       </Button>
                     </div>
                   )}
