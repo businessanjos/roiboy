@@ -8,6 +8,63 @@ const corsHeaders = {
 const UAZAPI_URL = (Deno.env.get("UAZAPI_URL") || "").trim().replace(/\/$/, '');
 const UAZAPI_ADMIN_TOKEN = (Deno.env.get("UAZAPI_ADMIN_TOKEN") || "").trim();
 
+// --- Per-sector server resolution ---
+// Each sector can override the global UAZAPI host + admin token via sector_settings.
+// When override fields are NULL, falls back to the global secrets above.
+// This keeps "Vendas" untouched while allowing "Operações" to use a different server.
+type ServerConfig = { host: string; adminToken: string; source: "global" | "sector" };
+
+const GLOBAL_SERVER: ServerConfig = { host: UAZAPI_URL, adminToken: UAZAPI_ADMIN_TOKEN, source: "global" };
+
+async function resolveServerForSector(
+  supabase: any,
+  accountId: string,
+  sectorId: string | null | undefined,
+): Promise<ServerConfig> {
+  if (!sectorId) return GLOBAL_SERVER;
+  try {
+    const { data } = await supabase
+      .from("sector_settings")
+      .select("royzapp_host, royzapp_admin_token_secret_name")
+      .eq("account_id", accountId)
+      .eq("sector_id", sectorId)
+      .maybeSingle();
+    const host = (data?.royzapp_host || "").trim().replace(/\/$/, '');
+    const secretName = (data?.royzapp_admin_token_secret_name || "").trim();
+    if (host && secretName) {
+      const secretValue = (Deno.env.get(secretName) || "").trim();
+      if (secretValue) {
+        console.log(`[uazapi-manager] Sector "${sectorId}" using custom server: ${host} (secret: ${secretName})`);
+        return { host, adminToken: secretValue, source: "sector" };
+      } else {
+        console.warn(`[uazapi-manager] Sector "${sectorId}" has host=${host} but secret "${secretName}" is empty/missing. Falling back to global.`);
+      }
+    }
+  } catch (err) {
+    console.warn(`[uazapi-manager] Failed to resolve server for sector ${sectorId}:`, err);
+  }
+  return GLOBAL_SERVER;
+}
+
+async function resolveServerForIntegrationId(
+  supabase: any,
+  accountId: string,
+  integrationId: string | null | undefined,
+): Promise<ServerConfig> {
+  if (!integrationId) return GLOBAL_SERVER;
+  try {
+    const { data } = await supabase
+      .from("integrations")
+      .select("sector_id")
+      .eq("id", integrationId)
+      .eq("account_id", accountId)
+      .maybeSingle();
+    return resolveServerForSector(supabase, accountId, data?.sector_id);
+  } catch {
+    return GLOBAL_SERVER;
+  }
+}
+
 type UazapiInstanceLike = {
   name?: string;
   instance_name?: string;
@@ -279,14 +336,15 @@ function normalizeQuotedMessageId(value: unknown): string | undefined {
   return trimmed.includes(":") ? trimmed.split(":").pop() || trimmed : trimmed;
 }
 
-async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
-  console.log(`[uazapi-admin] Calling: ${method} ${UAZAPI_URL}${endpoint}`);
-  const r = await fetch(`${UAZAPI_URL}${endpoint}`, { 
+async function uazapiAdmin(endpoint: string, method: string, body?: unknown, server?: ServerConfig) {
+  const s = server || GLOBAL_SERVER;
+  console.log(`[uazapi-admin] Calling: ${method} ${s.host}${endpoint} (server: ${s.source})`);
+  const r = await fetch(`${s.host}${endpoint}`, { 
     method, 
     headers: { 
       "Content-Type": "application/json", 
-      "AdminToken": UAZAPI_ADMIN_TOKEN,
-      "admintoken": UAZAPI_ADMIN_TOKEN,
+      "AdminToken": s.adminToken,
+      "admintoken": s.adminToken,
     }, 
     body: body ? JSON.stringify(body) : undefined 
   });
@@ -300,9 +358,10 @@ async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
   return json;
 }
 
-async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown) {
-  console.log(`[uazapi] Calling: ${method} ${UAZAPI_URL}${endpoint}`);
-  const r = await fetch(`${UAZAPI_URL}${endpoint}`, { 
+async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown, server?: ServerConfig) {
+  const s = server || GLOBAL_SERVER;
+  console.log(`[uazapi] Calling: ${method} ${s.host}${endpoint} (server: ${s.source})`);
+  const r = await fetch(`${s.host}${endpoint}`, { 
     method, 
     headers: { "Content-Type": "application/json", "token": token }, 
     body: body ? JSON.stringify(body) : undefined 
