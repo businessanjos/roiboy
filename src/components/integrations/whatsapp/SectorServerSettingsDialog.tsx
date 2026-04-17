@@ -194,8 +194,8 @@ export function SectorServerSettingsDialog({
               </p>
             </div>
 
-            <Alert className="border-amber-500/30 bg-amber-500/5">
-              <ShieldAlert className="h-4 w-4 text-amber-600" />
+            <Alert variant="default">
+              <ShieldAlert className="h-4 w-4" />
               <AlertDescription className="text-xs">
                 Se host ou secret estiverem vazios — ou se o secret não existir no backend — o
                 sistema retorna automaticamente para o servidor global. Isso garante zero risco
