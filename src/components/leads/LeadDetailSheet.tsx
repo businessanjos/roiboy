@@ -129,6 +129,9 @@ export function LeadDetailSheet({
   
   const [fieldValues, setFieldValues] = useState<Record<string, any>>({});
   const [managerOpen, setManagerOpen] = useState(false);
+  // Valores espelhados do deal mais recente vinculado ao lead (somente leitura)
+  const [dealItemVenda, setDealItemVenda] = useState<string | null>(null);
+  const [dealOrigemVenda, setDealOrigemVenda] = useState<string | null>(null);
 
   const fetchCustomFields = async () => {
     const { data } = await supabase
