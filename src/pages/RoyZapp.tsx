@@ -830,8 +830,8 @@ export default function RoyZapp() {
       
       const matchesTab = (filterArchived || filterStatus === "closed" || skipTabFilterForGroups) ? true : (
         inboxTab === "mine" 
-          ? (hasFullVisibility || a.agent_id === currentAgent?.id) // Admin/Gestor veem todas as conversas atribuídas
-          : (hasFullVisibility ? true : isUnassigned) // Admin/Gestor veem todas na fila; demais veem só sem agente
+          ? (hasFullVisibility ? a.agent_id !== null : a.agent_id === currentAgent?.id) // Admin/Gestor veem todas as ATRIBUÍDAS; demais veem só as suas
+          : isUnassigned // Fila SEMPRE mostra apenas conversas sem agente atribuído (igual para todos)
       );
       
       const matchesSearch = matchesSearchQuery(contact, searchQuery);
