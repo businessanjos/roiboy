@@ -7,11 +7,12 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Globe, Loader2, MessageSquare, type LucideIcon } from "lucide-react";
+import { Plus, Globe, Loader2, MessageSquare, Server, type LucideIcon } from "lucide-react";
 import { SectorInstanceCard, SectorInstance } from "./SectorInstanceCard";
 import { AddInstanceDialog } from "./AddInstanceDialog";
 import { AddMetaInstanceDialog } from "./AddMetaInstanceDialog";
 import { EditInstanceDialog } from "./EditInstanceDialog";
+import { SectorServerSettingsDialog } from "./SectorServerSettingsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -38,6 +39,7 @@ export function SectorInstancesAccordion({
 }: SectorInstancesAccordionProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showMetaDialog, setShowMetaDialog] = useState(false);
+  const [showServerDialog, setShowServerDialog] = useState(false);
   const [editingInstance, setEditingInstance] = useState<SectorInstance | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
