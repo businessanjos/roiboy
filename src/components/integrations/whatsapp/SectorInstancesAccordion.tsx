@@ -7,11 +7,12 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Globe, Loader2, MessageSquare, type LucideIcon } from "lucide-react";
+import { Plus, Globe, Loader2, MessageSquare, Server, type LucideIcon } from "lucide-react";
 import { SectorInstanceCard, SectorInstance } from "./SectorInstanceCard";
 import { AddInstanceDialog } from "./AddInstanceDialog";
 import { AddMetaInstanceDialog } from "./AddMetaInstanceDialog";
 import { EditInstanceDialog } from "./EditInstanceDialog";
+import { SectorServerSettingsDialog } from "./SectorServerSettingsDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -38,6 +39,7 @@ export function SectorInstancesAccordion({
 }: SectorInstancesAccordionProps) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showMetaDialog, setShowMetaDialog] = useState(false);
+  const [showServerDialog, setShowServerDialog] = useState(false);
   const [editingInstance, setEditingInstance] = useState<SectorInstance | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
@@ -100,7 +102,7 @@ export function SectorInstancesAccordion({
                 <div className="text-center py-6 text-muted-foreground">
                   <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p className="text-sm">Nenhuma instância neste setor</p>
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex flex-wrap gap-2 mt-3 justify-center">
                       <Button
                         variant="outline"
                         size="sm"
@@ -113,11 +115,21 @@ export function SectorInstancesAccordion({
                         variant="outline"
                         size="sm"
                         onClick={() => setShowMetaDialog(true)}
-                        className="border-primary/30 text-primary hover:bg-primary/5"
                       >
                         <Globe className="h-4 w-4 mr-2" />
                         Meta Cloud API
                       </Button>
+                      {isAdmin && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowServerDialog(true)}
+                          title="Configurar servidor RoyZapp deste setor"
+                        >
+                          <Server className="h-4 w-4 mr-2" />
+                          Servidor
+                        </Button>
+                      )}
                     </div>
                 </div>
               ) : (
@@ -153,6 +165,15 @@ export function SectorInstancesAccordion({
                         <Globe className="h-4 w-4 mr-2" />
                         Meta API
                       </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowServerDialog(true)}
+                        title="Configurar servidor RoyZapp deste setor"
+                      >
+                        <Server className="h-4 w-4 mr-2" />
+                        Servidor
+                      </Button>
                     </div>
                   )}
                 </>
@@ -187,6 +208,15 @@ export function SectorInstancesAccordion({
         sectorId={sector.id}
         sectorName={sector.name}
         onSuccess={onRefresh}
+      />
+
+      {/* Sector server settings dialog */}
+      <SectorServerSettingsDialog
+        open={showServerDialog}
+        onOpenChange={setShowServerDialog}
+        sectorId={sector.id}
+        sectorName={sector.name}
+        onSaved={onRefresh}
       />
     </>
   );

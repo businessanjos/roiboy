@@ -8,6 +8,63 @@ const corsHeaders = {
 const UAZAPI_URL = (Deno.env.get("UAZAPI_URL") || "").trim().replace(/\/$/, '');
 const UAZAPI_ADMIN_TOKEN = (Deno.env.get("UAZAPI_ADMIN_TOKEN") || "").trim();
 
+// --- Per-sector server resolution ---
+// Each sector can override the global UAZAPI host + admin token via sector_settings.
+// When override fields are NULL, falls back to the global secrets above.
+// This keeps "Vendas" untouched while allowing "Operações" to use a different server.
+type ServerConfig = { host: string; adminToken: string; source: "global" | "sector" };
+
+const GLOBAL_SERVER: ServerConfig = { host: UAZAPI_URL, adminToken: UAZAPI_ADMIN_TOKEN, source: "global" };
+
+async function resolveServerForSector(
+  supabase: any,
+  accountId: string,
+  sectorId: string | null | undefined,
+): Promise<ServerConfig> {
+  if (!sectorId) return GLOBAL_SERVER;
+  try {
+    const { data } = await supabase
+      .from("sector_settings")
+      .select("royzapp_host, royzapp_admin_token_secret_name")
+      .eq("account_id", accountId)
+      .eq("sector_id", sectorId)
+      .maybeSingle();
+    const host = (data?.royzapp_host || "").trim().replace(/\/$/, '');
+    const secretName = (data?.royzapp_admin_token_secret_name || "").trim();
+    if (host && secretName) {
+      const secretValue = (Deno.env.get(secretName) || "").trim();
+      if (secretValue) {
+        console.log(`[uazapi-manager] Sector "${sectorId}" using custom server: ${host} (secret: ${secretName})`);
+        return { host, adminToken: secretValue, source: "sector" };
+      } else {
+        console.warn(`[uazapi-manager] Sector "${sectorId}" has host=${host} but secret "${secretName}" is empty/missing. Falling back to global.`);
+      }
+    }
+  } catch (err) {
+    console.warn(`[uazapi-manager] Failed to resolve server for sector ${sectorId}:`, err);
+  }
+  return GLOBAL_SERVER;
+}
+
+async function resolveServerForIntegrationId(
+  supabase: any,
+  accountId: string,
+  integrationId: string | null | undefined,
+): Promise<ServerConfig> {
+  if (!integrationId) return GLOBAL_SERVER;
+  try {
+    const { data } = await supabase
+      .from("integrations")
+      .select("sector_id")
+      .eq("id", integrationId)
+      .eq("account_id", accountId)
+      .maybeSingle();
+    return resolveServerForSector(supabase, accountId, data?.sector_id);
+  } catch {
+    return GLOBAL_SERVER;
+  }
+}
+
 type UazapiInstanceLike = {
   name?: string;
   instance_name?: string;
@@ -205,9 +262,9 @@ function resolveStatusSnapshot(payload: unknown): StatusSnapshot {
   return { state, connected: state === "connected", owner };
 }
 
-async function resolveStatusFromToken(token: string): Promise<StatusSnapshot> {
+async function resolveStatusFromToken(token: string, server?: ServerConfig): Promise<StatusSnapshot> {
   try {
-    const instanceInfo = await uazapiInstance("/status", "GET", token);
+    const instanceInfo = await uazapiInstance("/status", "GET", token, undefined, server);
     console.log(`[uazapi-manager] Instance status fallback response:`, JSON.stringify(instanceInfo).substring(0, 300));
 
     const snapshot = resolveStatusSnapshot(instanceInfo);
@@ -219,7 +276,7 @@ async function resolveStatusFromToken(token: string): Promise<StatusSnapshot> {
   }
 
   try {
-    const meInfo = await uazapiInstance("/me", "GET", token);
+    const meInfo = await uazapiInstance("/me", "GET", token, undefined, server);
     if (meInfo && (meInfo.id || meInfo.wid || meInfo.phone || meInfo.number)) {
       const owner = meInfo.phone || meInfo.number || meInfo.id;
       console.log(`[uazapi-manager] /me endpoint confirmed connected:`, owner);
@@ -233,41 +290,54 @@ async function resolveStatusFromToken(token: string): Promise<StatusSnapshot> {
 }
 
 async function resolveLiveStatusesForIntegrations(
-  integrations: Array<{ config?: Record<string, unknown>; status?: string | null }>,
+  integrations: Array<{ config?: Record<string, unknown>; status?: string | null; sector_id?: string | null }>,
+  supabase?: any,
+  accountId?: string,
 ): Promise<Map<string, StatusSnapshot>> {
   const snapshots = new Map<string, StatusSnapshot>();
-  const unresolved = new Map<string, string>();
+  // Group integrations by sector_id so we hit the correct UAZAPI server for each.
+  const bySector = new Map<string | null, Array<{ name: string; token: string }>>();
 
   for (const integration of integrations) {
     const config = integration.config || {};
     const instanceName = getString(config.instance_name);
     const token = getString(config.instance_token);
-    if (instanceName) {
-      unresolved.set(instanceName, token || "");
-    }
+    if (!instanceName) continue;
+    const sid = (integration.sector_id ?? null) as string | null;
+    const arr = bySector.get(sid) || [];
+    arr.push({ name: instanceName, token: token || "" });
+    bySector.set(sid, arr);
   }
 
-  try {
-    const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET");
-    const all = extractInstancesList(allRaw);
+  for (const [sid, items] of bySector.entries()) {
+    const server = supabase && accountId
+      ? await resolveServerForSector(supabase, accountId, sid)
+      : GLOBAL_SERVER;
 
-    for (const instance of all) {
-      const name = getInstanceName(instance);
-      if (!name || !unresolved.has(name)) continue;
-      snapshots.set(name, resolveStatusSnapshot(instance));
-      unresolved.delete(name);
+    const remaining = new Map(items.map((i) => [i.name, i.token]));
+
+    try {
+      const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET", undefined, server);
+      const all = extractInstancesList(allRaw);
+
+      for (const instance of all) {
+        const name = getInstanceName(instance);
+        if (!name || !remaining.has(name)) continue;
+        snapshots.set(name, resolveStatusSnapshot(instance));
+        remaining.delete(name);
+      }
+    } catch (adminErr) {
+      console.warn(`[uazapi-manager] Admin fetchInstances failed for sector ${sid} (server: ${server.source})`);
     }
-  } catch (adminErr) {
-    console.warn(`[uazapi-manager] Admin fetchInstances failed while listing sector instances`);
-  }
 
-  await Promise.all(
-    Array.from(unresolved.entries()).map(async ([instanceName, token]) => {
-      if (!token) return;
-      const snapshot = await resolveStatusFromToken(token);
-      snapshots.set(instanceName, snapshot);
-    }),
-  );
+    await Promise.all(
+      Array.from(remaining.entries()).map(async ([instanceName, token]) => {
+        if (!token) return;
+        const snapshot = await resolveStatusFromToken(token, server);
+        snapshots.set(instanceName, snapshot);
+      }),
+    );
+  }
 
   return snapshots;
 }
@@ -279,14 +349,15 @@ function normalizeQuotedMessageId(value: unknown): string | undefined {
   return trimmed.includes(":") ? trimmed.split(":").pop() || trimmed : trimmed;
 }
 
-async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
-  console.log(`[uazapi-admin] Calling: ${method} ${UAZAPI_URL}${endpoint}`);
-  const r = await fetch(`${UAZAPI_URL}${endpoint}`, { 
+async function uazapiAdmin(endpoint: string, method: string, body?: unknown, server?: ServerConfig) {
+  const s = server || GLOBAL_SERVER;
+  console.log(`[uazapi-admin] Calling: ${method} ${s.host}${endpoint} (server: ${s.source})`);
+  const r = await fetch(`${s.host}${endpoint}`, { 
     method, 
     headers: { 
       "Content-Type": "application/json", 
-      "AdminToken": UAZAPI_ADMIN_TOKEN,
-      "admintoken": UAZAPI_ADMIN_TOKEN,
+      "AdminToken": s.adminToken,
+      "admintoken": s.adminToken,
     }, 
     body: body ? JSON.stringify(body) : undefined 
   });
@@ -300,9 +371,10 @@ async function uazapiAdmin(endpoint: string, method: string, body?: unknown) {
   return json;
 }
 
-async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown) {
-  console.log(`[uazapi] Calling: ${method} ${UAZAPI_URL}${endpoint}`);
-  const r = await fetch(`${UAZAPI_URL}${endpoint}`, { 
+async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown, server?: ServerConfig) {
+  const s = server || GLOBAL_SERVER;
+  console.log(`[uazapi] Calling: ${method} ${s.host}${endpoint} (server: ${s.source})`);
+  const r = await fetch(`${s.host}${endpoint}`, { 
     method, 
     headers: { "Content-Type": "application/json", "token": token }, 
     body: body ? JSON.stringify(body) : undefined 
@@ -385,6 +457,16 @@ serve(async (req) => {
 
     console.log(`[uazapi-manager] Found integration: ${intData?.id || "NONE"}, token: ${token ? "present" : "MISSING"}`);
 
+    // Resolve which UAZAPI server to use for this request.
+    // Priority: explicit sector_id > integration's sector > global fallback.
+    // This isolates "Operações" (new server) from "Vendas" (legacy global server).
+    let sectorServer: ServerConfig = GLOBAL_SERVER;
+    if (sector_id) {
+      sectorServer = await resolveServerForSector(supabase, accountId, sector_id);
+    } else if (integration_id) {
+      sectorServer = await resolveServerForIntegrationId(supabase, accountId, integration_id);
+    }
+
     // Ações que requerem token
     const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect", "delete_message"];
     if (tokenRequiredActions.includes(action) && !token) {
@@ -455,7 +537,7 @@ serve(async (req) => {
       };
 
       try {
-        const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET");
+        const allRaw = await uazapiAdmin("/instance/fetchInstances", "GET", undefined, sectorServer);
         const all = extractInstancesList(allRaw);
         const inst = all.find((i) => getInstanceName(i) === instanceName);
 
@@ -463,12 +545,12 @@ serve(async (req) => {
           statusSnapshot = resolveStatusSnapshot(inst);
         } else if (token) {
           console.warn(`[uazapi-manager] Instance ${instanceName} not found in admin list, trying instance-level status check`);
-          statusSnapshot = await resolveStatusFromToken(token);
+          statusSnapshot = await resolveStatusFromToken(token, sectorServer);
         }
       } catch (adminErr) {
         console.warn(`[uazapi-manager] Admin fetchInstances failed, trying instance-level status check for: ${instanceName}`);
         if (token) {
-          statusSnapshot = await resolveStatusFromToken(token);
+          statusSnapshot = await resolveStatusFromToken(token, sectorServer);
         }
       }
 
@@ -489,17 +571,17 @@ serve(async (req) => {
       }
     
     } else if (action === "create") {
-      const r = await uazapiAdmin("/instance/init", "POST", { name: instanceName });
+      const r = await uazapiAdmin("/instance/init", "POST", { name: instanceName }, sectorServer);
       const newToken = r.token || r.instance?.token;
       await supabase.from("integrations").upsert({ account_id: accountId, type: "whatsapp", sector_id: sector_id || null, status: "pending", config: { provider: "uazapi", instance_name: instanceName, instance_token: newToken } }, { onConflict: "account_id,type,sector_id" });
       result = { ...r, token: newToken };
     
     } else if (action === "connect" || action === "qrcode") {
       const instName = payload.instance_name || instanceName;
-      result = await uazapiAdmin(`/instance/connect/${instName}`, "GET");
+      result = await uazapiAdmin(`/instance/connect/${instName}`, "GET", undefined, sectorServer);
     
     } else if (action === "disconnect") {
-      try { await uazapiInstance("/logout", "POST", token!); } catch {}
+      try { await uazapiInstance("/logout", "POST", token!, undefined, sectorServer); } catch {}
       if (intData?.id) await supabase.from("integrations").update({ status: "disconnected" }).eq("id", intData.id);
       result = { disconnected: true };
     
@@ -517,7 +599,7 @@ serve(async (req) => {
       }
       if (payload.mentions) textBody.mentions = payload.mentions;
       
-      result = await uazapiInstance("/send/text", "POST", token!, textBody);
+      result = await uazapiInstance("/send/text", "POST", token!, textBody, sectorServer);
     
     } else if (action === "send_media") {
       // ✅ NOVO: Suporte a envio de mídia
@@ -536,7 +618,7 @@ serve(async (req) => {
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
-      result = await uazapiInstance("/send/media", "POST", token!, mediaBody);
+      result = await uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer);
     
     } else if (action === "send_to_group") {
       // ✅ CORRIGIDO: Usar /send/text para grupos
@@ -547,7 +629,7 @@ serve(async (req) => {
       if (normalizedQuotedMessageId) { groupBody.replyid = normalizedQuotedMessageId; }
       if (payload.mentions) groupBody.mentions = payload.mentions;
       
-      result = await uazapiInstance("/send/text", "POST", token!, groupBody);
+      result = await uazapiInstance("/send/text", "POST", token!, groupBody, sectorServer);
     
     } else if (action === "send_media_to_group") {
       // ✅ NOVO: Mídia em grupos
@@ -563,14 +645,14 @@ serve(async (req) => {
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
-      result = await uazapiInstance("/send/media", "POST", token!, mediaBody);
+      result = await uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer);
     
     } else if (action === "list_groups") {
-      const r = await uazapiInstance("/group/fetchAllGroups", "GET", token!);
+      const r = await uazapiInstance("/group/fetchAllGroups", "GET", token!, undefined, sectorServer);
       result = { groups: (Array.isArray(r) ? r : r.groups || []).map((g:any) => ({ group_jid: g.JID||g.jid||g.id, name: g.Name||g.name||g.Subject })) };
     
     } else if (action === "list_instances") {
-      const allRaw = await uazapiAdmin("/instance/all", "GET");
+      const allRaw = await uazapiAdmin("/instance/all", "GET", undefined, sectorServer);
       const all = extractInstancesList(allRaw);
       
       // Get all integrations for this account to know which are linked
@@ -623,7 +705,10 @@ serve(async (req) => {
         integrations.map((integration) => ({
           config: asRecord(integration.config),
           status: integration.status,
+          sector_id: integration.sector_id,
         })),
+        supabase,
+        accountId,
       );
 
       const pendingStatusUpdates = integrations
@@ -671,7 +756,7 @@ serve(async (req) => {
       };
     
     } else if (action === "add_instance_to_sector") {
-      const allRaw = await uazapiAdmin("/instance/all", "GET");
+      const allRaw = await uazapiAdmin("/instance/all", "GET", undefined, sectorServer);
       const all = extractInstancesList(allRaw);
       const inst = all.find((i) => getInstanceName(i) === payload.instance_name);
       if (!inst) return new Response(JSON.stringify({ error: "Instance not found" }), { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -766,7 +851,7 @@ serve(async (req) => {
       for (const ep of endpoints) {
         try {
           console.log(`[uazapi-manager] Trying ${ep.method} ${ep.path}...`);
-          webhookResult = await uazapiInstance(ep.path, ep.method, token!, webhookConfig);
+          webhookResult = await uazapiInstance(ep.path, ep.method, token!, webhookConfig, sectorServer);
           webhookSuccess = true;
           console.log(`[uazapi-manager] Webhook configured via ${ep.path}`);
           break;
@@ -778,7 +863,7 @@ serve(async (req) => {
       if (!webhookSuccess) {
         // Fallback: tentar via admin endpoint
         try {
-          webhookResult = await uazapiAdmin(`/instance/webhook/${instanceName}`, "PUT", webhookConfig);
+          webhookResult = await uazapiAdmin(`/instance/webhook/${instanceName}`, "PUT", webhookConfig, sectorServer);
           webhookSuccess = true;
           console.log(`[uazapi-manager] Webhook configured via admin endpoint`);
         } catch (err) {
@@ -808,7 +893,7 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      result = await uazapiInstance("/message/delete", "POST", token!, { id: messageId });
+      result = await uazapiInstance("/message/delete", "POST", token!, { id: messageId }, sectorServer);
       result = { deleted: true, api_response: result };
     
     } else if (action === "unlink_instance") {
@@ -843,6 +928,75 @@ serve(async (req) => {
       
       console.log(`[uazapi-manager] Integration ${integration_id} unlinked successfully`);
       result = { success: true };
+    
+    } else if (action === "get_sector_server") {
+      // Returns the sector's RoyZapp server config (host + secret name).
+      // Does NOT return the actual secret value.
+      if (!sector_id) {
+        return new Response(JSON.stringify({ error: "sector_id é obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const { data } = await supabase
+        .from("sector_settings")
+        .select("royzapp_host, royzapp_admin_token_secret_name")
+        .eq("account_id", accountId)
+        .eq("sector_id", sector_id)
+        .maybeSingle();
+      const host = (data?.royzapp_host || "").trim();
+      const secretName = (data?.royzapp_admin_token_secret_name || "").trim();
+      const secretConfigured = secretName ? !!Deno.env.get(secretName) : false;
+      result = {
+        host: host || null,
+        admin_token_secret_name: secretName || null,
+        secret_configured: secretConfigured,
+        using_global_fallback: !host || !secretName || !secretConfigured,
+        global_host: UAZAPI_URL || null,
+      };
+    
+    } else if (action === "update_sector_server") {
+      // Admin-only: configure/clear the sector's custom server.
+      // Pass host=null and admin_token_secret_name=null to revert to global fallback.
+      if (!sector_id) {
+        return new Response(JSON.stringify({ error: "sector_id é obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const isAdmin = userData.role === "admin" || userData.is_also_admin === true;
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: "Apenas administradores podem alterar o servidor de um setor." }), { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const newHost = payload.host ? String(payload.host).trim().replace(/\/$/, '') : null;
+      const newSecretName = payload.admin_token_secret_name ? String(payload.admin_token_secret_name).trim() : null;
+
+      // Validate host shape if provided
+      if (newHost && !/^https?:\/\//i.test(newHost)) {
+        return new Response(JSON.stringify({ error: "Host inválido. Use uma URL completa, ex: https://cs-roy-eternum.uazapi.com" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Validate secret exists when provided
+      if (newSecretName && !Deno.env.get(newSecretName)) {
+        return new Response(JSON.stringify({ error: `O secret "${newSecretName}" não está configurado no backend. Cadastre-o antes de salvar.` }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      // Upsert into sector_settings
+      const { data: existing } = await supabase
+        .from("sector_settings")
+        .select("id")
+        .eq("account_id", accountId)
+        .eq("sector_id", sector_id)
+        .maybeSingle();
+
+      if (existing) {
+        const { error: updErr } = await supabase
+          .from("sector_settings")
+          .update({ royzapp_host: newHost, royzapp_admin_token_secret_name: newSecretName })
+          .eq("id", existing.id);
+        if (updErr) throw updErr;
+      } else {
+        const { error: insErr } = await supabase
+          .from("sector_settings")
+          .insert({ account_id: accountId, sector_id, royzapp_host: newHost, royzapp_admin_token_secret_name: newSecretName });
+        if (insErr) throw insErr;
+      }
+      console.log(`[uazapi-manager] Sector "${sector_id}" server updated: host=${newHost || "(global)"}, secret=${newSecretName || "(global)"}`);
+      result = { success: true, host: newHost, admin_token_secret_name: newSecretName };
     }
 
     return new Response(JSON.stringify({ data: result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
