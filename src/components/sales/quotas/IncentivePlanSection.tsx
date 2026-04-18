@@ -60,6 +60,10 @@ export function IncentivePlanSection() {
   const [clawbackPercent, setClawbackPercent] = useState(100);
   const [quarterlyBonusEnabled, setQuarterlyBonusEnabled] = useState(false);
   const [quarterlyBonusValue, setQuarterlyBonusValue] = useState(0);
+  const [quarterlyBonusRules, setQuarterlyBonusRules] = useState("");
+  const [annualBonusEnabled, setAnnualBonusEnabled] = useState(false);
+  const [annualBonusValue, setAnnualBonusValue] = useState(0);
+  const [annualBonusRules, setAnnualBonusRules] = useState("");
   const [draftRates, setDraftRates] = useState<Record<string, { percent: number; fixed: number }>>({});
   const [draftTiers, setDraftTiers] = useState<{ min: number; max: string; multiplier: number; label: string }[]>([]);
 
