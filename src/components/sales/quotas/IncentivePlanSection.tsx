@@ -154,13 +154,16 @@ export function IncentivePlanSection() {
       planName !== activePlan.name ||
       planDesc !== (activePlan.description || "") ||
       bonusBase !== Number(activePlan.bonus_base_value) ||
+      quotaValue !== Number(activePlan.quota_value || 0) ||
+      goalValue !== Number(activePlan.goal_value || 0) ||
+      minimumAchievement !== Number(activePlan.minimum_achievement_percent ?? 40) ||
       clawbackEnabled !== activePlan.clawback_enabled ||
       clawbackDays !== activePlan.clawback_days ||
       clawbackPercent !== Number(activePlan.clawback_percent) ||
       quarterlyBonusEnabled !== activePlan.quarterly_bonus_enabled ||
       quarterlyBonusValue !== Number(activePlan.quarterly_bonus_value)
     );
-  }, [activePlan, planName, planDesc, bonusBase, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue]);
+  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue]);
 
   const hasTierChanges = useCallback(() => {
     if (draftTiers.length !== planTiers.length) return true;
