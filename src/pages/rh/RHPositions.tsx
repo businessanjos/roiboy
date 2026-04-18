@@ -89,7 +89,40 @@ export default function RHPositions() {
     return matchSearch && matchDept;
   });
 
-  const getDeptName = (id: string | null) => departments.find(d => d.id === id)?.name || "—";
+  const getDeptName = (id: string | null) => departments.find(d => d.id === id)?.name || "Sem departamento";
+  const getDeptColor = (id: string | null) => departments.find(d => d.id === id)?.color || "#94a3b8";
+
+  // Agrupar por departamento e ordenar internamente por hierarquia de senioridade
+  const grouped = (() => {
+    const groups = new Map<string, { id: string | null; name: string; color: string; items: HRPosition[] }>();
+    filtered.forEach(p => {
+      const key = p.department_id || "__none__";
+      if (!groups.has(key)) {
+        groups.set(key, {
+          id: p.department_id,
+          name: getDeptName(p.department_id),
+          color: getDeptColor(p.department_id),
+          items: [],
+        });
+      }
+      groups.get(key)!.items.push(p);
+    });
+    // Ordenar cargos dentro de cada grupo por senioridade (mais sênior primeiro), depois por título
+    groups.forEach(g => {
+      g.items.sort((a, b) => {
+        const ra = SENIORITY_RANK[a.seniority || ""] ?? 99;
+        const rb = SENIORITY_RANK[b.seniority || ""] ?? 99;
+        if (ra !== rb) return ra - rb;
+        return a.title.localeCompare(b.title);
+      });
+    });
+    // Ordenar grupos por nome de departamento (com "Sem departamento" no final)
+    return Array.from(groups.values()).sort((a, b) => {
+      if (!a.id && b.id) return 1;
+      if (a.id && !b.id) return -1;
+      return a.name.localeCompare(b.name);
+    });
+  })();
 
   const openDialog = (pos?: HRPosition) => {
     if (pos) {
