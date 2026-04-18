@@ -179,9 +179,14 @@ export function IncentivePlanSection() {
     autoSaveTimerRef.current = setTimeout(async () => {
       setAutoSaveStatus("saving");
       try {
-        if (planChanged) await handleSavePlanSilent();
-        if (hasRateChanges) await handleSaveRatesSilent();
-        if (tierChanged) await handleSaveTiersSilent();
+        // Always ensure plan exists first; capture its id for downstream saves
+        let planId = activePlan?.id ?? plans.find((p) => p.position_id === selectedPositionId && p.is_active)?.id ?? null;
+        if (planChanged || !planId) {
+          const saved = await handleSavePlanSilent();
+          planId = saved?.id ?? planId;
+        }
+        if (hasRateChanges && planId) await handleSaveRatesSilent(planId);
+        if (tierChanged && planId) await handleSaveTiersSilent(planId);
         setAutoSaveStatus("saved");
         setTimeout(() => setAutoSaveStatus("idle"), 2000);
       } catch {
@@ -199,7 +204,7 @@ export function IncentivePlanSection() {
   };
 
   const handleSavePlanSilent = async () => {
-    await savePlan.mutateAsync({
+    return await savePlan.mutateAsync({
       id: activePlan?.id,
       name: planName,
       description: planDesc,
@@ -214,10 +219,10 @@ export function IncentivePlanSection() {
     });
   };
 
-  const handleSaveRatesSilent = async () => {
-    const planId = activePlan?.id || plans.find((p) => p.position_id === selectedPositionId)?.id;
-    if (!planId) return;
-    for (const [productId, rate] of Object.entries(draftRates)) {
+  const handleSaveRatesSilent = async (planId: string) => {
+    const entries = Object.entries(draftRates);
+    if (entries.length === 0) return;
+    for (const [productId, rate] of entries) {
       await saveProductRate.mutateAsync({
         plan_id: planId,
         product_id: productId,
@@ -228,9 +233,7 @@ export function IncentivePlanSection() {
     setDraftRates({});
   };
 
-  const handleSaveTiersSilent = async () => {
-    const planId = activePlan?.id || plans.find((p) => p.position_id === selectedPositionId)?.id;
-    if (!planId) return;
+  const handleSaveTiersSilent = async (planId: string) => {
     await saveTiers.mutateAsync({
       planId,
       tiers: draftTiers.map((t) => ({
