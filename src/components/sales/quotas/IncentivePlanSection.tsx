@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save, Plus, Trash2, Gift, Percent, DollarSign, ShieldAlert, Zap, TrendingUp, TrendingDown, CheckCircle2, Loader2, Briefcase } from "lucide-react";
+import { Save, Plus, Trash2, Gift, Percent, DollarSign, ShieldAlert, Zap, TrendingUp, TrendingDown, CheckCircle2, Loader2, Briefcase, Target, Trophy } from "lucide-react";
 import { useQuotasIncentives, IncentivePlan } from "@/hooks/useQuotasIncentives";
 import { useHRPositions } from "@/hooks/useHRPositions";
 import { useHRDepartments } from "@/hooks/useHRDepartments";
@@ -52,6 +52,9 @@ export function IncentivePlanSection() {
   const [planName, setPlanName] = useState("");
   const [planDesc, setPlanDesc] = useState("");
   const [bonusBase, setBonusBase] = useState(0);
+  const [quotaValue, setQuotaValue] = useState(0);
+  const [goalValue, setGoalValue] = useState(0);
+  const [minimumAchievement, setMinimumAchievement] = useState(40);
   const [clawbackEnabled, setClawbackEnabled] = useState(false);
   const [clawbackDays, setClawbackDays] = useState(90);
   const [clawbackPercent, setClawbackPercent] = useState(100);
@@ -96,6 +99,9 @@ export function IncentivePlanSection() {
       setPlanName(activePlan.name);
       setPlanDesc(activePlan.description || "");
       setBonusBase(Number(activePlan.bonus_base_value));
+      setQuotaValue(Number(activePlan.quota_value || 0));
+      setGoalValue(Number(activePlan.goal_value || 0));
+      setMinimumAchievement(Number(activePlan.minimum_achievement_percent ?? 40));
       setClawbackEnabled(activePlan.clawback_enabled);
       setClawbackDays(activePlan.clawback_days);
       setClawbackPercent(Number(activePlan.clawback_percent));
@@ -107,6 +113,9 @@ export function IncentivePlanSection() {
       setPlanName(pos ? `Plano ${pos.title}` : "Novo Plano");
       setPlanDesc("");
       setBonusBase(0);
+      setQuotaValue(0);
+      setGoalValue(0);
+      setMinimumAchievement(40);
       setClawbackEnabled(false);
       setClawbackDays(90);
       setClawbackPercent(100);
@@ -145,13 +154,16 @@ export function IncentivePlanSection() {
       planName !== activePlan.name ||
       planDesc !== (activePlan.description || "") ||
       bonusBase !== Number(activePlan.bonus_base_value) ||
+      quotaValue !== Number(activePlan.quota_value || 0) ||
+      goalValue !== Number(activePlan.goal_value || 0) ||
+      minimumAchievement !== Number(activePlan.minimum_achievement_percent ?? 40) ||
       clawbackEnabled !== activePlan.clawback_enabled ||
       clawbackDays !== activePlan.clawback_days ||
       clawbackPercent !== Number(activePlan.clawback_percent) ||
       quarterlyBonusEnabled !== activePlan.quarterly_bonus_enabled ||
       quarterlyBonusValue !== Number(activePlan.quarterly_bonus_value)
     );
-  }, [activePlan, planName, planDesc, bonusBase, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue]);
+  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue]);
 
   const hasTierChanges = useCallback(() => {
     if (draftTiers.length !== planTiers.length) return true;
@@ -195,7 +207,7 @@ export function IncentivePlanSection() {
     }, 1500);
 
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
-  }, [planName, planDesc, bonusBase, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, draftRates, draftTiers]);
+  }, [planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, draftRates, draftTiers]);
 
   const getRate = (productId: string) => {
     if (draftRates[productId]) return draftRates[productId];
@@ -209,6 +221,9 @@ export function IncentivePlanSection() {
       name: planName,
       description: planDesc,
       bonus_base_value: bonusBase,
+      quota_value: quotaValue,
+      goal_value: goalValue,
+      minimum_achievement_percent: minimumAchievement,
       is_active: true,
       clawback_enabled: clawbackEnabled,
       clawback_days: clawbackDays,
@@ -406,6 +421,85 @@ export function IncentivePlanSection() {
                   <Input type="number" value={bonusBase || ""} onChange={(e) => setBonusBase(parseFloat(e.target.value) || 0)} placeholder="0" />
                 </div>
               </div>
+
+              {/* Quota / Meta / Mínimo */}
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-primary" />
+                  <p className="text-sm font-medium">Quota, Meta e Mínimo</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5 text-xs">
+                      <Trophy className="h-3.5 w-3.5 text-amber-600" />
+                      Meta (R$) — 100%
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
+                      <Input
+                        type="number"
+                        className="pl-8"
+                        value={goalValue || ""}
+                        onChange={(e) => setGoalValue(parseFloat(e.target.value) || 0)}
+                        placeholder="640000"
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">Objetivo principal do vendedor no período.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5 text-xs">
+                      <Zap className="h-3.5 w-3.5 text-green-600" />
+                      Quota (R$) — Acelerador
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
+                      <Input
+                        type="number"
+                        className="pl-8"
+                        value={quotaValue || ""}
+                        onChange={(e) => setQuotaValue(parseFloat(e.target.value) || 0)}
+                        placeholder="560000"
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">Patamar a partir do qual o acelerador é ativado.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5 text-xs">
+                      <ShieldAlert className="h-3.5 w-3.5 text-destructive" />
+                      Atingimento Mínimo (%)
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="pr-8"
+                        value={minimumAchievement}
+                        onChange={(e) => setMinimumAchievement(parseFloat(e.target.value) || 0)}
+                        placeholder="40"
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">%</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">Abaixo deste % da meta, o vendedor não recebe comissão.</p>
+                  </div>
+                </div>
+                {goalValue > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
+                    <Badge variant="outline" className="font-normal">
+                      Mínimo: R$ {((goalValue * minimumAchievement) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </Badge>
+                    {quotaValue > 0 && (
+                      <Badge variant="outline" className="font-normal">
+                        Acelerador a partir de: R$ {quotaValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="font-normal">
+                      Meta: R$ {goalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label>Descrição / Regras</Label>
                 <Textarea value={planDesc} onChange={(e) => setPlanDesc(e.target.value)} rows={3} placeholder="Descreva as regras gerais do plano..." />

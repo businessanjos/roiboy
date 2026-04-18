@@ -10875,13 +10875,16 @@ export type Database = {
           clawback_percent: number
           created_at: string
           description: string | null
+          goal_value: number
           id: string
           is_active: boolean | null
+          minimum_achievement_percent: number
           name: string
           period_type: string
           position_id: string | null
           quarterly_bonus_enabled: boolean
           quarterly_bonus_value: number
+          quota_value: number
           updated_at: string
         }
         Insert: {
@@ -10892,13 +10895,16 @@ export type Database = {
           clawback_percent?: number
           created_at?: string
           description?: string | null
+          goal_value?: number
           id?: string
           is_active?: boolean | null
+          minimum_achievement_percent?: number
           name: string
           period_type?: string
           position_id?: string | null
           quarterly_bonus_enabled?: boolean
           quarterly_bonus_value?: number
+          quota_value?: number
           updated_at?: string
         }
         Update: {
@@ -10909,13 +10915,16 @@ export type Database = {
           clawback_percent?: number
           created_at?: string
           description?: string | null
+          goal_value?: number
           id?: string
           is_active?: boolean | null
+          minimum_achievement_percent?: number
           name?: string
           period_type?: string
           position_id?: string | null
           quarterly_bonus_enabled?: boolean
           quarterly_bonus_value?: number
+          quota_value?: number
           updated_at?: string
         }
         Relationships: [
