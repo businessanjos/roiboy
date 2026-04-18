@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save, Plus, Trash2, Gift, Percent, DollarSign, ShieldAlert, Zap, TrendingUp, TrendingDown, CheckCircle2, Loader2, Briefcase } from "lucide-react";
+import { Save, Plus, Trash2, Gift, Percent, DollarSign, ShieldAlert, Zap, TrendingUp, TrendingDown, CheckCircle2, Loader2, Briefcase, Target, Trophy } from "lucide-react";
 import { useQuotasIncentives, IncentivePlan } from "@/hooks/useQuotasIncentives";
 import { useHRPositions } from "@/hooks/useHRPositions";
 import { useHRDepartments } from "@/hooks/useHRDepartments";
