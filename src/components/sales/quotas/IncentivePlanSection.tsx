@@ -421,6 +421,85 @@ export function IncentivePlanSection() {
                   <Input type="number" value={bonusBase || ""} onChange={(e) => setBonusBase(parseFloat(e.target.value) || 0)} placeholder="0" />
                 </div>
               </div>
+
+              {/* Quota / Meta / Mínimo */}
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-primary" />
+                  <p className="text-sm font-medium">Quota, Meta e Mínimo</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5 text-xs">
+                      <Trophy className="h-3.5 w-3.5 text-amber-600" />
+                      Meta (R$) — 100%
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
+                      <Input
+                        type="number"
+                        className="pl-8"
+                        value={goalValue || ""}
+                        onChange={(e) => setGoalValue(parseFloat(e.target.value) || 0)}
+                        placeholder="640000"
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">Objetivo principal do vendedor no período.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5 text-xs">
+                      <Zap className="h-3.5 w-3.5 text-green-600" />
+                      Quota (R$) — Acelerador
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
+                      <Input
+                        type="number"
+                        className="pl-8"
+                        value={quotaValue || ""}
+                        onChange={(e) => setQuotaValue(parseFloat(e.target.value) || 0)}
+                        placeholder="560000"
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">Patamar a partir do qual o acelerador é ativado.</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1.5 text-xs">
+                      <ShieldAlert className="h-3.5 w-3.5 text-destructive" />
+                      Atingimento Mínimo (%)
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="pr-8"
+                        value={minimumAchievement}
+                        onChange={(e) => setMinimumAchievement(parseFloat(e.target.value) || 0)}
+                        placeholder="40"
+                      />
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">%</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">Abaixo deste % da meta, o vendedor não recebe comissão.</p>
+                  </div>
+                </div>
+                {goalValue > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1 text-[11px]">
+                    <Badge variant="outline" className="font-normal">
+                      Mínimo: R$ {((goalValue * minimumAchievement) / 100).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </Badge>
+                    {quotaValue > 0 && (
+                      <Badge variant="outline" className="font-normal">
+                        Acelerador a partir de: R$ {quotaValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="font-normal">
+                      Meta: R$ {goalValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-2">
                 <Label>Descrição / Regras</Label>
                 <Textarea value={planDesc} onChange={(e) => setPlanDesc(e.target.value)} rows={3} placeholder="Descreva as regras gerais do plano..." />
