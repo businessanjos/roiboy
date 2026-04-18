@@ -235,7 +235,6 @@ export function useQuotasIncentives(year: number, month: number) {
       queryClient.invalidateQueries({ queryKey: ["incentive-plans"] });
       queryClient.invalidateQueries({ queryKey: ["incentive-product-rates"] });
       queryClient.invalidateQueries({ queryKey: ["incentive-tiers"] });
-      toast.success("Plano salvo com sucesso");
     },
     onError: (err: any) => toast.error("Erro ao salvar plano: " + err.message),
   });
