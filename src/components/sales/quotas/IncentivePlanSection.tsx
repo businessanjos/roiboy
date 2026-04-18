@@ -52,6 +52,9 @@ export function IncentivePlanSection() {
   const [planName, setPlanName] = useState("");
   const [planDesc, setPlanDesc] = useState("");
   const [bonusBase, setBonusBase] = useState(0);
+  const [quotaValue, setQuotaValue] = useState(0);
+  const [goalValue, setGoalValue] = useState(0);
+  const [minimumAchievement, setMinimumAchievement] = useState(40);
   const [clawbackEnabled, setClawbackEnabled] = useState(false);
   const [clawbackDays, setClawbackDays] = useState(90);
   const [clawbackPercent, setClawbackPercent] = useState(100);
