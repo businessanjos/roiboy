@@ -437,11 +437,15 @@ export function IncentivePlanSection() {
                     <div className="relative">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         className="pl-8"
-                        value={goalValue || ""}
-                        onChange={(e) => setGoalValue(parseFloat(e.target.value) || 0)}
-                        placeholder="640000"
+                        value={goalValue ? goalValue.toLocaleString("pt-BR") : ""}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, "");
+                          setGoalValue(digits ? parseInt(digits, 10) : 0);
+                        }}
+                        placeholder="640.000"
                       />
                     </div>
                     <p className="text-[11px] text-muted-foreground">Objetivo principal (100%) — comissão cheia ao atingir.</p>
@@ -454,11 +458,15 @@ export function IncentivePlanSection() {
                     <div className="relative">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         className="pl-8"
-                        value={quotaValue || ""}
-                        onChange={(e) => setQuotaValue(parseFloat(e.target.value) || 0)}
-                        placeholder="800000"
+                        value={quotaValue ? quotaValue.toLocaleString("pt-BR") : ""}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, "");
+                          setQuotaValue(digits ? parseInt(digits, 10) : 0);
+                        }}
+                        placeholder="800.000"
                       />
                     </div>
                     <p className="text-[11px] text-muted-foreground">Patamar acima da meta que ativa o acelerador de comissão.</p>
@@ -679,10 +687,11 @@ export function IncentivePlanSection() {
                       <TableCell className="text-center">
                         <Input
                           type="number"
-                          value={tier.min}
+                          value={(tier as any)._minStr ?? (tier.min || "")}
                           onChange={(e) => {
                             const t = [...draftTiers];
-                            t[idx] = { ...t[idx], min: parseFloat(e.target.value) || 0 };
+                            const v = e.target.value;
+                            t[idx] = { ...t[idx], min: v === "" ? 0 : parseFloat(v) || 0, _minStr: v } as any;
                             setDraftTiers(t);
                           }}
                           className="w-20 text-center mx-auto"
@@ -705,10 +714,11 @@ export function IncentivePlanSection() {
                         <Input
                           type="number"
                           step={0.1}
-                          value={tier.multiplier}
+                          value={(tier as any)._multStr ?? (tier.multiplier || "")}
                           onChange={(e) => {
                             const t = [...draftTiers];
-                            t[idx] = { ...t[idx], multiplier: parseFloat(e.target.value) || 0 };
+                            const v = e.target.value;
+                            t[idx] = { ...t[idx], multiplier: v === "" ? 0 : parseFloat(v) || 0, _multStr: v } as any;
                             setDraftTiers(t);
                           }}
                           className="w-20 text-center mx-auto"
