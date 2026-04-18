@@ -629,15 +629,17 @@ export function IncentivePlanSection() {
                         </TableCell>
                         <TableCell className="text-center">
                           <Input
-                            type="number"
-                            min={0}
-                            step={100}
+                            type="text"
+                            inputMode="numeric"
                             className="w-32 text-center mx-auto"
-                            value={rate.fixed || ""}
-                            onChange={(e) => setDraftRates((prev) => ({
-                              ...prev,
-                              [product.id]: { ...getRate(product.id), fixed: parseFloat(e.target.value) || 0 },
-                            }))}
+                            value={rate.fixed ? rate.fixed.toLocaleString("pt-BR") : ""}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/\D/g, "");
+                              setDraftRates((prev) => ({
+                                ...prev,
+                                [product.id]: { ...getRate(product.id), fixed: digits ? parseInt(digits, 10) : 0 },
+                              }));
+                            }}
                           />
                         </TableCell>
                       </TableRow>
