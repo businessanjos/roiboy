@@ -437,11 +437,15 @@ export function IncentivePlanSection() {
                     <div className="relative">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         className="pl-8"
-                        value={goalValue || ""}
-                        onChange={(e) => setGoalValue(parseFloat(e.target.value) || 0)}
-                        placeholder="640000"
+                        value={goalValue ? goalValue.toLocaleString("pt-BR") : ""}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, "");
+                          setGoalValue(digits ? parseInt(digits, 10) : 0);
+                        }}
+                        placeholder="640.000"
                       />
                     </div>
                     <p className="text-[11px] text-muted-foreground">Objetivo principal (100%) — comissão cheia ao atingir.</p>
@@ -454,11 +458,15 @@ export function IncentivePlanSection() {
                     <div className="relative">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         className="pl-8"
-                        value={quotaValue || ""}
-                        onChange={(e) => setQuotaValue(parseFloat(e.target.value) || 0)}
-                        placeholder="800000"
+                        value={quotaValue ? quotaValue.toLocaleString("pt-BR") : ""}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, "");
+                          setQuotaValue(digits ? parseInt(digits, 10) : 0);
+                        }}
+                        placeholder="800.000"
                       />
                     </div>
                     <p className="text-[11px] text-muted-foreground">Patamar acima da meta que ativa o acelerador de comissão.</p>
