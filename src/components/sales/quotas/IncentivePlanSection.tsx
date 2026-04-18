@@ -111,6 +111,10 @@ export function IncentivePlanSection() {
       setClawbackPercent(Number(activePlan.clawback_percent));
       setQuarterlyBonusEnabled(activePlan.quarterly_bonus_enabled);
       setQuarterlyBonusValue(Number(activePlan.quarterly_bonus_value));
+      setQuarterlyBonusRules((activePlan as any).quarterly_bonus_rules || "");
+      setAnnualBonusEnabled((activePlan as any).annual_bonus_enabled || false);
+      setAnnualBonusValue(Number((activePlan as any).annual_bonus_value || 0));
+      setAnnualBonusRules((activePlan as any).annual_bonus_rules || "");
     } else {
       // Defaults for new plan
       const pos = positions.find((p) => p.id === selectedPositionId);
@@ -125,6 +129,10 @@ export function IncentivePlanSection() {
       setClawbackPercent(100);
       setQuarterlyBonusEnabled(false);
       setQuarterlyBonusValue(0);
+      setQuarterlyBonusRules("");
+      setAnnualBonusEnabled(false);
+      setAnnualBonusValue(0);
+      setAnnualBonusRules("");
     }
     setTimeout(() => { initializedRef.current = true; }, 150);
   }, [activePlan, selectedPositionId]);
