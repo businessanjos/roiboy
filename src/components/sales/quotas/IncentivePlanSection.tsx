@@ -547,33 +547,89 @@ export function IncentivePlanSection() {
               </div>
 
               {/* Quarterly Bonus */}
-              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
-                <div className="flex items-center gap-3">
-                  <Zap className="h-4 w-4 text-amber-500" />
-                  <div>
-                    <p className="text-sm font-medium">Bônus Trimestral</p>
-                    <p className="text-xs text-muted-foreground">Bônus adicional por atingimento da meta no trimestre</p>
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Zap className="h-4 w-4 text-amber-500" />
+                    <div>
+                      <p className="text-sm font-medium">Bônus Trimestral</p>
+                      <p className="text-xs text-muted-foreground">Bônus adicional pago ao fim de cada trimestre. Acumula com o mensal.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {quarterlyBonusEnabled && (
+                      <div className="relative w-40">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          className="pl-8 text-right"
+                          value={quarterlyBonusValue ? quarterlyBonusValue.toLocaleString("pt-BR") : ""}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, "");
+                            setQuarterlyBonusValue(digits ? parseInt(digits, 10) : 0);
+                          }}
+                          placeholder="0"
+                        />
+                      </div>
+                    )}
+                    <Switch checked={quarterlyBonusEnabled} onCheckedChange={setQuarterlyBonusEnabled} />
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  {quarterlyBonusEnabled && (
-                    <div className="relative w-40">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        className="pl-8 text-right"
-                        value={quarterlyBonusValue ? quarterlyBonusValue.toLocaleString("pt-BR") : ""}
-                        onChange={(e) => {
-                          const digits = e.target.value.replace(/\D/g, "");
-                          setQuarterlyBonusValue(digits ? parseInt(digits, 10) : 0);
-                        }}
-                        placeholder="0"
-                      />
+                {quarterlyBonusEnabled && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Regras do Bônus Trimestral</Label>
+                    <Textarea
+                      value={quarterlyBonusRules}
+                      onChange={(e) => setQuarterlyBonusRules(e.target.value)}
+                      rows={3}
+                      placeholder="Ex: Pago ao atingir 100% da soma das metas dos 3 meses do trimestre. Caso atinja entre 80% e 99%, recebe 50% do bônus."
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Annual Bonus */}
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Trophy className="h-4 w-4 text-amber-600" />
+                    <div>
+                      <p className="text-sm font-medium">Bônus Anual</p>
+                      <p className="text-xs text-muted-foreground">Bônus adicional pago no fechamento do ano. Acumula com o mensal e trimestral.</p>
                     </div>
-                  )}
-                  <Switch checked={quarterlyBonusEnabled} onCheckedChange={setQuarterlyBonusEnabled} />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {annualBonusEnabled && (
+                      <div className="relative w-40">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          className="pl-8 text-right"
+                          value={annualBonusValue ? annualBonusValue.toLocaleString("pt-BR") : ""}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, "");
+                            setAnnualBonusValue(digits ? parseInt(digits, 10) : 0);
+                          }}
+                          placeholder="0"
+                        />
+                      </div>
+                    )}
+                    <Switch checked={annualBonusEnabled} onCheckedChange={setAnnualBonusEnabled} />
+                  </div>
                 </div>
+                {annualBonusEnabled && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Regras do Bônus Anual</Label>
+                    <Textarea
+                      value={annualBonusRules}
+                      onChange={(e) => setAnnualBonusRules(e.target.value)}
+                      rows={3}
+                      placeholder="Ex: Pago ao atingir 100% da meta anual (soma dos 12 meses). Atingimento entre 90% e 99% libera 50% do bônus."
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Clawback */}
