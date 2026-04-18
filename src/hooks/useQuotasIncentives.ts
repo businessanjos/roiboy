@@ -32,6 +32,10 @@ export interface IncentivePlan {
   clawback_percent: number;
   quarterly_bonus_enabled: boolean;
   quarterly_bonus_value: number;
+  quarterly_bonus_rules: string | null;
+  annual_bonus_enabled: boolean;
+  annual_bonus_value: number;
+  annual_bonus_rules: string | null;
   position_id: string | null;
   quota_value: number;
   goal_value: number;

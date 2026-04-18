@@ -60,6 +60,10 @@ export function IncentivePlanSection() {
   const [clawbackPercent, setClawbackPercent] = useState(100);
   const [quarterlyBonusEnabled, setQuarterlyBonusEnabled] = useState(false);
   const [quarterlyBonusValue, setQuarterlyBonusValue] = useState(0);
+  const [quarterlyBonusRules, setQuarterlyBonusRules] = useState("");
+  const [annualBonusEnabled, setAnnualBonusEnabled] = useState(false);
+  const [annualBonusValue, setAnnualBonusValue] = useState(0);
+  const [annualBonusRules, setAnnualBonusRules] = useState("");
   const [draftRates, setDraftRates] = useState<Record<string, { percent: number; fixed: number }>>({});
   const [draftTiers, setDraftTiers] = useState<{ min: number; max: string; multiplier: number; label: string }[]>([]);
 
@@ -107,6 +111,10 @@ export function IncentivePlanSection() {
       setClawbackPercent(Number(activePlan.clawback_percent));
       setQuarterlyBonusEnabled(activePlan.quarterly_bonus_enabled);
       setQuarterlyBonusValue(Number(activePlan.quarterly_bonus_value));
+      setQuarterlyBonusRules((activePlan as any).quarterly_bonus_rules || "");
+      setAnnualBonusEnabled((activePlan as any).annual_bonus_enabled || false);
+      setAnnualBonusValue(Number((activePlan as any).annual_bonus_value || 0));
+      setAnnualBonusRules((activePlan as any).annual_bonus_rules || "");
     } else {
       // Defaults for new plan
       const pos = positions.find((p) => p.id === selectedPositionId);
@@ -121,6 +129,10 @@ export function IncentivePlanSection() {
       setClawbackPercent(100);
       setQuarterlyBonusEnabled(false);
       setQuarterlyBonusValue(0);
+      setQuarterlyBonusRules("");
+      setAnnualBonusEnabled(false);
+      setAnnualBonusValue(0);
+      setAnnualBonusRules("");
     }
     setTimeout(() => { initializedRef.current = true; }, 150);
   }, [activePlan, selectedPositionId]);
@@ -161,9 +173,13 @@ export function IncentivePlanSection() {
       clawbackDays !== activePlan.clawback_days ||
       clawbackPercent !== Number(activePlan.clawback_percent) ||
       quarterlyBonusEnabled !== activePlan.quarterly_bonus_enabled ||
-      quarterlyBonusValue !== Number(activePlan.quarterly_bonus_value)
+      quarterlyBonusValue !== Number(activePlan.quarterly_bonus_value) ||
+      quarterlyBonusRules !== ((activePlan as any).quarterly_bonus_rules || "") ||
+      annualBonusEnabled !== ((activePlan as any).annual_bonus_enabled || false) ||
+      annualBonusValue !== Number((activePlan as any).annual_bonus_value || 0) ||
+      annualBonusRules !== ((activePlan as any).annual_bonus_rules || "")
     );
-  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue]);
+  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules]);
 
   const hasTierChanges = useCallback(() => {
     if (draftTiers.length !== planTiers.length) return true;
@@ -207,7 +223,7 @@ export function IncentivePlanSection() {
     }, 1500);
 
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
-  }, [planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, draftRates, draftTiers]);
+  }, [planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, draftRates, draftTiers]);
 
   const getRate = (productId: string) => {
     if (draftRates[productId]) return draftRates[productId];
@@ -230,8 +246,12 @@ export function IncentivePlanSection() {
       clawback_percent: clawbackPercent,
       quarterly_bonus_enabled: quarterlyBonusEnabled,
       quarterly_bonus_value: quarterlyBonusValue,
+      quarterly_bonus_rules: quarterlyBonusRules,
+      annual_bonus_enabled: annualBonusEnabled,
+      annual_bonus_value: annualBonusValue,
+      annual_bonus_rules: annualBonusRules,
       position_id: selectedPositionId,
-    });
+    } as any);
   };
 
   const handleSaveRatesSilent = async (planId: string) => {
@@ -527,33 +547,89 @@ export function IncentivePlanSection() {
               </div>
 
               {/* Quarterly Bonus */}
-              <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
-                <div className="flex items-center gap-3">
-                  <Zap className="h-4 w-4 text-amber-500" />
-                  <div>
-                    <p className="text-sm font-medium">Bônus Trimestral</p>
-                    <p className="text-xs text-muted-foreground">Bônus adicional por atingimento da meta no trimestre</p>
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Zap className="h-4 w-4 text-amber-500" />
+                    <div>
+                      <p className="text-sm font-medium">Bônus Trimestral</p>
+                      <p className="text-xs text-muted-foreground">Bônus adicional pago ao fim de cada trimestre. Acumula com o mensal.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {quarterlyBonusEnabled && (
+                      <div className="relative w-40">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          className="pl-8 text-right"
+                          value={quarterlyBonusValue ? quarterlyBonusValue.toLocaleString("pt-BR") : ""}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, "");
+                            setQuarterlyBonusValue(digits ? parseInt(digits, 10) : 0);
+                          }}
+                          placeholder="0"
+                        />
+                      </div>
+                    )}
+                    <Switch checked={quarterlyBonusEnabled} onCheckedChange={setQuarterlyBonusEnabled} />
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  {quarterlyBonusEnabled && (
-                    <div className="relative w-40">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        className="pl-8 text-right"
-                        value={quarterlyBonusValue ? quarterlyBonusValue.toLocaleString("pt-BR") : ""}
-                        onChange={(e) => {
-                          const digits = e.target.value.replace(/\D/g, "");
-                          setQuarterlyBonusValue(digits ? parseInt(digits, 10) : 0);
-                        }}
-                        placeholder="0"
-                      />
+                {quarterlyBonusEnabled && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Regras do Bônus Trimestral</Label>
+                    <Textarea
+                      value={quarterlyBonusRules}
+                      onChange={(e) => setQuarterlyBonusRules(e.target.value)}
+                      rows={3}
+                      placeholder="Ex: Pago ao atingir 100% da soma das metas dos 3 meses do trimestre. Caso atinja entre 80% e 99%, recebe 50% do bônus."
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Annual Bonus */}
+              <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <Trophy className="h-4 w-4 text-amber-600" />
+                    <div>
+                      <p className="text-sm font-medium">Bônus Anual</p>
+                      <p className="text-xs text-muted-foreground">Bônus adicional pago no fechamento do ano. Acumula com o mensal e trimestral.</p>
                     </div>
-                  )}
-                  <Switch checked={quarterlyBonusEnabled} onCheckedChange={setQuarterlyBonusEnabled} />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {annualBonusEnabled && (
+                      <div className="relative w-40">
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          className="pl-8 text-right"
+                          value={annualBonusValue ? annualBonusValue.toLocaleString("pt-BR") : ""}
+                          onChange={(e) => {
+                            const digits = e.target.value.replace(/\D/g, "");
+                            setAnnualBonusValue(digits ? parseInt(digits, 10) : 0);
+                          }}
+                          placeholder="0"
+                        />
+                      </div>
+                    )}
+                    <Switch checked={annualBonusEnabled} onCheckedChange={setAnnualBonusEnabled} />
+                  </div>
                 </div>
+                {annualBonusEnabled && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Regras do Bônus Anual</Label>
+                    <Textarea
+                      value={annualBonusRules}
+                      onChange={(e) => setAnnualBonusRules(e.target.value)}
+                      rows={3}
+                      placeholder="Ex: Pago ao atingir 100% da meta anual (soma dos 12 meses). Atingimento entre 90% e 99% libera 50% do bônus."
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Clawback */}
