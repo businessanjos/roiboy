@@ -246,8 +246,12 @@ export function IncentivePlanSection() {
       clawback_percent: clawbackPercent,
       quarterly_bonus_enabled: quarterlyBonusEnabled,
       quarterly_bonus_value: quarterlyBonusValue,
+      quarterly_bonus_rules: quarterlyBonusRules,
+      annual_bonus_enabled: annualBonusEnabled,
+      annual_bonus_value: annualBonusValue,
+      annual_bonus_rules: annualBonusRules,
       position_id: selectedPositionId,
-    });
+    } as any);
   };
 
   const handleSaveRatesSilent = async (planId: string) => {
