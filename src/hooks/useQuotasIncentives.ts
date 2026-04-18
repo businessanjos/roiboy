@@ -277,7 +277,6 @@ export function useQuotasIncentives(year: number, month: number) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incentive-tiers"] });
-      toast.success("Faixas de bônus salvas");
     },
     onError: (err: any) => toast.error("Erro: " + err.message),
   });
