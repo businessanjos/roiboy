@@ -221,19 +221,20 @@ export function useQuotasIncentives(year: number, month: number) {
       const payload = { ...plan, account_id: accountId! };
       if (plan.id) {
         const { id, created_at, updated_at, ...updatePayload } = payload;
-        const { error } = await supabase.from("sales_incentive_plans").update(updatePayload).eq("id", plan.id);
+        const { data, error } = await supabase.from("sales_incentive_plans").update(updatePayload).eq("id", plan.id).select().single();
         if (error) throw error;
+        return data as IncentivePlan;
       } else {
         const { id, created_at, updated_at, ...insertPayload } = payload;
-        const { error } = await supabase.from("sales_incentive_plans").insert({ ...insertPayload, name: insertPayload.name || "Novo Plano" });
+        const { data, error } = await supabase.from("sales_incentive_plans").insert({ ...insertPayload, name: insertPayload.name || "Novo Plano" }).select().single();
         if (error) throw error;
+        return data as IncentivePlan;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incentive-plans"] });
       queryClient.invalidateQueries({ queryKey: ["incentive-product-rates"] });
       queryClient.invalidateQueries({ queryKey: ["incentive-tiers"] });
-      toast.success("Plano salvo com sucesso");
     },
     onError: (err: any) => toast.error("Erro ao salvar plano: " + err.message),
   });
@@ -260,7 +261,6 @@ export function useQuotasIncentives(year: number, month: number) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incentive-product-rates"] });
-      toast.success("Comissão por produto salva");
     },
     onError: (err: any) => toast.error("Erro: " + err.message),
   });
@@ -277,7 +277,6 @@ export function useQuotasIncentives(year: number, month: number) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incentive-tiers"] });
-      toast.success("Faixas de bônus salvas");
     },
     onError: (err: any) => toast.error("Erro: " + err.message),
   });
