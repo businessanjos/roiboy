@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Save, Plus, Trash2, Gift, Percent, DollarSign, ShieldAlert, Zap, TrendingUp, TrendingDown, CheckCircle2, Loader2, Briefcase } from "lucide-react";
 import { useQuotasIncentives, IncentivePlan } from "@/hooks/useQuotasIncentives";
 import { useHRPositions } from "@/hooks/useHRPositions";
+import { useHRDepartments } from "@/hooks/useHRDepartments";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -24,7 +25,14 @@ export function IncentivePlanSection() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const { plans, productRates, tiers, loading, savePlan, saveProductRate, saveTiers } = useQuotasIncentives(now.getFullYear(), now.getMonth() + 1);
-  const { positions, loading: positionsLoading } = useHRPositions();
+  const { positions: allPositions, loading: positionsLoading } = useHRPositions();
+  const { departments } = useHRDepartments();
+
+  // Only show sales-related positions (Comercial department)
+  const salesDeptIds = departments
+    .filter((d) => /comercial|vendas|sales/i.test(d.name))
+    .map((d) => d.id);
+  const positions = allPositions.filter((p) => p.department_id && salesDeptIds.includes(p.department_id));
 
   const [selectedPositionId, setSelectedPositionId] = useState<string | null>(null);
 
