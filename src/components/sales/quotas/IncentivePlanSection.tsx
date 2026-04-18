@@ -418,7 +418,20 @@ export function IncentivePlanSection() {
                 </div>
                 <div className="space-y-2">
                   <Label>Bônus Base Mensal (R$) — ao atingir 100%</Label>
-                  <Input type="number" value={bonusBase || ""} onChange={(e) => setBonusBase(parseFloat(e.target.value) || 0)} placeholder="0" />
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      className="pl-8"
+                      value={bonusBase ? bonusBase.toLocaleString("pt-BR") : ""}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, "");
+                        setBonusBase(digits ? parseInt(digits, 10) : 0);
+                      }}
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -524,13 +537,17 @@ export function IncentivePlanSection() {
                 </div>
                 <div className="flex items-center gap-3">
                   {quarterlyBonusEnabled && (
-                    <div className="relative w-36">
+                    <div className="relative w-40">
                       <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         className="pl-8 text-right"
-                        value={quarterlyBonusValue || ""}
-                        onChange={(e) => setQuarterlyBonusValue(parseFloat(e.target.value) || 0)}
+                        value={quarterlyBonusValue ? quarterlyBonusValue.toLocaleString("pt-BR") : ""}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, "");
+                          setQuarterlyBonusValue(digits ? parseInt(digits, 10) : 0);
+                        }}
                         placeholder="0"
                       />
                     </div>
@@ -612,15 +629,17 @@ export function IncentivePlanSection() {
                         </TableCell>
                         <TableCell className="text-center">
                           <Input
-                            type="number"
-                            min={0}
-                            step={100}
+                            type="text"
+                            inputMode="numeric"
                             className="w-32 text-center mx-auto"
-                            value={rate.fixed || ""}
-                            onChange={(e) => setDraftRates((prev) => ({
-                              ...prev,
-                              [product.id]: { ...getRate(product.id), fixed: parseFloat(e.target.value) || 0 },
-                            }))}
+                            value={rate.fixed ? rate.fixed.toLocaleString("pt-BR") : ""}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/\D/g, "");
+                              setDraftRates((prev) => ({
+                                ...prev,
+                                [product.id]: { ...getRate(product.id), fixed: digits ? parseInt(digits, 10) : 0 },
+                              }));
+                            }}
                           />
                         </TableCell>
                       </TableRow>
