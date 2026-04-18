@@ -223,7 +223,7 @@ export function IncentivePlanSection() {
     }, 1500);
 
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
-  }, [planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, draftRates, draftTiers]);
+  }, [planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, draftRates, draftTiers]);
 
   const getRate = (productId: string) => {
     if (draftRates[productId]) return draftRates[productId];
