@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileText, ArrowLeft, Plus, Search, MoreVertical, Pencil, Trash2,
-  GraduationCap, Briefcase, TrendingUp, ChevronRight, X,
+  GraduationCap, Briefcase, TrendingUp, ChevronRight, X, Users, DollarSign, Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
