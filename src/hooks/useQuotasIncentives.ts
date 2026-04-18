@@ -33,6 +33,9 @@ export interface IncentivePlan {
   quarterly_bonus_enabled: boolean;
   quarterly_bonus_value: number;
   position_id: string | null;
+  quota_value: number;
+  goal_value: number;
+  minimum_achievement_percent: number;
   created_at: string;
   updated_at: string;
 }
