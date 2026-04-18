@@ -261,7 +261,6 @@ export function useQuotasIncentives(year: number, month: number) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["incentive-product-rates"] });
-      toast.success("Comissão por produto salva");
     },
     onError: (err: any) => toast.error("Erro: " + err.message),
   });
