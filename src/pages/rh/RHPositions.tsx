@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FileText, ArrowLeft, Plus, Search, MoreVertical, Pencil, Trash2,
-  GraduationCap, Briefcase, TrendingUp, ChevronRight, X,
+  GraduationCap, Briefcase, TrendingUp, ChevronRight, X, Users, DollarSign, Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,31 @@ import { useHRDepartments } from "@/hooks/useHRDepartments";
 
 const SENIORITY_OPTIONS = ["Estagiário", "Júnior", "Pleno", "Sênior", "Especialista", "Coordenador", "Gerente", "Diretor", "C-Level"];
 const EDUCATION_OPTIONS = ["Ensino Médio", "Técnico", "Superior Incompleto", "Superior Completo", "Pós-graduação", "MBA", "Mestrado", "Doutorado"];
+
+// Hierarquia (do mais sênior para o mais júnior) — usada para ordenar cards dentro do departamento
+const SENIORITY_RANK: Record<string, number> = {
+  "C-Level": 0,
+  "Diretor": 1,
+  "Gerente": 2,
+  "Coordenador": 3,
+  "Especialista": 4,
+  "Sênior": 5,
+  "Pleno": 6,
+  "Júnior": 7,
+  "Estagiário": 8,
+};
+
+const SENIORITY_COLORS: Record<string, string> = {
+  "C-Level": "bg-purple-500/10 text-purple-700 border-purple-200 dark:text-purple-300 dark:border-purple-800",
+  "Diretor": "bg-indigo-500/10 text-indigo-700 border-indigo-200 dark:text-indigo-300 dark:border-indigo-800",
+  "Gerente": "bg-blue-500/10 text-blue-700 border-blue-200 dark:text-blue-300 dark:border-blue-800",
+  "Coordenador": "bg-cyan-500/10 text-cyan-700 border-cyan-200 dark:text-cyan-300 dark:border-cyan-800",
+  "Especialista": "bg-teal-500/10 text-teal-700 border-teal-200 dark:text-teal-300 dark:border-teal-800",
+  "Sênior": "bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:text-emerald-300 dark:border-emerald-800",
+  "Pleno": "bg-amber-500/10 text-amber-700 border-amber-200 dark:text-amber-300 dark:border-amber-800",
+  "Júnior": "bg-orange-500/10 text-orange-700 border-orange-200 dark:text-orange-300 dark:border-orange-800",
+  "Estagiário": "bg-slate-500/10 text-slate-700 border-slate-200 dark:text-slate-300 dark:border-slate-800",
+};
 
 const EMPTY_FORM = {
   title: "",
@@ -64,7 +89,40 @@ export default function RHPositions() {
     return matchSearch && matchDept;
   });
 
-  const getDeptName = (id: string | null) => departments.find(d => d.id === id)?.name || "—";
+  const getDeptName = (id: string | null) => departments.find(d => d.id === id)?.name || "Sem departamento";
+  const getDeptColor = (id: string | null) => departments.find(d => d.id === id)?.color || "#94a3b8";
+
+  // Agrupar por departamento e ordenar internamente por hierarquia de senioridade
+  const grouped = (() => {
+    const groups = new Map<string, { id: string | null; name: string; color: string; items: HRPosition[] }>();
+    filtered.forEach(p => {
+      const key = p.department_id || "__none__";
+      if (!groups.has(key)) {
+        groups.set(key, {
+          id: p.department_id,
+          name: getDeptName(p.department_id),
+          color: getDeptColor(p.department_id),
+          items: [],
+        });
+      }
+      groups.get(key)!.items.push(p);
+    });
+    // Ordenar cargos dentro de cada grupo por senioridade (mais sênior primeiro), depois por título
+    groups.forEach(g => {
+      g.items.sort((a, b) => {
+        const ra = SENIORITY_RANK[a.seniority || ""] ?? 99;
+        const rb = SENIORITY_RANK[b.seniority || ""] ?? 99;
+        if (ra !== rb) return ra - rb;
+        return a.title.localeCompare(b.title);
+      });
+    });
+    // Ordenar grupos por nome de departamento (com "Sem departamento" no final)
+    return Array.from(groups.values()).sort((a, b) => {
+      if (!a.id && b.id) return 1;
+      if (a.id && !b.id) return -1;
+      return a.name.localeCompare(b.name);
+    });
+  })();
 
   const openDialog = (pos?: HRPosition) => {
     if (pos) {
@@ -142,7 +200,7 @@ export default function RHPositions() {
   const formatSalary = (v: number | null) => v ? `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : null;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/rh")}>
@@ -153,7 +211,9 @@ export default function RHPositions() {
         </div>
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-foreground">Cargos</h1>
-          <p className="text-sm text-muted-foreground">Cargos, competências e requisitos</p>
+          <p className="text-sm text-muted-foreground">
+            {positions.length} {positions.length === 1 ? "cargo cadastrado" : "cargos cadastrados"} • organizados por departamento e hierarquia
+          </p>
         </div>
         <Button onClick={() => openDialog()} className="gap-2">
           <Plus className="h-4 w-4" />
@@ -168,7 +228,7 @@ export default function RHPositions() {
           <Input placeholder="Buscar cargo..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
         <Select value={filterDept} onValueChange={setFilterDept}>
-          <SelectTrigger className="w-48"><SelectValue placeholder="Departamento" /></SelectTrigger>
+          <SelectTrigger className="w-56"><SelectValue placeholder="Departamento" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os departamentos</SelectItem>
             {departments.map(d => (
@@ -178,100 +238,162 @@ export default function RHPositions() {
         </Select>
       </div>
 
-      {/* Grid + Detail */}
-      <div className="flex gap-6">
-        {/* List */}
-        <div className={`flex-1 ${detailPosition ? "max-w-md" : ""}`}>
-          {loading ? (
-            <div className="text-center py-12 text-muted-foreground">Carregando...</div>
-          ) : filtered.length === 0 ? (
-            <div className="text-center py-16">
-              <FileText className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="text-muted-foreground">{search || filterDept !== "all" ? "Nenhum cargo encontrado" : "Nenhum cargo cadastrado"}</p>
-              {!search && filterDept === "all" && (
-                <Button variant="outline" className="mt-4" onClick={() => openDialog()}>
-                  <Plus className="h-4 w-4 mr-2" /> Criar primeiro cargo
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filtered.map(pos => (
-                <Card
-                  key={pos.id}
-                  className={`group cursor-pointer hover:shadow-md transition-all ${detailPosition?.id === pos.id ? "ring-2 ring-primary" : ""}`}
-                  onClick={() => setDetailPosition(pos)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-foreground text-sm">{pos.title}</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">{getDeptName(pos.department_id)}</p>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={e => { e.stopPropagation(); openDialog(pos); }}>
-                            <Pencil className="h-4 w-4 mr-2" /> Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive" onClick={e => { e.stopPropagation(); handleDelete(pos.id); }}>
-                            <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {pos.seniority && <Badge variant="secondary" className="text-[10px]">{pos.seniority}</Badge>}
-                      {pos.education_level && (
-                        <Badge variant="outline" className="text-[10px] gap-1">
-                          <GraduationCap className="h-3 w-3" />{pos.education_level}
-                        </Badge>
-                      )}
-                      {!pos.is_active && <Badge variant="outline" className="text-[10px] text-muted-foreground">Inativo</Badge>}
-                    </div>
-                    {(pos.salary_min || pos.salary_max) && (
-                      <p className="text-xs text-muted-foreground mt-1.5">
-                        {formatSalary(pos.salary_min)}{pos.salary_min && pos.salary_max ? " – " : ""}{formatSalary(pos.salary_max)}
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+      {/* Grouped grid by department */}
+      {loading ? (
+        <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 border border-dashed rounded-xl">
+          <FileText className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
+          <p className="text-muted-foreground">{search || filterDept !== "all" ? "Nenhum cargo encontrado" : "Nenhum cargo cadastrado"}</p>
+          {!search && filterDept === "all" && (
+            <Button variant="outline" className="mt-4" onClick={() => openDialog()}>
+              <Plus className="h-4 w-4 mr-2" /> Criar primeiro cargo
+            </Button>
           )}
         </div>
-
-        {/* Detail Panel */}
-        {detailPosition && (
-          <div className="flex-1 min-w-0">
-            <Card>
-              <CardContent className="p-5 space-y-4">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h2 className="text-lg font-semibold text-foreground">{detailPosition.title}</h2>
-                    <p className="text-sm text-muted-foreground">{getDeptName(detailPosition.department_id)}</p>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openDialog(detailPosition)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDetailPosition(null)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
+      ) : (
+        <div className="space-y-8">
+          {grouped.map(group => (
+            <section key={group.id || "__none__"}>
+              {/* Department header */}
+              <div className="flex items-center gap-3 mb-3">
+                <div
+                  className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ backgroundColor: `${group.color}1a`, color: group.color }}
+                >
+                  <Building2 className="h-4 w-4" strokeWidth={2} />
                 </div>
+                <div className="flex-1">
+                  <h2 className="text-base font-semibold text-foreground">{group.name}</h2>
+                  <p className="text-xs text-muted-foreground">
+                    {group.items.length} {group.items.length === 1 ? "cargo" : "cargos"}
+                  </p>
+                </div>
+                <div
+                  className="h-px flex-1 max-w-[40%]"
+                  style={{ background: `linear-gradient(to right, ${group.color}40, transparent)` }}
+                />
+              </div>
 
+              {/* Cards grid */}
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {group.items.map(pos => (
+                  <Card
+                    key={pos.id}
+                    className="group cursor-pointer hover:shadow-md hover:border-primary/30 transition-all relative overflow-hidden"
+                    onClick={() => setDetailPosition(pos)}
+                  >
+                    {/* Top accent bar by department color */}
+                    <div className="h-1" style={{ backgroundColor: group.color }} />
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2">{pos.title}</h3>
+                          {pos.seniority && (
+                            <Badge
+                              variant="outline"
+                              className={`mt-1.5 text-[10px] font-medium ${SENIORITY_COLORS[pos.seniority] || ""}`}
+                            >
+                              {pos.seniority}
+                            </Badge>
+                          )}
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 -mr-1 -mt-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={e => { e.stopPropagation(); openDialog(pos); }}>
+                              <Pencil className="h-4 w-4 mr-2" /> Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="text-destructive" onClick={e => { e.stopPropagation(); handleDelete(pos.id); }}>
+                              <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+
+                      {pos.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                          {pos.description}
+                        </p>
+                      )}
+
+                      <div className="space-y-1.5 pt-1 border-t">
+                        {(pos.salary_min || pos.salary_max) && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <DollarSign className="h-3 w-3 shrink-0" />
+                            <span className="truncate">
+                              {formatSalary(pos.salary_min)}{pos.salary_min && pos.salary_max ? " – " : ""}{formatSalary(pos.salary_max)}
+                            </span>
+                          </div>
+                        )}
+                        {pos.education_level && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <GraduationCap className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{pos.education_level}</span>
+                          </div>
+                        )}
+                        {pos.experience_years != null && pos.experience_years > 0 && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <Briefcase className="h-3 w-3 shrink-0" />
+                            <span>{pos.experience_years} ano(s) de experiência</span>
+                          </div>
+                        )}
+                        {(pos.technical_skills.length > 0 || pos.behavioral_skills.length > 0) && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <Users className="h-3 w-3 shrink-0" />
+                            <span>{pos.technical_skills.length + pos.behavioral_skills.length} competências</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {!pos.is_active && (
+                        <Badge variant="outline" className="text-[10px] text-muted-foreground">Inativo</Badge>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      <Dialog open={!!detailPosition} onOpenChange={(open) => !open && setDetailPosition(null)}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          {detailPosition && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1">
+                    <DialogTitle className="text-xl">{detailPosition.title}</DialogTitle>
+                    <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1.5">
+                      <Building2 className="h-3.5 w-3.5" />
+                      {getDeptName(detailPosition.department_id)}
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => openDialog(detailPosition)} className="gap-1.5">
+                    <Pencil className="h-3.5 w-3.5" /> Editar
+                  </Button>
+                </div>
+              </DialogHeader>
+
+              <div className="space-y-4">
                 <div className="flex flex-wrap gap-2">
-                  {detailPosition.seniority && <Badge variant="secondary">{detailPosition.seniority}</Badge>}
+                  {detailPosition.seniority && (
+                    <Badge variant="outline" className={SENIORITY_COLORS[detailPosition.seniority] || ""}>
+                      {detailPosition.seniority}
+                    </Badge>
+                  )}
                   {detailPosition.education_level && (
                     <Badge variant="outline" className="gap-1"><GraduationCap className="h-3 w-3" />{detailPosition.education_level}</Badge>
                   )}
-                  {detailPosition.experience_years && (
+                  {detailPosition.experience_years != null && detailPosition.experience_years > 0 && (
                     <Badge variant="outline" className="gap-1"><Briefcase className="h-3 w-3" />{detailPosition.experience_years} ano(s) exp.</Badge>
                   )}
                 </div>
@@ -365,11 +487,11 @@ export default function RHPositions() {
                     )}
                   </TabsContent>
                 </Tabs>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog - Create/Edit */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
