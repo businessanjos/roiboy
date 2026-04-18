@@ -274,8 +274,56 @@ export function IncentivePlanSection() {
 
   const selectedPosition = positions.find((p) => p.id === selectedPositionId);
 
+  const handleManualSave = async () => {
+    if (!selectedPositionId) return;
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    setAutoSaveStatus("saving");
+    try {
+      let planId = activePlan?.id ?? plans.find((p) => p.position_id === selectedPositionId && p.is_active)?.id ?? null;
+      const saved = await handleSavePlanSilent();
+      planId = saved?.id ?? planId;
+      if (planId) {
+        if (Object.keys(draftRates).length > 0) await handleSaveRatesSilent(planId);
+        await handleSaveTiersSilent(planId);
+      }
+      setAutoSaveStatus("saved");
+      setTimeout(() => setAutoSaveStatus("idle"), 2000);
+    } catch {
+      setAutoSaveStatus("idle");
+    }
+  };
+
+  const isSaving = autoSaveStatus === "saving" || savePlan.isPending || saveProductRate.isPending || saveTiers.isPending;
+
   return (
     <div className="space-y-6">
+      {/* ── Sticky Save Bar ── */}
+      <div className="sticky top-0 z-30 -mx-4 px-4 py-2 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Gift className="h-4 w-4 text-primary" />
+          <span className="text-sm font-medium">Plano de Incentivo</span>
+          {selectedPosition && (
+            <Badge variant="secondary" className="text-[10px]">{selectedPosition.title}</Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          {autoSaveStatus === "saving" && (
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...
+            </span>
+          )}
+          {autoSaveStatus === "saved" && (
+            <span className="flex items-center gap-1.5 text-xs text-green-600">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Salvo
+            </span>
+          )}
+          <Button size="sm" onClick={handleManualSave} disabled={isSaving || !selectedPositionId} className="gap-1.5">
+            {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            Salvar
+          </Button>
+        </div>
+      </div>
+
       {/* ── Position Selector ── */}
       <Card>
         <CardHeader className="pb-3">
