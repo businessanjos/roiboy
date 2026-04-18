@@ -99,6 +99,9 @@ export function IncentivePlanSection() {
       setPlanName(activePlan.name);
       setPlanDesc(activePlan.description || "");
       setBonusBase(Number(activePlan.bonus_base_value));
+      setQuotaValue(Number(activePlan.quota_value || 0));
+      setGoalValue(Number(activePlan.goal_value || 0));
+      setMinimumAchievement(Number(activePlan.minimum_achievement_percent ?? 40));
       setClawbackEnabled(activePlan.clawback_enabled);
       setClawbackDays(activePlan.clawback_days);
       setClawbackPercent(Number(activePlan.clawback_percent));
@@ -110,6 +113,9 @@ export function IncentivePlanSection() {
       setPlanName(pos ? `Plano ${pos.title}` : "Novo Plano");
       setPlanDesc("");
       setBonusBase(0);
+      setQuotaValue(0);
+      setGoalValue(0);
+      setMinimumAchievement(40);
       setClawbackEnabled(false);
       setClawbackDays(90);
       setClawbackPercent(100);
