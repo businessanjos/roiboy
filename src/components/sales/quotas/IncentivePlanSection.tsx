@@ -374,13 +374,16 @@ export function IncentivePlanSection() {
                 </div>
                 <div className="flex items-center gap-3">
                   {quarterlyBonusEnabled && (
-                    <Input
-                      type="number"
-                      className="w-32 text-right"
-                      value={quarterlyBonusValue || ""}
-                      onChange={(e) => setQuarterlyBonusValue(parseFloat(e.target.value) || 0)}
-                      placeholder="R$ 0"
-                    />
+                    <div className="relative w-36">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
+                      <Input
+                        type="number"
+                        className="pl-8 text-right"
+                        value={quarterlyBonusValue || ""}
+                        onChange={(e) => setQuarterlyBonusValue(parseFloat(e.target.value) || 0)}
+                        placeholder="0"
+                      />
+                    </div>
                   )}
                   <Switch checked={quarterlyBonusEnabled} onCheckedChange={setQuarterlyBonusEnabled} />
                 </div>
