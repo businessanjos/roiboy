@@ -173,9 +173,13 @@ export function IncentivePlanSection() {
       clawbackDays !== activePlan.clawback_days ||
       clawbackPercent !== Number(activePlan.clawback_percent) ||
       quarterlyBonusEnabled !== activePlan.quarterly_bonus_enabled ||
-      quarterlyBonusValue !== Number(activePlan.quarterly_bonus_value)
+      quarterlyBonusValue !== Number(activePlan.quarterly_bonus_value) ||
+      quarterlyBonusRules !== ((activePlan as any).quarterly_bonus_rules || "") ||
+      annualBonusEnabled !== ((activePlan as any).annual_bonus_enabled || false) ||
+      annualBonusValue !== Number((activePlan as any).annual_bonus_value || 0) ||
+      annualBonusRules !== ((activePlan as any).annual_bonus_rules || "")
     );
-  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue]);
+  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules]);
 
   const hasTierChanges = useCallback(() => {
     if (draftTiers.length !== planTiers.length) return true;
