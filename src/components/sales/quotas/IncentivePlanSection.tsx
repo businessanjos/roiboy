@@ -679,10 +679,11 @@ export function IncentivePlanSection() {
                       <TableCell className="text-center">
                         <Input
                           type="number"
-                          value={tier.min}
+                          value={(tier as any)._minStr ?? (tier.min || "")}
                           onChange={(e) => {
                             const t = [...draftTiers];
-                            t[idx] = { ...t[idx], min: parseFloat(e.target.value) || 0 };
+                            const v = e.target.value;
+                            t[idx] = { ...t[idx], min: v === "" ? 0 : parseFloat(v) || 0, _minStr: v } as any;
                             setDraftTiers(t);
                           }}
                           className="w-20 text-center mx-auto"
@@ -705,10 +706,11 @@ export function IncentivePlanSection() {
                         <Input
                           type="number"
                           step={0.1}
-                          value={tier.multiplier}
+                          value={(tier as any)._multStr ?? (tier.multiplier || "")}
                           onChange={(e) => {
                             const t = [...draftTiers];
-                            t[idx] = { ...t[idx], multiplier: parseFloat(e.target.value) || 0 };
+                            const v = e.target.value;
+                            t[idx] = { ...t[idx], multiplier: v === "" ? 0 : parseFloat(v) || 0, _multStr: v } as any;
                             setDraftTiers(t);
                           }}
                           className="w-20 text-center mx-auto"
