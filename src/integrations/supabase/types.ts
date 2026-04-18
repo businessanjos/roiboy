@@ -10869,6 +10869,9 @@ export type Database = {
       sales_incentive_plans: {
         Row: {
           account_id: string
+          annual_bonus_enabled: boolean
+          annual_bonus_rules: string | null
+          annual_bonus_value: number
           bonus_base_value: number | null
           clawback_days: number
           clawback_enabled: boolean
@@ -10883,12 +10886,16 @@ export type Database = {
           period_type: string
           position_id: string | null
           quarterly_bonus_enabled: boolean
+          quarterly_bonus_rules: string | null
           quarterly_bonus_value: number
           quota_value: number
           updated_at: string
         }
         Insert: {
           account_id: string
+          annual_bonus_enabled?: boolean
+          annual_bonus_rules?: string | null
+          annual_bonus_value?: number
           bonus_base_value?: number | null
           clawback_days?: number
           clawback_enabled?: boolean
@@ -10903,12 +10910,16 @@ export type Database = {
           period_type?: string
           position_id?: string | null
           quarterly_bonus_enabled?: boolean
+          quarterly_bonus_rules?: string | null
           quarterly_bonus_value?: number
           quota_value?: number
           updated_at?: string
         }
         Update: {
           account_id?: string
+          annual_bonus_enabled?: boolean
+          annual_bonus_rules?: string | null
+          annual_bonus_value?: number
           bonus_base_value?: number | null
           clawback_days?: number
           clawback_enabled?: boolean
@@ -10923,6 +10934,7 @@ export type Database = {
           period_type?: string
           position_id?: string | null
           quarterly_bonus_enabled?: boolean
+          quarterly_bonus_rules?: string | null
           quarterly_bonus_value?: number
           quota_value?: number
           updated_at?: string
