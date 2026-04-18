@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,17 +37,20 @@ export function IncentivePlanSection() {
   const [selectedPositionId, setSelectedPositionId] = useState<string | null>(null);
 
   // Derive active plan for selected position
-  const activePlan: IncentivePlan | null = plans.find(
-    (p) => p.is_active && p.position_id === selectedPositionId
-  ) ?? null;
+  const activePlan: IncentivePlan | null = useMemo(
+    () => plans.find((p) => p.is_active && p.position_id === selectedPositionId) ?? null,
+    [plans, selectedPositionId]
+  );
 
   // Derive product rates and tiers for this plan
-  const planProductRates = activePlan
-    ? productRates.filter((r) => r.plan_id === activePlan.id)
-    : [];
-  const planTiers = activePlan
-    ? tiers.filter((t) => t.plan_id === activePlan.id)
-    : [];
+  const planProductRates = useMemo(
+    () => (activePlan ? productRates.filter((r) => r.plan_id === activePlan.id) : []),
+    [activePlan, productRates]
+  );
+  const planTiers = useMemo(
+    () => (activePlan ? tiers.filter((t) => t.plan_id === activePlan.id) : []),
+    [activePlan, tiers]
+  );
 
   const [planName, setPlanName] = useState("");
   const [planDesc, setPlanDesc] = useState("");
