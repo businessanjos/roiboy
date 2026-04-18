@@ -418,7 +418,20 @@ export function IncentivePlanSection() {
                 </div>
                 <div className="space-y-2">
                   <Label>Bônus Base Mensal (R$) — ao atingir 100%</Label>
-                  <Input type="number" value={bonusBase || ""} onChange={(e) => setBonusBase(parseFloat(e.target.value) || 0)} placeholder="0" />
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      className="pl-8"
+                      value={bonusBase ? bonusBase.toLocaleString("pt-BR") : ""}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/\D/g, "");
+                        setBonusBase(digits ? parseInt(digits, 10) : 0);
+                      }}
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
               </div>
 
