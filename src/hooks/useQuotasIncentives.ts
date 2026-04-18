@@ -221,12 +221,14 @@ export function useQuotasIncentives(year: number, month: number) {
       const payload = { ...plan, account_id: accountId! };
       if (plan.id) {
         const { id, created_at, updated_at, ...updatePayload } = payload;
-        const { error } = await supabase.from("sales_incentive_plans").update(updatePayload).eq("id", plan.id);
+        const { data, error } = await supabase.from("sales_incentive_plans").update(updatePayload).eq("id", plan.id).select().single();
         if (error) throw error;
+        return data as IncentivePlan;
       } else {
         const { id, created_at, updated_at, ...insertPayload } = payload;
-        const { error } = await supabase.from("sales_incentive_plans").insert({ ...insertPayload, name: insertPayload.name || "Novo Plano" });
+        const { data, error } = await supabase.from("sales_incentive_plans").insert({ ...insertPayload, name: insertPayload.name || "Novo Plano" }).select().single();
         if (error) throw error;
+        return data as IncentivePlan;
       }
     },
     onSuccess: () => {
