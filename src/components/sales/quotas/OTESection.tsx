@@ -142,9 +142,10 @@ export function OTESection({ year, positionId, positionTitle }: OTESectionProps)
               <CardTitle className="text-base flex items-center gap-2">
                 <Wallet className="h-4 w-4" />
                 OTE — On-Target Earnings ({year})
+                {positionTitle && <Badge variant="secondary" className="text-[10px]">{positionTitle}</Badge>}
               </CardTitle>
               <CardDescription>
-                Base puxada do RH (CLT: salário × 13,33 + 70% encargos · PJ/Sócio: × 12). Variável = comissões + bônus a 100% da meta.
+                Apenas colaboradores com cargo "{positionTitle}". Base puxada do RH (CLT: salário × 13,33 + 70% encargos · PJ/Sócio: × 12).
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
