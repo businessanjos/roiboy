@@ -54,10 +54,6 @@ export default function SalesTeam() {
               <span className="hidden sm:inline">Performance</span>
               <span className="sm:hidden">Perf.</span>
             </TabsTrigger>
-            <TabsTrigger value="goals" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium whitespace-nowrap">
-              <Target className="h-3.5 w-3.5" />
-              Meta
-            </TabsTrigger>
             <TabsTrigger value="insights" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium whitespace-nowrap">
               <Sparkles className="h-3.5 w-3.5" />
               Insights
@@ -123,10 +119,6 @@ export default function SalesTeam() {
               <VideoCallTab />
             </TabsContent>
           </Tabs>
-        </TabsContent>
-
-        <TabsContent value="goals">
-          <TeamGoalsTab />
         </TabsContent>
 
         <TabsContent value="insights">
