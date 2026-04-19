@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { SpiffsSection } from "./SpiffsSection";
 import { OTESection } from "./OTESection";
 import { CommissionSimulator } from "./CommissionSimulator";
+import { PAYMENT_CHANNELS } from "./paymentChannels";
 
 export function IncentivePlanSection() {
   const now = new Date();
@@ -67,6 +68,9 @@ export function IncentivePlanSection() {
   const [annualBonusEnabled, setAnnualBonusEnabled] = useState(false);
   const [annualBonusValue, setAnnualBonusValue] = useState(0);
   const [annualBonusRules, setAnnualBonusRules] = useState("");
+  const [monthlyBonusChannel, setMonthlyBonusChannel] = useState<string>("folha");
+  const [quarterlyBonusChannel, setQuarterlyBonusChannel] = useState<string>("ferias_co");
+  const [annualBonusChannel, setAnnualBonusChannel] = useState<string>("ferias_co");
   const [draftRates, setDraftRates] = useState<Record<string, { percent: number; fixed: number }>>({});
   const [draftTiers, setDraftTiers] = useState<{ min: number; max: string; multiplier: number; label: string }[]>([]);
 
@@ -118,6 +122,9 @@ export function IncentivePlanSection() {
       setAnnualBonusEnabled((activePlan as any).annual_bonus_enabled || false);
       setAnnualBonusValue(Number((activePlan as any).annual_bonus_value || 0));
       setAnnualBonusRules((activePlan as any).annual_bonus_rules || "");
+      setMonthlyBonusChannel((activePlan as any).monthly_bonus_payment_channel || "folha");
+      setQuarterlyBonusChannel((activePlan as any).quarterly_bonus_payment_channel || "ferias_co");
+      setAnnualBonusChannel((activePlan as any).annual_bonus_payment_channel || "ferias_co");
     } else {
       // Defaults for new plan
       const pos = positions.find((p) => p.id === selectedPositionId);
@@ -136,6 +143,9 @@ export function IncentivePlanSection() {
       setAnnualBonusEnabled(false);
       setAnnualBonusValue(0);
       setAnnualBonusRules("");
+      setMonthlyBonusChannel("folha");
+      setQuarterlyBonusChannel("ferias_co");
+      setAnnualBonusChannel("ferias_co");
     }
     setTimeout(() => { initializedRef.current = true; }, 150);
   }, [activePlan, selectedPositionId]);
