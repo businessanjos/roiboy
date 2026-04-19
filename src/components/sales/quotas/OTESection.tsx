@@ -22,53 +22,55 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 
-const SALES_USER_IDS = [
-  "de43a643-0109-4afb-ac35-be768dbf4090",
-  "1232ec15-5f66-4b5f-9e74-f40d436f9d0f",
-  "d20201f6-a9bd-4934-ae50-07ce7a47574b",
-  "1d090543-1853-4cd0-bdb4-02e17a5df4d8",
-  "1ac1c97c-bff6-4174-b48c-9b524b404ce6",
-  "cefc44c7-d2e2-4937-94ac-069c1c94731b",
-];
+interface OTESectionProps {
+  year: number;
+  positionId: string;
+  positionTitle?: string;
+}
 
-export function OTESection({ year }: { year: number }) {
+export function OTESection({ year, positionId, positionTitle }: OTESectionProps) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const { userOTEs, upsertOTE } = useQuotasIncentives(year, 1);
 
   const [drafts, setDrafts] = useState<Record<string, { base: number; variable: number }>>({});
 
-  const usersQuery = useQuery({
-    queryKey: ["sales-team-users", accountId],
+  // Buscar colaboradores HR vinculados a este cargo (match por título)
+  const collaboratorsQuery = useQuery({
+    queryKey: ["sales-collaborators-by-position", accountId, positionTitle],
     queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hr_collaborators")
+        .select("user_id, salary, employment_type, full_name, position")
+        .eq("account_id", accountId!)
+        .ilike("position", `%${positionTitle}%`)
+        .not("user_id", "is", null);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!accountId && !!positionTitle,
+  });
+
+  const collaborators = collaboratorsQuery.data ?? [];
+  const userIds = collaborators.map((c) => c.user_id).filter(Boolean) as string[];
+
+  const usersQuery = useQuery({
+    queryKey: ["sales-team-users-by-position", accountId, positionId, userIds.join(",")],
+    queryFn: async () => {
+      if (userIds.length === 0) return [];
       const { data, error } = await supabase
         .from("users")
         .select("id, name")
         .eq("account_id", accountId!)
-        .in("id", SALES_USER_IDS)
+        .in("id", userIds)
         .order("name");
       if (error) throw error;
       return data;
     },
-    enabled: !!accountId,
-  });
-
-  const collaboratorsQuery = useQuery({
-    queryKey: ["sales-collaborators-hr", accountId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_collaborators")
-        .select("user_id, salary, employment_type, full_name")
-        .eq("account_id", accountId!)
-        .in("user_id", SALES_USER_IDS);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!accountId,
+    enabled: !!accountId && userIds.length > 0,
   });
 
   const users = usersQuery.data ?? [];
-  const collaborators = collaboratorsQuery.data ?? [];
 
   // Calcula a Base Anual automaticamente a partir do RH:
   // CLT: salário × 13,33 (12 meses + 13º + 1/3 férias) + ~70% encargos patronais (FGTS, INSS, provisões)
@@ -140,9 +142,10 @@ export function OTESection({ year }: { year: number }) {
               <CardTitle className="text-base flex items-center gap-2">
                 <Wallet className="h-4 w-4" />
                 OTE — On-Target Earnings ({year})
+                {positionTitle && <Badge variant="secondary" className="text-[10px]">{positionTitle}</Badge>}
               </CardTitle>
               <CardDescription>
-                Base puxada do RH (CLT: salário × 13,33 + 70% encargos · PJ/Sócio: × 12). Variável = comissões + bônus a 100% da meta.
+                Apenas colaboradores com cargo "{positionTitle}". Base puxada do RH (CLT: salário × 13,33 + 70% encargos · PJ/Sócio: × 12).
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -230,6 +233,13 @@ export function OTESection({ year }: { year: number }) {
                   </TableRow>
                 );
               })}
+              {users.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8 text-sm">
+                    Nenhum colaborador com cargo "{positionTitle}" cadastrado no RH.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
