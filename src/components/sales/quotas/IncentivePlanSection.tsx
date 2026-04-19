@@ -20,6 +20,7 @@ import { SpiffsSection } from "./SpiffsSection";
 import { OTESection } from "./OTESection";
 import { CommissionSimulator } from "./CommissionSimulator";
 import { PAYMENT_CHANNELS } from "./paymentChannels";
+import { ProductCommissionCard } from "./ProductCommissionCard";
 
 export function IncentivePlanSection() {
   const now = new Date();
