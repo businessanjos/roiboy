@@ -35,20 +35,20 @@ export function OTESection({ year, positionId, positionTitle }: OTESectionProps)
 
   const [drafts, setDrafts] = useState<Record<string, { base: number; variable: number }>>({});
 
-  // Buscar colaboradores HR vinculados a este cargo
+  // Buscar colaboradores HR vinculados a este cargo (match por título)
   const collaboratorsQuery = useQuery({
-    queryKey: ["sales-collaborators-by-position", accountId, positionId],
+    queryKey: ["sales-collaborators-by-position", accountId, positionTitle],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("hr_collaborators")
-        .select("user_id, salary, employment_type, full_name, position_id")
+        .select("user_id, salary, employment_type, full_name, position")
         .eq("account_id", accountId!)
-        .eq("position_id", positionId)
+        .ilike("position", `%${positionTitle}%`)
         .not("user_id", "is", null);
       if (error) throw error;
       return data;
     },
-    enabled: !!accountId && !!positionId,
+    enabled: !!accountId && !!positionTitle,
   });
 
   const collaborators = collaboratorsQuery.data ?? [];
