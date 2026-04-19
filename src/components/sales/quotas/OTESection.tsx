@@ -1,4 +1,14 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
+
+const formatBRL = (value: number): string => {
+  if (!value) return "";
+  return value.toLocaleString("pt-BR");
+};
+
+const parseBRL = (value: string): number => {
+  const cleaned = value.replace(/\./g, "").replace(",", ".").replace(/[^\d.]/g, "");
+  return parseFloat(cleaned) || 0;
+};
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
