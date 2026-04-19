@@ -229,7 +229,7 @@ export function SpiffsSection() {
                   </div>
 
                   {/* Campos condicionais por tipo de prêmio */}
-                  {prizeType === "fixed" ? (
+                  {prizeType === "fixed" && (
                     <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
                       <p className="text-xs font-medium text-muted-foreground">Bônus por meta de quantidade</p>
                       <div className="grid grid-cols-3 gap-3">
@@ -253,11 +253,13 @@ export function SpiffsSection() {
                         </div>
                       </div>
                     </div>
-                  ) : (
+                  )}
+
+                  {prizeType === "roulette" && (
                     <div className="rounded-lg border-2 border-amber-500/30 bg-amber-500/5 p-3 space-y-3">
                       <div className="flex items-center gap-2">
                         <Dice5 className="h-4 w-4 text-amber-600" />
-                        <p className="text-xs font-medium">Configuração da Roleta</p>
+                        <p className="text-xs font-medium">Configuração da Roleta ($)</p>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Gatilho — 1 giro a cada (R$ de entrada captada)</Label>
@@ -288,6 +290,54 @@ export function SpiffsSection() {
                       </div>
                       <p className="text-[10px] text-muted-foreground italic">
                         Os giros ganhos por cada vendedor serão calculados automaticamente com base nos negócios fechados no período. O sorteio em si é feito fora do sistema (roleta física ou digital).
+                      </p>
+                    </div>
+                  )}
+
+                  {prizeType === "custom" && (
+                    <div className="rounded-lg border-2 border-pink-500/30 bg-pink-500/5 p-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Gift className="h-4 w-4 text-pink-600" />
+                        <p className="text-xs font-medium">Configuração da Roleta Custom</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Vendas necessárias (qtd)</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={triggerSalesCount || ""}
+                            onChange={(e) => setTriggerSalesCount(parseInt(e.target.value) || 1)}
+                            placeholder="3"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Janela (dias)</Label>
+                          <Select value={String(triggerWindowDays)} onValueChange={(v) => setTriggerWindowDays(parseInt(v))}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">1 dia</SelectItem>
+                              <SelectItem value="7">7 dias (semana)</SelectItem>
+                              <SelectItem value="14">14 dias</SelectItem>
+                              <SelectItem value="30">30 dias (mês)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Ex: 3 vendas em 7 dias = 1 giro
+                      </p>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Prêmio (descrição livre)</Label>
+                        <Textarea
+                          value={customPrizeDescription}
+                          onChange={(e) => setCustomPrizeDescription(e.target.value)}
+                          rows={2}
+                          placeholder="Ex: Vale Zara, vale restaurante, vale spa, à escolha do vendedor — até R$ 200"
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground italic">
+                        O prêmio é customizado pelo próprio vendedor. O sistema apenas conta as vendas e mostra quem ganhou giros pendentes.
                       </p>
                     </div>
                   )}
