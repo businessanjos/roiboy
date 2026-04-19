@@ -523,6 +523,13 @@ export function SpiffsSection() {
             .map((spiff) => (
               <CustomSpinsPanel key={`custom-spins-${spiff.id}`} spiff={spiff as any} />
             ))}
+
+          {/* SPIFF de Forma de Pagamento — fixo, calculado por mês corrente */}
+          <PaymentMethodSpiffPanel
+            startDate={`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`}
+            endDate={new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0]}
+            periodLabel={`${now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}`}
+          />
         </CardContent>
       </Card>
     </TooltipProvider>
