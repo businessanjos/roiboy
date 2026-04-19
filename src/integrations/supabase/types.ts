@@ -11577,6 +11577,7 @@ export type Database = {
           target_quantity: number
           trigger_per_value: number | null
           trigger_sales_count: number
+          trigger_week_start_day: number | null
           trigger_window_days: number
           updated_at: string
         }
@@ -11600,6 +11601,7 @@ export type Database = {
           target_quantity?: number
           trigger_per_value?: number | null
           trigger_sales_count?: number
+          trigger_week_start_day?: number | null
           trigger_window_days?: number
           updated_at?: string
         }
@@ -11623,6 +11625,7 @@ export type Database = {
           target_quantity?: number
           trigger_per_value?: number | null
           trigger_sales_count?: number
+          trigger_week_start_day?: number | null
           trigger_window_days?: number
           updated_at?: string
         }
