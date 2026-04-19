@@ -26,12 +26,25 @@ interface OTESectionProps {
   year: number;
   positionId: string;
   positionTitle?: string;
+  monthlyBonusBase?: number;
+  quarterlyBonusValue?: number;
+  annualBonusValue?: number;
 }
 
-export function OTESection({ year, positionId, positionTitle }: OTESectionProps) {
+export function OTESection({
+  year,
+  positionId,
+  positionTitle,
+  monthlyBonusBase = 0,
+  quarterlyBonusValue = 0,
+  annualBonusValue = 0,
+}: OTESectionProps) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const { userOTEs, upsertOTE } = useQuotasIncentives(year, 1);
+
+  // Variável anual calculado a partir do plano: bônus mensal × 12 + trimestral × 4 + anual
+  const calculatedVariable = (monthlyBonusBase * 12) + (quarterlyBonusValue * 4) + annualBonusValue;
 
   const [drafts, setDrafts] = useState<Record<string, { base: number; variable: number }>>({});
 
@@ -101,9 +114,7 @@ export function OTESection({ year, positionId, positionTitle }: OTESectionProps)
     for (const user of users) {
       const calc = calculateAnnualBase(user.id);
       if (calc) {
-        const existing = userOTEs.find((o) => o.user_id === user.id);
-        const variable = drafts[user.id]?.variable ?? (existing ? Number(existing.variable_target_annual) : 0);
-        newDrafts[user.id] = { base: calc.value, variable };
+        newDrafts[user.id] = { base: calc.value, variable: calculatedVariable };
         count++;
       }
     }
@@ -111,14 +122,17 @@ export function OTESection({ year, positionId, positionTitle }: OTESectionProps)
     if (count === 0) {
       toast.warning("Nenhum vendedor com salário cadastrado no RH");
     } else {
-      toast.success(`Base anual calculada para ${count} vendedor(es) a partir do RH`);
+      toast.success(`OTE calculado para ${count} vendedor(es): base do RH + variável do plano`);
     }
   };
 
   const getOTE = (userId: string) => {
     if (drafts[userId]) return drafts[userId];
     const existing = userOTEs.find((o) => o.user_id === userId);
-    return existing ? { base: Number(existing.base_salary_annual), variable: Number(existing.variable_target_annual) } : { base: 0, variable: 0 };
+    // Variável sempre vem do plano (calculado), base do existente ou 0
+    return existing
+      ? { base: Number(existing.base_salary_annual), variable: calculatedVariable }
+      : { base: 0, variable: calculatedVariable };
   };
 
   const handleSaveAll = async () => {
@@ -145,7 +159,7 @@ export function OTESection({ year, positionId, positionTitle }: OTESectionProps)
                 {positionTitle && <Badge variant="secondary" className="text-[10px]">{positionTitle}</Badge>}
               </CardTitle>
               <CardDescription>
-                Apenas colaboradores com cargo "{positionTitle}". Base puxada do RH (CLT: salário × 13,33 + 70% encargos · PJ/Sócio: × 12).
+                Cargo "{positionTitle}". Base puxada do RH (CLT × 13,33 + 70% encargos · PJ/Sócio × 12). Variável calculado do plano acima (mensal × 12 + trimestral × 4 + anual).
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
@@ -213,16 +227,27 @@ export function OTESection({ year, positionId, positionTitle }: OTESectionProps)
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        className="w-36 text-center mx-auto"
-                        value={formatBRL(ote.variable)}
-                        onChange={(e) => setDrafts((prev) => ({
-                          ...prev,
-                          [user.id]: { ...getOTE(user.id), variable: parseBRL(e.target.value) },
-                        }))}
-                      />
+                      <div className="flex items-center justify-center gap-1">
+                        <span className="font-medium tabular-nums">
+                          {ote.variable > 0 ? `R$ ${formatBRL(ote.variable)}` : "—"}
+                        </span>
+                        {calculatedVariable > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs max-w-xs">
+                                Calculado do plano:<br />
+                                Bônus mensal R$ {formatBRL(monthlyBonusBase)} × 12 = R$ {formatBRL(monthlyBonusBase * 12)}<br />
+                                {quarterlyBonusValue > 0 && <>Bônus trimestral R$ {formatBRL(quarterlyBonusValue)} × 4 = R$ {formatBRL(quarterlyBonusValue * 4)}<br /></>}
+                                {annualBonusValue > 0 && <>Bônus anual R$ {formatBRL(annualBonusValue)}<br /></>}
+                                <strong>Total: R$ {formatBRL(calculatedVariable)}</strong>
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right font-bold">
                       {total > 0 ? `R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
