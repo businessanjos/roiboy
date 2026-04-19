@@ -246,9 +246,9 @@ export function OTESection({
                             <TooltipContent>
                               <p className="text-xs max-w-xs">
                                 Calculado do plano:<br />
-                                Bônus mensal R$ {formatBRL(monthlyBonusBase)} × 12 = R$ {formatBRL(monthlyBonusBase * 12)}<br />
-                                {quarterlyBonusValue > 0 && <>Bônus trimestral R$ {formatBRL(quarterlyBonusValue)} × 4 = R$ {formatBRL(quarterlyBonusValue * 4)}<br /></>}
-                                {annualBonusValue > 0 && <>Bônus anual R$ {formatBRL(annualBonusValue)}<br /></>}
+                                Bônus mensal R$ {formatBRL(monthlyBonusBase)} × 12 = R$ {formatBRL(monthlyBonusBase * 12)} <span className="text-muted-foreground">({getPaymentChannelLabel(monthlyBonusChannel, true)})</span><br />
+                                {quarterlyBonusValue > 0 && <>Bônus trimestral R$ {formatBRL(quarterlyBonusValue)} × 4 = R$ {formatBRL(quarterlyBonusValue * 4)} <span className="text-muted-foreground">({getPaymentChannelLabel(quarterlyBonusChannel, true)})</span><br /></>}
+                                {annualBonusValue > 0 && <>Bônus anual R$ {formatBRL(annualBonusValue)} <span className="text-muted-foreground">({getPaymentChannelLabel(annualBonusChannel, true)})</span><br /></>}
                                 <strong>Total: R$ {formatBRL(calculatedVariable)}</strong>
                               </p>
                             </TooltipContent>
