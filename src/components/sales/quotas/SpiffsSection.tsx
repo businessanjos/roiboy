@@ -670,7 +670,25 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
     enabled: !!accountId && triggerSalesCount > 0,
   });
 
-  const userIds = Array.from(new Set((dealsQuery.data ?? []).map((d) => d.responsible_user_id).filter(Boolean) as string[]));
+  // Busca todos os colaboradores do RH em cargos de vendas (para mostrar mesmo quem ainda não vendeu)
+  const salesTeamQuery = useQuery({
+    queryKey: ["sales-team-collaborators", accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hr_collaborators")
+        .select("user_id, full_name, position")
+        .eq("account_id", accountId!)
+        .not("user_id", "is", null)
+        .or("position.ilike.%vend%,position.ilike.%closer%,position.ilike.%executiv%,position.ilike.%sdr%");
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!accountId,
+  });
+
+  const dealUserIds = Array.from(new Set((dealsQuery.data ?? []).map((d) => d.responsible_user_id).filter(Boolean) as string[]));
+  const teamUserIds = (salesTeamQuery.data ?? []).map((c) => c.user_id).filter(Boolean) as string[];
+  const userIds = Array.from(new Set([...dealUserIds, ...teamUserIds]));
 
   const usersQuery = useQuery({
     queryKey: ["custom-spin-users", accountId, userIds.join(",")],
@@ -689,8 +707,9 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
     const remainder = triggerSalesCount > 0 ? sales - spins * triggerSalesCount : 0;
     const toNext = triggerSalesCount > 0 ? triggerSalesCount - remainder : 0;
     const user = usersQuery.data?.find((u) => u.id === uid);
-    return { uid, name: user?.name || "—", sales, spins, toNext };
-  }).sort((a, b) => b.spins - a.spins || b.sales - a.sales);
+    const collab = (salesTeamQuery.data ?? []).find((c) => c.user_id === uid);
+    return { uid, name: user?.name || collab?.full_name || "—", sales, spins, toNext };
+  }).sort((a, b) => b.spins - a.spins || b.sales - a.sales || a.name.localeCompare(b.name));
 
   if (triggerSalesCount <= 0) return null;
 
