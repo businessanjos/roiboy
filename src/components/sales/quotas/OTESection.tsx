@@ -51,7 +51,7 @@ export function OTESection({
   const { userOTEs, upsertOTE } = useQuotasIncentives(year, 1);
 
   // Variável anual calculado a partir do plano: bônus mensal × 12 + trimestral × 4 + anual
-  const calculatedVariable = (monthlyBonusBase * 12) + (quarterlyBonusValue * 4) + annualBonusValue;
+  const calculatedVariable = (Number(monthlyBonusBase) || 0) * 12 + (Number(quarterlyBonusValue) || 0) * 4 + (Number(annualBonusValue) || 0);
 
   const [drafts, setDrafts] = useState<Record<string, { base: number; variable: number }>>({});
 
