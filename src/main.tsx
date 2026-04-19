@@ -23,4 +23,28 @@ window.fetch = async (...args: Parameters<typeof fetch>): Promise<Response> => {
   return originalFetch(...args); // fallback
 };
 
+// Auto-reload on dynamic import failures (stale chunks after redeploy)
+window.addEventListener("vite:preloadError", (event) => {
+  event.preventDefault();
+  if (!sessionStorage.getItem("chunk-reload")) {
+    sessionStorage.setItem("chunk-reload", "1");
+    window.location.reload();
+  }
+});
+
+window.addEventListener("error", (event) => {
+  const msg = event.message || "";
+  if (msg.includes("Failed to fetch dynamically imported module") || msg.includes("Importing a module script failed")) {
+    if (!sessionStorage.getItem("chunk-reload")) {
+      sessionStorage.setItem("chunk-reload", "1");
+      window.location.reload();
+    }
+  }
+});
+
+// Clear reload flag on successful load
+window.addEventListener("load", () => {
+  setTimeout(() => sessionStorage.removeItem("chunk-reload"), 5000);
+});
+
 createRoot(document.getElementById("root")!).render(<App />);
