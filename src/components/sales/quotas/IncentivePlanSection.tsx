@@ -20,6 +20,7 @@ import { SpiffsSection } from "./SpiffsSection";
 import { OTESection } from "./OTESection";
 import { CommissionSimulator } from "./CommissionSimulator";
 import { PAYMENT_CHANNELS } from "./paymentChannels";
+import { ProductCommissionCard } from "./ProductCommissionCard";
 
 export function IncentivePlanSection() {
   const now = new Date();
@@ -723,70 +724,12 @@ export function IncentivePlanSection() {
           </Card>
 
           {/* ── Commission per product ── */}
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Percent className="h-4 w-4" />
-                  Comissão por Produto — {selectedPosition?.title}
-                </CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Produto</TableHead>
-                    <TableHead className="text-right">Preço (R$)</TableHead>
-                    <TableHead className="text-center w-[130px]">Comissão (%)</TableHead>
-                    <TableHead className="text-center w-[150px]">Valor Fixo (R$)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {products.map((product) => {
-                    const rate = getRate(product.id);
-                    return (
-                      <TableRow key={product.id}>
-                        <TableCell className="font-medium">{product.name}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">
-                          {(Number(product.price) || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={0.5}
-                            className="w-24 text-center mx-auto"
-                            value={rate.percent || ""}
-                            onChange={(e) => setDraftRates((prev) => ({
-                              ...prev,
-                              [product.id]: { ...getRate(product.id), percent: parseFloat(e.target.value) || 0 },
-                            }))}
-                          />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Input
-                            type="text"
-                            inputMode="numeric"
-                            className="w-32 text-center mx-auto"
-                            value={rate.fixed ? rate.fixed.toLocaleString("pt-BR") : ""}
-                            onChange={(e) => {
-                              const digits = e.target.value.replace(/\D/g, "");
-                              setDraftRates((prev) => ({
-                                ...prev,
-                                [product.id]: { ...getRate(product.id), fixed: digits ? parseInt(digits, 10) : 0 },
-                              }));
-                            }}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <ProductCommissionCard
+            products={products}
+            getRate={getRate}
+            setDraftRates={setDraftRates}
+            positionTitle={selectedPosition?.title}
+          />
 
           {/* ── Bonus Tiers ── */}
           <Card>
