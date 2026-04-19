@@ -11568,6 +11568,8 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          participant_user_ids: Json | null
+          payment_tiers: Json | null
           plan_id: string | null
           prize_type: string
           product_id: string | null
@@ -11593,6 +11595,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          participant_user_ids?: Json | null
+          payment_tiers?: Json | null
           plan_id?: string | null
           prize_type?: string
           product_id?: string | null
@@ -11618,6 +11622,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          participant_user_ids?: Json | null
+          payment_tiers?: Json | null
           plan_id?: string | null
           prize_type?: string
           product_id?: string | null

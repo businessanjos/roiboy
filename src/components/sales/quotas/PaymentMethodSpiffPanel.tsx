@@ -9,29 +9,46 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 // Custom field IDs (account 796e7970-...)
 const FORMA_PAGAMENTO_FIELD_ID = "b2cd2366-b990-43d9-a0b7-1b567fbed729";
 const PARCELAS_FIELD_ID = "069ee7f8-befd-482d-990d-13048b17180c";
+const ITEM_DA_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR");
 
-// Tabela de faixas: 1x ou Pix/À vista = R$ 1.000; 2-3x = R$ 750; 4-6x = R$ 550; 7-10x = R$ 400; 11-12x = R$ 250
-const TIERS = [
-  { key: "tier_1k", label: "Pix / À vista / 1x", bonus: 1000, parcelasFn: (p: number, isCash: boolean) => isCash || p === 1, color: "bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-400" },
-  { key: "tier_750", label: "2x ou 3x cartão", bonus: 750, parcelasFn: (p: number) => p === 2 || p === 3, color: "bg-blue-500/10 border-blue-500/40 text-blue-700 dark:text-blue-400" },
-  { key: "tier_550", label: "4x, 5x ou 6x cartão", bonus: 550, parcelasFn: (p: number) => p >= 4 && p <= 6, color: "bg-indigo-500/10 border-indigo-500/40 text-indigo-700 dark:text-indigo-400" },
-  { key: "tier_400", label: "7x, 8x, 9x ou 10x cartão", bonus: 400, parcelasFn: (p: number) => p >= 7 && p <= 10, color: "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-500" },
-  { key: "tier_250", label: "11x ou 12x cartão", bonus: 250, parcelasFn: (p: number) => p === 11 || p === 12, color: "bg-orange-500/10 border-orange-500/40 text-orange-700 dark:text-orange-400" },
+const TIER_COLORS = [
+  "bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-400",
+  "bg-blue-500/10 border-blue-500/40 text-blue-700 dark:text-blue-400",
+  "bg-indigo-500/10 border-indigo-500/40 text-indigo-700 dark:text-indigo-400",
+  "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-500",
+  "bg-orange-500/10 border-orange-500/40 text-orange-700 dark:text-orange-400",
+  "bg-pink-500/10 border-pink-500/40 text-pink-700 dark:text-pink-400",
+  "bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-purple-400",
 ];
 
-interface Props {
-  startDate: string; // YYYY-MM-DD
-  endDate: string;   // YYYY-MM-DD
-  periodLabel?: string;
+export interface PaymentTier {
+  label: string;
+  bonus: number;
+  min_parcelas: number;
+  max_parcelas: number;
+  includes_cash: boolean;
 }
 
-export function PaymentMethodSpiffPanel({ startDate, endDate, periodLabel }: Props) {
+interface Props {
+  spiff: {
+    id: string;
+    name: string;
+    start_date: string;
+    end_date: string;
+    product_id: string | null;
+    payment_tiers?: PaymentTier[] | null;
+    participant_user_ids?: string[] | null;
+  };
+}
+
+export function PaymentMethodSpiffPanel({ spiff }: Props) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
+  const tiers: PaymentTier[] = Array.isArray(spiff.payment_tiers) ? spiff.payment_tiers : [];
 
-  // Closers ativos (Darlan e Vanessa)
+  // Closers ativos
   const closersQuery = useQuery({
     queryKey: ["payment-spiff-closers", accountId],
     queryFn: async () => {
@@ -50,28 +67,44 @@ export function PaymentMethodSpiffPanel({ startDate, endDate, periodLabel }: Pro
     enabled: !!accountId,
   });
 
-  const closerUserIds = (closersQuery.data ?? []).map((c) => c.user_id).filter(Boolean) as string[];
+  const allCloserIds = (closersQuery.data ?? []).map((c) => c.user_id).filter(Boolean) as string[];
+  const participantIds = Array.isArray(spiff.participant_user_ids) && spiff.participant_user_ids.length > 0
+    ? spiff.participant_user_ids
+    : allCloserIds;
 
-  // Vendas ganhas no período pelos Closers
+  // Vendas ganhas no período
   const dealsQuery = useQuery({
-    queryKey: ["payment-spiff-deals", accountId, startDate, endDate, closerUserIds.join(",")],
+    queryKey: ["payment-spiff-deals", accountId, spiff.id, spiff.start_date, spiff.end_date, participantIds.join(",")],
     queryFn: async () => {
-      if (closerUserIds.length === 0) return [];
+      if (participantIds.length === 0) return [];
       const { data, error } = await supabase
         .from("deals")
         .select("id, responsible_user_id, won_at, value")
         .eq("account_id", accountId!)
         .eq("status", "won")
-        .in("responsible_user_id", closerUserIds)
-        .gte("won_at", startDate)
-        .lte("won_at", `${endDate}T23:59:59`);
+        .in("responsible_user_id", participantIds)
+        .gte("won_at", spiff.start_date)
+        .lte("won_at", `${spiff.end_date}T23:59:59`);
       if (error) throw error;
-      return data ?? [];
+      let deals = data ?? [];
+
+      // Filtro por produto-alvo via custom field "Item da Venda"
+      if (spiff.product_id && deals.length > 0) {
+        const dealIds = deals.map((d: any) => d.id);
+        const { data: fvs } = await supabase
+          .from("deal_field_values")
+          .select("deal_id, value_text")
+          .eq("field_id", ITEM_DA_VENDA_FIELD_ID)
+          .in("deal_id", dealIds);
+        const matchingIds = new Set((fvs ?? []).filter((f: any) => f.value_text === spiff.product_id).map((f: any) => f.deal_id));
+        deals = deals.filter((d: any) => matchingIds.has(d.id));
+      }
+      return deals;
     },
-    enabled: !!accountId && closerUserIds.length > 0,
+    enabled: !!accountId && participantIds.length > 0,
   });
 
-  // Custom field values (Forma da Pagamento + Parcelas) para esses deals
+  // Custom field values (Forma + Parcelas)
   const fieldValuesQuery = useQuery({
     queryKey: ["payment-spiff-fvs", accountId, (dealsQuery.data ?? []).map((d: any) => d.id).join(",")],
     queryFn: async () => {
@@ -88,7 +121,6 @@ export function PaymentMethodSpiffPanel({ startDate, endDate, periodLabel }: Pro
     enabled: (dealsQuery.data ?? []).length > 0,
   });
 
-  // Indexa values por deal
   const valuesByDeal = new Map<string, { forma?: string; parcelas?: number }>();
   for (const fv of fieldValuesQuery.data ?? []) {
     const cur = valuesByDeal.get(fv.deal_id) ?? {};
@@ -97,74 +129,71 @@ export function PaymentMethodSpiffPanel({ startDate, endDate, periodLabel }: Pro
     valuesByDeal.set(fv.deal_id, cur);
   }
 
-  // Classifica cada venda em uma faixa
-  const classifyTier = (forma?: string, parcelas?: number): typeof TIERS[number] | null => {
+  const classifyTier = (forma?: string, parcelas?: number): { tier: PaymentTier; index: number } | null => {
     const isCash = forma === "pix" || (parcelas !== undefined && parcelas === 0);
-    const p = parcelas ?? -1;
-    for (const tier of TIERS) {
-      if (tier.parcelasFn(p, isCash)) return tier;
+    for (let i = 0; i < tiers.length; i++) {
+      const t = tiers[i];
+      if (isCash && t.includes_cash) return { tier: t, index: i };
+      if (parcelas !== undefined && parcelas >= t.min_parcelas && parcelas <= t.max_parcelas) {
+        return { tier: t, index: i };
+      }
     }
     return null;
   };
 
-  // Resumo por Closer
-  const summary = closerUserIds.map((uid) => {
+  const summary = participantIds.map((uid) => {
     const userDeals = (dealsQuery.data ?? []).filter((d: any) => d.responsible_user_id === uid);
     const collab = (closersQuery.data ?? []).find((c) => c.user_id === uid);
-    const tierCounts: Record<string, { count: number; bonus: number }> = {};
+    const tierCounts: Record<number, { count: number; bonus: number }> = {};
     let totalBonus = 0;
     let unclassified = 0;
-    for (const d of userDeals) {
+    for (const d of userDeals as any[]) {
       const fv = valuesByDeal.get(d.id);
-      const tier = classifyTier(fv?.forma, fv?.parcelas);
-      if (!tier) {
-        unclassified += 1;
-        continue;
-      }
-      const cur = tierCounts[tier.key] ?? { count: 0, bonus: 0 };
+      const result = classifyTier(fv?.forma, fv?.parcelas);
+      if (!result) { unclassified += 1; continue; }
+      const cur = tierCounts[result.index] ?? { count: 0, bonus: 0 };
       cur.count += 1;
-      cur.bonus += tier.bonus;
-      tierCounts[tier.key] = cur;
-      totalBonus += tier.bonus;
+      cur.bonus += result.tier.bonus;
+      tierCounts[result.index] = cur;
+      totalBonus += result.tier.bonus;
     }
-    return {
-      uid,
-      name: collab?.full_name || "—",
-      totalSales: userDeals.length,
-      tierCounts,
-      totalBonus,
-      unclassified,
-    };
+    return { uid, name: collab?.full_name || "—", totalSales: userDeals.length, tierCounts, totalBonus, unclassified };
   }).sort((a, b) => b.totalBonus - a.totalBonus || a.name.localeCompare(b.name));
+
+  if (tiers.length === 0) {
+    return (
+      <div className="rounded-lg border-2 border-purple-500/30 bg-purple-500/5 p-3">
+        <p className="text-xs text-muted-foreground">SPIFF "{spiff.name}" sem faixas configuradas. Edite para adicionar.</p>
+      </div>
+    );
+  }
+
+  const periodLabel = `${new Date(spiff.start_date).toLocaleDateString("pt-BR")} → ${new Date(spiff.end_date).toLocaleDateString("pt-BR")}`;
 
   return (
     <div className="rounded-lg border-2 border-purple-500/30 bg-purple-500/5 p-3 space-y-3">
       <div className="flex items-center gap-2 flex-wrap">
         <CreditCard className="h-4 w-4 text-purple-600" />
-        <p className="text-sm font-medium">SPIFF — Forma de Pagamento (Closers)</p>
-        {periodLabel && (
-          <Badge variant="outline" className="text-[10px] border-purple-500/40 text-purple-700 dark:text-purple-400">
-            {periodLabel}
-          </Badge>
-        )}
+        <p className="text-sm font-medium">{spiff.name}</p>
+        <Badge variant="outline" className="text-[10px] border-purple-500/40 text-purple-700 dark:text-purple-400">
+          {periodLabel}
+        </Badge>
         <Tooltip>
           <TooltipTrigger>
             <Badge variant="outline" className="text-[10px] cursor-help">como funciona?</Badge>
           </TooltipTrigger>
           <TooltipContent className="max-w-sm">
             <p className="text-xs">
-              Bônus por venda baseado na forma de pagamento + parcelas (campos personalizados do negócio):
-              {" "}Pix/À vista/1x = R$ 1.000 · 2-3x = R$ 750 · 4-6x = R$ 550 · 7-10x = R$ 400 · 11-12x = R$ 250.
+              Bônus por venda baseado nas faixas configuradas (forma de pagamento + parcelas).
               Vendas sem o campo "Parcelas" preenchido não pontuam.
             </p>
           </TooltipContent>
         </Tooltip>
       </div>
 
-      {/* Tabela de faixas (referência) */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-        {TIERS.map((t) => (
-          <div key={t.key} className={`rounded-md border px-2 py-1.5 text-center ${t.color}`}>
+      <div className={`grid gap-2 grid-cols-2 sm:grid-cols-${Math.min(tiers.length, 5)}`}>
+        {tiers.map((t, i) => (
+          <div key={i} className={`rounded-md border px-2 py-1.5 text-center ${TIER_COLORS[i % TIER_COLORS.length]}`}>
             <p className="text-[10px] font-medium leading-tight">{t.label}</p>
             <p className="text-sm font-bold tabular-nums">R$ {formatBRL(t.bonus)}</p>
           </div>
@@ -172,15 +201,15 @@ export function PaymentMethodSpiffPanel({ startDate, endDate, periodLabel }: Pro
       </div>
 
       {summary.length === 0 ? (
-        <p className="text-xs text-muted-foreground py-2">Nenhum Closer ativo encontrado.</p>
+        <p className="text-xs text-muted-foreground py-2">Nenhum participante encontrado.</p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="text-xs">Closer</TableHead>
               <TableHead className="text-center text-xs">Vendas</TableHead>
-              {TIERS.map((t) => (
-                <TableHead key={t.key} className="text-center text-xs whitespace-nowrap">
+              {tiers.map((t, i) => (
+                <TableHead key={i} className="text-center text-xs whitespace-nowrap">
                   R$ {formatBRL(t.bonus)}
                 </TableHead>
               ))}
@@ -206,15 +235,11 @@ export function PaymentMethodSpiffPanel({ startDate, endDate, periodLabel }: Pro
                   )}
                 </TableCell>
                 <TableCell className="text-center text-sm tabular-nums">{s.totalSales}</TableCell>
-                {TIERS.map((t) => {
-                  const cell = s.tierCounts[t.key];
+                {tiers.map((_, i) => {
+                  const cell = s.tierCounts[i];
                   return (
-                    <TableCell key={t.key} className="text-center text-xs tabular-nums">
-                      {cell ? (
-                        <span className="font-medium">{cell.count}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
+                    <TableCell key={i} className="text-center text-xs tabular-nums">
+                      {cell ? <span className="font-medium">{cell.count}</span> : <span className="text-muted-foreground">—</span>}
                     </TableCell>
                   );
                 })}

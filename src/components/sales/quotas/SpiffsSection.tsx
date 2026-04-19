@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Zap, Save, Dice5, Trophy, Pencil, Gift } from "lucide-react";
+import { Plus, Trash2, Zap, Save, Dice5, Trophy, Pencil, Gift, CreditCard, X } from "lucide-react";
 import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,7 +33,7 @@ export function SpiffsSection() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [productId, setProductId] = useState<string>("all");
-  const [prizeType, setPrizeType] = useState<"fixed" | "roulette" | "custom">("fixed");
+  const [prizeType, setPrizeType] = useState<"fixed" | "roulette" | "custom" | "payment_method">("fixed");
   const [bonusAmount, setBonusAmount] = useState(0);
   const [bonusType, setBonusType] = useState("fixed");
   const [targetQty, setTargetQty] = useState(1);
@@ -44,6 +44,8 @@ export function SpiffsSection() {
   const [triggerWindowDays, setTriggerWindowDays] = useState(7);
   const [triggerWeekStartDay, setTriggerWeekStartDay] = useState<string>("rolling"); // "rolling" | "0".."6"
   const [customPrizeDescription, setCustomPrizeDescription] = useState("");
+  const [paymentTiers, setPaymentTiers] = useState<Array<{ label: string; bonus: number; min_parcelas: number; max_parcelas: number; includes_cash: boolean }>>([]);
+  const [participantUserIds, setParticipantUserIds] = useState<string[]>([]);
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState("");
 
@@ -63,6 +65,26 @@ export function SpiffsSection() {
   });
 
   const products = productsQuery.data ?? [];
+
+  // Closers ativos (para seleção de participantes em SPIFFs de pagamento)
+  const closersQuery = useQuery({
+    queryKey: ["spiffs-closers", accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hr_collaborators")
+        .select("user_id, full_name, position")
+        .eq("account_id", accountId!)
+        .not("user_id", "is", null)
+        .or("position.ilike.%closer%,position.ilike.%executiv%");
+      if (error) throw error;
+      return (data ?? []).filter((c: any) => {
+        const pos = (c.position || "").toLowerCase();
+        return !pos.includes("sdr") && !pos.includes("gerente") && !pos.includes("manager");
+      });
+    },
+    enabled: !!accountId,
+  });
+  const closers = closersQuery.data ?? [];
 
   const handleSave = async () => {
     await saveSpiff.mutateAsync({
@@ -86,6 +108,8 @@ export function SpiffsSection() {
       trigger_window_type:
         prizeType === "custom" && triggerWeekStartDay === "last-business-day" ? "last-business-day" : null,
       custom_prize_description: prizeType === "custom" ? customPrizeDescription || null : null,
+      payment_tiers: prizeType === "payment_method" ? paymentTiers : null,
+      participant_user_ids: prizeType === "payment_method" && participantUserIds.length > 0 ? participantUserIds : null,
       start_date: startDate,
       end_date: endDate || new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
       is_active: true,
@@ -111,6 +135,8 @@ export function SpiffsSection() {
     setTriggerWindowDays(7);
     setTriggerWeekStartDay("rolling");
     setCustomPrizeDescription("");
+    setPaymentTiers([]);
+    setParticipantUserIds([]);
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
   };
@@ -120,8 +146,11 @@ export function SpiffsSection() {
     setName(spiff.name || "");
     setDescription(spiff.description || "");
     setProductId(spiff.product_id || "all");
-    const pType: "fixed" | "roulette" | "custom" =
-      spiff.prize_type === "roulette" ? "roulette" : spiff.prize_type === "custom" ? "custom" : "fixed";
+    const pType: "fixed" | "roulette" | "custom" | "payment_method" =
+      spiff.prize_type === "roulette" ? "roulette"
+      : spiff.prize_type === "custom" ? "custom"
+      : spiff.prize_type === "payment_method" ? "payment_method"
+      : "fixed";
     setPrizeType(pType);
     setBonusAmount(Number(spiff.bonus_amount) || 0);
     setBonusType(spiff.bonus_type || "fixed");
@@ -139,6 +168,8 @@ export function SpiffsSection() {
           : "rolling"
     );
     setCustomPrizeDescription(spiff.custom_prize_description || "");
+    setPaymentTiers(Array.isArray(spiff.payment_tiers) ? spiff.payment_tiers : []);
+    setParticipantUserIds(Array.isArray(spiff.participant_user_ids) ? spiff.participant_user_ids : []);
     setStartDate(spiff.start_date || new Date().toISOString().split("T")[0]);
     setEndDate(spiff.end_date || "");
     setOpen(true);
@@ -178,7 +209,7 @@ export function SpiffsSection() {
                   {/* Tipo de Prêmio — define o restante do form */}
                   <div className="space-y-2">
                     <Label>Tipo de Prêmio</Label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <button
                         type="button"
                         onClick={() => setPrizeType("fixed")}
@@ -217,6 +248,30 @@ export function SpiffsSection() {
                         <Gift className="h-4 w-4 text-pink-500 shrink-0" />
                         <p className="text-sm font-medium leading-tight">Roleta Custom</p>
                         <p className="text-[10px] text-muted-foreground leading-tight">Prêmio livre por nº de vendas</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPrizeType("payment_method");
+                          if (paymentTiers.length === 0) {
+                            setPaymentTiers([
+                              { label: "Pix / À vista / 1x", bonus: 1000, min_parcelas: 1, max_parcelas: 1, includes_cash: true },
+                              { label: "2x ou 3x cartão", bonus: 750, min_parcelas: 2, max_parcelas: 3, includes_cash: false },
+                              { label: "4x, 5x ou 6x cartão", bonus: 550, min_parcelas: 4, max_parcelas: 6, includes_cash: false },
+                              { label: "7x a 10x cartão", bonus: 400, min_parcelas: 7, max_parcelas: 10, includes_cash: false },
+                              { label: "11x ou 12x cartão", bonus: 250, min_parcelas: 11, max_parcelas: 12, includes_cash: false },
+                            ]);
+                          }
+                        }}
+                        className={`flex flex-col items-start gap-1 p-3 rounded-lg border-2 transition-colors text-left ${
+                          prizeType === "payment_method"
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <CreditCard className="h-4 w-4 text-purple-500 shrink-0" />
+                        <p className="text-sm font-medium leading-tight">Forma de Pagamento</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">Bônus por faixa de parcelas</p>
                       </button>
                     </div>
                   </div>
@@ -387,6 +442,147 @@ export function SpiffsSection() {
                     </div>
                   )}
 
+                  {prizeType === "payment_method" && (
+                    <div className="rounded-lg border-2 border-purple-500/30 bg-purple-500/5 p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-purple-600" />
+                          <p className="text-xs font-medium">Faixas de Bônus por Forma de Pagamento</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1 text-xs"
+                          onClick={() => setPaymentTiers([...paymentTiers, { label: "Nova faixa", bonus: 0, min_parcelas: 1, max_parcelas: 1, includes_cash: false }])}
+                        >
+                          <Plus className="h-3 w-3" />
+                          Faixa
+                        </Button>
+                      </div>
+
+                      {paymentTiers.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic">Adicione faixas para configurar os bônus.</p>
+                      )}
+
+                      <div className="space-y-2">
+                        {paymentTiers.map((tier, idx) => (
+                          <div key={idx} className="rounded-md border bg-background p-2 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={tier.label}
+                                onChange={(e) => {
+                                  const next = [...paymentTiers];
+                                  next[idx] = { ...next[idx], label: e.target.value };
+                                  setPaymentTiers(next);
+                                }}
+                                placeholder="Ex: 2x ou 3x cartão"
+                                className="h-8 text-xs flex-1"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => setPaymentTiers(paymentTiers.filter((_, i) => i !== idx))}
+                              >
+                                <X className="h-3.5 w-3.5 text-destructive" />
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="space-y-1">
+                                <Label className="text-[10px] text-muted-foreground">Bônus (R$)</Label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  value={tier.bonus || ""}
+                                  onChange={(e) => {
+                                    const next = [...paymentTiers];
+                                    next[idx] = { ...next[idx], bonus: parseFloat(e.target.value) || 0 };
+                                    setPaymentTiers(next);
+                                  }}
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[10px] text-muted-foreground">Parcelas mín</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={12}
+                                  value={tier.min_parcelas || ""}
+                                  onChange={(e) => {
+                                    const next = [...paymentTiers];
+                                    next[idx] = { ...next[idx], min_parcelas: parseInt(e.target.value) || 1 };
+                                    setPaymentTiers(next);
+                                  }}
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[10px] text-muted-foreground">Parcelas máx</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={12}
+                                  value={tier.max_parcelas || ""}
+                                  onChange={(e) => {
+                                    const next = [...paymentTiers];
+                                    next[idx] = { ...next[idx], max_parcelas: parseInt(e.target.value) || 1 };
+                                    setPaymentTiers(next);
+                                  }}
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                            </div>
+                            <label className="flex items-center gap-2 text-xs cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={tier.includes_cash}
+                                onChange={(e) => {
+                                  const next = [...paymentTiers];
+                                  next[idx] = { ...next[idx], includes_cash: e.target.checked };
+                                  setPaymentTiers(next);
+                                }}
+                                className="h-3.5 w-3.5"
+                              />
+                              <span>Inclui Pix / À vista nesta faixa</span>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="space-y-1.5 pt-2 border-t">
+                        <Label className="text-xs">Closers participantes (vazio = todos os Closers ativos)</Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {closers.map((c) => {
+                            const selected = participantUserIds.includes(c.user_id!);
+                            return (
+                              <Badge
+                                key={c.user_id}
+                                variant={selected ? "default" : "outline"}
+                                className="cursor-pointer text-[10px]"
+                                onClick={() => {
+                                  if (selected) {
+                                    setParticipantUserIds(participantUserIds.filter((u) => u !== c.user_id));
+                                  } else {
+                                    setParticipantUserIds([...participantUserIds, c.user_id!]);
+                                  }
+                                }}
+                              >
+                                {c.full_name}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <p className="text-[10px] text-muted-foreground italic">
+                        Cada venda é classificada na primeira faixa que combinar (parcelas + Pix/À vista quando marcado). Vendas sem o campo "Parcelas" preenchido não pontuam.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label>Início</Label>
@@ -427,12 +623,14 @@ export function SpiffsSection() {
                   const expired = isExpired(spiff.end_date);
                   const isRoulette = (spiff as any).prize_type === "roulette";
                   const isCustom = (spiff as any).prize_type === "custom";
+                  const isPayment = (spiff as any).prize_type === "payment_method";
                   return (
                     <TableRow key={spiff.id} className={expired ? "opacity-50" : ""}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-1.5">
                           {isRoulette && <Dice5 className="h-3.5 w-3.5 text-amber-500" />}
                           {isCustom && <Gift className="h-3.5 w-3.5 text-pink-500" />}
+                          {isPayment && <CreditCard className="h-3.5 w-3.5 text-purple-500" />}
                           {spiff.name}
                         </div>
                       </TableCell>
@@ -471,7 +669,17 @@ export function SpiffsSection() {
                             )}
                           </div>
                         )}
-                        {!isRoulette && !isCustom && (
+                        {isPayment && (
+                          <div className="space-y-0.5">
+                            <Badge variant="outline" className="text-[10px] border-purple-500/40 text-purple-700 dark:text-purple-400">
+                              Forma de Pagamento
+                            </Badge>
+                            <p className="text-muted-foreground">
+                              {Array.isArray((spiff as any).payment_tiers) ? (spiff as any).payment_tiers.length : 0} faixa(s)
+                            </p>
+                          </div>
+                        )}
+                        {!isRoulette && !isCustom && !isPayment && (
                           <div className="space-y-0.5">
                             <Badge variant="outline" className="text-[10px]">Bônus Fixo</Badge>
                             <p className="text-muted-foreground">
@@ -524,12 +732,12 @@ export function SpiffsSection() {
               <CustomSpinsPanel key={`custom-spins-${spiff.id}`} spiff={spiff as any} />
             ))}
 
-          {/* SPIFF de Forma de Pagamento — fixo, calculado por mês corrente */}
-          <PaymentMethodSpiffPanel
-            startDate={`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`}
-            endDate={new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0]}
-            periodLabel={`${now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}`}
-          />
+          {/* Painéis SPIFF Forma de Pagamento — um por spiff ativo */}
+          {spiffs
+            .filter((s) => (s as any).prize_type === "payment_method" && s.is_active && !isExpired(s.end_date))
+            .map((spiff) => (
+              <PaymentMethodSpiffPanel key={`payment-${spiff.id}`} spiff={spiff as any} />
+            ))}
         </CardContent>
       </Card>
     </TooltipProvider>
