@@ -125,6 +125,11 @@ export function SpiffsSection() {
     setRouletteMax(Number(spiff.roulette_max_prize) || 100);
     setTriggerSalesCount(Number(spiff.trigger_sales_count) || 3);
     setTriggerWindowDays(Number(spiff.trigger_window_days) || 7);
+    setTriggerWeekStartDay(
+      spiff.trigger_week_start_day !== null && spiff.trigger_week_start_day !== undefined
+        ? String(spiff.trigger_week_start_day)
+        : "rolling"
+    );
     setCustomPrizeDescription(spiff.custom_prize_description || "");
     setStartDate(spiff.start_date || new Date().toISOString().split("T")[0]);
     setEndDate(spiff.end_date || "");
