@@ -78,7 +78,12 @@ export function SpiffsSection() {
       roulette_max_prize: prizeType === "roulette" ? rouletteMax : 0,
       trigger_sales_count: prizeType === "custom" ? triggerSalesCount : 0,
       trigger_window_days: prizeType === "custom" ? triggerWindowDays : 7,
-      trigger_week_start_day: prizeType === "custom" && triggerWeekStartDay !== "rolling" ? parseInt(triggerWeekStartDay) : null,
+      trigger_week_start_day:
+        prizeType === "custom" && triggerWeekStartDay !== "rolling" && triggerWeekStartDay !== "last-business-day"
+          ? parseInt(triggerWeekStartDay)
+          : null,
+      trigger_window_type:
+        prizeType === "custom" && triggerWeekStartDay === "last-business-day" ? "last-business-day" : null,
       custom_prize_description: prizeType === "custom" ? customPrizeDescription || null : null,
       start_date: startDate,
       end_date: endDate || new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
@@ -126,9 +131,11 @@ export function SpiffsSection() {
     setTriggerSalesCount(Number(spiff.trigger_sales_count) || 3);
     setTriggerWindowDays(Number(spiff.trigger_window_days) || 7);
     setTriggerWeekStartDay(
-      spiff.trigger_week_start_day !== null && spiff.trigger_week_start_day !== undefined
-        ? String(spiff.trigger_week_start_day)
-        : "rolling"
+      spiff.trigger_window_type === "last-business-day"
+        ? "last-business-day"
+        : spiff.trigger_week_start_day !== null && spiff.trigger_week_start_day !== undefined
+          ? String(spiff.trigger_week_start_day)
+          : "rolling"
     );
     setCustomPrizeDescription(spiff.custom_prize_description || "");
     setStartDate(spiff.start_date || new Date().toISOString().split("T")[0]);
@@ -322,9 +329,18 @@ export function SpiffsSection() {
                         <div className="space-y-1.5">
                           <Label className="text-xs">Janela</Label>
                           <Select
-                            value={triggerWeekStartDay === "rolling" ? `rolling-${triggerWindowDays}` : `week-${triggerWeekStartDay}`}
+                            value={
+                              triggerWeekStartDay === "last-business-day"
+                                ? "last-business-day"
+                                : triggerWeekStartDay === "rolling"
+                                ? `rolling-${triggerWindowDays}`
+                                : `week-${triggerWeekStartDay}`
+                            }
                             onValueChange={(v) => {
-                              if (v.startsWith("rolling-")) {
+                              if (v === "last-business-day") {
+                                setTriggerWeekStartDay("last-business-day");
+                                setTriggerWindowDays(1);
+                              } else if (v.startsWith("rolling-")) {
                                 setTriggerWeekStartDay("rolling");
                                 setTriggerWindowDays(parseInt(v.replace("rolling-", "")));
                               } else {
@@ -336,6 +352,7 @@ export function SpiffsSection() {
                           >
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="last-business-day">Último dia útil do mês</SelectItem>
                               <SelectItem value="rolling-1">Últimas 24h (rolante)</SelectItem>
                               <SelectItem value="rolling-7">Últimos 7 dias (rolante)</SelectItem>
                               <SelectItem value="rolling-14">Últimos 14 dias (rolante)</SelectItem>
@@ -352,7 +369,7 @@ export function SpiffsSection() {
                         </div>
                       </div>
                       <p className="text-[10px] text-muted-foreground">
-                        Ex: 3 vendas em uma semana. Use "Semana Qua→Ter" se sua semana de vendas começa na quarta 00:00 e termina terça 23:59.
+                        Ex: 3 vendas em uma semana (Qua→Ter), ou "War Day" no último dia útil do mês.
                       </p>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Prêmio (descrição livre)</Label>
@@ -440,9 +457,11 @@ export function SpiffsSection() {
                             </Badge>
                             <p className="text-muted-foreground">
                               {(spiff as any).trigger_sales_count || 0} vendas /{" "}
-                              {(spiff as any).trigger_week_start_day !== null && (spiff as any).trigger_week_start_day !== undefined
-                                ? ["Sem Dom→Sáb","Sem Seg→Dom","Sem Ter→Seg","Sem Qua→Ter","Sem Qui→Qua","Sem Sex→Qui","Sem Sáb→Sex"][(spiff as any).trigger_week_start_day]
-                                : `${(spiff as any).trigger_window_days || 7}d`}
+                              {(spiff as any).trigger_window_type === "last-business-day"
+                                ? "Último dia útil"
+                                : (spiff as any).trigger_week_start_day !== null && (spiff as any).trigger_week_start_day !== undefined
+                                  ? ["Sem Dom→Sáb","Sem Seg→Dom","Sem Ter→Seg","Sem Qua→Ter","Sem Qui→Qua","Sem Sex→Qui","Sem Sáb→Sex"][(spiff as any).trigger_week_start_day]
+                                  : `${(spiff as any).trigger_window_days || 7}d`}
                             </p>
                             {(spiff as any).custom_prize_description && (
                               <p className="text-muted-foreground italic line-clamp-1 max-w-[180px] mx-auto">
@@ -633,18 +652,35 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
   const accountId = currentUser?.account_id;
   const triggerSalesCount = Number(spiff.trigger_sales_count || 0);
   const windowDays = Number(spiff.trigger_window_days || 7);
+  const windowType: string | null = spiff.trigger_window_type || null;
   const weekStartDay: number | null =
     spiff.trigger_week_start_day !== null && spiff.trigger_week_start_day !== undefined
       ? Number(spiff.trigger_week_start_day)
       : null;
 
+  // Helper: último dia útil do mês corrente (seg-sex). Se cair em sáb/dom, recua até sexta.
+  const getLastBusinessDayOfMonth = (ref: Date): Date => {
+    const last = new Date(ref.getFullYear(), ref.getMonth() + 1, 0); // último dia do mês
+    while (last.getDay() === 0 || last.getDay() === 6) {
+      last.setDate(last.getDate() - 1);
+    }
+    return last;
+  };
+
   // Cálculo da janela atual:
-  // - Se weekStartDay definido: alinha à semana customizada (ex: Qua 00:00 → Ter 23:59).
+  // - "last-business-day": exatamente o último dia útil do mês corrente (00:00 → 23:59)
+  // - weekStartDay definido: alinha à semana customizada (ex: Qua 00:00 → Ter 23:59).
   // - Senão: usa janela rolante de N dias até hoje.
   const today = new Date();
   let windowStart: Date;
   let windowEnd: Date;
-  if (weekStartDay !== null) {
+  if (windowType === "last-business-day") {
+    const lbd = getLastBusinessDayOfMonth(today);
+    windowStart = new Date(lbd);
+    windowStart.setHours(0, 0, 0, 0);
+    windowEnd = new Date(lbd);
+    windowEnd.setHours(23, 59, 59, 999);
+  } else if (weekStartDay !== null) {
     const todayDow = today.getDay(); // 0=Dom..6=Sab
     const diff = (todayDow - weekStartDay + 7) % 7;
     windowStart = new Date(today);
@@ -662,15 +698,17 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
   }
   const campaignEnd = new Date(spiff.end_date);
   campaignEnd.setHours(23, 59, 59, 999);
-  // A janela semanal/rolante é o que importa para o Hat Trick — start_date da campanha não corta a janela.
+  // A janela semanal/rolante/last-business-day é o que importa — start_date da campanha não corta a janela.
   // Apenas limitar pelo end_date.
   const effectiveStart = windowStart;
   const effectiveEnd = windowEnd < campaignEnd ? windowEnd : campaignEnd;
 
   const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-  const windowLabel = weekStartDay !== null
-    ? `Semana ${dayNames[weekStartDay]}→${dayNames[(weekStartDay + 6) % 7]} (${effectiveStart.toLocaleDateString("pt-BR")} a ${effectiveEnd.toLocaleDateString("pt-BR")})`
-    : `Últimos ${windowDays}d`;
+  const windowLabel = windowType === "last-business-day"
+    ? `Último dia útil (${effectiveStart.toLocaleDateString("pt-BR")})`
+    : weekStartDay !== null
+      ? `Semana ${dayNames[weekStartDay]}→${dayNames[(weekStartDay + 6) % 7]} (${effectiveStart.toLocaleDateString("pt-BR")} a ${effectiveEnd.toLocaleDateString("pt-BR")})`
+      : `Últimos ${windowDays}d`;
 
   const targetProductId: string | null = spiff.product_id || null;
 

@@ -1,0 +1,1 @@
+UPDATE public.sales_spiffs SET trigger_window_type = 'last-business-day', trigger_window_days = 1 WHERE name = 'War Day';
