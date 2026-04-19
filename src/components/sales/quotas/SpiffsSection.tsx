@@ -322,9 +322,18 @@ export function SpiffsSection() {
                         <div className="space-y-1.5">
                           <Label className="text-xs">Janela</Label>
                           <Select
-                            value={triggerWeekStartDay === "rolling" ? `rolling-${triggerWindowDays}` : `week-${triggerWeekStartDay}`}
+                            value={
+                              triggerWeekStartDay === "last-business-day"
+                                ? "last-business-day"
+                                : triggerWeekStartDay === "rolling"
+                                ? `rolling-${triggerWindowDays}`
+                                : `week-${triggerWeekStartDay}`
+                            }
                             onValueChange={(v) => {
-                              if (v.startsWith("rolling-")) {
+                              if (v === "last-business-day") {
+                                setTriggerWeekStartDay("last-business-day");
+                                setTriggerWindowDays(1);
+                              } else if (v.startsWith("rolling-")) {
                                 setTriggerWeekStartDay("rolling");
                                 setTriggerWindowDays(parseInt(v.replace("rolling-", "")));
                               } else {
@@ -336,6 +345,7 @@ export function SpiffsSection() {
                           >
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="last-business-day">Último dia útil do mês</SelectItem>
                               <SelectItem value="rolling-1">Últimas 24h (rolante)</SelectItem>
                               <SelectItem value="rolling-7">Últimos 7 dias (rolante)</SelectItem>
                               <SelectItem value="rolling-14">Últimos 14 dias (rolante)</SelectItem>
@@ -352,7 +362,7 @@ export function SpiffsSection() {
                         </div>
                       </div>
                       <p className="text-[10px] text-muted-foreground">
-                        Ex: 3 vendas em uma semana. Use "Semana Qua→Ter" se sua semana de vendas começa na quarta 00:00 e termina terça 23:59.
+                        Ex: 3 vendas em uma semana (Qua→Ter), ou "War Day" no último dia útil do mês.
                       </p>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Prêmio (descrição livre)</Label>
