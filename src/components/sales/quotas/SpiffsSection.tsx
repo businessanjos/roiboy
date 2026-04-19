@@ -209,7 +209,7 @@ export function SpiffsSection() {
                   {/* Tipo de Prêmio — define o restante do form */}
                   <div className="space-y-2">
                     <Label>Tipo de Prêmio</Label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <button
                         type="button"
                         onClick={() => setPrizeType("fixed")}
@@ -248,6 +248,30 @@ export function SpiffsSection() {
                         <Gift className="h-4 w-4 text-pink-500 shrink-0" />
                         <p className="text-sm font-medium leading-tight">Roleta Custom</p>
                         <p className="text-[10px] text-muted-foreground leading-tight">Prêmio livre por nº de vendas</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPrizeType("payment_method");
+                          if (paymentTiers.length === 0) {
+                            setPaymentTiers([
+                              { label: "Pix / À vista / 1x", bonus: 1000, min_parcelas: 1, max_parcelas: 1, includes_cash: true },
+                              { label: "2x ou 3x cartão", bonus: 750, min_parcelas: 2, max_parcelas: 3, includes_cash: false },
+                              { label: "4x, 5x ou 6x cartão", bonus: 550, min_parcelas: 4, max_parcelas: 6, includes_cash: false },
+                              { label: "7x a 10x cartão", bonus: 400, min_parcelas: 7, max_parcelas: 10, includes_cash: false },
+                              { label: "11x ou 12x cartão", bonus: 250, min_parcelas: 11, max_parcelas: 12, includes_cash: false },
+                            ]);
+                          }
+                        }}
+                        className={`flex flex-col items-start gap-1 p-3 rounded-lg border-2 transition-colors text-left ${
+                          prizeType === "payment_method"
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <CreditCard className="h-4 w-4 text-purple-500 shrink-0" />
+                        <p className="text-sm font-medium leading-tight">Forma de Pagamento</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">Bônus por faixa de parcelas</p>
                       </button>
                     </div>
                   </div>
