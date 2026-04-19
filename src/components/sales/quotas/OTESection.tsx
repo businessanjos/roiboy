@@ -114,9 +114,7 @@ export function OTESection({
     for (const user of users) {
       const calc = calculateAnnualBase(user.id);
       if (calc) {
-        const existing = userOTEs.find((o) => o.user_id === user.id);
-        const variable = drafts[user.id]?.variable ?? (existing ? Number(existing.variable_target_annual) : 0);
-        newDrafts[user.id] = { base: calc.value, variable };
+        newDrafts[user.id] = { base: calc.value, variable: calculatedVariable };
         count++;
       }
     }
@@ -124,14 +122,17 @@ export function OTESection({
     if (count === 0) {
       toast.warning("Nenhum vendedor com salário cadastrado no RH");
     } else {
-      toast.success(`Base anual calculada para ${count} vendedor(es) a partir do RH`);
+      toast.success(`OTE calculado para ${count} vendedor(es): base do RH + variável do plano`);
     }
   };
 
   const getOTE = (userId: string) => {
     if (drafts[userId]) return drafts[userId];
     const existing = userOTEs.find((o) => o.user_id === userId);
-    return existing ? { base: Number(existing.base_salary_annual), variable: Number(existing.variable_target_annual) } : { base: 0, variable: 0 };
+    // Variável sempre vem do plano (calculado), base do existente ou 0
+    return existing
+      ? { base: Number(existing.base_salary_annual), variable: calculatedVariable }
+      : { base: 0, variable: calculatedVariable };
   };
 
   const handleSaveAll = async () => {
