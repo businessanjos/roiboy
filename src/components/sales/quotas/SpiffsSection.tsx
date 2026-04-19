@@ -418,7 +418,7 @@ function RouletteSpinsPanel({ spiff }: { spiff: any }) {
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">
             <p className="text-xs">
-              Soma o valor dos negócios ganhos por cada vendedor no período da campanha e divide por R$ {formatBRL(triggerPerValue)} para calcular os giros. Os prêmios são sorteados separadamente (roleta física ou digital) entre R$ {formatBRL(Number(spiff.roulette_min_prize || 0))} e R$ {formatBRL(Number(spiff.roulette_max_prize || 0))}.
+              Soma o campo "Entrada" dos negócios ganhos por cada vendedor no período da campanha e divide por R$ {formatBRL(triggerPerValue)} para calcular os giros. Os prêmios são sorteados separadamente (roleta física ou digital) entre R$ {formatBRL(Number(spiff.roulette_min_prize || 0))} e R$ {formatBRL(Number(spiff.roulette_max_prize || 0))}.
             </p>
           </TooltipContent>
         </Tooltip>
