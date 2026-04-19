@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Zap, Save, Dice5, Trophy } from "lucide-react";
+import { Plus, Trash2, Zap, Save, Dice5, Trophy, Pencil } from "lucide-react";
 import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +27,7 @@ export function SpiffsSection() {
   const accountId = currentUser?.account_id;
   const { spiffs, activePlan, saveSpiff, deleteSpiff } = useQuotasIncentives(now.getFullYear(), now.getMonth() + 1);
   const [open, setOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -60,6 +61,7 @@ export function SpiffsSection() {
 
   const handleSave = async () => {
     await saveSpiff.mutateAsync({
+      ...(editingId ? { id: editingId } : {}),
       name,
       description: description || null,
       product_id: productId === "all" ? null : productId,
@@ -80,6 +82,7 @@ export function SpiffsSection() {
   };
 
   const resetForm = () => {
+    setEditingId(null);
     setName("");
     setDescription("");
     setProductId("all");
@@ -92,6 +95,24 @@ export function SpiffsSection() {
     setRouletteMax(100);
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
+  };
+
+  const openEdit = (spiff: any) => {
+    setEditingId(spiff.id);
+    setName(spiff.name || "");
+    setDescription(spiff.description || "");
+    setProductId(spiff.product_id || "all");
+    const pType = spiff.prize_type === "roulette" ? "roulette" : "fixed";
+    setPrizeType(pType);
+    setBonusAmount(Number(spiff.bonus_amount) || 0);
+    setBonusType(spiff.bonus_type || "fixed");
+    setTargetQty(Number(spiff.target_quantity) || 1);
+    setTriggerPerValue(Number(spiff.trigger_per_value) || 10000);
+    setRouletteMin(Number(spiff.roulette_min_prize) || 0);
+    setRouletteMax(Number(spiff.roulette_max_prize) || 100);
+    setStartDate(spiff.start_date || new Date().toISOString().split("T")[0]);
+    setEndDate(spiff.end_date || "");
+    setOpen(true);
   };
 
   const isExpired = (endDate: string) => new Date(endDate) < new Date();
@@ -108,16 +129,16 @@ export function SpiffsSection() {
               </CardTitle>
               <CardDescription>Campanhas de curto prazo: bônus fixo por meta ou roleta da sorte por valor captado</CardDescription>
             </div>
-            <Dialog open={open} onOpenChange={setOpen}>
+            <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
               <DialogTrigger asChild>
-                <Button size="sm" className="gap-1.5">
+                <Button size="sm" className="gap-1.5" onClick={() => resetForm()}>
                   <Plus className="h-4 w-4" />
                   Novo SPIFF
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Criar Campanha SPIFF</DialogTitle>
+                  <DialogTitle>{editingId ? "Editar Campanha SPIFF" : "Criar Campanha SPIFF"}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
                   <div className="space-y-2">
@@ -261,7 +282,7 @@ export function SpiffsSection() {
                   </div>
                   <Button onClick={handleSave} disabled={!name || saveSpiff.isPending} className="w-full gap-1.5">
                     <Save className="h-4 w-4" />
-                    Criar SPIFF
+                    {editingId ? "Salvar Alterações" : "Criar SPIFF"}
                   </Button>
                 </div>
               </DialogContent>
@@ -333,9 +354,14 @@ export function SpiffsSection() {
                             : <Badge variant="secondary">Inativo</Badge>}
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="icon" onClick={() => deleteSpiff.mutate(spiff.id)} className="h-8 w-8">
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                        </Button>
+                        <div className="flex items-center gap-1 justify-end">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(spiff)} className="h-8 w-8" title="Editar">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => deleteSpiff.mutate(spiff.id)} className="h-8 w-8" title="Excluir">
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
