@@ -189,13 +189,14 @@ export function OTESection({ year }: { year: number }) {
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1">
                         <Input
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
                           className="w-36 text-center"
-                          value={ote.base || ""}
-                          placeholder={calc ? String(calc.value) : "—"}
+                          value={formatBRL(ote.base)}
+                          placeholder={calc ? formatBRL(calc.value) : "—"}
                           onChange={(e) => setDrafts((prev) => ({
                             ...prev,
-                            [user.id]: { ...getOTE(user.id), base: parseFloat(e.target.value) || 0 },
+                            [user.id]: { ...getOTE(user.id), base: parseBRL(e.target.value) },
                           }))}
                         />
                         {calc && (
@@ -210,12 +211,13 @@ export function OTESection({ year }: { year: number }) {
                     </TableCell>
                     <TableCell className="text-center">
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         className="w-36 text-center mx-auto"
-                        value={ote.variable || ""}
+                        value={formatBRL(ote.variable)}
                         onChange={(e) => setDrafts((prev) => ({
                           ...prev,
-                          [user.id]: { ...getOTE(user.id), variable: parseFloat(e.target.value) || 0 },
+                          [user.id]: { ...getOTE(user.id), variable: parseBRL(e.target.value) },
                         }))}
                       />
                     </TableCell>
