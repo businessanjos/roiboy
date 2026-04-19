@@ -613,14 +613,54 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
   const accountId = currentUser?.account_id;
   const triggerSalesCount = Number(spiff.trigger_sales_count || 0);
   const windowDays = Number(spiff.trigger_window_days || 7);
+  const weekStartDay: number | null =
+    spiff.trigger_week_start_day !== null && spiff.trigger_week_start_day !== undefined
+      ? Number(spiff.trigger_week_start_day)
+      : null;
 
-  // Janela atual: últimos N dias até hoje (limitada ao período da campanha)
+  // Cálculo da janela atual:
+  // - Se weekStartDay definido: alinha à semana customizada (ex: Qua 00:00 → Ter 23:59).
+  // - Senão: usa janela rolante de N dias até hoje.
   const today = new Date();
-  const windowStart = new Date(today);
-  windowStart.setDate(windowStart.getDate() - windowDays + 1);
+  let windowStart: Date;
+  let windowEnd: Date;
+  if (weekStartDay !== null) {
+    const todayDow = today.getDay(); // 0=Dom..6=Sab
+    const diff = (todayDow - weekStartDay + 7) % 7;
+    windowStart = new Date(today);
+    windowStart.setDate(windowStart.getDate() - diff);
+    windowStart.setHours(0, 0, 0, 0);
+    windowEnd = new Date(windowStart);
+    windowEnd.setDate(windowEnd.getDate() + 6);
+    windowEnd.setHours(23, 59, 59, 999);
+  } else {
+    windowStart = new Date(today);
+    windowStart.setDate(windowStart.getDate() - windowDays + 1);
+    windowStart.setHours(0, 0, 0, 0);
+    windowEnd = new Date(today);
+    windowEnd.setHours(23, 59, 59, 999);
+  }
   const campaignStart = new Date(spiff.start_date);
+  const campaignEnd = new Date(spiff.end_date);
+  campaignEnd.setHours(23, 59, 59, 999);
   const effectiveStart = windowStart > campaignStart ? windowStart : campaignStart;
-  const effectiveEnd = today < new Date(spiff.end_date) ? today : new Date(spiff.end_date);
+  const effectiveEnd = windowEnd < campaignEnd ? windowEnd : campaignEnd;
+
+  const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const windowLabel = weekStartDay !== null
+    ? `Semana ${dayNames[weekStartDay]}→${dayNames[(weekStartDay + 6) % 7]} (${effectiveStart.toLocaleDateString("pt-BR")} a ${effectiveEnd.toLocaleDateString("pt-BR")})`
+    : `Últimos ${windowDays}d`;
+
+  const dealsQuery = useQuery({
+    queryKey: ["custom-spins", accountId, spiff.id, effectiveStart.toISOString(), effectiveEnd.toISOString()],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("deals")
+        .select("id, responsible_user_id, won_at, status")
+        .eq("account_id", accountId!)
+        .eq("status", "won")
+        .gte("won_at", effectiveStart.toISOString())
+        .lte("won_at", effectiveEnd.toISOString());
 
   const dealsQuery = useQuery({
     queryKey: ["custom-spins", accountId, spiff.id, effectiveStart.toISOString().split("T")[0]],
