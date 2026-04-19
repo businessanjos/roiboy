@@ -609,15 +609,30 @@ export function IncentivePlanSection() {
                   </div>
                 </div>
                 {quarterlyBonusEnabled && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Regras do Bônus Trimestral</Label>
-                    <Textarea
-                      value={quarterlyBonusRules}
-                      onChange={(e) => setQuarterlyBonusRules(e.target.value)}
-                      rows={3}
-                      placeholder="Ex: Pago ao atingir 100% da soma das metas dos 3 meses do trimestre. Caso atinja entre 80% e 99%, recebe 50% do bônus."
-                    />
-                  </div>
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Canal de pagamento</Label>
+                      <Select value={quarterlyBonusChannel} onValueChange={setQuarterlyBonusChannel}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Onde será pago" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_CHANNELS.map((c) => (
+                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Regras do Bônus Trimestral</Label>
+                      <Textarea
+                        value={quarterlyBonusRules}
+                        onChange={(e) => setQuarterlyBonusRules(e.target.value)}
+                        rows={3}
+                        placeholder="Ex: Pago ao atingir 100% da soma das metas dos 3 meses do trimestre. Caso atinja entre 80% e 99%, recebe 50% do bônus."
+                      />
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -652,15 +667,30 @@ export function IncentivePlanSection() {
                   </div>
                 </div>
                 {annualBonusEnabled && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Regras do Bônus Anual</Label>
-                    <Textarea
-                      value={annualBonusRules}
-                      onChange={(e) => setAnnualBonusRules(e.target.value)}
-                      rows={3}
-                      placeholder="Ex: Pago ao atingir 100% da meta anual (soma dos 12 meses). Atingimento entre 90% e 99% libera 50% do bônus."
-                    />
-                  </div>
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Canal de pagamento</Label>
+                      <Select value={annualBonusChannel} onValueChange={setAnnualBonusChannel}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Onde será pago" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_CHANNELS.map((c) => (
+                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Regras do Bônus Anual</Label>
+                      <Textarea
+                        value={annualBonusRules}
+                        onChange={(e) => setAnnualBonusRules(e.target.value)}
+                        rows={3}
+                        placeholder="Ex: Pago ao atingir 100% da meta anual (soma dos 12 meses). Atingimento entre 90% e 99% libera 50% do bônus."
+                      />
+                    </div>
+                  </>
                 )}
               </div>
 
