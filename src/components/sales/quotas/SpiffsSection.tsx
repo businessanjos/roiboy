@@ -671,8 +671,10 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
     ? `Semana ${dayNames[weekStartDay]}→${dayNames[(weekStartDay + 6) % 7]} (${effectiveStart.toLocaleDateString("pt-BR")} a ${effectiveEnd.toLocaleDateString("pt-BR")})`
     : `Últimos ${windowDays}d`;
 
+  const targetProductId: string | null = spiff.product_id || null;
+
   const dealsQuery = useQuery({
-    queryKey: ["custom-spins", accountId, spiff.id, effectiveStart.toISOString(), effectiveEnd.toISOString()],
+    queryKey: ["custom-spins", accountId, spiff.id, effectiveStart.toISOString(), effectiveEnd.toISOString(), targetProductId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("deals")
@@ -682,7 +684,20 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
         .gte("won_at", effectiveStart.toISOString())
         .lte("won_at", effectiveEnd.toISOString());
       if (error) throw error;
-      return (data ?? []) as Array<{ id: string; responsible_user_id: string | null; won_at: string | null }>;
+      let deals = (data ?? []) as Array<{ id: string; responsible_user_id: string | null; won_at: string | null }>;
+
+      // Filtro por produto-alvo da campanha (via custom field "Item da Venda")
+      if (targetProductId && deals.length > 0) {
+        const dealIds = deals.map((d) => d.id);
+        const { data: fvs } = await supabase
+          .from("deal_field_values")
+          .select("deal_id, value_text")
+          .eq("field_id", ITEM_DA_VENDA_FIELD_ID)
+          .in("deal_id", dealIds);
+        const matchingIds = new Set((fvs ?? []).filter((f: any) => f.value_text === targetProductId).map((f: any) => f.deal_id));
+        deals = deals.filter((d) => matchingIds.has(d.id));
+      }
+      return deals;
     },
     enabled: !!accountId && triggerSalesCount > 0,
   });
