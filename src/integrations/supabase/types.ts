@@ -11562,6 +11562,7 @@ export type Database = {
           bonus_amount: number
           bonus_type: string
           created_at: string
+          custom_prize_description: string | null
           description: string | null
           end_date: string
           id: string
@@ -11575,6 +11576,8 @@ export type Database = {
           start_date: string
           target_quantity: number
           trigger_per_value: number | null
+          trigger_sales_count: number
+          trigger_window_days: number
           updated_at: string
         }
         Insert: {
@@ -11582,6 +11585,7 @@ export type Database = {
           bonus_amount?: number
           bonus_type?: string
           created_at?: string
+          custom_prize_description?: string | null
           description?: string | null
           end_date?: string
           id?: string
@@ -11595,6 +11599,8 @@ export type Database = {
           start_date?: string
           target_quantity?: number
           trigger_per_value?: number | null
+          trigger_sales_count?: number
+          trigger_window_days?: number
           updated_at?: string
         }
         Update: {
@@ -11602,6 +11608,7 @@ export type Database = {
           bonus_amount?: number
           bonus_type?: string
           created_at?: string
+          custom_prize_description?: string | null
           description?: string | null
           end_date?: string
           id?: string
@@ -11615,6 +11622,8 @@ export type Database = {
           start_date?: string
           target_quantity?: number
           trigger_per_value?: number | null
+          trigger_sales_count?: number
+          trigger_window_days?: number
           updated_at?: string
         }
         Relationships: [

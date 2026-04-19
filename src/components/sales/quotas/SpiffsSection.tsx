@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Zap, Save, Dice5, Trophy, Pencil } from "lucide-react";
+import { Plus, Trash2, Zap, Save, Dice5, Trophy, Pencil, Gift } from "lucide-react";
 import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,13 +32,16 @@ export function SpiffsSection() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [productId, setProductId] = useState<string>("all");
-  const [prizeType, setPrizeType] = useState<"fixed" | "roulette">("fixed");
+  const [prizeType, setPrizeType] = useState<"fixed" | "roulette" | "custom">("fixed");
   const [bonusAmount, setBonusAmount] = useState(0);
   const [bonusType, setBonusType] = useState("fixed");
   const [targetQty, setTargetQty] = useState(1);
   const [triggerPerValue, setTriggerPerValue] = useState(10000);
   const [rouletteMin, setRouletteMin] = useState(0);
   const [rouletteMax, setRouletteMax] = useState(100);
+  const [triggerSalesCount, setTriggerSalesCount] = useState(3);
+  const [triggerWindowDays, setTriggerWindowDays] = useState(7);
+  const [customPrizeDescription, setCustomPrizeDescription] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState("");
 
@@ -65,13 +68,16 @@ export function SpiffsSection() {
       name,
       description: description || null,
       product_id: productId === "all" ? null : productId,
-      bonus_amount: prizeType === "roulette" ? rouletteMax : bonusAmount,
-      bonus_type: prizeType === "roulette" ? "fixed" : bonusType,
-      target_quantity: prizeType === "roulette" ? 0 : targetQty,
+      bonus_amount: prizeType === "roulette" ? rouletteMax : prizeType === "custom" ? 0 : bonusAmount,
+      bonus_type: prizeType === "fixed" ? bonusType : "fixed",
+      target_quantity: prizeType === "fixed" ? targetQty : 0,
       prize_type: prizeType,
       trigger_per_value: prizeType === "roulette" ? triggerPerValue : 0,
       roulette_min_prize: prizeType === "roulette" ? rouletteMin : 0,
       roulette_max_prize: prizeType === "roulette" ? rouletteMax : 0,
+      trigger_sales_count: prizeType === "custom" ? triggerSalesCount : 0,
+      trigger_window_days: prizeType === "custom" ? triggerWindowDays : 7,
+      custom_prize_description: prizeType === "custom" ? customPrizeDescription || null : null,
       start_date: startDate,
       end_date: endDate || new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
       is_active: true,
@@ -93,6 +99,9 @@ export function SpiffsSection() {
     setTriggerPerValue(10000);
     setRouletteMin(0);
     setRouletteMax(100);
+    setTriggerSalesCount(3);
+    setTriggerWindowDays(7);
+    setCustomPrizeDescription("");
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
   };
@@ -102,7 +111,8 @@ export function SpiffsSection() {
     setName(spiff.name || "");
     setDescription(spiff.description || "");
     setProductId(spiff.product_id || "all");
-    const pType = spiff.prize_type === "roulette" ? "roulette" : "fixed";
+    const pType: "fixed" | "roulette" | "custom" =
+      spiff.prize_type === "roulette" ? "roulette" : spiff.prize_type === "custom" ? "custom" : "fixed";
     setPrizeType(pType);
     setBonusAmount(Number(spiff.bonus_amount) || 0);
     setBonusType(spiff.bonus_type || "fixed");
@@ -110,6 +120,9 @@ export function SpiffsSection() {
     setTriggerPerValue(Number(spiff.trigger_per_value) || 10000);
     setRouletteMin(Number(spiff.roulette_min_prize) || 0);
     setRouletteMax(Number(spiff.roulette_max_prize) || 100);
+    setTriggerSalesCount(Number(spiff.trigger_sales_count) || 3);
+    setTriggerWindowDays(Number(spiff.trigger_window_days) || 7);
+    setCustomPrizeDescription(spiff.custom_prize_description || "");
     setStartDate(spiff.start_date || new Date().toISOString().split("T")[0]);
     setEndDate(spiff.end_date || "");
     setOpen(true);
@@ -149,36 +162,45 @@ export function SpiffsSection() {
                   {/* Tipo de Prêmio — define o restante do form */}
                   <div className="space-y-2">
                     <Label>Tipo de Prêmio</Label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
                         type="button"
                         onClick={() => setPrizeType("fixed")}
-                        className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-colors text-left ${
+                        className={`flex flex-col items-start gap-1 p-3 rounded-lg border-2 transition-colors text-left ${
                           prizeType === "fixed"
                             ? "border-primary bg-primary/5"
                             : "border-border hover:border-primary/50"
                         }`}
                       >
                         <Trophy className="h-4 w-4 text-primary shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium">Bônus Fixo</p>
-                          <p className="text-[10px] text-muted-foreground">Valor por meta de qtd</p>
-                        </div>
+                        <p className="text-sm font-medium leading-tight">Bônus Fixo</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">Valor por meta de qtd</p>
                       </button>
                       <button
                         type="button"
                         onClick={() => setPrizeType("roulette")}
-                        className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-colors text-left ${
+                        className={`flex flex-col items-start gap-1 p-3 rounded-lg border-2 transition-colors text-left ${
                           prizeType === "roulette"
                             ? "border-primary bg-primary/5"
                             : "border-border hover:border-primary/50"
                         }`}
                       >
                         <Dice5 className="h-4 w-4 text-amber-500 shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium">Roleta da Sorte</p>
-                          <p className="text-[10px] text-muted-foreground">Giro a cada R$ captado</p>
-                        </div>
+                        <p className="text-sm font-medium leading-tight">Roleta $</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">Giro a cada R$ captado</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPrizeType("custom")}
+                        className={`flex flex-col items-start gap-1 p-3 rounded-lg border-2 transition-colors text-left ${
+                          prizeType === "custom"
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <Gift className="h-4 w-4 text-pink-500 shrink-0" />
+                        <p className="text-sm font-medium leading-tight">Roleta Custom</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">Prêmio livre por nº de vendas</p>
                       </button>
                     </div>
                   </div>
@@ -207,7 +229,7 @@ export function SpiffsSection() {
                   </div>
 
                   {/* Campos condicionais por tipo de prêmio */}
-                  {prizeType === "fixed" ? (
+                  {prizeType === "fixed" && (
                     <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
                       <p className="text-xs font-medium text-muted-foreground">Bônus por meta de quantidade</p>
                       <div className="grid grid-cols-3 gap-3">
@@ -231,11 +253,13 @@ export function SpiffsSection() {
                         </div>
                       </div>
                     </div>
-                  ) : (
+                  )}
+
+                  {prizeType === "roulette" && (
                     <div className="rounded-lg border-2 border-amber-500/30 bg-amber-500/5 p-3 space-y-3">
                       <div className="flex items-center gap-2">
                         <Dice5 className="h-4 w-4 text-amber-600" />
-                        <p className="text-xs font-medium">Configuração da Roleta</p>
+                        <p className="text-xs font-medium">Configuração da Roleta ($)</p>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Gatilho — 1 giro a cada (R$ de entrada captada)</Label>
@@ -266,6 +290,54 @@ export function SpiffsSection() {
                       </div>
                       <p className="text-[10px] text-muted-foreground italic">
                         Os giros ganhos por cada vendedor serão calculados automaticamente com base nos negócios fechados no período. O sorteio em si é feito fora do sistema (roleta física ou digital).
+                      </p>
+                    </div>
+                  )}
+
+                  {prizeType === "custom" && (
+                    <div className="rounded-lg border-2 border-pink-500/30 bg-pink-500/5 p-3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Gift className="h-4 w-4 text-pink-600" />
+                        <p className="text-xs font-medium">Configuração da Roleta Custom</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Vendas necessárias (qtd)</Label>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={triggerSalesCount || ""}
+                            onChange={(e) => setTriggerSalesCount(parseInt(e.target.value) || 1)}
+                            placeholder="3"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs">Janela (dias)</Label>
+                          <Select value={String(triggerWindowDays)} onValueChange={(v) => setTriggerWindowDays(parseInt(v))}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">1 dia</SelectItem>
+                              <SelectItem value="7">7 dias (semana)</SelectItem>
+                              <SelectItem value="14">14 dias</SelectItem>
+                              <SelectItem value="30">30 dias (mês)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">
+                        Ex: 3 vendas em 7 dias = 1 giro
+                      </p>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Prêmio (descrição livre)</Label>
+                        <Textarea
+                          value={customPrizeDescription}
+                          onChange={(e) => setCustomPrizeDescription(e.target.value)}
+                          rows={2}
+                          placeholder="Ex: Vale Zara, vale restaurante, vale spa, à escolha do vendedor — até R$ 200"
+                        />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground italic">
+                        O prêmio é customizado pelo próprio vendedor. O sistema apenas conta as vendas e mostra quem ganhou giros pendentes.
                       </p>
                     </div>
                   )}
@@ -309,20 +381,22 @@ export function SpiffsSection() {
                   const product = products.find((p) => p.id === spiff.product_id);
                   const expired = isExpired(spiff.end_date);
                   const isRoulette = (spiff as any).prize_type === "roulette";
+                  const isCustom = (spiff as any).prize_type === "custom";
                   return (
                     <TableRow key={spiff.id} className={expired ? "opacity-50" : ""}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-1.5">
                           {isRoulette && <Dice5 className="h-3.5 w-3.5 text-amber-500" />}
+                          {isCustom && <Gift className="h-3.5 w-3.5 text-pink-500" />}
                           {spiff.name}
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{product?.name || "Todos"}</TableCell>
                       <TableCell className="text-center text-xs">
-                        {isRoulette ? (
+                        {isRoulette && (
                           <div className="space-y-0.5">
                             <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">
-                              Roleta da Sorte
+                              Roleta $
                             </Badge>
                             <p className="text-muted-foreground">
                               1 giro / R$ {formatBRL(Number((spiff as any).trigger_per_value || 0))}
@@ -331,7 +405,23 @@ export function SpiffsSection() {
                               R$ {formatBRL(Number((spiff as any).roulette_min_prize || 0))} – R$ {formatBRL(Number((spiff as any).roulette_max_prize || 0))}
                             </p>
                           </div>
-                        ) : (
+                        )}
+                        {isCustom && (
+                          <div className="space-y-0.5">
+                            <Badge variant="outline" className="text-[10px] border-pink-500/40 text-pink-700 dark:text-pink-400">
+                              Roleta Custom
+                            </Badge>
+                            <p className="text-muted-foreground">
+                              {(spiff as any).trigger_sales_count || 0} vendas / {(spiff as any).trigger_window_days || 7}d
+                            </p>
+                            {(spiff as any).custom_prize_description && (
+                              <p className="text-muted-foreground italic line-clamp-1 max-w-[180px] mx-auto">
+                                {(spiff as any).custom_prize_description}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {!isRoulette && !isCustom && (
                           <div className="space-y-0.5">
                             <Badge variant="outline" className="text-[10px]">Bônus Fixo</Badge>
                             <p className="text-muted-foreground">
@@ -375,6 +465,13 @@ export function SpiffsSection() {
             .filter((s) => (s as any).prize_type === "roulette" && s.is_active && !isExpired(s.end_date))
             .map((spiff) => (
               <RouletteSpinsPanel key={`spins-${spiff.id}`} spiff={spiff as any} />
+            ))}
+
+          {/* Painéis de giros pendentes — um por spiff custom ativo */}
+          {spiffs
+            .filter((s) => (s as any).prize_type === "custom" && s.is_active && !isExpired(s.end_date))
+            .map((spiff) => (
+              <CustomSpinsPanel key={`custom-spins-${spiff.id}`} spiff={spiff as any} />
             ))}
         </CardContent>
       </Card>
@@ -473,6 +570,117 @@ function RouletteSpinsPanel({ spiff }: { spiff: any }) {
                 </TableCell>
                 <TableCell className="text-center text-xs text-muted-foreground tabular-nums">
                   R$ {formatBRL(Math.round(s.toNextSpin))}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </div>
+  );
+}
+
+// ── Painel de giros pendentes — Roleta Custom (vendas em janela) ──
+function CustomSpinsPanel({ spiff }: { spiff: any }) {
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
+  const triggerSalesCount = Number(spiff.trigger_sales_count || 0);
+  const windowDays = Number(spiff.trigger_window_days || 7);
+
+  // Janela atual: últimos N dias até hoje (limitada ao período da campanha)
+  const today = new Date();
+  const windowStart = new Date(today);
+  windowStart.setDate(windowStart.getDate() - windowDays + 1);
+  const campaignStart = new Date(spiff.start_date);
+  const effectiveStart = windowStart > campaignStart ? windowStart : campaignStart;
+  const effectiveEnd = today < new Date(spiff.end_date) ? today : new Date(spiff.end_date);
+
+  const dealsQuery = useQuery({
+    queryKey: ["custom-spins", accountId, spiff.id, effectiveStart.toISOString().split("T")[0]],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("deals")
+        .select("id, responsible_user_id, won_at, status")
+        .eq("account_id", accountId!)
+        .eq("status", "won")
+        .gte("won_at", effectiveStart.toISOString().split("T")[0])
+        .lte("won_at", `${effectiveEnd.toISOString().split("T")[0]}T23:59:59`);
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; responsible_user_id: string | null; won_at: string | null }>;
+    },
+    enabled: !!accountId && triggerSalesCount > 0,
+  });
+
+  const userIds = Array.from(new Set((dealsQuery.data ?? []).map((d) => d.responsible_user_id).filter(Boolean) as string[]));
+
+  const usersQuery = useQuery({
+    queryKey: ["custom-spin-users", accountId, userIds.join(",")],
+    queryFn: async () => {
+      if (userIds.length === 0) return [];
+      const { data, error } = await supabase.from("users").select("id, name").in("id", userIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: userIds.length > 0,
+  });
+
+  const summary = userIds.map((uid) => {
+    const sales = (dealsQuery.data ?? []).filter((d) => d.responsible_user_id === uid).length;
+    const spins = triggerSalesCount > 0 ? Math.floor(sales / triggerSalesCount) : 0;
+    const remainder = triggerSalesCount > 0 ? sales - spins * triggerSalesCount : 0;
+    const toNext = triggerSalesCount > 0 ? triggerSalesCount - remainder : 0;
+    const user = usersQuery.data?.find((u) => u.id === uid);
+    return { uid, name: user?.name || "—", sales, spins, toNext };
+  }).sort((a, b) => b.spins - a.spins || b.sales - a.sales);
+
+  if (triggerSalesCount <= 0) return null;
+
+  return (
+    <div className="rounded-lg border-2 border-pink-500/30 bg-pink-500/5 p-3 space-y-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <Gift className="h-4 w-4 text-pink-600" />
+        <p className="text-sm font-medium">Giros pendentes — {spiff.name}</p>
+        <Badge variant="outline" className="text-[10px] border-pink-500/40 text-pink-700 dark:text-pink-400">
+          {triggerSalesCount} vendas / {windowDays}d
+        </Badge>
+        <Tooltip>
+          <TooltipTrigger>
+            <Badge variant="outline" className="text-[10px] cursor-help">como funciona?</Badge>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            <p className="text-xs">
+              Conta os negócios ganhos por cada vendedor nos últimos {windowDays} dias. A cada {triggerSalesCount} vendas, o vendedor ganha 1 giro. O prêmio é livre — escolhido pelo próprio vendedor (ex: "{spiff.custom_prize_description || "vale presente"}").
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+      {spiff.custom_prize_description && (
+        <p className="text-xs text-muted-foreground italic">🎁 Prêmio: {spiff.custom_prize_description}</p>
+      )}
+      {summary.length === 0 ? (
+        <p className="text-xs text-muted-foreground py-2">Nenhuma venda ganha na janela atual ainda.</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs">Vendedor</TableHead>
+              <TableHead className="text-center text-xs">Vendas (janela)</TableHead>
+              <TableHead className="text-center text-xs">Giros</TableHead>
+              <TableHead className="text-center text-xs">Falta p/ próximo</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {summary.map((s) => (
+              <TableRow key={s.uid}>
+                <TableCell className="text-sm font-medium">{s.name}</TableCell>
+                <TableCell className="text-center text-sm tabular-nums">{s.sales}</TableCell>
+                <TableCell className="text-center">
+                  <Badge variant={s.spins > 0 ? "default" : "secondary"} className="text-xs">
+                    {s.spins} {s.spins === 1 ? "giro" : "giros"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-center text-xs text-muted-foreground tabular-nums">
+                  {s.toNext} {s.toNext === 1 ? "venda" : "vendas"}
                 </TableCell>
               </TableRow>
             ))}
