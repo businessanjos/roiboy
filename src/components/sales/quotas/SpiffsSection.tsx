@@ -103,6 +103,7 @@ export function SpiffsSection() {
     setRouletteMax(100);
     setTriggerSalesCount(3);
     setTriggerWindowDays(7);
+    setTriggerWeekStartDay("rolling");
     setCustomPrizeDescription("");
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
