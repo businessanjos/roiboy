@@ -227,16 +227,27 @@ export function OTESection({
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        className="w-36 text-center mx-auto"
-                        value={formatBRL(ote.variable)}
-                        onChange={(e) => setDrafts((prev) => ({
-                          ...prev,
-                          [user.id]: { ...getOTE(user.id), variable: parseBRL(e.target.value) },
-                        }))}
-                      />
+                      <div className="flex items-center justify-center gap-1">
+                        <span className="font-medium tabular-nums">
+                          {ote.variable > 0 ? `R$ ${formatBRL(ote.variable)}` : "—"}
+                        </span>
+                        {calculatedVariable > 0 && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs max-w-xs">
+                                Calculado do plano:<br />
+                                Bônus mensal R$ {formatBRL(monthlyBonusBase)} × 12 = R$ {formatBRL(monthlyBonusBase * 12)}<br />
+                                {quarterlyBonusValue > 0 && <>Bônus trimestral R$ {formatBRL(quarterlyBonusValue)} × 4 = R$ {formatBRL(quarterlyBonusValue * 4)}<br /></>}
+                                {annualBonusValue > 0 && <>Bônus anual R$ {formatBRL(annualBonusValue)}<br /></>}
+                                <strong>Total: R$ {formatBRL(calculatedVariable)}</strong>
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right font-bold">
                       {total > 0 ? `R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
