@@ -180,6 +180,26 @@ export function OTESection({
               </Button>
             </div>
           </div>
+          {(monthlyBonusBase > 0 || quarterlyBonusValue > 0 || annualBonusValue > 0) && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-2 text-[11px]">
+              <span className="text-muted-foreground">Canais de pagamento do variável:</span>
+              {monthlyBonusBase > 0 && (
+                <Badge variant="outline" className="text-[10px] font-normal">
+                  Mensal · {getPaymentChannelLabel(monthlyBonusChannel, true)}
+                </Badge>
+              )}
+              {quarterlyBonusValue > 0 && (
+                <Badge variant="outline" className="text-[10px] font-normal">
+                  Trimestral · {getPaymentChannelLabel(quarterlyBonusChannel, true)}
+                </Badge>
+              )}
+              {annualBonusValue > 0 && (
+                <Badge variant="outline" className="text-[10px] font-normal">
+                  Anual · {getPaymentChannelLabel(annualBonusChannel, true)}
+                </Badge>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <Table>
