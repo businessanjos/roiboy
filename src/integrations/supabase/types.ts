@@ -11579,6 +11579,7 @@ export type Database = {
           trigger_sales_count: number
           trigger_week_start_day: number | null
           trigger_window_days: number
+          trigger_window_type: string | null
           updated_at: string
         }
         Insert: {
@@ -11603,6 +11604,7 @@ export type Database = {
           trigger_sales_count?: number
           trigger_week_start_day?: number | null
           trigger_window_days?: number
+          trigger_window_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -11627,6 +11629,7 @@ export type Database = {
           trigger_sales_count?: number
           trigger_week_start_day?: number | null
           trigger_window_days?: number
+          trigger_window_type?: string | null
           updated_at?: string
         }
         Relationships: [

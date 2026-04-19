@@ -1,0 +1,2 @@
+ALTER TABLE public.sales_spiffs ADD COLUMN IF NOT EXISTS trigger_window_type TEXT;
+COMMENT ON COLUMN public.sales_spiffs.trigger_window_type IS 'Tipo especial de janela. NULL = usa trigger_week_start_day/trigger_window_days. Valores: last-business-day';
