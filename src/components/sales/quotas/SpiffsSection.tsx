@@ -660,10 +660,11 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
     windowEnd = new Date(today);
     windowEnd.setHours(23, 59, 59, 999);
   }
-  const campaignStart = new Date(spiff.start_date);
   const campaignEnd = new Date(spiff.end_date);
   campaignEnd.setHours(23, 59, 59, 999);
-  const effectiveStart = windowStart > campaignStart ? windowStart : campaignStart;
+  // A janela semanal/rolante é o que importa para o Hat Trick — start_date da campanha não corta a janela.
+  // Apenas limitar pelo end_date.
+  const effectiveStart = windowStart;
   const effectiveEnd = windowEnd < campaignEnd ? windowEnd : campaignEnd;
 
   const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
