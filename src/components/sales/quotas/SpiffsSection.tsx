@@ -41,6 +41,7 @@ export function SpiffsSection() {
   const [rouletteMax, setRouletteMax] = useState(100);
   const [triggerSalesCount, setTriggerSalesCount] = useState(3);
   const [triggerWindowDays, setTriggerWindowDays] = useState(7);
+  const [triggerWeekStartDay, setTriggerWeekStartDay] = useState<string>("rolling"); // "rolling" | "0".."6"
   const [customPrizeDescription, setCustomPrizeDescription] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState("");
