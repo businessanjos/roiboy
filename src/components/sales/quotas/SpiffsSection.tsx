@@ -162,36 +162,45 @@ export function SpiffsSection() {
                   {/* Tipo de Prêmio — define o restante do form */}
                   <div className="space-y-2">
                     <Label>Tipo de Prêmio</Label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
                       <button
                         type="button"
                         onClick={() => setPrizeType("fixed")}
-                        className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-colors text-left ${
+                        className={`flex flex-col items-start gap-1 p-3 rounded-lg border-2 transition-colors text-left ${
                           prizeType === "fixed"
                             ? "border-primary bg-primary/5"
                             : "border-border hover:border-primary/50"
                         }`}
                       >
                         <Trophy className="h-4 w-4 text-primary shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium">Bônus Fixo</p>
-                          <p className="text-[10px] text-muted-foreground">Valor por meta de qtd</p>
-                        </div>
+                        <p className="text-sm font-medium leading-tight">Bônus Fixo</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">Valor por meta de qtd</p>
                       </button>
                       <button
                         type="button"
                         onClick={() => setPrizeType("roulette")}
-                        className={`flex items-center gap-2 p-3 rounded-lg border-2 transition-colors text-left ${
+                        className={`flex flex-col items-start gap-1 p-3 rounded-lg border-2 transition-colors text-left ${
                           prizeType === "roulette"
                             ? "border-primary bg-primary/5"
                             : "border-border hover:border-primary/50"
                         }`}
                       >
                         <Dice5 className="h-4 w-4 text-amber-500 shrink-0" />
-                        <div>
-                          <p className="text-sm font-medium">Roleta da Sorte</p>
-                          <p className="text-[10px] text-muted-foreground">Giro a cada R$ captado</p>
-                        </div>
+                        <p className="text-sm font-medium leading-tight">Roleta $</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">Giro a cada R$ captado</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPrizeType("custom")}
+                        className={`flex flex-col items-start gap-1 p-3 rounded-lg border-2 transition-colors text-left ${
+                          prizeType === "custom"
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        <Gift className="h-4 w-4 text-pink-500 shrink-0" />
+                        <p className="text-sm font-medium leading-tight">Roleta Custom</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">Prêmio livre por nº de vendas</p>
                       </button>
                     </div>
                   </div>
