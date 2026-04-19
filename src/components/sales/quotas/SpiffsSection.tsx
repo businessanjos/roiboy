@@ -108,6 +108,8 @@ export function SpiffsSection() {
       trigger_window_type:
         prizeType === "custom" && triggerWeekStartDay === "last-business-day" ? "last-business-day" : null,
       custom_prize_description: prizeType === "custom" ? customPrizeDescription || null : null,
+      payment_tiers: prizeType === "payment_method" ? paymentTiers : null,
+      participant_user_ids: prizeType === "payment_method" && participantUserIds.length > 0 ? participantUserIds : null,
       start_date: startDate,
       end_date: endDate || new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
       is_active: true,
@@ -133,6 +135,8 @@ export function SpiffsSection() {
     setTriggerWindowDays(7);
     setTriggerWeekStartDay("rolling");
     setCustomPrizeDescription("");
+    setPaymentTiers([]);
+    setParticipantUserIds([]);
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
   };
@@ -142,8 +146,11 @@ export function SpiffsSection() {
     setName(spiff.name || "");
     setDescription(spiff.description || "");
     setProductId(spiff.product_id || "all");
-    const pType: "fixed" | "roulette" | "custom" =
-      spiff.prize_type === "roulette" ? "roulette" : spiff.prize_type === "custom" ? "custom" : "fixed";
+    const pType: "fixed" | "roulette" | "custom" | "payment_method" =
+      spiff.prize_type === "roulette" ? "roulette"
+      : spiff.prize_type === "custom" ? "custom"
+      : spiff.prize_type === "payment_method" ? "payment_method"
+      : "fixed";
     setPrizeType(pType);
     setBonusAmount(Number(spiff.bonus_amount) || 0);
     setBonusType(spiff.bonus_type || "fixed");
@@ -161,6 +168,8 @@ export function SpiffsSection() {
           : "rolling"
     );
     setCustomPrizeDescription(spiff.custom_prize_description || "");
+    setPaymentTiers(Array.isArray(spiff.payment_tiers) ? spiff.payment_tiers : []);
+    setParticipantUserIds(Array.isArray(spiff.participant_user_ids) ? spiff.participant_user_ids : []);
     setStartDate(spiff.start_date || new Date().toISOString().split("T")[0]);
     setEndDate(spiff.end_date || "");
     setOpen(true);
