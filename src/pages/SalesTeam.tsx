@@ -58,21 +58,6 @@ export default function SalesTeam() {
               <Target className="h-3.5 w-3.5" />
               Meta
             </TabsTrigger>
-            <TabsTrigger value="live" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium whitespace-nowrap">
-              <Activity className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Ao Vivo</span>
-              <span className="sm:hidden">Live</span>
-            </TabsTrigger>
-            <TabsTrigger value="telephony" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium whitespace-nowrap">
-              <Phone className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Telefonia</span>
-              <span className="sm:hidden">Tel.</span>
-            </TabsTrigger>
-            <TabsTrigger value="conversations" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium whitespace-nowrap">
-              <MessageSquareText className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Conversas</span>
-              <span className="sm:hidden">Conv.</span>
-            </TabsTrigger>
             <TabsTrigger value="insights" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium whitespace-nowrap">
               <Sparkles className="h-3.5 w-3.5" />
               Insights
@@ -87,11 +72,6 @@ export default function SalesTeam() {
               <span className="hidden sm:inline">Comissão</span>
               <span className="sm:hidden">Com.</span>
             </TabsTrigger>
-            <TabsTrigger value="videocall" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium whitespace-nowrap">
-              <Video className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Vídeo</span>
-              <span className="sm:hidden">Víd.</span>
-            </TabsTrigger>
             <TabsTrigger value="career" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium whitespace-nowrap">
               <GraduationCap className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">Carreira</span>
@@ -101,23 +81,52 @@ export default function SalesTeam() {
         </div>
 
         <TabsContent value="performance">
-          <SalesTeamTab />
+          <Tabs defaultValue="overview" className="space-y-4">
+            <div className="overflow-x-auto -mx-4 px-4">
+              <TabsList className="h-9 p-1 bg-muted/40 gap-0.5 inline-flex w-auto min-w-full sm:min-w-0">
+                <TabsTrigger value="overview" className="gap-1.5 text-xs px-2.5 sm:px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  Visão Geral
+                </TabsTrigger>
+                <TabsTrigger value="live" className="gap-1.5 text-xs px-2.5 sm:px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
+                  <Activity className="h-3.5 w-3.5" />
+                  Ao Vivo
+                </TabsTrigger>
+                <TabsTrigger value="telephony" className="gap-1.5 text-xs px-2.5 sm:px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
+                  <Phone className="h-3.5 w-3.5" />
+                  Telefonia
+                </TabsTrigger>
+                <TabsTrigger value="conversations" className="gap-1.5 text-xs px-2.5 sm:px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
+                  <MessageSquareText className="h-3.5 w-3.5" />
+                  Conversas
+                </TabsTrigger>
+                <TabsTrigger value="videocall" className="gap-1.5 text-xs px-2.5 sm:px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
+                  <Video className="h-3.5 w-3.5" />
+                  Vídeo
+                </TabsTrigger>
+              </TabsList>
+            </div>
+
+            <TabsContent value="overview">
+              <SalesTeamTab />
+            </TabsContent>
+            <TabsContent value="live">
+              <ThreeCPlusLiveMonitor />
+            </TabsContent>
+            <TabsContent value="telephony">
+              <ThreeCPlusMetrics />
+            </TabsContent>
+            <TabsContent value="conversations">
+              <TeamConversationAnalysisTab />
+            </TabsContent>
+            <TabsContent value="videocall">
+              <VideoCallTab />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="goals">
           <TeamGoalsTab />
-        </TabsContent>
-
-        <TabsContent value="live">
-          <ThreeCPlusLiveMonitor />
-        </TabsContent>
-
-        <TabsContent value="telephony">
-          <ThreeCPlusMetrics />
-        </TabsContent>
-
-        <TabsContent value="conversations">
-          <TeamConversationAnalysisTab />
         </TabsContent>
 
         <TabsContent value="insights">
@@ -130,10 +139,6 @@ export default function SalesTeam() {
 
         <TabsContent value="commission">
           <CommissionTab />
-        </TabsContent>
-
-        <TabsContent value="videocall">
-          <VideoCallTab />
         </TabsContent>
 
         <TabsContent value="career">
