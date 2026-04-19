@@ -852,9 +852,9 @@ export function IncentivePlanSection() {
           year={now.getFullYear()}
           positionId={selectedPositionId}
           positionTitle={selectedPosition?.title}
-          monthlyBonusBase={bonusBase}
-          quarterlyBonusValue={quarterlyBonusEnabled ? quarterlyBonusValue : 0}
-          annualBonusValue={annualBonusEnabled ? annualBonusValue : 0}
+          monthlyBonusBase={Number(activePlan?.bonus_base_value || 0)}
+          quarterlyBonusValue={activePlan?.quarterly_bonus_enabled ? Number(activePlan.quarterly_bonus_value || 0) : 0}
+          annualBonusValue={(activePlan as any)?.annual_bonus_enabled ? Number((activePlan as any).annual_bonus_value || 0) : 0}
         />
       )}
 
