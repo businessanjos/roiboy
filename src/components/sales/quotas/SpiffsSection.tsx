@@ -439,7 +439,10 @@ export function SpiffsSection() {
                               Roleta Custom
                             </Badge>
                             <p className="text-muted-foreground">
-                              {(spiff as any).trigger_sales_count || 0} vendas / {(spiff as any).trigger_window_days || 7}d
+                              {(spiff as any).trigger_sales_count || 0} vendas /{" "}
+                              {(spiff as any).trigger_week_start_day !== null && (spiff as any).trigger_week_start_day !== undefined
+                                ? ["Sem Dom→Sáb","Sem Seg→Dom","Sem Ter→Seg","Sem Qua→Ter","Sem Qui→Qua","Sem Sex→Qui","Sem Sáb→Sex"][(spiff as any).trigger_week_start_day]
+                                : `${(spiff as any).trigger_window_days || 7}d`}
                             </p>
                             {(spiff as any).custom_prize_description && (
                               <p className="text-muted-foreground italic line-clamp-1 max-w-[180px] mx-auto">
