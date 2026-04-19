@@ -1,13 +1,17 @@
-import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Target, Gift } from "lucide-react";
+import { Target, Gift, Crosshair } from "lucide-react";
 import { QuotasSection } from "./QuotasSection";
 import { IncentivePlanSection } from "./IncentivePlanSection";
+import { TeamGoalsTab } from "@/components/sales/team/TeamGoalsTab";
 
 export function QuotasIncentivesTab() {
   return (
-    <Tabs defaultValue="quotas" className="space-y-4">
+    <Tabs defaultValue="goals" className="space-y-4">
       <TabsList>
+        <TabsTrigger value="goals" className="gap-1.5">
+          <Crosshair className="h-4 w-4" />
+          Meta
+        </TabsTrigger>
         <TabsTrigger value="quotas" className="gap-1.5">
           <Target className="h-4 w-4" />
           Quotas por Vendedor
@@ -17,6 +21,10 @@ export function QuotasIncentivesTab() {
           Plano de Incentivo
         </TabsTrigger>
       </TabsList>
+
+      <TabsContent value="goals">
+        <TeamGoalsTab />
+      </TabsContent>
 
       <TabsContent value="quotas">
         <QuotasSection />
