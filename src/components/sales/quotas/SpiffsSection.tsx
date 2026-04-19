@@ -66,6 +66,26 @@ export function SpiffsSection() {
 
   const products = productsQuery.data ?? [];
 
+  // Closers ativos (para seleção de participantes em SPIFFs de pagamento)
+  const closersQuery = useQuery({
+    queryKey: ["spiffs-closers", accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hr_collaborators")
+        .select("user_id, full_name, position")
+        .eq("account_id", accountId!)
+        .not("user_id", "is", null)
+        .or("position.ilike.%closer%,position.ilike.%executiv%");
+      if (error) throw error;
+      return (data ?? []).filter((c: any) => {
+        const pos = (c.position || "").toLowerCase();
+        return !pos.includes("sdr") && !pos.includes("gerente") && !pos.includes("manager");
+      });
+    },
+    enabled: !!accountId,
+  });
+  const closers = closersQuery.data ?? [];
+
   const handleSave = async () => {
     await saveSpiff.mutateAsync({
       ...(editingId ? { id: editingId } : {}),
