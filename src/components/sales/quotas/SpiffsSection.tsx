@@ -320,20 +320,39 @@ export function SpiffsSection() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-xs">Janela (dias)</Label>
-                          <Select value={String(triggerWindowDays)} onValueChange={(v) => setTriggerWindowDays(parseInt(v))}>
+                          <Label className="text-xs">Janela</Label>
+                          <Select
+                            value={triggerWeekStartDay === "rolling" ? `rolling-${triggerWindowDays}` : `week-${triggerWeekStartDay}`}
+                            onValueChange={(v) => {
+                              if (v.startsWith("rolling-")) {
+                                setTriggerWeekStartDay("rolling");
+                                setTriggerWindowDays(parseInt(v.replace("rolling-", "")));
+                              } else {
+                                const day = v.replace("week-", "");
+                                setTriggerWeekStartDay(day);
+                                setTriggerWindowDays(7);
+                              }
+                            }}
+                          >
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="1">1 dia</SelectItem>
-                              <SelectItem value="7">7 dias (semana)</SelectItem>
-                              <SelectItem value="14">14 dias</SelectItem>
-                              <SelectItem value="30">30 dias (mês)</SelectItem>
+                              <SelectItem value="rolling-1">Últimas 24h (rolante)</SelectItem>
+                              <SelectItem value="rolling-7">Últimos 7 dias (rolante)</SelectItem>
+                              <SelectItem value="rolling-14">Últimos 14 dias (rolante)</SelectItem>
+                              <SelectItem value="rolling-30">Últimos 30 dias (rolante)</SelectItem>
+                              <SelectItem value="week-0">Semana Dom→Sáb</SelectItem>
+                              <SelectItem value="week-1">Semana Seg→Dom</SelectItem>
+                              <SelectItem value="week-2">Semana Ter→Seg</SelectItem>
+                              <SelectItem value="week-3">Semana Qua→Ter</SelectItem>
+                              <SelectItem value="week-4">Semana Qui→Qua</SelectItem>
+                              <SelectItem value="week-5">Semana Sex→Qui</SelectItem>
+                              <SelectItem value="week-6">Semana Sáb→Sex</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
                       <p className="text-[10px] text-muted-foreground">
-                        Ex: 3 vendas em 7 dias = 1 giro
+                        Ex: 3 vendas em uma semana. Use "Semana Qua→Ter" se sua semana de vendas começa na quarta 00:00 e termina terça 23:59.
                       </p>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Prêmio (descrição livre)</Label>
