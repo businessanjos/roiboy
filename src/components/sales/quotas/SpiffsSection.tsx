@@ -78,6 +78,7 @@ export function SpiffsSection() {
       roulette_max_prize: prizeType === "roulette" ? rouletteMax : 0,
       trigger_sales_count: prizeType === "custom" ? triggerSalesCount : 0,
       trigger_window_days: prizeType === "custom" ? triggerWindowDays : 7,
+      trigger_week_start_day: prizeType === "custom" && triggerWeekStartDay !== "rolling" ? parseInt(triggerWeekStartDay) : null,
       custom_prize_description: prizeType === "custom" ? customPrizeDescription || null : null,
       start_date: startDate,
       end_date: endDate || new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
