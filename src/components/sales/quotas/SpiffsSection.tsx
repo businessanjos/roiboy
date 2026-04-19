@@ -661,17 +661,6 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
         .eq("status", "won")
         .gte("won_at", effectiveStart.toISOString())
         .lte("won_at", effectiveEnd.toISOString());
-
-  const dealsQuery = useQuery({
-    queryKey: ["custom-spins", accountId, spiff.id, effectiveStart.toISOString().split("T")[0]],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("deals")
-        .select("id, responsible_user_id, won_at, status")
-        .eq("account_id", accountId!)
-        .eq("status", "won")
-        .gte("won_at", effectiveStart.toISOString().split("T")[0])
-        .lte("won_at", `${effectiveEnd.toISOString().split("T")[0]}T23:59:59`);
       if (error) throw error;
       return (data ?? []) as Array<{ id: string; responsible_user_id: string | null; won_at: string | null }>;
     },
