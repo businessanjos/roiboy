@@ -21,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import { getPaymentChannelLabel } from "./paymentChannels";
 
 interface OTESectionProps {
   year: number;
@@ -29,6 +30,9 @@ interface OTESectionProps {
   monthlyBonusBase?: number;
   quarterlyBonusValue?: number;
   annualBonusValue?: number;
+  monthlyBonusChannel?: string;
+  quarterlyBonusChannel?: string;
+  annualBonusChannel?: string;
 }
 
 export function OTESection({
@@ -38,6 +42,9 @@ export function OTESection({
   monthlyBonusBase = 0,
   quarterlyBonusValue = 0,
   annualBonusValue = 0,
+  monthlyBonusChannel,
+  quarterlyBonusChannel,
+  annualBonusChannel,
 }: OTESectionProps) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
@@ -173,6 +180,26 @@ export function OTESection({
               </Button>
             </div>
           </div>
+          {(monthlyBonusBase > 0 || quarterlyBonusValue > 0 || annualBonusValue > 0) && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-2 text-[11px]">
+              <span className="text-muted-foreground">Canais de pagamento do variável:</span>
+              {monthlyBonusBase > 0 && (
+                <Badge variant="outline" className="text-[10px] font-normal">
+                  Mensal · {getPaymentChannelLabel(monthlyBonusChannel, true)}
+                </Badge>
+              )}
+              {quarterlyBonusValue > 0 && (
+                <Badge variant="outline" className="text-[10px] font-normal">
+                  Trimestral · {getPaymentChannelLabel(quarterlyBonusChannel, true)}
+                </Badge>
+              )}
+              {annualBonusValue > 0 && (
+                <Badge variant="outline" className="text-[10px] font-normal">
+                  Anual · {getPaymentChannelLabel(annualBonusChannel, true)}
+                </Badge>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <Table>
@@ -239,9 +266,9 @@ export function OTESection({
                             <TooltipContent>
                               <p className="text-xs max-w-xs">
                                 Calculado do plano:<br />
-                                Bônus mensal R$ {formatBRL(monthlyBonusBase)} × 12 = R$ {formatBRL(monthlyBonusBase * 12)}<br />
-                                {quarterlyBonusValue > 0 && <>Bônus trimestral R$ {formatBRL(quarterlyBonusValue)} × 4 = R$ {formatBRL(quarterlyBonusValue * 4)}<br /></>}
-                                {annualBonusValue > 0 && <>Bônus anual R$ {formatBRL(annualBonusValue)}<br /></>}
+                                Bônus mensal R$ {formatBRL(monthlyBonusBase)} × 12 = R$ {formatBRL(monthlyBonusBase * 12)} <span className="text-muted-foreground">({getPaymentChannelLabel(monthlyBonusChannel, true)})</span><br />
+                                {quarterlyBonusValue > 0 && <>Bônus trimestral R$ {formatBRL(quarterlyBonusValue)} × 4 = R$ {formatBRL(quarterlyBonusValue * 4)} <span className="text-muted-foreground">({getPaymentChannelLabel(quarterlyBonusChannel, true)})</span><br /></>}
+                                {annualBonusValue > 0 && <>Bônus anual R$ {formatBRL(annualBonusValue)} <span className="text-muted-foreground">({getPaymentChannelLabel(annualBonusChannel, true)})</span><br /></>}
                                 <strong>Total: R$ {formatBRL(calculatedVariable)}</strong>
                               </p>
                             </TooltipContent>

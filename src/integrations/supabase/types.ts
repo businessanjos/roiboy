@@ -10870,6 +10870,7 @@ export type Database = {
         Row: {
           account_id: string
           annual_bonus_enabled: boolean
+          annual_bonus_payment_channel: string | null
           annual_bonus_rules: string | null
           annual_bonus_value: number
           bonus_base_value: number | null
@@ -10882,10 +10883,12 @@ export type Database = {
           id: string
           is_active: boolean | null
           minimum_achievement_percent: number
+          monthly_bonus_payment_channel: string | null
           name: string
           period_type: string
           position_id: string | null
           quarterly_bonus_enabled: boolean
+          quarterly_bonus_payment_channel: string | null
           quarterly_bonus_rules: string | null
           quarterly_bonus_value: number
           quota_value: number
@@ -10894,6 +10897,7 @@ export type Database = {
         Insert: {
           account_id: string
           annual_bonus_enabled?: boolean
+          annual_bonus_payment_channel?: string | null
           annual_bonus_rules?: string | null
           annual_bonus_value?: number
           bonus_base_value?: number | null
@@ -10906,10 +10910,12 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           minimum_achievement_percent?: number
+          monthly_bonus_payment_channel?: string | null
           name: string
           period_type?: string
           position_id?: string | null
           quarterly_bonus_enabled?: boolean
+          quarterly_bonus_payment_channel?: string | null
           quarterly_bonus_rules?: string | null
           quarterly_bonus_value?: number
           quota_value?: number
@@ -10918,6 +10924,7 @@ export type Database = {
         Update: {
           account_id?: string
           annual_bonus_enabled?: boolean
+          annual_bonus_payment_channel?: string | null
           annual_bonus_rules?: string | null
           annual_bonus_value?: number
           bonus_base_value?: number | null
@@ -10930,10 +10937,12 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           minimum_achievement_percent?: number
+          monthly_bonus_payment_channel?: string | null
           name?: string
           period_type?: string
           position_id?: string | null
           quarterly_bonus_enabled?: boolean
+          quarterly_bonus_payment_channel?: string | null
           quarterly_bonus_rules?: string | null
           quarterly_bonus_value?: number
           quota_value?: number

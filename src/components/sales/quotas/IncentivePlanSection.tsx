@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { SpiffsSection } from "./SpiffsSection";
 import { OTESection } from "./OTESection";
 import { CommissionSimulator } from "./CommissionSimulator";
+import { PAYMENT_CHANNELS } from "./paymentChannels";
 
 export function IncentivePlanSection() {
   const now = new Date();
@@ -67,6 +68,9 @@ export function IncentivePlanSection() {
   const [annualBonusEnabled, setAnnualBonusEnabled] = useState(false);
   const [annualBonusValue, setAnnualBonusValue] = useState(0);
   const [annualBonusRules, setAnnualBonusRules] = useState("");
+  const [monthlyBonusChannel, setMonthlyBonusChannel] = useState<string>("folha");
+  const [quarterlyBonusChannel, setQuarterlyBonusChannel] = useState<string>("ferias_co");
+  const [annualBonusChannel, setAnnualBonusChannel] = useState<string>("ferias_co");
   const [draftRates, setDraftRates] = useState<Record<string, { percent: number; fixed: number }>>({});
   const [draftTiers, setDraftTiers] = useState<{ min: number; max: string; multiplier: number; label: string }[]>([]);
 
@@ -118,6 +122,9 @@ export function IncentivePlanSection() {
       setAnnualBonusEnabled((activePlan as any).annual_bonus_enabled || false);
       setAnnualBonusValue(Number((activePlan as any).annual_bonus_value || 0));
       setAnnualBonusRules((activePlan as any).annual_bonus_rules || "");
+      setMonthlyBonusChannel((activePlan as any).monthly_bonus_payment_channel || "folha");
+      setQuarterlyBonusChannel((activePlan as any).quarterly_bonus_payment_channel || "ferias_co");
+      setAnnualBonusChannel((activePlan as any).annual_bonus_payment_channel || "ferias_co");
     } else {
       // Defaults for new plan
       const pos = positions.find((p) => p.id === selectedPositionId);
@@ -136,6 +143,9 @@ export function IncentivePlanSection() {
       setAnnualBonusEnabled(false);
       setAnnualBonusValue(0);
       setAnnualBonusRules("");
+      setMonthlyBonusChannel("folha");
+      setQuarterlyBonusChannel("ferias_co");
+      setAnnualBonusChannel("ferias_co");
     }
     setTimeout(() => { initializedRef.current = true; }, 150);
   }, [activePlan, selectedPositionId]);
@@ -180,9 +190,12 @@ export function IncentivePlanSection() {
       quarterlyBonusRules !== ((activePlan as any).quarterly_bonus_rules || "") ||
       annualBonusEnabled !== ((activePlan as any).annual_bonus_enabled || false) ||
       annualBonusValue !== Number((activePlan as any).annual_bonus_value || 0) ||
-      annualBonusRules !== ((activePlan as any).annual_bonus_rules || "")
+      annualBonusRules !== ((activePlan as any).annual_bonus_rules || "") ||
+      monthlyBonusChannel !== ((activePlan as any).monthly_bonus_payment_channel || "folha") ||
+      quarterlyBonusChannel !== ((activePlan as any).quarterly_bonus_payment_channel || "ferias_co") ||
+      annualBonusChannel !== ((activePlan as any).annual_bonus_payment_channel || "ferias_co")
     );
-  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules]);
+  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, monthlyBonusChannel, quarterlyBonusChannel, annualBonusChannel]);
 
   const hasTierChanges = useCallback(() => {
     if (draftTiers.length !== planTiers.length) return true;
@@ -226,7 +239,7 @@ export function IncentivePlanSection() {
     }, 1500);
 
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
-  }, [planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, draftRates, draftTiers]);
+  }, [planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, monthlyBonusChannel, quarterlyBonusChannel, annualBonusChannel, draftRates, draftTiers]);
 
   const getRate = (productId: string) => {
     if (draftRates[productId]) return draftRates[productId];
@@ -253,6 +266,9 @@ export function IncentivePlanSection() {
       annual_bonus_enabled: annualBonusEnabled,
       annual_bonus_value: annualBonusValue,
       annual_bonus_rules: annualBonusRules,
+      monthly_bonus_payment_channel: monthlyBonusChannel,
+      quarterly_bonus_payment_channel: quarterlyBonusChannel,
+      annual_bonus_payment_channel: annualBonusChannel,
       position_id: selectedPositionId,
     } as any);
   };
@@ -441,20 +457,33 @@ export function IncentivePlanSection() {
                 </div>
                 <div className="space-y-2">
                   <Label>Bônus Base Mensal (R$) — ao atingir 100%</Label>
-                  <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      className="pl-8"
-                      value={bonusBase ? bonusBase.toLocaleString("pt-BR") : ""}
-                      onChange={(e) => {
-                        const digits = e.target.value.replace(/\D/g, "");
-                        setBonusBase(digits ? parseInt(digits, 10) : 0);
-                      }}
-                      placeholder="0"
-                    />
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        className="pl-8"
+                        value={bonusBase ? bonusBase.toLocaleString("pt-BR") : ""}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, "");
+                          setBonusBase(digits ? parseInt(digits, 10) : 0);
+                        }}
+                        placeholder="0"
+                      />
+                    </div>
+                    <Select value={monthlyBonusChannel} onValueChange={setMonthlyBonusChannel}>
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue placeholder="Pagamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_CHANNELS.map((c) => (
+                          <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+                  <p className="text-[10px] text-muted-foreground">Canal de pagamento desta parcela do variável</p>
                 </div>
               </div>
 
@@ -580,15 +609,30 @@ export function IncentivePlanSection() {
                   </div>
                 </div>
                 {quarterlyBonusEnabled && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Regras do Bônus Trimestral</Label>
-                    <Textarea
-                      value={quarterlyBonusRules}
-                      onChange={(e) => setQuarterlyBonusRules(e.target.value)}
-                      rows={3}
-                      placeholder="Ex: Pago ao atingir 100% da soma das metas dos 3 meses do trimestre. Caso atinja entre 80% e 99%, recebe 50% do bônus."
-                    />
-                  </div>
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Canal de pagamento</Label>
+                      <Select value={quarterlyBonusChannel} onValueChange={setQuarterlyBonusChannel}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Onde será pago" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_CHANNELS.map((c) => (
+                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Regras do Bônus Trimestral</Label>
+                      <Textarea
+                        value={quarterlyBonusRules}
+                        onChange={(e) => setQuarterlyBonusRules(e.target.value)}
+                        rows={3}
+                        placeholder="Ex: Pago ao atingir 100% da soma das metas dos 3 meses do trimestre. Caso atinja entre 80% e 99%, recebe 50% do bônus."
+                      />
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -623,15 +667,30 @@ export function IncentivePlanSection() {
                   </div>
                 </div>
                 {annualBonusEnabled && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Regras do Bônus Anual</Label>
-                    <Textarea
-                      value={annualBonusRules}
-                      onChange={(e) => setAnnualBonusRules(e.target.value)}
-                      rows={3}
-                      placeholder="Ex: Pago ao atingir 100% da meta anual (soma dos 12 meses). Atingimento entre 90% e 99% libera 50% do bônus."
-                    />
-                  </div>
+                  <>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Canal de pagamento</Label>
+                      <Select value={annualBonusChannel} onValueChange={setAnnualBonusChannel}>
+                        <SelectTrigger className="h-9">
+                          <SelectValue placeholder="Onde será pago" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PAYMENT_CHANNELS.map((c) => (
+                            <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs">Regras do Bônus Anual</Label>
+                      <Textarea
+                        value={annualBonusRules}
+                        onChange={(e) => setAnnualBonusRules(e.target.value)}
+                        rows={3}
+                        placeholder="Ex: Pago ao atingir 100% da meta anual (soma dos 12 meses). Atingimento entre 90% e 99% libera 50% do bônus."
+                      />
+                    </div>
+                  </>
                 )}
               </div>
 
@@ -855,6 +914,9 @@ export function IncentivePlanSection() {
           monthlyBonusBase={Number(activePlan?.bonus_base_value || 0)}
           quarterlyBonusValue={activePlan?.quarterly_bonus_enabled ? Number(activePlan.quarterly_bonus_value || 0) : 0}
           annualBonusValue={(activePlan as any)?.annual_bonus_enabled ? Number((activePlan as any).annual_bonus_value || 0) : 0}
+          monthlyBonusChannel={monthlyBonusChannel}
+          quarterlyBonusChannel={quarterlyBonusChannel}
+          annualBonusChannel={annualBonusChannel}
         />
       )}
 
