@@ -509,14 +509,18 @@ export function SpiffsSection() {
   );
 }
 
+// Field ID do custom field "Item da Venda" — referencia products.id em deal_field_values.value_text
+const ITEM_DA_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
+
 // ── Painel de giros pendentes por vendedor ──
 function RouletteSpinsPanel({ spiff }: { spiff: any }) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const triggerPerValue = Number(spiff.trigger_per_value || 0);
+  const targetProductId: string | null = spiff.product_id || null;
 
   const dealsQuery = useQuery({
-    queryKey: ["roulette-spins", accountId, spiff.id, spiff.start_date, spiff.end_date],
+    queryKey: ["roulette-spins", accountId, spiff.id, spiff.start_date, spiff.end_date, targetProductId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("deals")
@@ -526,7 +530,20 @@ function RouletteSpinsPanel({ spiff }: { spiff: any }) {
         .gte("won_at", spiff.start_date)
         .lte("won_at", `${spiff.end_date}T23:59:59`);
       if (error) throw error;
-      return (data ?? []) as Array<{ id: string; entry_value: number | null; value: number | null; responsible_user_id: string | null; won_at: string | null; status: string }>;
+      let deals = (data ?? []) as Array<{ id: string; entry_value: number | null; value: number | null; responsible_user_id: string | null; won_at: string | null; status: string }>;
+
+      // Filtro por produto-alvo da campanha (via custom field "Item da Venda")
+      if (targetProductId && deals.length > 0) {
+        const dealIds = deals.map((d) => d.id);
+        const { data: fvs } = await supabase
+          .from("deal_field_values")
+          .select("deal_id, value_text")
+          .eq("field_id", ITEM_DA_VENDA_FIELD_ID)
+          .in("deal_id", dealIds);
+        const matchingIds = new Set((fvs ?? []).filter((f: any) => f.value_text === targetProductId).map((f: any) => f.deal_id));
+        deals = deals.filter((d) => matchingIds.has(d.id));
+      }
+      return deals;
     },
     enabled: !!accountId && triggerPerValue > 0,
   });
