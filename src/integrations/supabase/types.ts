@@ -11568,9 +11568,13 @@ export type Database = {
           is_active: boolean
           name: string
           plan_id: string | null
+          prize_type: string
           product_id: string | null
+          roulette_max_prize: number | null
+          roulette_min_prize: number | null
           start_date: string
           target_quantity: number
+          trigger_per_value: number | null
           updated_at: string
         }
         Insert: {
@@ -11584,9 +11588,13 @@ export type Database = {
           is_active?: boolean
           name: string
           plan_id?: string | null
+          prize_type?: string
           product_id?: string | null
+          roulette_max_prize?: number | null
+          roulette_min_prize?: number | null
           start_date?: string
           target_quantity?: number
+          trigger_per_value?: number | null
           updated_at?: string
         }
         Update: {
@@ -11600,9 +11608,13 @@ export type Database = {
           is_active?: boolean
           name?: string
           plan_id?: string | null
+          prize_type?: string
           product_id?: string | null
+          roulette_max_prize?: number | null
+          roulette_min_prize?: number | null
           start_date?: string
           target_quantity?: number
+          trigger_per_value?: number | null
           updated_at?: string
         }
         Relationships: [
