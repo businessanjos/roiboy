@@ -381,20 +381,22 @@ export function SpiffsSection() {
                   const product = products.find((p) => p.id === spiff.product_id);
                   const expired = isExpired(spiff.end_date);
                   const isRoulette = (spiff as any).prize_type === "roulette";
+                  const isCustom = (spiff as any).prize_type === "custom";
                   return (
                     <TableRow key={spiff.id} className={expired ? "opacity-50" : ""}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-1.5">
                           {isRoulette && <Dice5 className="h-3.5 w-3.5 text-amber-500" />}
+                          {isCustom && <Gift className="h-3.5 w-3.5 text-pink-500" />}
                           {spiff.name}
                         </div>
                       </TableCell>
                       <TableCell className="text-muted-foreground">{product?.name || "Todos"}</TableCell>
                       <TableCell className="text-center text-xs">
-                        {isRoulette ? (
+                        {isRoulette && (
                           <div className="space-y-0.5">
                             <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">
-                              Roleta da Sorte
+                              Roleta $
                             </Badge>
                             <p className="text-muted-foreground">
                               1 giro / R$ {formatBRL(Number((spiff as any).trigger_per_value || 0))}
@@ -403,7 +405,23 @@ export function SpiffsSection() {
                               R$ {formatBRL(Number((spiff as any).roulette_min_prize || 0))} – R$ {formatBRL(Number((spiff as any).roulette_max_prize || 0))}
                             </p>
                           </div>
-                        ) : (
+                        )}
+                        {isCustom && (
+                          <div className="space-y-0.5">
+                            <Badge variant="outline" className="text-[10px] border-pink-500/40 text-pink-700 dark:text-pink-400">
+                              Roleta Custom
+                            </Badge>
+                            <p className="text-muted-foreground">
+                              {(spiff as any).trigger_sales_count || 0} vendas / {(spiff as any).trigger_window_days || 7}d
+                            </p>
+                            {(spiff as any).custom_prize_description && (
+                              <p className="text-muted-foreground italic line-clamp-1 max-w-[180px] mx-auto">
+                                {(spiff as any).custom_prize_description}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        {!isRoulette && !isCustom && (
                           <div className="space-y-0.5">
                             <Badge variant="outline" className="text-[10px]">Bônus Fixo</Badge>
                             <p className="text-muted-foreground">
