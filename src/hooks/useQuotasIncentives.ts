@@ -83,6 +83,9 @@ export interface SalesSpiff {
   trigger_per_value: number;
   roulette_min_prize: number;
   roulette_max_prize: number;
+  trigger_sales_count: number;
+  trigger_window_days: number;
+  custom_prize_description: string | null;
   created_at: string;
   updated_at: string;
 }
