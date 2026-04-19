@@ -121,10 +121,6 @@ export default function SalesTeam() {
           </Tabs>
         </TabsContent>
 
-        <TabsContent value="goals">
-          <TeamGoalsTab />
-        </TabsContent>
-
         <TabsContent value="insights">
           <TeamInsightsTab />
         </TabsContent>
