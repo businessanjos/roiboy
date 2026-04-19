@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Zap, Save, Dice5, Trophy, Pencil } from "lucide-react";
+import { Plus, Trash2, Zap, Save, Dice5, Trophy, Pencil, Gift } from "lucide-react";
 import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,13 +32,16 @@ export function SpiffsSection() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [productId, setProductId] = useState<string>("all");
-  const [prizeType, setPrizeType] = useState<"fixed" | "roulette">("fixed");
+  const [prizeType, setPrizeType] = useState<"fixed" | "roulette" | "custom">("fixed");
   const [bonusAmount, setBonusAmount] = useState(0);
   const [bonusType, setBonusType] = useState("fixed");
   const [targetQty, setTargetQty] = useState(1);
   const [triggerPerValue, setTriggerPerValue] = useState(10000);
   const [rouletteMin, setRouletteMin] = useState(0);
   const [rouletteMax, setRouletteMax] = useState(100);
+  const [triggerSalesCount, setTriggerSalesCount] = useState(3);
+  const [triggerWindowDays, setTriggerWindowDays] = useState(7);
+  const [customPrizeDescription, setCustomPrizeDescription] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState("");
 
@@ -65,13 +68,16 @@ export function SpiffsSection() {
       name,
       description: description || null,
       product_id: productId === "all" ? null : productId,
-      bonus_amount: prizeType === "roulette" ? rouletteMax : bonusAmount,
-      bonus_type: prizeType === "roulette" ? "fixed" : bonusType,
-      target_quantity: prizeType === "roulette" ? 0 : targetQty,
+      bonus_amount: prizeType === "roulette" ? rouletteMax : prizeType === "custom" ? 0 : bonusAmount,
+      bonus_type: prizeType === "fixed" ? bonusType : "fixed",
+      target_quantity: prizeType === "fixed" ? targetQty : 0,
       prize_type: prizeType,
       trigger_per_value: prizeType === "roulette" ? triggerPerValue : 0,
       roulette_min_prize: prizeType === "roulette" ? rouletteMin : 0,
       roulette_max_prize: prizeType === "roulette" ? rouletteMax : 0,
+      trigger_sales_count: prizeType === "custom" ? triggerSalesCount : 0,
+      trigger_window_days: prizeType === "custom" ? triggerWindowDays : 7,
+      custom_prize_description: prizeType === "custom" ? customPrizeDescription || null : null,
       start_date: startDate,
       end_date: endDate || new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
       is_active: true,
@@ -93,6 +99,9 @@ export function SpiffsSection() {
     setTriggerPerValue(10000);
     setRouletteMin(0);
     setRouletteMax(100);
+    setTriggerSalesCount(3);
+    setTriggerWindowDays(7);
+    setCustomPrizeDescription("");
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
   };
@@ -102,7 +111,8 @@ export function SpiffsSection() {
     setName(spiff.name || "");
     setDescription(spiff.description || "");
     setProductId(spiff.product_id || "all");
-    const pType = spiff.prize_type === "roulette" ? "roulette" : "fixed";
+    const pType: "fixed" | "roulette" | "custom" =
+      spiff.prize_type === "roulette" ? "roulette" : spiff.prize_type === "custom" ? "custom" : "fixed";
     setPrizeType(pType);
     setBonusAmount(Number(spiff.bonus_amount) || 0);
     setBonusType(spiff.bonus_type || "fixed");
@@ -110,6 +120,9 @@ export function SpiffsSection() {
     setTriggerPerValue(Number(spiff.trigger_per_value) || 10000);
     setRouletteMin(Number(spiff.roulette_min_prize) || 0);
     setRouletteMax(Number(spiff.roulette_max_prize) || 100);
+    setTriggerSalesCount(Number(spiff.trigger_sales_count) || 3);
+    setTriggerWindowDays(Number(spiff.trigger_window_days) || 7);
+    setCustomPrizeDescription(spiff.custom_prize_description || "");
     setStartDate(spiff.start_date || new Date().toISOString().split("T")[0]);
     setEndDate(spiff.end_date || "");
     setOpen(true);
