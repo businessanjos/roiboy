@@ -741,24 +741,35 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
     enabled: !!accountId && triggerSalesCount > 0,
   });
 
-  // Busca todos os colaboradores do RH em cargos de vendas (para mostrar mesmo quem ainda não vendeu)
+  // Busca apenas Closers/Executivos Comerciais (exclui SDR, Gerente, etc.)
+  // SPIFFs de incentivo são exclusivos para Closers (executivos comerciais).
   const salesTeamQuery = useQuery({
-    queryKey: ["sales-team-collaborators", accountId],
+    queryKey: ["sales-team-closers", accountId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("hr_collaborators")
         .select("user_id, full_name, position")
         .eq("account_id", accountId!)
         .not("user_id", "is", null)
-        .or("position.ilike.%vend%,position.ilike.%closer%,position.ilike.%executiv%,position.ilike.%sdr%");
+        .or("position.ilike.%closer%,position.ilike.%executiv%");
       if (error) throw error;
-      return data ?? [];
+      // Garantia extra: remove qualquer cargo que contenha SDR ou Gerente
+      return (data ?? []).filter((c: any) => {
+        const pos = (c.position || "").toLowerCase();
+        return !pos.includes("sdr") && !pos.includes("gerente") && !pos.includes("manager");
+      });
     },
     enabled: !!accountId,
   });
 
-  const dealUserIds = Array.from(new Set((dealsQuery.data ?? []).map((d) => d.responsible_user_id).filter(Boolean) as string[]));
   const teamUserIds = (salesTeamQuery.data ?? []).map((c) => c.user_id).filter(Boolean) as string[];
+  const allowedSet = new Set(teamUserIds);
+  // Apenas inclui vendas feitas por Closers da lista permitida
+  const dealUserIds = Array.from(new Set(
+    (dealsQuery.data ?? [])
+      .map((d) => d.responsible_user_id)
+      .filter((uid): uid is string => !!uid && allowedSet.has(uid))
+  ));
   const userIds = Array.from(new Set([...dealUserIds, ...teamUserIds]));
 
   const usersQuery = useQuery({
