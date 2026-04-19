@@ -216,8 +216,10 @@ export function OTESection({
             <TableBody>
               {users.map((user) => {
                 const ote = getOTE(user.id);
-                const total = ote.base + ote.variable;
-                const basePct = total > 0 ? Math.round((ote.base / total) * 100) : 0;
+                const baseNum = Number(ote.base) || 0;
+                const variableNum = Number(ote.variable) || 0;
+                const total = baseNum + variableNum;
+                const basePct = total > 0 ? Math.round((baseNum / total) * 100) : 0;
                 const collab = collaborators.find((c) => c.user_id === user.id);
                 const calc = calculateAnnualBase(user.id);
                 return (
