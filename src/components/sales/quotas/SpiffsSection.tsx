@@ -720,12 +720,12 @@ export function SpiffsSection() {
               <CustomSpinsPanel key={`custom-spins-${spiff.id}`} spiff={spiff as any} />
             ))}
 
-          {/* SPIFF de Forma de Pagamento — fixo, calculado por mês corrente */}
-          <PaymentMethodSpiffPanel
-            startDate={`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`}
-            endDate={new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0]}
-            periodLabel={`${now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}`}
-          />
+          {/* Painéis SPIFF Forma de Pagamento — um por spiff ativo */}
+          {spiffs
+            .filter((s) => (s as any).prize_type === "payment_method" && s.is_active && !isExpired(s.end_date))
+            .map((spiff) => (
+              <PaymentMethodSpiffPanel key={`payment-${spiff.id}`} spiff={spiff as any} />
+            ))}
         </CardContent>
       </Card>
     </TooltipProvider>
