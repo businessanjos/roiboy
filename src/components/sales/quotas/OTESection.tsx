@@ -26,12 +26,25 @@ interface OTESectionProps {
   year: number;
   positionId: string;
   positionTitle?: string;
+  monthlyBonusBase?: number;
+  quarterlyBonusValue?: number;
+  annualBonusValue?: number;
 }
 
-export function OTESection({ year, positionId, positionTitle }: OTESectionProps) {
+export function OTESection({
+  year,
+  positionId,
+  positionTitle,
+  monthlyBonusBase = 0,
+  quarterlyBonusValue = 0,
+  annualBonusValue = 0,
+}: OTESectionProps) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const { userOTEs, upsertOTE } = useQuotasIncentives(year, 1);
+
+  // Variável anual calculado a partir do plano: bônus mensal × 12 + trimestral × 4 + anual
+  const calculatedVariable = (monthlyBonusBase * 12) + (quarterlyBonusValue * 4) + annualBonusValue;
 
   const [drafts, setDrafts] = useState<Record<string, { base: number; variable: number }>>({});
 
