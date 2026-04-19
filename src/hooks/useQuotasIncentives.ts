@@ -36,6 +36,9 @@ export interface IncentivePlan {
   annual_bonus_enabled: boolean;
   annual_bonus_value: number;
   annual_bonus_rules: string | null;
+  monthly_bonus_payment_channel: string | null;
+  quarterly_bonus_payment_channel: string | null;
+  annual_bonus_payment_channel: string | null;
   position_id: string | null;
   quota_value: number;
   goal_value: number;
