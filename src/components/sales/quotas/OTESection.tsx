@@ -233,6 +233,13 @@ export function OTESection({ year, positionId, positionTitle }: OTESectionProps)
                   </TableRow>
                 );
               })}
+              {users.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8 text-sm">
+                    Nenhum colaborador com cargo "{positionTitle}" cadastrado no RH.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
