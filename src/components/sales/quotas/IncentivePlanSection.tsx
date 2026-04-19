@@ -848,7 +848,14 @@ export function IncentivePlanSection() {
 
       {/* ── OTE Section ── */}
       {selectedPositionId && (
-        <OTESection year={now.getFullYear()} positionId={selectedPositionId} positionTitle={selectedPosition?.title} />
+        <OTESection
+          year={now.getFullYear()}
+          positionId={selectedPositionId}
+          positionTitle={selectedPosition?.title}
+          monthlyBonusBase={bonusBase}
+          quarterlyBonusValue={quarterlyBonusEnabled ? quarterlyBonusValue : 0}
+          annualBonusValue={annualBonusEnabled ? annualBonusValue : 0}
+        />
       )}
 
       {/* ── SPIFFs Section ── */}
