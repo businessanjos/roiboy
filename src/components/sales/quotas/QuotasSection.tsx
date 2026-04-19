@@ -13,13 +13,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
+// Apenas Closers/Executivos Comerciais ativos (Darlan e Vanessa).
+// Jonathan = Gerente Comercial, George = SDR, Everton/Maikol = Sócios → não entram nas metas/cash collect de executivos.
 const SALES_USER_IDS = [
-  "de43a643-0109-4afb-ac35-be768dbf4090",
-  "1232ec15-5f66-4b5f-9e74-f40d436f9d0f",
-  "d20201f6-a9bd-4934-ae50-07ce7a47574b",
-  "1d090543-1853-4cd0-bdb4-02e17a5df4d8",
-  "1ac1c97c-bff6-4174-b48c-9b524b404ce6",
-  "cefc44c7-d2e2-4937-94ac-069c1c94731b",
+  "1d090543-1853-4cd0-bdb4-02e17a5df4d8", // Darlan Ferreira
+  "1ac1c97c-bff6-4174-b48c-9b524b404ce6", // Vanessa Minelli
 ];
 
 const TRACKED_PRODUCTS = [
