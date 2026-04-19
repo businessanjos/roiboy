@@ -363,26 +363,22 @@ function RouletteSpinsPanel({ spiff }: { spiff: any }) {
   const triggerPerValue = Number(spiff.trigger_per_value || 0);
 
   const dealsQuery = useQuery({
-    queryKey: ["roulette-spins", accountId, spiff.id, spiff.start_date, spiff.end_date, spiff.product_id],
+    queryKey: ["roulette-spins", accountId, spiff.id, spiff.start_date, spiff.end_date],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from("deals")
-        .select("id, value, owner_id, product_id, won_at, status")
+        .select("id, entry_value, value, responsible_user_id, won_at, status")
         .eq("account_id", accountId!)
         .eq("status", "won")
         .gte("won_at", spiff.start_date)
         .lte("won_at", `${spiff.end_date}T23:59:59`);
-
-      if (spiff.product_id) query = query.eq("product_id", spiff.product_id);
-
-      const { data, error } = await query;
       if (error) throw error;
-      return data || [];
+      return (data ?? []) as Array<{ id: string; entry_value: number | null; value: number | null; responsible_user_id: string | null; won_at: string | null; status: string }>;
     },
     enabled: !!accountId && triggerPerValue > 0,
   });
 
-  const userIds = Array.from(new Set((dealsQuery.data ?? []).map((d) => d.owner_id).filter(Boolean)));
+  const userIds = Array.from(new Set((dealsQuery.data ?? []).map((d) => d.responsible_user_id).filter(Boolean) as string[]));
 
   const usersQuery = useQuery({
     queryKey: ["spin-users", accountId, userIds.join(",")],
@@ -400,8 +396,8 @@ function RouletteSpinsPanel({ spiff }: { spiff: any }) {
 
   const summary = userIds.map((uid) => {
     const total = (dealsQuery.data ?? [])
-      .filter((d) => d.owner_id === uid)
-      .reduce((acc, d) => acc + Number(d.value || 0), 0);
+      .filter((d) => d.responsible_user_id === uid)
+      .reduce((acc, d) => acc + Number(d.entry_value || 0), 0);
     const spins = triggerPerValue > 0 ? Math.floor(total / triggerPerValue) : 0;
     const remainder = triggerPerValue > 0 ? total - spins * triggerPerValue : 0;
     const toNextSpin = triggerPerValue > 0 ? triggerPerValue - remainder : 0;
