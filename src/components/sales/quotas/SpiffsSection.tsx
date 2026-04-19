@@ -442,6 +442,147 @@ export function SpiffsSection() {
                     </div>
                   )}
 
+                  {prizeType === "payment_method" && (
+                    <div className="rounded-lg border-2 border-purple-500/30 bg-purple-500/5 p-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="h-4 w-4 text-purple-600" />
+                          <p className="text-xs font-medium">Faixas de Bônus por Forma de Pagamento</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 gap-1 text-xs"
+                          onClick={() => setPaymentTiers([...paymentTiers, { label: "Nova faixa", bonus: 0, min_parcelas: 1, max_parcelas: 1, includes_cash: false }])}
+                        >
+                          <Plus className="h-3 w-3" />
+                          Faixa
+                        </Button>
+                      </div>
+
+                      {paymentTiers.length === 0 && (
+                        <p className="text-xs text-muted-foreground italic">Adicione faixas para configurar os bônus.</p>
+                      )}
+
+                      <div className="space-y-2">
+                        {paymentTiers.map((tier, idx) => (
+                          <div key={idx} className="rounded-md border bg-background p-2 space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={tier.label}
+                                onChange={(e) => {
+                                  const next = [...paymentTiers];
+                                  next[idx] = { ...next[idx], label: e.target.value };
+                                  setPaymentTiers(next);
+                                }}
+                                placeholder="Ex: 2x ou 3x cartão"
+                                className="h-8 text-xs flex-1"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => setPaymentTiers(paymentTiers.filter((_, i) => i !== idx))}
+                              >
+                                <X className="h-3.5 w-3.5 text-destructive" />
+                              </Button>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="space-y-1">
+                                <Label className="text-[10px] text-muted-foreground">Bônus (R$)</Label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  value={tier.bonus || ""}
+                                  onChange={(e) => {
+                                    const next = [...paymentTiers];
+                                    next[idx] = { ...next[idx], bonus: parseFloat(e.target.value) || 0 };
+                                    setPaymentTiers(next);
+                                  }}
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[10px] text-muted-foreground">Parcelas mín</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={12}
+                                  value={tier.min_parcelas || ""}
+                                  onChange={(e) => {
+                                    const next = [...paymentTiers];
+                                    next[idx] = { ...next[idx], min_parcelas: parseInt(e.target.value) || 1 };
+                                    setPaymentTiers(next);
+                                  }}
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[10px] text-muted-foreground">Parcelas máx</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={12}
+                                  value={tier.max_parcelas || ""}
+                                  onChange={(e) => {
+                                    const next = [...paymentTiers];
+                                    next[idx] = { ...next[idx], max_parcelas: parseInt(e.target.value) || 1 };
+                                    setPaymentTiers(next);
+                                  }}
+                                  className="h-8 text-xs"
+                                />
+                              </div>
+                            </div>
+                            <label className="flex items-center gap-2 text-xs cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={tier.includes_cash}
+                                onChange={(e) => {
+                                  const next = [...paymentTiers];
+                                  next[idx] = { ...next[idx], includes_cash: e.target.checked };
+                                  setPaymentTiers(next);
+                                }}
+                                className="h-3.5 w-3.5"
+                              />
+                              <span>Inclui Pix / À vista nesta faixa</span>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="space-y-1.5 pt-2 border-t">
+                        <Label className="text-xs">Closers participantes (vazio = todos os Closers ativos)</Label>
+                        <div className="flex flex-wrap gap-1.5">
+                          {closers.map((c) => {
+                            const selected = participantUserIds.includes(c.user_id!);
+                            return (
+                              <Badge
+                                key={c.user_id}
+                                variant={selected ? "default" : "outline"}
+                                className="cursor-pointer text-[10px]"
+                                onClick={() => {
+                                  if (selected) {
+                                    setParticipantUserIds(participantUserIds.filter((u) => u !== c.user_id));
+                                  } else {
+                                    setParticipantUserIds([...participantUserIds, c.user_id!]);
+                                  }
+                                }}
+                              >
+                                {c.full_name}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <p className="text-[10px] text-muted-foreground italic">
+                        Cada venda é classificada na primeira faixa que combinar (parcelas + Pix/À vista quando marcado). Vendas sem o campo "Parcelas" preenchido não pontuam.
+                      </p>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label>Início</Label>
