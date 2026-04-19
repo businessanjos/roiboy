@@ -567,7 +567,35 @@ function RouletteSpinsPanel({ spiff }: { spiff: any }) {
     enabled: !!accountId && triggerPerValue > 0,
   });
 
-  const userIds = Array.from(new Set((dealsQuery.data ?? []).map((d) => d.responsible_user_id).filter(Boolean) as string[]));
+  // Busca apenas Closers/Executivos Comerciais (exclui SDR, Gerente, Sócios)
+  // SPIFFs/Cash Collect são exclusivos para Closers (executivos comerciais).
+  const salesTeamQuery = useQuery({
+    queryKey: ["sales-team-closers-roulette", accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hr_collaborators")
+        .select("user_id, full_name, position")
+        .eq("account_id", accountId!)
+        .not("user_id", "is", null)
+        .or("position.ilike.%closer%,position.ilike.%executiv%");
+      if (error) throw error;
+      return (data ?? []).filter((c: any) => {
+        const pos = (c.position || "").toLowerCase();
+        return !pos.includes("sdr") && !pos.includes("gerente") && !pos.includes("manager");
+      });
+    },
+    enabled: !!accountId,
+  });
+
+  const teamUserIds = (salesTeamQuery.data ?? []).map((c) => c.user_id).filter(Boolean) as string[];
+  const allowedSet = new Set(teamUserIds);
+  // Apenas inclui vendas feitas por Closers da lista permitida
+  const dealUserIds = Array.from(new Set(
+    (dealsQuery.data ?? [])
+      .map((d) => d.responsible_user_id)
+      .filter((uid): uid is string => !!uid && allowedSet.has(uid))
+  ));
+  const userIds = Array.from(new Set([...dealUserIds, ...teamUserIds]));
 
   const usersQuery = useQuery({
     queryKey: ["spin-users", accountId, userIds.join(",")],
@@ -591,8 +619,9 @@ function RouletteSpinsPanel({ spiff }: { spiff: any }) {
     const remainder = triggerPerValue > 0 ? total - spins * triggerPerValue : 0;
     const toNextSpin = triggerPerValue > 0 ? triggerPerValue - remainder : 0;
     const user = usersQuery.data?.find((u) => u.id === uid);
-    return { uid, name: user?.name || "—", total, spins, toNextSpin };
-  }).sort((a, b) => b.spins - a.spins);
+    const collab = (salesTeamQuery.data ?? []).find((c) => c.user_id === uid);
+    return { uid, name: user?.name || collab?.full_name || "—", total, spins, toNextSpin };
+  }).sort((a, b) => b.spins - a.spins || a.name.localeCompare(b.name));
 
   if (triggerPerValue <= 0) return null;
 
