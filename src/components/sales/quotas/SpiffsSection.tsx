@@ -579,3 +579,114 @@ function RouletteSpinsPanel({ spiff }: { spiff: any }) {
     </div>
   );
 }
+
+// ── Painel de giros pendentes — Roleta Custom (vendas em janela) ──
+function CustomSpinsPanel({ spiff }: { spiff: any }) {
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
+  const triggerSalesCount = Number(spiff.trigger_sales_count || 0);
+  const windowDays = Number(spiff.trigger_window_days || 7);
+
+  // Janela atual: últimos N dias até hoje (limitada ao período da campanha)
+  const today = new Date();
+  const windowStart = new Date(today);
+  windowStart.setDate(windowStart.getDate() - windowDays + 1);
+  const campaignStart = new Date(spiff.start_date);
+  const effectiveStart = windowStart > campaignStart ? windowStart : campaignStart;
+  const effectiveEnd = today < new Date(spiff.end_date) ? today : new Date(spiff.end_date);
+
+  const dealsQuery = useQuery({
+    queryKey: ["custom-spins", accountId, spiff.id, effectiveStart.toISOString().split("T")[0]],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("deals")
+        .select("id, responsible_user_id, won_at, status")
+        .eq("account_id", accountId!)
+        .eq("status", "won")
+        .gte("won_at", effectiveStart.toISOString().split("T")[0])
+        .lte("won_at", `${effectiveEnd.toISOString().split("T")[0]}T23:59:59`);
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; responsible_user_id: string | null; won_at: string | null }>;
+    },
+    enabled: !!accountId && triggerSalesCount > 0,
+  });
+
+  const userIds = Array.from(new Set((dealsQuery.data ?? []).map((d) => d.responsible_user_id).filter(Boolean) as string[]));
+
+  const usersQuery = useQuery({
+    queryKey: ["custom-spin-users", accountId, userIds.join(",")],
+    queryFn: async () => {
+      if (userIds.length === 0) return [];
+      const { data, error } = await supabase.from("users").select("id, name").in("id", userIds);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: userIds.length > 0,
+  });
+
+  const summary = userIds.map((uid) => {
+    const sales = (dealsQuery.data ?? []).filter((d) => d.responsible_user_id === uid).length;
+    const spins = triggerSalesCount > 0 ? Math.floor(sales / triggerSalesCount) : 0;
+    const remainder = triggerSalesCount > 0 ? sales - spins * triggerSalesCount : 0;
+    const toNext = triggerSalesCount > 0 ? triggerSalesCount - remainder : 0;
+    const user = usersQuery.data?.find((u) => u.id === uid);
+    return { uid, name: user?.name || "—", sales, spins, toNext };
+  }).sort((a, b) => b.spins - a.spins || b.sales - a.sales);
+
+  if (triggerSalesCount <= 0) return null;
+
+  return (
+    <div className="rounded-lg border-2 border-pink-500/30 bg-pink-500/5 p-3 space-y-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <Gift className="h-4 w-4 text-pink-600" />
+        <p className="text-sm font-medium">Giros pendentes — {spiff.name}</p>
+        <Badge variant="outline" className="text-[10px] border-pink-500/40 text-pink-700 dark:text-pink-400">
+          {triggerSalesCount} vendas / {windowDays}d
+        </Badge>
+        <Tooltip>
+          <TooltipTrigger>
+            <Badge variant="outline" className="text-[10px] cursor-help">como funciona?</Badge>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            <p className="text-xs">
+              Conta os negócios ganhos por cada vendedor nos últimos {windowDays} dias. A cada {triggerSalesCount} vendas, o vendedor ganha 1 giro. O prêmio é livre — escolhido pelo próprio vendedor (ex: "{spiff.custom_prize_description || "vale presente"}").
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+      {spiff.custom_prize_description && (
+        <p className="text-xs text-muted-foreground italic">🎁 Prêmio: {spiff.custom_prize_description}</p>
+      )}
+      {summary.length === 0 ? (
+        <p className="text-xs text-muted-foreground py-2">Nenhuma venda ganha na janela atual ainda.</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs">Vendedor</TableHead>
+              <TableHead className="text-center text-xs">Vendas (janela)</TableHead>
+              <TableHead className="text-center text-xs">Giros</TableHead>
+              <TableHead className="text-center text-xs">Falta p/ próximo</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {summary.map((s) => (
+              <TableRow key={s.uid}>
+                <TableCell className="text-sm font-medium">{s.name}</TableCell>
+                <TableCell className="text-center text-sm tabular-nums">{s.sales}</TableCell>
+                <TableCell className="text-center">
+                  <Badge variant={s.spins > 0 ? "default" : "secondary"} className="text-xs">
+                    {s.spins} {s.spins === 1 ? "giro" : "giros"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-center text-xs text-muted-foreground tabular-nums">
+                  {s.toNext} {s.toNext === 1 ? "venda" : "vendas"}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+    </div>
+  );
+}
