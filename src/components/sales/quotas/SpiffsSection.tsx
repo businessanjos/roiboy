@@ -466,6 +466,13 @@ export function SpiffsSection() {
             .map((spiff) => (
               <RouletteSpinsPanel key={`spins-${spiff.id}`} spiff={spiff as any} />
             ))}
+
+          {/* Painéis de giros pendentes — um por spiff custom ativo */}
+          {spiffs
+            .filter((s) => (s as any).prize_type === "custom" && s.is_active && !isExpired(s.end_date))
+            .map((spiff) => (
+              <CustomSpinsPanel key={`custom-spins-${spiff.id}`} spiff={spiff as any} />
+            ))}
         </CardContent>
       </Card>
     </TooltipProvider>
