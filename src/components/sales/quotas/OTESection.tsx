@@ -51,7 +51,7 @@ export function OTESection({
   const { userOTEs, upsertOTE } = useQuotasIncentives(year, 1);
 
   // Variável anual calculado a partir do plano: bônus mensal × 12 + trimestral × 4 + anual
-  const calculatedVariable = (monthlyBonusBase * 12) + (quarterlyBonusValue * 4) + annualBonusValue;
+  const calculatedVariable = (Number(monthlyBonusBase) || 0) * 12 + (Number(quarterlyBonusValue) || 0) * 4 + (Number(annualBonusValue) || 0);
 
   const [drafts, setDrafts] = useState<Record<string, { base: number; variable: number }>>({});
 
@@ -216,8 +216,10 @@ export function OTESection({
             <TableBody>
               {users.map((user) => {
                 const ote = getOTE(user.id);
-                const total = ote.base + ote.variable;
-                const basePct = total > 0 ? Math.round((ote.base / total) * 100) : 0;
+                const baseNum = Number(ote.base) || 0;
+                const variableNum = Number(ote.variable) || 0;
+                const total = baseNum + variableNum;
+                const basePct = total > 0 ? Math.round((baseNum / total) * 100) : 0;
                 const collab = collaborators.find((c) => c.user_id === user.id);
                 const calc = calculateAnnualBase(user.id);
                 return (
@@ -276,8 +278,8 @@ export function OTESection({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right font-bold">
-                      {total > 0 ? `R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—"}
+                    <TableCell className="text-right font-bold tabular-nums">
+                      {total > 0 ? `R$ ${formatBRL(total)}` : "—"}
                     </TableCell>
                     <TableCell className="text-right text-muted-foreground text-xs">
                       {total > 0 ? `${basePct}/${100 - basePct}` : "—"}
