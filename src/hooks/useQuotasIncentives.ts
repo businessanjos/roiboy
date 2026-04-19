@@ -79,6 +79,10 @@ export interface SalesSpiff {
   start_date: string;
   end_date: string;
   is_active: boolean;
+  prize_type: string;
+  trigger_per_value: number;
+  roulette_min_prize: number;
+  roulette_max_prize: number;
   created_at: string;
   updated_at: string;
 }
