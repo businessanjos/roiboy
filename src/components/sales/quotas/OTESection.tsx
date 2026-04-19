@@ -136,10 +136,11 @@ export function OTESection({
   const getOTE = (userId: string) => {
     if (drafts[userId]) return drafts[userId];
     const existing = userOTEs.find((o) => o.user_id === userId);
-    // Variável sempre vem do plano (calculado), base do existente ou 0
-    return existing
-      ? { base: Number(existing.base_salary_annual), variable: calculatedVariable }
-      : { base: 0, variable: calculatedVariable };
+    const savedBase = existing ? Number(existing.base_salary_annual) : 0;
+    // Fallback: se não há valor salvo, usa a base calculada do RH automaticamente
+    const calc = calculateAnnualBase(userId);
+    const effectiveBase = savedBase > 0 ? savedBase : (calc?.value ?? 0);
+    return { base: effectiveBase, variable: calculatedVariable };
   };
 
   const handleSaveAll = async () => {
