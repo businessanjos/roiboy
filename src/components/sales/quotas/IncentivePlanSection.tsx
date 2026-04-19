@@ -239,7 +239,7 @@ export function IncentivePlanSection() {
     }, 1500);
 
     return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
-  }, [planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, draftRates, draftTiers]);
+  }, [planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, monthlyBonusChannel, quarterlyBonusChannel, annualBonusChannel, draftRates, draftTiers]);
 
   const getRate = (productId: string) => {
     if (draftRates[productId]) return draftRates[productId];
@@ -266,6 +266,9 @@ export function IncentivePlanSection() {
       annual_bonus_enabled: annualBonusEnabled,
       annual_bonus_value: annualBonusValue,
       annual_bonus_rules: annualBonusRules,
+      monthly_bonus_payment_channel: monthlyBonusChannel,
+      quarterly_bonus_payment_channel: quarterlyBonusChannel,
+      annual_bonus_payment_channel: annualBonusChannel,
       position_id: selectedPositionId,
     } as any);
   };
