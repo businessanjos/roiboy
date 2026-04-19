@@ -124,9 +124,6 @@ export default function SalesTeam() {
           <QuotasIncentivesTab />
         </TabsContent>
 
-        <TabsContent value="commission">
-          <CommissionTab />
-        </TabsContent>
 
         <TabsContent value="career">
           <CareerPlanTab plan={plan} onSaveLevels={saveSalesLevels} />
