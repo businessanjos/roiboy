@@ -623,12 +623,14 @@ export function SpiffsSection() {
                   const expired = isExpired(spiff.end_date);
                   const isRoulette = (spiff as any).prize_type === "roulette";
                   const isCustom = (spiff as any).prize_type === "custom";
+                  const isPayment = (spiff as any).prize_type === "payment_method";
                   return (
                     <TableRow key={spiff.id} className={expired ? "opacity-50" : ""}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-1.5">
                           {isRoulette && <Dice5 className="h-3.5 w-3.5 text-amber-500" />}
                           {isCustom && <Gift className="h-3.5 w-3.5 text-pink-500" />}
+                          {isPayment && <CreditCard className="h-3.5 w-3.5 text-purple-500" />}
                           {spiff.name}
                         </div>
                       </TableCell>
@@ -667,7 +669,17 @@ export function SpiffsSection() {
                             )}
                           </div>
                         )}
-                        {!isRoulette && !isCustom && (
+                        {isPayment && (
+                          <div className="space-y-0.5">
+                            <Badge variant="outline" className="text-[10px] border-purple-500/40 text-purple-700 dark:text-purple-400">
+                              Forma de Pagamento
+                            </Badge>
+                            <p className="text-muted-foreground">
+                              {Array.isArray((spiff as any).payment_tiers) ? (spiff as any).payment_tiers.length : 0} faixa(s)
+                            </p>
+                          </div>
+                        )}
+                        {!isRoulette && !isCustom && !isPayment && (
                           <div className="space-y-0.5">
                             <Badge variant="outline" className="text-[10px]">Bônus Fixo</Badge>
                             <p className="text-muted-foreground">
