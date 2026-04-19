@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, Zap, Save, Dice5, Trophy, Pencil, Gift } from "lucide-react";
+import { Plus, Trash2, Zap, Save, Dice5, Trophy, Pencil, Gift, CreditCard, X } from "lucide-react";
 import { useQuotasIncentives } from "@/hooks/useQuotasIncentives";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,7 +33,7 @@ export function SpiffsSection() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [productId, setProductId] = useState<string>("all");
-  const [prizeType, setPrizeType] = useState<"fixed" | "roulette" | "custom">("fixed");
+  const [prizeType, setPrizeType] = useState<"fixed" | "roulette" | "custom" | "payment_method">("fixed");
   const [bonusAmount, setBonusAmount] = useState(0);
   const [bonusType, setBonusType] = useState("fixed");
   const [targetQty, setTargetQty] = useState(1);
@@ -44,6 +44,8 @@ export function SpiffsSection() {
   const [triggerWindowDays, setTriggerWindowDays] = useState(7);
   const [triggerWeekStartDay, setTriggerWeekStartDay] = useState<string>("rolling"); // "rolling" | "0".."6"
   const [customPrizeDescription, setCustomPrizeDescription] = useState("");
+  const [paymentTiers, setPaymentTiers] = useState<Array<{ label: string; bonus: number; min_parcelas: number; max_parcelas: number; includes_cash: boolean }>>([]);
+  const [participantUserIds, setParticipantUserIds] = useState<string[]>([]);
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState("");
 
