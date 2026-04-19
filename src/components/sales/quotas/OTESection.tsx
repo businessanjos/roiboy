@@ -21,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import { getPaymentChannelLabel } from "./paymentChannels";
 
 interface OTESectionProps {
   year: number;
@@ -29,6 +30,9 @@ interface OTESectionProps {
   monthlyBonusBase?: number;
   quarterlyBonusValue?: number;
   annualBonusValue?: number;
+  monthlyBonusChannel?: string;
+  quarterlyBonusChannel?: string;
+  annualBonusChannel?: string;
 }
 
 export function OTESection({
@@ -38,6 +42,9 @@ export function OTESection({
   monthlyBonusBase = 0,
   quarterlyBonusValue = 0,
   annualBonusValue = 0,
+  monthlyBonusChannel,
+  quarterlyBonusChannel,
+  annualBonusChannel,
 }: OTESectionProps) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
