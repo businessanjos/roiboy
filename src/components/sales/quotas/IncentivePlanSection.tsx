@@ -914,6 +914,9 @@ export function IncentivePlanSection() {
           monthlyBonusBase={Number(activePlan?.bonus_base_value || 0)}
           quarterlyBonusValue={activePlan?.quarterly_bonus_enabled ? Number(activePlan.quarterly_bonus_value || 0) : 0}
           annualBonusValue={(activePlan as any)?.annual_bonus_enabled ? Number((activePlan as any).annual_bonus_value || 0) : 0}
+          monthlyBonusChannel={monthlyBonusChannel}
+          quarterlyBonusChannel={quarterlyBonusChannel}
+          annualBonusChannel={annualBonusChannel}
         />
       )}
 
