@@ -14,6 +14,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { PaymentMethodSpiffPanel } from "./PaymentMethodSpiffPanel";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR");
 const parseBRL = (s: string) => {
@@ -522,6 +523,13 @@ export function SpiffsSection() {
             .map((spiff) => (
               <CustomSpinsPanel key={`custom-spins-${spiff.id}`} spiff={spiff as any} />
             ))}
+
+          {/* SPIFF de Forma de Pagamento — fixo, calculado por mês corrente */}
+          <PaymentMethodSpiffPanel
+            startDate={`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`}
+            endDate={new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0]}
+            periodLabel={`${now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}`}
+          />
         </CardContent>
       </Card>
     </TooltipProvider>
