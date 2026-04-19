@@ -190,9 +190,12 @@ export function IncentivePlanSection() {
       quarterlyBonusRules !== ((activePlan as any).quarterly_bonus_rules || "") ||
       annualBonusEnabled !== ((activePlan as any).annual_bonus_enabled || false) ||
       annualBonusValue !== Number((activePlan as any).annual_bonus_value || 0) ||
-      annualBonusRules !== ((activePlan as any).annual_bonus_rules || "")
+      annualBonusRules !== ((activePlan as any).annual_bonus_rules || "") ||
+      monthlyBonusChannel !== ((activePlan as any).monthly_bonus_payment_channel || "folha") ||
+      quarterlyBonusChannel !== ((activePlan as any).quarterly_bonus_payment_channel || "ferias_co") ||
+      annualBonusChannel !== ((activePlan as any).annual_bonus_payment_channel || "ferias_co")
     );
-  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules]);
+  }, [activePlan, planName, planDesc, bonusBase, quotaValue, goalValue, minimumAchievement, clawbackEnabled, clawbackDays, clawbackPercent, quarterlyBonusEnabled, quarterlyBonusValue, quarterlyBonusRules, annualBonusEnabled, annualBonusValue, annualBonusRules, monthlyBonusChannel, quarterlyBonusChannel, annualBonusChannel]);
 
   const hasTierChanges = useCallback(() => {
     if (draftTiers.length !== planTiers.length) return true;
