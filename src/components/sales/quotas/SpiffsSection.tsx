@@ -41,6 +41,7 @@ export function SpiffsSection() {
   const [rouletteMax, setRouletteMax] = useState(100);
   const [triggerSalesCount, setTriggerSalesCount] = useState(3);
   const [triggerWindowDays, setTriggerWindowDays] = useState(7);
+  const [triggerWeekStartDay, setTriggerWeekStartDay] = useState<string>("rolling"); // "rolling" | "0".."6"
   const [customPrizeDescription, setCustomPrizeDescription] = useState("");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState("");
@@ -77,6 +78,7 @@ export function SpiffsSection() {
       roulette_max_prize: prizeType === "roulette" ? rouletteMax : 0,
       trigger_sales_count: prizeType === "custom" ? triggerSalesCount : 0,
       trigger_window_days: prizeType === "custom" ? triggerWindowDays : 7,
+      trigger_week_start_day: prizeType === "custom" && triggerWeekStartDay !== "rolling" ? parseInt(triggerWeekStartDay) : null,
       custom_prize_description: prizeType === "custom" ? customPrizeDescription || null : null,
       start_date: startDate,
       end_date: endDate || new Date(Date.now() + 30 * 86400000).toISOString().split("T")[0],
@@ -101,6 +103,7 @@ export function SpiffsSection() {
     setRouletteMax(100);
     setTriggerSalesCount(3);
     setTriggerWindowDays(7);
+    setTriggerWeekStartDay("rolling");
     setCustomPrizeDescription("");
     setStartDate(new Date().toISOString().split("T")[0]);
     setEndDate("");
@@ -122,6 +125,11 @@ export function SpiffsSection() {
     setRouletteMax(Number(spiff.roulette_max_prize) || 100);
     setTriggerSalesCount(Number(spiff.trigger_sales_count) || 3);
     setTriggerWindowDays(Number(spiff.trigger_window_days) || 7);
+    setTriggerWeekStartDay(
+      spiff.trigger_week_start_day !== null && spiff.trigger_week_start_day !== undefined
+        ? String(spiff.trigger_week_start_day)
+        : "rolling"
+    );
     setCustomPrizeDescription(spiff.custom_prize_description || "");
     setStartDate(spiff.start_date || new Date().toISOString().split("T")[0]);
     setEndDate(spiff.end_date || "");
@@ -312,20 +320,39 @@ export function SpiffsSection() {
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-xs">Janela (dias)</Label>
-                          <Select value={String(triggerWindowDays)} onValueChange={(v) => setTriggerWindowDays(parseInt(v))}>
+                          <Label className="text-xs">Janela</Label>
+                          <Select
+                            value={triggerWeekStartDay === "rolling" ? `rolling-${triggerWindowDays}` : `week-${triggerWeekStartDay}`}
+                            onValueChange={(v) => {
+                              if (v.startsWith("rolling-")) {
+                                setTriggerWeekStartDay("rolling");
+                                setTriggerWindowDays(parseInt(v.replace("rolling-", "")));
+                              } else {
+                                const day = v.replace("week-", "");
+                                setTriggerWeekStartDay(day);
+                                setTriggerWindowDays(7);
+                              }
+                            }}
+                          >
                             <SelectTrigger><SelectValue /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="1">1 dia</SelectItem>
-                              <SelectItem value="7">7 dias (semana)</SelectItem>
-                              <SelectItem value="14">14 dias</SelectItem>
-                              <SelectItem value="30">30 dias (mês)</SelectItem>
+                              <SelectItem value="rolling-1">Últimas 24h (rolante)</SelectItem>
+                              <SelectItem value="rolling-7">Últimos 7 dias (rolante)</SelectItem>
+                              <SelectItem value="rolling-14">Últimos 14 dias (rolante)</SelectItem>
+                              <SelectItem value="rolling-30">Últimos 30 dias (rolante)</SelectItem>
+                              <SelectItem value="week-0">Semana Dom→Sáb</SelectItem>
+                              <SelectItem value="week-1">Semana Seg→Dom</SelectItem>
+                              <SelectItem value="week-2">Semana Ter→Seg</SelectItem>
+                              <SelectItem value="week-3">Semana Qua→Ter</SelectItem>
+                              <SelectItem value="week-4">Semana Qui→Qua</SelectItem>
+                              <SelectItem value="week-5">Semana Sex→Qui</SelectItem>
+                              <SelectItem value="week-6">Semana Sáb→Sex</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                       </div>
                       <p className="text-[10px] text-muted-foreground">
-                        Ex: 3 vendas em 7 dias = 1 giro
+                        Ex: 3 vendas em uma semana. Use "Semana Qua→Ter" se sua semana de vendas começa na quarta 00:00 e termina terça 23:59.
                       </p>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Prêmio (descrição livre)</Label>
@@ -412,7 +439,10 @@ export function SpiffsSection() {
                               Roleta Custom
                             </Badge>
                             <p className="text-muted-foreground">
-                              {(spiff as any).trigger_sales_count || 0} vendas / {(spiff as any).trigger_window_days || 7}d
+                              {(spiff as any).trigger_sales_count || 0} vendas /{" "}
+                              {(spiff as any).trigger_week_start_day !== null && (spiff as any).trigger_week_start_day !== undefined
+                                ? ["Sem Dom→Sáb","Sem Seg→Dom","Sem Ter→Seg","Sem Qua→Ter","Sem Qui→Qua","Sem Sex→Qui","Sem Sáb→Sex"][(spiff as any).trigger_week_start_day]
+                                : `${(spiff as any).trigger_window_days || 7}d`}
                             </p>
                             {(spiff as any).custom_prize_description && (
                               <p className="text-muted-foreground italic line-clamp-1 max-w-[180px] mx-auto">
@@ -586,25 +616,54 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
   const accountId = currentUser?.account_id;
   const triggerSalesCount = Number(spiff.trigger_sales_count || 0);
   const windowDays = Number(spiff.trigger_window_days || 7);
+  const weekStartDay: number | null =
+    spiff.trigger_week_start_day !== null && spiff.trigger_week_start_day !== undefined
+      ? Number(spiff.trigger_week_start_day)
+      : null;
 
-  // Janela atual: últimos N dias até hoje (limitada ao período da campanha)
+  // Cálculo da janela atual:
+  // - Se weekStartDay definido: alinha à semana customizada (ex: Qua 00:00 → Ter 23:59).
+  // - Senão: usa janela rolante de N dias até hoje.
   const today = new Date();
-  const windowStart = new Date(today);
-  windowStart.setDate(windowStart.getDate() - windowDays + 1);
+  let windowStart: Date;
+  let windowEnd: Date;
+  if (weekStartDay !== null) {
+    const todayDow = today.getDay(); // 0=Dom..6=Sab
+    const diff = (todayDow - weekStartDay + 7) % 7;
+    windowStart = new Date(today);
+    windowStart.setDate(windowStart.getDate() - diff);
+    windowStart.setHours(0, 0, 0, 0);
+    windowEnd = new Date(windowStart);
+    windowEnd.setDate(windowEnd.getDate() + 6);
+    windowEnd.setHours(23, 59, 59, 999);
+  } else {
+    windowStart = new Date(today);
+    windowStart.setDate(windowStart.getDate() - windowDays + 1);
+    windowStart.setHours(0, 0, 0, 0);
+    windowEnd = new Date(today);
+    windowEnd.setHours(23, 59, 59, 999);
+  }
   const campaignStart = new Date(spiff.start_date);
+  const campaignEnd = new Date(spiff.end_date);
+  campaignEnd.setHours(23, 59, 59, 999);
   const effectiveStart = windowStart > campaignStart ? windowStart : campaignStart;
-  const effectiveEnd = today < new Date(spiff.end_date) ? today : new Date(spiff.end_date);
+  const effectiveEnd = windowEnd < campaignEnd ? windowEnd : campaignEnd;
+
+  const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const windowLabel = weekStartDay !== null
+    ? `Semana ${dayNames[weekStartDay]}→${dayNames[(weekStartDay + 6) % 7]} (${effectiveStart.toLocaleDateString("pt-BR")} a ${effectiveEnd.toLocaleDateString("pt-BR")})`
+    : `Últimos ${windowDays}d`;
 
   const dealsQuery = useQuery({
-    queryKey: ["custom-spins", accountId, spiff.id, effectiveStart.toISOString().split("T")[0]],
+    queryKey: ["custom-spins", accountId, spiff.id, effectiveStart.toISOString(), effectiveEnd.toISOString()],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("deals")
         .select("id, responsible_user_id, won_at, status")
         .eq("account_id", accountId!)
         .eq("status", "won")
-        .gte("won_at", effectiveStart.toISOString().split("T")[0])
-        .lte("won_at", `${effectiveEnd.toISOString().split("T")[0]}T23:59:59`);
+        .gte("won_at", effectiveStart.toISOString())
+        .lte("won_at", effectiveEnd.toISOString());
       if (error) throw error;
       return (data ?? []) as Array<{ id: string; responsible_user_id: string | null; won_at: string | null }>;
     },
@@ -641,7 +700,7 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
         <Gift className="h-4 w-4 text-pink-600" />
         <p className="text-sm font-medium">Giros pendentes — {spiff.name}</p>
         <Badge variant="outline" className="text-[10px] border-pink-500/40 text-pink-700 dark:text-pink-400">
-          {triggerSalesCount} vendas / {windowDays}d
+          {triggerSalesCount} vendas / {windowLabel}
         </Badge>
         <Tooltip>
           <TooltipTrigger>
@@ -649,7 +708,10 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">
             <p className="text-xs">
-              Conta os negócios ganhos por cada vendedor nos últimos {windowDays} dias. A cada {triggerSalesCount} vendas, o vendedor ganha 1 giro. O prêmio é livre — escolhido pelo próprio vendedor (ex: "{spiff.custom_prize_description || "vale presente"}").
+              {weekStartDay !== null
+                ? `Conta os negócios ganhos por cada vendedor na semana atual (${dayNames[weekStartDay]} 00:00 → ${dayNames[(weekStartDay + 6) % 7]} 23:59).`
+                : `Conta os negócios ganhos por cada vendedor nos últimos ${windowDays} dias.`}
+              {" "}A cada {triggerSalesCount} vendas, o vendedor ganha 1 giro. O prêmio é livre — escolhido pelo próprio vendedor (ex: "{spiff.custom_prize_description || "vale presente"}").
             </p>
           </TooltipContent>
         </Tooltip>
