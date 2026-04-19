@@ -457,20 +457,33 @@ export function IncentivePlanSection() {
                 </div>
                 <div className="space-y-2">
                   <Label>Bônus Base Mensal (R$) — ao atingir 100%</Label>
-                  <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
-                    <Input
-                      type="text"
-                      inputMode="numeric"
-                      className="pl-8"
-                      value={bonusBase ? bonusBase.toLocaleString("pt-BR") : ""}
-                      onChange={(e) => {
-                        const digits = e.target.value.replace(/\D/g, "");
-                        setBonusBase(digits ? parseInt(digits, 10) : 0);
-                      }}
-                      placeholder="0"
-                    />
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">R$</span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        className="pl-8"
+                        value={bonusBase ? bonusBase.toLocaleString("pt-BR") : ""}
+                        onChange={(e) => {
+                          const digits = e.target.value.replace(/\D/g, "");
+                          setBonusBase(digits ? parseInt(digits, 10) : 0);
+                        }}
+                        placeholder="0"
+                      />
+                    </div>
+                    <Select value={monthlyBonusChannel} onValueChange={setMonthlyBonusChannel}>
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue placeholder="Pagamento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PAYMENT_CHANNELS.map((c) => (
+                          <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+                  <p className="text-[10px] text-muted-foreground">Canal de pagamento desta parcela do variável</p>
                 </div>
               </div>
 
