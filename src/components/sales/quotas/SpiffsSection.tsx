@@ -697,7 +697,7 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
         <Gift className="h-4 w-4 text-pink-600" />
         <p className="text-sm font-medium">Giros pendentes — {spiff.name}</p>
         <Badge variant="outline" className="text-[10px] border-pink-500/40 text-pink-700 dark:text-pink-400">
-          {triggerSalesCount} vendas / {windowDays}d
+          {triggerSalesCount} vendas / {windowLabel}
         </Badge>
         <Tooltip>
           <TooltipTrigger>
@@ -705,7 +705,10 @@ function CustomSpinsPanel({ spiff }: { spiff: any }) {
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">
             <p className="text-xs">
-              Conta os negócios ganhos por cada vendedor nos últimos {windowDays} dias. A cada {triggerSalesCount} vendas, o vendedor ganha 1 giro. O prêmio é livre — escolhido pelo próprio vendedor (ex: "{spiff.custom_prize_description || "vale presente"}").
+              {weekStartDay !== null
+                ? `Conta os negócios ganhos por cada vendedor na semana atual (${dayNames[weekStartDay]} 00:00 → ${dayNames[(weekStartDay + 6) % 7]} 23:59).`
+                : `Conta os negócios ganhos por cada vendedor nos últimos ${windowDays} dias.`}
+              {" "}A cada {triggerSalesCount} vendas, o vendedor ganha 1 giro. O prêmio é livre — escolhido pelo próprio vendedor (ex: "{spiff.custom_prize_description || "vale presente"}").
             </p>
           </TooltipContent>
         </Tooltip>
