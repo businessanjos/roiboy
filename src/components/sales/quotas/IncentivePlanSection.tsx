@@ -74,6 +74,10 @@ export function IncentivePlanSection() {
   const [annualBonusChannel, setAnnualBonusChannel] = useState<string>("ferias_co");
   const [draftRates, setDraftRates] = useState<Record<string, { percent: number; fixed: number }>>({});
   const [draftTiers, setDraftTiers] = useState<{ min: number; max: string; multiplier: number; label: string }[]>([]);
+  const [uncappedEnabled, setUncappedEnabled] = useState(false);
+  const [uncappedThreshold, setUncappedThreshold] = useState(0);
+  const [uncappedPerSale, setUncappedPerSale] = useState(0);
+  const [uncappedType, setUncappedType] = useState<string>("fixed");
 
   const productsQuery = useQuery({
     queryKey: ["active-products", accountId],
