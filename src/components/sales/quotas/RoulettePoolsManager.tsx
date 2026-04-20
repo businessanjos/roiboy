@@ -99,20 +99,25 @@ export function RoulettePoolsManager() {
           .update({ name: pool.name, description: pool.description, is_active: pool.is_active ?? true })
           .eq("id", pool.id);
         if (error) throw error;
+        return pool.id;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("roulette_prize_pools")
-          .insert({ name: pool.name, description: pool.description, account_id: accountId! });
+          .insert({ name: pool.name, description: pool.description, account_id: accountId! })
+          .select("id")
+          .single();
         if (error) throw error;
+        return data.id as string;
       }
     },
-    onSuccess: () => {
+    onSuccess: (newId) => {
       queryClient.invalidateQueries({ queryKey: ["roulette-pools"] });
-      toast.success("Pool salvo com sucesso");
+      toast.success("Pool salvo! Agora adicione os prêmios abaixo.");
       setPoolDialogOpen(false);
       setEditingPool(null);
       setPoolName("");
       setPoolDescription("");
+      setSelectedPoolId(newId); // Auto-seleciona para mostrar editor de prêmios
     },
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
@@ -221,13 +226,18 @@ export function RoulettePoolsManager() {
                           </AlertDialog>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="secondary" className="text-[10px]">
-                          {prizes.length} {prizes.length === 1 ? "prêmio" : "prêmios"}
-                        </Badge>
-                        {totalWeight > 0 && (
-                          <span className="text-[10px] text-muted-foreground">peso total: {totalWeight}</span>
-                        )}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={prizes.length === 0 ? "destructive" : "secondary"} className="text-[10px]">
+                            {prizes.length} {prizes.length === 1 ? "prêmio" : "prêmios"}
+                          </Badge>
+                          {totalWeight > 0 && (
+                            <span className="text-[10px] text-muted-foreground">peso total: {totalWeight}</span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-primary font-medium">
+                          {isSelected ? "✓ aberto" : "Clique para configurar →"}
+                        </span>
                       </div>
                     </CardContent>
                   </Card>
