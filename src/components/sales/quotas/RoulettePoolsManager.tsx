@@ -10,9 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Plus, Trash2, Pencil, Dice5, Gift, Save, X, Trophy, Sparkles } from "lucide-react";
+import { Plus, Trash2, Pencil, Dice5, Gift, Save, X, Trophy, Sparkles, Play } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { RouletteCardShuffle, ShuffleCard } from "./RouletteCardShuffle";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
