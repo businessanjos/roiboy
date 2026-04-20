@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Calendar, CalendarDays, Bell, Users, Grid3X3, Lightbulb, TrendingUp, Image as ImageIcon, Sparkles, Wand2, Flame, CalendarRange, Target } from 'lucide-react';
+import { Calendar, CalendarDays, Bell, Users, Grid3X3, Lightbulb, TrendingUp, Image as ImageIcon, Sparkles, Wand2, Flame, CalendarRange, Target, Bot, Zap } from 'lucide-react';
 import { MarketingPersonaTab } from '@/components/marketing/persona/MarketingPersonaTab';
 import { MarketingIdeasTab } from '@/components/marketing/ideas/MarketingIdeasTab';
 import { MarketingReferencesTab } from '@/components/marketing/references/MarketingReferencesTab';
@@ -10,6 +10,9 @@ import { CopyStudioTab } from '@/components/marketing/copy/CopyStudioTab';
 import { TrendsRadarTab } from '@/components/marketing/trends/TrendsRadarTab';
 import { BrandVoiceTab } from '@/components/marketing/brand/BrandVoiceTab';
 import { EditorialCalendarTab } from '@/components/marketing/calendar/EditorialCalendarTab';
+import { CopilotTab } from '@/components/marketing/copilot/CopilotTab';
+import { HooksTab } from '@/components/marketing/hooks/HooksTab';
+import { PerformanceTab } from '@/components/marketing/performance/PerformanceTab';
 import { useMarketingEvents, MarketingEvent } from '@/hooks/useMarketingEvents';
 import { MonthlyCalendarView } from '@/components/marketing/MonthlyCalendarView';
 import { YearlyCalendarView } from '@/components/marketing/YearlyCalendarView';
@@ -140,10 +143,13 @@ export default function Marketing() {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="calendar" className="flex items-center gap-2"><Calendar className="h-4 w-4" />Calendário</TabsTrigger>
+          <TabsTrigger value="copilot" className="flex items-center gap-2"><Bot className="h-4 w-4" />Copilot</TabsTrigger>
           <TabsTrigger value="persona" className="flex items-center gap-2"><Target className="h-4 w-4" />Persona</TabsTrigger>
           <TabsTrigger value="ideas" className="flex items-center gap-2"><Lightbulb className="h-4 w-4" />Ideias</TabsTrigger>
           <TabsTrigger value="editorial" className="flex items-center gap-2"><CalendarRange className="h-4 w-4" />Editorial</TabsTrigger>
           <TabsTrigger value="trends" className="flex items-center gap-2"><Flame className="h-4 w-4" />Trends</TabsTrigger>
+          <TabsTrigger value="hooks" className="flex items-center gap-2"><Zap className="h-4 w-4" />Hooks</TabsTrigger>
+          <TabsTrigger value="performance" className="flex items-center gap-2"><TrendingUp className="h-4 w-4" />Performance</TabsTrigger>
           <TabsTrigger value="copy" className="flex items-center gap-2"><Sparkles className="h-4 w-4" />Copy IA</TabsTrigger>
           <TabsTrigger value="references" className="flex items-center gap-2"><ImageIcon className="h-4 w-4" />Referências</TabsTrigger>
           <TabsTrigger value="brand" className="flex items-center gap-2"><Wand2 className="h-4 w-4" />Tom de Voz</TabsTrigger>
@@ -179,10 +185,13 @@ export default function Marketing() {
           )}
         </TabsContent>
 
+        <TabsContent value="copilot"><CopilotTab /></TabsContent>
         <TabsContent value="persona"><MarketingPersonaTab /></TabsContent>
         <TabsContent value="ideas"><MarketingIdeasTab /></TabsContent>
         <TabsContent value="editorial"><EditorialCalendarTab /></TabsContent>
         <TabsContent value="trends"><TrendsRadarTab /></TabsContent>
+        <TabsContent value="hooks"><HooksTab /></TabsContent>
+        <TabsContent value="performance"><PerformanceTab /></TabsContent>
         <TabsContent value="copy"><CopyStudioTab /></TabsContent>
         <TabsContent value="references"><MarketingReferencesTab /></TabsContent>
         <TabsContent value="brand"><BrandVoiceTab /></TabsContent>
