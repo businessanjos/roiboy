@@ -51,6 +51,7 @@ import {
   Target,
   Handshake,
   Crown,
+  Gift,
   
   type LucideIcon,
 } from "lucide-react";
