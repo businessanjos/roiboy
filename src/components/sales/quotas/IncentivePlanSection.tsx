@@ -787,7 +787,7 @@ export function IncentivePlanSection() {
                       <TableCell className="text-center">
                         <Input
                           type="number"
-                          value={(tier as any)._minStr ?? (tier.min || "")}
+                          value={(tier as any)._minStr ?? (tier.min != null ? String(tier.min) : "")}
                           onChange={(e) => {
                             const t = [...draftTiers];
                             const v = e.target.value;
@@ -814,7 +814,7 @@ export function IncentivePlanSection() {
                         <Input
                           type="number"
                           step={0.1}
-                          value={(tier as any)._multStr ?? (tier.multiplier || "")}
+                          value={(tier as any)._multStr ?? (tier.multiplier != null ? String(tier.multiplier) : "")}
                           onChange={(e) => {
                             const t = [...draftTiers];
                             const v = e.target.value;
