@@ -13,7 +13,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
-import { DealFieldValueEditor } from "@/components/custom-fields/DealFieldValueEditor";
+import { InlineFieldInput } from "@/components/sales/InlineFieldInput";
 
 interface RequiredFieldsModalProps {
   open: boolean;
