@@ -217,3 +217,9 @@ verify_jwt = false
 
 [functions.meta-manager]
 verify_jwt = false
+
+[functions.discover-trends-apify]
+verify_jwt = false
+
+[functions.discover-trends]
+verify_jwt = false
