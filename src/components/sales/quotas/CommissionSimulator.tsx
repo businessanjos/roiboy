@@ -164,7 +164,7 @@ export function CommissionSimulator() {
     const multiplier = activeTier ? Number(activeTier.bonus_multiplier) : 0;
     const bonusValue = bonusBase * multiplier;
 
-    // ── Bônus Adicional sem teto (acima do threshold) ──
+    // ── Bônus Adicional sem teto: R$ X por VENDA INTEIRA acima do limite ──
     const uncappedEnabled = (plan as any).uncapped_bonus_enabled;
     const uncappedThreshold = Number((plan as any).uncapped_threshold_percent || 0);
     const uncappedPerSale = Number((plan as any).uncapped_bonus_per_sale || 0);
@@ -172,10 +172,11 @@ export function CommissionSimulator() {
 
     let uncappedBonus = 0;
     let extraSales = 0;
-    let salesAtThreshold = 0;
-    if (uncappedEnabled && achievementPct > uncappedThreshold && avgTicket > 0) {
-      salesAtThreshold = (totalTargetQty * uncappedThreshold) / 100;
-      extraSales = Math.max(0, simulatedQty - salesAtThreshold);
+    // Limite em vendas inteiras: arredonda p/ baixo (ex: 142,86% × 7 = 9,999 → 10 vendas)
+    let salesAtThreshold = Math.round((totalTargetQty * uncappedThreshold) / 100);
+    if (uncappedEnabled && avgTicket > 0) {
+      // Apenas vendas INTEIRAS acima do limite contam
+      extraSales = Math.max(0, Math.floor(simulatedQty) - salesAtThreshold);
       if (uncappedType === "fixed") {
         uncappedBonus = extraSales * uncappedPerSale;
       } else {
