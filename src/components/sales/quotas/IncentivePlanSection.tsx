@@ -286,6 +286,10 @@ export function IncentivePlanSection() {
       monthly_bonus_payment_channel: monthlyBonusChannel,
       quarterly_bonus_payment_channel: quarterlyBonusChannel,
       annual_bonus_payment_channel: annualBonusChannel,
+      uncapped_bonus_enabled: uncappedEnabled,
+      uncapped_threshold_percent: uncappedThreshold,
+      uncapped_bonus_per_sale: uncappedPerSale,
+      uncapped_bonus_type: uncappedType,
       position_id: selectedPositionId,
     } as any);
   };
