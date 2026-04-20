@@ -41,6 +41,7 @@ export function SpiffsSection() {
   const [triggerPerValue, setTriggerPerValue] = useState(10000);
   const [rouletteMin, setRouletteMin] = useState(0);
   const [rouletteMax, setRouletteMax] = useState(100);
+  const [roulettePoolId, setRoulettePoolId] = useState<string>("range");
   const [triggerSalesCount, setTriggerSalesCount] = useState(3);
   const [triggerWindowDays, setTriggerWindowDays] = useState(7);
   const [triggerWeekStartDay, setTriggerWeekStartDay] = useState<string>("rolling"); // "rolling" | "0".."6"
@@ -87,6 +88,23 @@ export function SpiffsSection() {
   });
   const closers = closersQuery.data ?? [];
 
+  // Pools de prêmios para roleta
+  const poolsQuery = useQuery({
+    queryKey: ["roulette-pools", accountId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("roulette_prize_pools")
+        .select("id, name")
+        .eq("account_id", accountId!)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!accountId,
+  });
+  const roulettePools = poolsQuery.data ?? [];
+
   const handleSave = async () => {
     await saveSpiff.mutateAsync({
       ...(editingId ? { id: editingId } : {}),
@@ -100,6 +118,7 @@ export function SpiffsSection() {
       trigger_per_value: prizeType === "roulette" ? triggerPerValue : 0,
       roulette_min_prize: prizeType === "roulette" ? rouletteMin : 0,
       roulette_max_prize: prizeType === "roulette" ? rouletteMax : 0,
+      roulette_pool_id: prizeType === "roulette" && roulettePoolId !== "range" ? roulettePoolId : null,
       trigger_sales_count: prizeType === "custom" ? triggerSalesCount : 0,
       trigger_window_days: prizeType === "custom" ? triggerWindowDays : 7,
       trigger_week_start_day:
@@ -132,6 +151,7 @@ export function SpiffsSection() {
     setTriggerPerValue(10000);
     setRouletteMin(0);
     setRouletteMax(100);
+    setRoulettePoolId("range");
     setTriggerSalesCount(3);
     setTriggerWindowDays(7);
     setTriggerWeekStartDay("rolling");
@@ -159,6 +179,7 @@ export function SpiffsSection() {
     setTriggerPerValue(Number(spiff.trigger_per_value) || 10000);
     setRouletteMin(Number(spiff.roulette_min_prize) || 0);
     setRouletteMax(Number(spiff.roulette_max_prize) || 100);
+    setRoulettePoolId(spiff.roulette_pool_id || "range");
     setTriggerSalesCount(Number(spiff.trigger_sales_count) || 3);
     setTriggerWindowDays(Number(spiff.trigger_window_days) || 7);
     setTriggerWeekStartDay(
@@ -331,7 +352,7 @@ export function SpiffsSection() {
                     <div className="rounded-lg border-2 border-amber-500/30 bg-amber-500/5 p-3 space-y-3">
                       <div className="flex items-center gap-2">
                         <Dice5 className="h-4 w-4 text-amber-600" />
-                        <p className="text-xs font-medium">Configuração da Roleta ($)</p>
+                        <p className="text-xs font-medium">Configuração da Roleta</p>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs">Gatilho — 1 giro a cada (R$ de entrada captada)</Label>
@@ -350,18 +371,42 @@ export function SpiffsSection() {
                           Ex: R$ 10.000 → quem captar R$ 30.000 gira 3x
                         </p>
                       </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Prêmio Mínimo (R$)</Label>
-                          <Input type="number" min={0} value={rouletteMin || ""} onChange={(e) => setRouletteMin(parseFloat(e.target.value) || 0)} placeholder="0" />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-xs">Prêmio Máximo (R$)</Label>
-                          <Input type="number" min={0} value={rouletteMax || ""} onChange={(e) => setRouletteMax(parseFloat(e.target.value) || 0)} placeholder="100" />
-                        </div>
+
+                      <div className="space-y-1.5">
+                        <Label className="text-xs">Tipo de prêmios</Label>
+                        <Select value={roulettePoolId} onValueChange={setRoulettePoolId}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="range">Faixa de R$ (mín → máx)</SelectItem>
+                            {roulettePools.length > 0 && (
+                              <>
+                                <div className="px-2 py-1 text-[10px] text-muted-foreground uppercase">Pools cadastrados</div>
+                                {roulettePools.map((p) => (
+                                  <SelectItem key={p.id} value={p.id}>🎁 {p.name}</SelectItem>
+                                ))}
+                              </>
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-[10px] text-muted-foreground">
+                          Pools customizados são gerenciados na aba "Roletas".
+                        </p>
                       </div>
+
+                      {roulettePoolId === "range" && (
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Prêmio Mínimo (R$)</Label>
+                            <Input type="number" min={0} value={rouletteMin || ""} onChange={(e) => setRouletteMin(parseFloat(e.target.value) || 0)} placeholder="0" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs">Prêmio Máximo (R$)</Label>
+                            <Input type="number" min={0} value={rouletteMax || ""} onChange={(e) => setRouletteMax(parseFloat(e.target.value) || 0)} placeholder="100" />
+                          </div>
+                        </div>
+                      )}
                       <p className="text-[10px] text-muted-foreground italic">
-                        Os giros ganhos por cada vendedor serão calculados automaticamente com base nos negócios fechados no período. O sorteio em si é feito fora do sistema (roleta física ou digital).
+                        Os giros são calculados automaticamente. Quando o vendedor clicar em "Girar", o sistema sorteia o prêmio respeitando os pesos configurados.
                       </p>
                     </div>
                   )}
